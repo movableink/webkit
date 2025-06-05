@@ -147,14 +147,22 @@ auto ContentExtensionsBackend::actionsFromContentRuleList(const ContentExtension
         });
         std::ranges::sort(vector);
 
-        // Add actions in reverse order to properly deal with IgnorePreviousRules.
-        for (auto i = vector.size(); i; i--) {
-            auto action = DeserializedAction::deserialize(serializedActions, vector[i - 1]);
+        // We need to handle IgnoreFollowingRules...
+        for (size_t i = 0; i < vector.size(); i++) {
+            auto action = DeserializedAction::deserialize(serializedActions, vector[i]);
+            if (std::holds_alternative<IgnoreFollowingRulesAction>(action.data()))
+                break;
+            actionsStruct.actions.append(WTFMove(action));
+        }
+
+        // ...and iterate in reverse order to properly deal with IgnorePreviousRules.
+        for (auto i = actionsStruct.actions.size(); i; i--) {
+            auto action = actionsStruct.actions[i - 1];
             if (std::holds_alternative<IgnorePreviousRulesAction>(action.data())) {
                 actionsStruct.sawIgnorePreviousRules = true;
+                actionsStruct.actions.removeAt(0, i);
                 break;
             }
-            actionsStruct.actions.append(WTFMove(action));
         }
     }
     return actionsStruct;
@@ -288,6 +296,8 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
                 }
             }, [&](const IgnorePreviousRulesAction&) {
                 RELEASE_ASSERT_NOT_REACHED();
+            }, [&](const IgnoreFollowingRulesAction&) {
+                RELEASE_ASSERT_NOT_REACHED();
             }, [&] (const ModifyHeadersAction& action) {
                 if (initiatingDocumentLoader.allowsActiveContentRuleListActionsForURL(contentRuleListIdentifier, url)) {
                     result.modifiedHeaders = true;
@@ -363,6 +373,8 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForPingL
                     results.summary.madeHTTPS = true;
             }, [&](const IgnorePreviousRulesAction&) {
                 RELEASE_ASSERT_NOT_REACHED();
+            }, [&](const IgnoreFollowingRulesAction&) {
+                RELEASE_ASSERT_NOT_REACHED();
             }, [&] (const ModifyHeadersAction&) {
                 // We currently have not implemented active actions from the network process (CORS preflight).
             }, [&] (const RedirectAction&) {
@@ -389,6 +401,8 @@ bool ContentExtensionsBackend::processContentRuleListsForResourceMonitoring(cons
             }, [&](const NotifyAction&) {
             }, [&](const MakeHTTPSAction&) {
             }, [&](const IgnorePreviousRulesAction&) {
+                RELEASE_ASSERT_NOT_REACHED();
+            }, [&](const IgnoreFollowingRulesAction&) {
                 RELEASE_ASSERT_NOT_REACHED();
             }, [&] (const ModifyHeadersAction&) {
             }, [&] (const RedirectAction&) {

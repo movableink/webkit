@@ -244,6 +244,8 @@ static std::optional<Expected<Action, std::error_code>> loadAction(const JSON::O
         return Action { BlockLoadAction() };
     if (actionType == "ignore-previous-rules"_s)
         return Action { IgnorePreviousRulesAction() };
+    if (actionType == "ignore-following-rules"_s)
+        return Action { IgnoreFollowingRulesAction() };
     if (actionType == "block-cookies"_s)
         return Action { BlockCookiesAction() };
     if (actionType == "css-display-none"_s) {

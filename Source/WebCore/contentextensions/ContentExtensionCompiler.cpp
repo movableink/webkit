@@ -89,7 +89,7 @@ static Vector<unsigned> serializeActions(const Vector<ContentExtensionRule>& rul
 
     for (auto& rule : ruleList) {
         auto& actionData = rule.action().data();
-        if (std::holds_alternative<IgnorePreviousRulesAction>(actionData)) {
+        if (std::holds_alternative<IgnorePreviousRulesAction>(actionData) || std::holds_alternative<IgnoreFollowingRulesAction>(actionData)) {
             resolvePendingDisplayNoneActions(actions, actionLocations, cssDisplayNoneActionsMap);
 
             blockLoadActionsMap.clear();
@@ -97,12 +97,18 @@ static Vector<unsigned> serializeActions(const Vector<ContentExtensionRule>& rul
             cssDisplayNoneActionsMap.clear();
             makeHTTPSActionsMap.clear();
             notifyActionsMap.clear();
-        } else
+        }
+
+        if (!std::holds_alternative<IgnorePreviousRulesAction>(actionData))
             ignorePreviousRuleActionsMap.clear();
 
         // Anything with condition is just pushed.
         // We could try to merge conditions but that case is not common in practice.
-        if (!rule.trigger().conditions.isEmpty()) {
+        //
+        // Also, if the rule is an ignore-following-rules rule, we shouldn't try to
+        // combine them so that we maintain the position of the rule when we process
+        // them later.
+        if (!rule.trigger().conditions.isEmpty() || std::holds_alternative<IgnoreFollowingRulesAction>(actionData)) {
             actionLocations.append(actions.size());
 
             actions.append(actionData.index());
@@ -152,6 +158,9 @@ static Vector<unsigned> serializeActions(const Vector<ContentExtensionRule>& rul
             return std::numeric_limits<ActionLocation>::max();
         }, [&] (const IgnorePreviousRulesAction&) {
             return findOrMakeActionLocation(ignorePreviousRuleActionsMap);
+        }, [&] (const IgnoreFollowingRulesAction&) {
+            ASSERT_NOT_REACHED();
+            return static_cast<ActionLocation>(0);
         }, [&] (const BlockLoadAction&) {
             return findOrMakeActionLocation(blockLoadActionsMap);
         }, [&] (const BlockCookiesAction&) {

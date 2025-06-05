@@ -64,6 +64,7 @@ struct BlockCookiesAction : public ActionWithoutMetadata<BlockCookiesAction> { }
 struct CSSDisplayNoneSelectorAction : public ActionWithStringMetadata<CSSDisplayNoneSelectorAction> { };
 struct NotifyAction : public ActionWithStringMetadata<NotifyAction> { };
 struct IgnorePreviousRulesAction : public ActionWithoutMetadata<IgnorePreviousRulesAction> { };
+struct IgnoreFollowingRulesAction : public ActionWithoutMetadata<IgnoreFollowingRulesAction> { };
 struct MakeHTTPSAction : public ActionWithoutMetadata<MakeHTTPSAction> { };
 
 struct WEBCORE_EXPORT ModifyHeadersAction {
@@ -238,6 +239,7 @@ using ActionData = Variant<
     CSSDisplayNoneSelectorAction,
     NotifyAction,
     IgnorePreviousRulesAction,
+    IgnoreFollowingRulesAction,
     MakeHTTPSAction,
     ModifyHeadersAction,
     RedirectAction
