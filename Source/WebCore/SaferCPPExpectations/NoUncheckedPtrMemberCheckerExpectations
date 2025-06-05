@@ -55,7 +55,6 @@ platform/mac/WebPlaybackControlsManager.h
 platform/mock/DeviceOrientationClientMock.h
 rendering/BackgroundPainter.h
 rendering/GlyphDisplayListCache.cpp
-rendering/GridMasonryLayout.h
 rendering/GridTrackSizingAlgorithm.h
 rendering/ImageQualityController.h
 rendering/InlineBoxPainter.h

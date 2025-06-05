@@ -610,7 +610,6 @@ rendering/CounterNode.cpp
 rendering/EllipsisBoxPainter.cpp
 rendering/FixedTableLayout.cpp
 rendering/FloatingObjects.cpp
-rendering/GridMasonryLayout.cpp
 rendering/GridTrackSizingAlgorithm.cpp
 rendering/HitTestResult.cpp
 rendering/ImageQualityController.cpp

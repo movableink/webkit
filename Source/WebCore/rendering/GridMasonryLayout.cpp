@@ -39,12 +39,12 @@ void GridMasonryLayout::initializeMasonry(unsigned gridAxisTracks, GridTrackSizi
 {
     // Reset global variables as they may contain state from previous runs of Masonry.
     m_masonryAxisDirection = masonryAxisDirection;
-    m_masonryAxisGridGap = m_renderGrid.gridGap(m_masonryAxisDirection);
+    m_masonryAxisGridGap = m_renderGrid->gridGap(m_masonryAxisDirection);
     m_gridAxisTracksCount = gridAxisTracks;
     m_gridContentSize = 0;
 
-    m_renderGrid.currentGrid().setupGridForMasonryLayout();
-    m_renderGrid.populateExplicitGridAndOrderIterator();
+    m_renderGrid->currentGrid().setupGridForMasonryLayout();
+    m_renderGrid->populateExplicitGridAndOrderIterator();
 
     resizeAndResetRunningPositions();
 }
@@ -53,8 +53,8 @@ void GridMasonryLayout::performMasonryPlacement(const GridTrackSizingAlgorithm& 
 {
     initializeMasonry(gridAxisTracks, masonryAxisDirection);
 
-    m_renderGrid.populateGridPositionsForDirection(algorithm, GridTrackSizingDirection::ForColumns);
-    m_renderGrid.populateGridPositionsForDirection(algorithm, GridTrackSizingDirection::ForRows);
+    m_renderGrid->populateGridPositionsForDirection(algorithm, GridTrackSizingDirection::ForColumns);
+    m_renderGrid->populateGridPositionsForDirection(algorithm, GridTrackSizingDirection::ForRows);
 
     // 2.3 Masonry Layout Algorithm
     // https://drafts.csswg.org/css-grid-3/#masonry-layout-algorithm
@@ -75,7 +75,7 @@ void GridMasonryLayout::placeMasonryItems(const GridTrackSizingAlgorithm& algori
 {
     ASSERT(m_gridAxisTracksCount);
 
-    auto& grid = m_renderGrid.currentGrid();
+    auto& grid = m_renderGrid->currentGrid();
     for (CheckedPtr gridItem = grid.orderIterator().first(); gridItem; gridItem = grid.orderIterator().next()) {
         if (grid.orderIterator().shouldSkipChild(*gridItem))
             continue;
@@ -87,9 +87,9 @@ void GridMasonryLayout::placeMasonryItems(const GridTrackSizingAlgorithm& algori
 
 GridArea GridMasonryLayout::gridAreaForDefiniteGridAxisItem(const RenderBox& gridItem) const
 {
-    auto itemSpan = m_renderGrid.currentGrid().gridItemSpan(gridItem, gridAxisDirection());
+    auto itemSpan = m_renderGrid->currentGrid().gridItemSpan(gridItem, gridAxisDirection());
     ASSERT(!itemSpan.isIndefinite());
-    itemSpan.translate(m_renderGrid.currentGrid().explicitGridStart(gridAxisDirection()));
+    itemSpan.translate(m_renderGrid->currentGrid().explicitGridStart(gridAxisDirection()));
     return masonryGridAreaFromGridAxisSpan(itemSpan);
 }
 
@@ -128,9 +128,9 @@ void GridMasonryLayout::insertIntoGridAndLayoutItem(const GridTrackSizingAlgorit
         if (!(gridItem.style().logicalWidth().isAuto() || gridItem.style().logicalWidth().isPercent()))
             return false;
 
-        ASSERT(m_renderGrid.isMasonry(GridTrackSizingDirection::ForColumns));
+        ASSERT(m_renderGrid->isMasonry(GridTrackSizingDirection::ForColumns));
 
-        if (gridItem.style().writingMode().isOrthogonal(m_renderGrid.style().writingMode()))
+        if (gridItem.style().writingMode().isOrthogonal(m_renderGrid->style().writingMode()))
             return false;
 
         if (auto* renderGrid = dynamicDowncast<RenderGrid>(gridItem); renderGrid && renderGrid->isSubgridRows())
@@ -142,7 +142,7 @@ void GridMasonryLayout::insertIntoGridAndLayoutItem(const GridTrackSizingAlgorit
     if (shouldOverrideLogicalWidth(gridItem, layoutPhase))
         gridItem.setOverridingBorderBoxLogicalWidth(calculateMasonryIntrinsicLogicalWidth(gridItem, layoutPhase));
 
-    m_renderGrid.currentGrid().insert(gridItem, area);
+    m_renderGrid->currentGrid().insert(gridItem, area);
     setItemGridAxisContainingBlockToGridArea(algorithm, gridItem);
     gridItem.layoutIfNeeded();
     updateRunningPositions(gridItem, area);
