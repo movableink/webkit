@@ -404,7 +404,7 @@ Vector<AXIsolatedTree::NodeChange> AXIsolatedTree::resolveAppends()
         if (m_replacingTree) {
             ++counter;
             if (MonotonicTime::now() - lastFeedbackTime > CreationFeedbackInterval) {
-                m_replacingTree->reportLoadingProgress(counter / m_unresolvedPendingAppends.size());
+                m_replacingTree->reportLoadingProgress(counter / unresolvedPendingAppends.size());
                 lastFeedbackTime = MonotonicTime::now();
             }
         }
