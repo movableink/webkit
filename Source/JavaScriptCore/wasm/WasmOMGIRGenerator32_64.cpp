@@ -5608,8 +5608,7 @@ auto OMGIRGenerator::emitInlineDirectCall(FunctionCodeIndex calleeFunctionIndex,
     std::optional<bool> inlineeHasExceptionHandlers;
     {
         Locker locker { m_calleeGroup.m_lock };
-        auto& inlineCallee = m_calleeGroup.wasmEntrypointCalleeFromFunctionIndexSpace(locker, m_calleeGroup.toSpaceIndex(calleeFunctionIndex));
-        inlineeHasExceptionHandlers = inlineCallee.hasExceptionHandlers();
+        inlineeHasExceptionHandlers = m_calleeGroup.wasmEntrypointCalleeFromFunctionIndexSpace(locker, m_calleeGroup.toSpaceIndex(calleeFunctionIndex))->hasExceptionHandlers();
     }
     m_protectedInlineeGenerators.append(makeUnique<OMGIRGenerator>(m_context, *this, *m_inlineRoot, m_calleeGroup, calleeFunctionIndex, inlineeHasExceptionHandlers, continuation, WTFMove(getArgs)));
     auto& irGenerator = *m_protectedInlineeGenerators.last();

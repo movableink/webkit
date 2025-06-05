@@ -100,7 +100,7 @@ static inline bool shouldJIT(Wasm::IPIntCallee* callee)
 
 enum class OSRFor { Call, Loop };
 
-static inline Wasm::JITCallee* jitCompileAndSetHeuristics(Wasm::IPIntCallee* callee, JSWebAssemblyInstance* instance, OSRFor osrFor)
+static inline RefPtr<Wasm::JITCallee> jitCompileAndSetHeuristics(Wasm::IPIntCallee* callee, JSWebAssemblyInstance* instance, OSRFor osrFor)
 {
     Wasm::IPIntTierUpCounter& tierUpCounter = callee->tierUpCounter();
     if (!tierUpCounter.checkIfOptimizationThresholdReached()) {
@@ -112,14 +112,14 @@ static inline Wasm::JITCallee* jitCompileAndSetHeuristics(Wasm::IPIntCallee* cal
     Wasm::CalleeGroup& calleeGroup = *instance->calleeGroup();
     ASSERT(instance->memoryMode() == memoryMode);
     ASSERT(memoryMode == calleeGroup.mode());
-    auto getReplacement = [&] () -> Wasm::JITCallee* {
+    auto getReplacement = [&] () -> RefPtr<Wasm::JITCallee> {
         Locker locker { calleeGroup.m_lock };
         if (osrFor == OSRFor::Call)
             return calleeGroup.replacement(locker, callee->index());
         return calleeGroup.tryGetBBQCalleeForLoopOSR(locker, instance->vm(), callee->functionIndex());
     };
 
-    if (auto* replacement = getReplacement()) {
+    if (RefPtr replacement = getReplacement()) {
         dataLogLnIf(Options::verboseOSR(), "    Code was already compiled.");
         // FIXME: This should probably be some optimizeNow() for calls or checkIfOptimizationThresholdReached() should have a different threshold for calls.
         tierUpCounter.optimizeSoon();
@@ -157,7 +157,7 @@ static inline Wasm::JITCallee* jitCompileAndSetHeuristics(Wasm::IPIntCallee* cal
     return getReplacement();
 }
 
-static inline Expected<Wasm::JITCallee*, Wasm::Plan::Error> jitCompileSIMDFunction(Wasm::IPIntCallee* callee, JSWebAssemblyInstance* instance)
+static inline Expected<RefPtr<Wasm::JITCallee>, Wasm::Plan::Error> jitCompileSIMDFunction(Wasm::IPIntCallee* callee, JSWebAssemblyInstance* instance)
 {
     Wasm::IPIntTierUpCounter& tierUpCounter = callee->tierUpCounter();
 
@@ -165,7 +165,7 @@ static inline Expected<Wasm::JITCallee*, Wasm::Plan::Error> jitCompileSIMDFuncti
     Wasm::CalleeGroup& calleeGroup = *instance->calleeGroup();
     {
         Locker locker { calleeGroup.m_lock };
-        if (auto* replacement = calleeGroup.replacement(locker, callee->index()))  {
+        if (RefPtr replacement = calleeGroup.replacement(locker, callee->index()))  {
             dataLogLnIf(Options::verboseOSR(), "\tSIMD code was already compiled.");
             return replacement;
         }
@@ -188,7 +188,7 @@ static inline Expected<Wasm::JITCallee*, Wasm::Plan::Error> jitCompileSIMDFuncti
             locker.unlockEarly();
             {
                 Locker locker { calleeGroup.m_lock };
-                auto* replacement = calleeGroup.replacement(locker, callee->index());
+                RefPtr replacement = calleeGroup.replacement(locker, callee->index());
                 RELEASE_ASSERT(replacement);
                 return replacement;
             }
@@ -210,7 +210,7 @@ static inline Expected<Wasm::JITCallee*, Wasm::Plan::Error> jitCompileSIMDFuncti
     }
 
     Locker locker { calleeGroup.m_lock };
-    auto* replacement = calleeGroup.replacement(locker, callee->index());
+    RefPtr replacement = calleeGroup.replacement(locker, callee->index());
     RELEASE_ASSERT(replacement);
     return replacement;
 }
@@ -252,7 +252,7 @@ WASM_IPINT_EXTERN_CPP_DECL(prologue_osr, CallFrame* callFrame)
 
     dataLogLnIf(Options::verboseOSR(), *callee, ": Entered prologue_osr with tierUpCounter = ", callee->tierUpCounter());
 
-    if (auto* replacement = jitCompileAndSetHeuristics(callee, instance, OSRFor::Call))
+    if (RefPtr replacement = jitCompileAndSetHeuristics(callee, instance, OSRFor::Call))
         WASM_RETURN_TWO(replacement->entrypoint().taggedPtr(), nullptr);
     WASM_RETURN_TWO(nullptr, nullptr);
 }
@@ -279,10 +279,11 @@ WASM_IPINT_EXTERN_CPP_DECL(loop_osr, CallFrame* callFrame, uint8_t* pc, IPIntLoc
 
     if (!Options::useBBQJIT())
         WASM_RETURN_TWO(nullptr, nullptr);
-    auto* bbqCallee = static_cast<Wasm::BBQCallee*>(jitCompileAndSetHeuristics(callee, instance, OSRFor::Loop));
-    if (!bbqCallee)
+    RefPtr compiledCallee = jitCompileAndSetHeuristics(callee, instance, OSRFor::Loop);
+    if (!compiledCallee)
         WASM_RETURN_TWO(nullptr, nullptr);
 
+    auto* bbqCallee = static_cast<Wasm::BBQCallee*>(compiledCallee.get());
     ASSERT(bbqCallee->compilationMode() == Wasm::CompilationMode::BBQMode);
     size_t osrEntryScratchBufferSize = bbqCallee->osrEntryScratchBufferSize();
     RELEASE_ASSERT(osrEntryScratchBufferSize >= callee->numLocals() + osrEntryData.numberOfStackValues + osrEntryData.tryDepth);
@@ -906,7 +907,6 @@ static inline UGPRPair resolveWasmCall(JSWebAssemblyInstance* instance, Wasm::Fu
     Register& calleeReturn = calleeAndWasmInstanceReturn[0];
     Register& wasmInstanceReturn = calleeAndWasmInstanceReturn[1];
     CodePtr<WasmEntryPtrTag> codePtr;
-
     if (functionIndex < importFunctionCount) {
         auto* functionInfo = instance->importFunctionInfo(functionIndex);
         codePtr = functionInfo->importFunctionStub;
@@ -919,8 +919,8 @@ static inline UGPRPair resolveWasmCall(JSWebAssemblyInstance* instance, Wasm::Fu
     } else {
         // Target is a wasm function within the same instance
         codePtr = *instance->calleeGroup()->entrypointLoadLocationFromFunctionIndexSpace(functionIndex);
-        calleeReturn = CalleeBits::encodeNativeCallee(
-            instance->calleeGroup()->wasmCalleeFromFunctionIndexSpace(functionIndex));
+        auto callee = instance->calleeGroup()->wasmCalleeFromFunctionIndexSpace(functionIndex);
+        calleeReturn = CalleeBits::encodeNativeCallee(callee.get());
         wasmInstanceReturn = instance;
     }
 
@@ -956,9 +956,10 @@ WASM_IPINT_EXTERN_CPP_DECL(prepare_call_indirect, CallFrame* callFrame, Wasm::Fu
     Register* calleeReturn = std::bit_cast<Register*>(functionIndex);
     if (function.m_function.boxedWasmCalleeLoadLocation)
         *calleeReturn = function.m_function.boxedWasmCalleeLoadLocation->encodedBits();
-    else
-        *calleeReturn = CalleeBits::encodeNativeCallee(
-            function.m_instance->calleeGroup()->wasmCalleeFromFunctionIndexSpace(*functionIndex));
+    else {
+        auto callee = function.m_instance->calleeGroup()->wasmCalleeFromFunctionIndexSpace(*functionIndex);
+        *calleeReturn = CalleeBits::encodeNativeCallee(callee.get());
+    }
 
     Register& functionInfoSlot = calleeReturn[1];
     if (!function.m_function.targetInstance)

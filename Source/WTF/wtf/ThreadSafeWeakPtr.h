@@ -462,7 +462,6 @@ public:
     bool isStrong() const { return !isWeak(); }
 
     RefPtr<T> get() const { return isWeak() ? m_weak.get() : m_strong; }
-    T* ptr() const { ASSERT(isStrong()); return m_strong.get(); }
 
     // NB. This function is not atomic so it's not safe to call get() while this transition is happening.
     RefPtr<T> convertToWeak()
@@ -482,7 +481,8 @@ public:
         m_weak.setTag(Status::Strong);
         m_weak = nullptr;
         m_strong = WTFMove(strong);
-        return ptr();
+        ASSERT(isStrong());
+        return m_strong.get();
     }
 
     ThreadSafeWeakOrStrongPtr& operator=(const ThreadSafeWeakOrStrongPtr& other)
