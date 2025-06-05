@@ -56,6 +56,13 @@ namespace WebCore::Style {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(AnchorPositionedState);
 
+static const ScopedName& implicitAnchorElementName()
+{
+    // User specified anchor names start with "--".
+    static NeverDestroyed<ScopedName> name { ScopedName { "implicit-anchor-element"_s } };
+    return name;
+}
+
 static BoxAxis mapInsetPropertyToPhysicalAxis(CSSPropertyID id, const WritingMode writingMode)
 {
     switch (id) {
@@ -458,7 +465,7 @@ static LayoutUnit computeInsetValue(CSSPropertyID insetPropertyID, CheckedRef<co
     return removeBorderForInsetValue(insetValue, insetPropertySide, *containingBlock);
 }
 
-RefPtr<Element> AnchorPositionEvaluator::findAnchorForAnchorFunctionAndAttemptResolution(BuilderState& builderState, std::optional<ScopedName> anchorName)
+RefPtr<Element> AnchorPositionEvaluator::findAnchorForAnchorFunctionAndAttemptResolution(BuilderState& builderState, std::optional<ScopedName> anchorNameArgument)
 {
     auto& style = builderState.style();
     style.setUsesAnchorFunctions();
@@ -489,22 +496,23 @@ RefPtr<Element> AnchorPositionEvaluator::findAnchorForAnchorFunctionAndAttemptRe
         return WTF::makeUnique<AnchorPositionedState>();
     }).iterator->value.get();
 
-    if (!anchorName)
-        anchorName = style.positionAnchor();
+    auto scopedAnchorName = [&] {
+        if (anchorNameArgument)
+            return *anchorNameArgument;
+        if (style.positionAnchor())
+            return *style.positionAnchor();
+        return implicitAnchorElementName();
+    };
 
-    std::optional<ResolvedScopedName> resolvedAnchorName;
+    auto resolvedAnchorName = ResolvedScopedName::createFromScopedName(elementOrHost, scopedAnchorName());
 
-    if (anchorName) {
-        resolvedAnchorName = ResolvedScopedName::createFromScopedName(elementOrHost, *anchorName);
+    // Collect anchor names that this element refers to in anchor() or anchor-size()
+    bool isNewAnchorName = anchorPositionedState.anchorNames.add(resolvedAnchorName).isNewEntry;
 
-        // Collect anchor names that this element refers to in anchor() or anchor-size()
-        bool isNewAnchorName = anchorPositionedState.anchorNames.add(*resolvedAnchorName).isNewEntry;
-
-        // If anchor resolution has progressed past FindAnchors, and we pick up a new anchor name, set the
-        // stage back to Initial. This restarts the resolution process to resolve newly added names.
-        if (isNewAnchorName)
-            anchorPositionedState.stage = AnchorPositionResolutionStage::FindAnchors;
-    }
+    // If anchor resolution has progressed past FindAnchors, and we pick up a new anchor name, set the
+    // stage back to Initial. This restarts the resolution process to resolve newly added names.
+    if (isNewAnchorName)
+        anchorPositionedState.stage = AnchorPositionResolutionStage::FindAnchors;
 
     // An anchor() instance will be ready to be resolved when all referenced anchor-names
     // have been mapped to an actual anchor element in the DOM tree. At that point, we
@@ -525,7 +533,7 @@ RefPtr<Element> AnchorPositionEvaluator::findAnchorForAnchorFunctionAndAttemptRe
 
     // Anchor value may now be resolved using layout information
 
-    RefPtr anchorElement = resolvedAnchorName ? anchorPositionedState.anchorElements.get(*resolvedAnchorName).get() : nullptr;
+    RefPtr anchorElement = anchorPositionedState.anchorElements.get(resolvedAnchorName).get();
     if (!anchorElement) {
         // See: https://drafts.csswg.org/css-anchor-position-1/#valid-anchor-function
         anchorPositionedState.stage = AnchorPositionResolutionStage::Resolved;
@@ -853,6 +861,18 @@ static bool isAcceptableAnchorElement(const RenderBoxModelObject& anchorRenderer
 
 static std::optional<Ref<Element>> findLastAcceptableAnchorWithName(ResolvedScopedName anchorName, Ref<const Element> anchorPositionedElement, const AnchorsForAnchorName& anchorsForAnchorName)
 {
+    if (anchorName.name() == implicitAnchorElementName().name) {
+        // "The implicit anchor element of a pseudo-element is its originating element, unless otherwise specified."
+        // https://drafts.csswg.org/css-anchor-position-1/#implicit
+        if (auto pseudoElement = dynamicDowncast<PseudoElement>(anchorPositionedElement)) {
+            Ref implicitAnchorElement = *pseudoElement->hostElement();
+            CheckedPtr anchor = dynamicDowncast<RenderBoxModelObject>(implicitAnchorElement->renderer());
+            if (anchor && isAcceptableAnchorElement(*anchor, *pseudoElement))
+                return implicitAnchorElement;
+        }
+        return { };
+    }
+
     const auto& anchors = anchorsForAnchorName.get(anchorName);
 
     for (auto& anchor : makeReversedRange(anchors)) {
@@ -1031,9 +1051,6 @@ auto AnchorPositionEvaluator::makeAnchorPositionedForAnchorMap(AnchorPositionedT
 
 bool AnchorPositionEvaluator::isLayoutTimeAnchorPositioned(const RenderStyle& style)
 {
-    if (!style.positionAnchor())
-        return false;
-
     if (style.positionArea())
         return true;
 
@@ -1212,9 +1229,19 @@ bool AnchorPositionEvaluator::isAnchor(const RenderStyle& style)
     if (!style.anchorNames().isEmpty())
         return true;
 
-    // FIXME: Implicit anchors.
-    return false;
-}
+    // "The implicit anchor element of a pseudo-element is its originating element, unless otherwise specified."
+    // https://drafts.csswg.org/css-anchor-position-1/#implicit
+    auto isImplicitAnchorForPseudoElement = [&](PseudoId pseudoId) {
+        const RenderStyle* pseudoElementStyle = style.getCachedPseudoStyle({ pseudoId });
+        if (!pseudoElementStyle)
+            return false;
+        // If we have an explicit anchor name then there is no need for an implicit anchor.
+        if (pseudoElementStyle->positionAnchor())
+            return false;
 
+        return pseudoElementStyle->usesAnchorFunctions() || isLayoutTimeAnchorPositioned(*pseudoElementStyle);
+    };
+    return isImplicitAnchorForPseudoElement(PseudoId::Before) || isImplicitAnchorForPseudoElement(PseudoId::After);
+}
 
 } // namespace WebCore::Style
