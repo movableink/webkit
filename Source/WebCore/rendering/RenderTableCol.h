@@ -88,6 +88,7 @@ private:
     void paint(PaintInfo&, const LayoutPoint&) override { }
 
     RenderTable* table() const;
+    CheckedPtr<RenderTable> checkedTable() const;
 
     unsigned m_span { 1 };
 };
