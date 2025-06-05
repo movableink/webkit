@@ -410,7 +410,9 @@ void RenderImage::repaintOrMarkForLayout(ImageSizeChangeType imageSizeChange, co
         if (rect) {
             // The image changed rect is in source image coordinates (pre-zooming),
             // so map from the bounds of the image to the contentsBox.
-            repaintRect.intersect(enclosingIntRect(mapRect(*rect, FloatRect(FloatPoint(), imageResource().imageSize(1.0f)), repaintRect)));
+            RefPtr<Image> srcImg = imageResource().image(flooredIntSize(contentBoxSize()));
+            FloatSize sourceSize = srcImg->size() / style().usedZoom();
+            repaintRect.intersect(enclosingIntRect(mapRect(*rect, FloatRect(FloatPoint(), sourceSize), repaintRect)));
         }
         repaintRectangle(repaintRect);
     }
