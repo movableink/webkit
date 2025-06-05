@@ -150,7 +150,7 @@ RetainPtr<NSMenu> menuForTelephoneNumber(const String& telephoneNumber, NSView *
     auto delegate = adoptNS([[WKEmptyPresenterHighlightDelegate alloc] initWithRect:rect]);
     auto context = WebCore::createRVPresentingContextWithRetainedDelegate(NSZeroPoint, webView, delegate.get());
     NSArray *proposedMenuItems = [presenter menuItemsForItem:item.get() documentContext:nil presentingContext:context.get() options:nil];
-    
+
     [menu setItemArray:proposedMenuItems];
 
     return menu;
@@ -160,10 +160,17 @@ RetainPtr<NSMenu> menuForTelephoneNumber(const String& telephoneNumber, NSView *
 
 #if ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)
 
-static NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useAlternateImage)
+enum class SymbolType : bool { Public, Private };
+
+struct SymbolNameWithType {
+    SymbolType type;
+    String name;
+};
+
+static std::optional<SymbolNameWithType> symbolNameWithTypeForAction(const WebCore::ContextMenuAction action, bool useAlternateImage)
 {
     if (![NSMenuItem respondsToSelector:@selector(_systemImageNameForAction:)])
-        return nil;
+        return { };
 
     switch (action) {
     case WebCore::ContextMenuItemBaseApplicationTag:
@@ -201,154 +208,168 @@ static NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bo
     case WebCore::ContextMenuItemTagTextReplacement:
     case WebCore::ContextMenuItemTagTransformationsMenu:
     case WebCore::ContextMenuItemTagWritingDirectionMenu:
-        return nil;
+        return { };
     case WebCore::ContextMenuItemTagWritingTools:
-        return @"apple.writing.tools";
+        return { { SymbolType::Public, "apple.writing.tools"_s } };
     case WebCore::ContextMenuItemTagProofread:
-        return @"text.magnifyingglass";
+        return { { SymbolType::Public, "text.magnifyingglass"_s } };
     case WebCore::ContextMenuItemTagRewrite:
-        return @"pencil.arrow.trianglehead.clockwise";
+        return { { SymbolType::Private, "pencil.arrow.trianglehead.clockwise"_s } };
     case WebCore::ContextMenuItemTagSummarize:
-        return @"text.line.3.summary";
+        return { { SymbolType::Private, "text.line.3.summary"_s } };
     case WebCore::ContextMenuItemPDFAutoSize:
-        return @"sparkle.magnifyingglass";
+        return { { SymbolType::Public, "sparkle.magnifyingglass"_s } };
     case WebCore::ContextMenuItemPDFActualSize:
-        return @"text.magnifyingglass";
+        return { { SymbolType::Public, "text.magnifyingglass"_s } };
     case WebCore::ContextMenuItemPDFNextPage:
-        return @"chevron.down";
+        return { { SymbolType::Public, "chevron.down"_s } };
     case WebCore::ContextMenuItemPDFPreviousPage:
-        return @"chevron.up";
+        return { { SymbolType::Public, "chevron.up"_s } };
     case WebCore::ContextMenuItemPDFZoomIn:
-        return @"plus.magnifyingglass";
+        return { { SymbolType::Public, "plus.magnifyingglass"_s } };
     case WebCore::ContextMenuItemPDFZoomOut:
-        return @"minus.magnifyingglass";
+        return { { SymbolType::Public, "minus.magnifyingglass"_s } };
     case WebCore::ContextMenuItemTagAddHighlightToCurrentQuickNote:
     case WebCore::ContextMenuItemTagAddHighlightToNewQuickNote:
-        return @"quicknote";
+        return { { SymbolType::Public, "quicknote"_s } };
     case WebCore::ContextMenuItemTagBold:
-        return @"bold";
+        return { { SymbolType::Public, "bold"_s } };
     case WebCore::ContextMenuItemTagCapitalize:
-        return @"textformat.characters";
+        return { { SymbolType::Public, "textformat.characters"_s } };
     case WebCore::ContextMenuItemTagChangeBack:
-        return @"arrow.uturn.backward.circle";
+        return { { SymbolType::Public, "arrow.uturn.backward.circle"_s } };
     case WebCore::ContextMenuItemTagCheckSpelling:
-        return @"text.page.badge.magnifyingglass";
+        return { { SymbolType::Public, "text.page.badge.magnifyingglass"_s } };
     case WebCore::ContextMenuItemTagCopy:
     case WebCore::ContextMenuItemTagCopyImageToClipboard:
     case WebCore::ContextMenuItemTagCopyLinkToClipboard:
     case WebCore::ContextMenuItemTagCopyMediaLinkToClipboard:
-        return [NSMenuItem _systemImageNameForAction:@selector(copy:)];
+        return { { SymbolType::Public, [NSMenuItem _systemImageNameForAction:@selector(copy:)] } };
     case WebCore::ContextMenuItemTagCut:
-        return [NSMenuItem _systemImageNameForAction:@selector(cut:)];
+        return { { SymbolType::Public, [NSMenuItem _systemImageNameForAction:@selector(cut:)] } };
     case WebCore::ContextMenuItemTagDefaultDirection:
     case WebCore::ContextMenuItemTagTextDirectionDefault:
-        return @"arrow.left.arrow.right";
+        return { { SymbolType::Public, "arrow.left.arrow.right"_s } };
     case WebCore::ContextMenuItemTagDownloadImageToDisk:
     case WebCore::ContextMenuItemTagDownloadLinkToDisk:
     case WebCore::ContextMenuItemTagDownloadMediaToDisk:
-        return @"square.and.arrow.down";
+        return { { SymbolType::Public, "square.and.arrow.down"_s } };
     case WebCore::ContextMenuItemTagEnterVideoFullscreen:
-        return @"arrow.up.left.and.arrow.down.right";
+        return { { SymbolType::Public, "arrow.up.left.and.arrow.down.right"_s } };
     case WebCore::ContextMenuItemTagGoBack:
-        return @"chevron.backward";
+        return { { SymbolType::Public, "chevron.backward"_s } };
     case WebCore::ContextMenuItemTagGoForward:
-        return @"chevron.forward";
+        return { { SymbolType::Public, "chevron.forward"_s } };
     case WebCore::ContextMenuItemTagIgnoreGrammar:
     case WebCore::ContextMenuItemTagIgnoreSpelling:
-        return @"checkmark.circle";
+        return { { SymbolType::Public, "checkmark.circle"_s } };
     case WebCore::ContextMenuItemTagInspectElement:
-        return @"gear";
+        return { { SymbolType::Public, "gear"_s } };
     case WebCore::ContextMenuItemTagItalic:
-        return @"italic";
+        return { { SymbolType::Public, "italic"_s } };
     case WebCore::ContextMenuItemTagLearnSpelling:
-        return @"text.book.closed";
+        return { { SymbolType::Public, "text.book.closed"_s } };
     case WebCore::ContextMenuItemTagLeftToRight:
-        return [NSMenuItem _systemImageNameForAction:@selector(makeTextWritingDirectionLeftToRight:)];
+        return { { SymbolType::Public, [NSMenuItem _systemImageNameForAction:@selector(makeTextWritingDirectionLeftToRight:)] } };
     case WebCore::ContextMenuItemTagLookUpImage:
-        return @"info.circle.badge.sparkles";
+        return { { SymbolType::Private, "info.circle.badge.sparkles"_s } };
     case WebCore::ContextMenuItemTagLookUpInDictionary:
-        return @"character.book.closed";
+        return { { SymbolType::Public, "character.book.closed"_s } };
     case WebCore::ContextMenuItemTagMakeLowerCase:
-        return @"characters.lowercase";
+        return { { SymbolType::Public, "characters.lowercase"_s } };
     case WebCore::ContextMenuItemTagMakeUpperCase:
-        return @"characters.uppercase";
+        return { { SymbolType::Public, "characters.uppercase"_s } };
     case WebCore::ContextMenuItemTagMediaMute:
-        return @"speaker.slash";
-    case WebCore::ContextMenuItemTagMediaPlayPause:
-        return useAlternateImage ? @"pause.fill" : @"play.fill";
+        return { { SymbolType::Public, "speaker.slash"_s } };
+    case WebCore::ContextMenuItemTagMediaPlayPause: {
+        const auto symbolName = useAlternateImage ? "pause.fill"_s : "play.fill"_s;
+        return { { SymbolType::Public, symbolName } };
+    }
     case WebCore::ContextMenuItemTagOpenFrameInNewWindow:
     case WebCore::ContextMenuItemTagOpenImageInNewWindow:
     case WebCore::ContextMenuItemTagOpenLinkInNewWindow:
     case WebCore::ContextMenuItemTagOpenMediaInNewWindow:
-        return @"macwindow.badge.plus";
+        return { { SymbolType::Public, "macwindow.badge.plus"_s } };
     case WebCore::ContextMenuItemTagOpenLink:
-        return @"safari";
+        return { { SymbolType::Public, "safari"_s } };
     case WebCore::ContextMenuItemTagOpenWithDefaultApplication:
-        return @"arrow.up.forward.app";
+        return { { SymbolType::Public, "arrow.up.forward.app"_s } };
     case WebCore::ContextMenuItemTagPaste:
-        return [NSMenuItem _systemImageNameForAction:@selector(paste:)];
+        return { { SymbolType::Public, [NSMenuItem _systemImageNameForAction:@selector(paste:)] } };
     case WebCore::ContextMenuItemTagPauseAllAnimations:
-        return @"rectangle.stack.badge.minus";
+        return { { SymbolType::Public, "rectangle.stack.badge.minus"_s } };
     case WebCore::ContextMenuItemTagPauseAnimation:
-        return @"pause.rectangle";
+        return { { SymbolType::Public, "pause.rectangle"_s } };
     case WebCore::ContextMenuItemTagPlayAllAnimations:
-        return @"rectangle.stack.badge.play.fill";
+        return { { SymbolType::Public, "rectangle.stack.badge.play.fill"_s } };
     case WebCore::ContextMenuItemTagPlayAnimation:
-        return @"play.rectangle";
+        return { { SymbolType::Public, "play.rectangle"_s } };
     case WebCore::ContextMenuItemTagReload:
-        return @"arrow.clockwise";
+        return { { SymbolType::Public, "arrow.clockwise"_s } };
     case WebCore::ContextMenuItemTagRightToLeft:
-        return [NSMenuItem _systemImageNameForAction:@selector(makeTextWritingDirectionRightToLeft:)];
+        return { { SymbolType::Public, [NSMenuItem _systemImageNameForAction:@selector(makeTextWritingDirectionRightToLeft:)] } };
     case WebCore::ContextMenuItemTagSearchWeb:
-        return @"magnifyingglass";
+        return { { SymbolType::Public, "magnifyingglass"_s } };
     case WebCore::ContextMenuItemTagShareMenu:
-        return @"square.and.arrow.up";
+        return { { SymbolType::Public, "square.and.arrow.up"_s } };
     case WebCore::ContextMenuItemTagShowColors:
-        return @"paintpalette";
+        return { { SymbolType::Public, "paintpalette"_s } };
     case WebCore::ContextMenuItemTagShowFonts:
-        return @"text.and.command.macwindow";
+        return { { SymbolType::Public, "text.and.command.macwindow"_s } };
     case WebCore::ContextMenuItemTagShowMediaStats:
-        return @"info.circle";
+        return { { SymbolType::Public, "info.circle"_s } };
     case WebCore::ContextMenuItemTagShowSpellingPanel:
-    case WebCore::ContextMenuItemTagShowSubstitutions:
-        return useAlternateImage ? @"eye.slash" : @"text.and.command.macwindow";
+    case WebCore::ContextMenuItemTagShowSubstitutions: {
+        const auto symbolName = useAlternateImage ? "eye.slash"_s : "text.and.command.macwindow"_s;
+        return { { SymbolType::Public, symbolName } };
+    }
     case WebCore::ContextMenuItemTagStartSpeaking:
-        return @"play.fill";
+        return { { SymbolType::Public, "play.fill"_s } };
     case WebCore::ContextMenuItemTagStop:
     case WebCore::ContextMenuItemTagStopSpeaking:
-        return @"stop.fill";
+        return { { SymbolType::Public, "stop.fill"_s } };
     case WebCore::ContextMenuItemTagTextDirectionLeftToRight:
-        return @"arrow.right";
+        return { { SymbolType::Public, "arrow.right"_s } };
     case WebCore::ContextMenuItemTagTextDirectionRightToLeft:
-        return @"arrow.left";
-    case WebCore::ContextMenuItemTagToggleMediaControls:
-        return useAlternateImage ? @"eye" : @"eye.slash";
+        return { { SymbolType::Public, "arrow.left"_s } };
+    case WebCore::ContextMenuItemTagToggleMediaControls: {
+        const auto symbolName = useAlternateImage ? "eye"_s : "eye.slash"_s;
+        return { { SymbolType::Public, symbolName } };
+    }
     case WebCore::ContextMenuItemTagToggleMediaLoop:
-        return @"arrow.2.squarepath";
-    case WebCore::ContextMenuItemTagToggleVideoEnhancedFullscreen:
-        return useAlternateImage ? @"pip.exit" : @"pip.enter";
-    case WebCore::ContextMenuItemTagToggleVideoFullscreen:
-        return useAlternateImage ? @"arrow.down.right.and.arrow.up.left" : @"arrow.up.backward.and.arrow.down.forward";
-    case WebCore::ContextMenuItemTagToggleVideoViewer:
-        return useAlternateImage ? @"rectangle.slash" : @"rectangle.expand.diagonal";
+        return { { SymbolType::Public, "arrow.2.squarepath"_s } };
+    case WebCore::ContextMenuItemTagToggleVideoEnhancedFullscreen: {
+        const auto symbolName =  useAlternateImage ? "pip.exit"_s : "pip.enter"_s;
+        return { { SymbolType::Public, symbolName } };
+    }
+    case WebCore::ContextMenuItemTagToggleVideoFullscreen: {
+        const auto symbolName =  useAlternateImage ? "arrow.down.right.and.arrow.up.left"_s : "arrow.up.backward.and.arrow.down.forward"_s;
+        return { { SymbolType::Public, symbolName } };
+    }
+    case WebCore::ContextMenuItemTagToggleVideoViewer: {
+        const auto symbolName =  useAlternateImage ? "rectangle.slash"_s : "rectangle.expand.diagonal"_s;
+        return { { SymbolType::Public, symbolName } };
+    }
     case WebCore::ContextMenuItemTagTranslate:
-        return @"translate";
+        return { { SymbolType::Public, "translate"_s } };
     case WebCore::ContextMenuItemTagUnderline:
-        return [NSMenuItem _systemImageNameForAction:@selector(underline:)];
+        return { { SymbolType::Public, [NSMenuItem _systemImageNameForAction:@selector(underline:)] } };
     }
 
-    return nil;
+    return { };
 }
 
 void addImageToMenuItem(NSMenuItem *item, const WebCore::ContextMenuAction action, bool useAlternateImage)
 {
-    RetainPtr symbolName = symbolNameForAction(action, useAlternateImage);
-    auto isPrivate = action == WebCore::ContextMenuItemTagLookUpImage;
+    if (auto symbolNameWithType = symbolNameWithTypeForAction(action, useAlternateImage)) {
+        const auto symbolType = symbolNameWithType.value().type;
+        RetainPtr symbolName = symbolNameWithType.value().name.createNSString();
 
-    if (isPrivate)
-        [item _setActionImage:[NSImage imageWithPrivateSystemSymbolName:symbolName.get() accessibilityDescription:nil]];
-    else
-        [item _setActionImage:[NSImage imageWithSystemSymbolName:symbolName.get() accessibilityDescription:nil]];
+        if (symbolType == SymbolType::Public)
+            [item _setActionImage:[NSImage imageWithSystemSymbolName:symbolName.get() accessibilityDescription:nil]];
+        else
+            [item _setActionImage:[NSImage imageWithPrivateSystemSymbolName:symbolName.get() accessibilityDescription:nil]];
+    }
 }
 
 #endif
