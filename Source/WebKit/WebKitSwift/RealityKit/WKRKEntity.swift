@@ -29,8 +29,7 @@ import Foundation
 import WebKitSwift
 import os
 import simd
-@_spi(RealityKit) @_spi(Private) import RealityFoundation
-@_spi(RealityKit_Webkit) import RealityKit
+@_spi(Private) @_spi(RealityKit) @_spi(RealityKit_Webkit) import RealityKit
 
 private extension Logger {
     static let realityKitEntity = Logger(subsystem: "com.apple.WebKit", category: "RealityKitEntity")
@@ -44,7 +43,6 @@ extension WKRKEntity {
     weak var delegate: WKRKEntityDelegate?
 
     @nonobjc private var animationPlaybackController: AnimationPlaybackController? = nil
-    @nonobjc private var animationFinishedSubscription: Cancellable?
     @nonobjc private var _duration: TimeInterval? = nil
     @nonobjc private var _playbackRate: Float = 1.0
 
@@ -52,34 +50,29 @@ extension WKRKEntity {
 
     class func isLoadFromDataAvailable() -> Bool {
 #if canImport(RealityKit, _version: 377)
-        return true
+        true
 #else
-        return false
+        false
 #endif
     }
 
     @objc(loadFromData:withAttributionTaskID:completionHandler:)
-    class func load(from data: Data, withAttributionTaskID attributionTaskId: String?, completionHandler: @MainActor @Sendable @escaping (WKRKEntity?) -> Void) {
+    class func load(from data: Data, withAttributionTaskID attributionTaskId: String?) async -> WKRKEntity? {
 #if canImport(RealityKit, _version: "403.0.3")
-        Task {
-            do {
-                var loadOptions = Entity.__LoadOptions()
-                if let attributionTaskId {
-                    loadOptions.memoryAttributionID = attributionTaskId
-                }
-                let loadedEntity = try await Entity(from: data, options: loadOptions)
-                let result = WKRKEntity(loadedEntity)
-                await completionHandler(result)
-            } catch {
-                Logger.realityKitEntity.error("Failed to load entity from data")
-                await completionHandler(nil)
+        do {
+            var loadOptions = Entity.__LoadOptions()
+            if let attributionTaskId {
+                loadOptions.memoryAttributionID = attributionTaskId
             }
+            let loadedEntity = try await Entity(from: data, options: loadOptions)
+            return WKRKEntity(loadedEntity)
+        } catch {
+            Logger.realityKitEntity.error("Failed to load entity from data")
+            return nil
         }
 #else
-        Task {
-            await completionHandler(nil)
-        }
-#endif
+        return nil
+#endif // canImport(RealityKit, _version: "403.0.3")
     }
 
     @nonobjc convenience init(_ rkEntity: Entity) {
@@ -91,12 +84,8 @@ extension WKRKEntity {
     }
 
     var name: String {
-        get {
-            entity.name
-        }
-        set {
-            entity.name = newValue
-        }
+        get { entity.name }
+        set { entity.name = newValue }
     }
     
     var interactionPivotPoint: simd_float3 {
@@ -104,18 +93,15 @@ extension WKRKEntity {
     }
 
     var boundingBoxExtents: simd_float3 {
-        guard let boundingBox = self.boundingBox else { return SIMD3<Float>(0, 0, 0) }
-        return boundingBox.extents
+        boundingBox?.extents ?? SIMD3<Float>(0, 0, 0)
     }
 
     var boundingBoxCenter: simd_float3 {
-        guard let boundingBox = self.boundingBox else { return SIMD3<Float>(0, 0, 0) }
-        return boundingBox.center
+        boundingBox?.center ?? SIMD3<Float>(0, 0, 0)
     }
     
     var boundingRadius: Float {
-        guard let boundingBox = self.boundingBox else { return 0.0 }
-        return boundingBox.boundingRadius
+        boundingBox?.boundingRadius ?? 0
     }
 
     @nonobjc private final var boundingBox: BoundingBox? {
@@ -127,7 +113,6 @@ extension WKRKEntity {
             let transform = Transform(matrix: entity.transformMatrix(relativeTo: nil))
             return WKEntityTransform(scale: transform.scale, rotation: transform.rotation, translation: transform.translation)
         }
-
         set {
             var adjustedTransform = Transform(scale: newValue.scale, rotation: newValue.rotation, translation: newValue.translation)
             if let container = entity.parent {
@@ -146,7 +131,6 @@ extension WKRKEntity {
 
             return opacityComponent.opacity
         }
-
         set {
             let clampedValue = max(0, newValue)
             if clampedValue >= 1.0 {
@@ -159,22 +143,21 @@ extension WKRKEntity {
     }
 
     var duration: TimeInterval {
-        guard let _duration else { return 0 }
-        return _duration
+        _duration ?? 0
     }
 
     var loop: Bool = false
 
     var playbackRate: Float {
         get {
-            guard let animationPlaybackController else { return _playbackRate }
-            return animationPlaybackController.speed
+            animationPlaybackController?.speed ?? _playbackRate
         }
-
         set {
             // FIXME (280081): Support negative playback rate
             _playbackRate = max(newValue, 0);
-            guard let animationPlaybackController else { return }
+            guard let animationPlaybackController else {
+                return
+            }
             animationPlaybackController.speed = _playbackRate
             animationPlaybackStateDidUpdate()
         }
@@ -182,12 +165,13 @@ extension WKRKEntity {
 
     var paused: Bool {
         get {
-            guard let animationPlaybackController else { return true }
-            return animationPlaybackController.isPaused
+            animationPlaybackController?.isPaused ?? true
         }
-
         set {
-            guard let animationPlaybackController, animationPlaybackController.isPaused != newValue else { return }
+            guard let animationPlaybackController, animationPlaybackController.isPaused != newValue else {
+                return
+            }
+
             if newValue {
                 animationPlaybackController.pause()
             } else {
@@ -199,12 +183,14 @@ extension WKRKEntity {
 
     var currentTime: TimeInterval {
         get {
-            guard let animationPlaybackController else { return 0 }
-            return animationPlaybackController.time
+            animationPlaybackController?.time ?? 0
         }
 
         set {
-            guard let animationPlaybackController, let duration = _duration else { return }
+            guard let animationPlaybackController, let duration = _duration else {
+                return
+            }
+
             let clampedTime = min(max(newValue, 0), duration)
             animationPlaybackController.time = clampedTime
             animationPlaybackStateDidUpdate()
@@ -224,6 +210,7 @@ extension WKRKEntity {
             Logger.realityKitEntity.error("Cannot play entity animation")
             return
         }
+
         _duration = animationPlaybackController.duration
         animationPlaybackController.speed = _playbackRate
         animationPlaybackStateDidUpdate()
@@ -232,21 +219,36 @@ extension WKRKEntity {
             Logger.realityKitEntity.error("No scene to subscribe for animation events")
             return
         }
-        animationFinishedSubscription = scene.subscribe(to: AnimationEvents.PlaybackCompleted.self, on: entity) { [weak self] event in
-            guard let self,
-                  let playbackController = self.animationPlaybackController,
-                  event.playbackController == playbackController else {
-                Logger.realityKitEntity.error("Cannot schedule the next animation")
-                return
+
+        // This needs to be done within an unstructured async context (Task) because otherwise,
+        // the function will be forced to retain `self` for its lifetime, which will be indefinite
+        // because this async sequence never terminates, leading to a memory leak.
+        //
+        // Using Task avoids this because it allows `self` to be captured weakly, and then in each
+        // iteration of the loop, it is used if it is non-nil.
+        Task { [weak self, entity] in
+            for await event in scene.publisher(for: AnimationEvents.PlaybackCompleted.self, on: entity).values {
+                guard let self else {
+                    break
+                }
+
+                self.onPlaybackCompletedChange(event: event, animation: animation)
             }
-
-            let startsPaused = !self.loop
-            let animationController = self.entity.playAnimation(animation, startsPaused: startsPaused)
-            animationController.speed = self._playbackRate
-
-            self.animationPlaybackController = animationController
-            self.animationPlaybackStateDidUpdate()
         }
+    }
+
+    @nonobjc private final func onPlaybackCompletedChange(event: AnimationEvents.PlaybackCompleted, animation: AnimationResource) {
+        guard let playbackController = animationPlaybackController, event.playbackController == playbackController else {
+            Logger.realityKitEntity.error("Cannot schedule the next animation")
+            return
+        }
+
+        let startsPaused = !loop
+        let animationController = entity.playAnimation(animation, startsPaused: startsPaused)
+        animationController.speed = _playbackRate
+
+        animationPlaybackController = animationController
+        animationPlaybackStateDidUpdate()
     }
 
     private static func resizedImage(_ imageSource: CGImageSource) -> CGImage? {
@@ -323,44 +325,35 @@ extension WKRKEntity {
         entity.components[ImageBasedLightReceiverComponent.self] = .init(imageBasedLight: entity)
     }
 
-    @MainActor
-    func applyIBLData(_ data: Data, attributionHandler: @escaping (REAssetRef) -> Void, withCompletion completion: @MainActor @Sendable @escaping (Bool) -> Void) {
+    @objc(applyIBLData:attributionHandler:withCompletion:)
+    func applyIBLData(_ data: Data, attributionHandler: @MainActor @Sendable @escaping (REAssetRef) -> Void) async -> Bool {
         guard let imageSource = CGImageSourceCreateWithData(data as CFData, nil) else {
             Logger.realityKitEntity.error("Cannot get CGImageSource from IBL image data.")
-            completion(false)
-            return
+            return false
         }
 
         guard let cgImage = Self.resizedImage(imageSource) else {
             Logger.realityKitEntity.error("Cannot get CGImage from CGImageSource.")
-            completion(false)
-            return
+            return false
         }
 
-        Task {
-            do {
-                let textureResource = try await TextureResource(cubeFromEquirectangular: cgImage, options: TextureResource.CreateOptions(semantic: .hdrColor))
-                let environment = try await EnvironmentResource(cube: textureResource, options: .init())
+        do {
+            let textureResource = try await TextureResource(cubeFromEquirectangular: cgImage, options: TextureResource.CreateOptions(semantic: .hdrColor))
+            let environment = try await EnvironmentResource(cube: textureResource, options: .init())
 
-                await MainActor.run {
-                    if let coreEnvironmentResourceAsset = environment.coreIBLAsset?.__as(REAssetRef.self) {
-                        attributionHandler(coreEnvironmentResourceAsset)
-                    }
-
-                    applyIBL(environment)
-                    Logger.realityKitEntity.info("Successfully applied IBL to entity")
-                    completion(true)
-                }
-            } catch {
-                await MainActor.run {
-                    Logger.realityKitEntity.error("Cannot load environment resource from CGImage.")
-                    completion(false)
-                }
+            if let coreEnvironmentResourceAsset = environment.coreIBLAsset?.__as(REAssetRef.self) {
+                attributionHandler(coreEnvironmentResourceAsset)
             }
+
+            applyIBL(environment)
+            Logger.realityKitEntity.info("Successfully applied IBL to entity")
+            return true
+        } catch {
+            Logger.realityKitEntity.error("Cannot load environment resource from CGImage.")
+            return false
         }
     }
 
-    @MainActor
     func applyDefaultIBL() {
 #if canImport(RealityFoundation, _version: 380)
         if let environment = WKRKEntity._defaultEnvironmentResource {

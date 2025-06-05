@@ -43,11 +43,13 @@ typedef struct {
 
 @class WKRKEntity;
 
+NS_SWIFT_UI_ACTOR
 @protocol WKRKEntityDelegate <NSObject>
 @optional
 - (void)entityAnimationPlaybackStateDidUpdate:(WKRKEntity *)entity;
 @end
 
+NS_SWIFT_UI_ACTOR
 @interface WKRKEntity : NSObject
 @property (nonatomic, weak) id <WKRKEntityDelegate> delegate;
 @property (nonatomic, copy) NSString *name;
@@ -69,7 +71,7 @@ typedef struct {
 - (instancetype)initWithCoreEntity:(REEntityRef)coreEntity;
 - (void)setParentCoreEntity:(REEntityRef)parentCoreEntity preservingWorldTransform:(BOOL)preservingWorldTransform;
 - (void)setUpAnimationWithAutoPlay:(BOOL)autoPlay;
-- (void)applyIBLData:(NSData *)data attributionHandler:(void (^)(REAssetRef coreEnvironmentResourceAsset))attributionHandler withCompletion:(NS_SWIFT_UI_ACTOR void (^)(BOOL success))completion;
+- (void)applyIBLData:(NSData *)data attributionHandler:(NS_SWIFT_UI_ACTOR void (^)(REAssetRef coreEnvironmentResourceAsset))attributionHandler withCompletion:(NS_SWIFT_UI_ACTOR void (^)(BOOL success))completion;
 - (void)interactionContainerDidRecenterFromTransform:(simd_float4x4)transform;
 - (void)recenterEntityAtTransform:(WKEntityTransform)transform;
 - (void)applyDefaultIBL;
