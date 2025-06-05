@@ -7974,6 +7974,85 @@ TEST(ProcessSwap, NavigateBackAfterNavigatingAwayFromCrossOriginOpenerPolicyUsin
     done = false;
 }
 
+TEST(ProcessSwap, MultitabCOOPSwapSameOriginProcessPool)
+{
+    using namespace TestWebKitAPI;
+
+    HTTPServer coopSiteServer({
+        { "/coopSite.html"_s, { { { "Content-Type"_s, "text/html"_s }, { "Cross-Origin-Opener-Policy"_s, "same-origin"_s } }, "<html><body>coopSite</body></html>"_s } },
+    }, HTTPServer::Protocol::Https);
+
+    HTTPServer nonCoopSiteServer({
+        { "/nonCoopSite.html"_s, { { { "Content-Type"_s, "text/html"_s } }, "<html><body>nonCoopSite</body></html>"_s } },
+    }, HTTPServer::Protocol::Https);
+
+    auto processPoolConfiguration = psonProcessPoolConfiguration();
+    auto processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
+
+    auto webViewConfiguration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [webViewConfiguration setProcessPool:processPool.get()];
+    for (_WKFeature *feature in [WKPreferences _features]) {
+        if ([feature.key isEqualToString:@"CrossOriginOpenerPolicyEnabled"])
+            [[webViewConfiguration preferences] _setEnabled:YES forFeature:feature];
+        else if ([feature.key isEqualToString:@"CrossOriginEmbedderPolicyEnabled"])
+            [[webViewConfiguration preferences] _setEnabled:YES forFeature:feature];
+    }
+
+    // ORIGINAL TAB
+    auto webView1 = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:webViewConfiguration.get()]);
+    auto navigationDelegate = adoptNS([[PSONNavigationDelegate alloc] init]);
+    [webView1 setNavigationDelegate:navigationDelegate.get()];
+
+    // 1: load coopSite
+    done = false;
+    [webView1 loadRequest:coopSiteServer.request("/coopSite.html"_s)];
+    Util::run(&done);
+    auto pid1 = [webView1 _webProcessIdentifier];
+
+    // 2: navigate to nonCoopSite (no COOP) => must swap
+    done = false;
+    [webView1 loadRequest:nonCoopSiteServer.request("/nonCoopSite.html"_s)];
+    Util::run(&done);
+    auto pid2 = [webView1 _webProcessIdentifier];
+    EXPECT_NE(pid1, pid2);
+
+    // 3: goBack() to coopSite => COOP destination + cross-origin => must swap again
+    done = false;
+    [webView1 goBack];
+    Util::run(&done);
+    auto pid3 = [webView1 _webProcessIdentifier];
+    EXPECT_NE(pid2, pid3);
+
+    // NEW TAB
+    auto webView2 = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:webViewConfiguration.get()]);
+    auto navigationDelegate2 = adoptNS([[PSONNavigationDelegate alloc] init]);
+    [webView2 setNavigationDelegate:navigationDelegate2.get()];
+
+    // 4: load coopSite again in new tab => COOP always spawns a fresh process
+    done = false;
+    [webView2 loadRequest:coopSiteServer.request("/coopSite.html"_s)];
+    Util::run(&done);
+    auto pid4 = [webView2 _webProcessIdentifier];
+    EXPECT_NE(pid2, pid4);
+    EXPECT_NE(pid3, pid4);
+
+    // 5: navigate away
+    done = false;
+    [webView2 loadRequest:nonCoopSiteServer.request("/nonCoopSite.html"_s)];
+    Util::run(&done);
+    auto pid5 = [webView2 _webProcessIdentifier];
+    EXPECT_NE(pid4, pid5);
+
+    // 6: goBack() to coopSite in new tab must swap again
+    done = false;
+    [webView2 goBack];
+    Util::run(&done);
+    auto pid6 = [webView2 _webProcessIdentifier];
+    EXPECT_NE(pid5, pid6);
+
+    EXPECT_NE(pid3, pid6);
+}
+
 TEST(ProcessSwap, NavigateBackAfterNavigatingAwayFromCrossOriginOpenerPolicyUsingBackForwardCache2)
 {
     using namespace TestWebKitAPI;
