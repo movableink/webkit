@@ -271,8 +271,14 @@ void WebFullScreenManager::enterFullScreenForElement(Element& element, HTMLMedia
     if (CheckedPtr renderImage = dynamicDowncast<RenderImage>(element.renderer()))
         mediaDetails = getImageMediaDetails(renderImage, IsUpdating::No);
 
-    if (m_willUseQuickLookForFullscreen)
+    if (m_willUseQuickLookForFullscreen) {
         m_page->freezeLayerTree(WebPage::LayerTreeFreezeReason::OutOfProcessFullscreen);
+        static constexpr auto maxViewportSize = FloatSize { 10000, 10000 };
+        m_oldSize = m_page->viewportConfiguration().viewLayoutSize();
+        m_scaleFactor = m_page->viewportConfiguration().layoutSizeScaleFactor();
+        m_minEffectiveWidth = m_page->viewportConfiguration().minimumEffectiveDeviceWidth();
+        m_page->setViewportConfigurationViewLayoutSize(maxViewportSize, m_scaleFactor, m_minEffectiveWidth);
+    }
 #endif
 
     m_initialFrame = screenRectOfContents(m_element.get());
@@ -332,6 +338,9 @@ void WebFullScreenManager::enterFullScreenForElement(Element& element, HTMLMedia
 #if ENABLE(QUICKLOOK_FULLSCREEN)
 void WebFullScreenManager::updateImageSource(WebCore::Element& element)
 {
+    if (&element != m_element)
+        return;
+
     FullScreenMediaDetails mediaDetails;
     CheckedPtr renderImage = dynamicDowncast<RenderImage>(element.renderer());
     if (renderImage && m_willUseQuickLookForFullscreen) {
@@ -404,16 +413,6 @@ void WebFullScreenManager::didEnterFullScreen(CompletionHandler<bool(bool)>&& co
         close();
         return;
     }
-
-#if ENABLE(QUICKLOOK_FULLSCREEN)
-    static constexpr auto maxViewportSize = FloatSize { 10000, 10000 };
-    if (m_willUseQuickLookForFullscreen) {
-        m_oldSize = m_page->viewportConfiguration().viewLayoutSize();
-        m_scaleFactor = m_page->viewportConfiguration().layoutSizeScaleFactor();
-        m_minEffectiveWidth = m_page->viewportConfiguration().minimumEffectiveDeviceWidth();
-        m_page->setViewportConfigurationViewLayoutSize(maxViewportSize, m_scaleFactor, m_minEffectiveWidth);
-    }
-#endif
 
 #if PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
     RefPtr currentPlaybackControlsElement = m_page->playbackSessionManager().currentPlaybackControlsElement();
