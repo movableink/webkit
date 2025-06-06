@@ -774,8 +774,8 @@ inline RenderBox* RenderBox::parentBox() const
 
 inline RenderBox* RenderBox::firstChildBox() const
 {
-    if (auto* box = dynamicDowncast<RenderBox>(firstChild()))
-        return box;
+    if (CheckedPtr box = dynamicDowncast<RenderBox>(firstChild()))
+        return box.get();
 
     ASSERT(!firstChild());
     return nullptr;
@@ -788,8 +788,8 @@ inline RenderBox* RenderBox::firstInFlowChildBox() const
 
 inline RenderBox* RenderBox::lastChildBox() const
 {
-    if (auto* box = dynamicDowncast<RenderBox>(lastChild()))
-        return box;
+    if (CheckedPtr box = dynamicDowncast<RenderBox>(lastChild()))
+        return box.get();
 
     ASSERT(!lastChild());
     return nullptr;
@@ -802,8 +802,8 @@ inline RenderBox* RenderBox::lastInFlowChildBox() const
 
 inline RenderBox* RenderBox::previousSiblingBox() const
 {
-    if (auto* box = dynamicDowncast<RenderBox>(previousSibling()))
-        return box;
+    if (CheckedPtr box = dynamicDowncast<RenderBox>(previousSibling()))
+        return box.get();
 
     ASSERT(!previousSibling());
     return nullptr;
@@ -811,17 +811,17 @@ inline RenderBox* RenderBox::previousSiblingBox() const
 
 inline RenderBox* RenderBox::previousInFlowSiblingBox() const
 {
-    for (RenderBox* curr = previousSiblingBox(); curr; curr = curr->previousSiblingBox()) {
+    for (CheckedPtr curr = previousSiblingBox(); curr; curr = curr->previousSiblingBox()) {
         if (!curr->isFloatingOrOutOfFlowPositioned())
-            return curr;
+            return curr.get();
     }
     return nullptr;
 }
 
 inline RenderBox* RenderBox::nextSiblingBox() const
 {
-    if (auto* box = dynamicDowncast<RenderBox>(nextSibling()))
-        return box;
+    if (CheckedPtr box = dynamicDowncast<RenderBox>(nextSibling()))
+        return box.get();
 
     ASSERT(!nextSibling());
     return nullptr;
@@ -829,9 +829,9 @@ inline RenderBox* RenderBox::nextSiblingBox() const
 
 inline RenderBox* RenderBox::nextInFlowSiblingBox() const
 {
-    for (RenderBox* curr = nextSiblingBox(); curr; curr = curr->nextSiblingBox()) {
+    for (CheckedPtr curr = nextSiblingBox(); curr; curr = curr->nextSiblingBox()) {
         if (!curr->isFloatingOrOutOfFlowPositioned())
-            return curr;
+            return curr.get();
     }
     return nullptr;
 }
