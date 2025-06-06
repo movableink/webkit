@@ -124,7 +124,6 @@ list(APPEND PAL_PUBLIC_HEADERS
     spi/mac/NSColorSPI.h
     spi/mac/NSColorWellSPI.h
     spi/mac/NSEventSPI.h
-    spi/mac/NSFontSPI.h
     spi/mac/NSGraphicsSPI.h
     spi/mac/NSImageSPI.h
     spi/mac/NSImmediateActionGestureRecognizerSPI.h

@@ -233,7 +233,6 @@
 		DD20DE2527BC90D80093D175 /* NSCellSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = A1175B4A1F6B2D7E00C4B9F0 /* NSCellSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD20DE2627BC90D80093D175 /* NSColorWellSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = E5D45D112106A07400D2B738 /* NSColorWellSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD20DE2727BC90D80093D175 /* NSEventSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 0C7785761F45130F00F4EBB6 /* NSEventSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		DD20DE2827BC90D80093D175 /* NSFontSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 0C7785771F45130F00F4EBB6 /* NSFontSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD20DE2927BC90D80093D175 /* NSGraphicsSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = A10826FD1F58A433004772AC /* NSGraphicsSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD20DE2A27BC90D80093D175 /* NSImageSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 7A3A6A7F20CADB4600317AAE /* NSImageSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD20DE2B27BC90D80093D175 /* NSImmediateActionGestureRecognizerSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 0C7785781F45130F00F4EBB6 /* NSImmediateActionGestureRecognizerSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -517,7 +516,6 @@
 		0C7785741F45130F00F4EBB6 /* NSAccessibilitySPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSAccessibilitySPI.h; sourceTree = "<group>"; };
 		0C7785751F45130F00F4EBB6 /* NSApplicationSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSApplicationSPI.h; sourceTree = "<group>"; };
 		0C7785761F45130F00F4EBB6 /* NSEventSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSEventSPI.h; sourceTree = "<group>"; };
-		0C7785771F45130F00F4EBB6 /* NSFontSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSFontSPI.h; sourceTree = "<group>"; };
 		0C7785781F45130F00F4EBB6 /* NSImmediateActionGestureRecognizerSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSImmediateActionGestureRecognizerSPI.h; sourceTree = "<group>"; };
 		0C7785791F45130F00F4EBB6 /* NSMenuSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSMenuSPI.h; sourceTree = "<group>"; };
 		0C77857A1F45130F00F4EBB6 /* NSPasteboardSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSPasteboardSPI.h; sourceTree = "<group>"; };
@@ -970,7 +968,6 @@
 				0C2DA1311F3BEB4900DBC317 /* NSColorSPI.h */,
 				E5D45D112106A07400D2B738 /* NSColorWellSPI.h */,
 				0C7785761F45130F00F4EBB6 /* NSEventSPI.h */,
-				0C7785771F45130F00F4EBB6 /* NSFontSPI.h */,
 				A10826FD1F58A433004772AC /* NSGraphicsSPI.h */,
 				7A3A6A7F20CADB4600317AAE /* NSImageSPI.h */,
 				0C7785781F45130F00F4EBB6 /* NSImmediateActionGestureRecognizerSPI.h */,
@@ -1511,7 +1508,6 @@
 				DD20DDF727BC90D70093D175 /* NSExtensionSPI.h in Headers */,
 				DD20DDF827BC90D70093D175 /* NSFileManagerSPI.h in Headers */,
 				DD20DDF927BC90D70093D175 /* NSFileSizeFormatterSPI.h in Headers */,
-				DD20DE2827BC90D80093D175 /* NSFontSPI.h in Headers */,
 				DD20DE2927BC90D80093D175 /* NSGraphicsSPI.h in Headers */,
 				DD20DE2A27BC90D80093D175 /* NSImageSPI.h in Headers */,
 				DD20DE2B27BC90D80093D175 /* NSImmediateActionGestureRecognizerSPI.h in Headers */,
