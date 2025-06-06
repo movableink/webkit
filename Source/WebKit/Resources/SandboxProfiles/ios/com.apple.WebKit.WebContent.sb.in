@@ -860,9 +860,10 @@
             (xpc-service-name "com.apple.MTLCompilerService"))))
 #endif
 
+(log-streaming)
+
 (with-filter (system-attribute apple-internal)
     (allow mach-lookup
-        (global-name "com.apple.diagnosticd")
         (global-name "com.apple.osanalytics.osanalyticshelper")))
 
 (with-filter (require-not (sandbox-version-2))

@@ -682,9 +682,10 @@
 
 (media-accessibility-support)
 
+(log-streaming)
+
 (with-filter (system-attribute apple-internal)
     (allow mach-lookup
-        (global-name "com.apple.diagnosticd")
         (global-name "com.apple.analyticsd")))
 
 ;; Silence reports about things we do not want access to:
