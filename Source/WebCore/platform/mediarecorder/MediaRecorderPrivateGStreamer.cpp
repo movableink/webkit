@@ -351,8 +351,7 @@ GRefPtr<GstEncodingContainerProfile> MediaRecorderPrivateBackend::containerProfi
             m_videoCodec = codecs.first();
         auto [_, videoCaps] = GStreamerCodecUtilities::capsFromCodecString(m_videoCodec, { });
         GST_DEBUG("Creating video encoding profile for caps %" GST_PTR_FORMAT, videoCaps.get());
-        m_videoEncodingProfile = adoptGRef(GST_ENCODING_PROFILE(gst_encoding_video_profile_new(videoCaps.get(), nullptr, nullptr, 1)));
-        gst_encoding_container_profile_add_profile(profile.get(), m_videoEncodingProfile.get());
+        gst_encoding_container_profile_add_profile(profile.get(), GST_ENCODING_PROFILE(gst_encoding_video_profile_new(videoCaps.get(), nullptr, nullptr, 1)));
     }
 
     if (selectedTracks.audioTrack) {
@@ -389,7 +388,7 @@ GRefPtr<GstEncodingContainerProfile> MediaRecorderPrivateBackend::containerProfi
             gst_encoding_profile_set_restriction(m_audioEncodingProfile.get(), restrictionCaps.leakRef());
         }
 
-        gst_encoding_container_profile_add_profile(profile.get(), m_audioEncodingProfile.get());
+        gst_encoding_container_profile_add_profile(profile.get(), m_audioEncodingProfile.ref());
     }
 
     return profile;

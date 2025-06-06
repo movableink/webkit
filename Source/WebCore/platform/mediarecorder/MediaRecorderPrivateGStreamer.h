@@ -77,7 +77,6 @@ private:
     void notifyEOS();
 
     GRefPtr<GstEncodingProfile> m_audioEncodingProfile;
-    GRefPtr<GstEncodingProfile> m_videoEncodingProfile;
     String m_videoCodec;
     GRefPtr<GstTranscoder> m_transcoder;
     GRefPtr<GstTranscoderSignalAdapter> m_signalAdapter;

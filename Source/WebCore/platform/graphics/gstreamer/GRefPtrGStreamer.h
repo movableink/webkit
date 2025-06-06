@@ -204,6 +204,10 @@ template<> GRefPtr<GstEncodingProfile> adoptGRef(GstEncodingProfile*);
 template<> GstEncodingProfile* refGPtr<GstEncodingProfile>(GstEncodingProfile*);
 template<> void derefGPtr<GstEncodingProfile>(GstEncodingProfile*);
 
+template<> GRefPtr<GstEncodingContainerProfile> adoptGRef(GstEncodingContainerProfile*);
+template<> GstEncodingContainerProfile* refGPtr<GstEncodingContainerProfile>(GstEncodingContainerProfile*);
+template<> void derefGPtr<GstEncodingContainerProfile>(GstEncodingContainerProfile*);
+
 #if USE(GSTREAMER_WEBRTC)
 template <> GRefPtr<GstWebRTCRTPReceiver> adoptGRef(GstWebRTCRTPReceiver*);
 template <> GstWebRTCRTPReceiver* refGPtr<GstWebRTCRTPReceiver>(GstWebRTCRTPReceiver*);
