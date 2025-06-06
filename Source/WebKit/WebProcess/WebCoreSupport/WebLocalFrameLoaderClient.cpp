@@ -1532,6 +1532,8 @@ void WebLocalFrameLoaderClient::transitionToCommittedFromCachedFrame(CachedFrame
 void WebLocalFrameLoaderClient::transitionToCommittedForNewPage(InitializingIframe initializingIframe)
 {
     RefPtr webPage = m_frame->page();
+    if (!webPage)
+        return;
 
     bool isMainFrame = m_frame->isMainFrame();
     bool shouldUseFixedLayout = isMainFrame && webPage->useFixedLayout();
