@@ -59,7 +59,7 @@ static NSURL *literalURL(const char* literal)
 {
     EXPECT_WK_STREQ(error.domain, @"WebKitErrorDomain");
     EXPECT_EQ(error.code, 101);
-    EXPECT_NULL(error.userInfo[@"NSErrorFailingURLKey"]);
+    EXPECT_NULL(error.userInfo[NSURLErrorFailingURLErrorKey]);
 
     didFailProvisionalLoad = true;
     didFinishTest = true;
@@ -113,7 +113,7 @@ TEST(WebKit, LoadInvalidURLRequestNonASCII)
     delegate.get().didFailProvisionalNavigation = ^(WKWebView *, WKNavigation *, NSError *error) {
         EXPECT_WK_STREQ(error.domain, @"WebKitErrorDomain");
         EXPECT_EQ(error.code, WebKitErrorCannotShowURL);
-        EXPECT_WK_STREQ([error.userInfo[@"NSErrorFailingURLKey"] absoluteString], "");
+        EXPECT_WK_STREQ([error.userInfo[NSURLErrorFailingURLErrorKey] absoluteString], "");
         done = true;
     };
     auto webView = adoptNS([WKWebView new]);

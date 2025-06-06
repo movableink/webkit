@@ -35,6 +35,7 @@
 #import "TestResourceLoadDelegate.h"
 #import "TestWKWebView.h"
 #import "WKWebViewConfigurationExtras.h"
+#import <Foundation/NSURLError.h>
 #import <WebKit/WKNavigationDelegate.h>
 #import <WebKit/WKPreferencesPrivate.h>
 #import <WebKit/WKUIDelegatePrivate.h>
@@ -513,8 +514,10 @@ TEST(SafeBrowsing, WKWebViewGoBackIFrame)
     __block bool navigationFinished = false;
     delegate.get().didFailProvisionalLoadInSubframeWithError = ^(WKWebView *, WKFrameInfo *frame, NSError *error) {
         EXPECT_NOT_NULL(error);
-        auto failingURL = (NSString *)[error.userInfo valueForKey:@"NSErrorFailingURLStringKey"];
-        EXPECT_TRUE([failingURL hasSuffix:@"/simple.html"]);
+        auto failingURL = (NSURL *)[error.userInfo valueForKey:NSURLErrorFailingURLErrorKey];
+        EXPECT_TRUE([failingURL.lastPathComponent isEqualToString:@"simple.html"]);
+        auto failingURLString = (NSString *)[error.userInfo valueForKey:@"NSErrorFailingURLStringKey"];
+        EXPECT_TRUE([failingURLString hasSuffix:@"/simple.html"]);
         navigationFailed = true;
     };
     delegate.get().didFinishNavigation = ^(WKWebView *, WKNavigation *navigation) {
@@ -628,8 +631,10 @@ TEST(SafeBrowsing, PostResponseIframe)
     __block bool navigationFinished = false;
     delegate.get().didFailProvisionalLoadInSubframeWithError = ^(WKWebView *, WKFrameInfo *frame, NSError *error) {
         EXPECT_NOT_NULL(error);
-        auto failingURL = (NSString *)[error.userInfo valueForKey:@"NSErrorFailingURLStringKey"];
-        EXPECT_TRUE([failingURL hasSuffix:@"/simple.html"]);
+        auto failingURL = (NSURL *)[error.userInfo valueForKey:NSURLErrorFailingURLErrorKey];
+        EXPECT_TRUE([failingURL.lastPathComponent isEqualToString:@"simple.html"]);
+        auto failingURLString = (NSString *)[error.userInfo valueForKey:@"NSErrorFailingURLStringKey"];
+        EXPECT_TRUE([failingURLString hasSuffix:@"/simple.html"]);
         navigationFailed = true;
     };
     delegate.get().didFinishNavigation = ^(WKWebView *, WKNavigation *navigation) {

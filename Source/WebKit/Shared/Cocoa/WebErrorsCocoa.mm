@@ -38,7 +38,7 @@ using namespace WebCore;
 static RetainPtr<NSError> createNSError(NSString* domain, int code, NSURL *URL)
 {
     RetainPtr<NSDictionary> userInfo = [NSDictionary dictionaryWithObjectsAndKeys:
-        URL, @"NSErrorFailingURLKey",
+        URL, NSURLErrorFailingURLErrorKey,
         [URL absoluteString], @"NSErrorFailingURLStringKey",
         nil];
 

@@ -48,7 +48,7 @@ static int provisionalLoadCount;
 - (void)webView:(WKWebView *)webView didFailProvisionalNavigation:(WKNavigation *)navigation withError:(NSError *)error
 {
     if (error.code != NSURLErrorCancelled)
-        [webView _loadAlternateHTMLString:@"error page" baseURL:nil forUnreachableURL:error.userInfo[@"NSErrorFailingURLKey"]];
+        [webView _loadAlternateHTMLString:@"error page" baseURL:nil forUnreachableURL:error.userInfo[NSURLErrorFailingURLErrorKey]];
 }
 
 - (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation

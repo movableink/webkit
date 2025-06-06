@@ -2272,8 +2272,8 @@ TEST(WKNavigation, HTTPSOnlyWithSameSiteBypass)
 
     delegate.get().didFailProvisionalNavigation = ^(WKWebView *, WKNavigation *, NSError *error) {
         EXPECT_NOT_NULL(error);
-        EXPECT_NOT_NULL(error.userInfo[@"NSErrorFailingURLKey"]);
-        EXPECT_WK_STREQ(@"https://site.example/secure", ((NSURL *)error.userInfo[@"NSErrorFailingURLKey"]).absoluteString);
+        EXPECT_NOT_NULL(error.userInfo[NSURLErrorFailingURLErrorKey]);
+        EXPECT_WK_STREQ(@"https://site.example/secure", ((NSURL *)error.userInfo[NSURLErrorFailingURLErrorKey]).absoluteString);
         errorCode = error.code;
         didFailNavigation = true;
     };
@@ -2361,8 +2361,8 @@ TEST(WKNavigation, HTTPSOnlyWithSameSiteBypass)
     // Step 4: Attempt cross-site http load with HTTPS-bypass enabled
     delegate.get().didFailProvisionalNavigation = ^(WKWebView *, WKNavigation *, NSError *error) {
         EXPECT_NOT_NULL(error);
-        EXPECT_NOT_NULL(error.userInfo[@"NSErrorFailingURLKey"]);
-        EXPECT_WK_STREQ(@"https://site2.example/secure", ((NSURL *)error.userInfo[@"NSErrorFailingURLKey"]).absoluteString);
+        EXPECT_NOT_NULL(error.userInfo[NSURLErrorFailingURLErrorKey]);
+        EXPECT_WK_STREQ(@"https://site2.example/secure", ((NSURL *)error.userInfo[NSURLErrorFailingURLErrorKey]).absoluteString);
         errorCode = error.code;
         didFailNavigation = true;
     };
@@ -2448,8 +2448,8 @@ TEST(WKNavigation, HTTPSOnlyWithHTTPRedirect)
 
     delegate.get().didFailProvisionalNavigation = ^(WKWebView *, WKNavigation *, NSError *error) {
         EXPECT_NOT_NULL(error);
-        EXPECT_NOT_NULL(error.userInfo[@"NSErrorFailingURLKey"]);
-        EXPECT_WK_STREQ(@"https://site.example/secure", ((NSURL *)error.userInfo[@"NSErrorFailingURLKey"]).absoluteString);
+        EXPECT_NOT_NULL(error.userInfo[NSURLErrorFailingURLErrorKey]);
+        EXPECT_WK_STREQ(@"https://site.example/secure", ((NSURL *)error.userInfo[NSURLErrorFailingURLErrorKey]).absoluteString);
         errorCode = error.code;
         didFailNavigation = true;
     };
@@ -2474,8 +2474,8 @@ TEST(WKNavigation, HTTPSOnlyWithHTTPRedirect)
 
     delegate.get().didFailProvisionalNavigation = ^(WKWebView *, WKNavigation *, NSError *error) {
         EXPECT_NOT_NULL(error);
-        EXPECT_NOT_NULL(error.userInfo[@"NSErrorFailingURLKey"]);
-        EXPECT_WK_STREQ(@"https://site2.example/secure2", ((NSURL *)error.userInfo[@"NSErrorFailingURLKey"]).absoluteString);
+        EXPECT_NOT_NULL(error.userInfo[NSURLErrorFailingURLErrorKey]);
+        EXPECT_WK_STREQ(@"https://site2.example/secure2", ((NSURL *)error.userInfo[NSURLErrorFailingURLErrorKey]).absoluteString);
         errorCode = error.code;
         didFailNavigation = true;
     };
@@ -3467,8 +3467,8 @@ TEST(WKNavigation, PreferredHTTPSPolicyUserMediatedHTTPFallbackWithHTTPRedirect)
 
     delegate.get().didFailProvisionalNavigation = ^(WKWebView *, WKNavigation *, NSError *error) {
         EXPECT_NOT_NULL(error);
-        EXPECT_NOT_NULL(error.userInfo[@"NSErrorFailingURLKey"]);
-        EXPECT_WK_STREQ(@"https://site.example/secure", ((NSURL *)error.userInfo[@"NSErrorFailingURLKey"]).absoluteString);
+        EXPECT_NOT_NULL(error.userInfo[NSURLErrorFailingURLErrorKey]);
+        EXPECT_WK_STREQ(@"https://site.example/secure", ((NSURL *)error.userInfo[NSURLErrorFailingURLErrorKey]).absoluteString);
         errorCode = error.code;
         didFailNavigation = true;
     };
@@ -3493,8 +3493,8 @@ TEST(WKNavigation, PreferredHTTPSPolicyUserMediatedHTTPFallbackWithHTTPRedirect)
 
     delegate.get().didFailProvisionalNavigation = ^(WKWebView *, WKNavigation *, NSError *error) {
         EXPECT_NOT_NULL(error);
-        EXPECT_NOT_NULL(error.userInfo[@"NSErrorFailingURLKey"]);
-        EXPECT_WK_STREQ(@"https://site2.example/secure2", ((NSURL *)error.userInfo[@"NSErrorFailingURLKey"]).absoluteString);
+        EXPECT_NOT_NULL(error.userInfo[NSURLErrorFailingURLErrorKey]);
+        EXPECT_WK_STREQ(@"https://site2.example/secure2", ((NSURL *)error.userInfo[NSURLErrorFailingURLErrorKey]).absoluteString);
         errorCode = error.code;
         didFailNavigation = true;
     };
