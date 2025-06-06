@@ -27,6 +27,7 @@
 #include "JSStringJoiner.h"
 
 #include "JSCJSValueInlines.h"
+#include <charconv>
 #include <wtf/text/ParsingUtilities.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -51,6 +52,20 @@ static inline void appendStringToData(std::span<OutputCharacterType>& data, std:
 {
     StringImpl::copyCharacters(data, separator);
     skip(data, separator.size());
+}
+
+template<typename CharacterType>
+static inline void appendStringToData(std::span<CharacterType>& data, int32_t value)
+{
+    if constexpr (std::is_same_v<CharacterType, LChar>) {
+        auto result = std::to_chars(std::bit_cast<char*>(data.data()), std::bit_cast<char*>(data.data() + data.size()), value);
+        ASSERT(result.ec != std::errc::value_too_large);
+        skip(data, result.ptr - std::bit_cast<char*>(data.data()));
+    } else {
+        WTF::StringTypeAdapter<int32_t> adapter { value };
+        adapter.writeTo(data);
+        skip(data, adapter.length());
+    }
 }
 
 template<typename CharacterType>
@@ -185,27 +200,40 @@ static inline String joinStrings(JSGlobalObject* globalObject, const WriteBarrie
     case 0: {
         for (unsigned i = 0; i < size; ++i) {
             JSValue value = strings[i].get();
-            auto view = asString(value)->view(globalObject);
-            RETURN_IF_EXCEPTION(scope, String());
-
-            appendStringToData(data, view);
+            if (value.isString()) {
+                auto view = asString(value)->view(globalObject);
+                RETURN_IF_EXCEPTION(scope, String());
+                appendStringToData(data, view);
+            } else {
+                ASSERT(value.isInt32());
+                appendStringToData(data, value.asInt32());
+            }
         }
         break;
     }
     default: {
         JSValue value = strings[0].get();
-        auto view = asString(value)->view(globalObject);
-        RETURN_IF_EXCEPTION(scope, String());
-
-        appendStringToData(data, view);
+        if (value.isString()) {
+            auto view = asString(value)->view(globalObject);
+            RETURN_IF_EXCEPTION(scope, String());
+            appendStringToData(data, view);
+        } else {
+            ASSERT(value.isInt32());
+            appendStringToData(data, value.asInt32());
+        }
 
         for (unsigned i = 1; i < size; ++i) {
             JSValue value = strings[i].get();
-            auto view = asString(value)->view(globalObject);
-            RETURN_IF_EXCEPTION(scope, String());
-
-            appendStringToData(data, separator);
-            appendStringToData(data, view);
+            if (value.isString()) {
+                auto view = asString(value)->view(globalObject);
+                RETURN_IF_EXCEPTION(scope, String());
+                appendStringToData(data, separator);
+                appendStringToData(data, view);
+            } else {
+                ASSERT(value.isInt32());
+                appendStringToData(data, separator);
+                appendStringToData(data, value.asInt32());
+            }
         }
         break;
     }
@@ -268,7 +296,7 @@ JSValue JSStringJoiner::joinImpl(JSGlobalObject* globalObject)
     return jsString(vm, WTFMove(result));
 }
 
-JSValue JSOnlyStringsJoiner::joinImpl(JSGlobalObject* globalObject, const WriteBarrier<Unknown>* data, unsigned length)
+JSValue JSOnlyStringsAndInt32sJoiner::joinImpl(JSGlobalObject* globalObject, const WriteBarrier<Unknown>* data, unsigned length)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);

@@ -222,9 +222,9 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 // Avoids the overhead of accumulating intermediate vectors of values when
 // we're only joining existing strings.
-class JSOnlyStringsJoiner {
+class JSOnlyStringsAndInt32sJoiner {
 public:
-    JSOnlyStringsJoiner(StringView separator)
+    JSOnlyStringsAndInt32sJoiner(StringView separator)
         : m_separator(separator)
         , m_isAll8Bit(m_separator.is8Bit())
     {
@@ -234,20 +234,35 @@ public:
     {
         if (length == 1) {
             JSValue value = data[0].get();
-            if (!value || !value.isString())
+            if (!value)
                 return JSValue();
-            return value;
+            if (value.isString())
+                return value;
+            if (value.isInt32()) {
+                m_accumulatedStringsLength = WTF::StringTypeAdapter<int32_t> { value.asInt32() }.length();
+                return joinImpl(globalObject, data, length);
+            }
+            return JSValue();
         }
 
         for (size_t i = 0; i < length; ++i) {
             JSValue value = data[i].get();
-            if (!value || !value.isString())
+            if (!value)
                 return JSValue();
 
-            JSString* string = asString(value);
+            if (value.isString()) {
+                JSString* string = asString(value);
+                m_accumulatedStringsLength += string->length();
+                m_isAll8Bit &= string->is8Bit();
+                continue;
+            }
 
-            m_accumulatedStringsLength += string->length();
-            m_isAll8Bit &= string->is8Bit();
+            if (value.isInt32()) {
+                m_accumulatedStringsLength += WTF::StringTypeAdapter<int32_t> { value.asInt32() }.length();
+                continue;
+            }
+
+            return JSValue();
         }
 
         return joinImpl(globalObject, data, length);

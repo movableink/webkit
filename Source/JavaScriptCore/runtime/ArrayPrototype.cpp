@@ -287,7 +287,7 @@ inline JSValue fastJoin(JSGlobalObject* globalObject, JSObject* thisObject, Stri
         auto data = butterfly.contiguous().data();
         bool holesKnownToBeOK = false;
 
-        JSOnlyStringsJoiner onlyStringsJoiner(separator);
+        JSOnlyStringsAndInt32sJoiner onlyStringsJoiner(separator);
         if (auto joined = onlyStringsJoiner.tryJoin(globalObject, data, length))
             RELEASE_AND_RETURN(scope, joined);
         RETURN_IF_EXCEPTION(scope, { });
