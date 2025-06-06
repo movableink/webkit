@@ -326,6 +326,26 @@ void GraphicsContextCG::drawNativeImageInternal(NativeImage& nativeImage, const 
         return adoptCF(CGImageCreateWithImageInRect(image, physicalSubimageRect));
     };
 
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
+    auto setCGDynamicRangeLimitForImage = [](CGContextRef context, CGImageRef image, float dynamicRangeLimit) {
+        float edrStrength = dynamicRangeLimit == 1.0 ? 1 : 0;
+        float cdrStrength = dynamicRangeLimit == 0.5 ? 1 : 0;
+        unsigned averageLightLevel = CGImageGetContentAverageLightLevelNits(image);
+
+        RetainPtr edrStrengthNumber = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberFloatType, &edrStrength));
+        RetainPtr cdrStrengthNumber = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberFloatType, &cdrStrength));
+        RetainPtr averageLightLevelNumber = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &averageLightLevel));
+
+        CFTypeRef toneMappingKeys[] = { kCGContentEDRStrength, kCGContentAverageLightLevel, kCGConstrainedDynamicRange };
+        CFTypeRef toneMappingValues[] = { edrStrengthNumber.get(), averageLightLevelNumber.get(), cdrStrengthNumber.get() };
+
+        RetainPtr toneMappingOptions = adoptCF(CFDictionaryCreate(kCFAllocatorDefault, toneMappingKeys, toneMappingValues, sizeof(toneMappingKeys) / sizeof(toneMappingKeys[0]), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
+
+        CGContentToneMappingInfo toneMappingInfo = { kCGToneMappingReferenceWhiteBased, toneMappingOptions.get() };
+        CGContextSetContentToneMappingInfo(context, toneMappingInfo);
+    };
+#endif
+
     auto context = platformContext();
     CGContextStateSaver stateSaver(context, false);
     auto transform = CGContextGetCTM(context);
@@ -374,17 +394,19 @@ void GraphicsContextCG::drawNativeImageInternal(NativeImage& nativeImage, const 
     auto oldBlendMode = blendMode();
     setCGBlendMode(context, options.compositeOperator(), options.blendMode());
 
-#if HAVE(SUPPORT_HDR_DISPLAY)
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
     auto oldHeadroom = CGContextGetEDRTargetHeadroom(context);
+    auto oldToneMappingInfo = CGContextGetContentToneMappingInfo(context);
 
-    if (options.dynamicRangeLimit() != PlatformDynamicRangeLimit::standard()) {
-        auto headroom = options.headroom();
-        if (headroom == Headroom::FromImage)
-            headroom = nativeImage.headroom();
+    auto headroom = options.headroom();
+    if (headroom == Headroom::FromImage)
+        headroom = nativeImage.headroom();
 
-        if (headroom > Headroom::None)
-            CGContextSetEDRTargetHeadroom(context, headroom);
-    }
+    if (headroom > Headroom::None)
+        CGContextSetEDRTargetHeadroom(context, headroom);
+
+    if (options.dynamicRangeLimit() == PlatformDynamicRangeLimit::standard())
+        setCGDynamicRangeLimitForImage(context, subImage.get(), options.dynamicRangeLimit().value());
 #endif
 
     // Make the origin be at adjustedDestRect.location()
@@ -413,7 +435,8 @@ void GraphicsContextCG::drawNativeImageInternal(NativeImage& nativeImage, const 
         CGContextSetShouldAntialias(context, wasAntialiased);
 #endif
         setCGBlendMode(context, oldCompositeOperator, oldBlendMode);
-#if HAVE(SUPPORT_HDR_DISPLAY)
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
+        CGContextSetContentToneMappingInfo(context, oldToneMappingInfo);
         CGContextSetEDRTargetHeadroom(context, oldHeadroom);
 #endif
     }

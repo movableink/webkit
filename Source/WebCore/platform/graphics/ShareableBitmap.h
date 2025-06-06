@@ -27,6 +27,7 @@
 
 #include "CopyImageOptions.h"
 #include "DestinationColorSpace.h"
+#include "ImageTypes.h"
 #include "IntRect.h"
 #include "PlatformImage.h"
 #include "SharedMemory.h"
@@ -50,8 +51,8 @@ class ShareableBitmapConfiguration {
 public:
     ShareableBitmapConfiguration() = default;
 
-    WEBCORE_EXPORT ShareableBitmapConfiguration(const IntSize&, std::optional<DestinationColorSpace> = std::nullopt, bool isOpaque = false);
-    WEBCORE_EXPORT ShareableBitmapConfiguration(const IntSize&, std::optional<DestinationColorSpace>, bool isOpaque, unsigned bytesPerPixel, unsigned bytesPerRow
+    WEBCORE_EXPORT ShareableBitmapConfiguration(const IntSize&, std::optional<DestinationColorSpace> = std::nullopt, Headroom = Headroom::None, bool isOpaque = false);
+    WEBCORE_EXPORT ShareableBitmapConfiguration(const IntSize&, std::optional<DestinationColorSpace>, Headroom, bool isOpaque, unsigned bytesPerPixel, unsigned bytesPerRow
 #if USE(CG)
         , CGBitmapInfo
 #endif
@@ -63,6 +64,7 @@ public:
     IntSize size() const { return m_size; }
     const DestinationColorSpace& colorSpace() const { return m_colorSpace ? *m_colorSpace : DestinationColorSpace::SRGB(); }
     PlatformColorSpaceValue platformColorSpace() const { return colorSpace().platformColorSpace(); }
+    Headroom headroom() const { return m_headroom; }
     bool isOpaque() const { return m_isOpaque; }
 
     unsigned bytesPerPixel() const { ASSERT(!m_bytesPerPixel.hasOverflowed()); return m_bytesPerPixel; }
@@ -90,6 +92,7 @@ private:
 
     IntSize m_size;
     std::optional<DestinationColorSpace> m_colorSpace;
+    Headroom m_headroom { Headroom::None };
     bool m_isOpaque { false };
 
     CheckedUint32 m_bytesPerPixel;

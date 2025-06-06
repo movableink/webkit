@@ -5936,8 +5936,6 @@ static bool hasVisibleBoxDecorationsOrBackground(const RenderElement& renderer)
 static bool rendererHasHDRContent(const RenderElement& renderer)
 {
     auto& style = renderer.style();
-    if (style.dynamicRangeLimit() == Style::DynamicRangeLimit(CSS::Keyword::Standard { }))
-        return false;
 
     if (CheckedPtr imageRenderer = dynamicDowncast<RenderImage>(renderer)) {
         if (auto* cachedImage = imageRenderer->cachedImage()) {

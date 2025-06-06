@@ -105,11 +105,9 @@ void RemoteResourceCacheProxy::recordNativeImageUse(NativeImage& image, const De
 
     handle->takeOwnershipOfMemory(MemoryLedger::Graphics);
 
-    // FIXME: Remove the double backends for HDR images when the tonemapping can be applied in GPUProcess. <https://webkit.org/b/292679>
-    if (newBackend && !image.hasHDRContent()) {
-        // Replace the contents of the original NativeImage to save memory.
+    // Replace the contents of the original NativeImage to save memory.
+    if (newBackend)
         image.replaceBackend(makeUniqueRefFromNonNullUniquePtr(WTFMove(newBackend)));
-    }
 
     // Tell the GPU process to cache this resource.
     m_remoteRenderingBackendProxy->cacheNativeImage(WTFMove(*handle), identifier);

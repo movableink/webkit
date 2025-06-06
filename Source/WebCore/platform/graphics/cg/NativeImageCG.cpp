@@ -121,13 +121,6 @@ void NativeImage::draw(GraphicsContext& context, const FloatRect& destinationRec
     }
 #endif
 
-#if !HAVE(FIX_FOR_RADAR_147007029)
-    if (options.dynamicRangeLimit() == PlatformDynamicRangeLimit::standard()) {
-        drawWithToneMapping(context, destinationRect, sourceRect, options);
-        return;
-    }
-#endif
-
     context.drawNativeImageInternal(*this, destinationRect, sourceRect, options);
 }
 

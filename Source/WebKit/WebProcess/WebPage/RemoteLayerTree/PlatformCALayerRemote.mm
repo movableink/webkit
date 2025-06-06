@@ -298,8 +298,15 @@ DestinationColorSpace PlatformCALayerRemote::displayColorSpace() const
     if (auto displayColorSpace = contentsFormatExtendedColorSpace(contentsFormat()))
         return displayColorSpace.value();
 #else
-    if (auto displayColorSpace = m_context ? m_context->displayColorSpace() : std::nullopt)
+    if (auto displayColorSpace = m_context ? m_context->displayColorSpace() : std::nullopt) {
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+        if (contentsFormat() == ContentsFormat::RGBA16F) {
+            if (auto extendedDisplayColorSpace = displayColorSpace->asExtended())
+                return extendedDisplayColorSpace.value();
+        }
+#endif
         return displayColorSpace.value();
+    }
 #endif
 
     return DestinationColorSpace::SRGB();

@@ -36,9 +36,10 @@ namespace WebCore {
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER_AND_EXPORT(ShareableBitmap, WTF_INTERNAL);
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ShareableBitmap);
 
-ShareableBitmapConfiguration::ShareableBitmapConfiguration(const IntSize& size, std::optional<DestinationColorSpace> colorSpace, bool isOpaque)
+ShareableBitmapConfiguration::ShareableBitmapConfiguration(const IntSize& size, std::optional<DestinationColorSpace> colorSpace, Headroom headroom, bool isOpaque)
     : m_size(size)
     , m_colorSpace(validateColorSpace(colorSpace))
+    , m_headroom(headroom)
     , m_isOpaque(isOpaque)
     , m_bytesPerPixel(calculateBytesPerPixel(this->colorSpace()))
     , m_bytesPerRow(calculateBytesPerRow(size, this->colorSpace()))
@@ -52,13 +53,14 @@ ShareableBitmapConfiguration::ShareableBitmapConfiguration(const IntSize& size, 
     ASSERT(!m_size.isEmpty());
 }
 
-ShareableBitmapConfiguration::ShareableBitmapConfiguration(const IntSize& size, std::optional<DestinationColorSpace> colorSpace, bool isOpaque, unsigned bytesPerPixel, unsigned bytesPerRow
+ShareableBitmapConfiguration::ShareableBitmapConfiguration(const IntSize& size, std::optional<DestinationColorSpace> colorSpace, Headroom headroom, bool isOpaque, unsigned bytesPerPixel, unsigned bytesPerRow
 #if USE(CG)
     , CGBitmapInfo bitmapInfo
 #endif
 )
     : m_size(size)
     , m_colorSpace(colorSpace)
+    , m_headroom(headroom)
     , m_isOpaque(isOpaque)
     , m_bytesPerPixel(bytesPerPixel)
     , m_bytesPerRow(bytesPerRow)

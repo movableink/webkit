@@ -159,6 +159,17 @@ std::optional<DestinationColorSpace> DestinationColorSpace::asRGB() const
 #endif
 }
 
+std::optional<DestinationColorSpace> DestinationColorSpace::asExtended() const
+{
+    if (usesExtendedRange())
+        return *this;
+#if USE(CG)
+    if (RetainPtr colorSpace = adoptCF(CGColorSpaceCreateExtended(platformColorSpace())))
+        return DestinationColorSpace(WTFMove(colorSpace));
+#endif
+    return std::nullopt;
+}
+
 bool DestinationColorSpace::supportsOutput() const
 {
 #if USE(CG)
