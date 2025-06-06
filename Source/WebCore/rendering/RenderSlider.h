@@ -39,6 +39,8 @@ public:
     HTMLInputElement& element() const;
     Ref<HTMLInputElement> protectedElement() const;
 
+    bool canHaveGeneratedChildren() const override { return false; }
+
     bool inDragMode() const;
 
     double valueRatio() const;
