@@ -120,6 +120,7 @@ public:
     void closeSocket(WebCore::LibWebRTCSocketIdentifier);
 
 #if PLATFORM(COCOA)
+    bool webRTCInterfaceMonitoringViaNWEnabled() const;
     const std::optional<audit_token_t>& sourceApplicationAuditToken() const { return m_sourceApplicationAuditToken; }
     const char* applicationBundleIdentifier() const { return m_applicationBundleIdentifier.data(); }
 #endif

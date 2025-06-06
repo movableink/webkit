@@ -260,6 +260,9 @@ public:
 #if ENABLE(WEB_RTC)
     NetworkMDNSRegister& mdnsRegister() { return m_mdnsRegister; }
     Ref<NetworkMDNSRegister> protectedMDNSRegister() { return m_mdnsRegister; }
+#if PLATFORM(COCOA)
+    bool webRTCInterfaceMonitoringViaNWEnabled() const { return m_sharedPreferencesForWebProcess.webRTCInterfaceMonitoringViaNWEnabled; }
+#endif
 #endif
 
     WebSWServerToContextConnection* swContextConnection() { return m_swContextConnection.get(); }

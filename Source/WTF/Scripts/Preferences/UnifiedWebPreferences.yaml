@@ -8906,6 +8906,22 @@ WebRTCH265CodecEnabled:
       "PLATFORM(COCOA)": true
       default: false
 
+WebRTCInterfaceMonitoringViaNWEnabled:
+  type: bool
+  status: internal
+  category: media
+  condition: ENABLE(WEB_RTC) && PLATFORM(COCOA)
+  humanReadableName: "WebRTC interface monitoring via NW"
+  humanReadableDescription: "Enable WebRTC interface monitoring via NW"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+  sharedPreferenceForWebProcess: true
+
 WebRTCL4SEnabled:
   type: bool
   status: testable

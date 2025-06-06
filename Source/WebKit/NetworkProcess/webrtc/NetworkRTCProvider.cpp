@@ -235,6 +235,12 @@ void NetworkRTCProvider::stopResolver(LibWebRTCResolverIdentifier identifier)
 }
 
 #if PLATFORM(COCOA)
+bool NetworkRTCProvider::webRTCInterfaceMonitoringViaNWEnabled() const
+{
+    RefPtr connection = m_connection.get();
+    return connection && connection->webRTCInterfaceMonitoringViaNWEnabled();
+}
+
 const String& NetworkRTCProvider::attributedBundleIdentifierFromPageIdentifier(WebPageProxyIdentifier pageIdentifier)
 {
     return m_attributedBundleIdentifiers.ensure(pageIdentifier, [protectedThis = Ref { *this }, pageIdentifier]() -> String {
