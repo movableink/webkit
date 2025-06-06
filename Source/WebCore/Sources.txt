@@ -339,6 +339,7 @@ Modules/push-api/PushManager.cpp
 Modules/push-api/ServiceWorkerRegistrationPushAPI.cpp
 Modules/remoteplayback/RemotePlayback.cpp
 Modules/reporting/DeprecationReportBody.cpp
+Modules/reporting/IntegrityPolicyViolationReportBody.cpp
 Modules/reporting/Report.cpp
 Modules/reporting/ReportBody.cpp
 Modules/reporting/ReportingObserver.cpp
@@ -1995,6 +1996,7 @@ loader/HTTPHeaderField.cpp
 loader/HeaderFieldTokenizer.cpp
 loader/HistoryController.cpp
 loader/ImageLoader.cpp
+loader/IntegrityPolicy.cpp
 loader/LinkHeader.cpp
 loader/LinkLoader.cpp
 loader/LinkPreloadResourceClients.cpp
@@ -4158,6 +4160,7 @@ JSInspectorAuditDOMObject.cpp
 JSInspectorAuditResourcesObject.cpp
 JSInspectorFrontendHost.cpp
 JSInstallEvent.cpp
+JSIntegrityPolicyViolationReportBody.cpp
 JSIntersectionObserver.cpp
 JSIntersectionObserverCallback.cpp
 JSIntersectionObserverEntry.cpp

@@ -85,6 +85,7 @@
 #include "HistoryItem.h"
 #include "InspectorController.h"
 #include "InspectorInstrumentation.h"
+#include "IntegrityPolicy.h"
 #include "LinkLoader.h"
 #include "LoaderStrategy.h"
 #include "LocalDOMWindow.h"
@@ -857,6 +858,12 @@ void FrameLoader::didBeginDocument(bool dispatch, LocalDOMWindow* previousWindow
             if (auto crossOriginOpenerPolicy = documentLoader->crossOriginOpenerPolicy())
                 document->setCrossOriginOpenerPolicy(WTFMove(*crossOriginOpenerPolicy));
         }
+
+        if (auto integrityPolicy = documentLoader->integrityPolicy())
+            document->setIntegrityPolicy(WTFMove(integrityPolicy));
+
+        if (auto integrityPolicyReportOnly = documentLoader->integrityPolicyReportOnly())
+            document->setIntegrityPolicyReportOnly(WTFMove(integrityPolicyReportOnly));
 
         navigationType = m_documentLoader->triggeringAction().navigationAPIType();
     }

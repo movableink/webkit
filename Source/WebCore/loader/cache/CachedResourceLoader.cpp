@@ -58,6 +58,7 @@
 #include "HTMLFrameOwnerElement.h"
 #include "HTTPHeaderField.h"
 #include "InspectorInstrumentation.h"
+#include "IntegrityPolicy.h"
 #include "LegacySchemeRegistry.h"
 #include "LoaderStrategy.h"
 #include "LocalDOMWindow.h"
@@ -665,6 +666,9 @@ bool CachedResourceLoader::canRequest(CachedResource::Type type, const URL& url,
 
         bool shouldReportViolationAsConsoleMessage = forPreload == ForPreload::No || isLinkPreload;
         if (!allowedByContentSecurityPolicy(type, url, options, ContentSecurityPolicy::RedirectResponseReceived::No, { }, shouldReportViolationAsConsoleMessage))
+            return false;
+
+        if (shouldRequestBeBlockedByIntegrityPolicy(*document, options, url))
             return false;
     }
 

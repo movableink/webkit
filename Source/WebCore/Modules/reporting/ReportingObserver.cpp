@@ -50,6 +50,7 @@ static bool isVisibleToReportingObservers(const String& type)
         String { "coep"_s },
         String { "deprecation"_s },
         String { "test"_s },
+        String { "integrity-violation"_s },
     });
     return visibleTypes->contains(type);
 }

@@ -1760,6 +1760,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSInspectorFrontendHost.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSInspectorFrontendHost.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSInstallEvent.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSInstallEvent.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSIntegrityPolicyViolationReportBody.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSIntegrityPolicyViolationReportBody.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSInternalSettings.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSInternalSettings.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSInternalSettingsGenerated.cpp

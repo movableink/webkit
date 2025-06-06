@@ -33,6 +33,7 @@
 #include "ThreadableWebSocketChannel.h"
 #include "WebSocketChannelClient.h"
 #include "WorkerGlobalScope.h"
+#include "WorkerLoaderProxy.h"
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
@@ -42,8 +43,6 @@ namespace WebCore {
 
 class ScriptExecutionContext;
 class ThreadableWebSocketChannelClientWrapper;
-class WorkerGlobalScope;
-class WorkerLoaderProxy;
 class WorkerRunLoop;
 
 class WorkerThreadableWebSocketChannel final : public RefCounted<WorkerThreadableWebSocketChannel>, public ThreadableWebSocketChannel {

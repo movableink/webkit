@@ -69,6 +69,8 @@ If-Modified-Since
 If-None-Match
 If-Range
 If-Unmodified-Since
+Integrity-Policy
+Integrity-Policy-Report-Only
 Keep-Alive
 Last-Event-ID
 Last-Modified

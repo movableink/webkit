@@ -192,6 +192,7 @@ void PingLoader::sendViolationReport(LocalFrame& frame, URL&& violationReportURL
     case ViolationReportType::Deprecation:
     case ViolationReportType::StandardReportingAPIViolation:
     case ViolationReportType::Test:
+    case ViolationReportType::IntegrityPolicy:
         request.setHTTPContentType("application/reports+json"_s);
         break;
     }

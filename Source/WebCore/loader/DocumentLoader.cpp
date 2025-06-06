@@ -62,6 +62,7 @@
 #include "HistoryController.h"
 #include "IconLoader.h"
 #include "InspectorInstrumentation.h"
+#include "IntegrityPolicy.h"
 #include "LegacySchemeRegistry.h"
 #include "LinkIconCollector.h"
 #include "LinkIconType.h"
@@ -935,6 +936,10 @@ void DocumentLoader::responseReceived(const CachedResource& resource, const Reso
     }
     if (frame && frame->document() && frame->document()->settings().crossOriginOpenerPolicyEnabled())
         m_responseCOOP = obtainCrossOriginOpenerPolicy(response);
+
+    // https://w3c.github.io/webappsec-subresource-integrity/#parse-integrity-policy-headers
+    m_integrityPolicy = processIntegrityPolicy(response, HTTPHeaderName::IntegrityPolicy);
+    m_integrityPolicyReportOnly = processIntegrityPolicy(response, HTTPHeaderName::IntegrityPolicyReportOnly);
 
     if (frame->settings().clearSiteDataHTTPHeaderEnabled())
         m_responseClearSiteDataValues = parseClearSiteDataHeader(response);
@@ -2755,6 +2760,16 @@ void DocumentLoader::setNewResultingClientId(ScriptExecutionContextIdentifier id
         m_resultingClientId = identifier;
         scriptExecutionContextIdentifierToLoaderMap().add(identifier, this);
     }
+}
+
+std::unique_ptr<IntegrityPolicy> DocumentLoader::integrityPolicy()
+{
+    return WTFMove(m_integrityPolicy);
+}
+
+std::unique_ptr<IntegrityPolicy> DocumentLoader::integrityPolicyReportOnly()
+{
+    return WTFMove(m_integrityPolicyReportOnly);
 }
 
 } // namespace WebCore
