@@ -923,7 +923,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncMap(VM& vm, JSGlobalO
             size_t index = 0; \
             using Adaptor = typename JS##name##Array::Adaptor; \
             for (auto value : from) \
-                to[index++] = Adaptor::template convertTo<typename ViewClass::Adaptor>(value); \
+                to[index++] = ViewClass::Adaptor::template convertTo<Adaptor>(value); \
         } \
         break; \
     }
