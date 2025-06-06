@@ -124,7 +124,7 @@ void PingLoad::didFinish(const ResourceError& error, const ResourceResponse& res
 void PingLoad::loadRequest(NetworkProcess& networkProcess, ResourceRequest&& request)
 {
     PING_RELEASE_LOG("startNetworkLoad");
-    if (auto* networkSession = networkProcess.networkSession(m_sessionID)) {
+    if (CheckedPtr networkSession = networkProcess.networkSession(m_sessionID)) {
         auto loadParameters = m_parameters.networkLoadParameters();
         loadParameters.request = WTFMove(request);
         Ref task = NetworkDataTask::create(*networkSession, *this, WTFMove(loadParameters));

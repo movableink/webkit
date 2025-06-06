@@ -71,7 +71,7 @@ NetworkRTCProvider::NetworkRTCProvider(NetworkConnectionToWebProcess& connection
 #endif
 {
 #if PLATFORM(COCOA)
-    if (auto* session = downcast<NetworkSessionCocoa>(connection.networkSession()))
+    if (CheckedPtr session = downcast<NetworkSessionCocoa>(connection.networkSession()))
         m_applicationBundleIdentifier = session->sourceApplicationBundleIdentifier().utf8();
 #endif
 #if !RELEASE_LOG_DISABLED
@@ -241,7 +241,7 @@ const String& NetworkRTCProvider::attributedBundleIdentifierFromPageIdentifier(W
         String value;
         callOnMainRunLoopAndWait([protectedThis, &value, pageIdentifier] {
             RefPtr connection = protectedThis->m_connection.get();
-            if (auto* session = connection ? connection->networkSession() : nullptr)
+            if (CheckedPtr session = connection ? connection->networkSession() : nullptr)
                 value = session->attributedBundleIdentifierFromPageIdentifier(pageIdentifier).isolatedCopy();
         });
         return value;
@@ -335,8 +335,7 @@ void NetworkRTCProvider::createClientTCPSocket(LibWebRTCSocketIdentifier identif
         if (!m_connection)
             return;
 
-        auto* session = m_connection->networkSession();
-        if (!session) {
+        if (!m_connection->networkSession()) {
             signalSocketIsClosed(identifier);
             return;
         }

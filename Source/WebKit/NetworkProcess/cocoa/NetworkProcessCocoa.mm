@@ -143,7 +143,7 @@ std::optional<audit_token_t> NetworkProcess::sourceApplicationAuditToken() const
 HashSet<String> NetworkProcess::hostNamesWithHSTSCache(PAL::SessionID sessionID) const
 {
     HashSet<String> hostNames;
-    if (auto* networkSession = downcast<NetworkSessionCocoa>(this->networkSession(sessionID))) {
+    if (CheckedPtr networkSession = downcast<NetworkSessionCocoa>(this->networkSession(sessionID))) {
         for (NSString *host in networkSession->hstsStorage().nonPreloadedHosts)
             hostNames.add(host);
     }
@@ -152,7 +152,7 @@ HashSet<String> NetworkProcess::hostNamesWithHSTSCache(PAL::SessionID sessionID)
 
 void NetworkProcess::deleteHSTSCacheForHostNames(PAL::SessionID sessionID, const Vector<String>& hostNames)
 {
-    if (auto* networkSession = downcast<NetworkSessionCocoa>(this->networkSession(sessionID))) {
+    if (CheckedPtr networkSession = downcast<NetworkSessionCocoa>(this->networkSession(sessionID))) {
         for (auto& hostName : hostNames)
             [networkSession->hstsStorage() resetHSTSForHost:hostName.createNSString().get()];
     }
@@ -162,7 +162,7 @@ void NetworkProcess::clearHSTSCache(PAL::SessionID sessionID, WallTime modifiedS
 {
     NSTimeInterval timeInterval = modifiedSince.secondsSinceEpoch().seconds();
     RetainPtr date = [NSDate dateWithTimeIntervalSince1970:timeInterval];
-    if (auto* networkSession = downcast<NetworkSessionCocoa>(this->networkSession(sessionID)))
+    if (CheckedPtr networkSession = downcast<NetworkSessionCocoa>(this->networkSession(sessionID)))
         [networkSession->hstsStorage() resetHSTSHostsSinceDate:date.get()];
 }
 
@@ -207,7 +207,7 @@ void saveCookies(NSHTTPCookieStorage *cookieStorage, CompletionHandler<void()>&&
 void NetworkProcess::platformFlushCookies(PAL::SessionID sessionID, CompletionHandler<void()>&& completionHandler)
 {
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanAccessRawCookies));
-    auto* networkStorageSession = storageSession(sessionID);
+    CheckedPtr networkStorageSession = storageSession(sessionID);
     if (!networkStorageSession)
         return completionHandler();
 
@@ -227,7 +227,7 @@ const String& NetworkProcess::uiProcessBundleIdentifier() const
 void NetworkProcess::setBackupExclusionPeriodForTesting(PAL::SessionID sessionID, Seconds period, CompletionHandler<void()>&& completionHandler)
 {
     auto callbackAggregator = CallbackAggregator::create(WTFMove(completionHandler));
-    if (auto* session = networkSession(sessionID))
+    if (CheckedPtr session = networkSession(sessionID))
         session->protectedStorageManager()->setBackupExclusionPeriodForTesting(period, [callbackAggregator] { });
 }
 #endif // PLATFORM(IOS_FAMILY)
@@ -235,7 +235,7 @@ void NetworkProcess::setBackupExclusionPeriodForTesting(PAL::SessionID sessionID
 #if HAVE(NW_PROXY_CONFIG)
 void NetworkProcess::clearProxyConfigData(PAL::SessionID sessionID)
 {
-    auto* session = networkSession(sessionID);
+    CheckedPtr session = networkSession(sessionID);
     if (!session)
         return;
 
@@ -244,7 +244,7 @@ void NetworkProcess::clearProxyConfigData(PAL::SessionID sessionID)
 
 void NetworkProcess::setProxyConfigData(PAL::SessionID sessionID, Vector<std::pair<Vector<uint8_t>, std::optional<WTF::UUID>>>&& proxyConfigurations)
 {
-    auto* session = networkSession(sessionID);
+    CheckedPtr session = networkSession(sessionID);
     if (!session)
         return;
 
