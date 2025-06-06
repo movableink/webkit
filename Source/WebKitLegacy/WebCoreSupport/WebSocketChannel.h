@@ -213,7 +213,7 @@ private:
     BlobLoaderStatus m_blobLoaderStatus { BlobLoaderNotStarted };
 
     WebSocketDeflateFramer m_deflateFramer;
-    Ref<SocketProvider> m_socketProvider;
+    const Ref<SocketProvider> m_socketProvider;
 };
 
 } // namespace WebCore

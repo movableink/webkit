@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Igalia S.L.
- * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -219,7 +219,7 @@ private:
     RunLoop::Timer m_watchdogTimer;
     Seconds m_currentWatchdogInterval;
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
 #endif
 #if PLATFORM(COCOA)

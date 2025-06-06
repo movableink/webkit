@@ -783,17 +783,17 @@ private:
 #endif
 
 #if ENABLE(MODEL_PROCESS)
-    Ref<ModelProcessModelPlayerManager> m_modelProcessModelPlayerManager;
+    const Ref<ModelProcessModelPlayerManager> m_modelProcessModelPlayerManager;
     RefPtr<ModelProcessConnection> m_modelProcessConnection;
 #endif
 
     const Ref<WebCacheStorageProvider> m_cacheStorageProvider;
-    Ref<WebBadgeClient> m_badgeClient;
+    const Ref<WebBadgeClient> m_badgeClient;
 #if ENABLE(GPU_PROCESS) && ENABLE(VIDEO)
-    Ref<RemoteMediaPlayerManager> m_remoteMediaPlayerManager;
+    const Ref<RemoteMediaPlayerManager> m_remoteMediaPlayerManager;
 #endif
 #if ENABLE(GPU_PROCESS) && HAVE(AVASSETREADER)
-    Ref<RemoteImageDecoderAVFManager> m_remoteImageDecoderAVFManager;
+    const Ref<RemoteImageDecoderAVFManager> m_remoteImageDecoderAVFManager;
 #endif
     const Ref<WebBroadcastChannelRegistry> m_broadcastChannelRegistry;
     const Ref<WebCookieJar> m_cookieJar;

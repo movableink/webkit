@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -201,7 +201,7 @@ private:
     std::unique_ptr<LibWebRTCProvider::SuspendableSocketFactory> m_rtcSocketFactory;
 #if !RELEASE_LOG_DISABLED
     int64_t m_statsFirstDeliveredTimestamp { 0 };
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
 #endif
     bool m_isGatheringRTCLogs { false };

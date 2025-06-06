@@ -161,7 +161,7 @@ private:
 
     friend class MessageReceiver;
     ThreadSafeWeakPtr<GPUProcessConnection> m_gpuProcessConnection;
-    Ref<MessageReceiver> m_receiver;
+    const Ref<MessageReceiver> m_receiver;
     const RemoteSourceBufferIdentifier m_remoteSourceBufferIdentifier;
 
     std::atomic<uint64_t> m_totalTrackBufferSizeInBytes = { 0 };
@@ -182,7 +182,7 @@ private:
     const Logger& sourceBufferLogger() const final { return m_logger.get(); }
     uint64_t sourceBufferLogIdentifier() final { return logIdentifier(); }
 
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
 #endif
 };

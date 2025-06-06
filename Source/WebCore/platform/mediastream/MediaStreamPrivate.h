@@ -145,7 +145,7 @@ private:
     MemoryCompactRobinHoodHashMap<String, Ref<MediaStreamTrackPrivate>> m_trackSet;
     bool m_isActive { false };
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
 #endif
 };

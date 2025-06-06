@@ -249,7 +249,7 @@ private:
     uint64_t logIdentifier() const final { return m_logIdentifier; }
     WTFLogChannel& logChannel() const final;
 
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
 #endif
 

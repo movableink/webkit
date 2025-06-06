@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -102,7 +102,7 @@ protected:
     WebCore::IntRect m_initialFrame;
     WebCore::IntRect m_finalFrame;
     WebCore::IntPoint m_scrollPosition;
-    Ref<WebPage> m_page;
+    const Ref<WebPage> m_page;
     RefPtr<WebCore::Element> m_element;
     WeakPtr<WebCore::Element, WebCore::WeakPtrImplWithEventTargetData> m_elementToRestore;
 #if ENABLE(QUICKLOOK_FULLSCREEN)
@@ -154,7 +154,7 @@ private:
     bool m_closing { false };
     bool m_inWindowFullScreenMode { false };
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
 #endif
 };

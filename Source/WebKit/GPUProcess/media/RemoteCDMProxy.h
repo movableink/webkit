@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -92,7 +92,7 @@ private:
     UniqueRef<RemoteCDMConfiguration> m_configuration;
 
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     uint64_t m_logIdentifier { 0 };
 #endif
 };

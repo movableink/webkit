@@ -115,7 +115,7 @@ private:
     std::optional<MediaPromise::Producer> m_appendPromise;
 
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
 #endif
 };

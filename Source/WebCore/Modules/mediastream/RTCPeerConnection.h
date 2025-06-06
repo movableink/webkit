@@ -2,7 +2,7 @@
  * Copyright (C) 2012 Google Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  * Copyright (C) 2015 Ericsson AB. All rights reserved.
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -267,7 +267,7 @@ private:
     RTCPeerConnectionState m_connectionState { RTCPeerConnectionState::New };
 
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
 #endif
 

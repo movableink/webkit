@@ -174,7 +174,7 @@ private:
         std::unique_ptr<RunLoop::Timer> updateTimer;
     } m_display;
 
-    Ref<ThreadedDisplayRefreshMonitor> m_displayRefreshMonitor;
+    const Ref<ThreadedDisplayRefreshMonitor> m_displayRefreshMonitor;
 #endif
 };
 

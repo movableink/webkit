@@ -1,4 +1,3 @@
-wtf/AutomaticThread.cpp
 wtf/JSONValues.cpp
 wtf/MemoryPressureHandler.cpp
 wtf/ParallelHelperPool.cpp

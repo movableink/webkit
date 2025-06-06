@@ -200,7 +200,7 @@ private:
     WeakPtr<MediaSource> m_parent;
     const ScriptExecutionContextIdentifier m_identifier;
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
 #endif
     mutable Lock m_lock;
     RefPtr<MediaSourcePrivate> m_private WTF_GUARDED_BY_LOCK(m_lock);

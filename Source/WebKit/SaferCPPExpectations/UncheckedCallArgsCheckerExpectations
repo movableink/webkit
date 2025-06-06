@@ -83,7 +83,6 @@ WebProcess/GPU/ShapeDetection/RemoteBarcodeDetectorProxy.cpp
 WebProcess/GPU/ShapeDetection/RemoteTextDetectorProxy.cpp
 WebProcess/GPU/graphics/RemoteRenderingBackendProxy.cpp
 WebProcess/GPU/media/MediaPlayerPrivateRemote.cpp
-WebProcess/GPU/media/MediaSourcePrivateRemote.cpp
 WebProcess/GPU/media/RemoteLegacyCDMFactory.cpp
 WebProcess/GPU/media/RemoteMediaPlayerManager.cpp
 WebProcess/InjectedBundle/API/Cocoa/WKWebProcessPlugInFrame.mm
@@ -109,7 +108,6 @@ WebProcess/Network/webrtc/LibWebRTCNetwork.cpp
 WebProcess/Network/webrtc/LibWebRTCNetwork.h
 WebProcess/Network/webrtc/LibWebRTCProvider.cpp
 WebProcess/Network/webrtc/LibWebRTCResolver.cpp
-WebProcess/Network/webrtc/LibWebRTCSocket.cpp
 WebProcess/Plugins/PDF/PDFPluginAnnotation.mm
 WebProcess/Plugins/PDF/PDFPluginBase.mm
 WebProcess/Plugins/PDF/PDFPluginChoiceAnnotation.mm
@@ -117,7 +115,6 @@ WebProcess/Plugins/PDF/PDFPluginPasswordField.mm
 WebProcess/Plugins/PDF/PDFPluginPasswordForm.mm
 WebProcess/Plugins/PDF/PDFPluginTextAnnotation.mm
 WebProcess/Plugins/PDF/UnifiedPDF/PDFDiscretePresentationController.mm
-WebProcess/Plugins/PDF/UnifiedPDF/PDFPresentationController.mm
 WebProcess/Plugins/PDF/UnifiedPDF/PDFScrollingPresentationController.mm
 WebProcess/Plugins/PDF/UnifiedPDF/UnifiedPDFPlugin.mm
 WebProcess/Plugins/PDF/WKAccessibilityPDFDocumentObject.mm

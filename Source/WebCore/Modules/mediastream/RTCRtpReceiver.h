@@ -98,7 +98,7 @@ private:
     std::unique_ptr<RTCRtpTransform> m_transform;
     Vector<WeakPtr<MediaStream>> m_associatedStreams;
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     uint64_t m_logIdentifier { 0 };
 #endif
 };

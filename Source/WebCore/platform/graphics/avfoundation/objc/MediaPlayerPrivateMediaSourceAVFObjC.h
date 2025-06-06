@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -410,7 +410,7 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     RefPtr<MediaPlaybackTarget> m_playbackTarget;
     bool m_shouldPlayToTarget { false };
 #endif
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
     std::unique_ptr<VideoLayerManagerObjC> m_videoLayerManager;
     const Ref<EffectiveRateChangedListener> m_effectiveRateChangedListener;

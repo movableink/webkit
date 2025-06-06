@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -93,7 +93,7 @@ private:
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
 #endif
 
-    CheckedRef<WebProcess> m_webProcess;
+    const CheckedRef<WebProcess> m_webProcess;
 
 #if USE(LIBWEBRTC)
     LibWebRTCSocketFactory m_socketFactory;

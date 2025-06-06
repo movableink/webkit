@@ -649,7 +649,7 @@ private:
     uint64_t m_lastVideoFrameMetadataSampleCount { 0 };
     mutable PlatformTimeRanges m_buffered;
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
 #endif
 

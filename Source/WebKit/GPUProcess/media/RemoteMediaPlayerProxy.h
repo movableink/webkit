@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -471,7 +471,7 @@ private:
     bool m_shouldCheckHardwareSupport { false };
     SoundStageSize m_soundStageSize { SoundStageSize::Auto };
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
 #endif
 };
 

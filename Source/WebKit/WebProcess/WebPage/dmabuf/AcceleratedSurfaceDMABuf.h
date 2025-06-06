@@ -267,7 +267,7 @@ private:
 #endif
     };
 
-    CheckedRef<ThreadedCompositor> m_compositor;
+    const CheckedRef<ThreadedCompositor> m_compositor;
     uint64_t m_id { 0 };
     SwapChain m_swapChain;
     RenderTarget* m_target { nullptr };
