@@ -7880,9 +7880,6 @@ webkit.org/b/292650 http/tests/iframe-monitor/throttler.html [ Timeout ]
 
 webkit.org/b/288957 imported/w3c/web-platform-tests/css/CSS2/tables/border-collapse-dynamic-column-001.xht [ ImageOnlyFailure ]
 
-# rdar://146986685 (REGRESSION(Sequoia 15.4): fast/canvas/webgl/gl-teximage.html is a constant text failure)
-fast/canvas/webgl/gl-teximage.html [ Pass ]
-
 #rdar://145604998 (REGRESSION(iOS 18.4, macOS Sequoia 15.4 ): fast/text/international/hindi-spacing.html is a constant text failure)
 fast/text/international/hindi-spacing.html [ Failure ]
 
@@ -7898,3 +7895,5 @@ imported/w3c/web-platform-tests/url/toascii.window.html [ Failure ]
 # webkit.org/b/294135 REGRESSION(295356@main): [ iOS ] 2 accessibility/*.html tests are constant failures.
 accessibility/display-contents/element-roles.html [ Failure ]
 accessibility/dialog-slotted-content.html [ Failure ]
+
+webkit.org/b/294142 fast/canvas/webgl/gl-teximage.html [ Failure ]
