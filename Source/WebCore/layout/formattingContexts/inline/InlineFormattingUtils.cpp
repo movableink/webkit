@@ -118,8 +118,10 @@ bool InlineFormattingUtils::inlineLevelBoxAffectsLineBox(const InlineLevelBox& i
 
     if (inlineLevelBox.isLineBreakBox())
         return false;
-    if (inlineLevelBox.isListMarker())
+    if (inlineLevelBox.isListMarker()) {
+        // This does not match other browser engines. see webkit.org/b/256390.
         return true;
+    }
     if (inlineLevelBox.isInlineBox())
         return formattingContext().layoutState().inStandardsMode() ? true : formattingContext().quirks().inlineBoxAffectsLineBox(inlineLevelBox);
     if (inlineLevelBox.isAtomicInlineBox())

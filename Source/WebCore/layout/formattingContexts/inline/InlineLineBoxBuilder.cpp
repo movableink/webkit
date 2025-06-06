@@ -765,6 +765,8 @@ InlineLayoutUnit LineBoxBuilder::applyTextBoxTrimOnLineBoxIfNeeded(InlineLayoutU
 void LineBoxBuilder::computeLineBoxGeometry(LineBox& lineBox) const
 {
     auto lineBoxLogicalHeight = applyTextBoxTrimOnLineBoxIfNeeded(LineBoxVerticalAligner { formattingContext() }.computeLogicalHeightAndAlign(lineBox), lineBox);
+    if (formattingContext().quirks().shouldCollapseLineBoxHeight(lineLayoutResult().inlineContent, m_outsideListMarkers.size()))
+        lineBoxLogicalHeight = { };
     lineBox.setLogicalRect({ lineLayoutResult().lineGeometry.logicalTopLeft, lineLayoutResult().lineGeometry.logicalWidth, lineBoxLogicalHeight });
 }
 
