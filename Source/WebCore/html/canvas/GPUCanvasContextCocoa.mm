@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -156,8 +156,8 @@ static GPUIntegerCoordinate getCanvasHeight(const GPUCanvasContext::CanvasType& 
 
 GPUCanvasContextCocoa::CanvasType GPUCanvasContextCocoa::htmlOrOffscreenCanvas() const
 {
-    if (auto* c = htmlCanvas())
-        return c;
+    if (RefPtr canvas = htmlCanvas())
+        return canvas;
     return &downcast<OffscreenCanvas>(canvasBase());
 }
 
@@ -173,8 +173,8 @@ GPUCanvasContextCocoa::GPUCanvasContextCocoa(CanvasBase& canvas, Ref<GPUComposit
 
 void GPUCanvasContextCocoa::reshape()
 {
-    if (auto* texture = m_currentTexture.get()) {
-        texture->destroy();
+    if (RefPtr currentTexture = m_currentTexture) {
+        currentTexture->destroy();
         m_currentTexture = nullptr;
     }
     auto newSize = canvasBase().size();
@@ -210,9 +210,9 @@ RefPtr<ImageBuffer> GPUCanvasContextCocoa::surfaceBufferToImageBuffer(SurfaceBuf
         if (!protectedThis)
             return;
 
-        auto& base = protectedThis->canvasBase();
-        base.clearCopiedImage();
-        if (auto buffer = base.buffer(); buffer && protectedThis->m_configuration) {
+        RefPtr base = protectedThis->canvasBase();
+        base->clearCopiedImage();
+        if (RefPtr buffer = base->buffer(); buffer && protectedThis->m_configuration) {
             buffer->flushDrawingContext();
             protectedThis->m_compositorIntegration->paintCompositedResultsToCanvas(*buffer, frameCount);
             protectedThis->present(frameCount);
@@ -370,14 +370,14 @@ ExceptionOr<RefPtr<GPUTexture>> GPUCanvasContextCocoa::getCurrentTexture()
     if (!isConfigured())
         return Exception { ExceptionCode::InvalidStateError, "GPUCanvasContextCocoa::getCurrentTexture: canvas is not configured"_s };
 
-    RefPtr<GPUTexture> protectedCurrentTexture = m_currentTexture;
-    if (protectedCurrentTexture)
-        return protectedCurrentTexture;
+    RefPtr currentTexture = m_currentTexture;
+    if (currentTexture)
+        return currentTexture;
 
     markContextChangedAndNotifyCanvasObservers();
     m_currentTexture = m_presentationContext->getCurrentTexture(m_configuration->frameCount);
-    protectedCurrentTexture = m_currentTexture;
-    return protectedCurrentTexture;
+    currentTexture = m_currentTexture;
+    return currentTexture;
 }
 
 ImageBufferPixelFormat GPUCanvasContextCocoa::pixelFormat() const
@@ -405,8 +405,8 @@ void GPUCanvasContextCocoa::present(uint32_t frameIndex)
 
     m_compositingResultsNeedsUpdating = false;
     m_configuration->frameCount = (m_configuration->frameCount + 1) % m_configuration->renderBuffers.size();
-    if (m_currentTexture)
-        m_currentTexture->destroy();
+    if (RefPtr currentTexture = m_currentTexture)
+        currentTexture->destroy();
     m_currentTexture = nullptr;
     m_presentationContext->present(frameIndex);
 }

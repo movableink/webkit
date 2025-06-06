@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2009, 2012 Ericsson AB. All rights reserved.
  * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
- * Copyright (C) 2011, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2011 Code Aurora Forum. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,6 +43,7 @@
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include "ScriptExecutionContext.h"
+#include "ScriptExecutionContextInlines.h"
 #include "SecurityOrigin.h"
 #include "SharedBuffer.h"
 #include "TextResourceDecoder.h"
@@ -136,8 +137,7 @@ void EventSource::scheduleInitialConnect()
     ASSERT(m_state == CONNECTING);
     ASSERT(!m_requestInFlight);
 
-    auto* context = scriptExecutionContext();
-    m_connectTimer = context->eventLoop().scheduleTask(0_s, TaskSource::DOMManipulation, [weakThis = WeakPtr { *this }] {
+    m_connectTimer = protectedScriptExecutionContext()->checkedEventLoop()->scheduleTask(0_s, TaskSource::DOMManipulation, [weakThis = WeakPtr { *this }] {
         if (RefPtr protectedThis = weakThis.get())
             protectedThis->connect();
     });
@@ -147,8 +147,7 @@ void EventSource::scheduleReconnect()
 {
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!m_isSuspendedForBackForwardCache);
     m_state = CONNECTING;
-    auto* context = scriptExecutionContext();
-    m_connectTimer = context->eventLoop().scheduleTask(1_ms * m_reconnectDelay, TaskSource::DOMManipulation, [weakThis = WeakPtr { *this }] {
+    m_connectTimer = protectedScriptExecutionContext()->checkedEventLoop()->scheduleTask(1_ms * m_reconnectDelay, TaskSource::DOMManipulation, [weakThis = WeakPtr { *this }] {
         if (RefPtr protectedThis = weakThis.get())
             protectedThis->connect();
     });

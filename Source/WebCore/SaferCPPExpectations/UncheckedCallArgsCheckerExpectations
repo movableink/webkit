@@ -498,7 +498,6 @@ page/DebugPageOverlays.cpp
 page/DragController.cpp
 page/ElementTargetingController.cpp
 page/EventHandler.cpp
-page/EventSource.cpp
 page/FocusController.cpp
 page/Frame.cpp
 page/FrameSnapshotting.cpp

@@ -107,7 +107,6 @@ css/typedom/ComputedStylePropertyMapReadOnly.cpp
 css/typedom/HashMapStylePropertyMapReadOnly.cpp
 css/typedom/MainThreadStylePropertyMapReadOnly.cpp
 dom/ActiveDOMObject.cpp
-dom/BroadcastChannel.cpp
 dom/CollectionIndexCacheInlines.h
 dom/ComposedTreeAncestorIterator.h
 dom/ComposedTreeIterator.cpp
@@ -125,8 +124,6 @@ dom/ElementTextDirection.cpp
 dom/ElementTraversal.h
 dom/EventLoop.cpp
 dom/EventPath.cpp
-dom/FragmentDirectiveGenerator.cpp
-dom/FragmentDirectiveRangeFinder.cpp
 dom/InlineStyleSheetOwner.cpp
 dom/Microtasks.cpp
 dom/MouseRelatedEvent.cpp
@@ -188,7 +185,6 @@ html/Autofill.cpp
 html/CachedHTMLCollectionInlines.h
 html/CanvasBase.cpp
 html/CollectionTraversalInlines.h
-html/CustomPaintImage.cpp
 html/FormAssociatedCustomElement.cpp
 html/FormListedElement.cpp
 html/HTMLAttachmentElement.cpp
@@ -197,7 +193,6 @@ html/HTMLDocument.cpp
 html/HTMLEmbedElement.cpp
 html/HTMLFormControlElement.cpp
 html/HTMLFormElement.cpp
-html/HTMLFrameElementBase.cpp
 html/HTMLImageElement.cpp
 html/HTMLInputElement.cpp
 html/HTMLLabelElement.cpp
@@ -222,7 +217,6 @@ html/ValidatedFormListedElement.cpp
 html/ValidationMessage.cpp
 html/canvas/CanvasRenderingContext2D.cpp
 html/canvas/CanvasRenderingContext2DBase.cpp
-html/canvas/GPUCanvasContextCocoa.mm
 html/parser/HTMLConstructionSite.cpp
 html/shadow/DateTimeEditElement.cpp
 html/shadow/DateTimeNumericFieldElement.cpp

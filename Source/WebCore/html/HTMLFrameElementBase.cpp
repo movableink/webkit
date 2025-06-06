@@ -3,7 +3,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Simon Hausmann (hausmann@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -174,7 +174,7 @@ void HTMLFrameElementBase::didFinishInsertingNode()
 
 void HTMLFrameElementBase::didAttachRenderers()
 {
-    if (RenderWidget* part = renderWidget()) {
+    if (CheckedPtr part = renderWidget()) {
         if (RefPtr frame = contentFrame())
             part->setWidget(frame->virtualView());
     }
