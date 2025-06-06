@@ -87,7 +87,6 @@ domjit/JSNodeDOMJIT.cpp
 editing/TypingCommand.cpp
 html/InputType.cpp
 html/NavigatorUserActivation.cpp
-html/canvas/WebGL2RenderingContext.cpp
 html/track/TextTrackCueGeneric.cpp
 inspector/CommandLineAPIModule.cpp
 inspector/agents/InspectorCSSAgent.cpp

@@ -362,7 +362,6 @@ html/canvas/CanvasRenderingContext2D.cpp
 html/canvas/CanvasRenderingContext2DBase.cpp
 html/canvas/GPUCanvasContextCocoa.mm
 html/canvas/OffscreenCanvasRenderingContext2D.cpp
-html/canvas/WebGL2RenderingContext.cpp
 html/parser/HTMLConstructionSite.cpp
 html/shadow/DateTimeEditElement.cpp
 html/shadow/MediaControlTextTrackContainerElement.cpp

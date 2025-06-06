@@ -317,6 +317,10 @@ private:
     };
     void updateBuffersToAutoClear(ClearBufferCaller, GCGLenum buffer, GCGLint drawbuffer);
 
+    RefPtr<WebGLTransformFeedback> protectedBoundTransformFeedback() const { return m_boundTransformFeedback; }
+    RefPtr<WebGLVertexArrayObjectBase> protectedBoundVertexArrayObject() const { return m_boundVertexArrayObject; }
+    RefPtr<WebGLFramebuffer> protectedFramebufferBinding() const { return m_framebufferBinding; }
+
     WebGLBindingPoint<WebGLFramebuffer> m_readFramebufferBinding;
     WebGLBindingPoint<WebGLTransformFeedback> m_boundTransformFeedback;
     RefPtr<WebGLTransformFeedback> m_defaultTransformFeedback;

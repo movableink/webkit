@@ -644,7 +644,6 @@ html/canvas/GPUCanvasContextCocoa.mm
 html/canvas/ImageBitmapRenderingContext.cpp
 html/canvas/OffscreenCanvasRenderingContext2D.cpp
 html/canvas/PlaceholderRenderingContext.cpp
-html/canvas/WebGL2RenderingContext.cpp
 html/canvas/WebGLDrawBuffers.cpp
 html/canvas/WebGLDrawInstancedBaseVertexBaseInstance.cpp
 html/canvas/WebGLFramebuffer.cpp
