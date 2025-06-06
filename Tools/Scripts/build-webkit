@@ -179,7 +179,7 @@ my %options = (
 # Build usage text and options list from features
 foreach (@features) {
     my $opt = sprintf("%-35s", "  --[no-]$_->{option}");
-    $usage .= "$opt $_->{desc}\n";
+    $usage .= "$opt $_->{desc}\n" if not $_->{hidden};
     $options{"$_->{option}!"} = $_->{value};
 }
 

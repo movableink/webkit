@@ -409,8 +409,11 @@ my @features = (
     { option => "webgl", desc => "Toggle WebGL support",
       define => "ENABLE_WEBGL", value => \$webglSupport },
 
-    { option => "webGpuSwift", desc => "Toggle WebGpu Swift Implementation",
+    { option => "webgpu-swift", desc => "Toggle WebGPU Swift Implementation",
       define => "ENABLE_WEBGPU_SWIFT", value => \$webGpuSwift },
+
+    { option => "webGpuSwift", desc => "Old spelling of \"Toggle WebGPU Swift Implementation\"",
+      hidden => 1, define => "ENABLE_WEBGPU_SWIFT", value => \$webGpuSwift },
 
     { option => "webxr", desc => "Toggle WebXR support",
       define => "ENABLE_WEBXR", value => \$webXRSupport },
