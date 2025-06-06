@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -139,7 +139,7 @@ protected:
     DOMGuardedObjectSet m_guardedObjects WTF_GUARDED_BY_LOCK(m_gcLock);
     std::unique_ptr<DOMConstructors> m_constructors;
 
-    Ref<DOMWrapperWorld> m_world;
+    const Ref<DOMWrapperWorld> m_world;
     uint8_t m_worldIsNormal;
     Lock m_gcLock;
     JSC::WriteBarrier<JSC::JSGlobalProxy> m_proxy;

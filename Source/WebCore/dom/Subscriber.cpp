@@ -46,7 +46,7 @@ Subscriber::Subscriber(ScriptExecutionContext& context, Ref<InternalObserver>&& 
     , m_observer(observer)
     , m_options(options)
 {
-    followSignal(protectedSignal());
+    followSignal(m_signal);
     if (RefPtr signal = options.signal)
         followSignal(*signal);
     suspendIfNeeded();
@@ -115,7 +115,7 @@ void Subscriber::close(JSC::JSValue reason)
 
     m_active = false;
 
-    protectedSignal()->signalAbort(reason);
+    m_signal->signalAbort(reason);
 
     {
         Locker locker { m_teardownsLock };

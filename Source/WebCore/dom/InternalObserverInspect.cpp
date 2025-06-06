@@ -194,7 +194,7 @@ private:
             return;
 
         auto handle = std::exchange(m_abortAlgorithmHandler, std::nullopt);
-        protectedSubscriber()->protectedSignal()->removeAlgorithm(*handle);
+        protectedSubscriber()->signal().removeAlgorithm(*handle);
     }
 
     JSC::VM& vm() const

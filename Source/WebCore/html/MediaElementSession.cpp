@@ -170,7 +170,7 @@ public:
     }
 private:
     WeakPtr<MediaElementSession> m_session;
-    Ref<MediaSession> m_mediaSession;
+    const Ref<MediaSession> m_mediaSession;
 };
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaElementSessionObserver);

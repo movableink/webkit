@@ -72,7 +72,7 @@ public:
         std::optional<KeyValuePair<String, FormDataEntryValue>> next();
 
     private:
-        Ref<DOMFormData> m_target;
+        const Ref<DOMFormData> m_target;
         size_t m_index { 0 };
     };
     Iterator createIterator(ScriptExecutionContext*) { return Iterator { *this }; }

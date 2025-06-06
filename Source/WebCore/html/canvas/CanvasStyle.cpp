@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008, 2010 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2007 Alp Toker <alp@atoker.com>
  * Copyright (C) 2008 Eric Seidel <eric@webkit.org>
@@ -56,7 +56,7 @@ public:
 
     Color currentColor() const final;
 
-    Ref<HTMLCanvasElement> m_canvasElement;
+    const Ref<HTMLCanvasElement> m_canvasElement;
 };
 
 Color CanvasStyleColorResolutionDelegate::currentColor() const

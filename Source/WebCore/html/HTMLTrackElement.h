@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -97,7 +97,7 @@ private:
 
     bool canLoadURL(const URL&);
 
-    Ref<LoadableTextTrack> m_track;
+    const Ref<LoadableTextTrack> m_track;
     bool m_loadPending { false };
     bool m_hasRelevantLoadEventsListener { false };
 };

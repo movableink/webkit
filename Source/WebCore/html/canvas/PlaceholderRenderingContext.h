@@ -69,13 +69,13 @@ public:
     IntSize size() const;
     void setPlaceholderBuffer(Ref<ImageBuffer>&&);
 
-    Ref<PlaceholderRenderingContextSource> source() const { return m_source; }
+    PlaceholderRenderingContextSource& source() const { return m_source; }
 
 private:
     PlaceholderRenderingContext(HTMLCanvasElement&);
     void setContentsToLayer(GraphicsLayer&) final;
 
-    Ref<PlaceholderRenderingContextSource> m_source;
+    const Ref<PlaceholderRenderingContextSource> m_source;
 };
 
 }

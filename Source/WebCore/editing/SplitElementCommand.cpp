@@ -68,7 +68,7 @@ void SplitElementCommand::executeApply()
     
 void SplitElementCommand::doApply()
 {
-    m_element1 = protectedElement2()->cloneElementWithoutChildren(document(), nullptr);
+    m_element1 = m_element2->cloneElementWithoutChildren(document(), nullptr);
     
     executeApply();
 }
@@ -109,7 +109,7 @@ void SplitElementCommand::doReapply()
 void SplitElementCommand::getNodesInCommand(NodeSet& nodes)
 {
     addNodeAndDescendants(protectedElement1().get(), nodes);
-    addNodeAndDescendants(protectedElement2().ptr(), nodes);
+    addNodeAndDescendants(m_element2.ptr(), nodes);
     addNodeAndDescendants(Ref { m_atChild }.ptr(), nodes);
 }
 #endif

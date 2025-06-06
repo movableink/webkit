@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All Rights Reserved.
- * Copyright (C) 2012, 2013 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -177,7 +177,7 @@ private:
     SVGResourcesMap& svgResourcesMap() const;
     bool isElementWithPendingSVGResources(SVGElement&) const;
 
-    CheckedRef<ContainerNode> m_rootNode;
+    const CheckedRef<ContainerNode> m_rootNode;
     std::reference_wrapper<Document> m_documentScope;
     TreeScope* m_parentTreeScope;
 

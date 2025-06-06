@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2006 Jon Shier (jshier@iastate.edu)
- *  Copyright (C) 2003-2021 Apple Inc. All rights reseved.
+ *  Copyright (C) 2003-2025 Apple Inc. All rights reseved.
  *  Copyright (C) 2006 Alexey Proskuryakov (ap@webkit.org)
  *  Copyright (c) 2015 Canon Inc. All rights reserved.
  *
@@ -277,7 +277,7 @@ public:
     }
 
 private:
-    Ref<UserGestureToken> m_userGestureToken;
+    const Ref<UserGestureToken> m_userGestureToken;
 };
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(UserGestureInitiatedMicrotaskDispatcher);

@@ -56,7 +56,7 @@ WorkerModuleScriptLoader::WorkerModuleScriptLoader(ModuleScriptLoaderClient& cli
 
 WorkerModuleScriptLoader::~WorkerModuleScriptLoader()
 {
-    protectedScriptLoader()->cancel();
+    m_scriptLoader->cancel();
 }
 
 void WorkerModuleScriptLoader::load(ScriptExecutionContext& context, URL&& sourceURL)
@@ -102,7 +102,7 @@ void WorkerModuleScriptLoader::load(ScriptExecutionContext& context, URL&& sourc
         std::optional<ScriptExecutionContextIdentifier> mainContext;
         if (auto* document = dynamicDowncast<Document>(context))
             mainContext = document->identifier();
-        protectedScriptLoader()->notifyError(mainContext);
+        m_scriptLoader->notifyError(mainContext);
         ASSERT(!m_failed);
         notifyFinished(mainContext);
         ASSERT(m_failed);
@@ -116,12 +116,7 @@ void WorkerModuleScriptLoader::load(ScriptExecutionContext& context, URL&& sourc
             fetchOptions.mode = FetchOptions::Mode::SameOrigin;
     }
 
-    protectedScriptLoader()->loadAsynchronously(context, WTFMove(request), WorkerScriptLoader::Source::ModuleScript, WTFMove(fetchOptions), contentSecurityPolicyEnforcement, ServiceWorkersMode::All, *this, taskMode());
-}
-
-Ref<WorkerScriptLoader> WorkerModuleScriptLoader::protectedScriptLoader()
-{
-    return m_scriptLoader;
+    m_scriptLoader->loadAsynchronously(context, WTFMove(request), WorkerScriptLoader::Source::ModuleScript, WTFMove(fetchOptions), contentSecurityPolicyEnforcement, ServiceWorkersMode::All, *this, taskMode());
 }
 
 ReferrerPolicy WorkerModuleScriptLoader::referrerPolicy()

@@ -75,7 +75,7 @@ public:
     void reduce(ScriptExecutionContext&, Ref<ReducerCallback>&&, JSC::JSValue, const SubscribeOptions&, Ref<DeferredPromise>&&);
 
 private:
-    Ref<SubscriberCallback> m_subscriberCallback;
+    const Ref<SubscriberCallback> m_subscriberCallback;
 };
 
 } // namespace WebCore

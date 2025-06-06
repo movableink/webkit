@@ -256,7 +256,6 @@ animation/AnimationEffectTiming.cpp
 animation/AnimationTimeline.cpp
 animation/AnimationTimelinesController.cpp
 animation/BlendingKeyframes.cpp
-animation/CustomEffect.cpp
 animation/DocumentTimeline.cpp
 animation/KeyframeEffect.cpp
 animation/ScrollTimeline.cpp
@@ -289,7 +288,6 @@ bindings/js/JSDOMConvertBufferSource.h
 bindings/js/JSDOMConvertCallbacks.h
 bindings/js/JSDOMConvertEventListener.h
 bindings/js/JSDOMConvertInterface.h
-bindings/js/JSDOMConvertScheduledAction.h
 bindings/js/JSDOMExceptionHandling.cpp
 bindings/js/JSDOMGlobalObject.cpp
 bindings/js/JSDOMIterator.h
@@ -300,7 +298,6 @@ bindings/js/JSDOMSetLike.h
 bindings/js/JSDOMWindowBase.cpp
 bindings/js/JSDOMWindowCustom.cpp
 bindings/js/JSDOMWindowProperties.cpp
-bindings/js/JSDOMWrapperCache.h
 bindings/js/JSDocumentCustom.cpp
 bindings/js/JSElementCustom.cpp
 bindings/js/JSElementInternalsCustom.cpp
@@ -328,7 +325,6 @@ bindings/js/JSMutationRecordCustom.cpp
 bindings/js/JSNavigatorCustom.cpp
 bindings/js/JSNodeCustom.cpp
 bindings/js/JSNodeListCustom.cpp
-bindings/js/JSNodeListCustom.h
 bindings/js/JSObservableArray.cpp
 bindings/js/JSObservableArray.h
 bindings/js/JSOffscreenCanvasRenderingContext2DCustom.cpp
@@ -483,7 +479,6 @@ dom/ElementInlines.h
 dom/ElementInternals.cpp
 dom/ElementIteratorInlines.h
 dom/ElementTraversal.h
-dom/EventListenerMap.h
 dom/EventPath.cpp
 dom/ExtensionStyleSheets.cpp
 dom/FragmentDirectiveRangeFinder.cpp
@@ -503,7 +498,6 @@ dom/Node.cpp
 dom/NodeIterator.cpp
 dom/NodeRareData.h
 dom/NodeWithIndex.h
-dom/Observable.cpp
 dom/PendingScript.cpp
 dom/Position.cpp
 dom/PositionIterator.cpp
@@ -515,7 +509,6 @@ dom/RejectedPromiseTracker.cpp
 dom/ScriptExecutionContext.cpp
 dom/ScriptExecutionContextInlines.h
 dom/ScriptRunner.cpp
-dom/SecurityContext.cpp
 dom/SelectorQuery.cpp
 dom/ShadowRoot.cpp
 dom/ShadowRoot.h
@@ -525,11 +518,8 @@ dom/SpaceSplitString.h
 dom/StaticRange.cpp
 dom/StyledElement.cpp
 dom/Subscriber.cpp
-dom/TextDecoderStreamDecoder.h
-dom/Traversal.cpp
 dom/TreeScope.cpp
 dom/TreeScopeOrderedMap.cpp
-dom/TreeWalker.cpp
 dom/TypedElementDescendantIteratorInlines.h
 dom/VisitedLinkState.cpp
 dom/WindowOrWorkerGlobalScopeTrustedTypes.cpp
@@ -628,7 +618,6 @@ html/HTMLTemplateElement.cpp
 html/HTMLTextAreaElement.cpp
 html/HTMLTextFormControlElement.cpp
 html/HTMLTitleElement.cpp
-html/HTMLTrackElement.cpp
 html/HTMLVideoElement.cpp
 html/ImageBitmap.cpp
 html/ImageDocument.cpp
@@ -646,7 +635,6 @@ html/RadioNodeList.cpp
 html/ValidatedFormListedElement.cpp
 html/ValidationMessage.cpp
 html/canvas/CanvasFilterContextSwitcher.cpp
-html/canvas/CanvasGradient.cpp
 html/canvas/CanvasRenderingContext.cpp
 html/canvas/CanvasRenderingContext2D.cpp
 html/canvas/CanvasRenderingContext2DBase.cpp

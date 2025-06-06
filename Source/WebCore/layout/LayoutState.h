@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -133,8 +133,8 @@ private:
     UncheckedKeyHashMap<const Box*, std::unique_ptr<BoxGeometry>> m_layoutBoxToBoxGeometry;
     QuirksMode m_quirksMode { QuirksMode::No };
 
-    CheckedRef<const ElementBox> m_rootContainer;
-    Ref<SecurityOrigin> m_securityOrigin;
+    const CheckedRef<const ElementBox> m_rootContainer;
+    const Ref<SecurityOrigin> m_securityOrigin;
 
     FormattingContextLayoutFunction m_formattingContextLayoutFunction;
     FormattingContextLogicalWidthFunction m_formattingContextLogicalWidthFunction;

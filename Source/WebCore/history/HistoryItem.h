@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008, 2011, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Research In Motion Limited. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -296,7 +296,7 @@ private:
     BackForwardFrameItemIdentifier m_frameItemID;
     WTF::UUID m_uuidIdentifier;
     std::optional<PolicyContainer> m_policyContainer;
-    Ref<Client> m_client;
+    const Ref<Client> m_client;
 };
 
 } // namespace WebCore

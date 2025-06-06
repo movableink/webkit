@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2015, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -73,7 +73,7 @@ private:
     ExceptionOr<void> addInternal(std::span<const AtomString> tokens);
     ExceptionOr<void> removeInternal(std::span<const AtomString> tokens);
 
-    CheckedRef<Element> m_element;
+    const CheckedRef<Element> m_element;
     const WebCore::QualifiedName& m_attributeName;
     bool m_inUpdateAssociatedAttributeFromTokens { false };
     bool m_tokensNeedUpdating { true };

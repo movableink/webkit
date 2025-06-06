@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2015 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -1479,7 +1479,7 @@ private:
 #endif
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
-    Ref<RemotePlayback> m_remote;
+    const Ref<RemotePlayback> m_remote;
 #endif
 
     bool m_isChangingReadyStateWhileSuspended { false };

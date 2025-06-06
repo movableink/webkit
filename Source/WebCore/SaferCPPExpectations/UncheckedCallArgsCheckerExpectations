@@ -130,7 +130,6 @@ bindings/js/JSXMLHttpRequestCustom.cpp
 bindings/js/ScheduledAction.cpp
 bindings/js/ScriptModuleLoader.cpp
 bindings/js/WindowProxy.cpp
-bindings/js/WorkerModuleScriptLoader.cpp
 bridge/objc/WebScriptObject.mm
 bridge/runtime_method.cpp
 contentextensions/ContentExtensionsBackend.cpp
@@ -170,7 +169,6 @@ dom/ElementInternals.cpp
 dom/ElementIteratorInlines.h
 dom/ElementTraversal.h
 dom/EventLoop.cpp
-dom/EventPath.cpp
 dom/ExtensionStyleSheets.cpp
 dom/FragmentDirectiveRangeFinder.cpp
 dom/IdTargetObserver.cpp
@@ -206,7 +204,6 @@ dom/SimulatedClick.cpp
 dom/StaticRange.cpp
 dom/TreeScope.cpp
 dom/TreeScopeOrderedMap.cpp
-dom/TreeWalker.cpp
 dom/TypedElementDescendantIteratorInlines.h
 dom/ViewTransition.cpp
 dom/WindowEventLoop.cpp
@@ -387,7 +384,6 @@ inspector/agents/page/PageTimelineAgent.cpp
 inspector/agents/worker/WorkerAuditAgent.cpp
 inspector/agents/worker/WorkerDebuggerAgent.cpp
 inspector/agents/worker/WorkerRuntimeAgent.cpp
-layout/LayoutState.cpp
 layout/floats/FloatingContext.cpp
 layout/floats/PlacedFloats.cpp
 layout/formattingContexts/FormattingContext.h

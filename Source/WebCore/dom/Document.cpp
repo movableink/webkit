@@ -11117,7 +11117,7 @@ const CrossOriginOpenerPolicy& Document::crossOriginOpenerPolicy() const
     return SecurityContext::crossOriginOpenerPolicy();
 }
 
-Ref<FragmentDirective> Document::fragmentDirectiveForBindings()
+FragmentDirective& Document::fragmentDirectiveForBindings()
 {
     return m_fragmentDirectiveForBindings;
 }
