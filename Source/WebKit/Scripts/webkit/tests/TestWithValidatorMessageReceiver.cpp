@@ -51,7 +51,7 @@ void TestWithValidator::didReceiveMessage(IPC::Connection& connection, IPC::Deco
     if (decoder.messageName() == Messages::TestWithValidator::AlwaysEnabled::name())
         return IPC::handleMessage<Messages::TestWithValidator::AlwaysEnabled>(connection, decoder, this, &TestWithValidator::alwaysEnabled);
     if (decoder.messageName() == Messages::TestWithValidator::EnabledIfPassValidation::name()) {
-        if (!ValidateFunction()) {
+        if (!ValidateFunction(decoder)) {
             RELEASE_LOG_ERROR(IPC, "Message %s fails validation", IPC::description(decoder.messageName()).characters());
             return decoder.markInvalid();
         }
@@ -62,7 +62,7 @@ void TestWithValidator::didReceiveMessage(IPC::Connection& connection, IPC::Deco
             RELEASE_LOG_ERROR(IPC, "Message %s received by a disabled message endpoint", IPC::description(decoder.messageName()).characters());
             return decoder.markInvalid();
         }
-        if (!ValidateFunction()) {
+        if (!ValidateFunction(decoder)) {
             RELEASE_LOG_ERROR(IPC, "Message %s fails validation", IPC::description(decoder.messageName()).characters());
             return decoder.markInvalid();
         }
