@@ -61,6 +61,7 @@
 #include "compiler/translator/tree_ops/glsl/apple/AddAndTrueToLoopCondition.h"
 #include "compiler/translator/tree_ops/glsl/apple/RewriteDoWhile.h"
 #include "compiler/translator/tree_ops/glsl/apple/UnfoldShortCircuitAST.h"
+#include "compiler/translator/tree_ops/msl/EnsureLoopForwardProgress.h"
 #include "compiler/translator/tree_util/BuiltIn.h"
 #include "compiler/translator/tree_util/FindSymbolNode.h"
 #include "compiler/translator/tree_util/IntermNodePatternMatcher.h"
@@ -1061,6 +1062,14 @@ bool TCompiler::checkAndSimplifyAST(TIntermBlock *root,
         if (!EmulateGLFragColorBroadcast(this, root, mResources.MaxDrawBuffers,
                                          mResources.MaxDualSourceDrawBuffers, &mOutputVariables,
                                          &mSymbolTable, mShaderVersion))
+        {
+            return false;
+        }
+    }
+
+    if (compileOptions.ensureLoopForwardProgress)
+    {
+        if (!EnsureLoopForwardProgress(this, root))
         {
             return false;
         }

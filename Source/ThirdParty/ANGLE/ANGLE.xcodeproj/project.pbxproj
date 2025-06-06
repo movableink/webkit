@@ -464,6 +464,10 @@
 		7B820C792DE9956000DAC5E4 /* End2EndTestsSourcesPlatform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B820C762DE9956000DAC5E4 /* End2EndTestsSourcesPlatform.cpp */; };
 		7B8EC8402DF1BC9100105EB6 /* ImageTestMetal.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7B8EC83F2DF1BC9100105EB6 /* ImageTestMetal.mm */; };
 		7B8EC8412DF1BC9100105EB6 /* GLSLUBTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B8EC83E2DF1BC9100105EB6 /* GLSLUBTest.cpp */; };
+		7B8EC8462DF2E5FC00105EB6 /* EnsureLoopForwardProgress.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B8EC8452DF2E5FC00105EB6 /* EnsureLoopForwardProgress.cpp */; };
+		7B8EC8472DF2E5FC00105EB6 /* EnsureLoopForwardProgress.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B8EC8442DF2E5FC00105EB6 /* EnsureLoopForwardProgress.h */; };
+		7B8EC8482DF2E5FC00105EB6 /* EnsureLoopForwardProgress.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B8EC8442DF2E5FC00105EB6 /* EnsureLoopForwardProgress.h */; };
+		7B8EC8492DF2E5FC00105EB6 /* EnsureLoopForwardProgress.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B8EC8452DF2E5FC00105EB6 /* EnsureLoopForwardProgress.cpp */; };
 		7B9A99BA2DDC685100160B6E /* ReduceInterfaceBlocks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B9A99B92DDC685100160B6E /* ReduceInterfaceBlocks.cpp */; };
 		7B9A99BB2DDC685100160B6E /* ReduceInterfaceBlocks.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B9A99B82DDC685100160B6E /* ReduceInterfaceBlocks.h */; };
 		7B9A99BC2DDC685100160B6E /* ReduceInterfaceBlocks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B9A99B92DDC685100160B6E /* ReduceInterfaceBlocks.cpp */; };
@@ -2143,6 +2147,8 @@
 		7B820C762DE9956000DAC5E4 /* End2EndTestsSourcesPlatform.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = End2EndTestsSourcesPlatform.cpp; path = WebKit/End2EndTestsSourcesPlatform.cpp; sourceTree = "<group>"; };
 		7B8EC83E2DF1BC9100105EB6 /* GLSLUBTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = GLSLUBTest.cpp; sourceTree = "<group>"; };
 		7B8EC83F2DF1BC9100105EB6 /* ImageTestMetal.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ImageTestMetal.mm; sourceTree = "<group>"; };
+		7B8EC8442DF2E5FC00105EB6 /* EnsureLoopForwardProgress.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EnsureLoopForwardProgress.h; sourceTree = "<group>"; };
+		7B8EC8452DF2E5FC00105EB6 /* EnsureLoopForwardProgress.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = EnsureLoopForwardProgress.cpp; sourceTree = "<group>"; };
 		7B9A99B82DDC685100160B6E /* ReduceInterfaceBlocks.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ReduceInterfaceBlocks.h; sourceTree = "<group>"; };
 		7B9A99B92DDC685100160B6E /* ReduceInterfaceBlocks.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ReduceInterfaceBlocks.cpp; sourceTree = "<group>"; };
 		7B9BB4472D563C4A00E39E4C /* ObjCPtr.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ObjCPtr.h; sourceTree = "<group>"; };
@@ -3758,6 +3764,8 @@
 				7B359D9A2A7CEDAA0016DC59 /* AddExplicitTypeCasts.h */,
 				7B359D962A7CEDAA0016DC59 /* ConvertUnsupportedConstructorsToFunctionCalls.cpp */,
 				7B359D7C2A7CEDA90016DC59 /* ConvertUnsupportedConstructorsToFunctionCalls.h */,
+				7B8EC8452DF2E5FC00105EB6 /* EnsureLoopForwardProgress.cpp */,
+				7B8EC8442DF2E5FC00105EB6 /* EnsureLoopForwardProgress.h */,
 				7B359D7E2A7CEDA90016DC59 /* FixTypeConstructors.cpp */,
 				7B359D8F2A7CEDAA0016DC59 /* FixTypeConstructors.h */,
 				7B359D852A7CEDA90016DC59 /* GuardFragDepthWrite.cpp */,
@@ -4582,6 +4590,7 @@
 				A3C49BFC255DF6E6005E8DF7 /* EGLSyncImpl.h in Headers */,
 				31CDFF8F2491849800486F27 /* EmulateGLFragColorBroadcast.h in Headers */,
 				31CDFF812491849800486F27 /* EmulateMultiDrawShaderBuiltins.h in Headers */,
+				7B8EC8482DF2E5FC00105EB6 /* EnsureLoopForwardProgress.h in Headers */,
 				FFD002A52746E4F3002BE3BC /* entry_points_egl_autogen.h in Headers */,
 				FFD002A62746E4F3002BE3BC /* entry_points_egl_ext_autogen.h in Headers */,
 				A3C49BFF255DF708005E8DF7 /* entry_points_enum_autogen.h in Headers */,
@@ -4899,6 +4908,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7BA890652CB5234E0020C411 /* BuiltIn_autogen.h in Headers */,
+				7B8EC8472DF2E5FC00105EB6 /* EnsureLoopForwardProgress.h in Headers */,
 				7B9BB4482D563C4A00E39E4C /* ObjCPtr.h in Headers */,
 				7B9A99BD2DDC685100160B6E /* ReduceInterfaceBlocks.h in Headers */,
 				7B62E9DF2DA91F0900793212 /* ScalarizeVecAndMatConstructorArgs.h in Headers */,
@@ -5365,6 +5375,7 @@
 				DF83E2482639FCD5000825EF /* EmitMetal.cpp in Sources */,
 				DF83E2582639FD33000825EF /* EmulateGLFragColorBroadcast.cpp in Sources */,
 				DF83E26A2639FD33000825EF /* EmulateMultiDrawShaderBuiltins.cpp in Sources */,
+				7B8EC8492DF2E5FC00105EB6 /* EnsureLoopForwardProgress.cpp in Sources */,
 				FFD002A12746E4CF002BE3BC /* entry_points_egl_autogen.cpp in Sources */,
 				FFD002A22746E4CF002BE3BC /* entry_points_egl_ext_autogen.cpp in Sources */,
 				DF83E2232639FC74000825EF /* entry_points_enum_autogen.cpp in Sources */,
@@ -6045,6 +6056,7 @@
 				7BF5554E2C81F198002B101E /* EmitMetal.cpp in Sources */,
 				7BF5553E2C81F198002B101E /* EmulateGLFragColorBroadcast.cpp in Sources */,
 				7BF554F12C81F198002B101E /* EmulateMultiDrawShaderBuiltins.cpp in Sources */,
+				7B8EC8462DF2E5FC00105EB6 /* EnsureLoopForwardProgress.cpp in Sources */,
 				7BF555422C81F198002B101E /* entry_points_enum_autogen.cpp in Sources */,
 				7BF5556A2C81F198002B101E /* ExtensionBehavior.cpp in Sources */,
 				7BFAF9172DE6F85B00327F7F /* ExtensionGLSL.cpp in Sources */,

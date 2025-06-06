@@ -72,9 +72,15 @@ using GL = GraphicsContextGL;
 // For WK1, this variable is accessed from multiple threads but always sequentially.
 static GraphicsContextGLANGLE* currentContext;
 
+static const char* const enabledANGLEMetalFeatures[] = {
+    "ensureLoopForwardProgress",
+    nullptr
+};
+
 static const char* const disabledANGLEMetalFeatures[] = {
     "enableInMemoryMtlLibraryCache", // This would leak all program binary objects.
     "alwaysPreferStagedTextureUploads", // This would timeout tests due to excess staging buffer allocations and fail tests on MacPro.
+    "injectAsmStatementIntoLoopBodies", // Replaced by ensureLoopForwardProgress.
     nullptr
 };
 
@@ -139,6 +145,8 @@ static EGLDisplay initializeEGLDisplay(const GraphicsContextGLAttributes& attrs)
     ASSERT(WTF::contains(clientExtensions, "EGL_ANGLE_feature_control"_span));
     displayAttributes.append(EGL_FEATURE_OVERRIDES_DISABLED_ANGLE);
     displayAttributes.append(reinterpret_cast<EGLAttrib>(disabledANGLEMetalFeatures));
+    displayAttributes.append(EGL_FEATURE_OVERRIDES_ENABLED_ANGLE);
+    displayAttributes.append(reinterpret_cast<EGLAttrib>(enabledANGLEMetalFeatures));
     displayAttributes.append(EGL_NONE);
 
     EGLDisplay display = EGL_GetPlatformDisplay(EGL_PLATFORM_ANGLE_ANGLE, reinterpret_cast<void*>(EGL_DEFAULT_DISPLAY), displayAttributes.span().data());

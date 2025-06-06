@@ -27,7 +27,7 @@
 
 #include "compiler/translator/Compiler.h"
 
-#if ANGLE_SH_VERSION != 375
+#if ANGLE_SH_VERSION != 376
 #    error Check if there are added options and update this check.
 #endif
 
@@ -109,7 +109,9 @@
     MACRO(simplifyLoopConditions, 71, none, msl)                              \
     MACRO(separateCompoundStructDeclarations, 72, none, msl || wgsl)          \
     MACRO(preserveDenorms, 73, none, spirvVk)                                 \
-    MACRO(removeInactiveVariables, 74, any, spirvVk || msl)
+    MACRO(removeInactiveVariables, 74, any, spirvVk || msl)                   \
+    MACRO(ensureLoopForwardProgress, 75, none, msl)
+
 
 void filterOptions(ShShaderOutput output, ShCompileOptions &options);
 ShShaderOutput resolveShaderOutput(ShShaderOutput output);
