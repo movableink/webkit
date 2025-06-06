@@ -194,14 +194,14 @@
     { "name": "ews254", "platform": "ios-simulator-18" },
     { "name": "ews255", "platform": "ios-simulator-18" },
     { "name": "ews256", "platform": "ios-simulator-18" },
-    { "name": "ews257", "platform": "ios-simulator-18" },
-    { "name": "ews258", "platform": "ios-simulator-18" },
-    { "name": "ews259", "platform": "ios-simulator-18" },
-    { "name": "ews260", "platform": "mac-sequoia"},
-    { "name": "ews261", "platform": "mac-sequoia"},
-    { "name": "ews262", "platform": "mac-sequoia"},
-    { "name": "ews263", "platform": "mac-sequoia"},
-    { "name": "ews264", "platform": "mac-sequoia"},
+    { "name": "ews257", "platform": "mac-sequoia" },
+    { "name": "ews258", "platform": "mac-sequoia" },
+    { "name": "ews259", "platform": "mac-sequoia" },
+    { "name": "ews260", "platform": "mac-sequoia" },
+    { "name": "ews261", "platform": "mac-sequoia" },
+    { "name": "ews262", "platform": "mac-sequoia" },
+    { "name": "ews263", "platform": "mac-sequoia" },
+    { "name": "ews264", "platform": "mac-sequoia" },
     { "name": "ews265", "platform": "mac-sonoma" },
     { "name": "ews266", "platform": "mac-sonoma" },
     { "name": "webkit-cq-01", "platform": "mac-sonoma" },
@@ -276,7 +276,7 @@
       "factory": "macOSWK2Factory", "platform": "mac-sequoia",
       "configuration": "debug",
       "triggered_by": ["macos-sequoia-debug-build-ews"],
-      "workernames": ["ews138", "ews139", "ews140", "ews175", "ews176", "ews177", "ews178", "ews179", "ews180"]
+      "workernames": ["ews138", "ews139", "ews140", "ews175", "ews176", "ews177", "ews178", "ews179", "ews180", "ews257", "ews258", "ews259"]
     },
     {
       "name": "macOS-Sonoma-Release-Build-EWS", "shortname": "mac", "icon": "buildOnly",
@@ -449,7 +449,7 @@
       "name": "API-Tests-iOS-Simulator-EWS", "shortname": "api-ios", "icon": "testOnly",
       "factory": "APITestsFactory", "platform": "*",
       "triggered_by": ["ios-18-sim-build-ews"],
-      "workernames": ["ews110", "ews111", "ews114", "ews156", "ews157", "ews158", "ews159", "ews160", "ews183", "ews254", "ews255", "ews256", "ews257", "ews258", "ews259"]
+      "workernames": ["ews110", "ews111", "ews114", "ews156", "ews157", "ews158", "ews159", "ews160", "ews183", "ews254", "ews255", "ews256"]
     },
     {
       "name": "API-Tests-macOS-EWS", "shortname": "api-mac", "icon": "testOnly",
