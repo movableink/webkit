@@ -475,8 +475,11 @@ static inline std::optional<Layout::BlockLayoutState::LineGrid> lineGrid(const R
     return { };
 }
 
-std::optional<LayoutRect> LineLayout::layout()
+std::optional<LayoutRect> LineLayout::layout(ForceFullLayout forcedFullLayout)
 {
+    if (forcedFullLayout == ForceFullLayout::Yes && m_lineDamage)
+        Layout::InlineInvalidation::resetInlineDamage(*m_lineDamage);
+
     preparePlacedFloats();
 
     auto isPartialLayout = Layout::InlineInvalidation::mayOnlyNeedPartialLayout(m_lineDamage.get());

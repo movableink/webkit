@@ -3125,8 +3125,6 @@ imported/w3c/web-platform-tests/svg/painting/marker-006.svg [ ImageOnlyFailure ]
 
 webkit.org/b/292218 [ Sonoma Release ] media/media-source/media-source-video-renders.html [ Pass ImageOnlyFailure Timeout ]
 
-webkit.org/b/292395 [ Debug ] fast/picture/viewport-resize.html [ Pass Crash ]
-
 http/tests/iframe-memory-monitor/media-video-autoplay-in-frames.html [ Skip ]
 
 # webkit.org/b/293249 third-party cookie blocking is not supported in WK1
