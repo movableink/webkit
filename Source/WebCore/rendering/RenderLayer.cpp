@@ -405,6 +405,8 @@ RenderLayer::~RenderLayer()
 
     clearBacking({ }, true);
 
+    removeClipperClientIfNeeded();
+
     // Layer and all its children should be removed from the tree before destruction.
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(renderer().renderTreeBeingDestroyed() || !parent());
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(renderer().renderTreeBeingDestroyed() || !firstChild());
@@ -418,6 +420,15 @@ RenderLayer::PaintedContentRequest::PaintedContentRequest(const RenderLayer& own
 #else
     UNUSED_PARAM(owningLayer);
 #endif
+}
+
+void RenderLayer::removeClipperClientIfNeeded() const
+{
+    auto& style = renderer().style();
+    if (RefPtr referenceClipPathOperation = dynamicDowncast<ReferencePathOperation>(style.clipPath())) {
+        if (auto* clipperRenderer = ReferencedSVGResources::referencedClipperRenderer(renderer().treeScopeForSVGReferences(), *referenceClipPathOperation))
+            clipperRenderer->removeClientFromCache(renderer());
+    }
 }
 
 void RenderLayer::addChild(RenderLayer& child, RenderLayer* beforeChild)

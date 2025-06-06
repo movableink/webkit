@@ -1299,6 +1299,8 @@ private:
     void setIndirectCompositingReason(IndirectCompositingReason reason) { m_indirectCompositingReason = static_cast<unsigned>(reason); }
     bool mustCompositeForIndirectReasons() const { return m_indirectCompositingReason; }
 
+    void removeClipperClientIfNeeded() const;
+
     struct OverflowControlRects {
         IntRect horizontalScrollbar;
         IntRect verticalScrollbar;
