@@ -845,7 +845,7 @@ static gboolean webKitMediaSrcSendEvent(GstElement* element, GstEvent* eventTran
         if (forwardToAllPads) {
             wasEventHandledByAllStreams = !source->priv->streams.isEmpty();
             for (const RefPtr<Stream>& stream : source->priv->streams.values()) {
-                bool wasHandled = gst_pad_push_event(stream->pad.get(), gst_event_ref(event.get()));
+                bool wasHandled = gst_pad_push_event(stream->pad.get(), event.ref());
                 wasEventHandledByAllStreams &= wasHandled;
                 wasEventHandledByAnyStream |= wasHandled;
             }

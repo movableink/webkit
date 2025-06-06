@@ -538,11 +538,11 @@ static GRefPtr<GstCaps> createSrcPadTemplateCaps()
 {
     auto* caps = gst_caps_new_empty();
 
-    for (const auto& [id, encoder] : Encoders::singleton()) {
+    for (auto& [id, encoder] : Encoders::singleton()) {
         if (encoder.encodedFormat)
-            caps = gst_caps_merge(caps, gst_caps_ref(encoder.encodedFormat.get()));
+            caps = gst_caps_merge(caps, encoder.encodedFormat.ref());
         else
-            caps = gst_caps_merge(caps, gst_caps_ref(encoder.caps.get()));
+            caps = gst_caps_merge(caps, encoder.caps.ref());
     }
 
     GST_DEBUG("Source pad template caps: %" GST_PTR_FORMAT, caps);

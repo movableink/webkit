@@ -130,6 +130,12 @@ public:
         return ptr;
     }
 
+    // Increments the reference count.
+    T* /* (transfer full) */ ref() WARN_UNUSED_RETURN {
+        refGPtr(m_ptr);
+        return m_ptr;
+    }
+
     T*& outPtr()
     {
         clear();

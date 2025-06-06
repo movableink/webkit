@@ -125,7 +125,7 @@ void GStreamerDTMFSenderPrivate::playTone(const RefPtr<RealtimeOutgoingAudioSour
 void GStreamerDTMFSenderPrivate::sendEvent(const GRefPtr<GstPad>& pad, int number, int volume, bool start)
 {
     auto event = adoptGRef(gst_event_new_custom(GST_EVENT_CUSTOM_UPSTREAM, gst_structure_new("dtmf-event", "type", G_TYPE_INT, 1, "number", G_TYPE_INT, number, "volume", G_TYPE_INT, volume, "start", G_TYPE_BOOLEAN, start, nullptr)));
-    gst_pad_send_event(pad.get(), gst_event_ref(event.get()));
+    gst_pad_send_event(pad.get(), event.ref());
     gst_element_send_event(m_dtmfSrc.get(), event.leakRef());
 }
 
