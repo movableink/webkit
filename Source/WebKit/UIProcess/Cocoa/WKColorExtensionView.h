@@ -35,14 +35,14 @@
 #endif
 
 @protocol WKColorExtensionViewDelegate <NSObject>
-- (void)colorExtensionViewWillFadeOut:(WKColorExtensionView *)view;
-- (void)colorExtensionViewDidFadeIn:(WKColorExtensionView *)view;
+- (void)colorExtensionViewWillDisappear:(WKColorExtensionView *)view;
+- (void)colorExtensionViewDidAppear:(WKColorExtensionView *)view;
 @end
 
 @interface WKColorExtensionView : CocoaView
 
 - (instancetype)initWithFrame:(CGRect)frame delegate:(id<WKColorExtensionViewDelegate>)delegate;
-- (void)fadeToColor:(WebCore::CocoaColor *)color;
+- (void)updateColor:(WebCore::CocoaColor *)color;
 - (void)fadeOut;
 - (void)cancelFadeAnimation;
 

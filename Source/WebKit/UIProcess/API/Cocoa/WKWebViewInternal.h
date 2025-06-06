@@ -533,6 +533,7 @@ struct PerWebProcessState {
 #endif
 
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+- (void)_updateFixedColorExtensionViews;
 - (void)_updateFixedColorExtensionViewFrames;
 - (BOOL)_hasVisibleColorExtensionView:(WebCore::BoxSide)side;
 - (void)_addReasonToHideTopContentInsetFill:(WebKit::HideContentInsetFillReason)reason;

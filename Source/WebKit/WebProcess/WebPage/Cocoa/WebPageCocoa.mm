@@ -56,6 +56,7 @@
 #import <WebCore/Editor.h>
 #import <WebCore/EventHandler.h>
 #import <WebCore/EventNames.h>
+#import <WebCore/FixedContainerEdges.h>
 #import <WebCore/FocusController.h>
 #import <WebCore/FrameLoader.h>
 #import <WebCore/FrameView.h>
@@ -1363,7 +1364,7 @@ BoxSideSet WebPage::sidesRequiringFixedContainerEdges() const
     auto obscuredInsets = m_page->obscuredContentInsets();
 #endif
 
-    BoxSideSet sides;
+    auto sides = m_page->fixedContainerEdges().fixedEdges();
 
     if (obscuredInsets.top() > 0)
         sides.add(BoxSideFlag::Top);
