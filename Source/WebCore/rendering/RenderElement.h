@@ -310,9 +310,6 @@ public:
     bool renderBoxHasShapeOutsideInfo() const { return m_renderBoxHasShapeOutsideInfo; }
     bool hasCachedSVGResource() const { return m_hasCachedSVGResource; }
 
-    const Element* defaultAnchor() const;
-    const RenderBoxModelObject* defaultAnchorRenderer() const;
-
     bool isAnonymousBlock() const;
     bool isAnonymousForPercentageResolution() const { return isAnonymous() && !isViewTransitionPseudo(); }
     inline bool isBlockBox() const;

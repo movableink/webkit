@@ -1664,37 +1664,6 @@ bool RenderElement::isVisibleInViewport() const
     return isVisibleInDocumentRect(visibleRect);
 }
 
-const Element* RenderElement::defaultAnchor() const
-{
-    if (!element())
-        return nullptr;
-
-    auto& anchorPositionedMap = document().styleScope().anchorPositionedToAnchorMap();
-    auto it = anchorPositionedMap.find(*element());
-    if (it == anchorPositionedMap.end())
-        return nullptr;
-    const auto& anchorName = style().positionAnchor();
-    if (!anchorName)
-        return nullptr;
-
-    for (auto& anchor : it->value) {
-        if (!anchor)
-            continue;
-        for (auto& name : anchor->style().anchorNames()) {
-            if (name.name == anchorName->name)
-                return anchor->element();
-        }
-    }
-    return nullptr;
-}
-
-const RenderBoxModelObject* RenderElement::defaultAnchorRenderer() const
-{
-    if (auto* defaultAnchor = this->defaultAnchor())
-        return dynamicDowncast<RenderBoxModelObject>(defaultAnchor->renderer());
-    return nullptr;
-}
-
 VisibleInViewportState RenderElement::imageFrameAvailable(CachedImage& image, ImageAnimatingState animatingState, const IntRect* changeRect)
 {
     bool isVisible = isVisibleInViewport();

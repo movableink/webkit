@@ -26,6 +26,7 @@
 #include "config.h"
 #include "PositionedLayoutConstraints.h"
 
+#include "AnchorPositionEvaluator.h"
 #include "ContainerNodeInlines.h"
 #include "InlineIteratorBoxInlines.h"
 #include "InlineIteratorInlineBox.h"
@@ -65,7 +66,7 @@ PositionedLayoutConstraints::PositionedLayoutConstraints(const RenderBox& render
     , m_containingAxis(!isOrthogonal() ? selfAxis : oppositeAxis(selfAxis))
     , m_style(style)
     , m_alignment(m_containingAxis == LogicalBoxAxis::Inline ? style.justifySelf() : style.alignSelf())
-    , m_defaultAnchorBox(needsAnchor() ? renderer.defaultAnchorRenderer() : nullptr)
+    , m_defaultAnchorBox(needsAnchor() ? Style::AnchorPositionEvaluator::defaultAnchorForBox(renderer) : nullptr)
     , m_marginBefore { 0_css_px }
     , m_marginAfter { 0_css_px }
     , m_insetBefore { 0_css_px }

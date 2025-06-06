@@ -87,7 +87,12 @@ enum class AnchorSizeDimension : uint8_t {
     SelfInline
 };
 
-using AnchorPositionedToAnchorMap = WeakHashMap<Element, Vector<SingleThreadWeakPtr<RenderBoxModelObject>>, WeakPtrImplWithEventTargetData>;
+struct ResolvedAnchor {
+    SingleThreadWeakPtr<RenderBoxModelObject> renderer;
+    ResolvedScopedName name;
+};
+
+using AnchorPositionedToAnchorMap = WeakHashMap<Element, Vector<ResolvedAnchor>, WeakPtrImplWithEventTargetData>;
 using AnchorToAnchorPositionedMap = SingleThreadWeakHashMap<const RenderBoxModelObject, Vector<Ref<Element>>>;
 
 class AnchorPositionEvaluator {
@@ -118,7 +123,10 @@ public:
     static bool overflowsInsetModifiedContainingBlock(const RenderBox& anchoredBox);
     static bool isDefaultAnchorInvisibleOrClippedByInterveningBoxes(const RenderBox& anchoredBox);
 
+    static ScopedName defaultAnchorName(const RenderStyle&);
     static bool isAnchor(const RenderStyle&);
+
+    static CheckedPtr<RenderBoxModelObject> defaultAnchorForBox(const RenderBox&);
 
 private:
     static AnchorElements findAnchorsForAnchorPositionedElement(const Element&, const UncheckedKeyHashSet<ResolvedScopedName>& anchorNames, const AnchorsForAnchorName&);

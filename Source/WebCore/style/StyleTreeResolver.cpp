@@ -1379,12 +1379,21 @@ auto TreeResolver::updateAnchorPositioningState(Element& element, const RenderSt
     if (!style)
         return LayoutInterleavingAction::None;
 
-    AnchorPositionEvaluator::updateAnchorPositionedStateForLayoutTimePositioned(element, *style, m_treeResolutionState.anchorPositionedStates);
+    auto update = [&](const RenderStyle* style) {
+        if (!style)
+            return;
 
-    if (changes && !style->anchorNames().isEmpty()) {
-        // Existing anchor positions may change due to a style change. We need a round of interleaving.
-        m_needsInterleavedLayout = true;
-    }
+        AnchorPositionEvaluator::updateAnchorPositionedStateForLayoutTimePositioned(element, *style, m_treeResolutionState.anchorPositionedStates);
+
+        if (changes && !style->anchorNames().isEmpty()) {
+            // Existing anchor positions may change due to a style change. We need a round of interleaving.
+            m_needsInterleavedLayout = true;
+        }
+    };
+
+    update(style);
+    update(style->getCachedPseudoStyle({ PseudoId::Before }));
+    update(style->getCachedPseudoStyle({ PseudoId::After }));
 
     auto needsInterleavedLayout = hasUnresolvedAnchorPosition({ element, { } });
     if (needsInterleavedLayout)
