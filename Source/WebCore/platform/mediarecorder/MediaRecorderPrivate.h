@@ -106,8 +106,8 @@ private:
     virtual void resumeRecording(CompletionHandler<void()>&&) = 0;
 
 private:
-    bool m_shouldMuteAudio { false };
-    bool m_shouldMuteVideo { false };
+    std::atomic<bool> m_shouldMuteAudio { false };
+    std::atomic<bool> m_shouldMuteVideo { false };
     RefPtr<RealtimeMediaSource> m_audioSource;
     RefPtr<RealtimeMediaSource> m_videoSource;
     RefPtr<RealtimeMediaSource> m_pausedAudioSource;
