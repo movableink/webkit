@@ -21,6 +21,8 @@ sources:
 - kind: patch
   path: patches/fdo-0009-gst-plugins-bad-Enable-x265-encoder.patch
 - kind: patch
+  path: patches/fdo-0010-Include-GStreamer-patches-scheduled-for-1.26.3.patch
+- kind: patch
   path: patches/fdo-0013-ffmpeg-Bump-to-version-7.0.2.patch
 config:
   options:
