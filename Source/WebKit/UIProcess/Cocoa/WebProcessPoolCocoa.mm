@@ -1454,6 +1454,7 @@ void WebProcessPool::registerUserInstalledFonts(WebProcessProxy& process)
         Vector<URL> fontURLs;
         addUserInstalledFontURLs(userInstalledFontsPath.get(), fontURLs);
         addUserInstalledFontURLs(@"/Library/Fonts", fontURLs);
+        addUserInstalledFontURLs(@"/System/Library/AssetsV2/com_apple_MobileAsset_Font7", fontURLs);
 
         RunLoop::protectedMain()->dispatch([weakThis = WTFMove(weakThis), weakProcess = WTFMove(weakProcess), fontURLs = crossThreadCopy(WTFMove(fontURLs))] {
             if (weakProcess)
