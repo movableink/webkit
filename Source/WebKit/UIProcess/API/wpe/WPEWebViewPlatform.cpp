@@ -371,6 +371,7 @@ gboolean ViewPlatform::handleEvent(WPEEvent* event)
         break;
     case WPE_EVENT_POINTER_DOWN:
         m_inputMethodFilter.cancelComposition();
+        wpe_view_focus_in(m_wpeView.get());
         [[fallthrough]];
     case WPE_EVENT_POINTER_UP:
     case WPE_EVENT_POINTER_MOVE:
@@ -463,6 +464,8 @@ void ViewPlatform::handleGesture(WPEEvent* event)
                 ));
                 page().handleMouseEvent(WebKit::NativeWebMouseEvent(simulatedEvent.get()));
             }
+
+            wpe_view_focus_in(m_wpeView.get());
 
             // Mouse up on the same location.
             {
