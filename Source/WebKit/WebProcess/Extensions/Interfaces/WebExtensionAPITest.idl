@@ -56,16 +56,16 @@
     [NeedsScriptContext] void succeed([Optional] DOMString message);
 
     // Asserts the test value is `true`.
-    [NeedsScriptContext] void assertTrue(boolean actualValue, [Optional] DOMString message);
+    [RaisesException, NeedsScriptContext] void assertTrue(boolean actualValue, [Optional] DOMString message);
 
     // Asserts the test value is `false`.
-    [NeedsScriptContext] void assertFalse(boolean actualValue, [Optional] DOMString message);
+    [RaisesException, NeedsScriptContext] void assertFalse(boolean actualValue, [Optional] DOMString message);
 
     // Asserts the test value is deeply equal to the expected value.
-    [NeedsScriptContext] void assertDeepEq([ValuesAllowed] any actualValue, [ValuesAllowed] any expectedValue, [Optional] DOMString message);
+    [RaisesException, NeedsScriptContext] void assertDeepEq([ValuesAllowed] any actualValue, [ValuesAllowed] any expectedValue, [Optional] DOMString message);
 
     // Asserts the test value is equal to the expected value.
-    [NeedsScriptContext] void assertEq([ValuesAllowed] any actualValue, [ValuesAllowed] any expectedValue, [Optional] DOMString message);
+    [RaisesException, NeedsScriptContext] void assertEq([ValuesAllowed] any actualValue, [ValuesAllowed] any expectedValue, [Optional] DOMString message);
 
     // Asserts the promise is rejected.
     [NeedsScriptContext, ProcessArgumentsLeftToRight] any assertRejects(any promise, [Optional, ValuesAllowed] any expectedError, [Optional] DOMString message);
@@ -74,7 +74,7 @@
     [NeedsScriptContext] any assertResolves(any promise, [Optional] DOMString message);
 
     // Asserts the function throws an exception.
-    [NeedsScriptContext, ProcessArgumentsLeftToRight] void assertThrows(any function, [Optional, ValuesAllowed] any expectedError, [Optional] DOMString message);
+    [RaisesException, NeedsScriptContext, ProcessArgumentsLeftToRight] void assertThrows(any function, [Optional, ValuesAllowed] any expectedError, [Optional] DOMString message);
 
     // Asserts the function does not throw an exception.
     [NeedsScriptContext] any assertSafe(any function, [Optional] DOMString message);

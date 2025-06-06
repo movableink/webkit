@@ -56,16 +56,16 @@ public:
     void fail(JSContextRef, NSString *message);
     void succeed(JSContextRef, NSString *message);
 
-    void assertTrue(JSContextRef, bool testValue, NSString *message);
-    void assertFalse(JSContextRef, bool testValue, NSString *message);
+    void assertTrue(JSContextRef, bool testValue, NSString *message, NSString **outExceptionString);
+    void assertFalse(JSContextRef, bool testValue, NSString *message, NSString **outExceptionString);
 
-    void assertDeepEq(JSContextRef, JSValue *actualValue, JSValue *expectedValue, NSString *message);
-    void assertEq(JSContextRef, JSValue *actualValue, JSValue *expectedValue, NSString *message);
+    void assertDeepEq(JSContextRef, JSValue *actualValue, JSValue *expectedValue, NSString *message, NSString **outExceptionString);
+    void assertEq(JSContextRef, JSValue *actualValue, JSValue *expectedValue, NSString *message, NSString **outExceptionString);
 
     JSValue *assertRejects(JSContextRef, JSValue *promise, JSValue *expectedError, NSString *message);
     JSValue *assertResolves(JSContextRef, JSValue *promise, NSString *message);
 
-    void assertThrows(JSContextRef, JSValue *function, JSValue *expectedError, NSString *message);
+    void assertThrows(JSContextRef, JSValue *function, JSValue *expectedError, NSString *message, NSString **outExceptionString);
     JSValue *assertSafe(JSContextRef, JSValue *function, NSString *message);
 
     JSValue *assertSafeResolve(JSContextRef, JSValue *function, NSString *message);
@@ -91,15 +91,9 @@ private:
     String m_assertionMessage;
 
     JSValue *addTest(JSContextRef, JSValue *testFunction, String callingAPIName);
-    void assertEquals(JSContextRef, bool result, NSString *expectedString, NSString *actualString, NSString *message);
+    void assertEquals(JSContextRef, bool result, NSString *expectedString, NSString *actualString, NSString *message, NSString **outExceptionString);
     void startNextTest();
-    void recordAssertionIfNeeded(bool result, const String& message)
-    {
-        if (m_runningTest && !result) {
-            m_hitAssertion = true;
-            m_assertionMessage = message;
-        }
-    }
+    void recordAssertionIfNeeded(bool result, const String& message, std::pair<String, unsigned> location, NSString **outExceptionString);
 #endif
 };
 

@@ -610,6 +610,49 @@ TEST(WKWebExtensionAPITest, RunTestsWithAsyncTestThatFails)
     EXPECT_NS_EQUAL(manager.get().testResults, (@{ testNames.firstObject: @YES, testNames.lastObject: @NO }));
 }
 
+TEST(WKWebExtensionAPITest, RunTestsVerifyFailedTestAborts)
+{
+    auto *testNames = @[ @"testAssertTrue", @"testAssertFalse", @"testAssertEq", @"testAssertDeepEq", @"testAssertThrows" ];
+    auto *backgroundScript = Util::constructScript(@[
+        @"function testAssertTrue() {",
+        @"  browser.test.assertTrue(false)",
+        @"  browser.test.notifyFail()",
+        @"}",
+
+        @"function testAssertFalse() {",
+        @"  browser.test.assertFalse(true)",
+        @"  browser.test.notifyFail()",
+        @"}",
+
+        @"function testAssertEq() {",
+        @"  browser.test.assertEq(false, 4)",
+        @"  browser.test.notifyFail()",
+        @"}",
+
+        @"function testAssertDeepEq() {",
+        @"  browser.test.assertDeepEq({ 'key': 'value' }, { 'key2': 'value2' })",
+        @"  browser.test.notifyFail()",
+        @"}",
+
+        @"function testAssertThrows() {",
+        @"  browser.test.assertThrows(() => browser.permissions.getAll())",
+        @"  browser.test.notifyFail()",
+        @"}",
+
+        @"browser.test.assertRejects(browser.test.runTests([",
+        @"  testAssertTrue, testAssertFalse, testAssertEq, testAssertDeepEq, testAssertThrows",
+        @"]))",
+        @"  .then(() => browser.test.notifyPass())",
+        @"  .catch(() => browser.test.notifyFail('Test(s) with failing assertions resolved the promise.'))"
+    ]);
+
+    auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
+
+    [manager run];
+
+    EXPECT_EQ(manager.get().testResults.count, testNames.count);
+}
+
 } // namespace TestWebKitAPI
 
 #endif // ENABLE(WK_WEB_EXTENSIONS)
