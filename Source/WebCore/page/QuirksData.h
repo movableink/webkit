@@ -38,9 +38,11 @@ struct WEBCORE_EXPORT QuirksData {
     bool isGoogleProperty : 1 { false };
     bool isGoogleMaps : 1 { false };
     bool isNetflix : 1 { false };
+    bool isOutlook : 1 { false };
     bool isSoundCloud : 1 { false };
     bool isThesaurus : 1 { false };
     bool isVimeo : 1 { false };
+    bool isWalmart : 1 { false };
     bool isWebEx : 1 { false };
     bool isYouTube : 1 { false };
     bool isZoom : 1 { false };

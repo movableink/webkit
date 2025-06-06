@@ -1678,6 +1678,7 @@ static AccessibilityRole accessibilityRole(const Element& element)
 }
 
 // walmart.com: rdar://123734840
+// live.outlook.com: rdar://152277211
 bool Quirks::shouldIgnoreContentObservationForClick(const Node& targetNode) const
 {
     if (!needsQuirks())
@@ -1687,12 +1688,19 @@ bool Quirks::shouldIgnoreContentObservationForClick(const Node& targetNode) cons
         return false;
 
     RefPtr target = dynamicDowncast<Element>(targetNode);
-    if (!target || accessibilityRole(*target) != AccessibilityRole::Button)
-        return false;
+    if (m_quirksData.isOutlook) {
+        if (target && target->getIdAttribute().startsWith("swatchColorPicker"_s))
+            return true;
+    }
 
-    RefPtr parent = target->parentElementInComposedTree();
-    if (!parent || accessibilityRole(*parent) != AccessibilityRole::ListItem)
-        return false;
+    if (m_quirksData.isWalmart) {
+        if (!target || accessibilityRole(*target) != AccessibilityRole::Button)
+            return false;
+
+        RefPtr parent = target->parentElementInComposedTree();
+        if (!parent || accessibilityRole(*parent) != AccessibilityRole::ListItem)
+            return false;
+    }
 
     return true;
 }
@@ -2061,6 +2069,7 @@ static void handleWalmartQuirks(QuirksData& quirksData, const URL& quirksURL, co
     UNUSED_PARAM(documentURL);
     // walmart.com: rdar://123734840
     quirksData.mayNeedToIgnoreContentObservation = true;
+    quirksData.isWalmart = true;
 }
 
 static void handleYahooQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)
@@ -2467,8 +2476,13 @@ static void handleLiveQuirks(QuirksData& quirksData, const URL& quirksURL, const
 
     UNUSED_PARAM(documentURL);
     auto topDocumentHost = quirksURL.host();
+    quirksData.isOutlook = topDocumentHost == "outlook.live.com"_s;
     // outlook.live.com: rdar://136624720
-    quirksData.needsMozillaFileTypeForDataTransferQuirk = topDocumentHost == "outlook.live.com"_s;
+    quirksData.needsMozillaFileTypeForDataTransferQuirk = quirksData.isOutlook;
+#if PLATFORM(IOS_FAMILY)
+    // outlook.live.com: rdar://152277211
+    quirksData.mayNeedToIgnoreContentObservation = quirksData.isOutlook;
+#endif
     // live.com rdar://52116170
     quirksData.shouldAvoidResizingWhenInputViewBoundsChangeQuirk = true;
     // Microsoft office online generates data URLs with incorrect padding on Safari only (rdar://114573089).
