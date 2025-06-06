@@ -1423,7 +1423,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, SubFrameResourceRuleConversion)
 
     NSDictionary *correctRuleConversion = @{
         @"action": @{
-            @"type": @"ignore-previous-rules",
+            @"type": @"ignore-following-rules",
         },
         @"trigger": @{
             @"url-filter": @"crouton\\.net",
@@ -1453,7 +1453,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RepeatedMainFrameResourceRuleConver
 
     NSDictionary *correctRuleConversion = @{
         @"action": @{
-            @"type": @"ignore-previous-rules",
+            @"type": @"ignore-following-rules",
         },
         @"trigger": @{
             @"url-filter": @"crouton\\.net",
@@ -1604,16 +1604,6 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, UpgradeSchemeRuleConversion)
     NSArray<NSDictionary *> *convertedRules = validatedRule.ruleInWebKitFormat;
     EXPECT_EQ(convertedRules.count, 2ul);
 
-    NSDictionary *sortingRule = @{
-        @"action": @{
-            @"type": @"ignore-previous-rules",
-        },
-        @"trigger": @{
-            @"url-filter": @"crouton\\.net",
-            @"resource-type": @[ @"image" ],
-        },
-    };
-
     NSDictionary *makeHTTPSRule = @{
         @"action": @{
             @"type": @"make-https",
@@ -1624,8 +1614,19 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, UpgradeSchemeRuleConversion)
         },
     };
 
-    EXPECT_NS_EQUAL(convertedRules[0], sortingRule);
-    EXPECT_NS_EQUAL(convertedRules[1], makeHTTPSRule);
+
+    NSDictionary *sortingRule = @{
+        @"action": @{
+            @"type": @"ignore-following-rules",
+        },
+        @"trigger": @{
+            @"url-filter": @"crouton\\.net",
+            @"resource-type": @[ @"image" ],
+        },
+    };
+
+    EXPECT_NS_EQUAL(convertedRules[0], makeHTTPSRule);
+    EXPECT_NS_EQUAL(convertedRules[1], sortingRule);
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, UpgradeSchemeForMainFrameRuleConversion)
@@ -1644,17 +1645,6 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, UpgradeSchemeForMainFrameRuleConver
     NSArray<NSDictionary *> *convertedRules = validatedRule.ruleInWebKitFormat;
     EXPECT_EQ(convertedRules.count, 2ul);
 
-    NSDictionary *sortingRule = @{
-        @"action": @{
-            @"type": @"ignore-previous-rules",
-        },
-        @"trigger": @{
-            @"url-filter": @"crouton\\.net",
-            @"resource-type": @[ @"top-document" ],
-        },
-    };
-    EXPECT_NS_EQUAL(convertedRules[0], sortingRule);
-
     NSDictionary *makeHTTPSRule = @{
         @"action": @{
             @"type": @"make-https",
@@ -1664,7 +1654,18 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, UpgradeSchemeForMainFrameRuleConver
             @"resource-type": @[ @"top-document" ],
         },
     };
-    EXPECT_NS_EQUAL(convertedRules[1], makeHTTPSRule);
+    EXPECT_NS_EQUAL(convertedRules[0], makeHTTPSRule);
+
+    NSDictionary *sortingRule = @{
+        @"action": @{
+            @"type": @"ignore-following-rules",
+        },
+        @"trigger": @{
+            @"url-filter": @"crouton\\.net",
+            @"resource-type": @[ @"top-document" ],
+        },
+    };
+    EXPECT_NS_EQUAL(convertedRules[1], sortingRule);
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleWithoutAPriority)
@@ -1745,7 +1746,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithNoSpecifiedResour
 
     NSMutableDictionary *correctRuleConversion = [@{
         @"action": @{
-            @"type": @"ignore-previous-rules",
+            @"type": @"ignore-following-rules",
         },
         @"trigger": [@{
             @"url-filter": @".*",
@@ -2141,20 +2142,20 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithExcludedInitiator
     NSArray *correctRuleConversion = @[
         @{
             @"action": @{
-                @"type": @"block",
+                @"type": @"ignore-following-rules",
             },
             @"trigger": @{
-                @"if-frame-url": @[ @"^[^:]+://+([^:/]+\\.)?example\\.com/.*" ],
+                @"if-frame-url": @[ @"^[^:]+://+([^:/]+\\.)?blog\\.example\\.com/.*" ],
                 @"resource-type": @[ @"font" ],
                 @"url-filter": @".*",
             }
         },
         @{
             @"action": @{
-                @"type": @"ignore-previous-rules",
+                @"type": @"block",
             },
             @"trigger": @{
-                @"if-frame-url": @[ @"^[^:]+://+([^:/]+\\.)?blog\\.example\\.com/.*" ],
+                @"if-frame-url": @[ @"^[^:]+://+([^:/]+\\.)?example\\.com/.*" ],
                 @"resource-type": @[ @"font" ],
                 @"url-filter": @".*",
             }
@@ -2253,6 +2254,17 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithExcludedRequestDo
     NSArray<NSDictionary *> *convertedRules = validatedRule.ruleInWebKitFormat;
     EXPECT_EQ(convertedRules.count, 2ul);
 
+    NSDictionary *passRuleConversion = @{
+        @"action": @{
+            @"type": @"ignore-following-rules",
+        },
+        @"trigger": @{
+            @"resource-type": @[ @"media" ],
+            @"url-filter": @"apple\\.com",
+        },
+    };
+    EXPECT_NS_EQUAL(convertedRules[0], passRuleConversion);
+
     NSDictionary *blockRuleConversion = @{
         @"action": @{
             @"type": @"block",
@@ -2262,18 +2274,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithExcludedRequestDo
             @"url-filter": @".*",
         },
     };
-    EXPECT_NS_EQUAL(convertedRules[0], blockRuleConversion);
-
-    NSDictionary *passRuleConversion = @{
-        @"action": @{
-            @"type": @"ignore-previous-rules",
-        },
-        @"trigger": @{
-            @"resource-type": @[ @"media" ],
-            @"url-filter": @"apple\\.com",
-        },
-    };
-    EXPECT_NS_EQUAL(convertedRules[1], passRuleConversion);
+    EXPECT_NS_EQUAL(convertedRules[1], blockRuleConversion);
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithInvalidRequestMethods)
@@ -2365,16 +2366,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithExcludedRequestMe
     NSArray *correctRuleConversion = @[
         @{
             @"action": @{
-                @"type": @"block",
-            },
-            @"trigger": @{
-                @"url-filter": @".*",
-                @"resource-type": @[ @"top-document" ],
-            },
-        },
-        @{
-            @"action": @{
-                @"type": @"ignore-previous-rules",
+                @"type": @"ignore-following-rules",
             },
             @"trigger": @{
                 @"url-filter": @".*",
@@ -2384,12 +2376,21 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithExcludedRequestMe
         },
         @{
             @"action": @{
-                @"type": @"ignore-previous-rules",
+                @"type": @"ignore-following-rules",
             },
             @"trigger": @{
                 @"url-filter": @".*",
                 @"resource-type": @[ @"top-document" ],
                 @"request-method": @"post",
+            },
+        },
+        @{
+            @"action": @{
+                @"type": @"block",
+            },
+            @"trigger": @{
+                @"url-filter": @".*",
+                @"resource-type": @[ @"top-document" ],
             },
         }
     ];
@@ -2418,17 +2419,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithRequestMethodsAnd
     NSArray *correctRuleConversion = @[
         @{
             @"action": @{
-                @"type": @"block",
-            },
-            @"trigger": @{
-                @"url-filter": @"^[^:]+://+([^:/]+\\.)?apple\\.com",
-                @"resource-type": @[ @"top-document" ],
-                @"request-method": @"get",
-            },
-        },
-        @{
-            @"action": @{
-                @"type": @"ignore-previous-rules",
+                @"type": @"ignore-following-rules",
             },
             @"trigger": @{
                 @"url-filter": @"google\\.com",
@@ -2436,6 +2427,16 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithRequestMethodsAnd
                 @"request-method": @"post",
             },
         },
+        @{
+            @"action": @{
+                @"type": @"block",
+            },
+            @"trigger": @{
+                @"url-filter": @"^[^:]+://+([^:/]+\\.)?apple\\.com",
+                @"resource-type": @[ @"top-document" ],
+                @"request-method": @"get",
+            },
+        }
     ];
 
     EXPECT_NS_EQUAL(convertedRules, correctRuleConversion);
@@ -2578,7 +2579,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithAllowAllRequests)
 
         NSMutableDictionary *correctRuleConversion = [@{
             @"action": @{
-                @"type": @"ignore-previous-rules",
+                @"type": @"ignore-following-rules",
             },
             @"trigger": [@{
                 @"url-filter": @".*",
@@ -2832,7 +2833,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RulesSortByPriorityFromDifferentRul
     NSArray *sortedTranslatedRules = [_WKWebExtensionDeclarativeNetRequestTranslator translateRules:rules errorStrings:nil];
     EXPECT_NOT_NULL(sortedTranslatedRules);
 
-    EXPECT_NS_EQUAL(sortedTranslatedRules[0][@"action"][@"type"], @"ignore-previous-rules");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[0][@"action"][@"type"], @"ignore-following-rules");
     EXPECT_NS_EQUAL(sortedTranslatedRules[1][@"action"][@"type"], @"block");
 }
 
@@ -2864,8 +2865,8 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RulesSortWithoutExplicitPriority)
     EXPECT_NOT_NULL(sortedTranslatedRules);
 
     EXPECT_NS_EQUAL(sortedTranslatedRules[0][@"action"][@"type"], @"block");
-    EXPECT_NS_EQUAL(sortedTranslatedRules[1][@"action"][@"type"], @"ignore-previous-rules");
-    EXPECT_NS_EQUAL(sortedTranslatedRules[2][@"action"][@"type"], @"make-https");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[1][@"action"][@"type"], @"make-https");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[2][@"action"][@"type"], @"ignore-following-rules");
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RulesSortByActionType)
@@ -2923,12 +2924,12 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RulesSortByActionType)
     NSArray *sortedTranslatedRules = [_WKWebExtensionDeclarativeNetRequestTranslator translateRules:rules errorStrings:nil];
     EXPECT_NOT_NULL(sortedTranslatedRules);
 
-    EXPECT_NS_EQUAL(sortedTranslatedRules[0][@"action"][@"type"], @"modify-headers");
-    EXPECT_NS_EQUAL(sortedTranslatedRules[1][@"action"][@"type"], @"ignore-previous-rules");
-    EXPECT_NS_EQUAL(sortedTranslatedRules[2][@"action"][@"type"], @"make-https");
-    EXPECT_NS_EQUAL(sortedTranslatedRules[3][@"action"][@"type"], @"block");
-    EXPECT_NS_EQUAL(sortedTranslatedRules[4][@"action"][@"type"], @"ignore-previous-rules");
-    EXPECT_NS_EQUAL(sortedTranslatedRules[5][@"action"][@"type"], @"ignore-previous-rules");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[0][@"action"][@"type"], @"ignore-following-rules");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[1][@"action"][@"type"], @"ignore-following-rules");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[2][@"action"][@"type"], @"block");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[3][@"action"][@"type"], @"make-https");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[4][@"action"][@"type"], @"ignore-following-rules");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[5][@"action"][@"type"], @"modify-headers");
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RemoveAllContentRuleListsDoesNotRemoveWebExtensionRuleLists)

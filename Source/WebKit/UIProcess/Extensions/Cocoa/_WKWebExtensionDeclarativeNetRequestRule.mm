@@ -775,8 +775,8 @@ static BOOL isArrayOfRequestMethodsValid(NSArray<NSString *> *requestMethods)
 - (NSArray<NSDictionary<NSString *, id> *> *)ruleInWebKitFormat
 {
     static NSDictionary *chromeActionTypesToWebKitActionTypes = @{
-        declarativeNetRequestRuleActionTypeAllow: @"ignore-previous-rules",
-        declarativeNetRequestRuleActionTypeAllowAllRequests: @"ignore-previous-rules",
+        declarativeNetRequestRuleActionTypeAllow: @"ignore-following-rules",
+        declarativeNetRequestRuleActionTypeAllowAllRequests: @"ignore-following-rules",
         declarativeNetRequestRuleActionTypeBlock: @"block",
         declarativeNetRequestRuleActionTypeModifyHeaders: @"modify-headers",
         declarativeNetRequestRuleActionTypeRedirect: @"redirect",
@@ -810,7 +810,23 @@ static BOOL isArrayOfRequestMethodsValid(NSArray<NSString *> *requestMethods)
     NSArray *requestMethods = _condition[declarativeNetRequestRuleConditionRequestMethodsKey];
     NSArray *excludedRequestMethods = _condition[declarativeNetRequestRuleConditionExcludedRequestMethodsKey];
 
-    // We have to create one rule per request domain (unless we have a regex filter), and we also have to create one rule per request method...
+    // We also have to create one ignore-following-rules rule per excluded request domain and excluded request method...
+    if (excludedRequestDomains) {
+        for (NSString *excludedRequestDomain in excludedRequestDomains) {
+            NSDictionary *modifiedConditionsForURLFilter = createModifiedConditionsForURLFilter(_condition, excludedRequestDomain);
+
+            if (excludedRequestMethods && !isRuleForAllowAllRequests) {
+                for (NSString *excludedRequestMethod in excludedRequestMethods)
+                    [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:createModifiedConditionsForRequestMethod(modifiedConditionsForURLFilter, excludedRequestMethod) webKitActionType:@"ignore-following-rules" chromeActionType:chromeActionType]];
+            } else
+                [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:modifiedConditionsForURLFilter webKitActionType:@"ignore-following-rules" chromeActionType:chromeActionType]];
+        }
+    } else if (excludedRequestMethods && !isRuleForAllowAllRequests) {
+        for (NSString *excludedRequestMethod in excludedRequestMethods)
+            [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:createModifiedConditionsForRequestMethod(_condition, excludedRequestMethod) webKitActionType:@"ignore-following-rules" chromeActionType:chromeActionType]];
+    }
+
+    // ... and we also have to create one rule per request domain (unless we have a regex filter) and request method.
     if (requestDomains && !_condition[declarativeNetRequestRuleConditionRegexFilterKey]) {
         for (NSString *requestDomain in requestDomains) {
             NSString *combinedRequestDomainAndURLFilter = [self _combineRequestDomain:requestDomain withURLFilter:_condition[declarativeNetRequestRuleConditionURLFilterKey]];
@@ -828,22 +844,6 @@ static BOOL isArrayOfRequestMethodsValid(NSArray<NSString *> *requestMethods)
     } else
         [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:_condition webKitActionType:webKitActionType chromeActionType:chromeActionType]];
 
-    // ...and we also have to create one ignore-previous-rules rule per excluded request domain and excluded request method
-    if (excludedRequestDomains) {
-        for (NSString *excludedRequestDomain in excludedRequestDomains) {
-            NSDictionary *modifiedConditionsForURLFilter = createModifiedConditionsForURLFilter(_condition, excludedRequestDomain);
-
-            if (excludedRequestMethods && !isRuleForAllowAllRequests) {
-                for (NSString *excludedRequestMethod in excludedRequestMethods)
-                    [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:createModifiedConditionsForRequestMethod(modifiedConditionsForURLFilter, excludedRequestMethod) webKitActionType:@"ignore-previous-rules" chromeActionType:chromeActionType]];
-            } else
-                [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:modifiedConditionsForURLFilter webKitActionType:@"ignore-previous-rules" chromeActionType:chromeActionType]];
-        }
-    } else if (excludedRequestMethods && !isRuleForAllowAllRequests) {
-        for (NSString *excludedRequestMethod in excludedRequestMethods)
-            [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:createModifiedConditionsForRequestMethod(_condition, excludedRequestMethod) webKitActionType:@"ignore-previous-rules" chromeActionType:chromeActionType]];
-    }
-
     return convertedRules;
 }
 
@@ -851,20 +851,20 @@ static BOOL isArrayOfRequestMethodsValid(NSArray<NSString *> *requestMethods)
 {
     NSMutableArray<NSDictionary<NSString *, id> *> *convertedRules = [NSMutableArray array];
 
-    if ([webKitActionType isEqualToString:@"make-https"])
-        [convertedRules addObject:[self _webKitRuleWithWebKitActionType:@"ignore-previous-rules" chromeActionType:chromeActionType condition:condition]];
-
-    [convertedRules addObject:[self _webKitRuleWithWebKitActionType:webKitActionType chromeActionType:chromeActionType condition:condition]];
-
     if ((condition[ruleConditionInitiatorDomainsKey] && condition[ruleConditionExcludedInitiatorDomainsKey]) && ![chromeActionType isEqualToString:declarativeNetRequestRuleActionTypeAllowAllRequests]) {
         // If a rule specifies both initiatorDomains and excludedInitiatorDomains, we need to turn that into two rules.
-        // The first rule will have the initiatorDomains implemented as normal (using if-frame-url). We then create a
-        // second rule as an ignore-previous-rules rule using if-frame-url instead of unless-frame-url.
+        // We create the first rule as an ignore-following-rules rule using if-frame-url instead of unless-frame-url.
+        // The second rule will have the initiatorDomains implemented as normal (using if-frame-url).
         NSMutableDictionary *modifiedCondition = [condition mutableCopy];
         modifiedCondition[ruleConditionInitiatorDomainsKey] = modifiedCondition[ruleConditionExcludedInitiatorDomainsKey];
         modifiedCondition[ruleConditionExcludedInitiatorDomainsKey] = nil;
-        [convertedRules addObject:[self _webKitRuleWithWebKitActionType:@"ignore-previous-rules" chromeActionType:chromeActionType condition:modifiedCondition]];
+        [convertedRules addObject:[self _webKitRuleWithWebKitActionType:@"ignore-following-rules" chromeActionType:chromeActionType condition:modifiedCondition]];
     }
+
+    [convertedRules addObject:[self _webKitRuleWithWebKitActionType:webKitActionType chromeActionType:chromeActionType condition:condition]];
+
+    if ([webKitActionType isEqualToString:@"make-https"])
+        [convertedRules addObject:[self _webKitRuleWithWebKitActionType:@"ignore-following-rules" chromeActionType:chromeActionType condition:condition]];
 
     return [convertedRules copy];
 }
@@ -1202,9 +1202,9 @@ static BOOL isArrayOfRequestMethodsValid(NSArray<NSString *> *requestMethods)
         return NSOrderedAscending;
 
     if (priorityForRuleType(_action[declarativeNetRequestRuleActionTypeKey]) < priorityForRuleType(rule.action[declarativeNetRequestRuleActionTypeKey]))
-        return NSOrderedAscending;
-    if (priorityForRuleType(_action[declarativeNetRequestRuleActionTypeKey]) > priorityForRuleType(rule.action[declarativeNetRequestRuleActionTypeKey]))
         return NSOrderedDescending;
+    if (priorityForRuleType(_action[declarativeNetRequestRuleActionTypeKey]) > priorityForRuleType(rule.action[declarativeNetRequestRuleActionTypeKey]))
+        return NSOrderedAscending;
 
     return NSOrderedSame;
 }
