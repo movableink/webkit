@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -102,10 +102,10 @@ ExceptionOr<ViewTimeline::SpecifiedViewTimelineInsets> ViewTimeline::validateSpe
         if (!consumedInset)
             return Exception { ExceptionCode::TypeError };
 
-        if (auto insetPair = dynamicDowncast<CSSValuePair>(consumedInset)) {
+        if (RefPtr insetPair = dynamicDowncast<CSSValuePair>(consumedInset)) {
             return { {
-                dynamicDowncast<CSSPrimitiveValue>(insetPair->protectedFirst()),
-                dynamicDowncast<CSSPrimitiveValue>(insetPair->protectedSecond())
+                RefPtr { dynamicDowncast<CSSPrimitiveValue>(insetPair->first()) },
+                RefPtr { dynamicDowncast<CSSPrimitiveValue>(insetPair->second()) }
             } };
         } else
             return { { dynamicDowncast<CSSPrimitiveValue>(consumedInset), nullptr } };

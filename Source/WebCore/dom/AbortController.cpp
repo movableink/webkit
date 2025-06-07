@@ -46,11 +46,6 @@ AbortController::AbortController(ScriptExecutionContext& context)
 
 AbortController::~AbortController() = default;
 
-AbortSignal& AbortController::signal()
-{
-    return m_signal.get();
-}
-
 void AbortController::abort(JSC::JSValue reason)
 {
     m_signal->signalAbort(reason);
@@ -59,11 +54,6 @@ void AbortController::abort(JSC::JSValue reason)
 WebCoreOpaqueRoot AbortController::opaqueRoot()
 {
     return root(&signal());
-}
-
-Ref<AbortSignal> AbortController::protectedSignal() const
-{
-    return m_signal;
 }
 
 template<typename Visitor>

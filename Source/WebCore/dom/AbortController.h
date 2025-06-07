@@ -45,8 +45,7 @@ public:
     static Ref<AbortController> create(ScriptExecutionContext&);
     ~AbortController();
 
-    AbortSignal& signal();
-    Ref<AbortSignal> protectedSignal() const;
+    AbortSignal& signal() { return m_signal; }
     void abort(JSC::JSValue reason);
 
     WebCoreOpaqueRoot opaqueRoot();

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2021 Tyler Wilcock <twilco.o@protonmail.com>.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,9 +38,9 @@ public:
     static Ref<CSSValuePair> createNoncoalescing(Ref<CSSValue>, Ref<CSSValue>);
 
     const CSSValue& first() const { return m_first; }
+    CSSValue& first() { return m_first; }
     const CSSValue& second() const { return m_second; }
-    Ref<CSSValue> protectedFirst() const { return m_first; }
-    Ref<CSSValue> protectedSecond() const { return m_second; }
+    CSSValue& second() { return m_second; }
 
     String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSValuePair&) const;
