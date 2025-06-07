@@ -7817,8 +7817,6 @@ webkit.org/b/291115 imported/w3c/web-platform-tests/websockets/back-forward-cach
 
 webkit.org/b/290568 fast/multicol/simple-line-layout-line-index-after-strut.html [ Crash ImageOnlyFailure ]
 
-webkit.org/b/291278 http/tests/IndexedDB/storage-limit-1.https.html [ Pass Failure ]
-
 # webkit.org/b/292268 [ iOS ] Due to harness issues various trusted types tests are flaky timeouts on iOS.
 imported/w3c/web-platform-tests/trusted-types/ServiceWorker-block-eval-function-constructor.https.html [ Skip ]
 imported/w3c/web-platform-tests/trusted-types/ServiceWorker-eval.https.html [ Skip ]
