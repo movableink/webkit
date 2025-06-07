@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -194,7 +194,7 @@ private:
     std::optional<Source> m_source;
 
     RefPtr<IDBCursor> m_pendingCursor;
-    Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
+    const Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
 
     ReadyState m_readyState { ReadyState::Pending };
     IndexedDB::RequestType m_requestType { IndexedDB::RequestType::Other };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -2102,7 +2102,7 @@ private:
                 write(RTCCertificateTag);
                 write(rtcCertificate->expires());
                 write(rtcCertificate->pemCertificate());
-                write(rtcCertificate->protectedOrigin()->toString());
+                write(rtcCertificate->origin().toString());
                 write(rtcCertificate->pemPrivateKey());
                 write(static_cast<unsigned>(rtcCertificate->getFingerprints().size()));
                 for (const auto& fingerprint : rtcCertificate->getFingerprints()) {

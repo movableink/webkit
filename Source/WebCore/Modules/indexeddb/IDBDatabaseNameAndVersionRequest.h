@@ -66,7 +66,7 @@ private:
     bool virtualHasPendingActivity() const final;
     void stop() final;
 
-    Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
+    const Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
     IDBResourceIdentifier m_resourceIdentifier;
     InfoCallback m_callback;
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -97,7 +97,6 @@ public:
     const IDBTransactionInfo& info() const { return m_info; }
     IDBDatabase& database() { return m_database.get(); }
     const IDBDatabase& database() const { return m_database.get(); }
-    Ref<IDBDatabase> protectedDatabase() const;
     IDBDatabaseInfo* originalDatabaseInfo() const { return m_info.originalDatabaseInfo().get(); }
 
     void didStart(const IDBError&);
@@ -240,7 +239,7 @@ private:
     void trySchedulePendingOperationTimer();
     void addCursorRequest(IDBRequest&);
 
-    Ref<IDBDatabase> m_database;
+    const Ref<IDBDatabase> m_database;
     IDBTransactionInfo m_info;
 
     IndexedDB::TransactionState m_state { IndexedDB::TransactionState::Inactive };

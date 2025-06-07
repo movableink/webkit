@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,7 +41,7 @@ TransactionOperation::TransactionOperation(IDBTransaction& transaction)
     : m_transaction(transaction)
     , m_identifier(transaction.connectionProxy())
     , m_operationID(transaction.generateOperationID())
-    , m_scriptExecutionContextIdentifier(transaction.protectedDatabase()->scriptExecutionContextIdentifier())
+    , m_scriptExecutionContextIdentifier(transaction.database().scriptExecutionContextIdentifier())
 {
 }
 
@@ -56,7 +56,7 @@ TransactionOperation::TransactionOperation(IDBTransaction& transaction, IDBReque
         m_cursorIdentifier = cursor->info().identifier();
 
     request.setTransactionOperationID(m_operationID);
-    m_idbRequest = &request;
+    m_idbRequest = request;
 }
 
 } // namespace IDBClient

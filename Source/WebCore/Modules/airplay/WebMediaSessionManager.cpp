@@ -138,8 +138,8 @@ private:
     {
     }
 
-    CheckedRef<WebMediaSessionManager> m_manager;
-    Ref<Logger> m_logger;
+    const CheckedRef<WebMediaSessionManager> m_manager;
+    const Ref<const Logger> m_logger;
 };
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WebMediaSessionLogger);

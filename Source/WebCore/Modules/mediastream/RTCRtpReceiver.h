@@ -91,7 +91,7 @@ private:
     WTFLogChannel& logChannel() const final;
 #endif
 
-    Ref<MediaStreamTrack> m_track;
+    const Ref<MediaStreamTrack> m_track;
     RefPtr<RTCDtlsTransport> m_transport;
     std::unique_ptr<RTCRtpReceiverBackend> m_backend;
     WeakPtr<PeerConnectionBackend> m_connection;

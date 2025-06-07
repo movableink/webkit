@@ -544,7 +544,7 @@ private:
     void loadRecentSearches(const AtomString&, Vector<RecentSearch>&) final { }
     bool enabled() final { return false; }
 
-    Ref<EmptyPopupMenu> m_popup;
+    const Ref<EmptyPopupMenu> m_popup;
 };
 
 class EmptyStorageNamespaceProvider final : public StorageNamespaceProvider {

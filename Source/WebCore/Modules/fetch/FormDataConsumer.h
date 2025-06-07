@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -64,7 +64,7 @@ private:
     void didFail(Exception&&);
     bool isCancelled() { return !m_context; }
 
-    Ref<FormData> m_formData;
+    const Ref<FormData> m_formData;
     RefPtr<ScriptExecutionContext> m_context;
     Callback m_callback;
 

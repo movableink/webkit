@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,11 +51,11 @@ private:
     explicit HighlightRange(Ref<AbstractRange>&& range)
         : m_range(WTFMove(range))
     {
-        if (auto liveRange = dynamicDowncast<Range>(m_range))
+        if (RefPtr liveRange = dynamicDowncast<Range>(m_range))
             liveRange->didAssociateWithHighlight();
     }
 
-    Ref<AbstractRange> m_range;
+    const Ref<AbstractRange> m_range;
     Position m_startPosition;
     Position m_endPosition;
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -75,7 +75,7 @@ private:
     void onError() final;
 
     UniqueRef<RTCDtlsTransportBackend> m_backend;
-    Ref<RTCIceTransport> m_iceTransport;
+    const Ref<RTCIceTransport> m_iceTransport;
     RTCDtlsTransportState m_state { RTCDtlsTransportState::New };
     Vector<Ref<JSC::ArrayBuffer>> m_remoteCertificates;
 };

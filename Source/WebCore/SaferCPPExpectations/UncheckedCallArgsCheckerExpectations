@@ -24,7 +24,6 @@ Modules/indexeddb/server/MemoryIndex.cpp
 Modules/indexeddb/server/MemoryObjectStore.cpp
 Modules/indexeddb/server/SQLiteIDBBackingStore.cpp
 Modules/indexeddb/server/SQLiteIDBCursor.cpp
-Modules/indexeddb/server/SQLiteIDBTransaction.cpp
 Modules/indexeddb/server/UniqueIDBDatabase.cpp
 Modules/mediacontrols/MediaControlsHost.cpp
 Modules/mediarecorder/MediaRecorder.cpp

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -169,7 +169,7 @@ public:
     }
 
 private:
-    Ref<CacheStorageConnection> m_connection;
+    const Ref<CacheStorageConnection> m_connection;
     ClientOrigin m_origin;
 };
 

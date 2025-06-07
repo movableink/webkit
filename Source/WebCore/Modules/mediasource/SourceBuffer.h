@@ -226,8 +226,8 @@ private:
 
     void updateBuffered();
 
-    Ref<SourceBufferPrivate> m_private;
-    Ref<SourceBufferClientImpl> m_client;
+    const Ref<SourceBufferPrivate> m_private;
+    const Ref<SourceBufferClientImpl> m_client;
 
     WeakPtr<MediaSource> m_source;
     AppendMode m_mode { AppendMode::Segments };

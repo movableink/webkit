@@ -253,7 +253,7 @@ private:
 #endif
     std::atomic<uint64_t> m_associatedRegistryCount { 0 };
     RefPtr<MediaSourcePrivate> m_private;
-    Ref<MediaSourceClientImpl> m_client;
+    const Ref<MediaSourceClientImpl> m_client;
 };
 
 String convertEnumerationToString(MediaSource::EndOfStreamError);

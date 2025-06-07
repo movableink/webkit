@@ -520,7 +520,7 @@ private:
     {
     }
 
-    Ref<MediaControlsContextMenuProvider> m_contextMenuProvider;
+    const Ref<MediaControlsContextMenuProvider> m_contextMenuProvider;
 };
 
 #endif // ENABLE(CONTEXT_MENUS) && USE(ACCESSIBILITY_CONTEXT_MENUS)

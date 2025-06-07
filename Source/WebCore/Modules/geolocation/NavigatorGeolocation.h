@@ -50,7 +50,7 @@ private:
     static ASCIILiteral supplementName();
 
     mutable RefPtr<Geolocation> m_geolocation;
-    CheckedRef<Navigator> m_navigator;
+    const CheckedRef<Navigator> m_navigator;
 };
 
 } // namespace WebCore
