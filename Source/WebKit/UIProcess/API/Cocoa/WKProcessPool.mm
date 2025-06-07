@@ -682,6 +682,13 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
     return result.autorelease();
 }
 
+#if PLATFORM(MAC)
+- (void)_registerAdditionalFonts:(NSArray<NSString *> *)fontNames
+{
+    _processPool->registerAdditionalFonts(fontNames);
+}
+#endif
+
 @end
 
 

@@ -1467,6 +1467,36 @@ void WebProcessPool::registerUserInstalledFonts(WebProcessProxy& process)
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0), blockPtr.get());
 }
 
+#if PLATFORM(MAC)
+void WebProcessPool::registerAdditionalFonts(NSArray *fontNames)
+{
+    if (!fontNames)
+        return;
+
+    Vector<URL> fontURLs;
+
+    for (NSString *fontName : fontNames) {
+        RetainPtr ctFont = adoptCF(CTFontCreateWithName(bridge_cast(fontName), 0.0, nullptr));
+        RetainPtr downloaded = adoptCF(static_cast<CFBooleanRef>(CTFontCopyAttribute(ctFont.get(), kCTFontDownloadedAttribute)));
+        if (downloaded == kCFBooleanFalse)
+            return;
+        RetainPtr url = adoptCF(static_cast<CFURLRef>(CTFontCopyAttribute(ctFont.get(), kCTFontURLAttribute)));
+        fontURLs.append(URL(url.get()));
+    }
+
+    for (Ref process : m_processes) {
+        if (!process->canSendMessage())
+            continue;
+        process->send(Messages::WebProcess::RegisterAdditionalFonts(AdditionalFonts::additionalFonts(fontURLs, process->auditToken())), 0);
+    }
+
+    if (m_userInstalledFontURLs)
+        m_userInstalledFontURLs->appendVector(WTFMove(fontURLs));
+    else
+        m_userInstalledFontURLs = WTFMove(fontURLs);
+}
+#endif
+
 static URL fontURLFromName(ASCIILiteral fontName)
 {
     RetainPtr cfFontName = fontName.createCFString();

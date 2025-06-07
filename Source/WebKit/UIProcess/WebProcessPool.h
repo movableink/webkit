@@ -629,6 +629,10 @@ public:
     void markHasReceivedAXRequestInUIProcess() { m_hasReceivedAXRequestInUIProcess = true; }
     bool hasReceivedAXRequestInUIProcess() const { return m_hasReceivedAXRequestInUIProcess; }
 
+#if PLATFORM(MAC)
+    void registerAdditionalFonts(NSArray *fontNames);
+#endif
+
 private:
     enum class NeedsGlobalStaticInitialization : bool { No, Yes };
     void platformInitialize(NeedsGlobalStaticInitialization);

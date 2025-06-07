@@ -883,8 +883,6 @@ typedef NS_OPTIONS(NSUInteger, _WKWebViewDataType) {
 
 - (void)_showWritingTools WK_API_AVAILABLE(macos(15.2));
 
-- (void)_registerAdditionalFonts:(NSArray<NSURL *> *)fonts WK_API_AVAILABLE(macos(WK_MAC_TBA));
-
 @end
 
 @interface WKWebView (WKWindowSnapshot)
