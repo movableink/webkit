@@ -190,11 +190,13 @@ protected:
     macro(FlowToChanged) \
     macro(FocusableStateChanged) \
     macro(FocusedUIElementChanged) \
+    macro(FontChanged) \
     macro(FrameLoadComplete) \
     macro(GrabbedStateChanged) \
     macro(HasPopupChanged) \
     macro(IdAttributeChanged) \
     macro(ImageOverlayChanged) \
+    macro(InertOrVisibilityChanged) \
     macro(InputTypeChanged) \
     macro(IsAtomicChanged) \
     macro(KeyShortcutsChanged) \
@@ -218,6 +220,7 @@ protected:
     macro(SelectedStateChanged) \
     macro(SelectedTextChanged) \
     macro(SetSizeChanged) \
+    macro(TextColorChanged) \
     macro(TextCompositionBegan) \
     macro(TextCompositionEnded) \
     macro(URLChanged) \

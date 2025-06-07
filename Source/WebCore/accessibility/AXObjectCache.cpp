@@ -1928,14 +1928,13 @@ void AXObjectCache::onInertOrVisibilityChange(RenderElement& renderer)
 #if ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
     RefPtr axObject = get(renderer);
     if (!axObject)
-        return
+        return;
     // Both of these change the is-ignored state of all descendants of `renderer`, so throw away
     // the is-ignored cache.
     stopCachingComputedObjectAttributes();
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    if (RefPtr tree = AXIsolatedTree::treeForPageID(m_pageID))
-        tree->updatePropertiesForSelfAndDescendants(*axObject, { AXProperty::IsIgnored });
+    postNotification(*axObject, AXNotification::InertOrVisibilityChanged);
 #endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 
 #else // !ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
@@ -2083,7 +2082,7 @@ bool AXObjectCache::onFontChange(Element& element, const RenderStyle* oldStyle, 
         return false;
 
     if (!oldStyle->fontCascadeEqual(*newStyle)) {
-        tree->updatePropertiesForSelfAndDescendants(*object, { AXProperty::Font });
+        postNotification(*object, AXNotification::FontChanged);
         return true;
     }
 
@@ -2104,7 +2103,7 @@ bool AXObjectCache::onTextColorChange(Element& element, const RenderStyle* oldSt
         return false;
 
     if (oldStyle->visitedDependentColor(CSSPropertyColor) != newStyle->visitedDependentColor(CSSPropertyColor)) {
-        tree->updatePropertiesForSelfAndDescendants(*object, { AXProperty::TextColor });
+        postNotification(*object, AXNotification::TextColorChanged);
         return true;
     }
 
@@ -4965,6 +4964,12 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<Ref<AccessibilityO
         case AXNotification::FocusableStateChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::CanSetFocusAttribute });
             break;
+        case AXNotification::FontChanged:
+            tree->updatePropertiesForSelfAndDescendants(notification.first.get(), { AXProperty::Font });
+            break;
+        case AXNotification::InertOrVisibilityChanged:
+            tree->updatePropertiesForSelfAndDescendants(notification.first.get(), { AXProperty::IsIgnored });
+            break;
         case AXNotification::InputTypeChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::InputType });
             break;
@@ -5028,6 +5033,9 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<Ref<AccessibilityO
             break;
         case AXNotification::SpeakAsChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::SpeakAs });
+            break;
+        case AXNotification::TextColorChanged:
+            tree->updatePropertiesForSelfAndDescendants(notification.first.get(), { AXProperty::TextColor });
             break;
         case AXNotification::TextCompositionChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::TextInputMarkedTextMarkerRange });
