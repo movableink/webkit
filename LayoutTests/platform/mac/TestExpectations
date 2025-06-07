@@ -2440,4 +2440,4 @@ webkit.org/b/293981 [ Sequoia ] imported/w3c/web-platform-tests/mimesniff/media/
 
 webkit.org/b/294043 [ Sequoia ] platform/mac/fast/text/line-break-locale.html [ Failure ]
 
-webkit.org/b/294152 http/tests/misc/timer-vs-loading.html [ Timeout ]
+webkit.org/b/294152 [ Sequoia ] http/tests/misc/timer-vs-loading.html [ Timeout ]
