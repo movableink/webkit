@@ -25,6 +25,7 @@
 #include "RenderSVGResourceClipper.h"
 #include "RenderView.h"
 #include "SVGGraphicsElement.h"
+#include <wtf/CheckedPtr.h>
 
 namespace WebCore {
 
@@ -72,7 +73,7 @@ inline bool RenderLayer::hasNonOpacityTransparency() const
         return false;
 
     // SVG clip-paths may use clipping masks, if so, flag this layer as transparent.
-    if (auto* svgClipper = renderer().svgClipperResourceFromStyle(); svgClipper && !svgClipper->shouldApplyPathClipping())
+    if (CheckedPtr svgClipper = renderer().svgClipperResourceFromStyle(); svgClipper && !svgClipper->shouldApplyPathClipping())
         return true;
 
     return false;

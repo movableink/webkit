@@ -1398,7 +1398,7 @@ private:
 
     bool m_wasOmittedFromZOrderTree : 1 { false };
 
-    RenderLayerModelObject& m_renderer;
+    const CheckedRef<RenderLayerModelObject> m_renderer;
 
     RenderLayer* m_parent { nullptr };
     RenderLayer* m_previous { nullptr };

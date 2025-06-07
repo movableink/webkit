@@ -3695,7 +3695,7 @@ void RenderLayer::paintLayerContents(GraphicsContext& context, const LayerPainti
         if (isViewportConstrained())
             return false;
 
-        if (!m_renderer.frame().isMainFrame())
+        if (!m_renderer->frame().isMainFrame())
             return false;
 
         return true;
