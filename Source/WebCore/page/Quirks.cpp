@@ -1687,6 +1687,14 @@ bool Quirks::shouldIgnoreContentObservationForClick(const Node& targetNode) cons
     if (!m_quirksData.mayNeedToIgnoreContentObservation)
         return false;
 
+    if (m_quirksData.isGoogleMaps) {
+        for (Ref ancestor : lineageOfType<HTMLElement>(targetNode)) {
+            if (ancestor->attributeWithoutSynchronization(HTMLNames::aria_labelAttr) == "Suggestions"_s)
+                return true;
+        }
+        return false;
+    }
+
     RefPtr target = dynamicDowncast<Element>(targetNode);
     if (m_quirksData.isOutlook) {
         if (target && target->getIdAttribute().startsWith("swatchColorPicker"_s))
@@ -2387,6 +2395,8 @@ static void handleGoogleQuirks(QuirksData& quirksData, const URL& quirksURL, con
     if (startsWithLettersIgnoringASCIICase(quirksURL.path(), "/maps/"_s)) {
         quirksData.isGoogleMaps = true;
 #if PLATFORM(IOS_FAMILY)
+        // maps.google.com rdar://152194074
+        quirksData.mayNeedToIgnoreContentObservation = true;
         // maps.google.com rdar://67358928
         quirksData.needsGoogleMapsScrollingQuirk = true;
 #endif
