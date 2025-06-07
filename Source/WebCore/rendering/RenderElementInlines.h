@@ -91,6 +91,7 @@ inline bool RenderElement::mayContainOutOfFlowPositionedObjects(const RenderStyl
     return isRenderView()
         || (canEstablishContainingBlockWithTransform() && (styleToUse ? styleToUse->hasTransformRelatedProperty() : hasTransformRelatedProperty()))
         || (style.hasBackdropFilter() && !isDocumentElementRenderer())
+        || (style.hasFilter() && !isDocumentElementRenderer())
 #if HAVE(CORE_MATERIAL)
         || (style.hasAppleVisualEffectRequiringBackdropFilter() && !isDocumentElementRenderer())
 #endif

@@ -4653,6 +4653,8 @@ imported/w3c/web-platform-tests/css/filter-effects/effect-reference-feimage-001.
 imported/w3c/web-platform-tests/css/filter-effects/effect-reference-feimage-003.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/filter-effects/filter-function/filter-function-002.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/filter-effects/svg-image-root-filter.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/filter-effects/filtered-block-is-container.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/filter-effects/filtered-inline-is-container.html [ ImageOnlyFailure ]
 
 # webkit.org/b/260224 / rdar://113930861 (3D transforms with scaleZ(0) don't get rendered, even when combined with other transforms using preserve-3d (260224))
 compositing/geometry/clipped-out-perspective.html [ ImageOnlyFailure ]

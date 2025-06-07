@@ -1926,6 +1926,8 @@ webkit.org/b/261024 webrtc/utf8-sdp.html [ Pass Timeout ]
 
 
 imported/w3c/web-platform-tests/css/filter-effects/backdrop-filter-plus-filter.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/filter-effects/filtered-block-is-container.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/filter-effects/filtered-inline-is-container.html [ ImageOnlyFailure ]
 
 fast/canvas/font-family-system-ui-canvas.html [ Skip ]
 
