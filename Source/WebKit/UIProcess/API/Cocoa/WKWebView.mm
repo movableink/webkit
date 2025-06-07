@@ -556,14 +556,15 @@ static id browsingContextControllerMethodStub(id, SEL)
     return nil;
 }
 
-static void addBrowsingContextControllerMethodStubIfNeeded()
+static void addBrowsingContextControllerMethodStubsIfNeeded()
 {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         if (linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::BrowsingContextControllerMethodStubRemoved))
             return;
 
-        class_addMethod(WKWebView.class, NSSelectorFromString(@"browsingContextController"), reinterpret_cast<IMP>(browsingContextControllerMethodStub), "@@:");
+        for (auto wkClass : std::array { WKWebView.class, WKContentView.class })
+            class_addMethod(wkClass, NSSelectorFromString(@"browsingContextController"), reinterpret_cast<IMP>(browsingContextControllerMethodStub), "@@:");
     });
 }
 
@@ -577,7 +578,7 @@ static void addBrowsingContextControllerMethodStubIfNeeded()
     _configuration = adoptNS([configuration copy]);
 
 #if PLATFORM(IOS_FAMILY)
-    addBrowsingContextControllerMethodStubIfNeeded();
+    addBrowsingContextControllerMethodStubsIfNeeded();
 #endif
 
     ALLOW_DEPRECATED_DECLARATIONS_BEGIN
