@@ -1125,7 +1125,7 @@ public:
     void WriteLength(Ref<Writer>, Writer::Slot<uint32_t>* lengthSlot, int initialPosition);
 
 private:
-    Ref<CodeDescription> m_desc;
+    const Ref<CodeDescription> m_desc;
 
     // DWARF3 Specification, Table 7.23
     enum CFIInstructions {

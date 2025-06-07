@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -378,7 +378,7 @@ private:
 
     VMIdentifier m_identifier;
     const Ref<JSLock> m_apiLock;
-    Ref<WTF::RunLoop> m_runLoop;
+    const Ref<WTF::RunLoop> m_runLoop;
 
     WeakRandom m_random;
     WeakRandom m_heapRandom;
@@ -786,7 +786,7 @@ public:
     static constexpr size_t patternContextBufferSize = 0; // Space allocated to save nested parenthesis context
 #endif
 
-    Ref<CompactTDZEnvironmentMap> m_compactVariableMap;
+    const Ref<CompactTDZEnvironmentMap> m_compactVariableMap;
 
     LazyUniqueRef<VM, HasOwnPropertyCache> m_hasOwnPropertyCache;
     ALWAYS_INLINE HasOwnPropertyCache* hasOwnPropertyCache() { return m_hasOwnPropertyCache.getIfExists(); }
@@ -1106,7 +1106,7 @@ private:
     UncheckedKeyHashMap<const JSInstruction*, std::pair<unsigned, std::unique_ptr<uintptr_t>>> m_loopHintExecutionCounts;
 
     MicrotaskQueue m_defaultMicrotaskQueue;
-    Ref<Waiter> m_syncWaiter;
+    const Ref<Waiter> m_syncWaiter;
 
     std::atomic<int64_t> m_numberOfActiveJITPlans { 0 };
 

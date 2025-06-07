@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2024 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Cameron Zwarich (cwzwarich@uwaterloo.ca)
  *  Copyright (C) 2007 Maks Orlovich
  *  Copyright (C) 2007 Eric Seidel <eric@webkit.org>
@@ -2063,7 +2063,7 @@ namespace JSC {
         unsigned m_startColumn;
         unsigned m_endColumn;
         bool m_usesAwait;
-        Ref<ModuleScopeData> m_moduleScopeData;
+        const Ref<ModuleScopeData> m_moduleScopeData;
     };
 
     class ModuleNameNode final : public Node {

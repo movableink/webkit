@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 2007 Eric Seidel <eric@webkit.org>
- *  Copyright (C) 2007-2023 Apple Inc. All rights reserved.
+ *  Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *  Copyright (C) 2024 Sosuke Suzuki <aosukeke@gmail.com>.
  *  Copyright (C) 2024 Tetsuharu Ohzeki <tetsuharu.ohzeki@gmail.com>.
  *
@@ -458,12 +458,12 @@ public:
     RefPtr<JSGlobalObjectDebuggable> m_inspectorDebuggable;
 #endif
 
-    Ref<WatchpointSet> m_masqueradesAsUndefinedWatchpointSet;
-    Ref<WatchpointSet> m_havingABadTimeWatchpointSet;
-    Ref<WatchpointSet> m_varInjectionWatchpointSet;
-    Ref<WatchpointSet> m_varReadOnlyWatchpointSet;
-    Ref<WatchpointSet> m_regExpRecompiledWatchpointSet;
-    Ref<WatchpointSet> m_arrayBufferDetachWatchpointSet;
+    const Ref<WatchpointSet> m_masqueradesAsUndefinedWatchpointSet;
+    const Ref<WatchpointSet> m_havingABadTimeWatchpointSet;
+    const Ref<WatchpointSet> m_varInjectionWatchpointSet;
+    const Ref<WatchpointSet> m_varReadOnlyWatchpointSet;
+    const Ref<WatchpointSet> m_regExpRecompiledWatchpointSet;
+    const Ref<WatchpointSet> m_arrayBufferDetachWatchpointSet;
 
     struct RareData;
     std::unique_ptr<RareData> m_rareData;

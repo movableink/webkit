@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -315,7 +315,7 @@ private:
     void* m_softStackLimit { nullptr };
     CagedPtr<Gigacage::Primitive, void> m_cachedMemory;
     size_t m_cachedBoundsCheckingSize { 0 };
-    Ref<Wasm::Module> m_module;
+    const Ref<Wasm::Module> m_module;
 
     CallFrame* m_temporaryCallFrame { nullptr };
     Wasm::Global::Value* m_globals { nullptr };

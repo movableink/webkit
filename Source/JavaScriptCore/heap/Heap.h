@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2024 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -894,7 +894,7 @@ private:
     RefPtr<GCActivityCallback> m_fullActivityCallback;
     RefPtr<GCActivityCallback> m_edenActivityCallback;
     const Ref<IncrementalSweeper> m_sweeper;
-    Ref<StopIfNecessaryTimer> m_stopIfNecessaryTimer;
+    const Ref<StopIfNecessaryTimer> m_stopIfNecessaryTimer;
 
     Vector<HeapObserver*> m_observers;
     
@@ -969,7 +969,7 @@ private:
     uint64_t m_phaseVersion { 0 };
     uint64_t m_gcVersion { 0 };
     Box<Lock> m_threadLock;
-    Ref<AutomaticThreadCondition> m_threadCondition; // The mutator must not wait on this. It would cause a deadlock.
+    const Ref<AutomaticThreadCondition> m_threadCondition; // The mutator must not wait on this. It would cause a deadlock.
     RefPtr<AutomaticThread> m_thread;
 
     RefPtr<Thread> m_collectContinuouslyThread { nullptr };

@@ -124,7 +124,7 @@ private:
     Lock m_suspensionLock;
     Box<Lock> m_lock;
 
-    Ref<AutomaticThreadCondition> m_planEnqueued;
+    const Ref<AutomaticThreadCondition> m_planEnqueued;
     Condition m_planCompiledOrCancelled;
 };
 

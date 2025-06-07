@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -2000,7 +2000,7 @@ public:
 
     DECLARE_INFO;
 
-    Ref<Wasm::ModuleInformation> m_info;
+    const Ref<Wasm::ModuleInformation> m_info;
     Client m_client;
     Wasm::StreamingParser m_streamingParser;
 };
@@ -2090,7 +2090,7 @@ public:
     DECLARE_INFO;
 
     WriteBarrier<JSPromise> m_promise;
-    Ref<Wasm::StreamingCompiler> m_streamingCompiler;
+    const Ref<Wasm::StreamingCompiler> m_streamingCompiler;
 };
 
 template<typename Visitor>

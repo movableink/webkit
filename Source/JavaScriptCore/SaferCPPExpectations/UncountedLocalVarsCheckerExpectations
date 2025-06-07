@@ -37,7 +37,6 @@ dfg/DFGDesiredIdentifiers.cpp
 dfg/DFGDesiredWatchpoints.cpp
 dfg/DFGFixupPhase.cpp
 dfg/DFGGraph.cpp
-dfg/DFGGraph.h
 dfg/DFGJITCode.cpp
 dfg/DFGLazyJSValue.cpp
 dfg/DFGOSREntry.cpp
@@ -80,7 +79,6 @@ jit/JITSafepoint.cpp
 jit/JITWorklist.cpp
 jsc.cpp
 llint/LLIntEntrypoint.cpp
-llint/LLIntSlowPaths.cpp
 parser/Lexer.h
 parser/Parser.cpp
 parser/Parser.h
@@ -98,7 +96,6 @@ runtime/JSArrayBufferView.cpp
 runtime/JSCJSValue.cpp
 runtime/JSCJSValueInlines.h
 runtime/JSFinalizationRegistry.cpp
-runtime/JSFunction.cpp
 runtime/JSGlobalObject.cpp
 runtime/JSObject.cpp
 runtime/JSRunLoopTimer.cpp
@@ -113,7 +110,6 @@ runtime/ScopedArguments.h
 runtime/StringPrototype.cpp
 runtime/Structure.cpp
 runtime/StructureInlines.h
-runtime/SymbolConstructor.cpp
 runtime/SymbolTable.h
 runtime/TypeSet.cpp
 runtime/VMTraps.cpp
@@ -150,6 +146,5 @@ wasm/WasmWorklist.cpp
 wasm/js/JSWebAssembly.cpp
 wasm/js/JSWebAssemblyHelpers.h
 wasm/js/JSWebAssemblyInstance.cpp
-wasm/js/JSWebAssemblyModule.cpp
 wasm/js/WasmToJS.cpp
 wasm/js/WebAssemblyModuleRecord.cpp

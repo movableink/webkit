@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2024 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -442,7 +442,7 @@ private:
     PackedRefPtr<StringImpl> m_sourceMappingURLDirective;
 
     FixedVector<JSInstructionStream::Offset> m_jumpTargets;
-    Ref<UnlinkedMetadataTable> m_metadata;
+    const Ref<UnlinkedMetadataTable> m_metadata;
     std::unique_ptr<JSInstructionStream> m_instructions;
     std::unique_ptr<BytecodeLivenessAnalysis> m_liveness;
 
