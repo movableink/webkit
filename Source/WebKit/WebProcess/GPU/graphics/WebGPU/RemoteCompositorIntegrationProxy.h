@@ -61,7 +61,7 @@ public:
     void setPresentationContext(RemotePresentationContextProxy& presentationContext)
     {
         ASSERT(!m_presentationContext);
-        m_presentationContext = &presentationContext;
+        m_presentationContext = presentationContext;
     }
 
     void paintCompositedResultsToCanvas(WebCore::ImageBuffer&, uint32_t) final;

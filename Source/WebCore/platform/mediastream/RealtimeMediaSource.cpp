@@ -1552,7 +1552,7 @@ bool RealtimeMediaSource::setShouldApplyRotation()
 #if !RELEASE_LOG_DISABLED
 void RealtimeMediaSource::setLogger(const Logger& newLogger, uint64_t newLogIdentifier)
 {
-    m_logger = &newLogger;
+    m_logger = newLogger;
     m_logIdentifier = newLogIdentifier;
     ALWAYS_LOG(LOGIDENTIFIER, m_type, ", ", name(), ", ", m_hashedID, ", ", m_ephemeralHashedID);
 }

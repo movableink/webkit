@@ -194,7 +194,7 @@ void RemoteRenderingBackend::moveToSerializedBuffer(RenderingResourceIdentifier 
 static void adjustImageBufferCreationContext(RemoteSharedResourceCache& sharedResourceCache, ImageBufferCreationContext& creationContext)
 {
 #if HAVE(IOSURFACE)
-    creationContext.surfacePool = &sharedResourceCache.ioSurfacePool();
+    creationContext.surfacePool = sharedResourceCache.ioSurfacePool();
 #endif
     creationContext.resourceOwner = sharedResourceCache.resourceOwner();
 }

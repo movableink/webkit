@@ -58,7 +58,7 @@ ExceptionOr<Ref<XPathResult>> XPathExpression::evaluate(Node& contextNode, unsig
         return Exception { ExceptionCode::NotSupportedError };
 
     auto& evaluationContext = XPath::Expression::evaluationContext();
-    evaluationContext.node = &contextNode;
+    evaluationContext.node = contextNode;
     evaluationContext.size = 1;
     evaluationContext.position = 1;
     evaluationContext.hadTypeConversionError = false;

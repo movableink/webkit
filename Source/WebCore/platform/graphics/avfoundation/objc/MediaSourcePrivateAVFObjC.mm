@@ -256,7 +256,7 @@ void MediaSourcePrivateAVFObjC::cdmInstanceAttached(CDMInstance& instance)
         return;
 
     ASSERT(!m_cdmInstance);
-    m_cdmInstance = &instance;
+    m_cdmInstance = instance;
     for (auto& sourceBuffer : m_sourceBuffers)
         sourceBuffer->setCDMInstance(&instance);
 }

@@ -280,7 +280,7 @@ void SourceBufferParserAVFObjC::invalidate()
 #if !RELEASE_LOG_DISABLED
 void SourceBufferParserAVFObjC::setLogger(const Logger& newLogger, uint64_t newLogIdentifier)
 {
-    m_logger = &newLogger;
+    m_logger = newLogger;
     m_logIdentifier = newLogIdentifier;
     ALWAYS_LOG(LOGIDENTIFIER);
 }

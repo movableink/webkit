@@ -359,7 +359,7 @@ void DisplayCaptureSourceCocoa::setLogger(const Logger& logger, uint64_t identif
 
 void DisplayCaptureSourceCocoa::Capturer::setLogger(const Logger& newLogger, uint64_t newLogIdentifier)
 {
-    m_logger = &newLogger;
+    m_logger = newLogger;
     m_logIdentifier = newLogIdentifier;
 }
 

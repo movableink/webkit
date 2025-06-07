@@ -323,7 +323,7 @@ void FETurbulenceSoftwareApplier::applyPlatform(const IntRect& filterRegion, con
                 ApplyParameters& params = parallelJobs.parameter(i);
                 params.filterRegion = filterRegion;
                 params.filterScale = filterScale;
-                params.pixelBuffer = &pixelBuffer;
+                params.pixelBuffer = pixelBuffer;
                 params.paintingData = &paintingData;
                 params.stitchData = stitchData;
                 params.startY = startY;

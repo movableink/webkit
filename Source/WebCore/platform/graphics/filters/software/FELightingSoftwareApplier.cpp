@@ -196,8 +196,8 @@ bool FELightingSoftwareApplier::apply(const Filter& filter, std::span<const Ref<
         return true;
 
     LightingData data;
-    data.filter = &filter;
-    data.result = &result;
+    data.filter = filter;
+    data.result = result;
     data.filterType = m_effect->filterType();
     data.lightingColor = m_effect->lightingColor();
     data.surfaceScale = m_effect->surfaceScale() / 255.0f;

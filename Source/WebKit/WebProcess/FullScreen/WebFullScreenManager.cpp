@@ -184,7 +184,7 @@ void WebFullScreenManager::setElement(WebCore::Element& element)
 
     clearElement();
 
-    m_element = &element;
+    m_element = element;
     m_elementToRestore = element;
 
     for (auto& eventName : eventsToObserve())

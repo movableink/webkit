@@ -118,7 +118,7 @@ void LogStream::setup(IPC::StreamServerConnectionHandle&& serverConnection, Comp
 #else
 void LogStream::setup(IPC::Connection& connection)
 {
-    m_logConnection = &connection;
+    m_logConnection = connection;
 }
 #endif
 

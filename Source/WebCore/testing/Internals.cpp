@@ -6266,7 +6266,7 @@ void Internals::observeMediaStreamTrack(MediaStreamTrack& track)
     stopObservingRealtimeMediaSource();
 
     m_trackVideoRotation = -1;
-    m_trackSource = &track.source();
+    m_trackSource = track.source();
     m_trackSource->addObserver(*this);
     switch (m_trackSource->type()) {
     case RealtimeMediaSource::Type::Audio:

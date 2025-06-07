@@ -205,7 +205,7 @@
     if (!(self = [super init]))
         return nil;
 
-    _menuProxy = &menuProxy;
+    _menuProxy = menuProxy;
 
     return self;
 }

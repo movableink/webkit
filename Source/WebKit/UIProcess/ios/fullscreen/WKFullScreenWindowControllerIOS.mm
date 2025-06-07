@@ -808,7 +808,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     self._webView = webView;
 #if !RELEASE_LOG_DISABLED
     if (auto webPage = RefPtr { [webView _page].get() }) {
-        _logger = &webPage->logger();
+        _logger = webPage->logger();
         _logIdentifier = webPage->logIdentifier();
     }
 #endif

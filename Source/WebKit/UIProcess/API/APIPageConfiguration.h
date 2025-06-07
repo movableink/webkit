@@ -476,7 +476,7 @@ private:
         template<typename T, Ref<T>(*initializer)()> class LazyInitializedRef {
         public:
             LazyInitializedRef() = default;
-            void operator=(const LazyInitializedRef& other) { m_value = &other.get(); }
+            void operator=(const LazyInitializedRef& other) { m_value = other.get(); }
             void operator=(RefPtr<T>&& t) { m_value = WTFMove(t); }
             T& get() const
             {

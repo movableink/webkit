@@ -118,7 +118,7 @@ ProvisionalPageProxy::ProvisionalPageProxy(WebPageProxy& page, Ref<FrameProcess>
     if (suspendedPage) {
         ASSERT(&suspendedPage->process() == process.ptr());
         suspendedPage->unsuspend();
-        m_mainFrame = &suspendedPage->mainFrame();
+        m_mainFrame = suspendedPage->mainFrame();
         m_needsMainFrameObserver = true;
     } else if (m_isProcessSwappingForNewWindow)
         m_mainFrame = page.mainFrame();

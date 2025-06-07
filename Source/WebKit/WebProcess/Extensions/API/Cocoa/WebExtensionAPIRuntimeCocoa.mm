@@ -85,7 +85,7 @@ using ReplyCallbackAggregator = EagerCallbackAggregator<void(id, IsDefaultReply)
     if (!(self = [super init]))
         return nil;
 
-    _aggregator = &aggregator;
+    _aggregator = aggregator;
 
     return self;
 }

@@ -52,7 +52,7 @@ void RenderSVGResourcePattern::collectPatternAttributesIfNeeded()
 
     auto attributes = PatternAttributes { };
 
-    RefPtr current = &patternElement();
+    RefPtr current = patternElement();
 
     current->synchronizeAllAttributes();
 

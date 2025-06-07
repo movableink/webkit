@@ -61,7 +61,7 @@ void LegacyCustomProtocolManager::networkProcessCreated(NetworkProcess& networkP
     };
 
     RELEASE_ASSERT(!firstNetworkProcess() || !hasRegisteredSchemes(RefPtr { protectedFirstNetworkProcess()->supplement<LegacyCustomProtocolManager>() }.get()));
-    firstNetworkProcess() = &networkProcess;
+    firstNetworkProcess() = networkProcess;
 }
 
 @interface WKCustomProtocol : NSURLProtocol {

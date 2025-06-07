@@ -4486,7 +4486,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (customDataBuffer)
         [pasteboard setData:customDataBuffer.get() forType:@(WebCore::PasteboardCustomData::cocoaType().characters())];
 
-    m_promisedImage = &image;
+    m_promisedImage = image;
 }
 
 void WebViewImpl::clearPromisedDragImage()

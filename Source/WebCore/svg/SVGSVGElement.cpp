@@ -727,7 +727,7 @@ bool SVGSVGElement::scrollToFragment(StringView fragmentIdentifier)
 
     if (fragmentIdentifier.startsWith("svgView("_s)) {
         if (!view)
-            view = &currentView(); // Create the SVGViewSpec.
+            view = currentView(); // Create the SVGViewSpec.
         if (view->parseViewSpec(fragmentIdentifier))
             m_useCurrentView = true;
         else

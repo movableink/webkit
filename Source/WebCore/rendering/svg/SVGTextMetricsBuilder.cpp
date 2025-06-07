@@ -112,7 +112,7 @@ void SVGTextMetricsBuilder::advanceComplexText()
 
 void SVGTextMetricsBuilder::initializeMeasurementWithTextRenderer(RenderSVGInlineText& text)
 {
-    m_text = &text;
+    m_text = text;
     m_textPosition = 0;
     m_currentMetrics = SVGTextMetrics();
     m_complexStartToCurrentMetrics = SVGTextMetrics();

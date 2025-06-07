@@ -397,7 +397,7 @@ void RuleSet::addPageRule(StyleRulePage& rule)
 
 void RuleSet::setViewTransitionRule(StyleRuleViewTransition& rule)
 {
-    m_viewTransitionRule = &rule;
+    m_viewTransitionRule = rule;
 }
 
 RefPtr<StyleRuleViewTransition> RuleSet::viewTransitionRule() const

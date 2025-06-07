@@ -558,11 +558,11 @@ void WebPageProxy::forMostVisibleWebPageIfAny(PAL::SessionID sessionID, const Se
         if (!page.mainFrame())
             return;
         if (page.isViewVisible() && (!selectedPage || !selectedPage->isViewVisible())) {
-            selectedPage = &page;
+            selectedPage = page;
             return;
         }
         if (page.isViewFocused() && (!selectedPage || !selectedPage->isViewFocused())) {
-            selectedPage = &page;
+            selectedPage = page;
             return;
         }
     });

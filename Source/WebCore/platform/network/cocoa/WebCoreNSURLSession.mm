@@ -301,7 +301,7 @@ NS_ASSUME_NONNULL_END
     ASSERT(_corsResults == WebCoreNSURLSessionCORSAccessCheckResults::Unknown);
     ASSERT(!_invalidated);
 
-    _loader = &loader;
+    _loader = loader;
     _targetDispatcher = RefPtr { _loader }->targetDispatcher();
     self.delegate = inDelegate;
     _queue = inQueue ? inQueue : [NSOperationQueue mainQueue];

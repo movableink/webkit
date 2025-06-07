@@ -339,7 +339,7 @@ static Ref<NetworkProcessProxy> networkProcessForSession(PAL::SessionID sessionI
 void WebsiteDataStore::setNetworkProcess(NetworkProcessProxy& networkProcess)
 {
     ASSERT(!m_networkProcess);
-    m_networkProcess = &networkProcess;
+    m_networkProcess = networkProcess;
 }
 
 NetworkProcessProxy& WebsiteDataStore::networkProcess()
@@ -895,7 +895,7 @@ void WebsiteDataStore::removeDataInNetworkProcess(WebsiteDataStore::ProcessAcces
 {
     RefPtr<NetworkProcessProxy> networkProcess;
     if (networkProcessAccessType == ProcessAccessType::Launch)
-        networkProcess = &this->networkProcess();
+        networkProcess = this->networkProcess();
     else if (networkProcessAccessType == ProcessAccessType::OnlyIfLaunched)
         networkProcess = networkProcessIfExists();
 

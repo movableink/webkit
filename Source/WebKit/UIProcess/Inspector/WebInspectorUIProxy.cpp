@@ -246,7 +246,7 @@ void WebInspectorUIProxy::updateForNewPageProcess(WebPageProxy& inspectedPage)
 {
     ASSERT(!m_inspectedPage);
 
-    m_inspectedPage = &inspectedPage;
+    m_inspectedPage = inspectedPage;
     m_inspectedPageIdentifier = inspectedPage.identifier();
 
     protectedInspectedPage()->protectedLegacyMainFrameProcess()->addMessageReceiver(Messages::WebInspectorUIProxy::messageReceiverName(), m_inspectedPage->webPageIDInMainFrameProcess(), *this);

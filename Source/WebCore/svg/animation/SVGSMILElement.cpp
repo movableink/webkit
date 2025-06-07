@@ -285,7 +285,7 @@ Node::InsertedIntoAncestorResult SVGSMILElement::insertedIntoAncestor(InsertionT
     if (!owner)
         return InsertedIntoAncestorResult::Done;
 
-    m_timeContainer = &owner->timeContainer();
+    m_timeContainer = owner->timeContainer();
     protectedTimeContainer()->setDocumentOrderIndexesDirty();
 
     // "If no attribute is present, the default begin value (an offset-value of 0) must be evaluated."

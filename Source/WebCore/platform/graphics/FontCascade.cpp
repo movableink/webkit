@@ -1521,14 +1521,14 @@ inline bool shouldDrawIfLoading(const Font& font, FontCascade::CustomFontNotRead
 void FontCascade::drawGlyphBuffer(GraphicsContext& context, const GlyphBuffer& glyphBuffer, FloatPoint& point, CustomFontNotReadyAction customFontNotReadyAction) const
 {
     ASSERT(glyphBuffer.isFlattened());
-    RefPtr fontData = &glyphBuffer.fontAt(0);
+    RefPtr fontData = glyphBuffer.fontAt(0);
     FloatPoint startPoint = point;
     float nextX = startPoint.x() + WebCore::width(glyphBuffer.advanceAt(0));
     float nextY = startPoint.y() + height(glyphBuffer.advanceAt(0));
     unsigned lastFrom = 0;
     unsigned nextGlyph = 1;
     while (nextGlyph < glyphBuffer.size()) {
-        RefPtr nextFontData = &glyphBuffer.fontAt(nextGlyph);
+        RefPtr nextFontData = glyphBuffer.fontAt(nextGlyph);
 
         if (nextFontData != fontData) {
             if (shouldDrawIfLoading(*fontData, customFontNotReadyAction)) {

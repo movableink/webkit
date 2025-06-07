@@ -465,7 +465,7 @@ void WebProcessProxy::setWebsiteDataStore(WebsiteDataStore& dataStore)
     if (!m_websiteDataStore)
         dataStore.protectedNetworkProcess()->sendXPCEndpointToProcess(*this);
 #endif
-    m_websiteDataStore = &dataStore;
+    m_websiteDataStore = dataStore;
     logger().setEnabled(this, isAlwaysOnLoggingAllowed());
     updateRegistrationWithDataStore();
     send(Messages::WebProcess::SetWebsiteDataStoreParameters(protectedProcessPool()->webProcessDataStoreParameters(*this, dataStore)), 0);

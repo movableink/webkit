@@ -438,7 +438,7 @@ RefPtr<const Font> FontCascade::fontForCombiningCharacterSequence(StringView str
         if (font->platformData().orientation() == FontOrientation::Vertical) {
             if (isCJKIdeographOrSymbol(baseCharacter)) {
                 if (!font->hasVerticalGlyphs())
-                    font = &font->brokenIdeographFont();
+                    font = font->brokenIdeographFont();
             } else if (m_fontDescription.nonCJKGlyphOrientation() == NonCJKGlyphOrientation::Mixed) {
                 Ref verticalRightFont = font->verticalRightOrientationFont();
                 Glyph verticalRightGlyph = verticalRightFont->glyphForCharacter(baseCharacter);

@@ -369,7 +369,7 @@ void WorkerMessagingProxy::setResourceCachingDisabledByWebInspector(bool disable
 void WorkerMessagingProxy::workerThreadCreated(DedicatedWorkerThread& workerThread)
 {
     ASSERT(!m_askedToTerminate);
-    m_workerThread = &workerThread;
+    m_workerThread = workerThread;
 
     if (m_askedToSuspend) {
         m_askedToSuspend = false;

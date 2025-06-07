@@ -285,7 +285,7 @@ void MediaPlayerPrivateMediaStreamAVFObjC::processNewVideoFrame(VideoFrame& vide
     if (!isMainThread()) {
         {
             Locker locker { m_currentVideoFrameLock };
-            m_currentVideoFrame = &videoFrame;
+            m_currentVideoFrame = videoFrame;
         }
         scheduleDeferredTask([weakThis = WeakPtr { *this }, metadata, presentationTime]() mutable {
             RefPtr protectedThis = weakThis.get();
@@ -307,7 +307,7 @@ void MediaPlayerPrivateMediaStreamAVFObjC::processNewVideoFrame(VideoFrame& vide
         return;
 
     if (!m_imagePainter.videoFrame || m_displayMode != PausedImage) {
-        m_imagePainter.videoFrame = &videoFrame;
+        m_imagePainter.videoFrame = videoFrame;
         m_imagePainter.cgImage = nullptr;
         if (m_readyState < MediaPlayer::ReadyState::HaveEnoughData)
             updateReadyState();
@@ -502,7 +502,7 @@ void MediaPlayerPrivateMediaStreamAVFObjC::load(MediaStreamPrivate& stream)
 
     m_intrinsicSize = { };
 
-    m_mediaStreamPrivate = &stream;
+    m_mediaStreamPrivate = stream;
     stream.addObserver(*this);
     m_ended = !stream.active();
 

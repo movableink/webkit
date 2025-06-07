@@ -386,8 +386,8 @@ inline void FEGaussianBlurSoftwareApplier::applyPlatform(PixelBuffer& ioBuffer, 
                 IntSize blockSize = { paintSize.width(), endY - startY };
 
                 if (!job) {
-                    params.ioBuffer = &ioBuffer;
-                    params.tempBuffer = &tempBuffer;
+                    params.ioBuffer = ioBuffer;
+                    params.tempBuffer = tempBuffer;
                 } else {
                     params.ioBuffer = ioBuffer.createScratchPixelBuffer(blockSize);
                     params.tempBuffer = tempBuffer.createScratchPixelBuffer(blockSize);

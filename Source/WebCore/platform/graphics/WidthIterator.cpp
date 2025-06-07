@@ -235,7 +235,7 @@ struct SmallCapsState {
     {
         ASSERT(font);
         this->font = font;
-        synthesizedFont = &font->noSynthesizableFeaturesFont();
+        synthesizedFont = font->noSynthesizableFeaturesFont();
         smallSynthesizedFont = Ref { *synthesizedFont }->smallCapsFont(fontDescription);
         isLastSmallCaps = isSmallCaps;
         isSmallCaps = true;

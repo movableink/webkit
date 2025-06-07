@@ -50,7 +50,7 @@ StyleCustomPropertyData::StyleCustomPropertyData(const StyleCustomPropertyData& 
 
     // If there are mutations on multiple levels this constructs a linked list of property data objects.
     if (shouldReferenceAsParentValues)
-        m_parentValues = &other;
+        m_parentValues = other;
     else {
         m_parentValues = other.m_parentValues;
         m_ownValues = other.m_ownValues;

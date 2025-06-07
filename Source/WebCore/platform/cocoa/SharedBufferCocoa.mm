@@ -71,7 +71,7 @@
 
     RELEASE_ASSERT(position <= dataSegment.size());
     RELEASE_ASSERT(size <= dataSegment.size() - position);
-    _dataSegment = &dataSegment;
+    _dataSegment = dataSegment;
     _position = position;
     _size = size;
     return self;

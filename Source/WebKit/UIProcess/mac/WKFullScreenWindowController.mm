@@ -142,7 +142,7 @@ static void makeResponderFirstResponderIfDescendantOfView(NSWindow *window, NSRe
     _page = page.get();
 
 #if !RELEASE_LOG_DISABLED
-    _logger = &page.get().logger();
+    _logger = page.get().logger();
     _logIdentifier = page.get().logIdentifier();
 #endif
 

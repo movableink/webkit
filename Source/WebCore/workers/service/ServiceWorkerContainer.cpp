@@ -599,9 +599,9 @@ SWClientConnection& ServiceWorkerContainer::ensureSWClientConnection()
     if (!m_swConnection || m_swConnection->isClosed()) {
         // Using RefPtr here results in an m_adoptionIsRequired assert.
         if (auto* workerGlobal = dynamicDowncast<WorkerGlobalScope>(*scriptExecutionContext()))
-            m_swConnection = &workerGlobal->swClientConnection();
+            m_swConnection = workerGlobal->swClientConnection();
         else
-            m_swConnection = &mainThreadConnection();
+            m_swConnection = mainThreadConnection();
     }
     return *m_swConnection;
 }

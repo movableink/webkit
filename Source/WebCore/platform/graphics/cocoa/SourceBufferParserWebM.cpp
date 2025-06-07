@@ -577,7 +577,7 @@ ExceptionOr<int> WebMParser::parse(SourceBufferParser::Segment&& segment)
 
 void WebMParser::setLogger(const Logger& newLogger, uint64_t newLogIdentifier)
 {
-    m_logger = &newLogger;
+    m_logger = newLogger;
     m_logIdentifier = newLogIdentifier;
     ALWAYS_LOG(LOGIDENTIFIER);
 }
@@ -1669,7 +1669,7 @@ void SourceBufferParserWebM::invalidate()
 
 void SourceBufferParserWebM::setLogger(const Logger& newLogger, uint64_t newLogIdentifier)
 {
-    m_logger = &newLogger;
+    m_logger = newLogger;
     m_logIdentifier = newLogIdentifier;
     ALWAYS_LOG(LOGIDENTIFIER);
 

@@ -1502,7 +1502,7 @@ void RenderPassEncoder::setIndexBuffer(Buffer& buffer, WGPUIndexFormat format, u
         return;
     }
 
-    m_indexBuffer = &buffer;
+    m_indexBuffer = buffer;
     m_indexBufferSize = size == WGPU_WHOLE_SIZE ? buffer.initialSize() : size;
     m_indexType = format == WGPUIndexFormat_Uint32 ? MTLIndexTypeUInt32 : MTLIndexTypeUInt16;
     m_indexBufferOffset = offset;
@@ -1537,7 +1537,7 @@ void RenderPassEncoder::setPipeline(const RenderPipeline& pipeline)
 
     m_primitiveType = pipeline.primitiveType();
     if (m_pipeline.get() != &pipeline) {
-        m_pipeline = &pipeline;
+        m_pipeline = pipeline;
         m_bindGroupDynamicOffsetsChanged.fill(true);
         m_maxDynamicOffsetAtIndex.fill(0);
     }

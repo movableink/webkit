@@ -117,7 +117,7 @@ void RemoteGraphicsContextGLProxy::initializeIPC(Ref<IPC::StreamClientConnection
         gpuProcessConnection->createGraphicsContextGL(m_identifier, contextAttributes(), renderingBackend, WTFMove(serverHandle));
         m_gpuProcessConnection = gpuProcessConnection.get();
 #if ENABLE(VIDEO)
-        m_videoFrameObjectHeapProxy = &gpuProcessConnection->videoFrameObjectHeapProxy();
+        m_videoFrameObjectHeapProxy = gpuProcessConnection->videoFrameObjectHeapProxy();
 #endif
     });
 

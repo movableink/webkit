@@ -160,7 +160,7 @@ void PresentationContextIOSurface::configure(Device& device, const WGPUSwapChain
         return;
 
     bool reportValidationErrors = descriptor.reportValidationErrors;
-    m_device = &device;
+    m_device = device;
     auto allowedFormat = ^(WGPUTextureFormat format) {
         return format == WGPUTextureFormat_BGRA8Unorm || format == WGPUTextureFormat_RGBA8Unorm || format == WGPUTextureFormat_RGBA16Float;
     };

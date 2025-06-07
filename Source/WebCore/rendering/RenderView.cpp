@@ -999,7 +999,7 @@ void RenderView::updatePlayStateForAllAnimations(const IntRect& visibleRect)
             }
         };
 
-        for (RefPtr layer = &renderElement.style().backgroundLayers(); layer; layer = layer->next())
+        for (RefPtr layer = renderElement.style().backgroundLayers(); layer; layer = layer->next())
             updateAnimation(layer->image() ? layer->image()->cachedImage() : nullptr);
 
         if (auto* renderImage = dynamicDowncast<RenderImage>(renderElement))
