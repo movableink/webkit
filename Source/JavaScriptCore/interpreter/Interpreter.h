@@ -29,6 +29,7 @@
 
 #pragma once
 
+#include "BytecodeIndex.h"
 #include "JSCJSValue.h"
 #include "MacroAssemblerCodeRef.h"
 #include "NativeFunction.h"
@@ -191,7 +192,7 @@ using JSOrWasmInstruction = Variant<const JSInstruction*, const WasmInstruction*
 #endif // ENABLE(COMPUTED_GOTO_OPCODES)
     };
 
-    JSValue eval(CallFrame*, JSValue thisValue, JSScope*, LexicallyScopedFeatures);
+    JSValue eval(CallFrame*, JSValue thisValue, JSScope*, CodeBlock* callerBaselineCodeBlock, BytecodeIndex, LexicallyScopedFeatures);
 
     inline CallFrame* calleeFrameForVarargs(CallFrame*, unsigned numUsedStackSlots, unsigned argumentCountIncludingThis);
 

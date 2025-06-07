@@ -13513,10 +13513,11 @@ IGNORE_CLANG_WARNINGS_END
                 // Now we need to make room for:
                 // - The caller frame and PC for a call to operationCallDirectEvalSloppy/operationCallDirectEvalStrict.
                 // - Potentially two arguments on the stack.
+                CodeBlock* baselineCodeBlock = state->graph.baselineCodeBlockFor(semanticNodeOrigin);
                 unsigned requiredBytes = sizeof(CallerFrameAndPC) + sizeof(CallFrame*) * 2;
                 requiredBytes = WTF::roundUpToMultipleOf<stackAlignmentBytes()>(requiredBytes);
                 jit.subPtr(CCallHelpers::TrustedImm32(requiredBytes), CCallHelpers::stackPointerRegister);
-                jit.setupArguments<decltype(operationCallDirectEvalSloppy)>(GPRInfo::regT1, GPRInfo::regT2, GPRInfo::regT3);
+                jit.setupArguments<decltype(operationCallDirectEvalSloppy)>(GPRInfo::regT1, GPRInfo::regT2, GPRInfo::regT3, CCallHelpers::TrustedImmPtr(baselineCodeBlock), CCallHelpers::TrustedImm32(semanticNodeOrigin.bytecodeIndex().asBits()));
                 jit.prepareCallOperation(vm);
                 jit.move(CCallHelpers::TrustedImmPtr(tagCFunction<OperationPtrTag>(selectCallDirectEvalOperation(lexicallyScopedFeatures))), GPRInfo::nonPreservedNonArgumentGPR0);
                 jit.call(GPRInfo::nonPreservedNonArgumentGPR0, OperationPtrTag);

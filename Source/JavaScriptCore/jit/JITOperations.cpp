@@ -2406,7 +2406,7 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValSetPrivateFieldGeneric, void, (JSGloba
     OPERATION_RETURN(scope);
 }
 
-JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalSloppy, EncodedJSValue, (void* frame, JSScope* callerScopeChain, EncodedJSValue encodedThisValue))
+JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalSloppy, EncodedJSValue, (void* frame, JSScope* callerScopeChain, EncodedJSValue encodedThisValue, CodeBlock* callerBaselineCodeBlock, uint32_t bytecodeIndexBits))
 {
     CallFrame* calleeFrame = reinterpret_cast<CallFrame*>(frame);
     CallFrame* callFrame = calleeFrame->callerFrame();
@@ -2416,10 +2416,10 @@ JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalSloppy, EncodedJSValue, (void* f
     auto scope = DECLARE_THROW_SCOPE(vm);
     calleeFrame->setCodeBlock(nullptr);
 
-    OPERATION_RETURN(scope, JSValue::encode(eval(calleeFrame, JSValue::decode(encodedThisValue), callerScopeChain, NoLexicallyScopedFeatures)));
+    OPERATION_RETURN(scope, JSValue::encode(eval(calleeFrame, JSValue::decode(encodedThisValue), callerScopeChain, callerBaselineCodeBlock, BytecodeIndex::fromBits(bytecodeIndexBits), NoLexicallyScopedFeatures)));
 }
 
-JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalStrict, EncodedJSValue, (void* frame, JSScope* callerScopeChain, EncodedJSValue encodedThisValue))
+JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalStrict, EncodedJSValue, (void* frame, JSScope* callerScopeChain, EncodedJSValue encodedThisValue, CodeBlock* callerBaselineCodeBlock, uint32_t bytecodeIndexBits))
 {
     CallFrame* calleeFrame = reinterpret_cast<CallFrame*>(frame);
     CallFrame* callFrame = calleeFrame->callerFrame();
@@ -2429,10 +2429,10 @@ JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalStrict, EncodedJSValue, (void* f
     auto scope = DECLARE_THROW_SCOPE(vm);
     calleeFrame->setCodeBlock(nullptr);
 
-    OPERATION_RETURN(scope, JSValue::encode(eval(calleeFrame, JSValue::decode(encodedThisValue), callerScopeChain, StrictModeLexicallyScopedFeature)));
+    OPERATION_RETURN(scope, JSValue::encode(eval(calleeFrame, JSValue::decode(encodedThisValue), callerScopeChain, callerBaselineCodeBlock, BytecodeIndex::fromBits(bytecodeIndexBits), StrictModeLexicallyScopedFeature)));
 }
 
-JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalSloppyTaintedByWithScope, EncodedJSValue, (void* frame, JSScope* callerScopeChain, EncodedJSValue encodedThisValue))
+JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalSloppyTaintedByWithScope, EncodedJSValue, (void* frame, JSScope* callerScopeChain, EncodedJSValue encodedThisValue, CodeBlock* callerBaselineCodeBlock, uint32_t bytecodeIndexBits))
 {
     CallFrame* calleeFrame = reinterpret_cast<CallFrame*>(frame);
     CallFrame* callFrame = calleeFrame->callerFrame();
@@ -2442,10 +2442,10 @@ JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalSloppyTaintedByWithScope, Encode
     auto scope = DECLARE_THROW_SCOPE(vm);
     calleeFrame->setCodeBlock(nullptr);
 
-    OPERATION_RETURN(scope, JSValue::encode(eval(calleeFrame, JSValue::decode(encodedThisValue), callerScopeChain, TaintedByWithScopeLexicallyScopedFeature)));
+    OPERATION_RETURN(scope, JSValue::encode(eval(calleeFrame, JSValue::decode(encodedThisValue), callerScopeChain, callerBaselineCodeBlock, BytecodeIndex::fromBits(bytecodeIndexBits), TaintedByWithScopeLexicallyScopedFeature)));
 }
 
-JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalStrictTaintedByWithScope, EncodedJSValue, (void* frame, JSScope* callerScopeChain, EncodedJSValue encodedThisValue))
+JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalStrictTaintedByWithScope, EncodedJSValue, (void* frame, JSScope* callerScopeChain, EncodedJSValue encodedThisValue, CodeBlock* callerBaselineCodeBlock, uint32_t bytecodeIndexBits))
 {
     CallFrame* calleeFrame = reinterpret_cast<CallFrame*>(frame);
     CallFrame* callFrame = calleeFrame->callerFrame();
@@ -2455,7 +2455,7 @@ JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalStrictTaintedByWithScope, Encode
     auto scope = DECLARE_THROW_SCOPE(vm);
     calleeFrame->setCodeBlock(nullptr);
 
-    OPERATION_RETURN(scope, JSValue::encode(eval(calleeFrame, JSValue::decode(encodedThisValue), callerScopeChain, StrictModeLexicallyScopedFeature | TaintedByWithScopeLexicallyScopedFeature)));
+    OPERATION_RETURN(scope, JSValue::encode(eval(calleeFrame, JSValue::decode(encodedThisValue), callerScopeChain, callerBaselineCodeBlock, BytecodeIndex::fromBits(bytecodeIndexBits), StrictModeLexicallyScopedFeature | TaintedByWithScopeLexicallyScopedFeature)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPolymorphicCall, UCPURegister, (CallFrame* calleeFrame, CallLinkInfo* callLinkInfo))

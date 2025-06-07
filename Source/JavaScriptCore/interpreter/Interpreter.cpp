@@ -104,21 +104,8 @@ static inline DirectEvalCodeCache::CacheLookupKey directEvalCacheKey(JSGlobalObj
     return DirectEvalCodeCache::CacheLookupKey(string->getValueImpl(), bytecodeIndex, DirectEvalCodeCache::RopeSuffix::None);
 }
 
-JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain, LexicallyScopedFeatures lexicallyScopedFeatures)
+JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain, CodeBlock* callerBaselineCodeBlock, BytecodeIndex bytecodeIndex, LexicallyScopedFeatures lexicallyScopedFeatures)
 {
-    CallFrame* callerFrame = callFrame->callerFrame();
-    CallSiteIndex callerCallSiteIndex = callerFrame->callSiteIndex();
-    CodeBlock* callerCodeBlock = callerFrame->codeBlock();
-    CodeBlock* callerBaselineCodeBlock = callerCodeBlock;
-    BytecodeIndex bytecodeIndex = callerCallSiteIndex.bytecodeIndex();
-#if ENABLE(DFG_JIT)
-    if (JSC::JITCode::isOptimizingJIT(callerCodeBlock->jitType())) {
-        CodeOrigin codeOrigin = callerCodeBlock->codeOrigin(callerCallSiteIndex);
-        callerBaselineCodeBlock = baselineCodeBlockForOriginAndBaselineCodeBlock(codeOrigin, callerCodeBlock->baselineAlternative());
-        bytecodeIndex = codeOrigin.bytecodeIndex();
-    }
-#endif
-    UnlinkedCodeBlock* callerUnlinkedCodeBlock = callerBaselineCodeBlock->unlinkedCodeBlock();
     JSGlobalObject* globalObject = callerBaselineCodeBlock->globalObject();
 
     if (callFrame->guaranteedJSValueCallee() != globalObject->evalFunction()) [[unlikely]]
@@ -134,64 +121,47 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
     if (!callFrame->argumentCount())
         return jsUndefined();
 
-    JSValue program = callFrame->argument(0);
+    JSValue program = callFrame->uncheckedArgument(0);
     JSString* programString = nullptr;
     bool isTrusted = false;
     if (program.isString()) [[likely]]
         programString = asString(program);
-    else if (Options::useTrustedTypes() && program.isObject()) {
-        auto* structure = globalObject->trustedScriptStructure();
-        if (structure == asObject(program)->structure()) {
-            programString = program.toString(globalObject);
-            RETURN_IF_EXCEPTION(scope, { });
-            isTrusted = true;
-        } else {
-            auto code = globalObject->globalObjectMethodTable()->codeForEval(globalObject, program);
-            RETURN_IF_EXCEPTION(scope, { });
-            if (!code.isNull()) {
-                programString = jsString(vm, code);
+    else {
+        if (Options::useTrustedTypes() && program.isObject()) {
+            auto* structure = globalObject->trustedScriptStructure();
+            if (structure == asObject(program)->structure()) {
+                programString = program.toString(globalObject);
+                RETURN_IF_EXCEPTION(scope, { });
                 isTrusted = true;
+            } else {
+                auto code = globalObject->globalObjectMethodTable()->codeForEval(globalObject, program);
+                RETURN_IF_EXCEPTION(scope, { });
+                if (!code.isNull()) {
+                    programString = jsString(vm, code);
+                    isTrusted = true;
+                }
             }
         }
+
+        if (!programString) [[unlikely]]
+            return program;
     }
 
-    if (!programString)
-        return program;
-
-    if (globalObject->trustedTypesEnforcement() != TrustedTypesEnforcement::None && !isTrusted) {
+    if (globalObject->trustedTypesEnforcement() != TrustedTypesEnforcement::None && !isTrusted) [[unlikely]] {
         bool canCompileStrings = globalObject->globalObjectMethodTable()->canCompileStrings(globalObject, CompilationType::DirectEval, programString->value(globalObject).data, *vm.emptyList);
         RETURN_IF_EXCEPTION(scope, { });
-        if (!canCompileStrings) {
+        if (!canCompileStrings) [[unlikely]] {
             throwException(globalObject, scope, createEvalError(globalObject, "Refused to evaluate a string as JavaScript because this document requires a 'Trusted Type' assignment."_s));
             return { };
         }
     }
 
     TopCallFrameSetter topCallFrame(vm, callFrame);
-    if (!globalObject->evalEnabled() && globalObject->trustedTypesEnforcement() != TrustedTypesEnforcement::EnforcedWithEvalEnabled) {
+    if (!globalObject->evalEnabled() && globalObject->trustedTypesEnforcement() != TrustedTypesEnforcement::EnforcedWithEvalEnabled) [[unlikely]] {
         globalObject->globalObjectMethodTable()->reportViolationForUnsafeEval(globalObject, programString->value(globalObject).data);
         throwException(globalObject, scope, createEvalError(globalObject, globalObject->evalDisabledErrorMessage()));
         return { };
     }
-
-    bool isArrowFunctionContext = callerUnlinkedCodeBlock->isArrowFunction() || callerUnlinkedCodeBlock->isArrowFunctionContext();
-
-    DerivedContextType derivedContextType = callerUnlinkedCodeBlock->derivedContextType();
-    if (!isArrowFunctionContext && callerUnlinkedCodeBlock->isClassContext()) {
-        derivedContextType = callerUnlinkedCodeBlock->isConstructor()
-            ? DerivedContextType::DerivedConstructorContext
-            : DerivedContextType::DerivedMethodContext;
-    }
-
-    EvalContextType evalContextType;
-    if (callerUnlinkedCodeBlock->parseMode() == SourceParseMode::ClassFieldInitializerMode)
-        evalContextType = EvalContextType::InstanceFieldEvalContext;
-    else if (isFunctionParseMode(callerUnlinkedCodeBlock->parseMode()))
-        evalContextType = EvalContextType::FunctionEvalContext;
-    else if (callerUnlinkedCodeBlock->codeType() == EvalCode)
-        evalContextType = callerUnlinkedCodeBlock->evalContextType();
-    else
-        evalContextType = EvalContextType::None;
 
     auto cacheKey = directEvalCacheKey(globalObject, programString, bytecodeIndex);
     RETURN_IF_EXCEPTION(scope, { });
@@ -223,9 +193,31 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
         PrivateNameEnvironment privateNameEnvironment;
         JSScope::collectClosureVariablesUnderTDZ(callerScopeChain, variablesUnderTDZ, privateNameEnvironment);
         SourceTaintedOrigin sourceTaintedOrigin = computeNewSourceTaintedOriginFromStack(vm, callFrame);
+
+        UnlinkedCodeBlock* callerUnlinkedCodeBlock = callerBaselineCodeBlock->unlinkedCodeBlock();
+
+        bool isArrowFunctionContext = callerUnlinkedCodeBlock->isArrowFunction() || callerUnlinkedCodeBlock->isArrowFunctionContext();
+
+        DerivedContextType derivedContextType = callerUnlinkedCodeBlock->derivedContextType();
+        if (!isArrowFunctionContext && callerUnlinkedCodeBlock->isClassContext()) {
+            derivedContextType = callerUnlinkedCodeBlock->isConstructor()
+                ? DerivedContextType::DerivedConstructorContext
+                : DerivedContextType::DerivedMethodContext;
+        }
+
+        EvalContextType evalContextType;
+        if (callerUnlinkedCodeBlock->parseMode() == SourceParseMode::ClassFieldInitializerMode)
+            evalContextType = EvalContextType::InstanceFieldEvalContext;
+        else if (isFunctionParseMode(callerUnlinkedCodeBlock->parseMode()))
+            evalContextType = EvalContextType::FunctionEvalContext;
+        else if (callerUnlinkedCodeBlock->codeType() == EvalCode)
+            evalContextType = callerUnlinkedCodeBlock->evalContextType();
+        else
+            evalContextType = EvalContextType::None;
+
         eval = DirectEvalExecutable::create(globalObject, makeSource(programSource, callerBaselineCodeBlock->source().provider()->sourceOrigin(), sourceTaintedOrigin), lexicallyScopedFeatures, derivedContextType, callerUnlinkedCodeBlock->needsClassFieldInitializer(), callerUnlinkedCodeBlock->privateBrandRequirement(), isArrowFunctionContext, callerBaselineCodeBlock->ownerExecutable()->isInsideOrdinaryFunction(), evalContextType, &variablesUnderTDZ, &privateNameEnvironment);
         EXCEPTION_ASSERT(!!scope.exception() == !eval);
-        if (!eval)
+        if (!eval) [[unlikely]]
             return { };
 
         // Skip the eval cache if tainted since another eval call could have a different taintedness.

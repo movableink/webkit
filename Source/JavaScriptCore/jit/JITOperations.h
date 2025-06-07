@@ -317,10 +317,10 @@ JSC_DECLARE_JIT_OPERATION(operationGetPrivateNameByIdGeneric, EncodedJSValue, (J
 // End of IC related functions and generic helpers.
 
 // These use void* instead of CallFrame* to prevent setupArguments from assuming we want the current call frame.
-JSC_DECLARE_JIT_OPERATION(operationCallDirectEvalSloppy, EncodedJSValue, (void*, JSScope*, EncodedJSValue));
-JSC_DECLARE_JIT_OPERATION(operationCallDirectEvalStrict, EncodedJSValue, (void*, JSScope*, EncodedJSValue));
-JSC_DECLARE_JIT_OPERATION(operationCallDirectEvalSloppyTaintedByWithScope, EncodedJSValue, (void*, JSScope*, EncodedJSValue));
-JSC_DECLARE_JIT_OPERATION(operationCallDirectEvalStrictTaintedByWithScope, EncodedJSValue, (void*, JSScope*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationCallDirectEvalSloppy, EncodedJSValue, (void*, JSScope*, EncodedJSValue, CodeBlock*, uint32_t));
+JSC_DECLARE_JIT_OPERATION(operationCallDirectEvalStrict, EncodedJSValue, (void*, JSScope*, EncodedJSValue, CodeBlock*, uint32_t));
+JSC_DECLARE_JIT_OPERATION(operationCallDirectEvalSloppyTaintedByWithScope, EncodedJSValue, (void*, JSScope*, EncodedJSValue, CodeBlock*, uint32_t));
+JSC_DECLARE_JIT_OPERATION(operationCallDirectEvalStrictTaintedByWithScope, EncodedJSValue, (void*, JSScope*, EncodedJSValue, CodeBlock*, uint32_t));
 
 JSC_DECLARE_JIT_OPERATION(operationPolymorphicCall, UCPURegister, (CallFrame*, CallLinkInfo*));
 JSC_DECLARE_JIT_OPERATION(operationVirtualCall, UCPURegister, (CallFrame*, CallLinkInfo*));

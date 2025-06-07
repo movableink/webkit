@@ -971,10 +971,11 @@ void SpeculativeJIT::emitCall(Node* node)
         // Now we need to make room for:
         // - The caller frame and PC of a call to operationCallDirectEvalSloppy/operationCallDirectEvalStrict.
         // - Potentially two arguments on the stack.
+        CodeBlock* baselineCodeBlock = m_graph.baselineCodeBlockFor(staticOrigin);
         unsigned requiredBytes = sizeof(CallerFrameAndPC) + sizeof(CallFrame*) * 2;
         requiredBytes = WTF::roundUpToMultipleOf<stackAlignmentBytes()>(requiredBytes);
         subPtr(TrustedImm32(requiredBytes), stackPointerRegister);
-        setupArguments<decltype(operationCallDirectEvalSloppy)>(calleeFrameGPR, evalScopeGPR, evalThisValueGPR);
+        setupArguments<decltype(operationCallDirectEvalSloppy)>(calleeFrameGPR, evalScopeGPR, evalThisValueGPR, CCallHelpers::TrustedImmPtr(baselineCodeBlock), TrustedImm32(staticOrigin.bytecodeIndex().asBits()));
         prepareForExternalCall();
         appendCall(selectCallDirectEvalOperation(node->lexicallyScopedFeatures()));
         exceptionCheck();
