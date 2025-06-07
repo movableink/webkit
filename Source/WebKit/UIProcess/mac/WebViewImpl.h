@@ -326,6 +326,8 @@ public:
     void windowDidChangeScreen();
     void windowDidChangeOcclusionState();
     void windowWillClose();
+    void windowWillEnterOrExitFullScreen();
+    void windowDidEnterOrExitFullScreen();
     void screenDidChangeColorSpace();
     bool shouldDelayWindowOrderingForEvent(NSEvent *);
     bool windowResizeMouseLocationIsInVisibleScrollerThumb(CGPoint);
@@ -914,6 +916,7 @@ private:
     bool m_needsViewFrameInWindowCoordinates;
     bool m_didScheduleWindowAndViewFrameUpdate { false };
     bool m_windowOcclusionDetectionEnabled { true };
+    bool m_windowIsEnteringOrExitingFullScreen { false };
 
     CGSize m_scrollOffsetAdjustment { 0, 0 };
 
