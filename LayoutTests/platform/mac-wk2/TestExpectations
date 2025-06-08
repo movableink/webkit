@@ -1787,6 +1787,7 @@ http/tests/webgpu/webgpu/shader/execution/flow_control/switch.html [ Pass ]
 webkit.org/b/264306 fast/scrolling/mac/scrollbars/very-wide-overlay-scrollbar.html [ Pass ImageOnlyFailure Timeout ]
 
 webkit.org/b/265599 [ Sonoma+ Debug x86_64 ] imported/w3c/web-platform-tests/html/browsers/the-window-object/open-close/open-features-tokenization-noreferrer.html [ Pass Crash ]
+imported/w3c/web-platform-tests/html/browsers/the-window-object/open-close/open_initial_size.html [ Skip ]
 
 # WindowProxy property access delegate callbacks are only implemented on Mac and iOS WK2.
 http/wpt/opener/child-access-parent-via-windowproxy.html [ Pass ]
