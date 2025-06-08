@@ -341,7 +341,21 @@ void RenderBlock::removeOutOfFlowBoxesIfNeededOnStyleChange(const RenderStyle& o
         removeOutOfFlowBoxes({ }, ContainingBlockState::NewContainingBlock);
     }
 
-    if ((!wasContainingBlockForFixedContent && isContainingBlockForFixedContent) || (!wasContainingBlockForAbsoluteContent && isContainingBlockForAbsoluteContent)) {
+    if (!wasContainingBlockForFixedContent && isContainingBlockForFixedContent) {
+        // We are a new containing block for out-of-flow boxes. Find first ancestor that has our fixed positioned boxes and remove them.
+        // They will be inserted into our positioned objects list during their static position layout.
+        for (auto* ancestor = parent(); ancestor; ancestor = ancestor->parent()) {
+            if (CheckedPtr renderBlock = dynamicDowncast<RenderBlock>(ancestor); renderBlock && renderBlock->canContainFixedPositionObjects()) {
+                renderBlock->removeOutOfFlowBoxes(this, ContainingBlockState::NewContainingBlock);
+                return;
+            }
+        }
+        // We should always find the initial containing block.
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    if (!wasContainingBlockForAbsoluteContent && isContainingBlockForAbsoluteContent) {
         // We are a new containing block.
         // Remove our absolutely positioned descendants from their current containing block.
         // They will be inserted into our positioned objects list during layout.
