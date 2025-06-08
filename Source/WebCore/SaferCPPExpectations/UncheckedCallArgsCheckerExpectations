@@ -685,7 +685,6 @@ rendering/RenderSearchField.cpp
 rendering/RenderSelection.cpp
 rendering/RenderSelectionGeometry.cpp
 rendering/RenderTable.cpp
-rendering/RenderTable.h
 rendering/RenderTableCaption.cpp
 rendering/RenderTableCell.cpp
 rendering/RenderTableCellInlines.h
