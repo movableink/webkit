@@ -342,7 +342,6 @@ bindings/js/ScheduledAction.cpp
 bindings/js/ScriptBufferSourceProvider.h
 bindings/js/ScriptCachedFrameData.cpp
 bindings/js/ScriptModuleLoader.cpp
-bindings/js/ScriptSourceCode.h
 bindings/js/SerializedScriptValue.cpp
 bindings/js/WebAssemblyScriptBufferSourceProvider.h
 bindings/js/WebCoreJSClientData.cpp
