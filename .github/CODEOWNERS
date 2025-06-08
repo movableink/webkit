@@ -141,6 +141,7 @@
 *ContentExtension* @b-weinstein @xeenon
 *InspectorExtension* @b-weinstein @xeenon
 *WebExtension* @b-weinstein @xeenon
+/Source/WebKit/_WebKit_SwiftUI @rr-codes
 /Source/WebKit/GPUProcess/mac/com.apple.WebKit.GPUProcess.sb.in @brentfulgham @pvollan
 /Source/WebKit/NetworkProcess @cdumez
 /Source/WebKit/NetworkProcess/mac/com.apple.WebKit.NetworkProcess.sb.in @brentfulgham @pvollan
@@ -152,6 +153,7 @@
 /Source/WebKit/UIProcess @cdumez
 /Source/WebKit/UIProcess/Extensions @b-weinstein @xeenon
 /Source/WebKit/UIProcess/Inspector @dcrousso @patrickangle
+/Source/WebKit/WebKitSwift @rr-codes
 /Source/WebKit/WebProcess @cdumez
 /Source/WebKit/WebProcess/ApplePay @aprotyas
 /Source/WebKit/WebProcess/Extensions @b-weinstein @xeenon
@@ -173,6 +175,11 @@
 # Xcode
 
 *.xcconfig @emw-apple
+
+# ================================================================================
+# Swift
+
+*.swift @rr-codes
 
 # ================================================================================
 # Linux graphics
