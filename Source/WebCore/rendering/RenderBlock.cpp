@@ -359,17 +359,12 @@ void RenderBlock::removeOutOfFlowBoxesIfNeededOnStyleChange(const RenderStyle& o
         // We are a new containing block.
         // Remove our absolutely positioned descendants from their current containing block.
         // They will be inserted into our positioned objects list during layout.
-        auto* containingBlock = parent();
-        while (containingBlock && !is<RenderView>(*containingBlock)
-            && (containingBlock->style().position() == PositionType::Static || (containingBlock->isInline() && !containingBlock->isReplacedOrAtomicInline()))) {
-            if (containingBlock->style().position() == PositionType::Relative && containingBlock->isInline() && !containingBlock->isReplacedOrAtomicInline()) {
-                containingBlock = containingBlock->containingBlock();
-                break;
+        for (auto* ancestor = parent(); ancestor; ancestor = ancestor->parent()) {
+            if (CheckedPtr renderBlock = dynamicDowncast<RenderBlock>(ancestor); renderBlock && renderBlock->canContainAbsolutelyPositionedObjects()) {
+                renderBlock->removeOutOfFlowBoxes(this, ContainingBlockState::NewContainingBlock);
+                return;
             }
-            containingBlock = containingBlock->parent();
         }
-        if (CheckedPtr renderBlock = dynamicDowncast<RenderBlock>(containingBlock))
-            renderBlock->removeOutOfFlowBoxes(this, ContainingBlockState::NewContainingBlock);
     }
 }
 
