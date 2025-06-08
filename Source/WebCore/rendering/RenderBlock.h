@@ -224,10 +224,6 @@ public:
     LayoutUnit logicalLeftSelectionOffset(RenderBlock& rootBlock, LayoutUnit position, const LogicalSelectionOffsetCaches&);
     LayoutUnit logicalRightSelectionOffset(RenderBlock& rootBlock, LayoutUnit position, const LogicalSelectionOffsetCaches&);
 
-#if ASSERT_ENABLED
-    void checkOutOfFlowBoxesNeedLayout();
-#endif
-
     void updateHitTestResult(HitTestResult&, const LayoutPoint&) const override;
 
     bool canHaveChildren() const override { return true; }

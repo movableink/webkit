@@ -578,8 +578,15 @@ void RenderObject::clearNeedsLayout(HadSkippedLayout hadSkippedLayout)
     setOutOfFlowChildNeedsStaticPositionLayoutBit(false);
     setNeedsPositionedMovementLayoutBit(false);
 #if ASSERT_ENABLED
-    checkBlockPositionedObjectsNeedLayout();
-#endif
+    auto checkIfOutOfFlowDescendantsNeedLayout = [&](auto& renderBlock) {
+        if (auto* outOfFlowDescendants = renderBlock.outOfFlowBoxes()) {
+            for (auto& renderer : *outOfFlowDescendants)
+                ASSERT(!renderer.needsLayout());
+        }
+    };
+    if (auto* renderBlock = dynamicDowncast<RenderBlock>(*this))
+        checkIfOutOfFlowDescendantsNeedLayout(*renderBlock);
+#endif // ASSERT_ENABLED
 }
 
 void RenderObject::scheduleLayout(RenderElement* layoutRoot)
@@ -654,16 +661,6 @@ RenderElement* RenderObject::markContainingBlocksForLayout(RenderElement* layout
     }
     return { };
 }
-
-#if ASSERT_ENABLED
-void RenderObject::checkBlockPositionedObjectsNeedLayout()
-{
-    ASSERT(!needsLayout());
-
-    if (auto* renderBlock = dynamicDowncast<RenderBlock>(*this))
-        renderBlock->checkOutOfFlowBoxesNeedLayout();
-}
-#endif // ASSERT_ENABLED
 
 void RenderObject::setNeedsPreferredWidthsUpdate(MarkingBehavior markParents)
 {

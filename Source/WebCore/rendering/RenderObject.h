@@ -1193,7 +1193,6 @@ private:
 
 #if ASSERT_ENABLED
     void setNeedsLayoutIsForbidden(bool flag) const { m_setNeedsLayoutForbidden = flag; }
-    void checkBlockPositionedObjectsNeedLayout();
 #endif
 
 #if ASSERT_ENABLED

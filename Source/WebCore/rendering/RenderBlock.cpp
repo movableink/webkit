@@ -3250,18 +3250,6 @@ TextRun RenderBlock::constructTextRun(std::span<const UChar> characters, const R
     return constructTextRun(StringView { characters }, style, expansion);
 }
 
-#if ASSERT_ENABLED
-void RenderBlock::checkOutOfFlowBoxesNeedLayout()
-{
-    auto* outOfFlowDescendants = outOfFlowBoxes();
-    if (!outOfFlowDescendants)
-        return;
-
-    for (auto& renderer : *outOfFlowDescendants)
-        ASSERT(!renderer.needsLayout());
-}
-#endif // ASSERT_ENABLED
-
 bool RenderBlock::hasDefiniteLogicalHeight() const
 {
     return (bool)availableLogicalHeightForPercentageComputation();
