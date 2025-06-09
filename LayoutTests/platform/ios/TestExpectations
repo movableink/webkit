@@ -7907,3 +7907,5 @@ webkit.org/b/293761 http/wpt/service-workers/navigate-iframes-window-client.http
 webkit.org/b/294215 imported/blink/accessibility/link-inside-label.html [ Failure ]
 
 webkit.org/b/294222 [ Debug ] compositing/cocoa/clip-sticky-element-with-overflow-clip-on-root.html [ Crash ]
+
+webkit.org/b/294225 [ Debug ] fast/page-color-sampling/basic-fixed-container-edge-sampling.html [ Crash ]
