@@ -1,4 +1,0 @@
-
-
-PASS STF fixed height, percent height img
-
