@@ -23,8 +23,12 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/conditional-rules-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/conditional-rules-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/conditional-rules.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/contextually-invalid-selectors-expected.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/contextually-invalid-selectors.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/contextually-invalid-selectors-001-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/contextually-invalid-selectors-001.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/contextually-invalid-selectors-002-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/contextually-invalid-selectors-002.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/contextually-invalid-selectors-003-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/contextually-invalid-selectors-003.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/cssom.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/delete-other-rule-crash.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/has-nesting-expected.html
