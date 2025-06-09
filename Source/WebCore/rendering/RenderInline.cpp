@@ -433,18 +433,6 @@ VisiblePosition RenderInline::positionForPoint(const LayoutPoint& point, HitTest
     return containingBlock.positionForPoint(point, source, fragment);
 }
 
-class LinesBoundingBoxGeneratorContext {
-public:
-    LinesBoundingBoxGeneratorContext(FloatRect& rect) : m_rect(rect) { }
-
-    void addRect(const FloatRect& rect)
-    {
-        m_rect.uniteIfNonZero(rect);
-    }
-private:
-    FloatRect& m_rect;
-};
-
 LayoutUnit RenderInline::innerPaddingBoxWidth() const
 {
     auto firstInlineBoxPaddingBoxLeft = LayoutUnit { };
