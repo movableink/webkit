@@ -605,7 +605,6 @@ html/canvas/WebGLMultiDrawInstancedBaseVertexBaseInstance.cpp
 html/canvas/WebGLObject.cpp
 html/canvas/WebGLObject.h
 html/canvas/WebGLProgram.cpp
-html/canvas/WebGLRenderingContextBase.cpp
 html/canvas/WebGLSync.cpp
 html/canvas/WebGLTransformFeedback.cpp
 html/canvas/WebGLVertexArrayObject.cpp
