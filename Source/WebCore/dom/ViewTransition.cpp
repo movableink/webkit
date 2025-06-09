@@ -58,6 +58,7 @@
 #include "StyleResolver.h"
 #include "StyleScope.h"
 #include "Styleable.h"
+#include "TransformState.h"
 #include "ViewTransitionTypeSet.h"
 #include "WebAnimation.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -911,28 +912,32 @@ void ViewTransition::copyElementBaseProperties(RenderLayerModelObject& renderer,
         output.isRootElement = false;
         output.size = renderBox->borderBoundingBox().size();
 
-        if (auto transform = renderer.viewTransitionTransform()) {
-            // FIXME: This transform is the concatenation of layout offsets and transforms up
-            // to the root. Normal drawing would snap the subset up to the nearest composited
-            // ancestor transform, not on the combination.
-            output.subpixelOffset = snapTransformationTranslationToDevicePixels(*transform, renderer.protectedDocument()->deviceScaleFactor());
-            output.layerToLayoutOffset = layerToLayoutOffset(renderer);
-            transform->translate(output.layerToLayoutOffset.x(), output.layerToLayoutOffset.y());
-
-            auto offset = -toFloatSize(frameView->visibleContentRect().location());
-            transform->translateRight(offset.width(), offset.height());
-
-            auto mapped = transform->mapRect(output.overflowRect);
-            output.intersectsViewport = mapped.intersects(frameView->boundsRect());
-
-            // Apply the inverse of what will be added by the default value of 'transform-origin',
-            // since the computed transform has already included it.
-            transform->translate(output.size.width() / 2, output.size.height() / 2);
-            transform->translateRight(-output.size.width() / 2, -output.size.height() / 2);
-
-            Ref transformListValue = CSSTransformListValue::create(Style::ExtractorConverter::convertTransformationMatrix(documentElementRenderer->style(), *transform));
-            RefPtr { output.properties }->setProperty(CSSPropertyTransform, WTFMove(transformListValue));
+        auto transformState = renderer.viewTransitionTransform();
+        TransformationMatrix transform;
+        if (transformState.accumulatedTransform()) {
+            transform = *transformState.accumulatedTransform();
+            output.subpixelOffset = { };
+        } else {
+            transform.translate(transformState.accumulatedOffset().width(), transformState.accumulatedOffset().height());
+            output.subpixelOffset = snapTransformationTranslationToDevicePixels(transform, renderer.protectedDocument()->deviceScaleFactor());
         }
+
+        output.layerToLayoutOffset = layerToLayoutOffset(renderer);
+        transform.translate(output.layerToLayoutOffset.x(), output.layerToLayoutOffset.y());
+
+        auto offset = -toFloatSize(frameView->visibleContentRect().location());
+        transform.translateRight(offset.width(), offset.height());
+
+        auto mapped = transform.mapRect(output.overflowRect);
+        output.intersectsViewport = mapped.intersects(frameView->boundsRect());
+
+        // Apply the inverse of what will be added by the default value of 'transform-origin',
+        // since the computed transform has already included it.
+        transform.translate(output.size.width() / 2, output.size.height() / 2);
+        transform.translateRight(-output.size.width() / 2, -output.size.height() / 2);
+
+        Ref transformListValue = CSSTransformListValue::create(Style::ExtractorConverter::convertTransformationMatrix(documentElementRenderer->style(), transform));
+        RefPtr { output.properties }->setProperty(CSSPropertyTransform, WTFMove(transformListValue));
     }
 
     // Factor out the zoom from the nearest common ancestor of the captured element and the view transition

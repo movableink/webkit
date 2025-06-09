@@ -1493,16 +1493,14 @@ FloatPoint RenderObject::localToAbsolute(const FloatPoint& localPoint, OptionSet
     return transformState.mappedPoint();
 }
 
-std::unique_ptr<TransformationMatrix> RenderObject::viewTransitionTransform() const
+// https://drafts.csswg.org/css-view-transitions-1/#capture-old-state-algorithm
+// "a <transform-function> that would map element’s border box from the snapshot containing block origin to its current visual position."
+TransformState RenderObject::viewTransitionTransform() const
 {
-    // Compute the accumulated local to absolute TransformationMatrix, using the
-    // 'TrackSVGCTMMatrix' option. This computes a single matrix, applying flatten()
-    // to the matrix at 3d rendering context boundaries.
     TransformState transformState(TransformState::ApplyTransformDirection, FloatPoint { });
-    transformState.setTransformMatrixTracking(TransformState::TrackSVGCTMMatrix);
     OptionSet<MapCoordinatesMode> mode { UseTransforms, ApplyContainerFlip };
     mapLocalToContainer(nullptr, transformState, mode, nullptr);
-    return transformState.releaseTrackedTransform();
+    return transformState;
 }
 
 FloatPoint RenderObject::absoluteToLocal(const FloatPoint& containerPoint, OptionSet<MapCoordinatesMode> mode) const

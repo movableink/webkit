@@ -7083,8 +7083,6 @@ imported/w3c/web-platform-tests/navigation-api/navigation-methods/return-value/b
 imported/w3c/web-platform-tests/navigation-api/ordering-and-transition/navigate-204-205-download-then-same-document.html [ Failure Pass ]
 
 # -- View Transitions -- #
-# Reftest failures:
-imported/w3c/web-platform-tests/css/css-view-transitions/fractional-translation-from-transform.html [ ImageOnlyFailure ]
 
 # Timeouts
 
