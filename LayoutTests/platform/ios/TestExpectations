@@ -7905,3 +7905,5 @@ webkit.org/b/294152 http/tests/misc/timer-vs-loading.html [ Timeout ]
 webkit.org/b/293761 http/wpt/service-workers/navigate-iframes-window-client.https.html [ Failure ]
 
 webkit.org/b/294215 imported/blink/accessibility/link-inside-label.html [ Failure ]
+
+webkit.org/b/294222 [ Debug ] compositing/cocoa/clip-sticky-element-with-overflow-clip-on-root.html [ Crash ]
