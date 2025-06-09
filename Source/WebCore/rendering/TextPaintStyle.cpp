@@ -72,10 +72,11 @@ static Color adjustColorForVisibilityOnBackground(const Color& textColor, const 
 
 TextPaintStyle computeTextPaintStyle(const RenderText& renderer, const RenderStyle& lineStyle, const PaintInfo& paintInfo)
 {
-    auto& frame = renderer.frame();
+    Ref frame = renderer.frame();
+    RefPtr frameView = frame->view();
     TextPaintStyle paintStyle;
 
-    auto viewportSize = frame.view() ? frame.view()->size() : IntSize();
+    auto viewportSize = frameView ? frameView->size() : IntSize();
     paintStyle.strokeWidth = lineStyle.computedStrokeWidth(viewportSize);
     paintStyle.paintOrder = lineStyle.paintOrder();
     paintStyle.lineJoin = lineStyle.joinStyle();
@@ -90,7 +91,7 @@ TextPaintStyle computeTextPaintStyle(const RenderText& renderer, const RenderSty
     }
 
     if (lineStyle.insideDefaultButton()) {
-        Page* page = renderer.frame().page();
+        RefPtr page = renderer.frame().page();
         if (page && page->focusController().isActive()) {
             OptionSet<StyleColorOptions> options;
             if (page->settings().useSystemAppearance())
@@ -103,15 +104,15 @@ TextPaintStyle computeTextPaintStyle(const RenderText& renderer, const RenderSty
     paintStyle.fillColor = lineStyle.visitedDependentColorWithColorFilter(CSSPropertyWebkitTextFillColor, paintInfo.paintBehavior);
 
     bool forceBackgroundToWhite = false;
-    if (frame.document() && frame.document()->printing()) {
+    if (frame->document() && frame->document()->printing()) {
         if (lineStyle.printColorAdjust() == PrintColorAdjust::Economy)
             forceBackgroundToWhite = true;
 
-        if (frame.settings().shouldPrintBackgrounds())
+        if (frame->settings().shouldPrintBackgrounds())
             forceBackgroundToWhite = false;
 
         if (forceBackgroundToWhite) {
-            if (renderer.style().hasAnyBackgroundClipText())
+            if (renderer.checkedStyle()->hasAnyBackgroundClipText())
                 paintStyle.fillColor = Color::black;
         }
     }
@@ -148,10 +149,11 @@ TextPaintStyle computeTextSelectionPaintStyle(const TextPaintStyle& textPaintSty
     if (emphasisMarkForeground.isValid() && emphasisMarkForeground != selectionPaintStyle.emphasisMarkColor)
         selectionPaintStyle.emphasisMarkColor = emphasisMarkForeground;
 
+    RefPtr view = renderer.frame().view();
     if (auto pseudoStyle = renderer.selectionPseudoStyle()) {
         selectionPaintStyle.hasExplicitlySetFillColor = pseudoStyle->hasExplicitlySetColor();
         selectionShadow = paintInfo.forceTextColor() ? FixedVector<Style::TextShadow> { } : pseudoStyle->textShadow();
-        auto viewportSize = renderer.frame().view() ? renderer.frame().view()->size() : IntSize();
+        auto viewportSize = view ? view->size() : IntSize();
         float strokeWidth = pseudoStyle->computedStrokeWidth(viewportSize);
         if (strokeWidth != selectionPaintStyle.strokeWidth)
             selectionPaintStyle.strokeWidth = strokeWidth;

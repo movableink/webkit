@@ -213,7 +213,7 @@ bool RenderVideo::shouldDisplayVideo() const
 
 bool RenderVideo::failedToLoadPosterImage() const
 {
-    return imageResource().errorOccurred();
+    return checkedImageResource()->errorOccurred();
 }
 
 void RenderVideo::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -221,25 +221,26 @@ void RenderVideo::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
     ASSERT(!isSkippedContentRoot(*this));
 
     Ref videoElement = this->videoElement();
+    Ref page = this->page();
     RefPtr mediaPlayer = videoElement->player();
     bool displayingPoster = videoElement->shouldDisplayPosterImage();
 
     if (!displayingPoster && !mediaPlayer) {
         if (paintInfo.phase == PaintPhase::Foreground)
-            page().addRelevantUnpaintedObject(*this, visualOverflowRect());
+            page->addRelevantUnpaintedObject(*this, visualOverflowRect());
         return;
     }
 
     LayoutRect rect = videoBox();
     if (rect.isEmpty()) {
         if (paintInfo.phase == PaintPhase::Foreground)
-            page().addRelevantUnpaintedObject(*this, visualOverflowRect());
+            page->addRelevantUnpaintedObject(*this, visualOverflowRect());
         return;
     }
     rect.moveBy(paintOffset);
 
     if (paintInfo.phase == PaintPhase::Foreground)
-        page().addRelevantRepaintedObject(*this, rect);
+        page->addRelevantRepaintedObject(*this, rect);
 
     LayoutRect contentRect = contentBoxRect();
     contentRect.moveBy(paintOffset);
@@ -387,7 +388,7 @@ bool RenderVideo::hasPosterFrameSize() const
     // so that contain: inline-size could affect the intrinsic size, which should be 0 x block-size.
     if (shouldApplyInlineSizeContainment())
         isEmpty = isHorizontalWritingMode() ? !m_cachedImageSize.height() : !m_cachedImageSize.width();
-    return protectedVideoElement()->shouldDisplayPosterImage() && !isEmpty && !imageResource().errorOccurred();
+    return protectedVideoElement()->shouldDisplayPosterImage() && !isEmpty && !checkedImageResource()->errorOccurred();
 }
 
 bool RenderVideo::hasDefaultObjectSize() const
@@ -397,7 +398,7 @@ bool RenderVideo::hasDefaultObjectSize() const
 
 void RenderVideo::invalidateLineLayout()
 {
-    if (auto* inlineLayout = LayoutIntegration::LineLayout::containing(*this))
+    if (CheckedPtr inlineLayout = LayoutIntegration::LineLayout::containing(*this))
         inlineLayout->boxContentWillChange(*this);
 }
 

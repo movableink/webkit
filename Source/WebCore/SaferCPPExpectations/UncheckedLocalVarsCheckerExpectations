@@ -448,7 +448,6 @@ rendering/RenderLineBreak.cpp
 rendering/RenderListBox.cpp
 rendering/RenderListItem.cpp
 rendering/RenderListMarker.cpp
-rendering/RenderMarquee.cpp
 rendering/RenderMenuList.cpp
 rendering/RenderMultiColumnFlow.cpp
 rendering/RenderMultiColumnSet.cpp
@@ -476,7 +475,6 @@ rendering/RenderTextFragment.cpp
 rendering/RenderTheme.cpp
 rendering/RenderTreeAsText.cpp
 rendering/RenderVTTCue.cpp
-rendering/RenderVideo.cpp
 rendering/RenderView.cpp
 rendering/RenderWidget.cpp
 rendering/StyledMarkedText.cpp

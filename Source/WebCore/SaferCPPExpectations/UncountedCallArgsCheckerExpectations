@@ -971,11 +971,9 @@ rendering/RenderTextControlSingleLine.h
 rendering/RenderTextFragment.cpp
 rendering/RenderTheme.cpp
 rendering/RenderTreeAsText.cpp
-rendering/RenderVideo.cpp
 rendering/RenderView.cpp
 rendering/RenderWidget.cpp
 rendering/TextBoxPainter.cpp
-rendering/TextPaintStyle.cpp
 rendering/cocoa/RenderThemeCocoa.mm
 rendering/mac/RenderThemeMac.mm
 rendering/mathml/MathMLStyle.cpp

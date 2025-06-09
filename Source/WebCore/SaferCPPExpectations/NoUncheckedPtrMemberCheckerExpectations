@@ -83,7 +83,6 @@ rendering/RenderLayerCompositor.cpp
 rendering/RenderLayerCompositor.h
 rendering/RenderLayerScrollableArea.h
 rendering/RenderLayoutState.h
-rendering/RenderMarquee.h
 rendering/RenderSelection.h
 rendering/RenderSelectionGeometry.h
 rendering/RenderTableSection.h

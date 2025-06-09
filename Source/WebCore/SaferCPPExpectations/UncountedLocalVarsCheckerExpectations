@@ -555,7 +555,6 @@ rendering/RenderLayerFilters.cpp
 rendering/RenderLayerModelObject.cpp
 rendering/RenderListBox.cpp
 rendering/RenderListItem.cpp
-rendering/RenderMarquee.cpp
 rendering/RenderMenuList.cpp
 rendering/RenderObject.cpp
 rendering/RenderProgress.cpp
@@ -570,7 +569,6 @@ rendering/RenderTheme.cpp
 rendering/RenderTreeAsText.cpp
 rendering/RenderWidget.cpp
 rendering/TextBoxPainter.cpp
-rendering/TextPaintStyle.cpp
 rendering/mac/RenderThemeMac.mm
 rendering/mathml/MathMLStyle.cpp
 rendering/shapes/ShapeOutsideInfo.cpp

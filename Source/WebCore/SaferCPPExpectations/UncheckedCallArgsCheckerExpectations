@@ -665,7 +665,6 @@ rendering/RenderLineBreak.cpp
 rendering/RenderListBox.cpp
 rendering/RenderListItem.cpp
 rendering/RenderListMarker.cpp
-rendering/RenderMarquee.cpp
 rendering/RenderMenuList.cpp
 rendering/RenderMultiColumnFlow.cpp
 rendering/RenderMultiColumnSet.cpp
@@ -697,7 +696,6 @@ rendering/RenderTextLineBoxes.cpp
 rendering/RenderTheme.cpp
 rendering/RenderTreeAsText.cpp
 rendering/RenderVTTCue.cpp
-rendering/RenderVideo.cpp
 rendering/RenderView.cpp
 rendering/RenderViewTransitionCapture.cpp
 rendering/RenderWidget.cpp
@@ -707,7 +705,6 @@ rendering/TextAutoSizing.h
 rendering/TextBoxPainter.cpp
 rendering/TextBoxTrimmer.cpp
 rendering/TextDecorationPainter.cpp
-rendering/TextPaintStyle.cpp
 rendering/TextPainter.cpp
 rendering/TextPainter.h
 rendering/cocoa/RenderThemeCocoa.mm
