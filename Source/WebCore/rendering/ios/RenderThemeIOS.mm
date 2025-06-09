@@ -191,11 +191,11 @@ bool RenderThemeIOS::isControlStyled(const RenderStyle& style) const
 
 void RenderThemeIOS::adjustMinimumIntrinsicSizeForAppearance(StyleAppearance appearance, RenderStyle& style) const
 {
-    auto minControlSize = Theme::singleton().minimumControlSize(appearance, style.fontCascade(), { style.minWidth(), style.minHeight() }, { style.width(), style.height() }, style.usedZoom());
-    if (minControlSize.width.value() > style.minWidth().value())
-        style.setMinWidth(WTFMove(minControlSize.width));
-    if (minControlSize.height.value() > style.minHeight().value())
-        style.setMinHeight(WTFMove(minControlSize.height));
+    auto minimumControlSize = this->minimumControlSize(appearance, style.fontCascade(), { style.minWidth(), style.minHeight() }, { style.width(), style.height() }, style.usedZoom());
+    if (minimumControlSize.width.value() > style.minWidth().value())
+        style.setMinWidth(WTFMove(minimumControlSize.width));
+    if (minimumControlSize.height.value() > style.minHeight().value())
+        style.setMinHeight(WTFMove(minimumControlSize.height));
 }
 
 void RenderThemeIOS::adjustRadioStyle(RenderStyle& style, const Element* element) const

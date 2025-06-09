@@ -64,7 +64,6 @@
 #import "SliderThumbElement.h"
 #import "StringTruncator.h"
 #import "StylePadding.h"
-#import "ThemeMac.h"
 #import "UTIUtilities.h"
 #import <Carbon/Carbon.h>
 #import <Cocoa/Cocoa.h>
@@ -272,9 +271,15 @@ int RenderThemeMac::baselinePosition(const RenderBox& renderer) const
     return baseline;
 }
 
+static bool supportsLargeFormControls()
+{
+    static bool hasSupport = [[NSAppearance currentDrawingAppearance] _usesMetricsAppearance];
+    return hasSupport;
+}
+
 bool RenderThemeMac::supportsLargeFormControls() const
 {
-    return ThemeMac::supportsLargeFormControls();
+    return WebCore::supportsLargeFormControls();
 }
 
 Color RenderThemeMac::platformActiveSelectionBackgroundColor(OptionSet<StyleColorOptions> options) const
@@ -735,7 +740,6 @@ bool RenderThemeMac::searchFieldShouldAppearAsTextField(const RenderStyle& style
 #endif
 
     return !style.writingMode().isHorizontal();
-
 }
 
 bool RenderThemeMac::isControlStyled(const RenderStyle& style) const
@@ -775,7 +779,7 @@ static FloatRect inflateRect(const FloatRect& rect, const IntSize& size, std::sp
 
 static NSControlSize controlSizeFromPixelSize(std::span<const IntSize, 4> sizes, const IntSize& minSize, float zoomLevel)
 {
-    if (ThemeMac::supportsLargeFormControls()
+    if (supportsLargeFormControls()
         && minSize.width() >= static_cast<int>(sizes[NSControlSizeLarge].width() * zoomLevel)
         && minSize.height() >= static_cast<int>(sizes[NSControlSizeLarge].height() * zoomLevel))
         return NSControlSizeLarge;
@@ -791,6 +795,40 @@ static NSControlSize controlSizeFromPixelSize(std::span<const IntSize, 4> sizes,
     return NSControlSizeMini;
 }
 
+// Helper functions used by a bunch of different control parts.
+
+static NSControlSize controlSizeForFont(const FontCascade& font)
+{
+    auto fontSize = font.size();
+    if (fontSize >= 21 && supportsLargeFormControls())
+        return NSControlSizeLarge;
+    if (fontSize >= 16)
+        return NSControlSizeRegular;
+    if (fontSize >= 11)
+        return NSControlSizeSmall;
+    return NSControlSizeMini;
+}
+
+static LengthSize sizeFromNSControlSize(NSControlSize nsControlSize, const LengthSize& zoomedSize, float zoomFactor, const std::span<const IntSize, 4>& sizes)
+{
+    auto controlSize = sizes[nsControlSize];
+    if (zoomFactor != 1.0f)
+        controlSize = IntSize(controlSize.width() * zoomFactor, controlSize.height() * zoomFactor);
+    auto result = zoomedSize;
+    if (zoomedSize.width.isIntrinsicOrAuto() && controlSize.width() > 0)
+        result.width = { controlSize.width(), LengthType::Fixed };
+    if (zoomedSize.height.isIntrinsicOrAuto() && controlSize.height() > 0)
+        result.height = { controlSize.height(), LengthType::Fixed };
+    return result;
+}
+
+static LengthSize sizeFromFont(const FontCascade& font, const LengthSize& zoomedSize, float zoomFactor, const std::span<const IntSize, 4> sizes)
+{
+    return sizeFromNSControlSize(controlSizeForFont(font), zoomedSize, zoomFactor, sizes);
+}
+
+// Popup button
+
 static std::span<const int, 4> popupButtonMargins(NSControlSize size)
 {
     static constexpr std::array margins {
@@ -804,7 +842,12 @@ static std::span<const int, 4> popupButtonMargins(NSControlSize size)
 
 static std::span<const IntSize, 4> popupButtonSizes()
 {
-    static constexpr std::array sizes { IntSize(0, 21), IntSize(0, 18), IntSize(0, 15), IntSize(0, 24) };
+    static constexpr std::array sizes {
+        IntSize { 0, 21 },
+        IntSize { 0, 18 },
+        IntSize { 0, 15 },
+        IntSize { 0, 24 },
+    };
     return sizes;
 }
 
@@ -823,6 +866,236 @@ static std::span<const int, 4> popupButtonPadding(NSControlSize size, bool isRTL
         std::array { 2, 8, 3, 26 },
     };
     return isRTL ? paddingRTL[size] : paddingLTR[size];
+}
+
+// Checkboxes and radio buttons
+
+static const std::span<const IntSize, 4> checkboxSizes()
+{
+    static constexpr std::array sizes = {
+        IntSize { 14, 14 },
+        IntSize { 12, 12 },
+        IntSize { 10, 10 },
+        IntSize { 16, 16 },
+    };
+    return sizes;
+}
+
+static std::span<const int, 4> checkboxMargins(NSControlSize controlSize)
+{
+    static constexpr std::array margins {
+        // top right bottom left
+        std::array { 2, 2, 2, 2 },
+        std::array { 2, 1, 2, 1 },
+        std::array { 0, 0, 1, 0 },
+        std::array { 2, 2, 2, 2 },
+    };
+    return margins[controlSize];
+}
+
+static LengthSize checkboxSize(const LengthSize& zoomedSize, float zoomFactor)
+{
+    // If the width and height are both specified, then we have nothing to do.
+    if (!zoomedSize.width.isIntrinsicOrAuto() && !zoomedSize.height.isIntrinsicOrAuto())
+        return zoomedSize;
+
+    return sizeFromNSControlSize(NSControlSizeSmall, zoomedSize, zoomFactor, checkboxSizes());
+}
+
+// Radio Buttons
+
+static const std::span<const IntSize, 4> radioSizes()
+{
+    static std::array<IntSize, 4> sizes;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        if (supportsLargeFormControls()) {
+            sizes = { { IntSize(14, 14), IntSize(12, 12), IntSize(10, 10), IntSize(16, 16) } };
+            return;
+        }
+        sizes = { { IntSize(16, 16), IntSize(12, 12), IntSize(10, 10), IntSize(0, 0) } };
+    });
+    return sizes;
+}
+
+static std::span<const int, 4> radioMargins(NSControlSize controlSize)
+{
+    static constexpr std::array margins {
+        // top right bottom left
+        std::array { 1, 0, 1, 2 },
+        std::array { 1, 1, 2, 1 },
+        std::array { 0, 0, 1, 1 },
+        std::array { 1, 0, 1, 2 },
+    };
+    return margins[controlSize];
+}
+
+static LengthSize radioSize(const LengthSize& zoomedSize, float zoomFactor)
+{
+    // If the width and height are both specified, then we have nothing to do.
+    if (!zoomedSize.width.isIntrinsicOrAuto() && !zoomedSize.height.isIntrinsicOrAuto())
+        return zoomedSize;
+
+    return sizeFromNSControlSize(NSControlSizeSmall, zoomedSize, zoomFactor, radioSizes());
+}
+
+// Buttons
+
+// Buttons really only constrain height. They respect width.
+static const std::span<const IntSize, 4> buttonSizes()
+{
+    static constexpr std::array sizes = {
+        IntSize(0, 20),
+        IntSize(0, 16),
+        IntSize(0, 13),
+        IntSize(0, 28),
+    };
+    return sizes;
+}
+
+static std::span<const int, 4> buttonMargins(NSControlSize controlSize)
+{
+    // FIXME: These values may need to be reevaluated. They appear to have been originally chosen
+    // to reflect the size of shadows around native form controls on macOS, but as of macOS 10.15,
+    // these margins extend well past the boundaries of a native button cell's shadows.
+    static constexpr std::array margins {
+        std::array { 5, 7, 7, 7 },
+        std::array { 4, 6, 7, 6 },
+        std::array { 1, 2, 2, 2 },
+        std::array { 6, 6, 6, 6 },
+    };
+    return margins[controlSize];
+}
+
+// Stepper
+
+static const std::span<const IntSize, 4> stepperSizes()
+{
+    static constexpr std::array sizes = {
+        IntSize { 19, 27 },
+        IntSize { 15, 22 },
+        IntSize { 13, 15 },
+        IntSize { 19, 27 },
+    };
+    return sizes;
+}
+
+// We don't use controlSizeForFont() for steppers because the stepper height
+// should be equal to or less than the corresponding text field height,
+static NSControlSize stepperControlSizeForFont(const FontCascade& font)
+{
+    auto fontSize = font.size();
+    if (fontSize >= 23 && supportsLargeFormControls())
+        return NSControlSizeLarge;
+    if (fontSize >= 18)
+        return NSControlSizeRegular;
+    if (fontSize >= 13)
+        return NSControlSizeSmall;
+    return NSControlSizeMini;
+}
+
+// Switch
+
+static const std::span<const IntSize, 4> switchSizes()
+{
+    static constexpr std::array sizes = {
+        IntSize { 38, 22 },
+        IntSize { 32, 18 },
+        IntSize { 26, 15 },
+        IntSize { 38, 22 }
+    };
+    return sizes;
+}
+
+static std::span<const int, 4> switchMargins(NSControlSize controlSize)
+{
+    static constexpr std::array margins {
+        // top right bottom left
+        std::array { 2, 2, 1, 2 },
+        std::array { 2, 2, 1, 2 },
+        std::array { 1, 1, 0, 1 },
+        std::array { 2, 2, 1, 2 },
+    };
+    return margins[controlSize];
+}
+
+static std::span<const int, 4> visualSwitchMargins(NSControlSize controlSize, bool isVertical)
+{
+    auto margins = switchMargins(controlSize);
+    if (isVertical) {
+        static const std::array verticalMargins { margins[3], margins[0], margins[1], margins[2] };
+        return verticalMargins;
+    }
+    return margins;
+}
+
+static LengthSize switchSize(const LengthSize& zoomedSize, float zoomFactor)
+{
+    // If the width and height are both specified, then we have nothing to do.
+    if (!zoomedSize.width.isIntrinsicOrAuto() && !zoomedSize.height.isIntrinsicOrAuto())
+        return zoomedSize;
+
+    return sizeFromNSControlSize(NSControlSizeSmall, zoomedSize, zoomFactor, switchSizes());
+}
+
+static void inflateControlPaintRect(StyleAppearance appearance, FloatRect& zoomedRect, float zoomFactor, bool isVertical)
+{
+    BEGIN_BLOCK_OBJC_EXCEPTIONS
+    auto zoomRectSize = IntSize(zoomedRect.size());
+    switch (appearance) {
+    case StyleAppearance::Checkbox: {
+        auto size = controlSizeFromPixelSize(checkboxSizes(), zoomRectSize, zoomFactor);
+        auto zoomedSize = checkboxSizes()[size];
+        zoomedSize.setHeight(zoomedSize.height() * zoomFactor);
+        zoomedSize.setWidth(zoomedSize.width() * zoomFactor);
+        zoomedRect = inflateRect(zoomedRect, zoomedSize, checkboxMargins(size), zoomFactor);
+        break;
+    }
+    case StyleAppearance::Radio: {
+        auto size = controlSizeFromPixelSize(radioSizes(), zoomRectSize, zoomFactor);
+        auto zoomedSize = radioSizes()[size];
+        zoomedSize.setHeight(zoomedSize.height() * zoomFactor);
+        zoomedSize.setWidth(zoomedSize.width() * zoomFactor);
+        zoomedRect = inflateRect(zoomedRect, zoomedSize, radioMargins(size), zoomFactor);
+        break;
+    }
+    case StyleAppearance::Switch: {
+        auto logicalZoomRectSize = isVertical ? zoomRectSize.transposedSize() : zoomRectSize;
+        auto controlSize = controlSizeFromPixelSize(switchSizes(), logicalZoomRectSize, zoomFactor);
+        auto zoomedSize = switchSizes()[controlSize];
+        zoomedSize.setHeight(zoomedSize.height() * zoomFactor);
+        zoomedSize.setWidth(zoomedSize.width() * zoomFactor);
+        if (isVertical)
+            zoomedSize = zoomedSize.transposedSize();
+        zoomedRect = inflateRect(zoomedRect, zoomedSize, visualSwitchMargins(controlSize, isVertical), zoomFactor);
+        break;
+    }
+    case StyleAppearance::PushButton:
+    case StyleAppearance::DefaultButton:
+    case StyleAppearance::Button: {
+        auto largestControlSize = supportsLargeFormControls() ? NSControlSizeLarge : NSControlSizeRegular;
+        if (zoomedRect.height() > buttonSizes()[largestControlSize].height() * zoomFactor)
+            break;
+        auto size = controlSizeFromPixelSize(buttonSizes(), zoomRectSize, zoomFactor);
+        auto zoomedSize = buttonSizes()[size];
+        zoomedSize.setHeight(zoomedSize.height() * zoomFactor);
+        zoomedSize.setWidth(zoomedRect.width()); // Buttons don't ever constrain width, so the zoomed width can just be honored.
+        zoomedRect = inflateRect(zoomedRect, zoomedSize, buttonMargins(size), zoomFactor);
+        break;
+    }
+    case StyleAppearance::InnerSpinButton: {
+        static constexpr std::array stepperMargin = { 0, 0, 0, 0 };
+        auto controlSize = controlSizeFromPixelSize(stepperSizes(), zoomRectSize, zoomFactor);
+        IntSize zoomedSize = stepperSizes()[controlSize];
+        zoomedSize.setHeight(zoomedSize.height() * zoomFactor);
+        zoomedSize.setWidth(zoomedSize.width() * zoomFactor);
+        zoomedRect = inflateRect(zoomedRect, zoomedSize, stepperMargin, zoomFactor);
+        break;
+    }
+    default:
+        break;
+    }
+    END_BLOCK_OBJC_EXCEPTIONS
 }
 
 void RenderThemeMac::inflateRectForControlRenderer(const RenderObject& renderer, FloatRect& rect)
@@ -844,7 +1117,7 @@ void RenderThemeMac::inflateRectForControlRenderer(const RenderObject& renderer,
     case StyleAppearance::PushButton:
     case StyleAppearance::Radio:
     case StyleAppearance::Switch:
-        ThemeMac::inflateControlPaintRect(renderer.style().usedAppearance(), rect, renderer.style().usedZoom(), !renderer.writingMode().isHorizontal());
+        inflateControlPaintRect(renderer.style().usedAppearance(), rect, renderer.style().usedZoom(), !renderer.writingMode().isHorizontal());
         break;
     case StyleAppearance::Menulist: {
         auto zoomLevel = renderer.style().usedZoom();
@@ -889,7 +1162,7 @@ bool RenderThemeMac::controlSupportsTints(const RenderObject& o) const
 static NSControlSize controlSizeForSystemFont(const RenderStyle& style)
 {
     auto fontSize = style.computedFontSize();
-    if (fontSize >= [NSFont systemFontSizeForControlSize:NSControlSizeLarge] && ThemeMac::supportsLargeFormControls())
+    if (fontSize >= [NSFont systemFontSizeForControlSize:NSControlSizeLarge] && supportsLargeFormControls())
         return NSControlSizeLarge;
     if (fontSize >= [NSFont systemFontSizeForControlSize:NSControlSizeRegular])
         return NSControlSizeRegular;
@@ -901,7 +1174,7 @@ static NSControlSize controlSizeForSystemFont(const RenderStyle& style)
 static NSControlSize controlSizeForFont(const RenderStyle& style)
 {
     auto fontSize = style.computedFontSize();
-    if (fontSize >= 21 && ThemeMac::supportsLargeFormControls())
+    if (fontSize >= 21 && supportsLargeFormControls())
         return NSControlSizeLarge;
     if (fontSize >= 16)
         return NSControlSizeRegular;
@@ -1119,7 +1392,7 @@ PopupMenuStyle::Size RenderThemeMac::popupMenuSize(const RenderStyle& style, Int
     case NSControlSizeMini:
         return PopupMenuStyle::Size::Mini;
     case NSControlSizeLarge:
-        return ThemeMac::supportsLargeFormControls() ? PopupMenuStyle::Size::Large : PopupMenuStyle::Size::Normal;
+        return supportsLargeFormControls() ? PopupMenuStyle::Size::Large : PopupMenuStyle::Size::Normal;
     default:
         return PopupMenuStyle::Size::Normal;
     }
@@ -1334,6 +1607,24 @@ void RenderThemeMac::adjustSliderThumbSize(RenderStyle& style, const Element* el
     }
 }
 
+std::optional<FontCascadeDescription> RenderThemeMac::controlFont(StyleAppearance appearance, const FontCascade& font, float zoomFactor) const
+{
+    switch (appearance) {
+    case StyleAppearance::PushButton: {
+        FontCascadeDescription fontDescription;
+        fontDescription.setIsAbsoluteSize(true);
+
+        NSFont* nsFont = [NSFont systemFontOfSize:[NSFont systemFontSizeForControlSize:controlSizeForFont(font)]];
+        fontDescription.setOneFamily("-apple-system"_s);
+        fontDescription.setComputedSize([nsFont pointSize] * zoomFactor);
+        fontDescription.setSpecifiedSize([nsFont pointSize] * zoomFactor);
+        return fontDescription;
+    }
+    default:
+        return std::nullopt;
+    }
+}
+
 Style::PaddingBox RenderThemeMac::controlPadding(StyleAppearance appearance, const Style::PaddingBox& padding, float zoomFactor) const
 {
     switch (appearance) {
@@ -1349,6 +1640,69 @@ Style::PaddingBox RenderThemeMac::controlPadding(StyleAppearance appearance, con
     default:
         return RenderTheme::controlPadding(appearance, padding, zoomFactor);
     }
+}
+
+LengthSize RenderThemeMac::controlSize(StyleAppearance appearance, const FontCascade& font, const LengthSize& zoomedSize, float zoomFactor) const
+{
+    switch (appearance) {
+    case StyleAppearance::Checkbox:
+        return checkboxSize(zoomedSize, zoomFactor);
+    case StyleAppearance::Radio:
+        return radioSize(zoomedSize, zoomFactor);
+    case StyleAppearance::Switch:
+        return switchSize(zoomedSize, zoomFactor);
+    case StyleAppearance::PushButton:
+        // Height is reset to auto so that specified heights can be ignored.
+        return sizeFromFont(font, { zoomedSize.width, { } }, zoomFactor, buttonSizes());
+    case StyleAppearance::InnerSpinButton:
+        if (!zoomedSize.width.isIntrinsicOrAuto() && !zoomedSize.height.isIntrinsicOrAuto())
+            return zoomedSize;
+        return sizeFromNSControlSize(stepperControlSizeForFont(font), zoomedSize, zoomFactor, stepperSizes());
+    default:
+        return zoomedSize;
+    }
+}
+
+LengthSize RenderThemeMac::minimumControlSize(StyleAppearance appearance, const FontCascade& font, const LengthSize& zoomedSize, float zoomFactor) const
+{
+    switch (appearance) {
+    case StyleAppearance::SquareButton:
+    case StyleAppearance::ColorWell:
+    case StyleAppearance::DefaultButton:
+    case StyleAppearance::Button:
+        return {
+            { 0, LengthType::Fixed },
+            { static_cast<int>(15 * zoomFactor), LengthType::Fixed }
+        };
+    case StyleAppearance::InnerSpinButton: {
+        auto& base = stepperSizes()[NSControlSizeMini];
+        return {
+            { static_cast<int>(base.width() * zoomFactor), LengthType::Fixed },
+            { static_cast<int>(base.height() * zoomFactor), LengthType::Fixed }
+        };
+    }
+    default:
+        return RenderTheme::minimumControlSize(appearance, font, zoomedSize, zoomFactor);
+    }
+}
+
+
+LengthBox RenderThemeMac::controlBorder(StyleAppearance appearance, const FontCascade& font, const LengthBox& zoomedBox, float zoomFactor) const
+{
+    switch (appearance) {
+    case StyleAppearance::SquareButton:
+    case StyleAppearance::ColorWell:
+    case StyleAppearance::DefaultButton:
+    case StyleAppearance::Button:
+        return LengthBox(0, zoomedBox.right().value(), 0, zoomedBox.left().value());
+    default:
+        return RenderTheme::controlBorder(appearance, font, zoomedBox, zoomFactor);
+    }
+}
+
+bool RenderThemeMac::controlRequiresPreWhiteSpace(StyleAppearance appearance) const
+{
+    return appearance == StyleAppearance::PushButton;
 }
 
 String RenderThemeMac::fileListNameForWidth(const FileList* fileList, const FontCascade& font, int width, bool multipleFilesAllowed) const
