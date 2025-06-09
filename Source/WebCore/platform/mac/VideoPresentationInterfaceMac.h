@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -137,7 +137,7 @@ private:
     void decrementCheckedPtrCount() const final { CanMakeCheckedPtr::decrementCheckedPtrCount(); }
     void setDocumentBecameVisibleCallback(Function<void()>&& callback) { m_documentBecameVisibleCallback = WTFMove(callback); }
 
-    Ref<PlaybackSessionInterfaceMac> m_playbackSessionInterface;
+    const Ref<PlaybackSessionInterfaceMac> m_playbackSessionInterface;
     std::optional<MediaPlayerIdentifier> m_playerIdentifier;
     ThreadSafeWeakPtr<VideoPresentationModel> m_videoPresentationModel;
     HTMLMediaElementEnums::VideoFullscreenMode m_mode { HTMLMediaElementEnums::VideoFullscreenModeNone };

@@ -578,14 +578,12 @@ platform/mac/PlaybackSessionInterfaceMac.mm
 platform/mac/ScrollAnimatorMac.mm
 platform/mac/ScrollbarThemeMac.mm
 platform/mac/ScrollbarsControllerMac.mm
-platform/mac/VideoPresentationInterfaceMac.h
 platform/mac/VideoPresentationInterfaceMac.mm
 platform/mac/WebPlaybackControlsManager.mm
 platform/mock/DeviceOrientationClientMock.cpp
 platform/mock/MockRealtimeVideoSource.cpp
 platform/sql/SQLiteDatabase.cpp
 platform/sql/SQLiteStatementAutoResetScope.cpp
-platform/sql/SQLiteTransaction.cpp
 platform/text/cocoa/LocalizedDateCache.mm
 rendering/AccessibilityRegionContext.cpp
 rendering/AncestorSubgridIterator.cpp

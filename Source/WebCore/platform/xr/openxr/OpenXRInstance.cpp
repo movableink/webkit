@@ -43,7 +43,7 @@ struct Instance::Impl {
 
 private:
     XrInstance m_instance { XR_NULL_HANDLE };
-    Ref<WorkQueue> m_workQueue;
+    const Ref<WorkQueue> m_workQueue;
     std::unique_ptr<OpenXRExtensions> m_extensions;
 };
 

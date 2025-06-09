@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -136,7 +136,7 @@ private:
     Seconds m_repeatInterval; // 0 if not repeating
 
     CompactRefPtrTuple<ThreadTimerHeapItem, uint8_t> m_heapItemWithBitfields;
-    Ref<Thread> m_thread { Thread::currentSingleton() };
+    const Ref<Thread> m_thread { Thread::currentSingleton() };
 
     friend class ThreadTimers;
     friend class TimerHeapLessThanFunction;

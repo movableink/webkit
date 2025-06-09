@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -109,7 +109,7 @@ private:
     friend class FormData;
     FormDataForUpload(FormData&, Vector<String>&&);
     
-    Ref<FormData> m_data;
+    const Ref<FormData> m_data;
     Vector<String> m_temporaryZipFiles;
 };
 

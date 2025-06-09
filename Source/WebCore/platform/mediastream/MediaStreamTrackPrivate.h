@@ -193,7 +193,7 @@ private:
 #endif
 
     WeakHashSet<MediaStreamTrackPrivateObserver> m_observers;
-    Ref<MediaStreamTrackPrivateSourceObserver> m_sourceObserver;
+    const Ref<MediaStreamTrackPrivateSourceObserver> m_sourceObserver;
 
     String m_id;
     String m_label;

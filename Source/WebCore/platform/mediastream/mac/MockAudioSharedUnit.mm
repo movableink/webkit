@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -148,7 +148,7 @@ private:
 
     Vector<float> m_bipBopBuffer;
     bool m_hasAudioUnit { false };
-    Ref<MockAudioSharedInternalUnitState> m_internalState;
+    const Ref<MockAudioSharedInternalUnitState> m_internalState;
     bool m_enableEchoCancellation { true };
     bool m_isOutputMuted { false };
     bool m_voiceActivityDetectionEnabled { false };
@@ -157,7 +157,7 @@ private:
     MonotonicTime m_lastRenderTime { MonotonicTime::nan() };
     MonotonicTime m_delayUntil;
 
-    Ref<WorkQueue> m_workQueue;
+    const Ref<WorkQueue> m_workQueue;
     unsigned m_channelCount { 2 };
     
     AURenderCallbackStruct m_microphoneCallback;

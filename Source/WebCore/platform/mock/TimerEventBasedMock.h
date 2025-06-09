@@ -79,7 +79,7 @@ public:
 private:
     TimerEventBasedMock* m_mock;
     Timer m_timer;
-    Ref<MockNotifier> m_notifier;
+    const Ref<MockNotifier> m_notifier;
 };
 
 } // namespace WebCore
