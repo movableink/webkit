@@ -2236,7 +2236,7 @@ void RenderLayerBacking::updateSeparatedProperties()
             return false;
         if (image == &Image::nullImage())
             return false;
-        return image->isBitmapImage() && image->nativeImage();
+        return !image->isAnimated() && image->isBitmapImage() && image->nativeImage();
     }();
 
     m_graphicsLayer->setIsSeparatedImage(isSeparatedImage);
