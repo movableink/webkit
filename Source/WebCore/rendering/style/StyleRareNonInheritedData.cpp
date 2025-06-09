@@ -143,6 +143,7 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
 #endif
     , scrollbarWidth(static_cast<unsigned>(RenderStyle::initialScrollbarWidth()))
     , usesAnchorFunctions(false)
+    , isPopoverInvoker(false)
 {
 }
 
@@ -251,6 +252,7 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
 #endif
     , scrollbarWidth(o.scrollbarWidth)
     , usesAnchorFunctions(o.usesAnchorFunctions)
+    , isPopoverInvoker(o.isPopoverInvoker)
 {
 }
 
@@ -365,7 +367,8 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && appleVisualEffect == o.appleVisualEffect
 #endif
         && scrollbarWidth == o.scrollbarWidth
-        && usesAnchorFunctions == o.usesAnchorFunctions;
+        && usesAnchorFunctions == o.usesAnchorFunctions
+        && isPopoverInvoker == o.isPopoverInvoker;
 }
 
 OptionSet<Containment> StyleRareNonInheritedData::usedContain() const
@@ -543,6 +546,7 @@ void StyleRareNonInheritedData::dumpDifferences(TextStream& ts, const StyleRareN
     LOG_IF_DIFFERENT(scrollbarWidth);
 
     LOG_IF_DIFFERENT_WITH_CAST(bool, usesAnchorFunctions);
+    LOG_IF_DIFFERENT_WITH_CAST(bool, isPopoverInvoker);
 }
 #endif // !LOG_DISABLED
 

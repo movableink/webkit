@@ -412,6 +412,9 @@ public:
     void setUsesAnchorFunctions();
     bool usesAnchorFunctions() const;
 
+    void setIsPopoverInvoker();
+    bool isPopoverInvoker() const;
+
     void setColumnStylesFromPaginationMode(PaginationMode);
     
     inline bool isFloating() const;

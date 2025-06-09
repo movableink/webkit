@@ -645,6 +645,9 @@ void Adjuster::adjust(RenderStyle& style) const
 
         if (m_element->visibilityAdjustment().contains(VisibilityAdjustment::Subtree)) [[unlikely]]
             style.setIsForceHidden();
+
+        if (m_element->invokedPopover())
+            style.setIsPopoverInvoker();
     }
 
     if (shouldInheritTextDecorationsInEffect(style, m_element.get()))

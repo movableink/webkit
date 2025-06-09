@@ -861,6 +861,8 @@ inline bool RenderStyle::isForceHidden() const { return m_rareInheritedData->isF
 inline Isolation RenderStyle::isolation() const { return static_cast<Isolation>(m_nonInheritedData->rareData->isolation); }
 inline bool RenderStyle::usesAnchorFunctions() const { return m_nonInheritedData->rareData->usesAnchorFunctions; }
 
+inline bool RenderStyle::isPopoverInvoker() const { return m_nonInheritedData->rareData->isPopoverInvoker; }
+
 inline Visibility RenderStyle::usedVisibility() const
 {
     if (isForceHidden()) [[unlikely]]

@@ -125,6 +125,7 @@ public:
 
     static ScopedName defaultAnchorName(const RenderStyle&);
     static bool isAnchor(const RenderStyle&);
+    static bool isImplicitAnchor(const RenderStyle&);
 
     static CheckedPtr<RenderBoxModelObject> defaultAnchorForBox(const RenderBox&);
 

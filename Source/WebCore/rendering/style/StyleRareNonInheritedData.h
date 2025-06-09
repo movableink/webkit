@@ -293,6 +293,8 @@ public:
     unsigned usesAnchorFunctions : 1;
     unsigned usesTreeCountingFunctions : 1;
 
+    unsigned isPopoverInvoker : 1;
+
 private:
     StyleRareNonInheritedData();
     StyleRareNonInheritedData(const StyleRareNonInheritedData&);

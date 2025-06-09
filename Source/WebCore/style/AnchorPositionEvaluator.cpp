@@ -34,6 +34,7 @@
 #include "Element.h"
 #include "Node.h"
 #include "NodeRenderStyle.h"
+#include "PopoverData.h"
 #include "PositionedLayoutConstraints.h"
 #include "RenderBoxInlines.h"
 #include "RenderBlock.h"
@@ -856,26 +857,43 @@ static bool isAcceptableAnchorElement(const RenderBoxModelObject& anchorRenderer
     return true;
 }
 
-
-static std::optional<Ref<Element>> findLastAcceptableAnchorWithName(ResolvedScopedName anchorName, Ref<const Element> anchorPositionedElement, const AnchorsForAnchorName& anchorsForAnchorName)
+static RefPtr<Element> findImplicitAnchor(const Element& anchorPositionedElement)
 {
-    if (anchorName.name() == implicitAnchorElementName().name) {
+    auto find = [&]() -> RefPtr<Element> {
         // "The implicit anchor element of a pseudo-element is its originating element, unless otherwise specified."
         // https://drafts.csswg.org/css-anchor-position-1/#implicit
-        if (auto pseudoElement = dynamicDowncast<PseudoElement>(anchorPositionedElement)) {
-            Ref implicitAnchorElement = *pseudoElement->hostElement();
-            CheckedPtr anchor = dynamicDowncast<RenderBoxModelObject>(implicitAnchorElement->renderer());
-            if (anchor && isAcceptableAnchorElement(*anchor, *pseudoElement))
-                return implicitAnchorElement;
-        }
-        return { };
+        if (auto pseudoElement = dynamicDowncast<PseudoElement>(anchorPositionedElement))
+            return pseudoElement->hostElement();
+
+        // https://html.spec.whatwg.org/multipage/popover.html#the-popover-attribute
+        // 24. Set element's implicit anchor element to invoker.
+        if (auto popoverData = anchorPositionedElement.popoverData())
+            return popoverData->invoker();
+
+        return nullptr;
+    };
+
+    if (auto implicitAnchorElement = find()) {
+        // "If [a spec] defines is an implicit anchor element for query el which is an acceptable anchor element for query el, return that element."
+        // https://drafts.csswg.org/css-anchor-position-1/#target
+        CheckedPtr anchor = dynamicDowncast<RenderBoxModelObject>(implicitAnchorElement->renderer());
+        if (anchor && isAcceptableAnchorElement(*anchor, anchorPositionedElement))
+            return implicitAnchorElement;
     }
+
+    return nullptr;
+}
+
+static RefPtr<Element> findLastAcceptableAnchorWithName(ResolvedScopedName anchorName, const Element& anchorPositionedElement, const AnchorsForAnchorName& anchorsForAnchorName)
+{
+    if (anchorName.name() == implicitAnchorElementName().name)
+        return findImplicitAnchor(anchorPositionedElement);
 
     const auto& anchors = anchorsForAnchorName.get(anchorName);
 
     for (auto& anchor : makeReversedRange(anchors)) {
         if (isAcceptableAnchorElement(anchor.get(), anchorPositionedElement, anchorName.name()))
-            return *anchor->element();
+            return anchor->element();
     }
 
     return { };
@@ -922,7 +940,7 @@ AnchorElements AnchorPositionEvaluator::findAnchorsForAnchorPositionedElement(co
     for (auto& anchorName : anchorNames) {
         auto anchor = findLastAcceptableAnchorWithName(anchorName, anchorPositionedElement, anchorsForAnchorName);
         if (anchor)
-            anchorElements.add(anchorName, anchor->get());
+            anchorElements.add(anchorName, anchor);
     }
 
     return anchorElements;
@@ -1228,6 +1246,16 @@ AnchorPositionedKey AnchorPositionEvaluator::keyForElementOrPseudoElement(const 
 bool AnchorPositionEvaluator::isAnchor(const RenderStyle& style)
 {
     if (!style.anchorNames().isEmpty())
+        return true;
+
+    return isImplicitAnchor(style);
+}
+
+bool AnchorPositionEvaluator::isImplicitAnchor(const RenderStyle& style)
+{
+    // The invoker is an implicit anchor for the popover.
+    // https://drafts.csswg.org/css-anchor-position-1/#implicit
+    if (style.isPopoverInvoker())
         return true;
 
     // "The implicit anchor element of a pseudo-element is its originating element, unless otherwise specified."

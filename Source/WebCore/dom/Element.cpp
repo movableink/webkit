@@ -3204,6 +3204,9 @@ void Element::setInvokedPopover(RefPtr<Element>&& element)
 {
     auto& data = ensureElementRareData();
     data.setInvokedPopover(WTFMove(element));
+
+    // Invalidate so isPopoverInvoker style bit gets updated.
+    invalidateStyleInternal();
 }
 
 void Element::addShadowRoot(Ref<ShadowRoot>&& newShadowRoot)
