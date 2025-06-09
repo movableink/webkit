@@ -766,7 +766,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncPush, (JSGlobalObject* globalObject, Call
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     unsigned argCount = callFrame->argumentCount();
 
-    if (length + argCount > static_cast<uint64_t>(maxSafeInteger())) [[unlikely]]
+    if (length + argCount > maxSafeIntegerAsUInt64()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "push cannot produce an array of length larger than (2 ** 53) - 1"_s);
 
     for (unsigned n = 0; n < argCount; n++) {
@@ -1297,7 +1297,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncSplice, (JSGlobalObject* globalObject, Ca
     }
     ASSERT(callFrame->argumentCount() || (!itemCount && !actualDeleteCount));
 
-    if (length - actualDeleteCount + itemCount > static_cast<uint64_t>(maxSafeInteger())) [[unlikely]]
+    if (length - actualDeleteCount + itemCount > maxSafeIntegerAsUInt64()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Splice cannot produce an array of length larger than (2 ** 53) - 1"_s);
 
     std::pair<SpeciesConstructResult, JSObject*> speciesResult = speciesConstructArray(globalObject, thisObj, actualDeleteCount);
@@ -1369,7 +1369,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncUnShift, (JSGlobalObject* globalObject, C
 
     unsigned nrArgs = callFrame->argumentCount();
     if (nrArgs) {
-        if (length + nrArgs > static_cast<uint64_t>(maxSafeInteger())) [[unlikely]]
+        if (length + nrArgs > maxSafeIntegerAsUInt64()) [[unlikely]]
             return throwVMTypeError(globalObject, scope, "unshift cannot produce an array of length larger than (2 ** 53) - 1"_s);
         unshift(globalObject, thisObj, 0, 0, nrArgs, length);
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -2326,7 +2326,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncToSpliced, (JSGlobalObject* globalObject,
 
     uint64_t newLen = length + insertCount - deleteCount;
 
-    if (newLen >= static_cast<uint64_t>(maxSafeInteger())) [[unlikely]] {
+    if (newLen >= maxSafeIntegerAsUInt64()) [[unlikely]] {
         throwTypeError(globalObject, scope, "Array length exceeds 2**53 - 1"_s);
         return { };
     }

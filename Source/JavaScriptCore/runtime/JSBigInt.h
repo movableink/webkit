@@ -734,7 +734,7 @@ ALWAYS_INLINE std::optional<double> JSBigInt::tryExtractDouble(JSValue value)
             integer |= (static_cast<uint64_t>(bigInt->digit(1)) << 32);
     }
 
-    if (integer <= static_cast<uint64_t>(maxSafeInteger()))
+    if (integer <= maxSafeIntegerAsUInt64())
         return (bigInt->sign()) ? -static_cast<double>(integer) : static_cast<double>(integer);
 
     return std::nullopt;
