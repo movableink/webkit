@@ -831,7 +831,6 @@ platform/graphics/ComplexTextController.cpp
 platform/graphics/DisplayRefreshMonitorManager.h
 platform/graphics/FontCache.cpp
 platform/graphics/FontRanges.cpp
-platform/graphics/GradientImage.cpp
 platform/graphics/GraphicsLayer.cpp
 platform/graphics/GraphicsLayer.h
 platform/graphics/ImageAdapter.cpp
@@ -859,11 +858,9 @@ platform/graphics/ca/TileGrid.cpp
 platform/graphics/ca/cocoa/GraphicsLayerAsyncContentsDisplayDelegateCocoa.mm
 platform/graphics/ca/cocoa/PlatformCAAnimationCocoa.mm
 platform/graphics/ca/cocoa/PlatformCALayerCocoa.mm
-platform/graphics/cg/GraphicsContextGLCG.cpp
 platform/graphics/cocoa/ImageAdapterCocoa.mm
 platform/graphics/cocoa/MediaPlayerCocoa.mm
 platform/graphics/cocoa/SourceBufferParser.cpp
-platform/graphics/cocoa/WebProcessGraphicsContextGLCocoa.mm
 platform/graphics/controls/ApplePayButtonPart.cpp
 platform/graphics/controls/ButtonPart.h
 platform/graphics/controls/ColorWellPart.h

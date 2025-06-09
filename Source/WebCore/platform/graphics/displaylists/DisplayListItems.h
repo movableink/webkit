@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -401,7 +401,7 @@ public:
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    Ref<ImageBuffer> m_imageBuffer;
+    const Ref<ImageBuffer> m_imageBuffer;
     FloatRect m_destinationRect;
 };
 
@@ -486,9 +486,9 @@ public:
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    RefPtr<ImageBuffer> m_sourceImage;
+    const RefPtr<ImageBuffer> m_sourceImage;
     FloatRect m_sourceImageRect;
-    Ref<Filter> m_filter;
+    const Ref<Filter> m_filter;
 };
 
 class DrawGlyphs {
@@ -580,7 +580,7 @@ public:
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    Ref<ImageBuffer> m_imageBuffer;
+    const Ref<ImageBuffer> m_imageBuffer;
     FloatRect m_destinationRect;
     FloatRect m_srcRect;
     ImagePaintingOptions m_options;
@@ -607,7 +607,7 @@ public:
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    Ref<NativeImage> m_image;
+    const Ref<NativeImage> m_image;
     FloatRect m_destinationRect;
     FloatRect m_srcRect;
     ImagePaintingOptions m_options;
@@ -630,7 +630,7 @@ public:
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    Ref<SystemImage> m_systemImage;
+    const Ref<SystemImage> m_systemImage;
     FloatRect m_destinationRect;
 };
 
@@ -660,7 +660,7 @@ public:
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    Ref<NativeImage> m_image;
+    const Ref<NativeImage> m_image;
     FloatRect m_destination;
     FloatRect m_tileRect;
     AffineTransform m_patternTransform;
@@ -695,7 +695,7 @@ public:
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    Ref<ImageBuffer> m_imageBuffer;
+    const Ref<ImageBuffer> m_imageBuffer;
     FloatRect m_destination;
     FloatRect m_tileRect;
     AffineTransform m_patternTransform;
@@ -1000,7 +1000,7 @@ public:
 
 private:
     FloatRect m_rect;
-    Ref<Gradient> m_gradient;
+    const Ref<Gradient> m_gradient;
 };
 
 class FillRectWithGradientAndSpaceTransform {
@@ -1020,7 +1020,7 @@ public:
 
 private:
     FloatRect m_rect;
-    Ref<Gradient> m_gradient;
+    const Ref<Gradient> m_gradient;
     AffineTransform m_gradientSpaceTransform;
     GraphicsContext::RequiresClipToRect m_requiresClipToRect;
 };
@@ -1237,7 +1237,7 @@ public:
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    Ref<ControlPart> m_part;
+    const Ref<ControlPart> m_part;
     FloatRoundedRect m_borderRect;
     float m_deviceScaleFactor;
     ControlStyle m_style;

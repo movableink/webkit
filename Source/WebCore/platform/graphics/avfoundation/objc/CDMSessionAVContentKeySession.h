@@ -94,7 +94,7 @@ protected:
 
     RetainPtr<AVContentKeySession> m_contentKeySession;
     RetainPtr<WebCDMSessionAVContentKeySessionDelegate> m_contentKeySessionDelegate;
-    Ref<WTF::WorkQueue> m_delegateQueue;
+    const Ref<WTF::WorkQueue> m_delegateQueue;
     Semaphore m_hasKeyRequestSemaphore;
     mutable Lock m_keyRequestLock;
     RetainPtr<AVContentKeyRequest> m_keyRequest;

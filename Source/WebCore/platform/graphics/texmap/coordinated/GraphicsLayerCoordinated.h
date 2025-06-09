@@ -192,7 +192,7 @@ private:
     bool updateBackingStoresIfNeeded();
     bool updateBackingStoreIfNeeded();
 
-    Ref<CoordinatedPlatformLayer> m_platformLayer;
+    const Ref<CoordinatedPlatformLayer> m_platformLayer;
     OptionSet<Change> m_pendingChanges;
     bool m_hasDescendantsWithPendingChanges { false };
     bool m_hasDescendantsWithPendingTilesCreation { false };

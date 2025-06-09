@@ -125,7 +125,7 @@ private:
         int32_t m_maxTextureSize;
     };
 
-    Ref<SharedGLData> m_sharedGLData;
+    const Ref<SharedGLData> m_sharedGLData;
     UncheckedKeyHashMap<const void*, GLuint> m_vbos;
     UncheckedKeyHashMap<uint64_t, Vector<Ref<TextureMapperGPUBuffer>>> m_buffers;
 };

@@ -169,7 +169,7 @@ private:
     void loadFinished(PlatformMediaResource&, const NetworkLoadMetrics&) final { loadFinished(); }
 
     WebCoreAVFResourceLoader& m_parent;
-    Ref<GuaranteedSerialFunctionDispatcher> m_targetDispatcher;
+    const Ref<GuaranteedSerialFunctionDispatcher> m_targetDispatcher;
     RefPtr<PlatformMediaResource> m_resource WTF_GUARDED_BY_CAPABILITY(m_targetDispatcher.get());
     SharedBufferBuilder m_buffer WTF_GUARDED_BY_CAPABILITY(m_targetDispatcher.get());
 };
