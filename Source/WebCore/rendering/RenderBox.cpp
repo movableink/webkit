@@ -4336,6 +4336,28 @@ void RenderBox::addVisualEffectOverflow()
         fragmentedFlow->addFragmentsVisualEffectOverflow(*this);
 }
 
+static LayoutBoxExtent shadowOutsetsForWritingMode(const LayoutBoxExtent& shadowExtent, WritingMode writingMode)
+{
+    auto result = shadowExtent;
+    // Box-shadow extent's left and top are negative when extends to left and top, respectively, so negate to convert to outsets.
+    result.left() = -result.left();
+    result.top() = -result.top();
+
+    switch (writingMode.blockDirection()) {
+    case FlowDirection::TopToBottom:
+    case FlowDirection::LeftToRight:
+        break;
+    case FlowDirection::BottomToTop:
+        std::swap(result.top(), result.bottom());
+        break;
+    case FlowDirection::RightToLeft:
+        std::swap(result.left(), result.right());
+        break;
+    }
+
+    return result;
+}
+
 LayoutRect RenderBox::applyVisualEffectOverflow(const LayoutRect& borderBox) const
 {
     LayoutUnit overflowMinX = borderBox.x();
@@ -4345,12 +4367,11 @@ LayoutRect RenderBox::applyVisualEffectOverflow(const LayoutRect& borderBox) con
     
     // Compute box-shadow overflow first.
     if (style().hasBoxShadow()) {
-        auto shadowExtent = style().boxShadowExtent();
+        auto shadowExtent = shadowOutsetsForWritingMode(style().boxShadowExtent(), writingMode());
 
-        // Note that box-shadow extent's left and top are negative when extends to left and top, respectively.
-        overflowMinX = borderBox.x() + shadowExtent.left();
+        overflowMinX = borderBox.x() - shadowExtent.left();
         overflowMaxX = borderBox.maxX() + shadowExtent.right();
-        overflowMinY = borderBox.y() + shadowExtent.top();
+        overflowMinY = borderBox.y() - shadowExtent.top();
         overflowMaxY = borderBox.maxY() + shadowExtent.bottom();
     }
 
@@ -4677,9 +4698,7 @@ LayoutRect RenderBox::flippedClientBoxRect() const
     // quite physical), we need to flip the block progression coordinate in vertical-rl and
     // horizontal-bt writing modes. Apart from that, this method does the same as clientBoxRect().
 
-    auto borderWidths = this->borderWidths();
-    // Calculate physical padding box.
-    LayoutRect rect(borderWidths.left(), borderWidths.top(), width() - borderWidths.left() - borderWidths.right(), height() - borderWidths.top() - borderWidths.bottom());
+    auto rect = paddingBoxRectIncludingScrollbar();
     // Flip block progression axis if writing mode is vertical-rl or horizontal-bt.
     flipForWritingMode(rect);
     if (hasNonVisibleOverflow()) {
