@@ -1572,21 +1572,13 @@ void QtConnectionObject::qt_static_metacall(QObject *_o, QMetaObject::Call _c, i
     }
 }
 
-//const QMetaObject QtConnectionObject::staticMetaObject = {
-//    { &QObject::staticMetaObject, qt_meta_stringdata_QtConnectionObject.data,
-//      qt_meta_data_QtConnectionObject, qt_static_metacall, 0, 0 }
-//};
-
 const QMetaObject QtConnectionObject::staticMetaObject = { {
     QMetaObject::SuperData::link<QObject::staticMetaObject>(),
     qt_meta_stringdata_QtConnectionObject.offsetsAndSize,
     qt_meta_data_QtConnectionObject,
     qt_static_metacall,
     nullptr,
-qt_incomplete_metaTypeArray<qt_meta_stringdata_QtConnectionObject_t
-, QtPrivate::TypeAndForceComplete<QtConnectionObject, std::true_type>
-, QtPrivate::TypeAndForceComplete<void, std::false_type>
->,
+    nullptr,
     nullptr
 } };
 
