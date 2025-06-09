@@ -44,7 +44,6 @@ Modules/screen-wake-lock/WakeLock.cpp
 Modules/screen-wake-lock/WakeLockManager.cpp
 Modules/speech/SpeechRecognitionCaptureSource.cpp
 Modules/storage/StorageManager.cpp
-Modules/webaudio/AudioWorkletMessagingProxy.cpp
 Modules/webaudio/BiquadFilterNode.cpp
 Modules/webaudio/DefaultAudioDestinationNode.cpp
 Modules/webaudio/IIRFilterNode.cpp

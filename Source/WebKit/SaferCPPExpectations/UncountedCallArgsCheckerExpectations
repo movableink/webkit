@@ -90,7 +90,6 @@ UIProcess/ProvisionalPageProxy.cpp
 UIProcess/RemoteLayerTree/RemoteLayerTreeHost.mm
 UIProcess/RemoteLayerTree/RemoteLayerTreeScrollingPerformanceData.mm
 UIProcess/RemoteLayerTree/mac/RemoteScrollingCoordinatorProxyMac.mm
-UIProcess/WebAuthentication/Cocoa/LocalAuthenticator.mm
 UIProcess/WebPageProxy.cpp
 UIProcess/mac/ViewGestureControllerMac.mm
 UIProcess/mac/WebViewImpl.mm

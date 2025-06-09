@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -81,7 +81,7 @@ private:
 
     Type credentialType() const final { return Type::PublicKey; }
 
-    Ref<AuthenticatorResponse> m_response;
+    const Ref<AuthenticatorResponse> m_response;
 };
 
 } // namespace WebCore

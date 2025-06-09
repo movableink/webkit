@@ -86,8 +86,8 @@ private:
     bool virtualHasPendingActivity() const final;
 
     String m_name;
-    Ref<AudioParamMap> m_parameters;
-    Ref<MessagePort> m_port;
+    const Ref<AudioParamMap> m_parameters;
+    const Ref<MessagePort> m_port;
     Lock m_processLock;
     RefPtr<AudioWorkletProcessor> m_processor; // Should only be used on the rendering thread.
     MemoryCompactLookupOnlyRobinHoodHashMap<String, std::unique_ptr<AudioFloatArray>> m_paramValuesMap;

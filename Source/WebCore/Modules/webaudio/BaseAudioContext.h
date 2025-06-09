@@ -292,7 +292,7 @@ private:
     void disableOutputsForFinishedTailProcessingNodes();
 
 #if !RELEASE_LOG_DISABLED
-    Ref<Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
     uint64_t m_nextAudioNodeIdentifier { 0 };
     uint64_t m_nextAudioParameterIdentifier { 0 };
@@ -300,7 +300,7 @@ private:
 
     uint64_t m_contextID;
 
-    Ref<AudioWorklet> m_worklet;
+    const Ref<AudioWorklet> m_worklet;
 
     // Either accessed when the graph lock is held, or on the main thread when the audio thread has finished.
     Vector<AudioConnectionRefPtr<AudioNode>> m_referencedSourceNodes;
@@ -357,7 +357,7 @@ private:
     Vector<AudioNode*> m_deferredBreakConnectionList;
     Vector<Vector<DOMPromiseDeferred<void>>> m_stateReactions;
 
-    Ref<AudioListener> m_listener;
+    const Ref<AudioListener> m_listener;
 
     std::atomic<Thread*> m_audioThread;
 

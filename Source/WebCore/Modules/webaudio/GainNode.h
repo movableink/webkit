@@ -59,7 +59,7 @@ private:
     explicit GainNode(BaseAudioContext&);
 
     AudioFloatArray m_sampleAccurateGainValues;
-    Ref<AudioParam> m_gain;
+    const Ref<AudioParam> m_gain;
 };
 
 } // namespace WebCore
