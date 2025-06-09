@@ -452,9 +452,9 @@ void NetworkDataTaskBlob::download()
         return;
     }
 
-    auto& downloadManager = m_networkProcess->downloadManager();
-    Ref download = Download::create(downloadManager, *m_pendingDownloadID, *this, *m_session, suggestedFilename());
-    downloadManager.dataTaskBecameDownloadTask(*m_pendingDownloadID, download.copyRef());
+    CheckedRef downloadManager = m_networkProcess->downloadManager();
+    Ref download = Download::create(downloadManager, *m_pendingDownloadID, *this, *checkedNetworkSession(), suggestedFilename());
+    downloadManager->dataTaskBecameDownloadTask(*m_pendingDownloadID, download.copyRef());
     download->didCreateDestination(m_pendingDownloadLocation);
 
     ASSERT(!m_client);
@@ -473,7 +473,7 @@ bool NetworkDataTaskBlob::writeDownload(std::span<const uint8_t> data)
     }
 
     m_downloadBytesWritten += *bytesWritten;
-    RefPtr download = m_networkProcess->downloadManager().download(*m_pendingDownloadID);
+    RefPtr download = m_networkProcess->checkedDownloadManager()->download(*m_pendingDownloadID);
     ASSERT(download);
     download->didReceiveData(*bytesWritten, m_downloadBytesWritten, m_totalSize);
     return true;
@@ -498,7 +498,7 @@ void NetworkDataTaskBlob::didFailDownload(const ResourceError& error)
     if (RefPtr client = m_client.get())
         client->didCompleteWithError(error);
     else {
-        RefPtr download = m_networkProcess->downloadManager().download(*m_pendingDownloadID);
+        RefPtr download = m_networkProcess->checkedDownloadManager()->download(*m_pendingDownloadID);
         ASSERT(download);
         download->didFail(error, { });
     }
@@ -517,7 +517,7 @@ void NetworkDataTaskBlob::didFinishDownload()
 #endif
 
     clearStream();
-    RefPtr download = m_networkProcess->downloadManager().download(*m_pendingDownloadID);
+    RefPtr download = m_networkProcess->checkedDownloadManager()->download(*m_pendingDownloadID);
     ASSERT(download);
 
 #if HAVE(MODERN_DOWNLOADPROGRESS)

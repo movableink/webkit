@@ -36,6 +36,7 @@
 #include <WebCore/StoredCredentialsPolicy.h>
 #include <pal/SessionID.h>
 #include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/text/WTFString.h>
@@ -150,6 +151,7 @@ public:
 
     const NetworkSession* networkSession() const;
     NetworkSession* networkSession();
+    CheckedPtr<NetworkSession> checkedNetworkSession();
 
     virtual void setTimingAllowFailedFlag() { }
 

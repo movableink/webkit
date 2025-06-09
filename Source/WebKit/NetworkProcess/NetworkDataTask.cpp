@@ -105,7 +105,7 @@ NetworkDataTask::NetworkDataTask(NetworkSession& session, NetworkDataTaskClient&
         return;
     }
 
-    m_session->registerNetworkDataTask(*this);
+    checkedNetworkSession()->registerNetworkDataTask(*this);
 }
 
 NetworkDataTask::~NetworkDataTask()
@@ -113,8 +113,8 @@ NetworkDataTask::~NetworkDataTask()
     ASSERT(RunLoop::isMain());
     ASSERT(!m_client);
 
-    if (m_session)
-        m_session->unregisterNetworkDataTask(*this);
+    if (CheckedPtr session = m_session.get())
+        session->unregisterNetworkDataTask(*this);
 }
 
 void NetworkDataTask::scheduleFailure(FailureType type)
@@ -223,15 +223,23 @@ NetworkSession* NetworkDataTask::networkSession()
     return m_session.get();
 }
 
+CheckedPtr<NetworkSession> NetworkDataTask::checkedNetworkSession()
+{
+    ASSERT(m_session);
+    return m_session.get();
+}
+
 void NetworkDataTask::restrictRequestReferrerToOriginIfNeeded(WebCore::ResourceRequest& request)
 {
-    if ((m_session->sessionID().isEphemeral() || m_session->isTrackingPreventionEnabled()) && m_session->shouldDowngradeReferrer() && request.isThirdParty())
+    CheckedPtr session = m_session.get();
+
+    if ((session->sessionID().isEphemeral() || session->isTrackingPreventionEnabled()) && session->shouldDowngradeReferrer() && request.isThirdParty())
         request.setExistingHTTPReferrerToOriginString();
 }
 
 String NetworkDataTask::attributedBundleIdentifier(WebPageProxyIdentifier pageID)
 {
-    if (auto* session = networkSession())
+    if (CheckedPtr session = m_session.get())
         return session->attributedBundleIdentifierFromPageIdentifier(pageID);
     return { };
 }
