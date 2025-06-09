@@ -7909,3 +7909,5 @@ webkit.org/b/294215 imported/blink/accessibility/link-inside-label.html [ Failur
 webkit.org/b/294222 [ Debug ] compositing/cocoa/clip-sticky-element-with-overflow-clip-on-root.html [ Crash ]
 
 webkit.org/b/294225 [ Debug ] fast/page-color-sampling/basic-fixed-container-edge-sampling.html [ Crash ]
+
+webkit.org/b/294229 http/tests/site-isolation/page-scale.html [ Pass ImageOnlyFailure ]
