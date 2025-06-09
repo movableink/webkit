@@ -243,27 +243,7 @@ endif ()
 
 # FIXME: Move Qt handling here
 set(REQUIRED_QT_VERSION 6.0.0)
-
-## Qt 6 : Qt's cmake file don't seem to locate OpenGL on my system
-find_package(OpenGL)
-add_library(OpenGL::GL INTERFACE IMPORTED)
-set_target_properties(OpenGL::GL PROPERTIES
-  IMPORTED_LOCATION "${OPENGL_LIBRARIES}")
-
 find_package(Qt6 ${REQUIRED_QT_VERSION} REQUIRED COMPONENTS Core Gui)
-message("OPENGL_FOUND: ${OPENGL_FOUND}")
-message("OPENGL_GLU_FOUND: ${OPENGL_GLU_FOUND}")
-message("OpenGL_OpenGL_FOUND: ${OpenGL_OpenGL_FOUND}")
-message("OpenGL_GLX_FOUND: ${OpenGL_GLX_FOUND}")
-message("OPENGL_XMESA_FOUND: ${OPENGL_XMESA_FOUND}")
-message("OpenGL_EGL_FOUND: ${OpenGL_EGL_FOUND}")
-message("OPENGL_opengl_LIBRARY: ${OPENGL_opengl_LIBRARY}")
-message("OPENGL_gl_LIBRARY: ${OPENGL_gl_LIBRARY}")
-message("OPENGL_glx_LIBRARY: ${OPENGL_glx_LIBRARY}")
-message("OPENGL_INCLUDE_DIR: ${OPENGL_INCLUDE_DIR}")
-message("OPENGL_LIBRARIES: ${OPENGL_LIBRARIES}")
-include(CMakePrintHelpers)
-cmake_print_properties(TARGETS OpenGL::GL PROPERTIES IMPORTED_LOCATION)
 
 get_target_property(QT_CORE_TYPE Qt6::Core TYPE)
 if (QT_CORE_TYPE MATCHES STATIC)
