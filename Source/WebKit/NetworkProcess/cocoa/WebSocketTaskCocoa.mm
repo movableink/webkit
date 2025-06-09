@@ -60,7 +60,7 @@ WebSocketTask::WebSocketTask(NetworkSocketChannel& channel, WebPageProxyIdentifi
         m_topOrigin = clientOrigin.topOrigin;
 
     bool shouldBlockCookies = storedCredentialsPolicy == WebCore::StoredCredentialsPolicy::EphemeralStateless;
-    if (auto* networkStorageSession = networkSession() ? networkSession()->networkStorageSession() : nullptr) {
+    if (CheckedPtr networkStorageSession = networkSession() ? networkSession()->networkStorageSession() : nullptr) {
         if (!shouldBlockCookies)
             shouldBlockCookies = networkStorageSession->shouldBlockCookies(request, frameID, pageID, shouldRelaxThirdPartyCookieBlocking());
     }

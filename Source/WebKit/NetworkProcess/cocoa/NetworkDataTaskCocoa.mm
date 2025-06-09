@@ -206,7 +206,7 @@ NetworkDataTaskCocoa::NetworkDataTaskCocoa(NetworkSession& session, NetworkDataT
         request.removeCredentials();
         url = request.url();
     
-        if (auto* storageSession = m_session->networkStorageSession()) {
+        if (CheckedPtr storageSession = m_session->networkStorageSession()) {
             if (m_user.isEmpty() && m_password.isEmpty())
                 m_initialCredential = storageSession->credentialStorage().get(m_partition, url);
             else
@@ -487,7 +487,7 @@ void NetworkDataTaskCocoa::willPerformHTTPRedirection(WebCore::ResourceResponse&
         request.setFirstPartyForCookies(request.url());
     else {
         WebCore::RegistrableDomain firstPartyDomain { request.firstPartyForCookies() };
-        if (auto* storageSession = m_session->networkStorageSession()) {
+        if (CheckedPtr storageSession = m_session->networkStorageSession()) {
             bool didPreviousRequestHaveStorageAccess = storageSession->hasStorageAccess(WebCore::RegistrableDomain { redirectResponse.url() }, firstPartyDomain, m_frameID, m_pageID);
             bool doesRequestHaveStorageAccess = storageSession->hasStorageAccess(WebCore::RegistrableDomain { request.url() }, firstPartyDomain, m_frameID, m_pageID);
             if (didPreviousRequestHaveStorageAccess && doesRequestHaveStorageAccess)
@@ -552,12 +552,12 @@ bool NetworkDataTaskCocoa::tryPasswordBasedAuthentication(const WebCore::Authent
         }
 
         if (!challenge.previousFailureCount()) {
-            auto credential = m_session->networkStorageSession() ? m_session->networkStorageSession()->credentialStorage().get(m_partition, challenge.protectionSpace()) : WebCore::Credential();
+            auto credential = m_session->networkStorageSession() ? m_session->checkedNetworkStorageSession()->credentialStorage().get(m_partition, challenge.protectionSpace()) : WebCore::Credential();
             if (!credential.isEmpty() && credential != m_initialCredential) {
                 ASSERT(credential.persistence() == WebCore::CredentialPersistence::None);
                 if (challenge.failureResponse().httpStatusCode() == httpStatus401Unauthorized) {
                     // Store the credential back, possibly adding it as a default for this directory.
-                    if (auto* storageSession = m_session->networkStorageSession())
+                    if (CheckedPtr storageSession = m_session->networkStorageSession())
                         storageSession->credentialStorage().set(m_partition, credential, challenge.protectionSpace(), challenge.failureResponse().url());
                 }
                 completionHandler(AuthenticationChallengeDisposition::UseCredential, credential);

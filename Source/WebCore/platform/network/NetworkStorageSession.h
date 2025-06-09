@@ -239,7 +239,7 @@ public:
     WEBCORE_EXPORT void setTrackingPreventionEnabled(bool);
     WEBCORE_EXPORT bool trackingPreventionEnabled() const;
     WEBCORE_EXPORT void setTrackingPreventionDebugLoggingEnabled(bool);
-    WEBCORE_EXPORT bool trackingPreventionDebugLoggingEnabled() const;
+    bool trackingPreventionDebugLoggingEnabled() const { return m_isTrackingPreventionDebugLoggingEnabled; }
     WEBCORE_EXPORT ThirdPartyCookieBlockingDecision thirdPartyCookieBlockingDecisionForRequest(const ResourceRequest&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ShouldRelaxThirdPartyCookieBlocking) const;
     ThirdPartyCookieBlockingDecision thirdPartyCookieBlockingDecisionForRequest(const URL& firstPartyForCookies, const URL& resource, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ShouldRelaxThirdPartyCookieBlocking) const;
     WEBCORE_EXPORT bool shouldBlockCookies(const ResourceRequest&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ShouldRelaxThirdPartyCookieBlocking) const;

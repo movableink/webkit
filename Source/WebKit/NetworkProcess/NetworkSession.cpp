@@ -110,6 +110,11 @@ NetworkStorageSession* NetworkSession::networkStorageSession() const
     return storageSession;
 }
 
+CheckedPtr<NetworkStorageSession> NetworkSession::checkedNetworkStorageSession() const
+{
+    return networkStorageSession();
+}
+
 static Ref<PCM::ManagerInterface> managerOrProxy(NetworkSession& networkSession, NetworkProcess& networkProcess, const NetworkSessionCreationParameters& parameters)
 {
     if (!parameters.pcmMachServiceName.isEmpty() && !networkSession.sessionID().isEphemeral())

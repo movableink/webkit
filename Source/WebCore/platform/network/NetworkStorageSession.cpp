@@ -96,11 +96,6 @@ void NetworkStorageSession::setTrackingPreventionDebugLoggingEnabled(bool enable
     m_isTrackingPreventionDebugLoggingEnabled = enabled;
 }
 
-bool NetworkStorageSession::trackingPreventionDebugLoggingEnabled() const
-{
-    return m_isTrackingPreventionDebugLoggingEnabled;
-}
-
 bool NetworkStorageSession::shouldBlockThirdPartyCookies(const RegistrableDomain& registrableDomain) const
 {
     if (!m_isTrackingPreventionEnabled || registrableDomain.isEmpty())

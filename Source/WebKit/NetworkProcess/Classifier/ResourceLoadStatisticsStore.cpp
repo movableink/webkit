@@ -605,7 +605,7 @@ void ResourceLoadStatisticsStore::updateClientSideCookiesAgeCap()
 
     RunLoop::protectedMain()->dispatch([store = Ref { m_store.get() }, seconds = capTime] () {
         if (auto* networkSession = store->networkSession()) {
-            if (auto* storageSession = networkSession->networkStorageSession())
+            if (CheckedPtr storageSession = networkSession->networkStorageSession())
                 storageSession->setAgeCapForClientSideCookies(seconds);
         }
     });
@@ -1795,7 +1795,7 @@ void ResourceLoadStatisticsStore::grantStorageAccess(SubFrameDomain&& subFrameDo
         CanRequestStorageAccessWithoutUserInteraction canRequestStorageAccessWithoutUserInteraction { CanRequestStorageAccessWithoutUserInteraction::No };
 
         if (auto* networkSession = store->networkSession()) {
-            if (auto* storageSession = networkSession->networkStorageSession()) {
+            if (CheckedPtr storageSession = networkSession->networkStorageSession()) {
                 additionalDomainGrants = storageSession->storageAccessQuirkForDomainPair(subFrameDomain, topFrameDomain);
                 canRequestStorageAccessWithoutUserInteraction = storageSession->canRequestStorageAccessForLoginOrCompatibilityPurposesWithoutPriorUserInteraction(subFrameDomain, topFrameDomain) ? CanRequestStorageAccessWithoutUserInteraction::Yes : CanRequestStorageAccessWithoutUserInteraction::No;
             }

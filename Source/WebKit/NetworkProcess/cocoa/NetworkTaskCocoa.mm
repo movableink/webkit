@@ -301,7 +301,7 @@ void NetworkTaskCocoa::unblockCookies()
     if (!m_hasBeenSetToUseStatelessCookieStorage)
         return;
 
-    if (auto* storageSession = m_networkSession->networkStorageSession()) {
+    if (CheckedPtr storageSession = m_networkSession->networkStorageSession()) {
         [task() _setExplicitCookieStorage:[storageSession->nsCookieStorage() _cookieStorage]];
         m_hasBeenSetToUseStatelessCookieStorage = false;
     }

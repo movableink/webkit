@@ -13,8 +13,6 @@ NetworkProcess/ServiceWorker/WebSWServerToContextConnection.cpp
 NetworkProcess/SharedWorker/WebSharedWorkerServerConnection.cpp
 NetworkProcess/cocoa/NetworkDataTaskCocoa.mm
 NetworkProcess/cocoa/NetworkSessionCocoa.mm
-NetworkProcess/cocoa/NetworkTaskCocoa.mm
-NetworkProcess/cocoa/WebSocketTaskCocoa.mm
 NetworkProcess/storage/NetworkStorageManager.cpp
 Platform/IPC/ArgumentCoders.h
 Shared/RemoteLayerTree/RemoteLayerBackingStoreCollection.mm

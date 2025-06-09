@@ -125,6 +125,7 @@ public:
     NetworkProcess& networkProcess() { return m_networkProcess; }
     Ref<NetworkProcess> protectedNetworkProcess();
     WebCore::NetworkStorageSession* networkStorageSession() const;
+    CheckedPtr<WebCore::NetworkStorageSession> checkedNetworkStorageSession() const;
 
     void registerNetworkDataTask(NetworkDataTask&);
     void unregisterNetworkDataTask(NetworkDataTask&);
@@ -187,7 +188,6 @@ public:
 
     NetworkCache::Cache* cache() { return m_cache.get(); }
 
-    PrefetchCache& prefetchCache() { return m_prefetchCache; }
     CheckedRef<PrefetchCache> checkedPrefetchCache();
     void clearPrefetchCache() { m_prefetchCache.clear(); }
 
