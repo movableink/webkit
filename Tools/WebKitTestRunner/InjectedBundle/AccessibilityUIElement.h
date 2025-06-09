@@ -367,6 +367,7 @@ public:
     JSRetainPtr<JSStringRef> stringForTextMarkerRange(AccessibilityTextMarkerRange*);
     JSRetainPtr<JSStringRef> rectsForTextMarkerRange(AccessibilityTextMarkerRange*, JSStringRef);
     JSRetainPtr<JSStringRef> attributedStringForTextMarkerRange(AccessibilityTextMarkerRange*);
+    JSRetainPtr<JSStringRef> attributedStringForTextMarkerRangeWithDidSpellCheck(AccessibilityTextMarkerRange*);
     JSRetainPtr<JSStringRef> attributedStringForTextMarkerRangeWithOptions(AccessibilityTextMarkerRange*, bool);
     int textMarkerRangeLength(AccessibilityTextMarkerRange*);
     bool attributedStringForTextMarkerRangeContainsAttribute(JSStringRef, AccessibilityTextMarkerRange*);

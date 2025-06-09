@@ -889,7 +889,7 @@ public:
     // Don't allow more than a certain frame depth to avoid stack exhaustion.
     static constexpr int maxFrameDepth = 32;
 
-    void setEditable(bool isEditable) { m_isEditable = isEditable; }
+    WEBCORE_EXPORT void setEditable(bool);
     bool isEditable() const { return m_isEditable; }
 
     WEBCORE_EXPORT VisibilityState visibilityState() const;

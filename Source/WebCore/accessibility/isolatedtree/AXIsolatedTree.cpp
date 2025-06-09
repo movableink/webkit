@@ -692,6 +692,9 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
         case AXProperty::IsColumnHeader:
             properties.append({ AXProperty::IsColumnHeader, axObject.isColumnHeader() });
             break;
+        case AXProperty::IsEditableWebArea:
+            properties.append({ AXProperty::IsEditableWebArea, axObject.isEditableWebArea() });
+            break;
         case AXProperty::IsEnabled:
             properties.append({ AXProperty::IsEnabled, axObject.isEnabled() });
             break;
@@ -1842,6 +1845,9 @@ IsolatedObjectData createIsolatedObjectData(const Ref<AccessibilityObject>& axOb
             setProperty(AXProperty::RelativeFrame, IntRect());
         } else
             setProperty(AXProperty::InitialFrameRect, object.frameRect());
+
+        if (isWebArea)
+            setProperty(AXProperty::IsEditableWebArea, object.isEditableWebArea());
 
         if (object.supportsPath()) {
             setProperty(AXProperty::SupportsPath, true);

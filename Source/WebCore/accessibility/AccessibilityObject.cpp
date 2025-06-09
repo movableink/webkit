@@ -383,6 +383,19 @@ bool AccessibilityObject::isARIATextControl() const
     return ariaRoleAttribute() == AccessibilityRole::TextArea || ariaRoleAttribute() == AccessibilityRole::TextField || ariaRoleAttribute() == AccessibilityRole::SearchField;
 }
 
+bool AccessibilityObject::isEditableWebArea() const
+{
+    if (!isWebArea())
+        return false;
+
+    auto* page = this->page();
+    if (page && page->isEditable())
+        return true;
+
+    auto* document = this->document();
+    return document && document->inDesignMode();
+}
+
 bool AccessibilityObject::isNonNativeTextControl() const
 {
     return (isARIATextControl() || hasContentEditableAttributeSet()) && !isNativeTextControl();

@@ -199,6 +199,7 @@ protected:
     macro(InertOrVisibilityChanged) \
     macro(InputTypeChanged) \
     macro(IsAtomicChanged) \
+    macro(IsEditableWebAreaChanged) \
     macro(KeyShortcutsChanged) \
     macro(LabelChanged) \
     macro(LanguageChanged) \
@@ -417,6 +418,7 @@ public:
     void autofillTypeChanged(HTMLInputElement&);
     void handleRoleChanged(AccessibilityObject&, AccessibilityRole previousRole);
     void handleReferenceTargetChanged();
+    void handlePageEditibilityChanged(Document&);
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     void columnIndexChanged(AccessibilityObject&);

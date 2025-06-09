@@ -2830,6 +2830,17 @@ void Page::setMemoryCacheClientCallsEnabled(bool enabled)
     m_hasPendingMemoryCacheLoadNotifications = false;
 }
 
+void Page::setEditable(bool isEditable)
+{
+    m_isEditable = isEditable;
+
+    if (CheckedPtr cache = axObjectCache()) {
+        forEachDocument([&] (Document& document) {
+            cache->handlePageEditibilityChanged(document);
+        });
+    }
+}
+
 void Page::hiddenPageDOMTimerThrottlingStateChanged()
 {
     // Disable & reengage to ensure state is updated.

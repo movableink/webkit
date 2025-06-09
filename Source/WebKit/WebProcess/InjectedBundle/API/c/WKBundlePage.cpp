@@ -278,6 +278,13 @@ void WKAccessibilitySetForceInitialFrameCaching(bool shouldForce)
     WebCore::AXObjectCache::setForceInitialFrameCaching(shouldForce);
 }
 
+void WKBundlePageSetEditable(WKBundlePageRef pageRef, bool isEditable)
+{
+    WebKit::WebPage* webPage = WebKit::toImpl(pageRef);
+    if (WebCore::Page* page = webPage ? webPage->corePage() : nullptr)
+        page->setEditable(isEditable);
+}
+
 void WKBundlePageSetDefersLoading(WKBundlePageRef, bool)
 {
 }

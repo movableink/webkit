@@ -149,6 +149,7 @@ enum class AXProperty : uint16_t {
     HasPlainText,
     HasRemoteFrameChild,
     InputType,
+    IsEditableWebArea,
     IsSubscript,
     IsSuperscript,
     HasTextShadow,

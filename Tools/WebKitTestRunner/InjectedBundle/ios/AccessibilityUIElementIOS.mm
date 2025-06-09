@@ -1391,6 +1391,11 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::attributedStringForTextMarkerRa
     return nullptr;
 }
 
+JSRetainPtr<JSStringRef> AccessibilityUIElement::attributedStringForTextMarkerRangeWithDidSpellCheck(AccessibilityTextMarkerRange* markerRange)
+{
+    return nullptr;
+}
+
 JSRetainPtr<JSStringRef> AccessibilityUIElement::attributedStringForTextMarkerRangeWithOptions(AccessibilityTextMarkerRange* markerRange, bool)
 {
     return nullptr;

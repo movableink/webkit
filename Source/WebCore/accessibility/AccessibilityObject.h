@@ -185,6 +185,7 @@ public:
     bool isMockObject() const override { return false; }
     virtual bool isMediaObject() const { return false; }
     bool isARIATextControl() const;
+    bool isEditableWebArea() const final;
     bool isNonNativeTextControl() const final;
     bool isRangeControl() const;
     bool isStyleFormatGroup() const;

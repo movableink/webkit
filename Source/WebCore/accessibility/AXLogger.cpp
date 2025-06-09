@@ -807,6 +807,9 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::HasRemoteFrameChild:
         stream << "HasRemoteFrameChild";
         break;
+    case AXProperty::IsEditableWebArea:
+        stream << "IsEditableWebArea";
+        break;
     case AXProperty::IsSubscript:
         stream << "IsSubscript";
         break;

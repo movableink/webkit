@@ -2903,6 +2903,15 @@ void AXObjectCache::handleReferenceTargetChanged()
     relationsNeedUpdate(true);
 }
 
+void AXObjectCache::handlePageEditibilityChanged(Document& document)
+{
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    postNotification(&document, AXNotification::IsEditableWebAreaChanged);
+#else
+    UNUSED_PARAM(document);
+#endif
+}
+
 bool AXObjectCache::shouldProcessAttributeChange(Element* element, const QualifiedName& attrName)
 {
     if (!element)
@@ -4972,6 +4981,9 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<Ref<AccessibilityO
             break;
         case AXNotification::InputTypeChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::InputType });
+            break;
+        case AXNotification::IsEditableWebAreaChanged:
+            tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::IsEditableWebArea });
             break;
         case AXNotification::LevelChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::ARIALevel });

@@ -925,6 +925,7 @@ public:
     bool isSwitch() const { return role() == AccessibilityRole::Switch; }
     bool isToggleButton() const { return role() == AccessibilityRole::ToggleButton; }
     bool isTextControl() const;
+    virtual bool isEditableWebArea() const = 0;
     virtual bool isNonNativeTextControl() const = 0;
     bool isTabList() const { return role() == AccessibilityRole::TabList; }
     bool isTabItem() const { return role() == AccessibilityRole::Tab; }
@@ -1784,7 +1785,7 @@ template<typename T>
 T* editableAncestor(const T& startObject)
 {
     return findAncestor<T>(startObject, false, [] (const auto& ancestor) {
-        return ancestor.isTextControl();
+        return ancestor.isTextControl() || ancestor.isEditableWebArea();
     });
 }
 

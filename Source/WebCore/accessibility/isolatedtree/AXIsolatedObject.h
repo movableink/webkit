@@ -81,6 +81,7 @@ public:
 #endif // ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
     AXIsolatedObject* clickableSelfOrAncestor(ClickHandlerFilter filter = ClickHandlerFilter::ExcludeBody) const final { return Accessibility::clickableSelfOrAncestor(*this, filter); };
     AXIsolatedObject* editableAncestor() const final { return Accessibility::editableAncestor(*this); };
+    bool isEditableWebArea() const final { return boolAttributeValue(AXProperty::IsEditableWebArea); }
     bool canSetFocusAttribute() const final { return boolAttributeValue(AXProperty::CanSetFocusAttribute); }
     AttributedStringStyle stylesForAttributedString() const final;
     Color textColor() const final { return colorAttributeValue(AXProperty::TextColor); }

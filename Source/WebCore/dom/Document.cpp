@@ -7721,6 +7721,8 @@ void Document::setDesignMode(const String& value)
     DesignMode mode = equalLettersIgnoringASCIICase(value, "on"_s) ? DesignMode::On : DesignMode::Off;
     m_designMode = mode;
     scheduleFullStyleRebuild();
+    if (CheckedPtr cache = existingAXObjectCache())
+        cache->handlePageEditibilityChanged(*this);
 }
 
 Document* Document::parentDocument() const

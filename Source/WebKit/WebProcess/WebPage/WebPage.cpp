@@ -1840,8 +1840,8 @@ void WebPage::executeEditingCommand(const String& commandName, const String& arg
 
 void WebPage::setEditable(bool editable)
 {
-    m_page->setEditable(editable);
-    m_page->setTabKeyCyclesThroughElements(!editable);
+    protectedCorePage()->setEditable(editable);
+    protectedCorePage()->setTabKeyCyclesThroughElements(!editable);
     RefPtr frame = protectedCorePage()->checkedFocusController()->focusedOrMainFrame();
     if (!frame)
         return;
