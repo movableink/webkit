@@ -4336,26 +4336,19 @@ void RenderBox::addVisualEffectOverflow()
         fragmentedFlow->addFragmentsVisualEffectOverflow(*this);
 }
 
-static LayoutBoxExtent shadowOutsetsForWritingMode(const LayoutBoxExtent& shadowExtent, WritingMode writingMode)
+static void convertOutsetsToOverflowCoordinates(LayoutBoxExtent& outsets, WritingMode writingMode)
 {
-    auto result = shadowExtent;
-    // Box-shadow extent's left and top are negative when extends to left and top, respectively, so negate to convert to outsets.
-    result.left() = -result.left();
-    result.top() = -result.top();
-
     switch (writingMode.blockDirection()) {
     case FlowDirection::TopToBottom:
     case FlowDirection::LeftToRight:
         break;
     case FlowDirection::BottomToTop:
-        std::swap(result.top(), result.bottom());
+        std::swap(outsets.top(), outsets.bottom());
         break;
     case FlowDirection::RightToLeft:
-        std::swap(result.left(), result.right());
+        std::swap(outsets.left(), outsets.right());
         break;
     }
-
-    return result;
 }
 
 LayoutRect RenderBox::applyVisualEffectOverflow(const LayoutRect& borderBox) const
@@ -4367,17 +4360,22 @@ LayoutRect RenderBox::applyVisualEffectOverflow(const LayoutRect& borderBox) con
     
     // Compute box-shadow overflow first.
     if (style().hasBoxShadow()) {
-        auto shadowExtent = shadowOutsetsForWritingMode(style().boxShadowExtent(), writingMode());
+        auto shadowOutsets = style().boxShadowExtent();
+        // Box-shadow extent's left and top are negative when extends to left and top, respectively, so negate to convert to outsets.
+        shadowOutsets.left() = -shadowOutsets.left();
+        shadowOutsets.top() = -shadowOutsets.top();
+        convertOutsetsToOverflowCoordinates(shadowOutsets, writingMode());
 
-        overflowMinX = borderBox.x() - shadowExtent.left();
-        overflowMaxX = borderBox.maxX() + shadowExtent.right();
-        overflowMinY = borderBox.y() - shadowExtent.top();
-        overflowMaxY = borderBox.maxY() + shadowExtent.bottom();
+        overflowMinX = borderBox.x() - shadowOutsets.left();
+        overflowMaxX = borderBox.maxX() + shadowOutsets.right();
+        overflowMinY = borderBox.y() - shadowOutsets.top();
+        overflowMaxY = borderBox.maxY() + shadowOutsets.bottom();
     }
 
     // Now compute border-image-outset overflow.
     if (style().hasBorderImageOutsets()) {
         auto borderOutsets = style().borderImageOutsets();
+        convertOutsetsToOverflowCoordinates(borderOutsets, writingMode());
 
         overflowMinX = std::min(overflowMinX, borderBox.x() - borderOutsets.left());
         overflowMaxX = std::max(overflowMaxX, borderBox.maxX() + borderOutsets.right());
