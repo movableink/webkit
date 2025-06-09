@@ -443,7 +443,7 @@ void ResourceLoader::willSendRequestInternal(ResourceRequest&& request, const Re
             auto results = page->protectedUserContentProvider()->processContentRuleListsForLoad(*page, request.url(), m_resourceType, *documentLoader, redirectResponse.url());
             bool blockedLoad = results.summary.blockedLoad;
             ContentExtensions::applyResultsToRequest(WTFMove(results), page.get(), request);
-            if (blockedLoad) {
+            if (blockedLoad && !results.summary.redirectedPriorToBlock) {
                 RESOURCELOADER_RELEASE_LOG("willSendRequestInternal: resource load canceled because of content blocker");
                 didFail(blockedByContentBlockerError());
                 completionHandler({ });

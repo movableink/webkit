@@ -6059,6 +6059,7 @@ header: <WebCore/RTCDataChannelHandler.h>
     bool madeHTTPS;
     bool blockedCookies;
     bool hasNotifications;
+    bool redirectedPriorToBlock;
     [NotSerialized] Vector<WebCore::ContentExtensions::ModifyHeadersAction> modifyHeadersActions;
     [NotSerialized] Vector<std::pair<WebCore::ContentExtensions::RedirectAction, URL>> redirectActions;
 };

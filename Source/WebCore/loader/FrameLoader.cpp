@@ -3637,7 +3637,7 @@ ResourceLoaderIdentifier FrameLoader::loadResourceSynchronously(const ResourceRe
                 auto results = page->protectedUserContentProvider()->processContentRuleListsForLoad(*page, newRequest.url(), ContentExtensions::ResourceType::Fetch, *documentLoader);
                 bool blockedLoad = results.summary.blockedLoad;
                 ContentExtensions::applyResultsToRequest(WTFMove(results), page.get(), newRequest);
-                if (blockedLoad) {
+                if (blockedLoad && !results.summary.redirectedPriorToBlock) {
                     newRequest = { };
                     error = ResourceError(errorDomainWebKitInternal, 0, WTFMove(initialRequestURL), emptyString());
                     response = { };

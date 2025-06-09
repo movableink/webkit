@@ -292,7 +292,7 @@ void LinkLoader::preconnectIfNeeded(const LinkLoadParameters& params, Document& 
         return;
 
     auto results = page->protectedUserContentProvider()->processContentRuleListsForLoad(*page, params.href, ContentExtensions::ResourceType::Ping, *documentLoader);
-    if (results.summary.blockedLoad)
+    if (results.summary.blockedLoad && !results.summary.redirectedPriorToBlock)
         return;
 
     ContentExtensions::applyResultsToRequest(WTFMove(results), page.get(), request);

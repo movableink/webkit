@@ -58,6 +58,7 @@ struct ContentRuleListResults {
         bool madeHTTPS { false };
         bool blockedCookies { false };
         bool hasNotifications { false };
+        bool redirectedPriorToBlock { false };
         // Remaining fields currently aren't serialized as they aren't required by _WKContentRuleListAction
         Vector<ContentExtensions::ModifyHeadersAction> modifyHeadersActions { };
         Vector<std::pair<ContentExtensions::RedirectAction, URL>> redirectActions { };

@@ -38,6 +38,7 @@
 #import <WebKit/WKURLSchemeHandler.h>
 #import <WebKit/WKUserContentController.h>
 #import <WebKit/WKWebView.h>
+#import <WebKit/WKWebpagePreferencesPrivate.h>
 #import <WebKit/WKWebsiteDataStorePrivate.h>
 #import <WebKit/_WKContentRuleListAction.h>
 #import <WebKit/_WKWebsiteDataStoreConfiguration.h>
@@ -599,4 +600,32 @@ TEST(WebKit, RedirectToPlaintextHTTPSUpgrade)
     webView.get().navigationDelegate = delegate.get();
     [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://download/originalRequest"]]];
     EXPECT_WK_STREQ([webView _test_waitForAlert], "success!");
+}
+
+TEST(ContentRuleList, RedirectBeforeBlock)
+{
+    using namespace TestWebKitAPI;
+    HTTPServer server({
+        { "/to-be-blocked"_s, { "This content isn't going to load."_s } },
+        { "/redirected"_s, { "<script>alert('Redirected!')</script>"_s } }
+    });
+
+    NSString *rules = [NSString stringWithFormat:@"[{\"action\":{\"type\":\"redirect\",\"redirect\":{\"url\":\"%@\"}},\"trigger\":{\"url-filter\":\".*\"}},{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\".*\"}}]", server.request("/redirected"_s).URL.absoluteString];
+
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [[configuration userContentController] addContentRuleList:makeContentRuleList(rules).get()];
+
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:CGRectZero configuration:configuration.get()]);
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    delegate.get().decidePolicyForNavigationActionWithPreferences = ^(WKNavigationAction *, WKWebpagePreferences *preferences, void (^decisionHandler)(WKNavigationActionPolicy, WKWebpagePreferences *)) {
+        preferences._activeContentRuleListActionPatterns = @{
+            @"testidentifier": [NSSet setWithObject:@"*://*/*"]
+        };
+        decisionHandler(WKNavigationActionPolicyAllow, preferences);
+    };
+    [delegate allowAnyTLSCertificate];
+    webView.get().navigationDelegate = delegate.get();
+
+    [webView loadRequest:server.request("/to-be-blocked"_s)];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "Redirected!");
 }
