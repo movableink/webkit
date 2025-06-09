@@ -1013,7 +1013,7 @@ inline bool RenderInline::willChangeCreatesStackingContext() const
 
 bool RenderInline::requiresLayer() const
 {
-    return isInFlowPositioned() || createsGroup() || hasClipPath() || shouldApplyPaintContainment() || willChangeCreatesStackingContext() || hasRunningAcceleratedAnimations() || requiresRenderingConsolidationForViewTransition();
+    return isInFlowPositioned() || createsGroup() || hasClipPath() || willChangeCreatesStackingContext() || hasRunningAcceleratedAnimations() || requiresRenderingConsolidationForViewTransition();
 }
 
 } // namespace WebCore
