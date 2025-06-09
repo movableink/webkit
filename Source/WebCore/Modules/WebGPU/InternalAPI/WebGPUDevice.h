@@ -160,8 +160,8 @@ private:
     virtual void setLabelInternal(const String&) = 0;
 
     String m_label;
-    Ref<SupportedFeatures> m_features;
-    Ref<SupportedLimits> m_limits;
+    const Ref<SupportedFeatures> m_features;
+    const Ref<SupportedLimits> m_limits;
 };
 
 } // namespace WebCore::WebGPU

@@ -1,7 +1,5 @@
 Modules/WebGPU/GPUDevice.cpp
-Modules/WebGPU/Implementation/WebGPUAdapterImpl.cpp
 Modules/WebGPU/Implementation/WebGPUCompositorIntegrationImpl.cpp
-Modules/WebGPU/Implementation/WebGPUDeviceImpl.cpp
 Modules/WebGPU/Implementation/WebGPUImpl.cpp
 Modules/applepay-ams-ui/ApplePayAMSUIPaymentHandler.cpp
 Modules/applepay/ApplePaySession.cpp
@@ -77,12 +75,10 @@ Modules/webauthn/AuthenticatorAttestationResponse.cpp
 Modules/webauthn/AuthenticatorCoordinator.cpp
 Modules/webauthn/PublicKeyCredential.cpp
 Modules/webcodecs/WebCodecsVideoFrameAlgorithms.cpp
-Modules/webdatabase/ChangeVersionWrapper.cpp
 Modules/webdatabase/Database.cpp
 Modules/webdatabase/DatabaseContext.cpp
 Modules/webdatabase/DatabaseManager.cpp
 Modules/webdatabase/SQLCallbackWrapper.h
-Modules/webdatabase/SQLStatement.cpp
 Modules/websockets/WebSocket.cpp
 Modules/webtransport/WebTransport.cpp
 StyleBuilderGenerated.cpp
