@@ -686,7 +686,12 @@ String AXSummaryText()
 
 String AXFooterRoleDescriptionText()
 {
-    return WEB_UI_STRING("footer", "accessibility role description for a footer");
+    return WEB_UI_STRING("section footer", "accessibility role description for a footer");
+}
+
+String AXHeaderRoleDescriptionText()
+{
+    return WEB_UI_STRING("section header", "accessibility role description for a header");
 }
 
 String AXSuggestionRoleDescriptionText()
@@ -844,6 +849,10 @@ String AXARIAContentGroupText(StringView ariaType)
         return WEB_UI_STRING("region", "An ARIA accessibility group that acts as a distinct region in a document.");
     if (ariaType == "ARIALandmarkSearch"_s)
         return WEB_UI_STRING("search", "An ARIA accessibility group that contains a search feature of a website.");
+    if (ariaType == "ARIASectionFooter"_s)
+        return WEB_UI_STRING("section footer", "An ARIA accessibility group that acts as a footer region.");
+    if (ariaType == "ARIASectionHeader"_s)
+        return WEB_UI_STRING("section header", "An ARIA accessibility group that acts as a header region.");
     if (ariaType == "ARIAUserInterfaceTooltip"_s)
         return WEB_UI_STRING("tooltip", "An ARIA accessibility group that acts as a tooltip.");
     if (ariaType == "ARIATabPanel"_s)

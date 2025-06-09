@@ -164,7 +164,6 @@ enum class AccessibilityRole : uint8_t {
     Emphasis,
     Feed,
     Figure,
-    Footer,
     Footnote,
     Form,
     Generic,
@@ -225,6 +224,8 @@ enum class AccessibilityRole : uint8_t {
     ScrollArea,
     ScrollBar,
     SearchField,
+    SectionFooter,
+    SectionHeader,
     Slider,
     SliderThumb,
     SpinButton,
@@ -339,8 +340,6 @@ ALWAYS_INLINE String accessibilityRoleToString(AccessibilityRole role)
         return "Feed"_s;
     case AccessibilityRole::Figure:
         return "Figure"_s;
-    case AccessibilityRole::Footer:
-        return "Footer"_s;
     case AccessibilityRole::Footnote:
         return "Footnote"_s;
     case AccessibilityRole::Form:
@@ -461,6 +460,10 @@ ALWAYS_INLINE String accessibilityRoleToString(AccessibilityRole role)
         return "ScrollBar"_s;
     case AccessibilityRole::SearchField:
         return "SearchField"_s;
+    case AccessibilityRole::SectionFooter:
+        return "SectionFooter"_s;
+    case AccessibilityRole::SectionHeader:
+        return "SectionHeader"_s;
     case AccessibilityRole::Slider:
         return "Slider"_s;
     case AccessibilityRole::SliderThumb:

@@ -971,7 +971,6 @@ static AccessibilityObjectWrapper *ancestorWithRole(const AXCoreObject& descenda
     case AccessibilityRole::Emphasis:
     case AccessibilityRole::Feed:
     case AccessibilityRole::Figure:
-    case AccessibilityRole::Footer:
     case AccessibilityRole::Footnote:
     case AccessibilityRole::Form:
     case AccessibilityRole::Generic:
@@ -1012,6 +1011,8 @@ static AccessibilityObjectWrapper *ancestorWithRole(const AXCoreObject& descenda
     case AccessibilityRole::RubyText:
     case AccessibilityRole::ScrollArea:
     case AccessibilityRole::ScrollBar:
+    case AccessibilityRole::SectionFooter:
+    case AccessibilityRole::SectionHeader:
     case AccessibilityRole::SpinButtonPart:
     case AccessibilityRole::Splitter:
     case AccessibilityRole::Strong:
@@ -1189,8 +1190,12 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
         title = ""_s;
 
     // Footer is not considered a landmark, but we want the role description.
-    if (backingObject->role() == AccessibilityRole::Footer)
+    if (backingObject->role() == AccessibilityRole::SectionFooter)
         landmarkDescription = AXFooterRoleDescriptionText().createNSString();
+
+    // Header is not considered a landmark, but we want the role description.
+    if (backingObject->role() == AccessibilityRole::SectionHeader)
+        landmarkDescription = AXHeaderRoleDescriptionText().createNSString();
 
     NSMutableString *result = [NSMutableString string];
     if (backingObject->role() == AccessibilityRole::HorizontalRule)

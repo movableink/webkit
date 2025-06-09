@@ -222,6 +222,7 @@ namespace WebCore {
     String AXDescriptionListText();
     String AXDescriptionListTermText();
     String AXDescriptionListDetailText();
+    String AXHeaderRoleDescriptionText();
     String AXFooterRoleDescriptionText();
     String AXSuggestionRoleDescriptionText();
     String AXFileUploadButtonText();

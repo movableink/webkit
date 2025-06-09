@@ -283,7 +283,7 @@ bool AccessibilityObject::isInRow() const
     return hasAncestorMatchingFlag(AXAncestorFlag::IsInRow);
 }
 
-// ARIA marks elements as having their accessible name derive from either their contents, or their author provide name.
+// ARIA marks elements as having their accessible name derive from either their contents, or their author-provided name.
 bool AccessibilityObject::accessibleNameDerivesFromContent() const
 {
     // First check for objects specifically identified by ARIA.
@@ -320,6 +320,8 @@ bool AccessibilityObject::accessibleNameDerivesFromContent() const
     case AccessibilityRole::ProgressIndicator:
     case AccessibilityRole::Meter:
     case AccessibilityRole::RadioGroup:
+    case AccessibilityRole::SectionFooter:
+    case AccessibilityRole::SectionHeader:
     case AccessibilityRole::ScrollBar:
     case AccessibilityRole::Slider:
     case AccessibilityRole::SpinButton:
@@ -2696,6 +2698,8 @@ static void initializeRoleMap()
         RoleEntry { "scrollbar"_s, AccessibilityRole::ScrollBar },
         RoleEntry { "search"_s, AccessibilityRole::LandmarkSearch },
         RoleEntry { "searchbox"_s, AccessibilityRole::SearchField },
+        RoleEntry { "sectionfooter"_s, AccessibilityRole::SectionFooter },
+        RoleEntry { "sectionheader"_s, AccessibilityRole::SectionHeader },
         RoleEntry { "separator"_s, AccessibilityRole::Splitter },
         RoleEntry { "slider"_s, AccessibilityRole::Slider },
         RoleEntry { "spinbutton"_s, AccessibilityRole::SpinButton },

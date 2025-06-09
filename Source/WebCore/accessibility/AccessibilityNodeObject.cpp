@@ -466,21 +466,28 @@ AccessibilityRole AccessibilityNodeObject::determineAccessibilityRoleFromNode(Tr
     if (elementName == ElementName::HTML_html)
         return AccessibilityRole::Ignored;
 
-    // There should only be one banner/contentInfo per page. If header/footer are being used within an article or section then it should not be exposed as whole page's banner/contentInfo.
-    // https://w3c.github.io/html-aam/#el-header
+    // There should only be one role="banner" per page.
+    // https://w3c.github.io/html-aam/#el-header-ancestorbody
+    // Footer elements should be role="banner" if scoped to body, and consequently become a landmark.
     if (elementName == ElementName::HTML_header) {
         if (!isDescendantOfElementType({ articleTag, asideTag, mainTag, navTag, sectionTag }))
             return AccessibilityRole::LandmarkBanner;
-        return AccessibilityRole::Generic;
+
+        // https://github.com/w3c/aria/pull/1931
+        // A <header> that is a descendant of <main> or a sectioning element should be role="sectionheader".
+        return AccessibilityRole::SectionHeader;
     }
 
-    // http://webkit.org/b/190138 Footers should become contentInfo's if scoped to body (and consequently become a landmark).
-    // It should remain a footer if scoped to main, sectioning elements (article, aside, nav, section) or root sectioning element (blockquote, details, dialog, fieldset, figure, td).
-    // https://w3c.github.io/html-aam/#el-footer
+    // There should only be one role="contentinfo" per page.
+    // https://w3c.github.io/html-aam/#el-footer-ancestorbody
+    // Footer elements should be role="contentinfo" if scoped to body, and consequently become a landmark.
     if (elementName == ElementName::HTML_footer) {
-        if (!isDescendantOfElementType({ articleTag, asideTag, navTag, sectionTag, mainTag, blockquoteTag, detailsTag, dialogTag, fieldsetTag, figureTag, tdTag }))
+        if (!isDescendantOfElementType({ articleTag, asideTag, mainTag, navTag, sectionTag }))
             return AccessibilityRole::LandmarkContentInfo;
-        return AccessibilityRole::Footer;
+
+        // https://github.com/w3c/aria/pull/1931
+        // A <footer> that is a descendant of <main> or a sectioning element should be role="sectionfooter".
+        return AccessibilityRole::SectionFooter;
     }
 
     if (elementName == ElementName::HTML_time)

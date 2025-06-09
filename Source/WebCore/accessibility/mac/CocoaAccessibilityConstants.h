@@ -98,6 +98,8 @@
 #define NSAccessibilityRubyInlineSubrole @"AXRubyInline"
 #define NSAccessibilityRubyTextSubrole @"AXRubyText"
 #define NSAccessibilitySampleStyleGroupSubrole @"AXSampleStyleGroup"
+#define NSAccessibilitySectionFooterSubrole @"AXSectionFooter"
+#define NSAccessibilitySectionHeaderSubrole @"AXSectionHeader"
 #define NSAccessibilitySubscriptStyleGroupSubrole @"AXSubscriptStyleGroup"
 #define NSAccessibilitySuggestionSubrole @"AXSuggestion"
 #define NSAccessibilitySummarySubrole @"AXSummary"

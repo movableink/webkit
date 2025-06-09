@@ -1206,9 +1206,10 @@ bool AccessibilityRenderObject::computeIsIgnored() const
     case AccessibilityRole::DescriptionListDetail:
     case AccessibilityRole::Details:
     case AccessibilityRole::DocumentArticle:
-    case AccessibilityRole::Footer:
     case AccessibilityRole::LandmarkRegion:
     case AccessibilityRole::ListItem:
+    case AccessibilityRole::SectionFooter:
+    case AccessibilityRole::SectionHeader:
     case AccessibilityRole::Time:
     case AccessibilityRole::Video:
         return false;

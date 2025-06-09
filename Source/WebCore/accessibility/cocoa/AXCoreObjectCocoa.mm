@@ -337,8 +337,10 @@ ALLOW_DEPRECATED_DECLARATIONS_END
             return AXDetailsText();
         case AccessibilityRole::Feed:
             return AXFeedText();
-        case AccessibilityRole::Footer:
+        case AccessibilityRole::SectionFooter:
             return AXFooterRoleDescriptionText();
+        case AccessibilityRole::SectionHeader:
+            return AXHeaderRoleDescriptionText();
         case AccessibilityRole::Mark:
             return AXMarkText();
         case AccessibilityRole::Video:
@@ -545,6 +547,8 @@ PlatformRoleMap createPlatformRoleMap()
         { AccessibilityRole::LandmarkNavigation, NSAccessibilityGroupRole },
         { AccessibilityRole::LandmarkRegion, NSAccessibilityGroupRole },
         { AccessibilityRole::LandmarkSearch, NSAccessibilityGroupRole },
+        { AccessibilityRole::SectionFooter, NSAccessibilityGroupRole },
+        { AccessibilityRole::SectionHeader, NSAccessibilityGroupRole },
         { AccessibilityRole::ApplicationAlert, NSAccessibilityGroupRole },
         { AccessibilityRole::ApplicationAlertDialog, NSAccessibilityGroupRole },
         { AccessibilityRole::ApplicationDialog, NSAccessibilityGroupRole },
@@ -570,7 +574,6 @@ PlatformRoleMap createPlatformRoleMap()
         { AccessibilityRole::Generic, NSAccessibilityGroupRole },
         { AccessibilityRole::SpinButton, NSAccessibilityIncrementorRole },
         { AccessibilityRole::SpinButtonPart, NSAccessibilityIncrementorArrowRole },
-        { AccessibilityRole::Footer, NSAccessibilityGroupRole },
         { AccessibilityRole::ToggleButton, NSAccessibilityCheckBoxRole },
         { AccessibilityRole::Canvas, NSAccessibilityImageRole },
         { AccessibilityRole::SVGRoot, NSAccessibilityGroupRole },

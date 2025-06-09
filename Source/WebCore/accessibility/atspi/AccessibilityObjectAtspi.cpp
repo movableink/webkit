@@ -284,8 +284,6 @@ static Atspi::Role atspiRole(AccessibilityRole role)
     case AccessibilityRole::SVGText:
     case AccessibilityRole::TextGroup:
         return Atspi::Role::Section;
-    case AccessibilityRole::Footer:
-        return Atspi::Role::Footer;
     case AccessibilityRole::Form:
         return Atspi::Role::Form;
     case AccessibilityRole::Canvas:
@@ -323,6 +321,10 @@ static Atspi::Role atspiRole(AccessibilityRole role)
     case AccessibilityRole::LandmarkRegion:
     case AccessibilityRole::LandmarkSearch:
         return Atspi::Role::Landmark;
+    case AccessibilityRole::SectionFooter:
+        return Atspi::Role::SectionFooter;
+    case AccessibilityRole::SectionHeader:
+        return Atspi::Role::SectionHeader;
     case AccessibilityRole::DescriptionList:
         return Atspi::Role::DescriptionList;
     case AccessibilityRole::Term:

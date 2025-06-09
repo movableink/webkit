@@ -224,8 +224,10 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         return "AXContentSeparator"_s;
     if (role == AccessibilityRole::ToggleButton)
         return NSAccessibilityToggleSubrole;
-    if (role == AccessibilityRole::Footer)
-        return "AXFooter"_s;
+    if (role == AccessibilityRole::SectionFooter)
+        return "AXSectionFooter"_s;
+    if (role == AccessibilityRole::SectionHeader)
+        return "AXSectionHeader"_s;
     if (role == AccessibilityRole::SpinButtonPart) {
         if (isIncrementor())
             return NSAccessibilityIncrementArrowSubrole;
@@ -267,6 +269,10 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         return "AXLandmarkRegion"_s;
     case AccessibilityRole::LandmarkSearch:
         return "AXLandmarkSearch"_s;
+    case AccessibilityRole::SectionFooter:
+        return "AXSectionFooter"_s;
+    case AccessibilityRole::SectionHeader:
+        return "AXSectionHeader"_s;
     case AccessibilityRole::ApplicationAlert:
         return "AXApplicationAlert"_s;
     case AccessibilityRole::ApplicationAlertDialog:
