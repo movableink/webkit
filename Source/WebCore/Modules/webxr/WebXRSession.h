@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2020 Igalia S.L. All rights reserved.
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -156,7 +156,7 @@ private:
     FeatureList m_requestedFeatures;
     RefPtr<WebXRRenderState> m_activeRenderState;
     RefPtr<WebXRRenderState> m_pendingRenderState;
-    Ref<WebXRViewerSpace> m_viewerReferenceSpace;
+    const Ref<WebXRViewerSpace> m_viewerReferenceSpace;
     MonotonicTime m_timeOrigin;
 
     unsigned m_nextCallbackId { 1 };

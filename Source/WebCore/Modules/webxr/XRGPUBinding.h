@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -95,7 +95,7 @@ private:
     RefPtr<WebGPU::XRBinding> m_backing;
     RefPtr<const WebXRSession> m_session;
     std::optional<XRGPUProjectionLayerInit> m_init;
-    Ref<GPUDevice> m_device;
+    const Ref<GPUDevice> m_device;
 };
 
 } // namespace WebCore
