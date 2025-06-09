@@ -134,7 +134,7 @@ bool SVGTransformable::parseAndReplaceTransform(SVGTransformValue::SVGTransformT
 
     case SVGTransformValue::SVG_TRANSFORM_TRANSLATE:
         if (valueCount == 1)
-            transform.value().setTranslate(values[0], values[0]);
+            transform.value().setTranslate(values[0], 0);
         else
             transform.value().setTranslate(values[0], values[1]);
         return true;
