@@ -1114,7 +1114,7 @@ private:
             }
 
             case ResolveRope: {
-                if (m_state.forNode(node->child1()).m_type & ~SpecStringIdent)
+                if (!m_state.forNode(node->child1()).isType(SpecStringResolved))
                     break;
 
                 node->convertToIdentity();

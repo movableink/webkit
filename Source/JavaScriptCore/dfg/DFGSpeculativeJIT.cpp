@@ -8048,7 +8048,7 @@ void SpeculativeJIT::compileUnwrapGlobalProxy(Node* node)
 
 bool SpeculativeJIT::canBeRope(Edge& edge)
 {
-    if (m_state.forNode(edge).isType(SpecStringIdent))
+    if (m_state.forNode(edge).isType(SpecStringResolved))
         return false;
     // If this value is LazyValue, it will be converted to JSString, and the result must be non-rope string.
     String string = edge->tryGetString(m_graph);

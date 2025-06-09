@@ -11123,6 +11123,7 @@ IGNORE_CLANG_WARNINGS_END
         LValue index = lowInt32(m_node->child2());
 
         LValue stringImpl = m_out.loadPtr(base, m_heaps.JSString_value);
+        LValue data = m_out.loadPtr(stringImpl, m_heaps.StringImpl_data);
 
         speculate(
             Uncountable, noValue(), nullptr,
@@ -11136,23 +11137,14 @@ IGNORE_CLANG_WARNINGS_END
             unsure(is16Bit), unsure(is8Bit));
 
         LBasicBlock lastNext = m_out.appendTo(is8Bit, is16Bit);
-
-        // FIXME: need to cage strings!
-        // https://bugs.webkit.org/show_bug.cgi?id=174924
-        ValueFromBlock char8Bit = m_out.anchor(
-            m_out.load8ZeroExt32(baseIndexWithProvenValue(
-                m_heaps.characters8, m_out.loadPtr(stringImpl, m_heaps.StringImpl_data), index, m_node->child2())));
+        ValueFromBlock char8Bit = m_out.anchor(m_out.load8ZeroExt32(baseIndexWithProvenValue(m_heaps.characters8, data, index, m_node->child2())));
         m_out.jump(continuation);
 
         m_out.appendTo(is16Bit, continuation);
-
-        ValueFromBlock char16Bit = m_out.anchor(
-            m_out.load16ZeroExt32(baseIndexWithProvenValue(
-                m_heaps.characters16, m_out.loadPtr(stringImpl, m_heaps.StringImpl_data), index, m_node->child2())));
+        ValueFromBlock char16Bit = m_out.anchor(m_out.load16ZeroExt32(baseIndexWithProvenValue(m_heaps.characters16, data, index, m_node->child2())));
         m_out.jump(continuation);
 
         m_out.appendTo(continuation, lastNext);
-
         // We have to keep base alive since that keeps storage alive.
         ensureStillAliveHere(base);
         setInt32(m_out.phi(Int32, char8Bit, char16Bit));
@@ -23122,7 +23114,7 @@ IGNORE_CLANG_WARNINGS_END
     LValue isRopeString(LValue string, Edge edge = Edge())
     {
         if (edge) {
-            if (!((provenType(edge) & SpecString) & ~SpecStringIdent))
+            if (!((provenType(edge) & SpecString) & ~SpecStringResolved))
                 return m_out.booleanFalse;
             if (JSValue value = provenValue(edge)) {
                 if (value.isCell() && value.asCell()->type() == StringType && !asString(value)->isRope())
@@ -23141,7 +23133,7 @@ IGNORE_CLANG_WARNINGS_END
     LValue isNotRopeString(LValue string, Edge edge = Edge())
     {
         if (edge) {
-            if (!((provenType(edge) & SpecString) & ~SpecStringIdent))
+            if (!((provenType(edge) & SpecString) & ~SpecStringResolved))
                 return m_out.booleanTrue;
             if (JSValue value = provenValue(edge)) {
                 if (value.isCell() && value.asCell()->type() == StringType && !asString(value)->isRope())

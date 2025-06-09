@@ -4654,18 +4654,22 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         break;
     }
     case ResolveRope: {
-        JSValue childConst = forNode(node->child1()).value();
+        AbstractValue& value = forNode(node->child1());
+        JSValue childConst = value.value();
         if (childConst && childConst.isString() && !asString(childConst)->isRope()) {
             setConstant(node, *m_graph.freeze(childConst));
             break;
         }
 
-        if (!(forNode(node->child1()).m_type & ~SpecStringIdent)) {
-            setForNode(node, forNode(node->child1()));
+        if (value.isType(SpecStringResolved)) {
+            setForNode(node, value);
             break;
         }
 
-        setTypeForNode(node, SpecString);
+        auto resolved = value;
+        resolved.setType(m_graph, SpecStringResolved);
+        forNode(node->child1()) = resolved;
+        setForNode(node, resolved);
         break;
     }
     case ConstantStoragePointer: {
