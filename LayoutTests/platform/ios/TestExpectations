@@ -7854,6 +7854,8 @@ webkit.org/b/291456 fast/forms/state-restore-per-form.html [ Pass Timeout ]
 
 webkit.org/b/291459 imported/w3c/web-platform-tests/css/css-shapes/shape-outside/shape-image/shape-image-018.html [ Pass Failure ]
 
+http/tests/site-isolation/fullscreen-escape-key.html [ Skip ]
+
 # webkit.org/b/268568 [iOS] Assertion failure causing fast/forms/ios/file-upload-panel-capture.html to consistently crash. (268568) -[DOCWeakProxy forwardingTargetForSelector:]
 fast/forms/ios/file-upload-panel-accept.html [ Pass Crash ]
 fast/forms/ios/file-upload-panel-capture.html [ Pass Crash ]

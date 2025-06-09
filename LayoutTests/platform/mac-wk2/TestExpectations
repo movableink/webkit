@@ -1950,7 +1950,8 @@ editing/input/scroll-viewport-page-up-down.html [ Pass Failure ]
 
 # webkit.org/b/282046 REGRESSION(285592@main): [ macOS iOS wk2 ] http/tests/site-isolation/load-event.html are near constant failures.
 http/tests/site-isolation/load-event.html [ Pass Failure ]
-http/tests/site-isolation/fullscreen.html [ Pass Failure ]
+webkit.org/b/289347 http/tests/site-isolation/fullscreen.html [ Pass Failure ]
+webkit.org/b/289347 http/tests/site-isolation/fullscreen-escape-key.html [ Pass Failure ]
 
 # webkit.org/b/282051 REGRESSION(285577@main): [ macOS iOS wk2 ] imported/w3c/web-platform-tests/navigation-api/navigation-methods/return-value/back-204-205-download.html is a constant timeout
 # webkit.org/b/286584 REGRESSION (286180@main): [ macOS wk2 debug ] imported/w3c/web-platform-tests/navigation-api/navigation-methods/return-value/back-204-205-download.html is a flaky failure

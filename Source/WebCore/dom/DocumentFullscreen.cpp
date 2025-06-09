@@ -639,11 +639,11 @@ void DocumentFullscreen::exitRemovedFullscreenElement(Element& element)
 
 void DocumentFullscreen::fullyExitFullscreen()
 {
-    RefPtr mainFrameDocument = this->mainFrameDocument();
-    if (!mainFrameDocument)
-        LOG_ONCE(SiteIsolation, "Unable to fully perform DocumentFullscreen::fullyExitFullscreen() without access to the main frame document ");
+    RefPtr<Document> rootFrameDocument;
+    if (RefPtr frame = document().frame())
+        rootFrameDocument = frame->rootFrame().document();
 
-    if (!mainFrameDocument || !mainFrameDocument->protectedFullscreen()->fullscreenElement()) {
+    if (!rootFrameDocument || !rootFrameDocument->protectedFullscreen()->fullscreenElement()) {
         // If there is a pending fullscreen element but no top document fullscreen element,Add commentMore actions
         // there is a pending task in enterFullscreen(). Cause it to cancel and fire an error
         // by clearing the pending fullscreen element.
@@ -660,19 +660,19 @@ void DocumentFullscreen::fullyExitFullscreen()
             protectedThis->m_pendingExitFullscreen = false;
     });
 
-    protectedDocument()->eventLoop().queueTask(TaskSource::MediaElement, [weakThis = WeakPtr { *this }, resetPendingExitFullscreenScope = WTFMove(resetPendingExitFullscreenScope), mainFrameDocument = WTFMove(mainFrameDocument), identifier = LOGIDENTIFIER] mutable {
+    protectedDocument()->eventLoop().queueTask(TaskSource::MediaElement, [weakThis = WeakPtr { *this }, resetPendingExitFullscreenScope = WTFMove(resetPendingExitFullscreenScope), rootFrameDocument = WTFMove(rootFrameDocument), identifier = LOGIDENTIFIER] mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
 
-        if (!mainFrameDocument->page()) {
+        if (!rootFrameDocument->page()) {
             INFO_LOG_WITH_THIS(protectedThis, identifier, "Top document has no page.");
             return;
         }
 
         // This triggers finishExitFullscreen with ExitMode::Resize, which fully exits the document.
-        if (RefPtr fullscreenElement = mainFrameDocument->protectedFullscreen()->fullscreenElement()) {
-            mainFrameDocument->page()->chrome().client().exitFullScreenForElement(fullscreenElement.get(), [weakThis = WTFMove(weakThis), resetPendingExitFullscreenScope = WTFMove(resetPendingExitFullscreenScope)] mutable {
+        if (RefPtr fullscreenElement = rootFrameDocument->protectedFullscreen()->fullscreenElement()) {
+            rootFrameDocument->page()->chrome().client().exitFullScreenForElement(fullscreenElement.get(), [weakThis = WTFMove(weakThis), resetPendingExitFullscreenScope = WTFMove(resetPendingExitFullscreenScope)] mutable {
                 RefPtr protectedThis = weakThis.get();
                 if (!protectedThis)
                     return;
