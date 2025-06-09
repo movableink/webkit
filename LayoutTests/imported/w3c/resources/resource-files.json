@@ -611,6 +611,7 @@
         "web-platform-tests/content-security-policy/support/postmessage-pass.html",
         "web-platform-tests/content-security-policy/unsafe-hashes/support/child_window_location_navigate.sub.html",
         "web-platform-tests/content-security-policy/wasm-unsafe-eval/support/iframe.html",
+        "web-platform-tests/contenteditable/synthetic-height-ref.html",
         "web-platform-tests/credential-management/support/echoing-nester.html",
         "web-platform-tests/credential-management/support/federatedcredential-get.html",
         "web-platform-tests/credential-management/support/otpcredential-iframe.html",

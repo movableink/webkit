@@ -42,7 +42,7 @@
     "web-platform-tests/content-dpr": "skip",
     "web-platform-tests/content-index": "skip",
     "web-platform-tests/content-security-policy": "import",
-    "web-platform-tests/contenteditable": "skip",
+    "web-platform-tests/contenteditable": "import",
     "web-platform-tests/cookie-deprecation-label": "skip",
     "web-platform-tests/cookie-store": "import",
     "web-platform-tests/cookies": "import",
