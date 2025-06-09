@@ -116,7 +116,7 @@
     "web-platform-tests/css/css-size-adjust": "import",
     "web-platform-tests/css/css-sizing": "import",
     "web-platform-tests/css/css-speech": "skip",
-    "web-platform-tests/css/css-style-attr": "skip",
+    "web-platform-tests/css/css-style-attr": "import",
     "web-platform-tests/css/css-syntax": "import",
     "web-platform-tests/css/css-tables": "import",
     "web-platform-tests/css/css-text": "import",
