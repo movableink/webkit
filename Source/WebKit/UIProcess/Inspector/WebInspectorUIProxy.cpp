@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  * Portions Copyright (c) 2011 Motorola Mobility, Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -103,7 +103,7 @@ unsigned WebInspectorUIProxy::inspectionLevel() const
 WebPreferences& WebInspectorUIProxy::inspectorPagePreferences() const
 {
     ASSERT(m_inspectorPage);
-    return protectedInspectorPage()->protectedPageGroup()->preferences();
+    return protectedInspectorPage()->pageGroup().preferences();
 }
 
 Ref<WebPreferences> WebInspectorUIProxy::protectedInspectorPagePreferences() const

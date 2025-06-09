@@ -203,7 +203,7 @@ private:
         void didRenderFrame() override;
 
         unsigned m_colorBuffer { 0 };
-        Ref<WebCore::ShareableBitmap> m_bitmap;
+        const Ref<WebCore::ShareableBitmap> m_bitmap;
     };
 
     class RenderTargetTexture final : public RenderTarget {

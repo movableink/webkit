@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -98,9 +98,8 @@ public:
 
     bool flushAndCollectHandles(HashMap<RemoteImageBufferSetIdentifier, std::unique_ptr<BufferSetBackendHandle>>& handlesMap) final
     {
-        Ref flushState = m_flushState;
-        if (flushState->wait()) {
-            handlesMap.add(m_identifier, makeUnique<BufferSetBackendHandle>(*flushState->takeHandles()));
+        if (m_flushState->wait()) {
+            handlesMap.add(m_identifier, makeUnique<BufferSetBackendHandle>(*m_flushState->takeHandles()));
             return true;
         }
         RELEASE_LOG(RemoteLayerBuffers, "RemoteImageBufferSetProxyFlusher::flushAndCollectHandlers - failed");
@@ -109,7 +108,7 @@ public:
 
 private:
     RemoteImageBufferSetIdentifier m_identifier;
-    Ref<RemoteImageBufferSetProxyFlushFence> m_flushState;
+    const Ref<RemoteImageBufferSetProxyFlushFence> m_flushState;
 };
 
 }

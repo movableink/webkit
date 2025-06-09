@@ -16004,11 +16004,6 @@ Ref<WebPreferences> WebPageProxy::protectedPreferences() const
     return m_preferences;
 }
 
-Ref<WebPageGroup> WebPageProxy::protectedPageGroup() const
-{
-    return m_pageGroup;
-}
-
 Ref<WebsiteDataStore> WebPageProxy::protectedWebsiteDataStore() const
 {
     return m_websiteDataStore;

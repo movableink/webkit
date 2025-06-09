@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,7 +60,7 @@ RemoteMediaRecorderPrivateWriter::RemoteMediaRecorderPrivateWriter(GPUProcessCon
     , m_remoteMediaRecorderPrivateWriterIdentifier(RemoteMediaRecorderPrivateWriterIdentifier::generate())
 {
     if (RefPtr gpuProcessConnection = m_gpuProcessConnection.get())
-        gpuProcessConnection->protectedConnection()->send(Messages::RemoteMediaRecorderPrivateWriterManager::Create(m_remoteMediaRecorderPrivateWriterIdentifier), 0);
+        gpuProcessConnection->connection().send(Messages::RemoteMediaRecorderPrivateWriterManager::Create(m_remoteMediaRecorderPrivateWriterIdentifier), 0);
 }
 
 std::optional<uint8_t> RemoteMediaRecorderPrivateWriter::addAudioTrack(const AudioInfo& info)
@@ -68,7 +68,7 @@ std::optional<uint8_t> RemoteMediaRecorderPrivateWriter::addAudioTrack(const Aud
     std::optional<uint8_t> trackNumber;
     callOnMainRunLoopAndWait([&] {
         if (RefPtr gpuProcessConnection = m_gpuProcessConnection.get()) {
-            auto sendResult = gpuProcessConnection->protectedConnection()->sendSync(Messages::RemoteMediaRecorderPrivateWriterManager::AddAudioTrack(m_remoteMediaRecorderPrivateWriterIdentifier, RemoteAudioInfo { info }), 0);
+            auto sendResult = gpuProcessConnection->connection().sendSync(Messages::RemoteMediaRecorderPrivateWriterManager::AddAudioTrack(m_remoteMediaRecorderPrivateWriterIdentifier, RemoteAudioInfo { info }), 0);
             std::tie(trackNumber) = sendResult.takeReplyOr(std::optional<uint8_t> { });
         }
     });
@@ -80,7 +80,7 @@ std::optional<uint8_t> RemoteMediaRecorderPrivateWriter::addVideoTrack(const Vid
     std::optional<uint8_t> trackNumber;
     callOnMainRunLoopAndWait([&] {
         if (RefPtr gpuProcessConnection = m_gpuProcessConnection.get()) {
-            auto sendResult = gpuProcessConnection->protectedConnection()->sendSync(Messages::RemoteMediaRecorderPrivateWriterManager::AddVideoTrack(m_remoteMediaRecorderPrivateWriterIdentifier, RemoteVideoInfo { info }, transform), 0);
+            auto sendResult = gpuProcessConnection->connection().sendSync(Messages::RemoteMediaRecorderPrivateWriterManager::AddVideoTrack(m_remoteMediaRecorderPrivateWriterIdentifier, RemoteVideoInfo { info }, transform), 0);
             std::tie(trackNumber) = sendResult.takeReplyOr(std::optional<uint8_t> { });
         }
     });
@@ -92,7 +92,7 @@ bool RemoteMediaRecorderPrivateWriter::allTracksAdded()
     bool result = false;
     callOnMainRunLoopAndWait([&] {
         if (RefPtr gpuProcessConnection = m_gpuProcessConnection.get()) {
-            auto sendResult = gpuProcessConnection->protectedConnection()->sendSync(Messages::RemoteMediaRecorderPrivateWriterManager::AllTracksAdded(m_remoteMediaRecorderPrivateWriterIdentifier), 0);
+            auto sendResult = gpuProcessConnection->connection().sendSync(Messages::RemoteMediaRecorderPrivateWriterManager::AllTracksAdded(m_remoteMediaRecorderPrivateWriterIdentifier), 0);
             std::tie(result) = sendResult.takeReplyOr(false);
         }
     });
@@ -112,7 +112,7 @@ Ref<MediaRecorderPrivateWriter::WriterPromise> RemoteMediaRecorderPrivateWriter:
         auto samples = sample->takeSamples();
         return BlockPair { sample->info()->type(), WTFMove(samples) };
     });
-    return gpuProcessConnection->protectedConnection()->sendWithPromisedReply(Messages::RemoteMediaRecorderPrivateWriterManager::WriteFrames(m_remoteMediaRecorderPrivateWriterIdentifier, WTFMove(vectorSamples), endTime), 0)->whenSettled(MainThreadDispatcher::singleton(), [listener = m_listener](auto&& result) {
+    return gpuProcessConnection->connection().sendWithPromisedReply(Messages::RemoteMediaRecorderPrivateWriterManager::WriteFrames(m_remoteMediaRecorderPrivateWriterIdentifier, WTFMove(vectorSamples), endTime), 0)->whenSettled(MainThreadDispatcher::singleton(), [listener = m_listener](auto&& result) {
         RefPtr strongListener = listener.get();
         if (!strongListener || !result)
             return WriterPromise::createAndReject(Result::Failure); // IPCError.
@@ -136,7 +136,7 @@ Ref<GenericPromise> RemoteMediaRecorderPrivateWriter::close()
     RefPtr gpuProcessConnection = m_gpuProcessConnection.get();
     if (!gpuProcessConnection)
         return GenericPromise::createAndReject();
-    return gpuProcessConnection->protectedConnection()->sendWithPromisedReply(Messages::RemoteMediaRecorderPrivateWriterManager::Close(m_remoteMediaRecorderPrivateWriterIdentifier), 0)->whenSettled(MainThreadDispatcher::singleton(), [listener = m_listener](auto&& result) {
+    return gpuProcessConnection->connection().sendWithPromisedReply(Messages::RemoteMediaRecorderPrivateWriterManager::Close(m_remoteMediaRecorderPrivateWriterIdentifier), 0)->whenSettled(MainThreadDispatcher::singleton(), [listener = m_listener](auto&& result) {
         RefPtr strongListener = listener.get();
         if (!strongListener || !result)
             return GenericPromise::createAndReject();

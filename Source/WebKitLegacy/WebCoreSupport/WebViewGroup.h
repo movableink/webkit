@@ -61,6 +61,6 @@ private:
     String m_localStorageDatabasePath;
     RefPtr<WebCore::StorageNamespaceProvider> m_storageNamespaceProvider;
 
-    Ref<WebCore::UserContentController> m_userContentController;
+    const Ref<WebCore::UserContentController> m_userContentController;
     const Ref<WebVisitedLinkStore> m_visitedLinkStore;
 };

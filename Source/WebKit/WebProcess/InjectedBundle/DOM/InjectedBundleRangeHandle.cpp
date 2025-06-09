@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -95,16 +95,6 @@ InjectedBundleRangeHandle::InjectedBundleRangeHandle(WebCore::Range& range)
 InjectedBundleRangeHandle::~InjectedBundleRangeHandle()
 {
     domRangeHandleCache().remove(m_range.get());
-}
-
-WebCore::Range& InjectedBundleRangeHandle::coreRange() const
-{
-    return m_range.get();
-}
-
-Ref<WebCore::Range> InjectedBundleRangeHandle::protectedCoreRange() const
-{
-    return coreRange();
 }
 
 Ref<InjectedBundleNodeHandle> InjectedBundleRangeHandle::document()

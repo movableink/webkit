@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -156,7 +156,7 @@ private:
     template<typename PC = IPC::Connection::NoOpPromiseConverter, typename T>
     auto sendWithPromisedReply(T&& message)
     {
-        return m_gpuProcessConnection.get()->protectedConnection()->sendWithPromisedReply<PC, T>(std::forward<T>(message), m_remoteSourceBufferIdentifier);
+        return m_gpuProcessConnection.get()->connection().sendWithPromisedReply<PC, T>(std::forward<T>(message), m_remoteSourceBufferIdentifier);
     }
 
     friend class MessageReceiver;
@@ -190,7 +190,7 @@ private:
 template<typename T>
 void SourceBufferPrivateRemote::sendToProxy(T&& message)
 {
-    m_gpuProcessConnection.get()->protectedConnection()->send(WTFMove(message), m_remoteSourceBufferIdentifier);
+    m_gpuProcessConnection.get()->connection().send(WTFMove(message), m_remoteSourceBufferIdentifier);
 }
 
 } // namespace WebKit

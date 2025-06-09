@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -479,7 +479,7 @@ void WebInspectorUIProxy::platformCreateFrontendWindow()
 
     NSRect savedWindowFrame = NSZeroRect;
     if (RefPtr inspectedPage = this->inspectedPage()) {
-        RetainPtr savedWindowFrameString = inspectedPage->protectedPageGroup()->protectedPreferences()->inspectorWindowFrame().createNSString();
+        RetainPtr savedWindowFrameString = inspectedPage->pageGroup().preferences().inspectorWindowFrame().createNSString();
         savedWindowFrame = NSRectFromString(savedWindowFrameString.get());
     }
 
@@ -559,7 +559,7 @@ void WebInspectorUIProxy::platformHide()
 void WebInspectorUIProxy::platformResetState()
 {
     if (RefPtr inspectedPage = m_inspectedPage.get())
-        inspectedPage->protectedPageGroup()->protectedPreferences()->deleteInspectorWindowFrame();
+        inspectedPage->pageGroup().preferences().deleteInspectorWindowFrame();
 }
 
 void WebInspectorUIProxy::platformBringToFront()
@@ -728,7 +728,7 @@ void WebInspectorUIProxy::windowFrameDidChange()
         return;
 
     RetainPtr frameString = NSStringFromRect([m_inspectorWindow frame]);
-    inspectedPage->protectedPageGroup()->protectedPreferences()->setInspectorWindowFrame(frameString.get());
+    inspectedPage->pageGroup().preferences().setInspectorWindowFrame(frameString.get());
 }
 
 void WebInspectorUIProxy::windowFullScreenDidChange()

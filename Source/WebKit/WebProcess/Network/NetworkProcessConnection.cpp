@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -85,7 +85,7 @@ NetworkProcessConnection::NetworkProcessConnection(IPC::Connection::Identifier&&
     : m_connection(IPC::Connection::createClientConnection(WTFMove(connectionIdentifier)))
     , m_cookieAcceptPolicy(cookieAcceptPolicy)
 {
-    protectedConnection()->open(*this);
+    m_connection->open(*this);
 
     if (WebRTCProvider::webRTCAvailable())
         WebProcess::singleton().protectedLibWebRTCNetwork()->setConnection(m_connection.copyRef());
@@ -93,7 +93,7 @@ NetworkProcessConnection::NetworkProcessConnection(IPC::Connection::Identifier&&
 
 NetworkProcessConnection::~NetworkProcessConnection()
 {
-    protectedConnection()->invalidate();
+    m_connection->invalidate();
 }
 
 bool NetworkProcessConnection::dispatchMessage(IPC::Connection& connection, IPC::Decoder& decoder)
@@ -218,7 +218,7 @@ void NetworkProcessConnection::didReceiveInvalidMessage(IPC::Connection&, IPC::M
 
 void NetworkProcessConnection::writeBlobsToTemporaryFilesForIndexedDB(const Vector<String>& blobURLs, CompletionHandler<void(Vector<String>&& filePaths)>&& completionHandler)
 {
-    protectedConnection()->sendWithAsyncReply(Messages::NetworkConnectionToWebProcess::WriteBlobsToTemporaryFilesForIndexedDB(blobURLs), WTFMove(completionHandler));
+    m_connection->sendWithAsyncReply(Messages::NetworkConnectionToWebProcess::WriteBlobsToTemporaryFilesForIndexedDB(blobURLs), WTFMove(completionHandler));
 }
 
 void NetworkProcessConnection::didFinishPingLoad(WebCore::ResourceLoaderIdentifier pingLoadIdentifier, ResourceError&& error, ResourceResponse&& response)

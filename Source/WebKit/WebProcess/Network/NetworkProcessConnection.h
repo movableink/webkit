@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, 2011, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -70,8 +70,7 @@ public:
 
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
-    
-    Ref<IPC::Connection> protectedConnection() { return m_connection; }
+
     IPC::Connection& connection() { return m_connection.get(); }
 
     void writeBlobsToTemporaryFilesForIndexedDB(const Vector<String>& blobURLs, CompletionHandler<void(Vector<String>&& filePaths)>&&);
@@ -128,7 +127,7 @@ private:
     void broadcastConsoleMessage(MessageSource, MessageLevel, const String& message);
 
     // The connection from the web process to the network process.
-    Ref<IPC::Connection> m_connection;
+    const Ref<IPC::Connection> m_connection;
 #if HAVE(AUDIT_TOKEN)
     std::optional<audit_token_t> m_networkProcessAuditToken;
 #endif
