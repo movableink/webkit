@@ -50,7 +50,7 @@ public:
     Vector<MachSendRight> takeSurfaces() { return std::exchange(m_surfaces, { }); }
 
 private:
-    const Ref<WebCore::SharedBuffer> m_displayList;
+    Ref<WebCore::SharedBuffer> m_displayList;
     Vector<MachSendRight> m_surfaces;
 };
 
