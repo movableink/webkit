@@ -329,51 +329,12 @@ RenderBlock::~RenderBlock()
     // Do not add any more code here. Add it to willBeDestroyed() instead.
 }
 
-void RenderBlock::removeOutOfFlowBoxesIfNeededOnStyleChange(const RenderStyle& oldStyle, const RenderStyle& newStyle)
-{
-    auto wasContainingBlockForFixedContent = canContainFixedPositionObjects(&oldStyle);
-    auto wasContainingBlockForAbsoluteContent = canContainAbsolutelyPositionedObjects(&oldStyle);
-    auto isContainingBlockForFixedContent = canContainFixedPositionObjects(&newStyle);
-    auto isContainingBlockForAbsoluteContent = canContainAbsolutelyPositionedObjects(&newStyle);
-
-    if ((wasContainingBlockForFixedContent && !isContainingBlockForFixedContent) || (wasContainingBlockForAbsoluteContent && !isContainingBlockForAbsoluteContent)) {
-        // We are no longer the containing block for out-of-flow descendants.
-        removeOutOfFlowBoxes({ }, ContainingBlockState::NewContainingBlock);
-    }
-
-    if (!wasContainingBlockForFixedContent && isContainingBlockForFixedContent) {
-        // We are a new containing block for out-of-flow boxes. Find first ancestor that has our fixed positioned boxes and remove them.
-        // They will be inserted into our positioned objects list during their static position layout.
-        for (auto* ancestor = parent(); ancestor; ancestor = ancestor->parent()) {
-            if (CheckedPtr renderBlock = dynamicDowncast<RenderBlock>(ancestor); renderBlock && renderBlock->canContainFixedPositionObjects()) {
-                renderBlock->removeOutOfFlowBoxes(this, ContainingBlockState::NewContainingBlock);
-                return;
-            }
-        }
-        // We should always find the initial containing block.
-        ASSERT_NOT_REACHED();
-        return;
-    }
-
-    if (!wasContainingBlockForAbsoluteContent && isContainingBlockForAbsoluteContent) {
-        // We are a new containing block.
-        // Remove our absolutely positioned descendants from their current containing block.
-        // They will be inserted into our positioned objects list during layout.
-        for (auto* ancestor = parent(); ancestor; ancestor = ancestor->parent()) {
-            if (CheckedPtr renderBlock = dynamicDowncast<RenderBlock>(ancestor); renderBlock && renderBlock->canContainAbsolutelyPositionedObjects()) {
-                renderBlock->removeOutOfFlowBoxes(this, ContainingBlockState::NewContainingBlock);
-                return;
-            }
-        }
-    }
-}
-
 void RenderBlock::styleWillChange(StyleDifference diff, const RenderStyle& newStyle)
 {
     const RenderStyle* oldStyle = hasInitializedStyle() ? &style() : nullptr;
     setReplacedOrAtomicInline(newStyle.isDisplayInlineType());
     if (oldStyle) {
-        removeOutOfFlowBoxesIfNeededOnStyleChange(*oldStyle, newStyle);
+        removeOutOfFlowBoxesIfNeededOnStyleChange(*this, *oldStyle, newStyle);
         if (isLegend() && !oldStyle->isFloating() && newStyle.isFloating())
             setIsExcludedFromNormalLayout(false);
     }

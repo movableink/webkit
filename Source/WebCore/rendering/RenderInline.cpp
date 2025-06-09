@@ -166,19 +166,16 @@ static void updateStyleOfAnonymousBlockContinuations(const RenderBlock& block, c
 void RenderInline::styleWillChange(StyleDifference diff, const RenderStyle& newStyle)
 {
     RenderBoxModelObject::styleWillChange(diff, newStyle);
+
     // RenderInlines forward their absolute positioned descendants to their (non-anonymous) containing block.
     // Check if this non-anonymous containing block can hold the absolute positioned elements when the inline is no longer positioned.
-    if (canContainAbsolutelyPositionedObjects() && !canContainAbsolutelyPositionedObjects(&newStyle)) {
-        auto* container = containingBlock();
-        if (container && !container->canContainAbsolutelyPositionedObjects())
-            container->removeOutOfFlowBoxes({ }, RenderBlock::ContainingBlockState::NewContainingBlock);
-    }
+    CheckedPtr container = containingBlock();
+    if (!container)
+        return;
 
-    if (canContainFixedPositionObjects() && !canContainFixedPositionObjects(&newStyle)) {
-        auto* container = containingBlock();
-        if (container && !container->canContainFixedPositionObjects())
-            container->removeOutOfFlowBoxes({ }, RenderBlock::ContainingBlockState::NewContainingBlock);
-    }
+    const RenderStyle* oldStyle = hasInitializedStyle() ? &style() : nullptr;
+    if (oldStyle)
+        removeOutOfFlowBoxesIfNeededOnStyleChange(*container, *oldStyle, newStyle);
 }
 
 void RenderInline::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)

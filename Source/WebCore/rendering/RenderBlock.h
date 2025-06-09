@@ -407,8 +407,6 @@ private:
 
     RenderFragmentedFlow* updateCachedEnclosingFragmentedFlow(RenderFragmentedFlow*) const;
 
-    void removeOutOfFlowBoxesIfNeededOnStyleChange(const RenderStyle& oldStyle, const RenderStyle& newStyle);
-
     void absoluteQuadsIgnoringContinuation(const FloatRect&, Vector<FloatQuad>&, bool* wasFixed) const override;
 
     void paintDebugBoxShadowIfApplicable(GraphicsContext&, const LayoutRect&) const;
