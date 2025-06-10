@@ -33,6 +33,7 @@
 #include <QNetworkRequest>
 #include <QPainter>
 #include <WebCore/Chrome.h>
+#include <WebCore/DOMWrapperWorld.h>
 #include <WebCore/DocumentLoader.h>
 #include <WebCore/Editing.h>
 #include <WebCore/EventHandler.h>
@@ -190,7 +191,7 @@ QVariant QWebFrameAdapter::evaluateJavaScript(const QString &scriptSource)
     QVariant rc;
     int distance = 0;
     JSC::JSValue value = scriptController.executeScriptIgnoringException(scriptSource, JSC::SourceTaintedOrigin::Untainted);
-    JSC::JSGlobalObject* lexicalGlobalObject = scriptController.globalObject(mainThreadNormalWorld())->globalObject();
+    JSC::JSGlobalObject* lexicalGlobalObject = scriptController.globalObject(mainThreadNormalWorldSingleton())->globalObject();
     JSValueRef* ignoredException = 0;
     JSC::JSLockHolder lock(lexicalGlobalObject);
     JSValueRef valueRef = toRef(lexicalGlobalObject, value);
@@ -203,7 +204,7 @@ void QWebFrameAdapter::addToJavaScriptWindowObject(const QString& name, QObject*
     if (!pageAdapter->settings->testAttribute(QWebSettings::JavascriptEnabled))
         return;
     JSC::Bindings::QtInstance::ValueOwnership valueOwnership = static_cast<JSC::Bindings::QtInstance::ValueOwnership>(ownership);
-    JSDOMWindow* window = toJSDOMWindow(frame, mainThreadNormalWorld());
+    JSDOMWindow* window = toJSDOMWindow(frame, mainThreadNormalWorldSingleton());
     JSC::Bindings::RootObject* root;
     if (valueOwnership == JSC::Bindings::QtInstance::QtOwnership)
         root = frame->script().cacheableBindingRootObject();

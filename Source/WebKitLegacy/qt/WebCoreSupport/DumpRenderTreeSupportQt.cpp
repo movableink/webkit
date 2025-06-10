@@ -41,6 +41,7 @@
 #include <WebCore/CommonVM.h>
 #include <WebCore/DeprecatedGlobalSettings.h>
 #include <WebCore/DocumentLoader.h>
+#include <WebCore/DOMWrapperWorld.h>
 #include <WebCore/Editor.h>
 #include <WebCore/FocusController.h>
 #include <WebCore/FrameLoader.h>
@@ -735,7 +736,7 @@ void DumpRenderTreeSupportQt::confirmComposition(QWebPageAdapter *adapter, const
 void DumpRenderTreeSupportQt::injectInternalsObject(QWebFrameAdapter* adapter)
 {
     WebCore::LocalFrame* coreFrame = adapter->frame;
-    JSDOMWindow* window = toJSDOMWindow(coreFrame, mainThreadNormalWorld());
+    JSDOMWindow* window = toJSDOMWindow(coreFrame, mainThreadNormalWorldSingleton());
     Q_ASSERT(window);
 
     JSC::JSGlobalObject* lexicalGlobalObject = window->globalObject();
@@ -754,7 +755,7 @@ void DumpRenderTreeSupportQt::injectInternalsObject(JSContextRef context)
 void DumpRenderTreeSupportQt::resetInternalsObject(QWebFrameAdapter* adapter)
 {
     WebCore::LocalFrame* coreFrame = adapter->frame;
-    JSDOMWindow* window = toJSDOMWindow(coreFrame, mainThreadNormalWorld());
+    JSDOMWindow* window = toJSDOMWindow(coreFrame, mainThreadNormalWorldSingleton());
     Q_ASSERT(window);
 
     JSC::JSGlobalObject* lexicalGlobalObject = window->globalObject();
@@ -859,7 +860,7 @@ void DumpRenderTreeSupportQt::resetPageVisibility(QWebPageAdapter* adapter)
 
 void DumpRenderTreeSupportQt::getJSWindowObject(QWebFrameAdapter* adapter, JSContextRef* context, JSObjectRef* object)
 {
-    JSDOMWindow* window = toJSDOMWindow(adapter->frame, mainThreadNormalWorld());
+    JSDOMWindow* window = toJSDOMWindow(adapter->frame, mainThreadNormalWorldSingleton());
 
     // TODO: fix this
     //*object = toRef(window);

@@ -24,9 +24,9 @@
 #include <QPainter>
 #include <WebCore/Attr.h>
 #include <WebCore/DocumentFragment.h>
+#include <WebCore/DocumentFullscreen.h>
 #include <WebCore/ElementInlines.h>
 #include <WebCore/LocalFrameView.h>
-#include <WebCore/FullscreenManager.h>
 #include <WebCore/GraphicsContextQt.h>
 #include <WebCore/HTMLElement.h>
 #include <WebCore/NamedNodeMap.h>
@@ -457,11 +457,10 @@ QStringList QWebElement::attributeNames(const QString& namespaceUri) const
     QStringList attributeNameList;
     if (m_element->hasAttributes()) {
         const String namespaceUriString(namespaceUri); // convert QString -> String once
-        NamedNodeMap& attributes = m_element->attributes();
-        for (unsigned i = 0; i < attributes.length(); ++i) {
-            auto attribute = attributes.item(i);
-            if (namespaceUriString == attribute->namespaceURI())
-                attributeNameList.append(attribute->localName().string());
+        auto attributes = m_element->attributes();
+        for (const auto& attribute : attributes) {
+            if (namespaceUriString == attribute.namespaceURI())
+                attributeNameList.append(attribute.localName().string());
         }
     }
     return attributeNameList;
@@ -1022,7 +1021,7 @@ QWebElement QWebElement::clone() const
         return QWebElement();
 
     // FIXME: Do we need to add document argument? What is use case for cloning to different document?
-    return QWebElement(&m_element->cloneElementWithChildren(m_element->document()).get());
+    return QWebElement(&m_element->cloneElementWithChildren(m_element->document(), nullptr).get());
 }
 
 /*!
@@ -1332,32 +1331,44 @@ void QWebElement::render(QPainter* painter, const QRect& clip)
 void QWebElement::beginEnterFullScreen()
 {
 #if ENABLE(FULLSCREEN_API)
-    if (m_element)
-        m_element->document().fullscreenManager().willEnterFullscreen(*m_element);
+    if (m_element) {
+        RefPtr fullscreenManager = m_element->document().fullscreenIfExists();
+        if (fullscreenManager)
+            fullscreenManager->willEnterFullscreen(*m_element, HTMLMediaElementEnums::VideoFullscreenModeStandard);
+    }
 #endif
 }
 
 void QWebElement::endEnterFullScreen()
 {
 #if ENABLE(FULLSCREEN_API)
-    if (m_element)
-        m_element->document().fullscreenManager().didEnterFullscreen();
+    if (m_element) {
+        RefPtr fullscreenManager = m_element->document().fullscreenIfExists();
+        if (fullscreenManager)
+            m_element->didBecomeFullscreenElement();
+    }
 #endif
 }
 
 void QWebElement::beginExitFullScreen()
 {
 #if ENABLE(FULLSCREEN_API)
-    if (m_element)
-        m_element->document().fullscreenManager().willExitFullscreen();
+    if (m_element) {
+        RefPtr fullscreenManager = m_element->document().fullscreenIfExists();
+        if (fullscreenManager)
+            fullscreenManager->willExitFullscreen();
+    }
 #endif
 }
 
 void QWebElement::endExitFullScreen()
 {
 #if ENABLE(FULLSCREEN_API)
-    if (m_element)
-        m_element->document().fullscreenManager().didExitFullscreen();
+    if (m_element) {
+        RefPtr fullscreenManager = m_element->document().fullscreenIfExists();
+        if (fullscreenManager)
+            fullscreenManager->didExitFullscreen([] (auto) { });
+    }
 #endif
 }
 

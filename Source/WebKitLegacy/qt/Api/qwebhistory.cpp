@@ -294,7 +294,7 @@ void QWebHistory::clear()
     if (current) {
         auto page = lst->page().page;
         if (page) {
-            lst->addItem(page->mainFrame().frameID(), *current); // insert old current item
+            lst->addItem(Ref<WebCore::HistoryItem>(*current)); // insert old current item
             lst->goToItem(*current); // and set it as current again
         }
     }
@@ -502,7 +502,7 @@ QVariantMap QWebHistory::toMap() const
     encoder.encodeUInt32("currentItemIndex"_s, currentItemIndex());
 
     const HistoryItemVector &items = d->lst->entries();
-    encoder.encodeObjects("history"_s, items.begin(), items.end(), [&encoder](WebCore::KeyedEncoder&, const WebCore::HistoryItem& item) {
+    encoder.encodeObjects("history"_s, items, [&encoder](WebCore::KeyedEncoder&, const WebCore::HistoryItem& item) {
         WebCore::encodeBackForwardTree(encoder, item);
     });
 
@@ -531,7 +531,7 @@ void QWebHistory::loadFromMap(const QVariantMap& map)
 
         auto page = lst->page().page;
         if (page) {
-            lst->addItem(page->mainFrame().frameID(), WTFMove(item));
+            lst->addItem(WTFMove(item));
             return true;
         } else {
             return false;
