@@ -598,6 +598,40 @@ String AXARIAContentGroupText(StringView)
     return String();
 }
 
+String AXDateFieldMonthText()
+{
+    return QCoreApplication::translate("QWebPage", "month", "accessibility label for a date field month input");
+}
+
+String AXDateFieldDayText()
+{
+    return QCoreApplication::translate("QWebPage", "day", "accessibility label for a date field day input");
+}
+
+String AXDateFieldYearText()
+{
+    return QCoreApplication::translate("QWebPage", "year", "accessibility label for a date field year input");
+}
+
+String AXTimeFieldHourText()
+{
+    return QCoreApplication::translate("QWebPage", "hour", "accessibility label for hour fields");
+}
+
+String AXTimeFieldMinuteText()
+{
+    return QCoreApplication::translate("QWebPage", "minutes", "accessibility label for minutes fields");
+}
+
+String AXTimeFieldSecondText()
+{
+    return QCoreApplication::translate("QWebPage", "seconds", "accessibility label for seconds fields");
+}
+
+String AXTimeFieldMillisecondText()
+{
+    return QCoreApplication::translate("QWebPage", "milliseconds", "accessibility label for milliseconds fields");
+}
 
 String autoFillStrongPasswordLabel()
 {
