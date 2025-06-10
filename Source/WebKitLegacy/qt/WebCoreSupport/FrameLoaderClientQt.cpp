@@ -74,6 +74,8 @@
 #include <WebCore/SubresourceLoader.h>
 #include <WebCore/UserGestureIndicator.h>
 #include <WebCore/Widget.h>
+#include <WebCore/PlatformStrategies.h>
+#include <WebCore/LoaderStrategy.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/StringBuilder.h>
@@ -756,83 +758,17 @@ void FrameLoaderClientQt::committedLoad(WebCore::DocumentLoader* loader, const S
 
     // If we are sending data to MediaDocument, we should stop here and cancel the request.
     if (m_frame->document()->isMediaDocument())
-        loader->cancelMainResourceLoad(pluginWillHandleLoadError(loader->response()));
-}
-
-WebCore::ResourceError FrameLoaderClientQt::cancelledError(const WebCore::ResourceRequest& request) const
-{
-    ResourceError error = ResourceError("QtNetwork"_s, QNetworkReply::OperationCanceledError, request.url(),
-        QCoreApplication::translate("QWebFrame", "Request cancelled", 0), ResourceError::Type::Cancellation);
-    return error;
-}
-
-// This was copied from file "WebKit/Source/WebKit/mac/Misc/WebKitErrors.h".
-enum {
-    WebKitErrorCannotShowMIMEType =                             100,
-    WebKitErrorCannotShowURL =                                  101,
-    WebKitErrorFrameLoadInterruptedByPolicyChange =             102,
-    WebKitErrorCannotUseRestrictedPort =                        103,
-    WebKitErrorCannotFindPlugIn =                               200,
-    WebKitErrorCannotLoadPlugIn =                               201,
-    WebKitErrorJavaUnavailable =                                202,
-    WebKitErrorPluginWillHandleLoad =                           203
-};
-
-WebCore::ResourceError FrameLoaderClientQt::blockedError(const WebCore::ResourceRequest& request) const
-{
-    return ResourceError("WebKitErrorDomain"_s, WebKitErrorCannotUseRestrictedPort, request.url(),
-        QCoreApplication::translate("QWebFrame", "Request blocked", 0));
+        loader->cancelMainResourceLoad(platformStrategies()->loaderStrategy()->pluginWillHandleLoadError(loader->response()));
 }
 
 
-WebCore::ResourceError FrameLoaderClientQt::cannotShowURLError(const WebCore::ResourceRequest& request) const
-{
-    return ResourceError("WebKitErrorDomain"_s, WebKitErrorCannotShowURL, request.url(),
-        QCoreApplication::translate("QWebFrame", "Cannot show URL", 0));
-}
-
-WebCore::ResourceError FrameLoaderClientQt::interruptedForPolicyChangeError(const WebCore::ResourceRequest& request) const
-{
-    return ResourceError("WebKitErrorDomain"_s, WebKitErrorFrameLoadInterruptedByPolicyChange, request.url(),
-        QCoreApplication::translate("QWebFrame", "Frame load interrupted by policy change", 0));
-}
-
-WebCore::ResourceError FrameLoaderClientQt::cannotShowMIMETypeError(const WebCore::ResourceResponse& response) const
-{
-    return ResourceError("WebKitErrorDomain"_s, WebKitErrorCannotShowMIMEType, response.url(),
-        QCoreApplication::translate("QWebFrame", "Cannot show mimetype", 0));
-}
-
-WebCore::ResourceError FrameLoaderClientQt::fileDoesNotExistError(const WebCore::ResourceResponse& response) const
-{
-    return ResourceError("QtNetwork"_s, QNetworkReply::ContentNotFoundError, response.url(),
-        QCoreApplication::translate("QWebFrame", "File does not exist", 0));
-}
-
-WebCore::ResourceError FrameLoaderClientQt::httpNavigationWithHTTPSOnlyError(const WebCore::ResourceRequest& request) const
-{
-    return ResourceError("QtNetwork"_s, QNetworkReply::InsecureRedirectError, request.url(),
-        QCoreApplication::translate("QWebFrame", "HTTPS-only cannot navigate to http", 0));
-}
-
-WebCore::ResourceError FrameLoaderClientQt::httpsUpgradeRedirectLoopError(const WebCore::ResourceRequest& request) const
-{
-    return ResourceError("QtNetwork"_s, QNetworkReply::TooManyRedirectsError, request.url(),
-        QCoreApplication::translate("QWebFrame", "Too many redirects", 0));
-}
-
-WebCore::ResourceError FrameLoaderClientQt::pluginWillHandleLoadError(const WebCore::ResourceResponse& response) const
-{
-    return ResourceError("WebKit"_s, WebKitErrorPluginWillHandleLoad, response.url(),
-        QCoreApplication::translate("QWebFrame", "Loading is handled by the media engine", 0));
-}
 
 bool FrameLoaderClientQt::shouldFallBack(const WebCore::ResourceError& error) const
 {
     using Error = NeverDestroyed<const ResourceError>;
-    static Error cancelledError(this->cancelledError(ResourceRequest()));
-    static Error pluginWillHandleLoadError(this->pluginWillHandleLoadError(ResourceResponse()));
-    static Error errorInterruptedForPolicyChange(this->interruptedForPolicyChangeError(ResourceRequest()));
+    static Error cancelledError(platformStrategies()->loaderStrategy()->cancelledError(ResourceRequest()));
+    static Error pluginWillHandleLoadError(platformStrategies()->loaderStrategy()->pluginWillHandleLoadError(ResourceResponse()));
+    static Error errorInterruptedForPolicyChange(platformStrategies()->loaderStrategy()->interruptedForPolicyChangeError(ResourceRequest()));
 
     if (error.errorCode() == cancelledError.get().errorCode() && error.domain() == cancelledError.get().domain())
         return false;
@@ -1429,12 +1365,6 @@ void FrameLoaderClientQt::willReplaceMultipartContent()
 void FrameLoaderClientQt::didReplaceMultipartContent()
 {
     notImplemented();
-}
-
-WebCore::ResourceError FrameLoaderClientQt::blockedByContentBlockerError(const WebCore::ResourceRequest &) const
-{
-    notImplemented();
-    return WebCore::ResourceError();
 }
 
 void FrameLoaderClientQt::updateCachedDocumentLoader(WebCore::DocumentLoader &)

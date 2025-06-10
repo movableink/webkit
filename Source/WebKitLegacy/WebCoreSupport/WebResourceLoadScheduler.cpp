@@ -34,6 +34,7 @@
 #include <WebCore/LocalFrame.h>
 #include <WebCore/NetscapePlugInStreamLoader.h>
 #include <WebCore/NetworkStateNotifier.h>
+#include <WebCore/NotImplemented.h>
 #include <WebCore/PlatformStrategies.h>
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/SubresourceLoader.h>
@@ -42,6 +43,11 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 #include <wtf/text/CString.h>
+
+#if PLATFORM(QT)
+#include <QCoreApplication>
+#include <QNetworkReply>
+#endif
 
 #if PLATFORM(IOS_FAMILY)
 #include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
@@ -418,3 +424,130 @@ void WebResourceLoadScheduler::addOnlineStateChangeListener(WTF::Function<void(b
 void WebResourceLoadScheduler::preconnectTo(FrameLoader&, const URL&, StoredCredentialsPolicy, ShouldPreconnectAsFirstParty, PreconnectCompletionHandler&&)
 {
 }
+
+#if PLATFORM(QT)
+WebCore::ResourceError WebResourceLoadScheduler::cancelledError(const WebCore::ResourceRequest& request) const
+{
+    return ResourceError("QtNetwork"_s, QNetworkReply::OperationCanceledError, request.url(),
+        QCoreApplication::translate("QWebFrame", "Request cancelled", 0), ResourceError::Type::Cancellation);
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::blockedError(const WebCore::ResourceRequest& request) const
+{
+    return ResourceError("WebKitErrorDomain"_s, 103, request.url(),
+        QCoreApplication::translate("QWebFrame", "Request blocked", 0));
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::blockedByContentBlockerError(const WebCore::ResourceRequest&) const
+{
+    notImplemented();
+    return ResourceError();
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::cannotShowURLError(const WebCore::ResourceRequest& request) const
+{
+    return ResourceError("WebKitErrorDomain"_s, 101, request.url(),
+        QCoreApplication::translate("QWebFrame", "Cannot show URL", 0));
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::interruptedForPolicyChangeError(const WebCore::ResourceRequest& request) const
+{
+    return ResourceError("WebKitErrorDomain"_s, 102, request.url(),
+        QCoreApplication::translate("QWebFrame", "Frame load interrupted by policy change", 0));
+}
+
+#if ENABLE(CONTENT_FILTERING)
+WebCore::ResourceError WebResourceLoadScheduler::blockedByContentFilterError(const WebCore::ResourceRequest&) const
+{
+    notImplemented();
+    return ResourceError();
+}
+#endif
+
+WebCore::ResourceError WebResourceLoadScheduler::cannotShowMIMETypeError(const WebCore::ResourceResponse& response) const
+{
+    return ResourceError("WebKitErrorDomain"_s, 100, response.url(),
+        QCoreApplication::translate("QWebFrame", "Cannot show mimetype", 0));
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::fileDoesNotExistError(const WebCore::ResourceResponse& response) const
+{
+    return ResourceError("QtNetwork"_s, QNetworkReply::ContentNotFoundError, response.url(),
+        QCoreApplication::translate("QWebFrame", "File does not exist", 0));
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::httpsUpgradeRedirectLoopError(const WebCore::ResourceRequest& request) const
+{
+    return ResourceError("QtNetwork"_s, QNetworkReply::TooManyRedirectsError, request.url(),
+        QCoreApplication::translate("QWebFrame", "Too many redirects", 0));
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::httpNavigationWithHTTPSOnlyError(const WebCore::ResourceRequest& request) const
+{
+    return ResourceError("QtNetwork"_s, QNetworkReply::InsecureRedirectError, request.url(),
+        QCoreApplication::translate("QWebFrame", "HTTPS-only cannot navigate to http", 0));
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::pluginWillHandleLoadError(const WebCore::ResourceResponse& response) const
+{
+    return ResourceError("WebKit"_s, 203, response.url(),
+        QCoreApplication::translate("QWebFrame", "Loading is handled by the media engine", 0));
+}
+#else
+WebCore::ResourceError WebResourceLoadScheduler::cancelledError(const WebCore::ResourceRequest&) const
+{
+    return { ResourceError::Type::Cancellation };
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::blockedError(const WebCore::ResourceRequest&) const
+{
+    return { };
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::blockedByContentBlockerError(const WebCore::ResourceRequest&) const
+{
+    return { };
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::cannotShowURLError(const WebCore::ResourceRequest&) const
+{
+    return { };
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::interruptedForPolicyChangeError(const WebCore::ResourceRequest&) const
+{
+    return { };
+}
+
+#if ENABLE(CONTENT_FILTERING)
+WebCore::ResourceError WebResourceLoadScheduler::blockedByContentFilterError(const WebCore::ResourceRequest&) const
+{
+    return { };
+}
+#endif
+
+WebCore::ResourceError WebResourceLoadScheduler::cannotShowMIMETypeError(const WebCore::ResourceResponse&) const
+{
+    return { };
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::fileDoesNotExistError(const WebCore::ResourceResponse&) const
+{
+    return { };
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::httpsUpgradeRedirectLoopError(const WebCore::ResourceRequest&) const
+{
+    return { };
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::httpNavigationWithHTTPSOnlyError(const WebCore::ResourceRequest&) const
+{
+    return { };
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::pluginWillHandleLoadError(const WebCore::ResourceResponse&) const
+{
+    return { };
+}
+#endif

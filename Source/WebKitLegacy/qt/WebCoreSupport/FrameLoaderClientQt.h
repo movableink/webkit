@@ -151,17 +151,6 @@ public:
     void didDisplayInsecureContent() override;
     void didRunInsecureContent(SecurityOrigin&) override;
 
-    ResourceError cancelledError(const ResourceRequest&) const;
-    ResourceError blockedError(const ResourceRequest&) const;
-    ResourceError cannotShowURLError(const ResourceRequest&) const;
-    ResourceError interruptedForPolicyChangeError(const ResourceRequest&) const;
-
-    ResourceError cannotShowMIMETypeError(const ResourceResponse&) const;
-    ResourceError fileDoesNotExistError(const ResourceResponse&) const;
-    ResourceError httpsUpgradeRedirectLoopError(const ResourceRequest&) const;
-    ResourceError httpNavigationWithHTTPSOnlyError(const ResourceRequest&) const;
-    ResourceError pluginWillHandleLoadError(const ResourceResponse&) const;
-
     void loadStorageAccessQuirksIfNeeded() final { }
 
     bool shouldFallBack(const ResourceError&) const override;
@@ -206,7 +195,6 @@ public:
 
     void willReplaceMultipartContent() override;
     void didReplaceMultipartContent() override;
-    ResourceError blockedByContentBlockerError(const ResourceRequest &) const;
     void updateCachedDocumentLoader(DocumentLoader &) override;
     void prefetchDNS(const WTF::String &) override;
 
