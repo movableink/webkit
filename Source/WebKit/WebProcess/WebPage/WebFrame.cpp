@@ -518,6 +518,8 @@ void WebFrame::commitProvisionalFrame()
     if (remoteFrame->isMainFrame())
         corePage->setMainFrame(*localFrame);
     localFrame->takeWindowProxyAndOpenerFrom(*remoteFrame);
+    if (RefPtr document = localFrame->document())
+        document->didBecomeCurrentDocumentInFrame();
 
     if (corePage->focusController().focusedFrame() == remoteFrame.get())
         corePage->focusController().setFocusedFrame(localFrame.get(), FocusController::BroadcastFocusedFrame::No);

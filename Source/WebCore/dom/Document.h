@@ -754,7 +754,7 @@ public:
     inline CachedResourceLoader& cachedResourceLoader();
     inline Ref<CachedResourceLoader> protectedCachedResourceLoader() const;
 
-    void didBecomeCurrentDocumentInFrame();
+    WEBCORE_EXPORT void didBecomeCurrentDocumentInFrame();
     void destroyRenderTree();
     WEBCORE_EXPORT void willBeRemovedFromFrame();
 

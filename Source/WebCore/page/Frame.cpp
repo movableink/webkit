@@ -173,6 +173,7 @@ void Frame::disconnectOwnerElement()
 
 void Frame::takeWindowProxyAndOpenerFrom(Frame& frame)
 {
+    ASSERT(is<LocalDOMWindow>(window()) != is<LocalDOMWindow>(frame.window()) || page() != frame.page());
     ASSERT(m_windowProxy->frame() == this);
     m_windowProxy->detachFromFrame();
     m_windowProxy = frame.windowProxy();
