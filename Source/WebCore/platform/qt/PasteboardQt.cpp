@@ -126,7 +126,7 @@ Pasteboard::~Pasteboard()
     m_readableData = 0;
 }
 
-void Pasteboard::writeSelection(const SimpleRange& selectedRange, bool canSmartCopyOrDelete, LocalFrame& frame, ShouldSerializeSelectedTextForDataTransfer shouldSerializeSelectedTextForDataTransfer)
+void Pasteboard::writeSelection(const std::optional<SimpleRange>& selectedRange, bool canSmartCopyOrDelete, LocalFrame& frame, ShouldSerializeSelectedTextForDataTransfer shouldSerializeSelectedTextForDataTransfer)
 {
     if (!m_writableData)
         m_writableData = new QMimeData;
@@ -134,7 +134,10 @@ void Pasteboard::writeSelection(const SimpleRange& selectedRange, bool canSmartC
     text.replace(QChar(0xa0), QLatin1Char(' '));
     m_writableData->setText(text);
 
-    QString markup = serializePreservingVisualAppearance(selectedRange, nullptr,
+    if (!selectedRange)
+        return;
+
+    QString markup = serializePreservingVisualAppearance(*selectedRange, nullptr,
         AnnotateForInterchange::Yes, ConvertBlocksToInlines::No, ResolveURLs::YesExcludingURLsForPrivacy);
 #ifdef Q_OS_MACOS
     markup.prepend(QLatin1String("<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" /></head><body>"));
