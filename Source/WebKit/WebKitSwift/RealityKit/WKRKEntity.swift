@@ -64,6 +64,10 @@ extension WKRKEntity {
             if let attributionTaskId {
                 loadOptions.memoryAttributionID = attributionTaskId
             }
+#if canImport(RealityKit, _version: "403.0.9")
+            loadOptions.featuresToSkip = [.audio]
+#endif
+
             let loadedEntity = try await Entity(from: data, options: loadOptions)
             return WKRKEntity(loadedEntity)
         } catch {
