@@ -82,7 +82,7 @@ public:
     template<typename T> void send(T&& message);
 
     void unloadModelTimerFired();
-    void updateTransform();
+    void updateTransformAfterLayout();
     void updateOpacity();
     void startAnimating();
     void animationPlaybackStateDidUpdate();
@@ -151,12 +151,14 @@ private:
     ModelProcessModelPlayerProxy(ModelProcessModelPlayerManagerProxy&, WebCore::ModelPlayerIdentifier, Ref<IPC::Connection>&&, const std::optional<String>&);
 
     void computeTransform(bool);
+    void updateTransform();
     void applyEnvironmentMapDataAndRelease();
     void applyStageModeOperationToDriver();
     bool stageModeInteractionInProgress() const;
     void updateTransformSRT();
     void notifyModelPlayerOfEntityTransformChange();
     void applyDefaultIBL();
+    void updateForCurrentStageMode();
 
     WebCore::ModelPlayerIdentifier m_id;
     bool m_isVisible { true };
@@ -178,6 +180,7 @@ private:
     float m_yaw { 0 };
 
     RESRT m_transformSRT; // SRT=Scaling/Rotation/Translation. This is stricter than a WebCore::TransformationMatrix.
+    bool m_transformNeedsUpdateAfterNextLayout { false };
 
     bool m_autoplay { false };
     bool m_loop { false };

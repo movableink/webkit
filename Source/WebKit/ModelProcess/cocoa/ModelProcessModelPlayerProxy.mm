@@ -476,6 +476,17 @@ void ModelProcessModelPlayerProxy::updateTransform()
     [m_modelRKEntity setTransform:WKEntityTransform({ m_transformSRT.scale, m_transformSRT.rotation, m_transformSRT.translation })];
 }
 
+void ModelProcessModelPlayerProxy::updateTransformAfterLayout()
+{
+    if (m_transformNeedsUpdateAfterNextLayout) {
+        updateForCurrentStageMode();
+        m_transformNeedsUpdateAfterNextLayout = false;
+        return;
+    }
+
+    updateTransform();
+}
+
 void ModelProcessModelPlayerProxy::updateOpacity()
 {
     if (!m_modelRKEntity || !m_layer)
@@ -617,7 +628,11 @@ void ModelProcessModelPlayerProxy::load(WebCore::Model& model, WebCore::LayoutSi
 void ModelProcessModelPlayerProxy::sizeDidChange(WebCore::LayoutSize layoutSize)
 {
     RELEASE_LOG_INFO(ModelElement, "%p - ModelProcessModelPlayerProxy::sizeDidChange w=%lf h=%lf id=%" PRIu64, this, layoutSize.width().toDouble(), layoutSize.height().toDouble(), m_id.toUInt64());
-    [m_layer setFrame:CGRectMake(0, 0, layoutSize.width().toDouble(), layoutSize.height().toDouble())];
+    auto width = layoutSize.width().toDouble();
+    auto height = layoutSize.height().toDouble();
+    if (!m_transformNeedsUpdateAfterNextLayout && m_stageModeOperation != WebCore::StageModeOperation::None && m_modelRKEntity && m_layer)
+        m_transformNeedsUpdateAfterNextLayout = width != CGRectGetWidth([m_layer frame]) || height != CGRectGetHeight([m_layer frame]);
+    [m_layer setFrame:CGRectMake(0, 0, width, height)];
 }
 
 PlatformLayer* ModelProcessModelPlayerProxy::layer()
@@ -885,6 +900,17 @@ void ModelProcessModelPlayerProxy::setHasPortal(bool hasPortal)
     updateTransform();
 }
 
+void ModelProcessModelPlayerProxy::updateForCurrentStageMode()
+{
+    if (m_stageModeOperation != WebCore::StageModeOperation::None) {
+        computeTransform(false);
+        [m_modelRKEntity recenterEntityAtTransform:WKEntityTransform({ m_transformSRT.scale, m_transformSRT.rotation, m_transformSRT.translation })];
+        updateTransformSRT();
+    }
+
+    applyStageModeOperationToDriver();
+}
+
 void ModelProcessModelPlayerProxy::setStageMode(WebCore::StageModeOperation stagemodeOp)
 {
     if (m_stageModeOperation == stagemodeOp)
@@ -892,13 +918,7 @@ void ModelProcessModelPlayerProxy::setStageMode(WebCore::StageModeOperation stag
 
     m_stageModeOperation = stagemodeOp;
 
-    if (stagemodeOp != WebCore::StageModeOperation::None) {
-        computeTransform(false);
-        [m_modelRKEntity recenterEntityAtTransform:WKEntityTransform({ m_transformSRT.scale, m_transformSRT.rotation, m_transformSRT.translation })];
-        updateTransformSRT();
-    }
-
-    applyStageModeOperationToDriver();
+    updateForCurrentStageMode();
 }
 
 void ModelProcessModelPlayerProxy::updateTransformSRT()
