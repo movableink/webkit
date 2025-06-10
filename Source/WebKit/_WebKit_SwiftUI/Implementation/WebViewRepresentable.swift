@@ -24,6 +24,13 @@
 internal import SwiftUI
 @_spi(CrossImportOverlay) import WebKit
 
+#if !USE_APPLE_INTERNAL_SDK
+// Stubs for behavior not implemented in open source.
+extension WebPageWebView {
+    public func configureScrollInputBehavior(_ behavior: Any, for input: Any) { }
+}
+#endif
+
 @MainActor
 struct WebViewRepresentable {
     let page: WebPage
