@@ -127,7 +127,7 @@ void encodeFormData(const FormData& formData, KeyedEncoder& encoder)
     encoder.encodeBool("alwaysStream"_s, formData.alwaysStream());
     encoder.encodeBytes("boundary"_s, std::span { formData.boundary().data(), formData.boundary().size() });
 
-    encoder.encodeObjects("elements"_s, formData.elements().begin(), formData.elements().end(), [](KeyedEncoder& encoder, const FormDataElement& element) {
+    encoder.encodeObjects("elements"_s, formData.elements(), [](KeyedEncoder& encoder, const FormDataElement& element) {
         encodeElement(encoder, element);
     });
 
@@ -161,7 +161,7 @@ RefPtr<FormData> decodeFormData(KeyedDecoder& decoder)
 
 static void encodeBackForwardTreeNode(KeyedEncoder& encoder, const HistoryItem& item)
 {
-    encoder.encodeObjects("children"_s, item.children().begin(), item.children().end(),
+    encoder.encodeObjects("children"_s, item.children(),
         encodeBackForwardTreeNode);
 
     encoder.encodeString("originalURLString"_s, item.originalURLString());
@@ -169,7 +169,7 @@ static void encodeBackForwardTreeNode(KeyedEncoder& encoder, const HistoryItem& 
 
     encoder.encodeInt64("documentSequenceNumber"_s, item.documentSequenceNumber());
 
-    encoder.encodeObjects("documentState"_s, item.documentState().begin(), item.documentState().end(), [](KeyedEncoder& encoder, const String& string) {
+    encoder.encodeObjects("documentState"_s, item.documentState(), [](KeyedEncoder& encoder, const String& string) {
         encoder.encodeString("string"_s, string);
     });
 
@@ -226,24 +226,26 @@ static bool decodeBackForwardTreeNode(KeyedDecoder& decoder, HistoryItem& item)
     });
 
     Vector<int> ignore;
-    decoder.decodeObjects("children"_s, ignore, [&item](KeyedDecoder& decoder, int&) {
+    if (!decoder.decodeObjects("children"_s, ignore, [&item](KeyedDecoder& decoder, int&) {
         Ref<HistoryItem> element = HistoryItem::create(LegacyHistoryItemClient::singleton());
         if (decodeBackForwardTreeNode(decoder, element)) {
             item.addChildItem(WTFMove(element));
             return true;
         }
         return false;
-    });
+    }))
+        return false;
 
     int64_t documentSequenceNumber;
     if (decoder.decodeInt64("documentSequenceNumber"_s, documentSequenceNumber))
         item.setDocumentSequenceNumber(documentSequenceNumber);
 
     Vector<AtomString> documentState;
-    decoder.decodeObjects("documentState"_s, documentState, [](KeyedDecoder& decoder, AtomString& string) -> bool {
+    if (!decoder.decodeObjects("documentState"_s, documentState, [](KeyedDecoder& decoder, AtomString& string) -> bool {
         String s { string };
         return decoder.decodeString("string"_s, s);
-    });
+    }))
+        return false;
     item.setDocumentState(documentState);
 
     decodeString(decoder, "formContentType"_s, [&item](String&& str) {
@@ -266,7 +268,7 @@ static bool decodeBackForwardTreeNode(KeyedDecoder& decoder, HistoryItem& item)
     });
 
     int ignore2;
-    decoder.decodeObject("scrollPosition"_s, ignore2, [&item](KeyedDecoder& decoder, int&) -> bool {
+    if (!decoder.decodeObject("scrollPosition"_s, ignore2, [&item](KeyedDecoder& decoder, int&) -> bool {
         int x, y;
         if (!decoder.decodeInt32("x"_s, x))
             return false;
@@ -274,21 +276,23 @@ static bool decodeBackForwardTreeNode(KeyedDecoder& decoder, HistoryItem& item)
             return false;
         item.setScrollPosition(IntPoint(x, y));
         return true;
-    });
+    }))
+        return false;
 
     float pageScaleFactor;
     if (decoder.decodeFloat("pageScaleFactor"_s, pageScaleFactor))
         item.setPageScaleFactor(pageScaleFactor);
 
     RefPtr<SerializedScriptValue> stateObject;
-    decoder.decodeConditionalObject("stateObject"_s, stateObject, [](KeyedDecoder& decoder, RefPtr<SerializedScriptValue>& stateObject) -> bool {
+    if (!decoder.decodeConditionalObject("stateObject"_s, stateObject, [](KeyedDecoder& decoder, RefPtr<SerializedScriptValue>& stateObject) -> bool {
         Vector<uint8_t> bytes;
         if (decoder.decodeBytes("data"_s, bytes)) {
             stateObject = SerializedScriptValue::createFromWireBytes(WTFMove(bytes));
             return true;
         }
         return false;
-    });
+    }))
+        return false;
 
     decodeString(decoder, "target"_s, [&item](String&& str) {
         item.setTarget(AtomString(str));
