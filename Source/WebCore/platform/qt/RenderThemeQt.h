@@ -97,7 +97,7 @@ public:
     virtual String extraMediaControlsStyleSheet(const HTMLMediaElement&);
 #endif
 #if ENABLE(VIDEO)
-    Vector<String> mediaControlsStyleSheet(const HTMLMediaElement&) override;
+    Vector<String> mediaControlsStyleSheets(const HTMLMediaElement&) override;
     Vector<String, 2> mediaControlsScripts() override;
 #endif
 

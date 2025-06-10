@@ -509,7 +509,7 @@ bool RenderThemeQt::supportsFocus(StyleAppearance appearance) const
 }
 
 #if ENABLE(VIDEO)
-Vector<String> RenderThemeQt::mediaControlsStyleSheet(const HTMLMediaElement&)
+Vector<String> RenderThemeQt::mediaControlsStyleSheets(const HTMLMediaElement&)
 {
 #if ENABLE(MODERN_MEDIA_CONTROLS)
     if (m_mediaControlsStyleSheet.isEmpty())

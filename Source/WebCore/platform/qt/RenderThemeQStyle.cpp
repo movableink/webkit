@@ -542,7 +542,7 @@ void RenderThemeQStyle::adjustSliderThumbStyle(RenderStyle& style, const Element
     style.setBoxShadow(nullptr);
 }
 
-bool RenderThemeQStyle::paintSearchField(const RenderObject& o, const PaintInfo& pi, const IntRect& r)
+bool RenderThemeQStyle::paintSearchField(const RenderObject& o, const PaintInfo& pi, const FloatRect& r)
 {
     return paintTextField(o, pi, r);
 }

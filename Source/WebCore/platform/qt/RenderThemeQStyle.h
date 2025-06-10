@@ -74,7 +74,7 @@ protected:
     bool paintSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) final;
     void adjustSliderThumbStyle(RenderStyle&, const Element*) const final;
 
-    bool paintSearchField(const RenderObject&, const PaintInfo&, const IntRect&) final;
+    bool paintSearchField(const RenderObject&, const PaintInfo&, const FloatRect&) final;
 
     void adjustSearchFieldDecorationPartStyle(RenderStyle&, const Element*) const final;
     bool paintSearchFieldDecorationPart(const RenderObject&, const PaintInfo&, const IntRect&) final;

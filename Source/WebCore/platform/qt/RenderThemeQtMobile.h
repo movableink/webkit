@@ -55,7 +55,7 @@ public:
     // We don't want the focus ring to be drawn by the graphics context so we
     // always claim to support it in the theme.
     // FIXME: This could be a usability problem in the case of contenteditable divs.
-    bool supportsFocusRing(const RenderStyle&) const final { return true; }
+    bool supportsFocusRing(const RenderObject&, const RenderStyle&) const final { return true; }
 
 protected:
 
@@ -68,7 +68,7 @@ protected:
     bool paintMenuList(const RenderObject&, const PaintInfo&, const FloatRect&) final;
     void adjustMenuListStyle(RenderStyle&, const Element*) const final;
 
-    virtual bool paintMenuListButton(RenderObject&, const PaintInfo&, const IntRect&);
+    virtual bool paintMenuListButton(const RenderObject&, const PaintInfo&, const IntRect&);
 
     // Returns the duration of the animation for the progress bar.
     Seconds animationDurationForProgressBar() const final;

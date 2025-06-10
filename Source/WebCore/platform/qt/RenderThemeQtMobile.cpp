@@ -839,7 +839,7 @@ bool RenderThemeQtMobile::paintMenuList(const RenderObject& o, const PaintInfo& 
     return false;
 }
 
-bool RenderThemeQtMobile::paintMenuListButton(RenderObject& o, const PaintInfo& i,
+bool RenderThemeQtMobile::paintMenuListButton(const RenderObject& o, const PaintInfo& i,
                                         const IntRect& r)
 {
     StylePainterMobile p(this, i);
