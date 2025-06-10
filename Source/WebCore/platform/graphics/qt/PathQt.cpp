@@ -41,7 +41,9 @@
 #include <QString>
 #include <QTransform>
 #include <wtf/MathExtras.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/WTFString.h>
+#include <mutex>
 
 namespace WebCore {
 
@@ -72,6 +74,16 @@ Ref<PathQt> PathQt::create(const PathSegment& segment)
 Ref<PathQt> PathQt::create(QPainterPath platformPath)
 {
     return adoptRef(*new PathQt(WTFMove(platformPath)));
+}
+
+PlatformPathPtr PathQt::emptyPlatformPath()
+{
+    static LazyNeverDestroyed<QPainterPath> emptyPath;
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        emptyPath.construct();
+    });
+    return emptyPath.get();
 }
 
 PathQt::PathQt()
@@ -441,12 +453,7 @@ void PathQt::addPath(const PathQt& path, const AffineTransform& transform)
     m_path.addPath(qTransform.map(path.platformPath()));
 }
 
-bool PathQt::isEmpty() const
-{
-    // Don't use QPainterPath::isEmpty(), as that also returns true if there's only
-    // one initial MoveTo element in the path.
-    return !m_path.elementCount();
-}
+
 
 FloatPoint PathQt::currentPoint() const
 {

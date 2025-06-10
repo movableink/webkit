@@ -43,6 +43,7 @@ public:
     static Ref<PathQt> create(const PathSegment&);
     static Ref<PathQt> create(const PathStream&);
     static Ref<PathQt> create(QPainterPath);
+    static PlatformPathPtr emptyPlatformPath();
 
     PathQt();
     PathQt(QPainterPath&&);
@@ -89,8 +90,6 @@ private:
     void add(PathCloseSubpath) final;
 
     void applySegments(const PathSegmentApplier&) const final;
-
-    bool isEmpty() const final;
 
     FloatPoint currentPoint() const final;
 
