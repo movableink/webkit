@@ -304,7 +304,7 @@ void QWebPageAdapter::initializeWebCorePage()
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),
         WebBroadcastChannelRegistry::getOrCreate(isPrivateBrowsingEnabled),
         makeUniqueRef<WebCore::DummyStorageProvider>(),
-        makeUniqueRef<WebCore::DummyModelPlayerProvider>(),
+        WebCore::DummyModelPlayerProvider::create(),
         WebCore::EmptyBadgeClient::create(),
         LegacyHistoryItemClient::singleton(),
 #if ENABLE(CONTEXT_MENUS)
