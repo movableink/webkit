@@ -314,6 +314,9 @@
 #if !defined(USE_TZONE_MALLOC)
 #if (CPU(ARM64) || CPU(X86_64)) && OS(DARWIN) && (__SIZEOF_POINTER__ == 8)
 #define USE_TZONE_MALLOC 1
+#ifdef USE_ISO_MALLOC
+#undef USE_ISO_MALLOC
+#endif
 #define USE_ISO_MALLOC 0
 #else
 #define USE_TZONE_MALLOC 0
