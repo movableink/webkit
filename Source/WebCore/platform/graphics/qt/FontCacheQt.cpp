@@ -103,7 +103,7 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
     return std::make_unique<FontPlatformData>(fontDescription, family);
 }
 
-static ASCIILiteral platformAlternateFamilyName(const String&)
+ASCIILiteral FontCache::platformAlternateFamilyName(const String&)
 {
     return {};
 }

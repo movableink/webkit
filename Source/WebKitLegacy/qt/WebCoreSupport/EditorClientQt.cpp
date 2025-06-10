@@ -36,6 +36,7 @@
 #include <QGuiApplication>
 #include <QKeyEvent>
 #include <QKeySequence>
+#include <WebCore/CSSSerializationContext.h>
 #include <WebCore/Editor.h>
 #include <WebCore/EventNames.h>
 #include <WebCore/FocusController.h>
@@ -168,7 +169,7 @@ bool EditorClientQt::shouldApplyStyle(const WebCore::StyleProperties& style, con
 {
     if (dumpEditingCallbacks)
         printf("EDITING DELEGATE: shouldApplyStyle:%s toElementsInDOMRange:%s\n",
-            QString(style.asText()).toUtf8().constData(), dumpRange(range).toUtf8().constData());
+            QString(style.asText(CSS::defaultSerializationContext())).toUtf8().constData(), dumpRange(range).toUtf8().constData());
     return acceptsEditing;
 }
 
@@ -656,7 +657,7 @@ void EditorClientQt::updateEditorStateAfterLayoutIfEditabilityChanged()
 {
 }
 
-DOMPasteAccessResponse EditorClientQt::requestDOMPasteAccess(DOMPasteAccessCategory, FrameIdentifier, const WTF::String& originIdentifier)
+DOMPasteAccessResponse EditorClientQt::requestDOMPasteAccess(DOMPasteAccessCategory, FrameIdentifier, const WTF::String& /* originIdentifier */)
 {
     return WebCore::DOMPasteAccessResponse::DeniedForGesture;
 }
@@ -669,7 +670,7 @@ void EditorClientQt::didUpdateComposition()
 {
 }
 
-bool EditorClientQt::performTwoStepDrop(DocumentFragment&, const SimpleRange& destination, bool isMove)
+bool EditorClientQt::performTwoStepDrop(DocumentFragment&, const SimpleRange& /* destination */, bool /* isMove */)
 {
     return false;
 }
