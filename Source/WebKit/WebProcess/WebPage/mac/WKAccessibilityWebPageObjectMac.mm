@@ -331,13 +331,11 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
 - (id)accessibilityHitTest:(NSPoint)point
 {
-    auto convertedPoint = ax::retrieveValueFromMainThread<WebCore::IntPoint>([&point, PROTECTED_SELF] () -> WebCore::IntPoint {
-        if (!protectedSelf->m_page)
-            return WebCore::IntPoint(point);
-
-        // PDF plug-in handles the scroll view offset natively as part of the layer conversions.
-        if (protectedSelf->m_page->mainFramePlugIn())
-            return WebCore::IntPoint(point);
+    return ax::retrieveAutoreleasedValueFromMainThread<id>([&point, PROTECTED_SELF] () -> id {
+        // PDF plug-in handles the scroll view offset natively as part of the layer conversions, so don't
+        // do a coordinate conversion for those hit tests.
+        if (!protectedSelf->m_page || protectedSelf->m_page->mainFramePlugIn())
+            return [[protectedSelf accessibilityRootObjectWrapper:[protectedSelf focusedLocalFrame]] accessibilityHitTest:WebCore::IntPoint(point)];
 
         auto convertedPoint = protectedSelf->m_page->screenToRootView(WebCore::IntPoint(point));
 
@@ -351,10 +349,8 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             auto obscuredContentInsets = page->obscuredContentInsets();
             convertedPoint.move(-obscuredContentInsets.left(), -obscuredContentInsets.top());
         }
-        return convertedPoint;
+        return [[protectedSelf accessibilityRootObjectWrapper:[protectedSelf focusedLocalFrame]] accessibilityHitTest:convertedPoint];
     });
-    
-    return [[self accessibilityRootObjectWrapper:[self focusedLocalFrame]] accessibilityHitTest:convertedPoint];
 }
 ALLOW_DEPRECATED_DECLARATIONS_END
 
