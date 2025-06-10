@@ -1210,20 +1210,19 @@ void GraphicsContextQt::drawLinesForText(const FloatPoint& origin, float thickne
 
     Color localStrokeColor(strokeColor());
 
-    FloatRect bounds = computeLineBoundsAndAntialiasingModeForText(FloatRect(origin, FloatSize(lineSegments.back().length(), thickness)), isPrinting, localStrokeColor);
+    FloatRect bounds = computeLineBoundsAndAntialiasingModeForText(FloatRect(origin, FloatSize(lineSegments.back().end, thickness)), isPrinting, localStrokeColor);
     bool fillColorIsNotEqualToStrokeColor = fillColor() != localStrokeColor;
 
     // FIXME: drawRects() is significantly slower than drawLine() for thin lines (<= 1px)
     Vector<QRectF, 4> dashBounds;
-    ASSERT(!(lineSegments.size() % 2));
-    dashBounds.reserveInitialCapacity(dashBounds.size() / 2);
-    for (size_t i = 0; i < lineSegments.size(); i += 2)
-        dashBounds.append(QRectF(bounds.x() + lineSegments[i].length(), bounds.y(), lineSegments[i + 1].length() - lineSegments[i].length(), bounds.height()));
+    dashBounds.reserveInitialCapacity(lineSegments.size());
+    for (const auto& lineSegment : lineSegments)
+        dashBounds.append(QRectF(bounds.x() + lineSegment.begin, bounds.y(), lineSegment.length(), bounds.height()));
 
     if (doubleLines) {
         // The space between double underlines is equal to the height of the underline
-        for (size_t i = 0; i < lineSegments.size(); i += 2)
-            dashBounds.append(QRectF(bounds.x() + lineSegments[i].length(), bounds.y() + 2 * bounds.height(), lineSegments[i + 1].length() - lineSegments[i].length(), bounds.height()));
+        for (const auto& lineSegment : lineSegments)
+            dashBounds.append(QRectF(bounds.x() + lineSegment.begin, bounds.y() + 2 * bounds.height(), lineSegment.length(), bounds.height()));
     }
 
     QPainter* p = m_data->p();
