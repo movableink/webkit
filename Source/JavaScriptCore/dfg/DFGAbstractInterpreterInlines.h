@@ -432,7 +432,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         case LazyJSValue::SingleCharacterString:
         case LazyJSValue::KnownStringImpl:
         case LazyJSValue::NewStringImpl:
-            setTypeForNode(node, SpecString);
+            setTypeForNode(node, SpecStringResolved);
             break;
         }
         break;
@@ -1026,7 +1026,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
     }
 
     case MakeRope: {
-        setForNode(node, m_vm.stringStructure.get());
+        setTypeForNode(node, SpecString);
         break;
     }
 
@@ -2593,18 +2593,18 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             DFG_CRASH(m_graph, node, "Bad use kind");
             break;
         }
-        setTypeForNode(node, SpecString);
+        setTypeForNode(node, SpecStringResolved);
         break;
 
     case StringCharAt:
-        setForNode(node, m_vm.stringStructure.get());
+        setTypeForNode(node, SpecStringResolved);
         break;
 
     case StringAt: {
         if (node->arrayMode().isOutOfBounds())
             setTypeForNode(node, SpecString | SpecOther);
         else
-            setForNode(node, m_vm.stringStructure.get());
+            setTypeForNode(node, SpecString);
         break;
     }
 
@@ -2876,7 +2876,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                 clobberWorld();
                 makeHeapTopForNode(node);
             } else
-                setForNode(node, m_vm.stringStructure.get());
+                setTypeForNode(node, SpecStringResolved);
             break;
         case Array::DirectArguments:
         case Array::ScopedArguments:
@@ -3288,7 +3288,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             // This doesn't clobber the world. It just reads and writes regexp state.
         } else
             clobberWorld();
-        setForNode(node, m_vm.stringStructure.get());
+        setTypeForNode(node, SpecString);
         break;
 
     case StringReplaceString:
@@ -3296,7 +3296,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             // child3 could be non String (e.g. function). In this case, any side effect can happen.
             clobberWorld();
         }
-        setForNode(node, m_vm.stringStructure.get());
+        setTypeForNode(node, SpecString);
         break;
 
     case Jump:
@@ -3501,7 +3501,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             RELEASE_ASSERT_NOT_REACHED();
             break;
         }
-        setForNode(node, m_vm.stringStructure.get());
+        setTypeForNode(node, SpecString);
         break;
     }
 
@@ -3514,7 +3514,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                 break;
             }
         }
-        setForNode(node, m_vm.stringStructure.get());
+        setTypeForNode(node, SpecString);
         break;
     }
 
@@ -3549,17 +3549,17 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             int32_t radix = radixValue.asInt32();
             if (2 <= radix && radix <= 36) {
                 didFoldClobberWorld();
-                setForNode(node, m_graph.m_vm.stringStructure.get());
+                setTypeForNode(node, SpecString);
                 break;
             }
         }
         clobberWorld();
-        setForNode(node, m_graph.m_vm.stringStructure.get());
+        setTypeForNode(node, SpecString);
         break;
     }
 
     case NumberToStringWithValidRadixConstant: {
-        setForNode(node, m_graph.m_vm.stringStructure.get());
+        setTypeForNode(node, SpecString);
         break;
     }
         
