@@ -142,7 +142,7 @@ void QWebSettingsPrivate::apply()
 
         value = attributes.value(QWebSettings::DnsPrefetchEnabled,
                                  global->attributes.value(QWebSettings::DnsPrefetchEnabled));
-        settings->setDNSPrefetchingEnabled(value);
+        // DNS prefetching is no longer supported in WebCore
 
         value = attributes.value(QWebSettings::JavascriptEnabled,
                                  global->attributes.value(QWebSettings::JavascriptEnabled));
