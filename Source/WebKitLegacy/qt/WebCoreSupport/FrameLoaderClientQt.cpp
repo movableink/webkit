@@ -539,8 +539,7 @@ bool FrameLoaderClientQt::canShowMIMETypeAsHTML(const String& MIMEType) const
     
 bool FrameLoaderClientQt::canShowMIMEType(const String& MIMEType) const
 {
-    String type = MIMEType;
-    type.convertToASCIILowercase(); // FIXME: Do we really need it?
+    String type = MIMEType.convertToASCIILowercase(); // FIXME: Do we really need it?
     if (MIMETypeRegistry::canShowMIMEType(type))
         return true;
 
@@ -628,7 +627,7 @@ bool FrameLoaderClientQt::canHandleRequest(const WebCore::ResourceRequest&) cons
 
 void FrameLoaderClientQt::dispatchDidClearWindowObjectInWorld(DOMWrapperWorld &world)
 {
-    if (&world != &mainThreadNormalWorld())
+    if (&world != &mainThreadNormalWorldSingleton())
         return;
 
     if (m_webFrame) {
@@ -703,9 +702,19 @@ void FrameLoaderClientQt::updateGlobalHistoryRedirectLinks()
     }
 }
 
-bool FrameLoaderClientQt::shouldGoToHistoryItem(HistoryItem&) const
+ShouldGoToHistoryItem FrameLoaderClientQt::shouldGoToHistoryItem(HistoryItem&, IsSameDocumentNavigation) const
 {
-    return true;
+    return ShouldGoToHistoryItem::Yes;
+}
+
+bool FrameLoaderClientQt::supportsAsyncShouldGoToHistoryItem() const
+{
+    return false;
+}
+
+void FrameLoaderClientQt::shouldGoToHistoryItemAsync(HistoryItem& item, CompletionHandler<void(ShouldGoToHistoryItem)>&& completionHandler) const
+{
+    completionHandler(shouldGoToHistoryItem(item, IsSameDocumentNavigation::No));
 }
 
 void FrameLoaderClientQt::didDisplayInsecureContent()
@@ -1442,6 +1451,13 @@ void FrameLoaderClientQt::sendH2Ping(const URL& url, CompletionHandler<void(Expe
 {
     ASSERT_NOT_REACHED();
     completionHandler(makeUnexpected(WebCore::internalError(url)));
+}
+
+RefPtr<HistoryItem> FrameLoaderClientQt::createHistoryItemTree(bool clipAtTarget, BackForwardItemIdentifier) const
+{
+    // Qt WebKit doesn't use this functionality, so we return nullptr
+    // This method is used for creating history item trees for process navigation
+    return nullptr;
 }
 
 }

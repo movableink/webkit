@@ -145,20 +145,22 @@ public:
 
     void updateGlobalHistory() override;
     void updateGlobalHistoryRedirectLinks() override;
-    bool shouldGoToHistoryItem(HistoryItem&) const override;
+    ShouldGoToHistoryItem shouldGoToHistoryItem(HistoryItem&, IsSameDocumentNavigation) const override;
+    bool supportsAsyncShouldGoToHistoryItem() const override;
+    void shouldGoToHistoryItemAsync(HistoryItem&, CompletionHandler<void(ShouldGoToHistoryItem)>&&) const override;
     void didDisplayInsecureContent() override;
     void didRunInsecureContent(SecurityOrigin&) override;
 
-    ResourceError cancelledError(const ResourceRequest&) const override;
-    ResourceError blockedError(const ResourceRequest&) const override;
-    ResourceError cannotShowURLError(const ResourceRequest&) const override;
-    ResourceError interruptedForPolicyChangeError(const ResourceRequest&) const override;
+    ResourceError cancelledError(const ResourceRequest&) const;
+    ResourceError blockedError(const ResourceRequest&) const;
+    ResourceError cannotShowURLError(const ResourceRequest&) const;
+    ResourceError interruptedForPolicyChangeError(const ResourceRequest&) const;
 
-    ResourceError cannotShowMIMETypeError(const ResourceResponse&) const override;
-    ResourceError fileDoesNotExistError(const ResourceResponse&) const override;
-    ResourceError httpsUpgradeRedirectLoopError(const ResourceRequest&) const override;
-    ResourceError httpNavigationWithHTTPSOnlyError(const ResourceRequest&) const override;
-    ResourceError pluginWillHandleLoadError(const ResourceResponse&) const override;
+    ResourceError cannotShowMIMETypeError(const ResourceResponse&) const;
+    ResourceError fileDoesNotExistError(const ResourceResponse&) const;
+    ResourceError httpsUpgradeRedirectLoopError(const ResourceRequest&) const;
+    ResourceError httpNavigationWithHTTPSOnlyError(const ResourceRequest&) const;
+    ResourceError pluginWillHandleLoadError(const ResourceResponse&) const;
 
     void loadStorageAccessQuirksIfNeeded() final { }
 
@@ -204,7 +206,7 @@ public:
 
     void willReplaceMultipartContent() override;
     void didReplaceMultipartContent() override;
-    ResourceError blockedByContentBlockerError(const ResourceRequest &) const override;
+    ResourceError blockedByContentBlockerError(const ResourceRequest &) const;
     void updateCachedDocumentLoader(DocumentLoader &) override;
     void prefetchDNS(const WTF::String &) override;
 
@@ -220,6 +222,8 @@ public:
 
     void updateSandboxFlags(WebCore::SandboxFlags) override { }
     void updateOpener(const WebCore::Frame&) override { }
+
+    RefPtr<HistoryItem> createHistoryItemTree(bool clipAtTarget, BackForwardItemIdentifier) const override;
 
     static bool dumpFrameLoaderCallbacks;
     static bool dumpUserGestureInFrameLoaderCallbacks;
