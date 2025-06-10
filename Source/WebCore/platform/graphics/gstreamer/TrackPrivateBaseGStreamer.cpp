@@ -32,6 +32,7 @@
 #include "GStreamerCommon.h"
 #include "TrackPrivateBase.h"
 #include <gst/tag/tag.h>
+#include <wtf/glib/GUniquePtr.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringCommon.h>
 #include <wtf/text/StringToIntegerConversion.h>

@@ -27,14 +27,12 @@
 
 #if ENABLE(MEDIA_SOURCE)
 
-#include "ExceptionOr.h"
 #include "LibWebRTCMacros.h"
 #include "MediaSample.h"
 #include "SharedBuffer.h"
 #include "SourceBufferParser.h"
 #include <CoreAudio/CoreAudioTypes.h>
 #include <pal/spi/cf/CoreMediaSPI.h>
-#include <variant>
 #include <webm/callback.h>
 #include <webm/common/vp9_header_parser.h>
 #include <webm/status.h>
@@ -55,6 +53,7 @@ namespace WebCore {
 
 class PacketDurationParser;
 struct TrackInfo;
+template<typename> class ExceptionOr;
 
 class WebMParser
     : private webm::Callback
@@ -125,7 +124,7 @@ public:
         PCM,
     };
 
-    using ConsumeFrameDataResult = std::variant<MediaTime, webm::Status>;
+    using ConsumeFrameDataResult = Variant<MediaTime, webm::Status>;
 
     class TrackData {
         WTF_MAKE_TZONE_ALLOCATED(TrackData);
@@ -272,8 +271,8 @@ public:
     void allowLimitedMatroska() { m_allowLimitedMatroska = true; }
 private:
     TrackData* trackDataForTrackNumber(uint64_t);
-    static bool isSupportedVideoCodec(StringView);
-    static bool isSupportedAudioCodec(StringView);
+    bool isSupportedVideoCodec(StringView);
+    bool isSupportedAudioCodec(StringView);
     void flushPendingVideoSamples();
 
     // webm::Callback
@@ -312,7 +311,7 @@ private:
     UniqueRef<SegmentReader> m_reader;
 
     Vector<UniqueRef<TrackData>> m_tracks;
-    using BlockVariant = std::variant<webm::Block, webm::SimpleBlock>;
+    using BlockVariant = Variant<webm::Block, webm::SimpleBlock>;
     std::optional<BlockVariant> m_currentBlock;
     std::optional<uint64_t> m_rewindToPosition;
 

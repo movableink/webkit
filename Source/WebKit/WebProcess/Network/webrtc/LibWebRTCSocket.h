@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -90,7 +90,7 @@ private:
     int GetOption(rtc::Socket::Option, int*) final;
     int SetOption(rtc::Socket::Option, int) final;
 
-    CheckedRef<LibWebRTCSocketFactory> m_factory;
+    const CheckedRef<LibWebRTCSocketFactory> m_factory;
     Type m_type;
     rtc::SocketAddress m_localAddress;
     rtc::SocketAddress m_remoteAddress;

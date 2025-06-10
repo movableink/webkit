@@ -538,8 +538,7 @@ void GraphicsLayerWC::flushCompositingState(const FloatRect& passedVisibleRect)
     // passedVisibleRect doesn't contain the scrollbar area. Inflate it.
     FloatRect visibleRect = passedVisibleRect;
     visibleRect.inflate(20.f);
-    TransformState state(TransformState::UnapplyInverseTransformDirection, FloatQuad(visibleRect));
-    state.setSecondaryQuad(FloatQuad { visibleRect });
+    TransformState state(TransformState::UnapplyInverseTransformDirection, FloatQuad(visibleRect), FloatQuad { visibleRect });
     recursiveCommitChanges(state);
 }
 
@@ -722,10 +721,10 @@ GraphicsLayerWC::VisibleAndCoverageRects GraphicsLayerWC::computeVisibleAndCover
     if (masksToBounds()) {
         ASSERT(accumulation == TransformState::FlattenTransform);
         // Flatten, and replace the quad in the TransformState with one that is clipped to this layer's bounds.
-        state.flatten();
-        state.setQuad(clipRectForSelf);
         if (state.isMappingSecondaryQuad())
-            state.setSecondaryQuad(FloatQuad { clipRectForSelf });
+            state.reset(clipRectForSelf, clipRectForSelf);
+        else
+            state.reset(clipRectForSelf);
     }
 
     FloatRect coverageRect = clipRectForSelf;

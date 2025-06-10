@@ -57,6 +57,7 @@
 #include "RenderTableSectionInlines.h"
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
+#include "StyleBoxShadow.h"
 #include "StyleInheritedData.h"
 #include <wtf/SetForScope.h>
 #include <wtf/StackStats.h>
@@ -170,7 +171,7 @@ void RenderTable::styleDidChange(StyleDifference diff, const RenderStyle* oldSty
                 for (auto& section : childrenOfType<RenderTableSection>(*this)) {
                     for (CheckedPtr row = section.firstRow(); row; row = row->nextRow()) {
                         for (CheckedPtr cell = row->firstCell(); cell; cell = cell->nextCell())
-                            cell->setPreferredLogicalWidthsDirty(true);
+                            cell->setNeedsPreferredWidthsUpdate();
                     }
                 }
             };
@@ -218,7 +219,7 @@ void RenderTable::willInsertTableSection(RenderTableSection& child, RenderObject
             m_foot = child;
             break;
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     case DisplayType::TableRowGroup:
         resetSectionPointerIfNotBefore(m_firstBody, beforeChild);
         if (!m_firstBody)
@@ -303,8 +304,8 @@ void RenderTable::updateLogicalWidth()
         setLogicalWidth(convertStyleLogicalWidthToComputedWidth(styleLogicalWidth, containerWidthInInlineDirection));
     else {
         // Subtract out any fixed margins from our available width for auto width tables.
-        LayoutUnit marginStart = minimumValueForLength(style().marginStart(), availableLogicalWidth);
-        LayoutUnit marginEnd = minimumValueForLength(style().marginEnd(), availableLogicalWidth);
+        LayoutUnit marginStart = Style::evaluateMinimum(style().marginStart(), availableLogicalWidth);
+        LayoutUnit marginEnd = Style::evaluateMinimum(style().marginEnd(), availableLogicalWidth);
         LayoutUnit marginTotal = marginStart + marginEnd;
 
         // Subtract out our margins to get the available content width.
@@ -357,8 +358,8 @@ void RenderTable::updateLogicalWidth()
         setMarginStart(marginValues.m_start);
         setMarginEnd(marginValues.m_end);
     } else {
-        setMarginStart(minimumValueForLength(style().marginStart(), availableLogicalWidth));
-        setMarginEnd(minimumValueForLength(style().marginEnd(), availableLogicalWidth));
+        setMarginStart(Style::evaluateMinimum(style().marginStart(), availableLogicalWidth));
+        setMarginEnd(Style::evaluateMinimum(style().marginEnd(), availableLogicalWidth));
     }
 }
 
@@ -464,6 +465,14 @@ LayoutUnit RenderTable::sumCaptionsLogicalHeight() const
     for (auto& caption : m_captions)
         height += caption->logicalHeight() + caption->marginBefore() + caption->marginAfter();
     return height;
+}
+
+void RenderTable::setNeedsSectionRecalc()
+{
+    if (renderTreeBeingDestroyed())
+        return;
+    m_needsSectionRecalc = true;
+    setNeedsLayout();
 }
 
 void RenderTable::layout()
@@ -617,7 +626,7 @@ void RenderTable::layout()
 
         // table can be containing block of positioned elements.
         bool dimensionChanged = oldLogicalWidth != logicalWidth() || oldLogicalHeight != logicalHeight();
-        layoutPositionedObjects(dimensionChanged ? RelayoutChildren::Yes : RelayoutChildren::No);
+        layoutOutOfFlowBoxes(dimensionChanged ? RelayoutChildren::Yes : RelayoutChildren::No);
 
         updateLayerTransform();
 
@@ -765,7 +774,7 @@ void RenderTable::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
         // FIXME: Tables can never be skipped content roots. If a table is _inside_ a skipped subtree, we should have bailed out at the skipped root ancestor.
         // However with continuation (see webkit.org/b/275459) used visibility values does not always get propagated properly and
         // we may end up here with a dirty (skipped) table.
-        if (auto* containingBlock = this->containingBlock(); containingBlock && containingBlock->isAnonymousBlock() && !containingBlock->style().hasSkippedContent())
+        if (auto* containingBlock = this->containingBlock(); containingBlock && containingBlock->isAnonymousBlock() && !containingBlock->style().isSkippedRootOrSkippedContent())
             return true;
         return false;
     };
@@ -875,7 +884,7 @@ void RenderTable::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint& p
 
     auto bleedAvoidance = determineBleedAvoidance(paintInfo.context());
     if (!BackgroundPainter::boxShadowShouldBeAppliedToBackground(*this, rect.location(), bleedAvoidance, { }))
-        backgroundPainter.paintBoxShadow(rect, style(), ShadowStyle::Normal);
+        backgroundPainter.paintBoxShadow(rect, style(), Style::ShadowStyle::Normal);
 
     GraphicsContextStateSaver stateSaver(paintInfo.context(), false);
     if (bleedAvoidance == BleedAvoidance::UseTransparencyLayer) {
@@ -889,7 +898,7 @@ void RenderTable::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint& p
     }
 
     backgroundPainter.paintBackground(rect, bleedAvoidance);
-    backgroundPainter.paintBoxShadow(rect, style(), ShadowStyle::Inset);
+    backgroundPainter.paintBoxShadow(rect, style(), Style::ShadowStyle::Inset);
 
     if (style().hasVisibleBorderDecoration() && !collapseBorders())
         BorderPainter { *this, paintInfo }.paintBorder(rect, style());
@@ -934,7 +943,7 @@ void RenderTable::computeIntrinsicKeywordLogicalWidths(LayoutUnit& minWidth, Lay
 
 void RenderTable::computePreferredLogicalWidths()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
 
     computeIntrinsicLogicalWidths(m_minPreferredLogicalWidth, m_maxPreferredLogicalWidth);
 
@@ -963,7 +972,7 @@ void RenderTable::computePreferredLogicalWidths()
 
     // FIXME: We should be adding borderAndPaddingLogicalWidth here, but m_tableLayout->computePreferredLogicalWidths already does,
     // so a bunch of tests break doing this naively.
-    setPreferredLogicalWidthsDirty(false);
+    clearNeedsPreferredWidthsUpdate();
 }
 
 RenderTableSection* RenderTable::topNonEmptySection() const
@@ -1168,9 +1177,7 @@ void RenderTable::recalcSections() const
     m_hasCellColspanThatDeterminesTableWidth = hasCellColspanThatDeterminesTableWidth();
 
     // We need to get valid pointers to caption, head, foot and first body again
-    RenderObject* nextSibling;
-    for (RenderObject* child = firstChild(); child; child = nextSibling) {
-        nextSibling = child->nextSibling();
+    for (auto* child = firstChildBox(); child; child = child->nextSiblingBox()) {
         switch (child->style().display()) {
         case DisplayType::TableColumn:
         case DisplayType::TableColumnGroup:
@@ -1686,18 +1693,6 @@ bool RenderTable::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
     }
 
     return false;
-}
-
-RenderPtr<RenderTable> RenderTable::createTableWithStyle(Document& document, const RenderStyle& style)
-{
-    auto table = createRenderer<RenderTable>(Type::Table, document, RenderStyle::createAnonymousStyleWithDisplay(style, style.display() == DisplayType::Inline ? DisplayType::InlineTable : DisplayType::Table));
-    table->initializeStyle();
-    return table;
-}
-
-RenderPtr<RenderTable> RenderTable::createAnonymousWithParentRenderer(const RenderElement& parent)
-{
-    return RenderTable::createTableWithStyle(parent.document(), parent.style());
 }
 
 void RenderTable::markForPaginationRelayoutIfNeeded()

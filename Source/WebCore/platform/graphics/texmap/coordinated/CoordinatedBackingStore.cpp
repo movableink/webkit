@@ -67,32 +67,32 @@ void CoordinatedBackingStore::paintToTextureMapper(TextureMapper& textureMapper,
     ASSERT(!m_size.isZero());
     FloatRect layerRect = { { }, m_size };
     TransformationMatrix adjustedTransform = transform * TransformationMatrix::rectToRect(layerRect, targetRect);
+
+#if ENABLE(DAMAGE_TRACKING)
+    const auto& frameDamage = textureMapper.damage();
+    const auto canUseDamageToDrawTextureFragment = [&]() {
+        return frameDamage
+            && !frameDamage->isEmpty()
+            && frameDamage->mode() != Damage::Mode::Full
+            && adjustedTransform.isIdentity()
+            && opacity == 1.0;
+    }();
+#endif
+
     for (const auto& tile : m_tiles.values()) {
         ASSERT(tile.scale() == m_scale);
         const auto allEdgesExposed = allTileEdgesExposed(layerRect, tile.rect()) ? TextureMapper::AllEdgesExposed::Yes : TextureMapper::AllEdgesExposed::No;
+
 #if ENABLE(DAMAGE_TRACKING)
-        const auto canUseDamageToDrawTextureFragment = [&]() {
-            return !textureMapper.damage().isInvalid()
-                && !textureMapper.damage().isEmpty()
-                && adjustedTransform.isIdentity()
-                && allEdgesExposed == TextureMapper::AllEdgesExposed::No
-                && opacity == 1.0
-                && tile.texture().isOpaque()
-                && !tile.texture().filterOperation();
-        }();
-        if (canUseDamageToDrawTextureFragment) {
-            // We define damagedTileRect as a minimum bounding rectangle of all damage rects that intersect tile.rect()
-            // - this way we can keep a single texture draw call yet with potentially smaller sourceRect.
-            FloatRect damagedTileRect;
-            for (const auto& damageRect : textureMapper.damage().rects()) {
-                if (!damageRect.isEmpty())
-                    damagedTileRect.unite(intersection(tile.rect(), damageRect));
+        if (canUseDamageToDrawTextureFragment && allEdgesExposed == TextureMapper::AllEdgesExposed::No && tile.texture().isOpaque() && !tile.texture().filterOperation()) {
+            const auto tileDamageRect = intersection(tile.rect(), frameDamage->bounds());
+            if (!tileDamageRect.isEmpty()) {
+                const auto sourceRect = FloatRect { FloatPoint { tileDamageRect.location() - tile.rect().location() }, tileDamageRect.size() };
+                textureMapper.drawTextureFragment(tile.texture(), sourceRect, tileDamageRect);
             }
-            if (damagedTileRect.isEmpty())
-                continue;
-            const auto sourceRect = FloatRect { FloatPoint { damagedTileRect.location() - tile.rect().location() }, damagedTileRect.size() };
-            textureMapper.drawTextureFragment(tile.texture(), sourceRect, damagedTileRect);
-        } else
+
+            continue;
+        }
 #endif
         textureMapper.drawTexture(tile.texture(), tile.rect(), adjustedTransform, opacity, allEdgesExposed);
     }

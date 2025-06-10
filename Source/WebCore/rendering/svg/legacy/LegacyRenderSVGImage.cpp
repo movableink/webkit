@@ -29,10 +29,12 @@
 #include "FloatQuad.h"
 #include "GraphicsContext.h"
 #include "HitTestResult.h"
+#include "ImageQualityController.h"
 #include "LayoutRepainter.h"
 #include "LegacyRenderSVGResource.h"
 #include "PointerEventsHitRules.h"
 #include "RenderImageResource.h"
+#include "RenderObjectInlines.h"
 #include "RenderLayer.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGImageElement.h"
@@ -63,6 +65,17 @@ LegacyRenderSVGImage::~LegacyRenderSVGImage() = default;
 CheckedRef<RenderImageResource> LegacyRenderSVGImage::checkedImageResource() const
 {
     return *m_imageResource;
+}
+
+void LegacyRenderSVGImage::notifyFinished(CachedResource& newImage, const NetworkLoadMetrics& metrics, LoadWillContinueInAnotherProcess loadWillContinueInAnotherProcess)
+{
+    if (renderTreeBeingDestroyed())
+        return;
+
+    if (RefPtr image = dynamicDowncast<SVGImageElement>(LegacyRenderSVGModelObject::element()))
+        page().didFinishLoadingImageForSVGImage(*image);
+
+    LegacyRenderSVGModelObject::notifyFinished(newImage, metrics, loadWillContinueInAnotherProcess);
 }
 
 void LegacyRenderSVGImage::willBeDestroyed()
@@ -213,7 +226,12 @@ void LegacyRenderSVGImage::paintForeground(PaintInfo& paintInfo)
 
     imageElement().preserveAspectRatio().transformRect(destRect, srcRect);
 
-    paintInfo.context().drawImage(*image, destRect, srcRect);
+    ImagePaintingOptions options = {
+        imageOrientation(),
+        ImageQualityController::chooseInterpolationQualityForSVG(paintInfo.context(), *this, *image)
+    };
+
+    paintInfo.context().drawImage(*image, destRect, srcRect, options);
 }
 
 void LegacyRenderSVGImage::invalidateBufferedForeground()
@@ -260,7 +278,7 @@ void LegacyRenderSVGImage::imageChanged(WrappedImagePtr, const IntRect*)
     // The image resource defaults to nullImage until the resource arrives.
     // This empty image may be cached by SVG resources which must be invalidated.
     if (auto* resources = SVGResourcesCache::cachedResourcesForRenderer(*this))
-        resources->removeClientFromCache(*this);
+        resources->removeClientFromCacheAndMarkForInvalidation(*this);
 
     // Eventually notify parent resources, that we've changed.
     LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidation(*this, false);

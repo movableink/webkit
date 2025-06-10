@@ -26,18 +26,14 @@
 
 #include "CSSPropertyNames.h"
 #include "CounterDirectives.h"
-#include "FillLayer.h"
 #include "GapLength.h"
 #include "LengthPoint.h"
 #include "LineClampValue.h"
 #include "NameScope.h"
 #include "NinePieceImage.h"
 #include "OffsetRotation.h"
-#include "PathOperation.h"
 #include "PositionArea.h"
 #include "PositionTryFallback.h"
-#include "RotateTransformOperation.h"
-#include "ScaleTransformOperation.h"
 #include "ScopedName.h"
 #include "ScrollAxis.h"
 #include "ScrollTimeline.h"
@@ -57,13 +53,11 @@
 #include "TranslateTransformOperation.h"
 #include "ViewTimeline.h"
 #include "ViewTransitionName.h"
-#include "WebAnimationTypes.h"
-#include "WillChangeData.h"
 #include <memory>
 #include <wtf/DataRef.h>
+#include <wtf/FixedVector.h>
 #include <wtf/Markable.h>
 #include <wtf/OptionSet.h>
-#include <wtf/Vector.h>
 
 namespace WTF {
 class TextStream;
@@ -75,7 +69,9 @@ using namespace CSS::Literals;
 
 class AnimationList;
 class ContentData;
-class ShadowData;
+class PathOperation;
+class RotateTransformOperation;
+class ScaleTransformOperation;
 class StyleCustomPropertyData;
 class StyleDeprecatedFlexibleBoxData;
 class StyleFilterData;
@@ -86,6 +82,7 @@ class StyleMultiColData;
 class StyleReflection;
 class StyleResolver;
 class StyleTransformData;
+class WillChangeData;
 
 struct LengthSize;
 struct StyleMarqueeData;
@@ -121,6 +118,16 @@ public:
 
     bool hasBackdropFilters() const;
 
+    bool hasScrollTimelines() const
+    {
+        return scrollTimelines.size() || scrollTimelineNames.size();
+    }
+
+    bool hasViewTimelines() const
+    {
+        return viewTimelines.size() || viewTimelineNames.size();
+    }
+
     OptionSet<Containment> usedContain() const;
 
     Markable<Length> containIntrinsicWidth;
@@ -153,8 +160,8 @@ public:
     // Only meaningful when `hasClip` is true.
     LengthBox clip;
 
-    Style::ScrollMargin scrollMargin { 0_css_px };
-    Style::ScrollPadding scrollPadding { CSS::Keyword::Auto { } };
+    Style::ScrollMarginBox scrollMargin { 0_css_px };
+    Style::ScrollPaddingBox scrollPadding { CSS::Keyword::Auto { } };
 
     CounterDirectiveMap counterDirectives;
 
@@ -184,9 +191,9 @@ public:
     RefPtr<TranslateTransformOperation> translate;
     RefPtr<PathOperation> offsetPath;
 
-    Vector<Style::ScopedName> containerNames;
+    FixedVector<Style::ScopedName> containerNames;
 
-    Vector<Style::ScopedName> viewTransitionClasses;
+    FixedVector<Style::ScopedName> viewTransitionClasses;
     Style::ViewTransitionName viewTransitionName;
 
     GapLength columnGap;
@@ -199,14 +206,14 @@ public:
 
     TextDecorationThickness textDecorationThickness;
 
-    Vector<Ref<ScrollTimeline>> scrollTimelines;
-    Vector<ScrollAxis> scrollTimelineAxes;
-    Vector<AtomString> scrollTimelineNames;
+    FixedVector<Ref<ScrollTimeline>> scrollTimelines;
+    FixedVector<ScrollAxis> scrollTimelineAxes;
+    FixedVector<AtomString> scrollTimelineNames;
 
-    Vector<Ref<ViewTimeline>> viewTimelines;
-    Vector<ScrollAxis> viewTimelineAxes;
-    Vector<ViewTimelineInsets> viewTimelineInsets;
-    Vector<AtomString> viewTimelineNames;
+    FixedVector<Ref<ViewTimeline>> viewTimelines;
+    FixedVector<ScrollAxis> viewTimelineAxes;
+    FixedVector<ViewTimelineInsets> viewTimelineInsets;
+    FixedVector<AtomString> viewTimelineNames;
 
     NameScope timelineScope;
 
@@ -218,11 +225,11 @@ public:
 
     AtomString pseudoElementNameArgument;
 
-    Vector<Style::ScopedName> anchorNames;
+    FixedVector<Style::ScopedName> anchorNames;
     NameScope anchorScope;
     std::optional<Style::ScopedName> positionAnchor;
     std::optional<PositionArea> positionArea;
-    Vector<Style::PositionTryFallback> positionTryFallbacks;
+    FixedVector<Style::PositionTryFallback> positionTryFallbacks;
 
     std::optional<Length> blockStepSize;
     unsigned blockStepAlign : 2; // BlockStepAlign
@@ -278,10 +285,15 @@ public:
     unsigned nativeAppearanceDisabled : 1;
 
 #if HAVE(CORE_MATERIAL)
-    unsigned appleVisualEffect : 4; // AppleVisualEffect
+    unsigned appleVisualEffect : 5; // AppleVisualEffect
 #endif
 
     unsigned scrollbarWidth : 2; // ScrollbarWidth
+
+    unsigned usesAnchorFunctions : 1;
+    unsigned usesTreeCountingFunctions : 1;
+
+    unsigned isPopoverInvoker : 1;
 
 private:
     StyleRareNonInheritedData();

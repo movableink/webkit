@@ -29,6 +29,7 @@
 #if ENABLE(MEDIA_STREAM) && HAVE(REPLAYKIT)
 
 #import "Logging.h"
+#import "NativeImage.h"
 #import "RealtimeVideoUtilities.h"
 #import <wtf/BlockPtr.h>
 #import <wtf/NeverDestroyed.h>

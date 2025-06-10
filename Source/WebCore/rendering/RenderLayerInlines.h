@@ -25,6 +25,7 @@
 #include "RenderSVGResourceClipper.h"
 #include "RenderView.h"
 #include "SVGGraphicsElement.h"
+#include <wtf/CheckedPtr.h>
 
 namespace WebCore {
 
@@ -37,6 +38,8 @@ inline bool RenderLayer::isTransparent() const { return renderer().isTransparent
 inline bool RenderLayer::overlapBoundsIncludeChildren() const { return hasFilter() && renderer().style().filter().hasFilterThatMovesPixels(); }
 inline bool RenderLayer::preserves3D() const { return renderer().style().preserves3D(); }
 inline int RenderLayer::zIndex() const { return renderer().style().usedZIndex(); }
+inline Page& RenderLayer::page() const { return renderer().page(); }
+inline Ref<Page> RenderLayer::protectedPage() const { return renderer().page(); }
 
 #if HAVE(CORE_MATERIAL)
 inline bool RenderLayer::hasAppleVisualEffect() const { return renderer().hasAppleVisualEffect(); }
@@ -70,7 +73,7 @@ inline bool RenderLayer::hasNonOpacityTransparency() const
         return false;
 
     // SVG clip-paths may use clipping masks, if so, flag this layer as transparent.
-    if (auto* svgClipper = renderer().svgClipperResourceFromStyle(); svgClipper && !svgClipper->shouldApplyPathClipping())
+    if (CheckedPtr svgClipper = renderer().svgClipperResourceFromStyle(); svgClipper && !svgClipper->shouldApplyPathClipping())
         return true;
 
     return false;

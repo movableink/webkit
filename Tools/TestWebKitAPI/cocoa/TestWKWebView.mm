@@ -32,6 +32,7 @@
 #import "InstanceMethodSwizzler.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
+#import "TestCocoa.h"
 #import "TestNavigationDelegate.h"
 #import "Utilities.h"
 
@@ -522,6 +523,18 @@ static WebEvent *unwrap(BEKeyEntry *event)
     return count;
 }
 
+- (NSUInteger)modelProcessModelPlayerCount
+{
+    __block bool done = false;
+    __block NSUInteger count = 0;
+    [self _modelProcessModelPlayerCountForTesting:^(NSUInteger result) {
+        done = true;
+        count = result;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    return count;
+}
+
 - (NSString *)contentsAsString
 {
     __block bool done = false;
@@ -826,8 +839,7 @@ static void setOverriddenApplicationKeyWindow(UIWindow *window)
 
     if (!UIApplication.sharedApplication) {
         InstanceMethodSwizzler bundleIdentifierSwizzler(NSBundle.class, @selector(bundleIdentifier), reinterpret_cast<IMP>(overrideBundleIdentifier));
-        UIApplicationInitialize();
-        UIApplicationInstantiateSingleton(UIApplication.class);
+        TestWebKitAPI::Util::instantiateUIApplicationIfNeeded();
     }
 
     static dispatch_once_t onceToken;

@@ -332,6 +332,8 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 			skip(ALL, "test", ALL, "SkRuntimeBlender_GPU")
 			skip(ALL, "test", ALL, "SkRuntimeEffect") // knocks out a bunch
 			skip(ALL, "test", ALL, "SkRuntimeShaderImageFilter_GPU")
+			skip(ALL, "test", ALL, "SkRuntimeShader_TransformedCoords_Ganesh")
+			skip(ALL, "test", ALL, "SkRuntimeShader_TransformedCoords_Graphite")
 			skip(ALL, "test", ALL, "SkSLCross")
 			skip(ALL, "test", ALL, "SkSL") // knocks out a bunch
 			skip(ALL, "test", ALL, "SpecialImage_Gpu")
@@ -373,6 +375,9 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 			skip(ALL, "test", ALL, "ProcessorOptimizationValidationTest")
 			skip(ALL, "test", ALL, "TextBlobAbnormal")
 			skip(ALL, "test", ALL, "TextBlobStressAbnormal")
+
+			// b/399342221
+			skip(ALL, "test", ALL, "UserDefinedStableKeyTest")
 		}
 
 		// The Tegra3 doesn't support MSAA
@@ -436,6 +441,11 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 				// https://skbug.com/14105
 				skip(ALL, "test", ALL, "BackendTextureTest")
 
+				if b.matchOs("Win") {
+					// Enable MSAA tiling on Windows
+					args = append(args, "--internalMSAATileSize", "256")
+				}
+
 				if b.matchOs("Win10") || b.matchGpu("Adreno620", "MaliG78", "QuadroP400") {
 					// The Dawn Win10 and some Android/Linux device jobs OOMs (skbug.com/14410, b/318725123)
 					skip(ALL, "test", ALL, "BigImageTest_Graphite")
@@ -458,14 +468,11 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 
 					// b/389701894 - The Dawn/GLES backend is hard crashing on this test
 					skip(ALL, "test", ALL, "ThreadedPipelineCompilePurgingTest")
-				}
 
-				// b/373845830 - Precompile isn't thread-safe on either Dawn Metal
-				// or Dawn Vulkan
-				skip(ALL, "test", ALL, "ThreadedPipelinePrecompileTest")
-				// b/380039123 getting both ASAN and TSAN failures for this test on Dawn
-				skip(ALL, "test", ALL, "ThreadedPipelinePrecompileCompileTest")
-				skip(ALL, "test", ALL, "ThreadedPipelinePrecompileCompilePurgingTest")
+					// b/405970498 - The Dawn/GLES backend is failing these two tests
+					skip(ALL, "test", ALL, "ThreadedPipelinePrecompileCompileTest")
+					skip(ALL, "test", ALL, "ThreadedPipelinePrecompileCompilePurgingTest")
+				}
 
 				if b.extraConfig("Vulkan") {
 					if b.extraConfig("TSAN") {
@@ -486,7 +493,12 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 				}
 			} else if b.extraConfig("Native") {
 				if b.extraConfig("Metal") {
-					configs = []string{"grmtl"}
+					if b.extraConfig("TestPrecompile") {
+						configs = []string{"grmtltestprecompile"}
+					} else {
+						configs = []string{"grmtl"}
+					}
+
 					if b.gpu("IntelIrisPlus") {
 						// We get some 27/255 RGB diffs on the 45 degree
 						// rotation case on this device (skbug.com/14408)
@@ -494,7 +506,12 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 					}
 				}
 				if b.extraConfig("Vulkan") {
-					configs = []string{"grvk"}
+					if b.extraConfig("TestPrecompile") {
+						configs = []string{"grvktestprecompile"}
+					} else {
+						configs = []string{"grvk"}
+					}
+
 					// Couldn't readback
 					skip(ALL, "gm", ALL, "aaxfermodes")
 					// Could not instantiate texture proxy for UploadTask!
@@ -1069,6 +1086,12 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 		skip(ALL, "image", "gen_platf", "rle4-height-negative.bmp")
 	}
 
+	if b.matchOs("Mac14") {
+		// These images are very large
+		skip(ALL, "image", "gen_platf", "rgb24largepal.bmp")
+		skip(ALL, "image", "gen_platf", "pal8oversizepal.bmp")
+	}
+
 	// These PNGs have CRC errors. The platform generators seem to draw
 	// uninitialized memory without reporting an error, so skip them to
 	// avoid lots of images on Gold.
@@ -1207,15 +1230,11 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 		"async_rescale_and_read_dog_down",
 		"async_rescale_and_read_rose",
 		"async_rescale_and_read_no_bleed",
-		"async_rescale_and_read_alpha_type"} {
+		"async_rescale_and_read_alpha_type",
+		"blurrect_compare", // GM requires canvas->makeSurface() to return a valid surface.
+		"rrect_blurs"} {
 		skip("pic-8888", "gm", ALL, test)
 		skip("serialize-8888", "gm", ALL, test)
-
-		// GM requires canvas->makeSurface() to return a valid surface.
-		// TODO(borenet): These should be just outside of this block but are
-		// left here to match the recipe which has an indentation bug.
-		skip("pic-8888", "gm", ALL, "blurrect_compare")
-		skip("serialize-8888", "gm", ALL, "blurrect_compare")
 	}
 
 	// Extensions for RAW images
@@ -1261,6 +1280,11 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 		}
 	}
 
+	// b/416733454
+	if (b.model("AndroidOne") || b.model("JioNext") || b.model("GalaxyS7_G930FD")) && b.gpu() {
+		skip(ALL, "svg", ALL, "desk_motionmark_paths.svg")
+	}
+
 	// b/296440036
 	// disable broken tests on Adreno 5/6xx Vulkan or API30
 	if b.matchGpu("Adreno[56]") && (b.extraConfig("Vulkan") || b.extraConfig("API30")) {
@@ -1294,6 +1318,17 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 
 	if b.extraConfig("ANGLE") && b.matchOs("Win") && b.matchGpu("IntelIris(540|655|Xe)") {
 		skip(ALL, "tests", ALL, "ImageFilterCropRect_Gpu") // b/294080402
+	}
+
+	if b.extraConfig("ANGLE") && b.matchOs("Mac15") && b.matchGpu("IntelUHDGraphics630") {
+		// b/405918638
+		skip(ALL, "tests", ALL, "TransferPixelsFromTextureTest")
+		skip(ALL, "tests", ALL, "ImageAsyncReadPixels_Renderable_BottomLeft")
+		skip(ALL, "tests", ALL, "ImageAsyncReadPixels_Renderable_TopLeft")
+		skip(ALL, "tests", ALL, "ImageAsyncReadPixels_NonRenderable_BottomLeft")
+		skip(ALL, "tests", ALL, "ImageAsyncReadPixels_NonRenderable_TopLeft")
+		skip(ALL, "tests", ALL, "SurfaceAsyncReadPixels")
+		skip(ALL, "tests", ALL, "TransferPixelsToTextureTest")
 	}
 
 	if b.gpu("RTX3060") && b.extraConfig("Vulkan") && b.matchOs("Win") {

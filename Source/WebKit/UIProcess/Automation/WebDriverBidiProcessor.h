@@ -36,12 +36,14 @@
 
 namespace WebKit {
 
+class BidiBrowserAgent;
+class BidiBrowsingContextAgent;
+class BidiScriptAgent;
+class BidiStorageAgent;
 class WebAutomationSession;
+class WebPageProxy;
 
-class WebDriverBidiProcessor final
-    : public Inspector::FrontendChannel
-    , public Inspector::BidiBrowserBackendDispatcherHandler
-    , public Inspector::BidiBrowsingContextBackendDispatcherHandler {
+class WebDriverBidiProcessor final : public Inspector::FrontendChannel {
     WTF_MAKE_TZONE_ALLOCATED(WebDriverBidiProcessor);
 public:
     explicit WebDriverBidiProcessor(WebAutomationSession&);
@@ -50,19 +52,16 @@ public:
     void processBidiMessage(const String&);
     void sendBidiMessage(const String&);
 
+    BidiBrowserAgent& browserAgent() const { return *m_browserAgent; }
+
     // Inspector::FrontendChannel methods. Domain events sent via WebDriverBidi domain notifiers are packaged up
     // by FrontendRouter and are then sent back out-of-process via WebAutomationSession::sendBidiMessage().
     Inspector::FrontendChannel::ConnectionType connectionType() const override { return Inspector::FrontendChannel::ConnectionType::Local; };
     void sendMessageToFrontend(const String&) override;
 
-    // Inspector::BidiBrowsingContextDispatcherHandler methods.
-    void navigate(const Inspector::Protocol::BidiBrowsingContext::BrowsingContext&, const String& url, std::optional<Inspector::Protocol::BidiBrowsingContext::ReadinessState>&&, Inspector::CommandCallbackOf<String, String>&&) override;
-
-    // Inspector::BidiBrowserBackendDispatcherHandler methods.
-    Inspector::Protocol::ErrorStringOr<void> close() override;
-
     // Event entry points called from the owning WebAutomationSession.
-    void logEntryAdded(const String& level, const String& source, const String& message, double timestamp, const String& type, const String& method);
+    Inspector::BidiBrowsingContextFrontendDispatcher& browsingContextDomainNotifier() const { return *m_browsingContextDomainNotifier; }
+    Inspector::BidiLogFrontendDispatcher& logDomainNotifier() const { return *m_logDomainNotifier; }
 
 private:
     Ref<Inspector::FrontendRouter> protectedFrontendRouter() const;
@@ -73,9 +72,11 @@ private:
     Ref<Inspector::FrontendRouter> m_frontendRouter;
     Ref<Inspector::BackendDispatcher> m_backendDispatcher;
 
-    Ref<Inspector::BidiBrowserBackendDispatcher> m_browserDomainDispatcher;
-    Ref<Inspector::BidiBrowsingContextBackendDispatcher> m_browsingContextDomainDispatcher;
-
+    std::unique_ptr<BidiBrowserAgent> m_browserAgent;
+    std::unique_ptr<BidiBrowsingContextAgent> m_browsingContextAgent;
+    std::unique_ptr<BidiScriptAgent> m_scriptAgent;
+    std::unique_ptr<BidiStorageAgent> m_storageAgent;
+    std::unique_ptr<Inspector::BidiBrowsingContextFrontendDispatcher> m_browsingContextDomainNotifier;
     std::unique_ptr<Inspector::BidiLogFrontendDispatcher> m_logDomainNotifier;
 };
 

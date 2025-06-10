@@ -35,21 +35,24 @@
 #include "WebPage.h"
 #include "WebProcess.h"
 #include <JavaScriptCore/ConsoleTypes.h>
+#include <WebCore/AllAcceptedCredentialsOptions.h>
 #include <WebCore/AuthenticatorAttachment.h>
 #include <WebCore/AuthenticatorResponseData.h>
+#include <WebCore/CurrentUserDetailsOptions.h>
 #include <WebCore/LocalFrame.h>
 #include <WebCore/MediationRequirement.h>
 #include <WebCore/PublicKeyCredentialCreationOptions.h>
 #include <WebCore/PublicKeyCredentialRequestOptions.h>
 #include <WebCore/Quirks.h>
 #include <WebCore/SecurityOrigin.h>
+#include <WebCore/UnknownCredentialOptions.h>
 #include <WebCore/UserGestureIndicator.h>
 #include <WebCore/WebAuthenticationConstants.h>
 #include <wtf/TZoneMallocInlines.h>
 
 #undef WEBAUTHN_RELEASE_LOG
 #define PAGE_ID (m_webPage->identifier().toUInt64())
-#define FRAME_ID (webFrame->frameID().object().toUInt64())
+#define FRAME_ID (webFrame->frameID().toUInt64())
 #define WEBAUTHN_RELEASE_LOG_ERROR(fmt, ...) RELEASE_LOG_ERROR(WebAuthn, "%p - [webPageID=%" PRIu64 ", webFrameID=%" PRIu64 "] WebAuthenticatorCoordinator::" fmt, this, PAGE_ID, FRAME_ID, ##__VA_ARGS__)
 #define WEBAUTHN_RELEASE_LOG_ERROR_NO_FRAME(fmt, ...) RELEASE_LOG_ERROR(WebAuthn, "%p - [webPageID=%" PRIu64 "] WebAuthenticatorCoordinator::" fmt, this, PAGE_ID, ##__VA_ARGS__)
 

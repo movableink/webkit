@@ -111,7 +111,7 @@ void RemoteInspector::stopInternal(StopSource)
 
     updateHasActiveDebugSession();
 
-    m_pausedAutomaticInspectionCandidates.clear();
+    m_automaticInspectionCandidates.clear();
 }
 
 TargetListing RemoteInspector::listingForInspectionTarget(const RemoteInspectionTarget& target) const

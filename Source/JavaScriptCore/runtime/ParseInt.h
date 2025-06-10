@@ -225,7 +225,7 @@ static ALWAYS_INLINE typename std::invoke_result<CallbackWhenNoException, String
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSString* string = value.toStringOrNull(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !string);
-    if (UNLIKELY(!string))
+    if (!string) [[unlikely]]
         return { };
     auto view = string->view(globalObject);
     RETURN_IF_EXCEPTION(scope, { });

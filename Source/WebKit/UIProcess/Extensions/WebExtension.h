@@ -60,9 +60,9 @@ class WebExtension : public API::ObjectImpl<API::Object::Type::WebExtension>, pu
     WTF_MAKE_NONCOPYABLE(WebExtension);
 
 public:
-    using IconCacheEntry = std::variant<RefPtr<WebCore::Icon>, Vector<double>>;
+    using IconCacheEntry = Variant<RefPtr<WebCore::Icon>, Vector<double>>;
     using IconsCache = HashMap<String, IconCacheEntry>;
-    using Resources = HashMap<String, std::variant<String, Ref<API::Data>>>;
+    using Resources = HashMap<String, Variant<String, Ref<API::Data>>>;
 
     template<typename... Args>
     static Ref<WebExtension> create(Args&&... args)
@@ -330,6 +330,7 @@ public:
     // These are not the currently allowed permission patterns.
     const MatchPatternSet& requestedPermissionMatchPatterns();
     const MatchPatternSet& optionalPermissionMatchPatterns();
+    const MatchPatternSet combinedPermissionMatchPatterns() { return requestedPermissionMatchPatterns().unionWith(optionalPermissionMatchPatterns()); }
 
     // Permission patterns requested by the extension in their manifest.
     // These determine which websites the extension can communicate with.

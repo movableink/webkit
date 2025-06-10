@@ -25,7 +25,8 @@
 #include "config.h"
 #include <wtf/text/StringImpl.h>
 
-#include <wtf/Algorithms.h>
+#include <atomic>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/CString.h>
@@ -353,7 +354,7 @@ Ref<StringImpl> StringImpl::convertToLowercaseWithoutLocale()
     if (is8Bit()) {
         for (unsigned i = 0; i < m_length; ++i) {
             LChar character = m_data8[i];
-            if (UNLIKELY(!isASCII(character) || isASCIIUpper(character)))
+            if (!isASCII(character) || isASCIIUpper(character)) [[unlikely]]
                 return convertToLowercaseWithoutLocaleStartingAtFailingIndex8Bit(i);
         }
 
@@ -365,7 +366,7 @@ Ref<StringImpl> StringImpl::convertToLowercaseWithoutLocale()
 
     for (unsigned i = 0; i < m_length; ++i) {
         UChar character = m_data16[i];
-        if (UNLIKELY(isASCIIUpper(character)))
+        if (isASCIIUpper(character)) [[unlikely]]
             noUpper = false;
         ored |= character;
     }
@@ -441,7 +442,7 @@ Ref<StringImpl> StringImpl::convertToUppercaseWithoutLocale()
     if (is8Bit()) {
         for (unsigned i = 0; i < m_length; ++i) {
             LChar character = m_data8[i];
-            if (UNLIKELY(!isASCII(character) || isASCIILower(character)))
+            if (!isASCII(character) || isASCIILower(character)) [[unlikely]]
                 return convertToUppercaseWithoutLocaleStartingAtFailingIndex8Bit(i);
         }
         return *this;
@@ -479,11 +480,11 @@ Ref<StringImpl> StringImpl::convertToUppercaseWithoutLocaleStartingAtFailingInde
     //  2. Lower case sharp-S converts to "SS" (two characters)
     for (unsigned i = 0; i < m_length; ++i) {
         LChar character = m_data8[i];
-        if (UNLIKELY(character == smallLetterSharpS))
+        if (character == smallLetterSharpS) [[unlikely]]
             ++numberSharpSCharacters;
         ASSERT(u_toupper(character) <= 0xFFFF);
         UChar upper = u_toupper(character);
-        if (UNLIKELY(!isLatin1(upper))) {
+        if (!isLatin1(upper)) [[unlikely]] {
             // Since this upper-cased character does not fit in an 8-bit string, we need to take the 16-bit path.
             return convertToUppercaseWithoutLocaleUpconvert();
         }
@@ -645,7 +646,7 @@ Ref<StringImpl> StringImpl::foldCase()
         unsigned failingIndex;
         for (unsigned i = 0; i < m_length; ++i) {
             auto character = m_data8[i];
-            if (UNLIKELY(!isASCII(character) || isASCIIUpper(character))) {
+            if (!isASCII(character) || isASCIIUpper(character)) [[unlikely]] {
                 failingIndex = i;
                 goto SlowPath;
             }
@@ -684,7 +685,7 @@ SlowPath:
         unsigned ored = 0;
         for (unsigned i = 0; i < m_length; ++i) {
             UChar character = m_data16[i];
-            if (UNLIKELY(isASCIIUpper(character)))
+            if (isASCIIUpper(character)) [[unlikely]]
                 noUpper = false;
             ored |= character;
         }
@@ -728,9 +729,16 @@ ALWAYS_INLINE Ref<StringImpl> StringImpl::convertASCIICase(StringImpl& impl, std
     size_t failingIndex;
     for (size_t i = 0; i < data.size(); ++i) {
         CharacterType character = data[i];
-        if (type == CaseConvertType::Lower ? UNLIKELY(isASCIIUpper(character)) : LIKELY(isASCIILower(character))) {
-            failingIndex = i;
-            goto SlowPath;
+        if constexpr (type == CaseConvertType::Lower) {
+            if (isASCIIUpper(character)) [[unlikely]] {
+                failingIndex = i;
+                goto SlowPath;
+            }
+        } else {
+            if (isASCIILower(character)) [[likely]] {
+                failingIndex = i;
+                goto SlowPath;
+            }
         }
     }
     return impl;
@@ -918,7 +926,7 @@ size_t StringImpl::reverseFind(std::span<const LChar> matchString, size_t start)
 size_t StringImpl::find(StringView matchString)
 {
     // Check for null string to match against
-    if (UNLIKELY(!matchString))
+    if (!matchString) [[unlikely]]
         return notFound;
     unsigned matchLength = matchString.length();
 
@@ -939,7 +947,7 @@ size_t StringImpl::find(StringView matchString)
         return notFound;
 
     // Check for empty string to match against
-    if (UNLIKELY(!matchLength))
+    if (!matchLength) [[unlikely]]
         return 0;
 
     if (is8Bit()) {
@@ -957,7 +965,7 @@ size_t StringImpl::find(StringView matchString)
 size_t StringImpl::find(StringView matchString, size_t start)
 {
     // Check for null or empty string to match against
-    if (UNLIKELY(!matchString))
+    if (!matchString) [[unlikely]]
         return notFound;
 
     return findCommon(StringView { *this }, matchString, start);

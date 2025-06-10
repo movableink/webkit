@@ -39,11 +39,12 @@
 #import "WebViewImpl.h"
 #import <WebCore/DictionaryLookup.h>
 #import <WebCore/GeometryUtilities.h>
-#import <WebCore/TextIndicatorWindow.h>
 #import <pal/spi/mac/LookupSPI.h>
 #import <pal/spi/mac/NSMenuSPI.h>
 #import <pal/spi/mac/NSPopoverSPI.h>
 #import <wtf/URL.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
+
 #import <pal/mac/DataDetectorsSoftLink.h>
 #import <pal/mac/QuickLookUISoftLink.h>
 
@@ -83,10 +84,10 @@
     _hitTestResultData = WebKit::WebHitTestResultData();
     _contentPreventsDefault = NO;
     
-    id animationController = [_immediateActionRecognizer animationController];
+    RetainPtr<id> animationController = [_immediateActionRecognizer animationController];
     if (PAL::isQuickLookUIFrameworkAvailable() && [animationController isKindOfClass:PAL::getQLPreviewMenuItemClass()]) {
-        QLPreviewMenuItem *menuItem = (QLPreviewMenuItem *)animationController;
-        menuItem.delegate = nil;
+        RetainPtr menuItem = (QLPreviewMenuItem *)animationController.get();
+        menuItem.get().delegate = nil;
     }
 
     _immediateActionRecognizer = nil;
@@ -268,7 +269,7 @@
 
 #pragma mark Immediate actions
 
-- (id <NSImmediateActionAnimationController>)_defaultAnimationController
+- (id<NSImmediateActionAnimationController>)_defaultAnimationController
 {
     if (_contentPreventsDefault)
         return adoptNS([[WKAnimationController alloc] init]).autorelease();
@@ -298,27 +299,27 @@
         if (WTF::protocolIsInHTTPFamily(absoluteLinkURL)) {
             _type = kWKImmediateActionLinkPreview;
 
-            QLPreviewMenuItem *item = [NSMenuItem standardQuickLookMenuItem];
-            item.previewStyle = QLPreviewStylePopover;
-            item.delegate = self;
-            _currentQLPreviewMenuItem = item;
+            RetainPtr item = [NSMenuItem standardQuickLookMenuItem];
+            item.get().previewStyle = QLPreviewStylePopover;
+            item.get().delegate = self;
+            _currentQLPreviewMenuItem = item.get();
 
             if (RefPtr textIndicator = _hitTestResultData.linkTextIndicator)
-                RefPtr { _page.get() }->setTextIndicator(textIndicator->data());
+                RefPtr { _page.get() }->setTextIndicator(textIndicator->data(), WebCore::TextIndicatorLifetime::Permanent);
 
-            return (id<NSImmediateActionAnimationController>)item;
+            return (id<NSImmediateActionAnimationController>)item.autorelease();
         }
     }
 
     if (hitTestResult->isTextNode() || hitTestResult->isOverTextInsideFormControlElement()) {
-        if (auto animationController = [self _animationControllerForDataDetectedText]) {
+        if (RetainPtr animationController = [self _animationControllerForDataDetectedText]) {
             _type = kWKImmediateActionDataDetectedItem;
-            return animationController;
+            return animationController.autorelease();
         }
 
-        if (auto animationController = [self _animationControllerForText]) {
+        if (RetainPtr animationController = [self _animationControllerForText]) {
             _type = kWKImmediateActionLookupText;
-            return animationController;
+            return animationController.autorelease();
         }
     }
 
@@ -329,10 +330,10 @@
 {
     _type = kWKImmediateActionNone;
 
-    id <NSImmediateActionAnimationController> defaultAnimationController = [self _defaultAnimationController];
+    RetainPtr<id<NSImmediateActionAnimationController>> defaultAnimationController = [self _defaultAnimationController];
 
     if (_contentPreventsDefault) {
-        [_immediateActionRecognizer.get() setAnimationController:defaultAnimationController];
+        [_immediateActionRecognizer.get() setAnimationController:defaultAnimationController.get()];
         return;
     }
 
@@ -342,16 +343,16 @@
         return;
     }
 
-    id customClientAnimationController = RefPtr { _page.get() }->immediateActionAnimationControllerForHitTestResult(hitTestResult, _type, _userData);
-    if (customClientAnimationController == [NSNull null]) {
+    RetainPtr<id> customClientAnimationController = RefPtr { _page.get() }->immediateActionAnimationControllerForHitTestResult(hitTestResult, _type, _userData);
+    if (customClientAnimationController.get() == [NSNull null]) {
         [self _cancelImmediateAction];
         return;
     }
 
     if (customClientAnimationController && [customClientAnimationController conformsToProtocol:@protocol(NSImmediateActionAnimationController)])
-        [_immediateActionRecognizer setAnimationController:(id <NSImmediateActionAnimationController>)customClientAnimationController];
+        [_immediateActionRecognizer setAnimationController:(id<NSImmediateActionAnimationController>)customClientAnimationController.get()];
     else
-        [_immediateActionRecognizer setAnimationController:defaultAnimationController];
+        [_immediateActionRecognizer setAnimationController:defaultAnimationController.get()];
 }
 
 #pragma mark QLPreviewMenuItemDelegate implementation
@@ -416,13 +417,13 @@
     if (!detectedContext)
         return nil;
 
-    WKDDActionContext *actionContext = detectedContext->context.get();
+    RetainPtr actionContext = detectedContext->context.get();
     if (!actionContext)
         return nil;
 
-    actionContext.altMode = YES;
-    actionContext.immediate = YES;
-    if (![[PAL::getDDActionsManagerClass() sharedManager] hasActionsForResult:actionContext.mainResult actionContext:actionContext])
+    actionContext.get().altMode = YES;
+    actionContext.get().immediate = YES;
+    if (![[PAL::getDDActionsManagerClass() sharedManager] hasActionsForResult:actionContext.get().mainResult actionContext:actionContext.get()])
         return nil;
 
     RefPtr<WebKit::WebPageProxy> page = _page.get();
@@ -431,7 +432,7 @@
         page->protectedLegacyMainFrameProcess()->send(Messages::WebPage::DataDetectorsDidPresentUI(overlayID), page->webPageIDInMainFrameProcess());
     } interactionChangedHandler:^() {
         if (RefPtr detectedDataTextIndicator = _hitTestResultData.platformData.detectedDataTextIndicator)
-            page->setTextIndicator(detectedDataTextIndicator->data());
+            page->setTextIndicator(detectedDataTextIndicator->data(), WebCore::TextIndicatorLifetime::Permanent);
         page->protectedLegacyMainFrameProcess()->send(Messages::WebPage::DataDetectorsDidChangeUI(overlayID), page->webPageIDInMainFrameProcess());
     } interactionStoppedHandler:^() {
         page->protectedLegacyMainFrameProcess()->send(Messages::WebPage::DataDetectorsDidHideUI(overlayID), page->webPageIDInMainFrameProcess());
@@ -440,12 +441,12 @@
 
     [_currentActionContext setHighlightFrame:[_view.window convertRectToScreen:[_view convertRect:_hitTestResultData.platformData.detectedDataBoundingBox toView:nil]]];
 
-    NSArray *menuItems = [[PAL::getDDActionsManagerClass() sharedManager] menuItemsForResult:[_currentActionContext mainResult] actionContext:_currentActionContext.get()];
+    RetainPtr menuItems = [[PAL::getDDActionsManagerClass() sharedManager] menuItemsForResult:[_currentActionContext mainResult] actionContext:_currentActionContext.get()];
 
-    if (menuItems.count != 1)
+    if (menuItems.get().count != 1)
         return nil;
 
-    return (id<NSImmediateActionAnimationController>)menuItems.lastObject;
+    return (id<NSImmediateActionAnimationController>)menuItems.get().lastObject;
 }
 
 - (id<NSImmediateActionAnimationController>)_animationControllerForDataDetectedLink
@@ -453,7 +454,7 @@
     if (!PAL::isDataDetectorsFrameworkAvailable())
         return nil;
 
-    auto actionContext = adoptNS([PAL::allocWKDDActionContextInstance() init]);
+    RetainPtr actionContext = adoptNS([PAL::allocWKDDActionContextInstance() init]);
     if (!actionContext)
         return nil;
 
@@ -464,7 +465,7 @@
     _currentActionContext = (WKDDActionContext *)[actionContext contextForView:_view altMode:YES interactionStartedHandler:^() {
     } interactionChangedHandler:^() {
         if (RefPtr linkTextIndicator = _hitTestResultData.linkTextIndicator)
-            page->setTextIndicator(linkTextIndicator->data());
+            page->setTextIndicator(linkTextIndicator->data(), WebCore::TextIndicatorLifetime::Permanent);
     } interactionStoppedHandler:^() {
         [self _clearImmediateActionState];
     }];
@@ -475,12 +476,12 @@
     if (!hitTestResult)
         return nil;
 
-    NSArray *menuItems = [[PAL::getDDActionsManagerClass() sharedManager] menuItemsForTargetURL:hitTestResult->absoluteLinkURL() actionContext:_currentActionContext.get()];
+    RetainPtr menuItems = [[PAL::getDDActionsManagerClass() sharedManager] menuItemsForTargetURL:hitTestResult->absoluteLinkURL().createNSString().get() actionContext:_currentActionContext.get()];
 
-    if (menuItems.count != 1)
+    if (menuItems.get().count != 1)
         return nil;
 
-    return (id<NSImmediateActionAnimationController>)menuItems.lastObject;
+    return (id<NSImmediateActionAnimationController>)menuItems.get().lastObject;
 }
 
 #pragma mark Text action
@@ -491,15 +492,21 @@
         return nil;
 
     WebCore::DictionaryPopupInfo dictionaryPopupInfo = _hitTestResultData.dictionaryPopupInfo;
+
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
     if (!dictionaryPopupInfo.platformData.attributedString.nsAttributedString())
         return nil;
+#else
+    if (!dictionaryPopupInfo.text)
+        return nil;
+#endif
 
     CheckedPtr { _viewImpl.get() }->prepareForDictionaryLookup();
 
     return WebCore::DictionaryLookup::animationControllerForPopup(dictionaryPopupInfo, _view, [self](WebCore::TextIndicator& textIndicator) {
-        CheckedPtr { _viewImpl.get() }->setTextIndicator(textIndicator, WebCore::TextIndicatorLifetime::Permanent);
-    }, nullptr, [self]() {
-        CheckedPtr { _viewImpl.get() }->clearTextIndicatorWithAnimation(WebCore::TextIndicatorDismissalAnimation::None);
+        RefPtr { _page.get() }->setTextIndicator(textIndicator.data(), WebCore::TextIndicatorLifetime::Permanent);
+    }, nullptr, [strongSelf = retainPtr(self)]() {
+        RefPtr { strongSelf->_page.get() }->clearTextIndicatorWithAnimation(WebCore::TextIndicatorDismissalAnimation::None);
     });
 }
 

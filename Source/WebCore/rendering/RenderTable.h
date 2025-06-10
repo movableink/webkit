@@ -69,7 +69,7 @@ public:
     inline LayoutUnit borderTop() const final;
     inline LayoutUnit borderBottom() const final;
 
-    Color bgColor() const { return style().visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor); }
+    Color bgColor() const { return checkedStyle()->visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor); }
 
     LayoutUnit outerBorderBefore() const;
     LayoutUnit outerBorderAfter() const;
@@ -168,13 +168,7 @@ public:
     }
 
     bool needsSectionRecalc() const { return m_needsSectionRecalc; }
-    void setNeedsSectionRecalc()
-    {
-        if (renderTreeBeingDestroyed())
-            return;
-        m_needsSectionRecalc = true;
-        setNeedsLayout();
-    }
+    void setNeedsSectionRecalc();
 
     RenderTableSection* sectionAbove(const RenderTableSection*, SkipEmptySectionsValue = DoNotSkipEmptySections) const;
     RenderTableSection* sectionBelow(const RenderTableSection*, SkipEmptySectionsValue = DoNotSkipEmptySections) const;
@@ -198,9 +192,6 @@ public:
         if (m_needsSectionRecalc)
             recalcSections();
     }
-
-    static RenderPtr<RenderTable> createAnonymousWithParentRenderer(const RenderElement&);
-    RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const override;
 
     void addCaption(RenderTableCaption&);
     void removeCaption(RenderTableCaption&);
@@ -226,9 +217,6 @@ public:
 protected:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
     void simplifiedNormalFlowLayout() final;
-
-private:
-    static RenderPtr<RenderTable> createTableWithStyle(Document&, const RenderStyle&);
 
     ASCIILiteral renderName() const override { return "RenderTable"_s; }
 
@@ -321,11 +309,6 @@ private:
     mutable LayoutUnit m_columnOffsetHeight;
     unsigned m_recursiveSectionMovedWithPaginationLevel { 0 };
 };
-
-inline RenderPtr<RenderBox> RenderTable::createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const
-{
-    return RenderTable::createTableWithStyle(renderer.document(), renderer.style());
-}
 
 } // namespace WebCore
 

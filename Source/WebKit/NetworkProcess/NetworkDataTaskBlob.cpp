@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2016 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -262,7 +263,7 @@ void NetworkDataTaskBlob::dispatchDidReceiveResponse()
     LOG(NetworkSession, "%p - NetworkDataTaskBlob::dispatchDidReceiveResponse()", this);
 
     Ref<NetworkDataTaskBlob> protectedThis(*this);
-    ResourceResponse response(m_firstRequest.url(), extractMIMETypeFromMediaType(m_blobData->contentType()), m_totalRemainingSize, String());
+    ResourceResponse response(URL { m_firstRequest.url() }, extractMIMETypeFromMediaType(m_blobData->contentType()), m_totalRemainingSize, String());
     response.setHTTPStatusCode(m_isRangeRequest ? httpPartialContent : httpOK);
     response.setHTTPStatusText(m_isRangeRequest ? httpPartialContentText : httpOKText);
 
@@ -279,7 +280,7 @@ void NetworkDataTaskBlob::dispatchDidReceiveResponse()
     // Notably, this will affect a name suggested in "File Save As".
 
     didReceiveResponse(WTFMove(response), NegotiatedLegacyTLS::No, PrivateRelayed::No, std::nullopt, [this, protectedThis = Ref { *this }](PolicyAction policyAction) {
-        LOG(NetworkSession, "%p - NetworkDataTaskBlob::didReceiveResponse completionHandler (%u)", this, static_cast<unsigned>(policyAction));
+        LOG(NetworkSession, "%p - NetworkDataTaskBlob::didReceiveResponse completionHandler (%s)", this, toString(policyAction).characters());
 
         if (m_state == State::Canceling || m_state == State::Completed) {
             clearStream();
@@ -392,7 +393,7 @@ void NetworkDataTaskBlob::consumeData(std::span<const uint8_t> data)
     m_totalRemainingSize -= data.size();
 
     if (!data.empty()) {
-        if (m_downloadFile != FileSystem::invalidPlatformFileHandle) {
+        if (m_downloadFile) {
             if (!writeDownload(data))
                 return;
         } else {
@@ -446,14 +447,14 @@ void NetworkDataTaskBlob::download()
     LOG(NetworkSession, "%p - NetworkDataTaskBlob::download to %s", this, m_pendingDownloadLocation.utf8().data());
 
     m_downloadFile = FileSystem::openFile(m_pendingDownloadLocation, FileSystem::FileOpenMode::Truncate);
-    if (m_downloadFile == FileSystem::invalidPlatformFileHandle) {
+    if (!m_downloadFile) {
         didFailDownload(cancelledError(m_firstRequest));
         return;
     }
 
-    auto& downloadManager = m_networkProcess->downloadManager();
-    Ref download = Download::create(downloadManager, *m_pendingDownloadID, *this, *m_session, suggestedFilename());
-    downloadManager.dataTaskBecameDownloadTask(*m_pendingDownloadID, download.copyRef());
+    CheckedRef downloadManager = m_networkProcess->downloadManager();
+    Ref download = Download::create(downloadManager, *m_pendingDownloadID, *this, *checkedNetworkSession(), suggestedFilename());
+    downloadManager->dataTaskBecameDownloadTask(*m_pendingDownloadID, download.copyRef());
     download->didCreateDestination(m_pendingDownloadLocation);
 
     ASSERT(!m_client);
@@ -465,25 +466,22 @@ void NetworkDataTaskBlob::download()
 bool NetworkDataTaskBlob::writeDownload(std::span<const uint8_t> data)
 {
     ASSERT(isDownload());
-    int bytesWritten = FileSystem::writeToFile(m_downloadFile, data);
-    if (static_cast<size_t>(bytesWritten) != data.size()) {
+    auto bytesWritten = m_downloadFile.write(data);
+    if (bytesWritten != data.size()) {
         didFailDownload(cancelledError(m_firstRequest));
         return false;
     }
 
-    m_downloadBytesWritten += bytesWritten;
-    RefPtr download = m_networkProcess->downloadManager().download(*m_pendingDownloadID);
+    m_downloadBytesWritten += *bytesWritten;
+    RefPtr download = m_networkProcess->checkedDownloadManager()->download(*m_pendingDownloadID);
     ASSERT(download);
-    download->didReceiveData(bytesWritten, m_downloadBytesWritten, m_totalSize);
+    download->didReceiveData(*bytesWritten, m_downloadBytesWritten, m_totalSize);
     return true;
 }
 
 void NetworkDataTaskBlob::cleanDownloadFiles()
 {
-    if (m_downloadFile != FileSystem::invalidPlatformFileHandle) {
-        FileSystem::closeFile(m_downloadFile);
-        m_downloadFile = FileSystem::invalidPlatformFileHandle;
-    }
+    m_downloadFile = { };
     FileSystem::deleteFile(m_pendingDownloadLocation);
 }
 
@@ -500,7 +498,7 @@ void NetworkDataTaskBlob::didFailDownload(const ResourceError& error)
     if (RefPtr client = m_client.get())
         client->didCompleteWithError(error);
     else {
-        RefPtr download = m_networkProcess->downloadManager().download(*m_pendingDownloadID);
+        RefPtr download = m_networkProcess->checkedDownloadManager()->download(*m_pendingDownloadID);
         ASSERT(download);
         download->didFail(error, { });
     }
@@ -511,8 +509,7 @@ void NetworkDataTaskBlob::didFinishDownload()
     LOG(NetworkSession, "%p - NetworkDataTaskBlob::didFinishDownload", this);
 
     ASSERT(isDownload());
-    FileSystem::closeFile(m_downloadFile);
-    m_downloadFile = FileSystem::invalidPlatformFileHandle;
+    m_downloadFile = { };
 
 #if !HAVE(MODERN_DOWNLOADPROGRESS)
     if (RefPtr extension = std::exchange(m_sandboxExtension, nullptr))
@@ -520,7 +517,7 @@ void NetworkDataTaskBlob::didFinishDownload()
 #endif
 
     clearStream();
-    RefPtr download = m_networkProcess->downloadManager().download(*m_pendingDownloadID);
+    RefPtr download = m_networkProcess->checkedDownloadManager()->download(*m_pendingDownloadID);
     ASSERT(download);
 
 #if HAVE(MODERN_DOWNLOADPROGRESS)
@@ -550,7 +547,7 @@ void NetworkDataTaskBlob::didFail(Error errorCode)
 
 void NetworkDataTaskBlob::didFinish()
 {
-    if (m_downloadFile != FileSystem::invalidPlatformFileHandle) {
+    if (m_downloadFile) {
         didFinishDownload();
         return;
     }

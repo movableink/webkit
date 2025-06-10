@@ -55,7 +55,7 @@ private:
 
     bool isWebKitFindClient() const final { return true; }
     
-    WKWebView *m_webView;
+    WeakObjCPtr<WKWebView> m_webView;
     WeakObjCPtr<id <_WKFindDelegate>> m_delegate;
     
     struct {

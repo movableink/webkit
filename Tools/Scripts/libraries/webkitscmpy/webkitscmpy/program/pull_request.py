@@ -405,6 +405,20 @@ class PullRequest(Command):
         return 0
 
     @classmethod
+    def add_comment_to_issue(cls, issue, pr):
+        log.info('Checking issue assignee...')
+        if issue.assignee != issue.tracker.me():
+            issue.assign(issue.tracker.me())
+            print('Assigning associated issue to {}'.format(issue.tracker.me()))
+        log.info('Checking for pull request link in associated issue...')
+        if pr.url and not any([pr.url in comment.content for comment in issue.comments]):
+            if issue.opened:
+                issue.add_comment('Pull request: {}'.format(pr.url))
+            else:
+                issue.open(why='Re-opening for pull request {}'.format(pr.url))
+            print('Posted pull request link to {}'.format(issue.link))
+
+    @classmethod
     def create_pull_request(cls, repository, args, branch_point, callback=None, unblock=True, update_issue=None):
         if update_issue is None:
             update_issue = getattr(args, 'update_issue', True)
@@ -697,18 +711,10 @@ class PullRequest(Command):
             if cls.is_revert_commit(commits[0]) and update_issue:
                 cls.add_comment_to_reverted_commit_bug_tracker(repository, args, pr, commits[0])
 
-        if issue and update_issue:
-            log.info('Checking issue assignee...')
-            if issue.assignee != issue.tracker.me():
-                issue.assign(issue.tracker.me())
-                print('Assigning associated issue to {}'.format(issue.tracker.me()))
-            log.info('Checking for pull request link in associated issue...')
-            if pr.url and not any([pr.url in comment.content for comment in issue.comments]):
-                if issue.opened:
-                    issue.add_comment('Pull request: {}'.format(pr.url))
-                else:
-                    issue.open(why='Re-opening for pull request {}'.format(pr.url))
-                print('Posted pull request link to {}'.format(issue.link))
+        if issue and update_issue and isinstance(issue.tracker, radar.Tracker) and not_radar:
+            cls.add_comment_to_issue(not_radar, pr)
+        elif issue and update_issue:
+            cls.add_comment_to_issue(issue, pr)
 
         if issue and pr._metadata and pr._metadata.get('issue'):
             log.info('Syncing PR labels with issue component...')

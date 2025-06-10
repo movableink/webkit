@@ -121,7 +121,6 @@ void VideoPresentationInterfaceLMK::finalizeSetup()
 void VideoPresentationInterfaceLMK::setupPlayerViewController()
 {
     linearMediaPlayer().captionLayer = captionsLayer();
-    linearMediaPlayer().contentType = WKSLinearMediaContentTypePlanar;
 
     ensurePlayableViewController();
 }
@@ -156,43 +155,57 @@ void VideoPresentationInterfaceLMK::dismissFullscreen(bool animated, Function<vo
     }).get()];
 }
 
-void VideoPresentationInterfaceLMK::enterExternalPlayback(CompletionHandler<void(bool, UIViewController *)>&& completionHandler)
+void VideoPresentationInterfaceLMK::enterExternalPlayback(CompletionHandler<void(bool, UIViewController *)>&& enterHandler, CompletionHandler<void(bool)>&& exitHandler)
 {
     ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
 
     if (linearMediaPlayer().presentationState != WKSLinearMediaPresentationStateInline) {
-        completionHandler(false, nil);
+        enterHandler(false, nil);
+        exitHandler(false);
         return;
     }
+
     setupPlayerViewController();
+    m_exitExternalPlaybackHandler = WTFMove(exitHandler);
 
     playbackSessionInterface().startObservingNowPlayingMetadata();
-    [linearMediaPlayer() enterExternalPresentationWithCompletionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)] (BOOL success, NSError *error) mutable {
+    [linearMediaPlayer() enterExternalPresentationWithCompletionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, handler = WTFMove(enterHandler)] (BOOL success, NSError *error) mutable {
         if (auto* playbackSessionModel = this->playbackSessionModel()) {
             playbackSessionModel->setSpatialTrackingLabel(m_spatialTrackingLabel);
             playbackSessionModel->setSoundStageSize(WebCore::AudioSessionSoundStageSize::Large);
         }
-        completionHandler(success, m_playerViewController.get());
+
+        handler(success, m_playerViewController.get());
     }).get()];
 }
 
-void VideoPresentationInterfaceLMK::exitExternalPlayback(CompletionHandler<void(bool)>&& completionHandler)
+void VideoPresentationInterfaceLMK::exitExternalPlayback()
 {
     ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
 
+    ASSERT(m_exitExternalPlaybackHandler);
+    auto exitHandler = std::exchange(m_exitExternalPlaybackHandler, nullptr);
+
     if (linearMediaPlayer().presentationState != WKSLinearMediaPresentationStateExternal) {
-        completionHandler(false);
+        if (exitHandler)
+            exitHandler(false);
+
         return;
     }
 
     playbackSessionInterface().stopObservingNowPlayingMetadata();
-    [linearMediaPlayer() exitExternalPresentationWithCompletionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)] (BOOL success, NSError *error) mutable {
+    [linearMediaPlayer() exitExternalPresentationWithCompletionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, handler = WTFMove(exitHandler)] (BOOL success, NSError *error) mutable {
         if (auto* playbackSessionModel = this->playbackSessionModel()) {
             playbackSessionModel->setSpatialTrackingLabel(nullString());
             playbackSessionModel->setSoundStageSize(WebCore::AudioSessionSoundStageSize::Automatic);
         }
         invalidatePlayerViewController();
-        completionHandler(success);
+
+        if (RefPtr model = this->videoPresentationModel())
+            model->didExitExternalPlayback();
+
+        if (handler)
+            handler(success);
     }).get()];
 }
 
@@ -203,8 +216,19 @@ bool VideoPresentationInterfaceLMK::cleanupExternalPlayback()
 
     ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
 
-    exitExternalPlayback([](bool) { });
+    exitExternalPlayback();
     return true;
+}
+
+void VideoPresentationInterfaceLMK::didSetVideoReceiverEndpoint()
+{
+    if (linearMediaPlayer().presentationState != WKSLinearMediaPresentationStateExternal)
+        return;
+
+    ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
+
+    if (RefPtr model = this->videoPresentationModel())
+        model->didEnterExternalPlayback();
 }
 
 UIViewController *VideoPresentationInterfaceLMK::playerViewController() const
@@ -235,10 +259,10 @@ CALayer *VideoPresentationInterfaceLMK::captionsLayer()
     m_spatialTrackingLabel = makeString(createVersion4UUIDString());
 #if HAVE(SPATIAL_AUDIO_EXPERIENCE)
     if (prefersSpatialAudioExperience())
-        [m_spatialTrackingLayer setValue:(NSString *)m_spatialTrackingLabel forKeyPath:@"separatedOptions.AudioTether"];
+        [m_spatialTrackingLayer setValue:m_spatialTrackingLabel.createNSString().get() forKeyPath:@"separatedOptions.AudioTether"];
     else
 #endif
-        [m_spatialTrackingLayer setValue:(NSString *)m_spatialTrackingLabel forKeyPath:@"separatedOptions.STSLabel"];
+        [m_spatialTrackingLayer setValue:m_spatialTrackingLabel.createNSString().get() forKeyPath:@"separatedOptions.STSLabel"];
     [m_captionsLayer addSublayer:m_spatialTrackingLayer.get()];
 
     return m_captionsLayer.get();

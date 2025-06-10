@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Canon Inc.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted, provided that the following conditions
@@ -40,6 +41,7 @@
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "WebCoreOpaqueRoot.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
@@ -186,8 +188,8 @@ ExceptionOr<void> FetchRequest::initializeWith(const String& url, Init&& init)
     m_options.mode = Mode::Cors;
     m_options.credentials = Credentials::SameOrigin;
     m_referrer = "client"_s;
-    m_request.setURL(requestURL);
-    m_requestURL = { WTFMove(requestURL), scriptExecutionContext()->topOrigin().data() };
+    m_request.setURL(WTFMove(requestURL));
+    m_requestURL = { m_request.url(), scriptExecutionContext()->topOrigin().data() };
     m_request.setInitiatorIdentifier(scriptExecutionContext()->resourceRequestIdentifier());
 
     auto optionsResult = initializeOptions(init);
@@ -196,7 +198,7 @@ ExceptionOr<void> FetchRequest::initializeWith(const String& url, Init&& init)
 
     if (init.signal) {
         if (auto* signal = JSAbortSignal::toWrapped(scriptExecutionContext()->vm(), init.signal))
-            protectedSignal()->signalFollow(*signal);
+            m_signal->signalFollow(*signal);
         else if (!init.signal.isUndefinedOrNull())  {
             if (auto exception = processInvalidSignal(*scriptExecutionContext()))
                 return WTFMove(*exception);
@@ -234,14 +236,14 @@ ExceptionOr<void> FetchRequest::initializeWith(FetchRequest& input, Init&& init)
 
     if (init.signal && !init.signal.isUndefined()) {
         if (auto* signal = JSAbortSignal::toWrapped(scriptExecutionContext()->vm(), init.signal))
-            protectedSignal()->signalFollow(*signal);
+            m_signal->signalFollow(*signal);
         else if (!init.signal.isNull()) {
             if (auto exception = processInvalidSignal(*scriptExecutionContext()))
                 return WTFMove(*exception);
         }
 
     } else
-        protectedSignal()->signalFollow(input.m_signal.get());
+        m_signal->signalFollow(input.m_signal.get());
 
     if (init.hasMembers()) {
         auto fillResult = init.headers ? m_headers->fill(*init.headers) : m_headers->fill(input.headers());
@@ -355,7 +357,7 @@ ExceptionOr<Ref<FetchRequest>> FetchRequest::clone()
     clone->cloneBody(*this);
     clone->setNavigationPreloadIdentifier(m_navigationPreloadIdentifier);
     clone->m_enableContentExtensionsCheck = m_enableContentExtensionsCheck;
-    clone->protectedSignal()->signalFollow(m_signal);
+    clone->m_signal->signalFollow(m_signal);
     return clone;
 }
 

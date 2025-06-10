@@ -290,6 +290,17 @@ class TestGitHub(unittest.TestCase):
             'GitHub does not support state at this time\n',
         )
 
+    def test_set_substate(self):
+        with OutputCapture() as captured, mocks.GitHub(self.URL.split('://')[1], issues=mocks.ISSUES):
+            tracker = github.Tracker(self.URL)
+            self.assertEqual(tracker.issue(1).substate, None)
+            self.assertFalse(tracker.issue(1).set_state(state='Analyze', substate='Fix'))
+
+        self.assertEqual(
+            captured.stderr.getvalue(),
+            'GitHub does not support state at this time\n',
+        )
+
     def test_duplicate(self):
         with mocks.GitHub(self.URL.split('://')[1], issues=mocks.ISSUES, environment=wkmocks.Environment(
             GITHUB_EXAMPLE_COM_USERNAME='tcontributor',
@@ -483,4 +494,15 @@ Documentation URL: https://docs.github.com/rest/reference/pulls#create-a-pull-re
         self.assertEqual(
             captured.stderr.getvalue(),
             'GitHub does not support source changes at this time\n',
+        )
+
+    def test_related_links(self):
+        with OutputCapture() as captured, mocks.GitHub(self.URL.split('://')[1], issues=mocks.ISSUES):
+            tracker = github.Tracker(self.URL)
+            self.assertEqual(tracker.issue(1).references, [])
+            self.assertIsNone(tracker.issue(1).add_related_links(['12345']))
+
+        self.assertEqual(
+            captured.stderr.getvalue(),
+            'GitHub does not support the see_also field at this time\n',
         )

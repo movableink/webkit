@@ -29,7 +29,7 @@
     EnabledBy=UseGPUProcessForMediaEnabled
 ]
 messages -> RemoteMediaPlayerProxy {
-    PrepareForPlayback(bool privateMode, enum:uint8_t WebCore::MediaPlayerPreload preload, bool preservesPitch, enum:uint8_t WebCore::MediaPlayerPitchCorrectionAlgorithm pitchCorrectionAlgorithm, bool prepareToPlay, bool prepareForRendering, WebCore::IntSize presentationSize, float videoContentScale, enum:uint8_t WebCore::DynamicRangeMode mode, WebCore::PlatformDynamicRangeLimit platformDynamicRangeLimit)
+    PrepareForPlayback(bool privateMode, enum:uint8_t WebCore::MediaPlayerPreload preload, bool preservesPitch, enum:uint8_t WebCore::MediaPlayerPitchCorrectionAlgorithm pitchCorrectionAlgorithm, bool prepareToPlay, bool prepareForRendering, WebCore::IntSize presentationSize, float videoContentScale, bool isFullscreen, enum:uint8_t WebCore::DynamicRangeMode mode, WebCore::PlatformDynamicRangeLimit platformDynamicRangeLimit)
 
     Load(URL url, std::optional<WebKit::SandboxExtensionHandle> sandboxExtension, struct WebCore::MediaPlayerLoadOptions options) -> (struct WebKit::RemoteMediaPlayerConfiguration playerConfiguration)
 #if ENABLE(MEDIA_SOURCE)
@@ -134,7 +134,7 @@ messages -> RemoteMediaPlayerProxy {
     NativeImageForCurrentTime() -> (std::optional<MachSendRight> sendRight, WebCore::DestinationColorSpace colorSpace) Synchronous
     ColorSpace() -> (WebCore::DestinationColorSpace colorSpace) Synchronous
 #endif
-    VideoFrameForCurrentTimeIfChanged() -> (std::optional<WebKit::RemoteVideoFrameProxyProperties> videoFrame, bool changed) Synchronous
+    VideoFrameForCurrentTimeIfChanged() -> (struct std::optional<WebKit::RemoteVideoFrameProxyProperties> videoFrame, bool changed) Synchronous
 
     PlayAtHostTime(MonotonicTime time)
     PauseAtHostTime(MonotonicTime time)
@@ -162,6 +162,8 @@ messages -> RemoteMediaPlayerProxy {
     AudioOutputDeviceChanged(String deviceId)
     IsInFullscreenOrPictureInPictureChanged(bool value)
     SetSoundStageSize(enum:uint8_t WebCore::MediaPlayerSoundStageSize value)
+
+    SetHasMessageClientForTesting(bool value)
 }
 
 #endif

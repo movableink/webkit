@@ -120,7 +120,7 @@ static NSString * const sessionStorageAllowedInContentScriptsKey = @"SessionStor
 static constexpr NSInteger currentBackgroundContentListenerStateVersion = 3;
 
 // Update this value when any changes are made to the rule translation logic in _WKWebExtensionDeclarativeNetRequestRule.
-static constexpr NSInteger currentDeclarativeNetRequestRuleTranslatorVersion = 3;
+static constexpr NSInteger currentDeclarativeNetRequestRuleTranslatorVersion = 5;
 
 @interface _WKWebExtensionContextDelegate : NSObject <WKNavigationDelegate, WKUIDelegate> {
     WeakPtr<WebKit::WebExtensionContext> _webExtensionContext;
@@ -232,40 +232,40 @@ static WKWebExtensionContextError toAPI(WebExtensionContext::Error error)
 NSError *WebExtensionContext::createError(Error error, NSString *customLocalizedDescription, NSError *underlyingError)
 {
     auto errorCode = toAPI(error);
-    NSString *localizedDescription;
+    RetainPtr<NSString> localizedDescription;
 
     switch (error) {
     case Error::Unknown:
-        localizedDescription = WEB_UI_STRING_KEY("An unknown error has occurred.", "An unknown error has occurred. (WKWebExtensionContext)", "WKWebExtensionContextErrorUnknown description");
+        localizedDescription = WEB_UI_STRING_KEY("An unknown error has occurred.", "An unknown error has occurred. (WKWebExtensionContext)", "WKWebExtensionContextErrorUnknown description").createNSString();
         break;
 
     case Error::AlreadyLoaded:
-        localizedDescription = WEB_UI_STRING("Extension context is already loaded.", "WKWebExtensionContextErrorAlreadyLoaded description");
+        localizedDescription = WEB_UI_STRING("Extension context is already loaded.", "WKWebExtensionContextErrorAlreadyLoaded description").createNSString();
         break;
 
     case Error::NotLoaded:
-        localizedDescription = WEB_UI_STRING("Extension context is not loaded.", "WKWebExtensionContextErrorNotLoaded description");
+        localizedDescription = WEB_UI_STRING("Extension context is not loaded.", "WKWebExtensionContextErrorNotLoaded description").createNSString();
         break;
 
     case Error::BaseURLAlreadyInUse:
-        localizedDescription = WEB_UI_STRING("Another extension context is loaded with the same base URL.", "WKWebExtensionContextErrorBaseURLAlreadyInUse description");
+        localizedDescription = WEB_UI_STRING("Another extension context is loaded with the same base URL.", "WKWebExtensionContextErrorBaseURLAlreadyInUse description").createNSString();
         break;
 
     case Error::NoBackgroundContent:
-        localizedDescription = WEB_UI_STRING("No background content is available to load.", "WKWebExtensionContextErrorNoBackgroundContent description");
+        localizedDescription = WEB_UI_STRING("No background content is available to load.", "WKWebExtensionContextErrorNoBackgroundContent description").createNSString();
         break;
 
     case Error::BackgroundContentFailedToLoad:
-        localizedDescription = WEB_UI_STRING("The background content failed to load due to an error.", "WKWebExtensionContextErrorBackgroundContentFailedToLoad description");
+        localizedDescription = WEB_UI_STRING("The background content failed to load due to an error.", "WKWebExtensionContextErrorBackgroundContentFailedToLoad description").createNSString();
         break;
     }
 
     if (customLocalizedDescription.length)
         localizedDescription = customLocalizedDescription;
 
-    NSDictionary *userInfo = @{ NSLocalizedDescriptionKey: localizedDescription };
+    NSDictionary *userInfo = @{ NSLocalizedDescriptionKey: localizedDescription.get() };
     if (underlyingError)
-        userInfo = @{ NSLocalizedDescriptionKey: localizedDescription, NSUnderlyingErrorKey: underlyingError };
+        userInfo = @{ NSLocalizedDescriptionKey: localizedDescription.get(), NSUnderlyingErrorKey: underlyingError };
 
     return [[NSError alloc] initWithDomain:WKWebExtensionContextErrorDomain code:errorCode userInfo:userInfo];
 }
@@ -352,10 +352,10 @@ bool WebExtensionContext::load(WebExtensionController& controller, String storag
     readStateFromStorage();
 
     auto lastSeenBaseURL = URL { objectForKey<NSString>(m_state, lastSeenBaseURLStateKey) };
-    [m_state setObject:(NSString *)m_baseURL.string() forKey:lastSeenBaseURLStateKey];
+    [m_state setObject:m_baseURL.string().createNSString().get() forKey:lastSeenBaseURLStateKey];
 
-    if (NSString *displayName = protectedExtension()->displayName())
-        [m_state setObject:displayName forKey:lastSeenDisplayNameStateKey];
+    if (RetainPtr displayName = protectedExtension()->displayName().createNSString())
+        [m_state setObject:displayName.get() forKey:lastSeenDisplayNameStateKey];
 
     m_isSessionStorageAllowedInContentScripts = boolForKey(m_state.get(), sessionStorageAllowedInContentScriptsKey, false);
 
@@ -408,6 +408,8 @@ bool WebExtensionContext::unload(NSError **outError)
 
     invalidateStorage();
     unloadDeclarativeNetRequestState();
+
+    m_privilegedIdentifier = std::nullopt;
 
     m_actionsToPerformAfterBackgroundContentLoads.clear();
     m_backgroundContentEventListeners.clear();
@@ -505,7 +507,7 @@ NSMutableDictionary *WebExtensionContext::readStateFromPath(const String& stateF
     __block NSMutableDictionary *savedState;
 
     NSError *coordinatorError;
-    [fileCoordinator coordinateReadingItemAtURL:[NSURL fileURLWithPath:stateFilePath] options:NSFileCoordinatorReadingWithoutChanges error:&coordinatorError byAccessor:^(NSURL *fileURL) {
+    [fileCoordinator coordinateReadingItemAtURL:[[NSURL alloc] initFileURLWithPath:stateFilePath.createNSString().get()] options:NSFileCoordinatorReadingWithoutChanges error:&coordinatorError byAccessor:^(NSURL *fileURL) {
         savedState = [NSMutableDictionary dictionaryWithContentsOfURL:fileURL] ?: [NSMutableDictionary dictionary];
     }];
 
@@ -558,7 +560,7 @@ void WebExtensionContext::writeStateToStorage() const
     NSFileCoordinator *fileCoordinator = [[NSFileCoordinator alloc] initWithFilePresenter:nil];
 
     NSError *coordinatorError;
-    [fileCoordinator coordinateWritingItemAtURL:[NSURL fileURLWithPath:stateFilePath()] options:NSFileCoordinatorWritingForReplacing error:&coordinatorError byAccessor:^(NSURL *fileURL) {
+    [fileCoordinator coordinateWritingItemAtURL:[[NSURL alloc] initFileURLWithPath:stateFilePath().createNSString().get()] options:NSFileCoordinatorWritingForReplacing error:&coordinatorError byAccessor:^(NSURL *fileURL) {
         NSError *error;
         if (![currentState() writeToURL:fileURL error:&error])
             RELEASE_LOG_ERROR(Extensions, "Unable to save extension state: %{public}@", privacyPreservingDescription(error));
@@ -576,7 +578,7 @@ void WebExtensionContext::moveLocalStorageIfNeeded(const URL& previousBaseURL, C
     }
 
     static NSSet<NSString *> *dataTypes = [NSSet setWithObjects:WKWebsiteDataTypeIndexedDBDatabases, WKWebsiteDataTypeLocalStorage, nil];
-    [webViewConfiguration().websiteDataStore _renameOrigin:previousBaseURL to:baseURL() forDataOfTypes:dataTypes completionHandler:makeBlockPtr(WTFMove(completionHandler)).get()];
+    [webViewConfiguration().websiteDataStore _renameOrigin:previousBaseURL.createNSURL().get() to:baseURL().createNSURL().get() forDataOfTypes:dataTypes completionHandler:makeBlockPtr(WTFMove(completionHandler)).get()];
 }
 
 void WebExtensionContext::invalidateStorage()
@@ -1946,7 +1948,7 @@ Ref<WebExtensionWindow> WebExtensionContext::getOrCreateWindow(WKWebExtensionWin
 
 RefPtr<WebExtensionWindow> WebExtensionContext::getWindow(WebExtensionWindowIdentifier identifier, std::optional<WebPageProxyIdentifier> webPageProxyIdentifier, IgnoreExtensionAccess ignoreExtensionAccess) const
 {
-    if (UNLIKELY(!isValid(identifier)))
+    if (!isValid(identifier)) [[unlikely]]
         return nullptr;
 
     RefPtr<WebExtensionWindow> result;
@@ -1962,7 +1964,7 @@ RefPtr<WebExtensionWindow> WebExtensionContext::getWindow(WebExtensionWindowIden
     } else
         result = m_windowMap.get(identifier);
 
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         if (isCurrent(identifier)) {
             if (webPageProxyIdentifier)
                 RELEASE_LOG_ERROR(Extensions, "Current window for page %{public}llu was not found", webPageProxyIdentifier.value().toUInt64());
@@ -1974,7 +1976,7 @@ RefPtr<WebExtensionWindow> WebExtensionContext::getWindow(WebExtensionWindowIden
         return nullptr;
     }
 
-    if (UNLIKELY(!result->isValid())) {
+    if (!result->isValid()) [[unlikely]] {
         RELEASE_LOG_ERROR(Extensions, "Window %{public}llu has nil delegate; reference not removed via didCloseWindow: before release", result->identifier().toUInt64());
         forgetWindow(result->identifier());
         return nullptr;
@@ -2024,16 +2026,16 @@ Ref<WebExtensionTab> WebExtensionContext::getOrCreateTab(WKWebExtensionTab *dele
 
 RefPtr<WebExtensionTab> WebExtensionContext::getTab(WebExtensionTabIdentifier identifier, IgnoreExtensionAccess ignoreExtensionAccess) const
 {
-    if (UNLIKELY(!isValid(identifier)))
+    if (!isValid(identifier)) [[unlikely]]
         return nullptr;
 
     RefPtr result = m_tabMap.get(identifier);
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         RELEASE_LOG_ERROR(Extensions, "Tab %{public}llu was not found", identifier.toUInt64());
         return nullptr;
     }
 
-    if (UNLIKELY(!result->isValid())) {
+    if (!result->isValid()) [[unlikely]] {
         RELEASE_LOG_ERROR(Extensions, "Tab %{public}llu has nil delegate; reference not removed via didCloseTab: before release", identifier.toUInt64());
         forgetTab(identifier);
         return nullptr;
@@ -2131,12 +2133,12 @@ RefPtr<WebExtensionTab> WebExtensionContext::getCurrentTab(WebPageProxyIdentifie
 #endif // ENABLE(INSPECTOR_EXTENSIONS)
 
 finish:
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         RELEASE_LOG_DEBUG(Extensions, "Tab for page %{public}llu was not found", webPageProxyIdentifier.toUInt64());
         return nullptr;
     }
 
-    if (UNLIKELY(!result->isValid())) {
+    if (!result->isValid()) [[unlikely]] {
         RELEASE_LOG_ERROR(Extensions, "Tab %{public}llu has nil delegate; reference not removed via didCloseTab: before release", result->identifier().toUInt64());
         forgetTab(result->identifier());
         return nullptr;
@@ -2980,6 +2982,12 @@ void WebExtensionContext::performCommand(WebExtensionCommand& command, UserTrigg
     fireCommandEventIfNeeded(command, activeTab.get());
 }
 
+void WebExtensionContext::resetCommands()
+{
+    m_commands.clear();
+    m_populatedCommands = false;
+}
+
 #if TARGET_OS_IPHONE
 WebExtensionCommand* WebExtensionContext::commandMatchingKeyCommand(UIKeyCommand *keyCommand)
 {
@@ -3109,7 +3117,7 @@ CocoaMenuItem *WebExtensionContext::singleMenuItemOrExtensionItemWithSubmenu(con
         return menuItems.firstObject;
     }
 
-    auto *extensionItem = [[_WKWebExtensionMenuItem alloc] initWithTitle:protectedExtension()->displayShortName() handler:^(id) { }];
+    auto *extensionItem = [[_WKWebExtensionMenuItem alloc] initWithTitle:protectedExtension()->displayShortName().createNSString().get() handler:^(id) { }];
     auto *extensionSubmenu = [[NSMenu alloc] init];
     extensionSubmenu.itemArray = menuItems;
     extensionItem.submenu = extensionSubmenu;
@@ -3124,7 +3132,7 @@ CocoaMenuItem *WebExtensionContext::singleMenuItemOrExtensionItemWithSubmenu(con
     if (menuItems.count == 1)
         return menuItems.firstObject;
 
-    return [UIMenu menuWithTitle:protectedExtension()->displayShortName() children:menuItems];
+    return [UIMenu menuWithTitle:protectedExtension()->displayShortName().createNSString().get() children:menuItems];
 #endif
 }
 
@@ -3440,7 +3448,7 @@ WKWebView *WebExtensionContext::relatedWebView()
 NSString *WebExtensionContext::processDisplayName()
 {
 ALLOW_NONLITERAL_FORMAT_BEGIN
-    return [NSString localizedStringWithFormat:WEB_UI_STRING("%@ Web Extension", "Extension's process name that appears in Activity Monitor where the parameter is the name of the extension"), static_cast<NSString *>(protectedExtension()->displayShortName())];
+    return [NSString localizedStringWithFormat:WEB_UI_STRING("%@ Web Extension", "Extension's process name that appears in Activity Monitor where the parameter is the name of the extension").createNSString().get(), protectedExtension()->displayShortName().createNSString().get()];
 ALLOW_NONLITERAL_FORMAT_END
 }
 
@@ -3478,7 +3486,7 @@ WKWebViewConfiguration *WebExtensionContext::webViewConfiguration(WebViewPurpose
     configuration._corsDisablingPatterns = corsDisablingPatterns();
     configuration._crossOriginAccessControlCheckEnabled = NO;
     configuration._processDisplayName = processDisplayName();
-    configuration._requiredWebExtensionBaseURL = baseURL();
+    configuration._requiredWebExtensionBaseURL = baseURL().createNSURL().get();
     configuration._shouldRelaxThirdPartyCookieBlocking = YES;
 
     if (!configuration.preferences._siteIsolationEnabled) {
@@ -3650,11 +3658,11 @@ void WebExtensionContext::loadBackgroundWebView()
     if (!protectedExtension()->backgroundContentIsServiceWorker()) {
         backgroundProcess->send(Messages::WebExtensionContextProxy::SetBackgroundPageIdentifier(backgroundPage->webPageIDInMainFrameProcess()), identifier());
 
-        [m_backgroundWebView loadRequest:[NSURLRequest requestWithURL:backgroundContentURL()]];
+        [m_backgroundWebView loadRequest:[NSURLRequest requestWithURL:backgroundContentURL().createNSURL().get()]];
         return;
     }
 
-    [m_backgroundWebView _loadServiceWorker:backgroundContentURL() usingModules:protectedExtension()->backgroundContentUsesModules() completionHandler:makeBlockPtr([this, protectedThis = Ref { *this }](BOOL success) {
+    [m_backgroundWebView _loadServiceWorker:backgroundContentURL().createNSURL().get() usingModules:protectedExtension()->backgroundContentUsesModules() completionHandler:makeBlockPtr([this, protectedThis = Ref { *this }](BOOL success) {
         if (!success) {
             m_backgroundContentLoadError = createError(Error::BackgroundContentFailedToLoad);
             recordError(backgroundContentLoadError());
@@ -3681,20 +3689,20 @@ void WebExtensionContext::unloadBackgroundWebView()
 NSString *WebExtensionContext::backgroundWebViewInspectionName()
 {
     if (!m_backgroundWebViewInspectionName.isEmpty())
-        return m_backgroundWebViewInspectionName;
+        return m_backgroundWebViewInspectionName.createNSString().autorelease();
 
     if (protectedExtension()->backgroundContentIsServiceWorker())
         m_backgroundWebViewInspectionName = WEB_UI_FORMAT_CFSTRING("%@ — Extension Service Worker", "Label for an inspectable Web Extension service worker", protectedExtension()->displayShortName().createCFString().get());
     else
         m_backgroundWebViewInspectionName = WEB_UI_FORMAT_CFSTRING("%@ — Extension Background Page", "Label for an inspectable Web Extension background page", protectedExtension()->displayShortName().createCFString().get());
 
-    return m_backgroundWebViewInspectionName;
+    return m_backgroundWebViewInspectionName.createNSString().autorelease();
 }
 
 void WebExtensionContext::setBackgroundWebViewInspectionName(const String& name)
 {
     m_backgroundWebViewInspectionName = name;
-    m_backgroundWebView.get()._remoteInspectionNameOverride = name;
+    m_backgroundWebView.get()._remoteInspectionNameOverride = name.createNSString().get();
 }
 
 static inline bool isNotRunningInTestRunner()
@@ -3768,7 +3776,7 @@ void WebExtensionContext::determineInstallReasonDuringLoad()
     RefPtr extension = m_extension;
     String currentVersion = extension->version();
     m_previousVersion = objectForKey<NSString>(m_state, lastSeenVersionStateKey);
-    m_state.get()[lastSeenVersionStateKey] = currentVersion;
+    m_state.get()[lastSeenVersionStateKey] = currentVersion.createNSString().get();
 
     bool extensionVersionDidChange = !m_previousVersion.isEmpty() && m_previousVersion != currentVersion;
 
@@ -3991,7 +3999,7 @@ void WebExtensionContext::webViewWebContentProcessDidTerminate(WKWebView *webVie
 
 #if ENABLE(INSPECTOR_EXTENSIONS)
     if (isInspectorBackgroundPage(webView)) {
-        [webView loadRequest:[NSURLRequest requestWithURL:inspectorBackgroundPageURL()]];
+        [webView loadRequest:[NSURLRequest requestWithURL:inspectorBackgroundPageURL().createNSURL().get()]];
         return;
     }
 #endif
@@ -4137,9 +4145,9 @@ bool WebExtensionContext::isInspectorBackgroundPage(WKWebView *webView) const
     return false;
 }
 
-bool WebExtensionContext::isDevToolsMessageAllowed()
+bool WebExtensionContext::isDevToolsMessageAllowed(IPC::Decoder& message)
 {
-    return isLoaded() && protectedExtension()->hasInspectorBackgroundPage();
+    return isLoadedAndPrivilegedMessage(message) && protectedExtension()->hasInspectorBackgroundPage();
 }
 
 void WebExtensionContext::loadInspectorBackgroundPagesDuringLoad()
@@ -4300,7 +4308,7 @@ void WebExtensionContext::loadInspectorBackgroundPage(WebInspectorUIProxy& inspe
         process->send(Messages::WebExtensionContextProxy::AddInspectorBackgroundPageIdentifier(inspectorBackgroundWebView._page->webPageIDInMainFrameProcess(), tab->identifier(), windowIdentifier), identifier());
         process->send(Messages::WebExtensionContextProxy::DispatchDevToolsPanelsThemeChangedEvent(appearance), identifier());
 
-        [inspectorBackgroundWebView loadRequest:[NSURLRequest requestWithURL:inspectorBackgroundPageURL()]];
+        [inspectorBackgroundWebView loadRequest:[NSURLRequest requestWithURL:inspectorBackgroundPageURL().createNSURL().get()]];
     });
 }
 
@@ -4539,7 +4547,7 @@ void WebExtensionContext::addInjectedContent(const InjectedContentVector& inject
 
         RefPtr extension = m_extension;
 
-        for (NSString *scriptPath : injectedContentData.scriptPaths) {
+        for (auto& scriptPath : injectedContentData.scriptPaths) {
             RefPtr<API::Error> error;
             auto scriptString = extension->resourceStringForPath(scriptPath, error, WebExtension::CacheResult::Yes);
             if (!scriptString) {
@@ -4563,7 +4571,7 @@ void WebExtensionContext::addInjectedContent(const InjectedContentVector& inject
             }
         }
 
-        for (NSString *styleSheetPath : injectedContentData.styleSheetPaths) {
+        for (auto& styleSheetPath : injectedContentData.styleSheetPaths) {
             RefPtr<API::Error> error;
             auto styleSheetString = extension->resourceStringForPath(styleSheetPath, error, WebExtension::CacheResult::Yes);
             if (!styleSheetString) {
@@ -4743,7 +4751,7 @@ static NSString *computeStringHashForContentBlockerRules(NSString *rules)
     sha1.computeHash(digest);
 
     auto hashAsCString = SHA1::hexDigest(digest);
-    auto hashAsString = String::fromUTF8(hashAsCString.span());
+    auto hashAsString = String::fromUTF8(hashAsCString.span()).createNSString();
     return [hashAsString stringByAppendingString:[NSString stringWithFormat:@"-%zu", currentDeclarativeNetRequestRuleTranslatorVersion]];
 }
 
@@ -4764,11 +4772,11 @@ void WebExtensionContext::compileDeclarativeNetRequestRules(NSArray *rulesData, 
             return;
         }
 
-        auto *previouslyLoadedHash = objectForKey<NSString>(m_state, lastLoadedDeclarativeNetRequestHashStateKey);
-        auto *hashOfWebKitRules = computeStringHashForContentBlockerRules(webKitRules);
+        RetainPtr previouslyLoadedHash = objectForKey<NSString>(m_state, lastLoadedDeclarativeNetRequestHashStateKey);
+        RetainPtr hashOfWebKitRules = computeStringHashForContentBlockerRules(webKitRules);
 
-        dispatch_async(dispatch_get_main_queue(), makeBlockPtr([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler), previouslyLoadedHash = String { previouslyLoadedHash }, hashOfWebKitRules = String { hashOfWebKitRules }, webKitRules = String { webKitRules }]() mutable {
-            API::ContentRuleListStore::defaultStoreSingleton().lookupContentRuleListFile(declarativeNetRequestContentRuleListFilePath(), uniqueIdentifier().isolatedCopy(), [this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler), previouslyLoadedHash, hashOfWebKitRules, webKitRules](RefPtr<API::ContentRuleList> foundRuleList, std::error_code) mutable {
+        dispatch_async(dispatch_get_main_queue(), makeBlockPtr([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler), previouslyLoadedHash = WTFMove(previouslyLoadedHash), hashOfWebKitRules = WTFMove(hashOfWebKitRules), webKitRules = String { webKitRules }]() mutable {
+            API::ContentRuleListStore::defaultStoreSingleton().lookupContentRuleListFile(declarativeNetRequestContentRuleListFilePath(), uniqueIdentifier().isolatedCopy(), [this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler), previouslyLoadedHash = WTFMove(previouslyLoadedHash), hashOfWebKitRules = WTFMove(hashOfWebKitRules), webKitRules](RefPtr<API::ContentRuleList> foundRuleList, std::error_code) mutable {
                 // The extension could have been unloaded before this was called.
                 if (!isLoaded()) {
                     completionHandler(false);
@@ -4776,7 +4784,7 @@ void WebExtensionContext::compileDeclarativeNetRequestRules(NSArray *rulesData, 
                 }
 
                 if (foundRuleList) {
-                    if ([previouslyLoadedHash isEqualToString:hashOfWebKitRules]) {
+                    if ([previouslyLoadedHash isEqualToString:hashOfWebKitRules.get()]) {
                         for (Ref userContentController : userContentControllers())
                             userContentController->addContentRuleList(*foundRuleList, m_baseURL);
 
@@ -4798,7 +4806,7 @@ void WebExtensionContext::compileDeclarativeNetRequestRules(NSArray *rulesData, 
                         return;
                     }
 
-                    [m_state setObject:hashOfWebKitRules forKey:lastLoadedDeclarativeNetRequestHashStateKey];
+                    [m_state setObject:hashOfWebKitRules.get() forKey:lastLoadedDeclarativeNetRequestHashStateKey];
                     writeStateToStorage();
 
                     for (Ref userContentController : userContentControllers())
@@ -4852,7 +4860,7 @@ void WebExtensionContext::loadDeclarativeNetRequestRules(CompletionHandler<void(
     };
 
     auto addDynamicAndStaticRules = [this, protectedThis = Ref { *this }, addStaticRulesets = WTFMove(addStaticRulesets), allJSONData = RetainPtr { allJSONData }] () mutable {
-        [declarativeNetRequestDynamicRulesStore() getRulesWithCompletionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, addStaticRulesets = WTFMove(addStaticRulesets), allJSONData = RetainPtr { allJSONData }](NSArray *rules, NSString *errorMessage) mutable {
+        [declarativeNetRequestDynamicRulesStore() getRulesWithRuleIDs:@[] completionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, addStaticRulesets = WTFMove(addStaticRulesets), allJSONData = RetainPtr { allJSONData }](NSArray *rules, NSString *errorMessage) mutable {
             if (!rules.count) {
                 m_dynamicRulesIDs.clear();
                 addStaticRulesets();
@@ -4862,7 +4870,7 @@ void WebExtensionContext::loadDeclarativeNetRequestRules(CompletionHandler<void(
             NSError *serializationError;
             NSData *dynamicRulesAsData = encodeJSONData(rules, JSONOptions::FragmentsAllowed, &serializationError);
             if (serializationError)
-                RELEASE_LOG_ERROR(Extensions, "Unable to serialize dynamic declarativeNetRequest rules for extension with identifier %{private}@ with error: %{public}@", (NSString *)uniqueIdentifier(), privacyPreservingDescription(serializationError));
+                RELEASE_LOG_ERROR(Extensions, "Unable to serialize dynamic declarativeNetRequest rules for extension with identifier %{private}@ with error: %{public}@", uniqueIdentifier().createNSString().get(), privacyPreservingDescription(serializationError));
             else
                 [allJSONData addObject:dynamicRulesAsData];
 
@@ -4876,7 +4884,7 @@ void WebExtensionContext::loadDeclarativeNetRequestRules(CompletionHandler<void(
         }).get()];
     };
 
-    [declarativeNetRequestSessionRulesStore() getRulesWithCompletionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, addDynamicAndStaticRules = WTFMove(addDynamicAndStaticRules), allJSONData = RetainPtr { allJSONData }](NSArray *rules, NSString *errorMessage) mutable {
+    [declarativeNetRequestSessionRulesStore() getRulesWithRuleIDs:@[] completionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, addDynamicAndStaticRules = WTFMove(addDynamicAndStaticRules), allJSONData = RetainPtr { allJSONData }](NSArray *rules, NSString *errorMessage) mutable {
         if (!rules.count) {
             m_sessionRulesIDs.clear();
             addDynamicAndStaticRules();
@@ -4886,7 +4894,7 @@ void WebExtensionContext::loadDeclarativeNetRequestRules(CompletionHandler<void(
         NSError *serializationError;
         NSData *sessionRulesAsData = encodeJSONData(rules, JSONOptions::FragmentsAllowed, &serializationError);
         if (serializationError)
-            RELEASE_LOG_ERROR(Extensions, "Unable to serialize session declarativeNetRequest rules for extension with identifier %{private}@ with error: %{public}@", (NSString *)uniqueIdentifier(), privacyPreservingDescription(serializationError));
+            RELEASE_LOG_ERROR(Extensions, "Unable to serialize session declarativeNetRequest rules for extension with identifier %{private}@ with error: %{public}@", uniqueIdentifier().createNSString().get(), privacyPreservingDescription(serializationError));
         else
             [allJSONData addObject:sessionRulesAsData];
 
@@ -4934,7 +4942,7 @@ bool WebExtensionContext::purgeMatchedRulesFromBefore(const WallTime& startTime)
 _WKWebExtensionRegisteredScriptsSQLiteStore *WebExtensionContext::registeredContentScriptsStore()
 {
     if (!m_registeredContentScriptsStorage)
-        m_registeredContentScriptsStorage = [[_WKWebExtensionRegisteredScriptsSQLiteStore alloc] initWithUniqueIdentifier:m_uniqueIdentifier directory:storageDirectory() usesInMemoryDatabase:!storageIsPersistent()];
+        m_registeredContentScriptsStorage = [[_WKWebExtensionRegisteredScriptsSQLiteStore alloc] initWithUniqueIdentifier:m_uniqueIdentifier.createNSString().get() directory:storageDirectory().createNSString().get() usesInMemoryDatabase:!storageIsPersistent()];
     return m_registeredContentScriptsStorage.get();
 }
 

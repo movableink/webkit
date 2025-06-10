@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include <wtf/KeyValuePair.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
@@ -45,6 +44,7 @@ class Navigator;
 class PasteboardCustomData;
 class ScriptExecutionContext;
 struct PasteboardItemInfo;
+template<typename> class ExceptionOr;
 
 class ClipboardItem : public RefCountedAndCanMakeWeakPtr<ClipboardItem> {
 public:

@@ -29,6 +29,8 @@
 
 #pragma once
 
+#include "CSSParserTokenRange.h"
+#include "CSSPropertyNames.h"
 #include "CSSValue.h"
 #include "CSSValueKeywords.h"
 #include "CSSVariableData.h"
@@ -38,7 +40,6 @@
 namespace WebCore {
 
 class CSSParserToken;
-class CSSParserTokenRange;
 struct CSSParserContext;
 
 namespace Style {
@@ -66,7 +67,7 @@ public:
     
     const CSSVariableData& data() const { return m_data.get(); }
 
-    template<typename CacheFunction> bool resolveAndCacheValue(Style::BuilderState&, CacheFunction&&) const;
+    template<typename CacheFunction> bool resolveAndCacheValue(Style::BuilderState&, NOESCAPE const CacheFunction&) const;
 
 private:
     explicit CSSVariableReferenceValue(Ref<CSSVariableData>&&);
@@ -79,7 +80,7 @@ private:
     void cacheSimpleReference();
     RefPtr<CSSVariableData> tryResolveSimpleReference(Style::BuilderState&) const;
 
-    Ref<CSSVariableData> m_data;
+    const Ref<CSSVariableData> m_data;
     mutable String m_stringValue;
 
     // For quicky resolving simple var(--foo) values.
@@ -97,7 +98,7 @@ private:
 };
 
 template<typename CacheFunction>
-bool CSSVariableReferenceValue::resolveAndCacheValue(Style::BuilderState& builderState, CacheFunction&& cacheFunction) const
+bool CSSVariableReferenceValue::resolveAndCacheValue(Style::BuilderState& builderState, NOESCAPE const CacheFunction& cacheFunction) const
 
 {
     if (auto data = tryResolveSimpleReference(builderState)) {

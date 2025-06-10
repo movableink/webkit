@@ -28,6 +28,7 @@
 
 #include "EncodingTables.h"
 #include <mutex>
+#include <ranges>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CodePointIterator.h>
 #include <wtf/text/MakeString.h>
@@ -483,7 +484,7 @@ String TextCodecCJK::iso2022JPDecode(std::span<const uint8_t> bytes, bool flush,
             break;
         case ISO2022JPDecoderState::TrailByte:
             m_iso2022JPDecoderState = ISO2022JPDecoderState::LeadByte;
-            FALLTHROUGH;
+            [[fallthrough]];
         case ISO2022JPDecoderState::EscapeStart:
             sawError = true;
             result.append(replacementCharacter);
@@ -863,7 +864,7 @@ static std::optional<char32_t> gb18030RangesCodePoint(uint32_t pointer)
         return std::nullopt;
     if (pointer == 7457)
         return 0xE7C7;
-    auto upperBound = std::upper_bound(gb18030Ranges().begin(), gb18030Ranges().end(), makeFirstAdapter(pointer), CompareFirst { });
+    auto upperBound = std::ranges::upper_bound(gb18030Ranges(), makeFirstAdapter(pointer), CompareFirst { });
     ASSERT(upperBound != gb18030Ranges().begin());
     uint32_t offset = (upperBound - 1)->first;
     char32_t codePointOffset = (upperBound - 1)->second;
@@ -875,7 +876,7 @@ static uint32_t gb18030RangesPointer(char32_t codePoint)
 {
     if (codePoint == 0xE7C7)
         return 7457;
-    auto upperBound = std::upper_bound(gb18030Ranges().begin(), gb18030Ranges().end(), makeSecondAdapter(codePoint), CompareSecond { });
+    auto upperBound = std::ranges::upper_bound(gb18030Ranges(), makeSecondAdapter(codePoint), CompareSecond { });
     ASSERT(upperBound != gb18030Ranges().begin());
     uint32_t pointerOffset = (upperBound - 1)->first;
     char32_t offset = (upperBound - 1)->second;

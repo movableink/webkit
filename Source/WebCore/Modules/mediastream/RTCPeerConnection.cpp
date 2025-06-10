@@ -2,7 +2,7 @@
  * Copyright (C) 2012 Google Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  * Copyright (C) 2015, 2016 Ericsson AB. All rights reserved.
- * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,7 @@
 #if ENABLE(WEB_RTC)
 
 #include "DNS.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "FrameDestructionObserverInlines.h"
@@ -68,6 +68,7 @@
 #include "RTCSessionDescription.h"
 #include "RTCSessionDescriptionInit.h"
 #include "Settings.h"
+#include <algorithm>
 #include <wtf/MainThread.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/UUID.h>
@@ -99,7 +100,7 @@ ExceptionOr<Ref<RTCPeerConnection>> RTCPeerConnection::create(Document& document
         return exception.releaseException();
 
     if (!peerConnection->isClosed()) {
-        if (RefPtr page = document.protectedPage()) {
+        if (RefPtr page = document.page()) {
             peerConnection->registerToController(page->rtcController());
 #if USE(LIBWEBRTC) && (!LOG_DISABLED || !RELEASE_LOG_DISABLED)
             if (page->isAlwaysOnLoggingAllowed()) {
@@ -128,7 +129,7 @@ RTCPeerConnection::RTCPeerConnection(Document& document)
 {
     ALWAYS_LOG(LOGIDENTIFIER);
     relaxAdoptionRequirement();
-    m_backend = PeerConnectionBackend::create(*this);
+    lazyInitialize(m_backend, PeerConnectionBackend::create(*this));
 
 #if !RELEASE_LOG_DISABLED
     auto* page = document.page();
@@ -210,7 +211,7 @@ static bool isAudioTransceiver(const RTCPeerConnection::AddTransceiverTrackOrKin
 static std::optional<Exception> validateSendEncodings(Vector<RTCRtpEncodingParameters>& encodings, bool isAudio)
 {
     size_t encodingIndex = 0;
-    bool hasAnyScaleResolutionDownBy = !isAudio && WTF::anyOf(encodings, [] (auto& encoding){ return !!encoding.scaleResolutionDownBy; });
+    bool hasAnyScaleResolutionDownBy = !isAudio && std::ranges::any_of(encodings, [](auto& encoding) { return !!encoding.scaleResolutionDownBy; });
     for (auto& encoding: encodings) {
         // FIXME: Validate rid and codec
         if (isAudio) {
@@ -569,7 +570,7 @@ ExceptionOr<Vector<MediaEndpointConfiguration::CertificatePEM>> RTCPeerConnectio
     Vector<MediaEndpointConfiguration::CertificatePEM> certificates;
     certificates.reserveInitialCapacity(configuration.certificates.size());
     for (auto& certificate : configuration.certificates) {
-        if (!origin.isSameOriginAs(certificate->protectedOrigin()))
+        if (!origin.isSameOriginAs(certificate->origin()))
             return Exception { ExceptionCode::InvalidAccessError, "Certificate does not have a valid origin"_s };
 
         if (currentMilliSeconds > certificate->expires())
@@ -824,6 +825,12 @@ void RTCPeerConnection::updateIceConnectionState(RTCIceConnectionState)
     });
 }
 
+static bool isIceTransportUsedByTransceiver(const RTCIceTransport& iceTransport, RTCRtpTransceiver& transceiver)
+{
+    auto* dtlsTransport = transceiver.sender().transport();
+    return dtlsTransport && &dtlsTransport->iceTransport() == &iceTransport;
+}
+
 // https://w3c.github.io/webrtc-pc/#rtcpeerconnectionstate-enum
 RTCPeerConnectionState RTCPeerConnection::computeConnectionState()
 {
@@ -834,7 +841,7 @@ RTCPeerConnectionState RTCPeerConnection::computeConnectionState()
     iceTransports.removeAllMatching([&](auto& iceTransport) {
         if (m_sctpTransport && &m_sctpTransport->transport().iceTransport() == iceTransport.ptr())
             return false;
-        return allOf(m_transceiverSet.list(), [&iceTransport](auto& transceiver) {
+        return std::ranges::all_of(m_transceiverSet.list(), [&iceTransport](auto& transceiver) {
             return !isIceTransportUsedByTransceiver(iceTransport.get(), *transceiver);
         });
     });
@@ -843,24 +850,24 @@ RTCPeerConnectionState RTCPeerConnection::computeConnectionState()
     dtlsTransports.removeAllMatching([&](auto& dtlsTransport) {
         if (m_sctpTransport && &m_sctpTransport->transport() == dtlsTransport.ptr())
             return false;
-        return allOf(m_transceiverSet.list(), [&dtlsTransport](auto& transceiver) {
+        return std::ranges::all_of(m_transceiverSet.list(), [&dtlsTransport](auto& transceiver) {
             return transceiver->sender().transport() != dtlsTransport.ptr();
         });
     });
 
-    if (anyOf(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::Failed; }) || anyOf(dtlsTransports, [](auto& transport) { return transport->state() == RTCDtlsTransportState::Failed; }))
+    if (std::ranges::any_of(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::Failed; }) || std::ranges::any_of(dtlsTransports, [](auto& transport) { return transport->state() == RTCDtlsTransportState::Failed; }))
         return RTCPeerConnectionState::Failed;
 
-    if (anyOf(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::Disconnected; }))
+    if (std::ranges::any_of(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::Disconnected; }))
         return RTCPeerConnectionState::Disconnected;
 
-    if (allOf(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::New || transport->state() == RTCIceTransportState::Closed; }) && allOf(dtlsTransports, [](auto& transport) { return transport->state() == RTCDtlsTransportState::New || transport->state() == RTCDtlsTransportState::Closed; }))
+    if (std::ranges::all_of(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::New || transport->state() == RTCIceTransportState::Closed; }) && std::ranges::all_of(dtlsTransports, [](auto& transport) { return transport->state() == RTCDtlsTransportState::New || transport->state() == RTCDtlsTransportState::Closed; }))
         return RTCPeerConnectionState::New;
 
-    if (anyOf(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::New || transport->state() == RTCIceTransportState::Checking; }) || anyOf(dtlsTransports, [](auto& transport) { return transport->state() == RTCDtlsTransportState::New || transport->state() == RTCDtlsTransportState::Connecting; }))
+    if (std::ranges::any_of(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::New || transport->state() == RTCIceTransportState::Checking; }) || std::ranges::any_of(dtlsTransports, [](auto& transport) { return transport->state() == RTCDtlsTransportState::New || transport->state() == RTCDtlsTransportState::Connecting; }))
         return RTCPeerConnectionState::Connecting;
 
-    ASSERT(allOf(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::Connected || transport->state() == RTCIceTransportState::Completed || transport->state() == RTCIceTransportState::Closed; }) && allOf(dtlsTransports, [](auto& transport) { return transport->state() == RTCDtlsTransportState::Connected || transport->state() == RTCDtlsTransportState::Closed; }));
+    ASSERT(std::ranges::all_of(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::Connected || transport->state() == RTCIceTransportState::Completed || transport->state() == RTCIceTransportState::Closed; }) && std::ranges::all_of(dtlsTransports, [](auto& transport) { return transport->state() == RTCDtlsTransportState::Connected || transport->state() == RTCDtlsTransportState::Closed; }));
     return RTCPeerConnectionState::Connected;
 }
 
@@ -877,12 +884,6 @@ void RTCPeerConnection::updateConnectionState()
     scheduleEvent(Event::create(eventNames().connectionstatechangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
-static bool isIceTransportUsedByTransceiver(const RTCIceTransport& iceTransport, RTCRtpTransceiver& transceiver)
-{
-    auto* dtlsTransport = transceiver.sender().transport();
-    return dtlsTransport && &dtlsTransport->iceTransport() == &iceTransport;
-}
-
 // https://w3c.github.io/webrtc-pc/#dom-rtciceconnectionstate
 RTCIceConnectionState RTCPeerConnection::computeIceConnectionStateFromIceTransports()
 {
@@ -894,22 +895,22 @@ RTCIceConnectionState RTCPeerConnection::computeIceConnectionStateFromIceTranspo
     iceTransports.removeAllMatching([&](auto& iceTransport) {
         if (m_sctpTransport && &m_sctpTransport->transport().iceTransport() == iceTransport.ptr())
             return false;
-        return allOf(m_transceiverSet.list(), [&iceTransport](auto& transceiver) {
+        return std::ranges::all_of(m_transceiverSet.list(), [&iceTransport](auto& transceiver) {
             return !isIceTransportUsedByTransceiver(iceTransport.get(), *transceiver);
         });
     });
 
-    if (anyOf(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::Failed; }))
+    if (std::ranges::any_of(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::Failed; }))
         return RTCIceConnectionState::Failed;
-    if (anyOf(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::Disconnected; }))
+    if (std::ranges::any_of(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::Disconnected; }))
         return RTCIceConnectionState::Disconnected;
-    if (allOf(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::New || transport->state() == RTCIceTransportState::Closed; }))
+    if (std::ranges::all_of(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::New || transport->state() == RTCIceTransportState::Closed; }))
         return RTCIceConnectionState::New;
-    if (anyOf(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::New || transport->state() == RTCIceTransportState::Checking; }))
+    if (std::ranges::any_of(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::New || transport->state() == RTCIceTransportState::Checking; }))
         return RTCIceConnectionState::Checking;
-    if (allOf(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::Completed || transport->state() == RTCIceTransportState::Closed; }))
+    if (std::ranges::all_of(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::Completed || transport->state() == RTCIceTransportState::Closed; }))
         return RTCIceConnectionState::Completed;
-    ASSERT(allOf(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::Connected || transport->state() == RTCIceTransportState::Completed || transport->state() == RTCIceTransportState::Closed; }));
+    ASSERT(std::ranges::all_of(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::Connected || transport->state() == RTCIceTransportState::Completed || transport->state() == RTCIceTransportState::Closed; }));
     return RTCIceConnectionState::Connected;
 }
 
@@ -963,6 +964,7 @@ void RTCPeerConnection::updateNegotiationNeededFlag(std::optional<uint32_t> even
         if (!connection.protectedBackend()->isNegotiationNeeded(*eventId))
             return;
 
+        connection.m_negotiationNeededEventId = std::nullopt;
         connection.dispatchEvent(Event::create(eventNames().negotiationneededEvent, Event::CanBubble::No, Event::IsCancelable::No));
     });
 }
@@ -1004,7 +1006,7 @@ static inline ExceptionOr<PeerConnectionBackend::CertificateInformation> certifi
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
     auto parametersConversionResult = convertDictionary<RTCPeerConnection::CertificateParameters>(lexicalGlobalObject, value.get());
-    if (UNLIKELY(parametersConversionResult.hasException(scope))) {
+    if (parametersConversionResult.hasException(scope)) [[unlikely]] {
         scope.clearException();
         return Exception { ExceptionCode::TypeError, "Unable to read certificate parameters"_s };
     }

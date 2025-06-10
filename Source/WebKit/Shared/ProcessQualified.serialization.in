@@ -24,7 +24,6 @@
 additional_forward_declaration: namespace WebCore { using BackForwardFrameItemIdentifierID = ObjectIdentifier<BackForwardFrameItemIdentifierType>; }
 additional_forward_declaration: namespace WebCore { using BackForwardItemIdentifierID = ObjectIdentifier<BackForwardItemIdentifierType>; }
 additional_forward_declaration: namespace WebCore { using DOMCacheIdentifierID = AtomicObjectIdentifier<DOMCacheIdentifierType>; }
-additional_forward_declaration: namespace WebCore { using FrameIdentifierID = ObjectIdentifier<FrameIdentifierType>; }
 additional_forward_declaration: namespace WebCore { using OpaqueOriginIdentifier = AtomicObjectIdentifier<OpaqueOriginIdentifierType>; }
 additional_forward_declaration: namespace WebCore { using PlatformLayerIdentifierID = ObjectIdentifier<PlatformLayerIdentifierType>; }
 additional_forward_declaration: namespace WebCore { using PlaybackTargetClientContextID = ObjectIdentifier<PlaybackTargetClientContextIdentifierType>; }
@@ -47,11 +46,6 @@ header: <WebCore/ProcessQualified.h>
 
 [Alias=class ProcessQualified<DOMCacheIdentifierID>, AdditionalEncoder=StreamConnectionEncoder, CustomHeader] alias WebCore::DOMCacheIdentifier {
     WebCore::DOMCacheIdentifierID object();
-    WebCore::ProcessIdentifier processIdentifier();
-};
-
-[Alias=class ProcessQualified<FrameIdentifierID>, AdditionalEncoder=StreamConnectionEncoder, CustomHeader] alias WebCore::FrameIdentifier {
-    WebCore::FrameIdentifierID object();
     WebCore::ProcessIdentifier processIdentifier();
 };
 

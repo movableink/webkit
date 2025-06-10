@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,6 +55,7 @@
 #import <pal/spi/cf/CFUtilitiesSPI.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/CompletionHandler.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/Base64.h>
 
@@ -247,33 +248,33 @@ static void* kWindowContentLayoutObserverContext = &kWindowContentLayoutObserver
 
     self.view = adoptNS([[NSView alloc] init]).get();
 
-    NSTextField *label = [NSTextField labelWithString:WEB_UI_STRING("Format:", "Label for the save data format selector when saving data in Web Inspector")];
-    label.textColor = NSColor.secondaryLabelColor;
-    label.font = [NSFont systemFontOfSize:NSFont.smallSystemFontSize];
-    label.alignment = NSTextAlignmentRight;
+    RetainPtr label = [NSTextField labelWithString:WEB_UI_STRING("Format:", "Label for the save data format selector when saving data in Web Inspector").createNSString().get()];
+    label.get().textColor = NSColor.secondaryLabelColor;
+    label.get().font = [NSFont systemFontOfSize:NSFont.smallSystemFontSize];
+    label.get().alignment = NSTextAlignmentRight;
 
     _popUpButton = adoptNS([[NSPopUpButton alloc] init]);
     [_popUpButton setAction:@selector(_popUpButtonAction:)];
     [_popUpButton setTarget:self];
-    [_popUpButton addItemsWithTitles:createNSArray(_saveDatas, [] (const auto& item) -> NSString * {
-        return item.displayType;
+    [_popUpButton addItemsWithTitles:createNSArray(_saveDatas, [] (const auto& item) {
+        return item.displayType.createNSString();
     }).get()];
     [_popUpButton selectItemAtIndex:0];
 
-    [self.view addSubview:label];
+    [self.view addSubview:label.get()];
     [self.view addSubview:_popUpButton.get()];
 
     [label setTranslatesAutoresizingMaskIntoConstraints:NO];
     [_popUpButton setTranslatesAutoresizingMaskIntoConstraints:NO];
 
     [NSLayoutConstraint activateConstraints:@[
-        [label.topAnchor constraintEqualToAnchor:self.view.topAnchor constant:8.0],
-        [label.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:0.0],
-        [label.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor constant:-8.0],
-        [label.widthAnchor constraintEqualToConstant:64.0],
+        [label.get().topAnchor constraintEqualToAnchor:self.view.topAnchor constant:8.0],
+        [label.get().leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:0.0],
+        [label.get().bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor constant:-8.0],
+        [label.get().widthAnchor constraintEqualToConstant:64.0],
 
         [[_popUpButton topAnchor] constraintEqualToAnchor:self.view.topAnchor constant:8.0],
-        [[_popUpButton leadingAnchor] constraintEqualToAnchor:label.trailingAnchor constant:8.0],
+        [[_popUpButton leadingAnchor] constraintEqualToAnchor:label.get().trailingAnchor constant:8.0],
         [[_popUpButton bottomAnchor] constraintEqualToAnchor:self.view.bottomAnchor constant:-8.0],
         [[_popUpButton trailingAnchor] constraintEqualToAnchor:self.view.trailingAnchor constant:-20.0],
     ]];
@@ -288,7 +289,7 @@ static void* kWindowContentLayoutObserverContext = &kWindowContentLayoutObserver
 
 - (NSString *)content
 {
-    return _saveDatas[[_popUpButton indexOfSelectedItem]].content;
+    return _saveDatas[[_popUpButton indexOfSelectedItem]].content.createNSString().autorelease();
 }
 
 - (BOOL)base64Encoded
@@ -298,9 +299,9 @@ static void* kWindowContentLayoutObserverContext = &kWindowContentLayoutObserver
 
 - (void)_updateSavePanel
 {
-    NSString *suggestedURL = _saveDatas[[_popUpButton indexOfSelectedItem]].url;
+    RetainPtr suggestedURL = _saveDatas[[_popUpButton indexOfSelectedItem]].url.createNSString();
 
-    if (UTType *type = [UTType typeWithFilenameExtension:suggestedURL.pathExtension])
+    if (UTType *type = [UTType typeWithFilenameExtension:suggestedURL.get().pathExtension])
         [_savePanel setAllowedContentTypes:@[ type ]];
     else
         [_savePanel setAllowedContentTypes:@[ ]];
@@ -354,11 +355,11 @@ void WebInspectorUIProxy::updateInspectorWindowTitle() const
 
     unsigned level = inspectionLevel();
     if (level > 1) {
-        NSString *debugTitle = [NSString stringWithFormat:WEB_UI_NSSTRING(@"Web Inspector [%d] — %@", "Web Inspector window title when inspecting Web Inspector"), level, (NSString *)m_urlString];
-        [m_inspectorWindow setTitle:debugTitle];
+        RetainPtr debugTitle = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"Web Inspector [%d] — %@", "Web Inspector window title when inspecting Web Inspector"), level, m_urlString.createNSString().get()]);
+        [m_inspectorWindow setTitle:debugTitle.get()];
     } else {
-        NSString *title = [NSString stringWithFormat:WEB_UI_NSSTRING(@"Web Inspector — %@", "Web Inspector window title"), (NSString *)m_urlString];
-        [m_inspectorWindow setTitle:title];
+        RetainPtr title = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"Web Inspector — %@", "Web Inspector window title"), m_urlString.createNSString().get()]);
+        [m_inspectorWindow setTitle:title.get()];
     }
 }
 
@@ -440,8 +441,8 @@ void WebInspectorUIProxy::showSavePanel(NSWindow *frontendWindow, NSURL *platfor
         saveToURL([savePanel URL]);
     };
 
-    if (NSWindow *window = frontendWindow ?: [NSApp keyWindow])
-        [savePanel beginSheetModalForWindow:window completionHandler:makeBlockPtr(WTFMove(didShowModal)).get()];
+    if (RetainPtr window = frontendWindow ?: [NSApp keyWindow])
+        [savePanel beginSheetModalForWindow:window.get() completionHandler:makeBlockPtr(WTFMove(didShowModal)).get()];
     else
         didShowModal([savePanel runModal]);
 }
@@ -460,8 +461,8 @@ RefPtr<WebPageProxy> WebInspectorUIProxy::platformCreateFrontendPage()
     }
 
     m_objCAdapter = adoptNS([[WKWebInspectorUIProxyObjCAdapter alloc] initWithWebInspectorUIProxy:this]);
-    NSView *inspectedView = inspectedPage->inspectorAttachmentView();
-    [[NSNotificationCenter defaultCenter] addObserver:m_objCAdapter.get() selector:@selector(inspectedViewFrameDidChange:) name:NSViewFrameDidChangeNotification object:inspectedView];
+    RetainPtr inspectedView = inspectedPage->inspectorAttachmentView();
+    [[NSNotificationCenter defaultCenter] addObserver:m_objCAdapter.get() selector:@selector(inspectedViewFrameDidChange:) name:NSViewFrameDidChangeNotification object:inspectedView.get()];
 
     auto configuration = inspectedPage->uiClient().configurationForLocalInspector(*inspectedPage,  *this);
     m_inspectorViewController = adoptNS([[WKInspectorViewController alloc] initWithConfiguration: WebKit::wrapper(configuration.get()) inspectedPage:inspectedPage.get()]);
@@ -477,9 +478,9 @@ void WebInspectorUIProxy::platformCreateFrontendWindow()
     ASSERT(!m_inspectorWindow);
 
     NSRect savedWindowFrame = NSZeroRect;
-    if (RefPtr inspectedPage = protectedInspectedPage()) {
-        NSString *savedWindowFrameString = inspectedPage->protectedPageGroup()->protectedPreferences()->inspectorWindowFrame();
-        savedWindowFrame = NSRectFromString(savedWindowFrameString);
+    if (RefPtr inspectedPage = this->inspectedPage()) {
+        RetainPtr savedWindowFrameString = inspectedPage->pageGroup().preferences().inspectorWindowFrame().createNSString();
+        savedWindowFrame = NSRectFromString(savedWindowFrameString.get());
     }
 
     m_inspectorWindow = WebInspectorUIProxy::createFrontendWindow(savedWindowFrame, InspectionTargetType::Local, protectedInspectedPage().get());
@@ -558,7 +559,7 @@ void WebInspectorUIProxy::platformHide()
 void WebInspectorUIProxy::platformResetState()
 {
     if (RefPtr inspectedPage = m_inspectedPage.get())
-        inspectedPage->protectedPageGroup()->protectedPreferences()->deleteInspectorWindowFrame();
+        inspectedPage->pageGroup().preferences().deleteInspectorWindowFrame();
 }
 
 void WebInspectorUIProxy::platformBringToFront()
@@ -605,18 +606,18 @@ bool WebInspectorUIProxy::platformCanAttach(bool webProcessCanAttach)
     if (!inspectedPage)
         return false;
 
-    NSView *inspectedView = inspectedPage->inspectorAttachmentView();
-    if ([WKInspectorViewController viewIsInspectorWebView:inspectedView])
+    RetainPtr inspectedView = inspectedPage->inspectorAttachmentView();
+    if ([WKInspectorViewController viewIsInspectorWebView:inspectedView.get()])
         return webProcessCanAttach;
 
-    if (inspectedView.hidden)
+    if (inspectedView.get().hidden)
         return false;
 
     static const float minimumAttachedHeight = 250;
     static const float maximumAttachedHeightRatio = 0.75;
     static const float minimumAttachedWidth = 500;
 
-    NSRect inspectedViewFrame = inspectedView.frame;
+    NSRect inspectedViewFrame = inspectedView.get().frame;
 
     float maximumAttachedHeight = NSHeight(inspectedViewFrame) * maximumAttachedHeightRatio;
     return minimumAttachedHeight <= maximumAttachedHeight && minimumAttachedWidth <= NSWidth(inspectedViewFrame);
@@ -647,7 +648,7 @@ void WebInspectorUIProxy::platformShowCertificate(const CertificateInfo& certifi
 
     RetainPtr<SFCertificatePanel> certificatePanel = adoptNS([[SFCertificatePanel alloc] init]);
 
-    NSWindow *window;
+    RetainPtr<NSWindow> window;
     if (m_inspectorWindow)
         window = m_inspectorWindow.get();
     else
@@ -656,7 +657,7 @@ void WebInspectorUIProxy::platformShowCertificate(const CertificateInfo& certifi
     if (!window)
         window = [NSApp keyWindow];
 
-    [certificatePanel beginSheetForWindow:window modalDelegate:nil didEndSelector:NULL contextInfo:nullptr trust:certificateInfo.trust().get() showGroup:YES];
+    [certificatePanel beginSheetForWindow:window.get() modalDelegate:nil didEndSelector:NULL contextInfo:nullptr trust:certificateInfo.trust().get() showGroup:YES];
 
     // This must be called after the trust panel has been displayed, because the certificateView doesn't exist beforehand.
     SFCertificateView *certificateView = [certificatePanel certificateView];
@@ -668,7 +669,7 @@ void WebInspectorUIProxy::platformShowCertificate(const CertificateInfo& certifi
 
 void WebInspectorUIProxy::platformRevealFileExternally(const String& path)
 {
-    [[NSWorkspace sharedWorkspace] activateFileViewerSelectingURLs:@[ [NSURL URLWithString:path] ]];
+    [[NSWorkspace sharedWorkspace] activateFileViewerSelectingURLs:@[ adoptNS([[NSURL alloc] initWithString:path.createNSString().get()]).get() ]];
 }
 
 void WebInspectorUIProxy::platformSave(Vector<InspectorFrontendClient::SaveData>&& saveDatas, bool forceSaveAs)
@@ -676,16 +677,16 @@ void WebInspectorUIProxy::platformSave(Vector<InspectorFrontendClient::SaveData>
     RetainPtr<NSString> urlCommonPrefix;
     for (auto& item : saveDatas) {
         if (!urlCommonPrefix)
-            urlCommonPrefix = item.url;
+            urlCommonPrefix = item.url.createNSString();
         else
-            urlCommonPrefix = [urlCommonPrefix commonPrefixWithString:item.url options:0];
+            urlCommonPrefix = [urlCommonPrefix commonPrefixWithString:item.url.createNSString().get() options:0];
     }
     if ([urlCommonPrefix hasSuffix:@"."])
         urlCommonPrefix = [urlCommonPrefix substringToIndex:[urlCommonPrefix length] - 1];
 
     RetainPtr platformURL = m_suggestedToActualURLMap.get(urlCommonPrefix.get());
     if (!platformURL) {
-        platformURL = [NSURL URLWithString:urlCommonPrefix.get()];
+        platformURL = adoptNS([[NSURL alloc] initWithString:urlCommonPrefix.get()]);
         // The user must confirm new filenames before we can save to them.
         forceSaveAs = true;
     }
@@ -726,8 +727,8 @@ void WebInspectorUIProxy::windowFrameDidChange()
     if (m_isAttached || !m_isVisible || !m_inspectorWindow || !inspectedPage)
         return;
 
-    NSString *frameString = NSStringFromRect([m_inspectorWindow frame]);
-    inspectedPage->protectedPageGroup()->protectedPreferences()->setInspectorWindowFrame(frameString);
+    RetainPtr frameString = NSStringFromRect([m_inspectorWindow frame]);
+    inspectedPage->pageGroup().preferences().setInspectorWindowFrame(frameString.get());
 }
 
 void WebInspectorUIProxy::windowFullScreenDidChange()
@@ -758,13 +759,13 @@ void WebInspectorUIProxy::inspectedViewFrameDidChange(CGFloat currentDimension)
     if (!inspectedPage)
         return;
 
-    NSView *inspectedView = inspectedPage->inspectorAttachmentView();
+    RetainPtr inspectedView = inspectedPage->inspectorAttachmentView();
     WKWebView *inspectorView = [m_inspectorViewController webView];
 
-    NSRect inspectedViewFrame = inspectedView.frame;
+    NSRect inspectedViewFrame = inspectedView.get().frame;
     NSRect oldInspectorViewFrame = inspectorView.frame;
     NSRect newInspectorViewFrame = NSZeroRect;
-    NSRect parentBounds = inspectedView.superview.bounds;
+    NSRect parentBounds = inspectedView.get().superview.bounds;
     CGFloat inspectedViewTop = NSMaxY(inspectedViewFrame);
 
     switch (m_attachmentSide) {
@@ -794,7 +795,7 @@ void WebInspectorUIProxy::inspectedViewFrameDidChange(CGFloat currentDimension)
         newInspectorViewFrame = NSMakeRect(parentWidth - inspectorWidth, 0, inspectorWidth, NSHeight(parentBounds));
 
         if (NSWindow *inspectorWindow = inspectorView.window) {
-            NSRect contentLayoutRect = [inspectedView.superview convertRect:inspectorWindow.contentLayoutRect fromView:nil];
+            NSRect contentLayoutRect = [inspectedView.get().superview convertRect:inspectorWindow.contentLayoutRect fromView:nil];
             newInspectorViewFrame = NSIntersectionRect(newInspectorViewFrame, contentLayoutRect);
         }
         break;
@@ -813,7 +814,7 @@ void WebInspectorUIProxy::inspectedViewFrameDidChange(CGFloat currentDimension)
         newInspectorViewFrame = NSMakeRect(0, 0, inspectorWidth, NSHeight(parentBounds));
 
         if (NSWindow *inspectorWindow = inspectorView.window) {
-            NSRect contentLayoutRect = [inspectedView.superview convertRect:inspectorWindow.contentLayoutRect fromView:nil];
+            NSRect contentLayoutRect = [inspectedView.get().superview convertRect:inspectorWindow.contentLayoutRect fromView:nil];
             newInspectorViewFrame = NSIntersectionRect(newInspectorViewFrame, contentLayoutRect);
         }
         break;
@@ -835,7 +836,7 @@ void WebInspectorUIProxy::inspectedViewFrameDidChange(CGFloat currentDimension)
 void WebInspectorUIProxy::platformAttach()
 {
     ASSERT(protectedInspectedPage());
-    NSView *inspectedView = protectedInspectedPage()->inspectorAttachmentView();
+    RetainPtr inspectedView = protectedInspectedPage()->inspectorAttachmentView();
     WKWebView *inspectorView = [m_inspectorViewController webView];
 
     if (m_inspectorWindow) {
@@ -864,14 +865,14 @@ void WebInspectorUIProxy::platformAttach()
 
     inspectedViewFrameDidChange(currentDimension);
 
-    [inspectedView.superview addSubview:inspectorView positioned:NSWindowBelow relativeTo:inspectedView];
+    [inspectedView.get().superview addSubview:inspectorView positioned:NSWindowBelow relativeTo:inspectedView.get()];
     [inspectorView.window makeFirstResponder:inspectorView];
 }
 
 void WebInspectorUIProxy::platformDetach()
 {
     RefPtr inspectedPage = m_inspectedPage.get();
-    NSView *inspectedView = inspectedPage ? inspectedPage->inspectorAttachmentView() : nil;
+    RetainPtr inspectedView = inspectedPage ? inspectedPage->inspectorAttachmentView() : nil;
     WKWebView *inspectorView = [m_inspectorViewController webView];
 
     [inspectorView removeFromSuperview];
@@ -880,7 +881,7 @@ void WebInspectorUIProxy::platformDetach()
     // Make sure that we size the inspected view's frame after detaching so that it takes up the space that the
     // attached inspector used to. Preserve the top position of the inspected view so banners in Safari still work.
     if (inspectedView)
-        inspectedView.frame = NSMakeRect(0, 0, NSWidth(inspectedView.superview.bounds), NSMaxY(inspectedView.frame));
+        inspectedView.get().frame = NSMakeRect(0, 0, NSWidth(inspectedView.get().superview.bounds), NSMaxY(inspectedView.get().frame));
 
     // Return early if we are not visible. This means the inspector was closed while attached
     // and we should not create and show the inspector window.
@@ -895,7 +896,8 @@ void WebInspectorUIProxy::platformSetAttachedWindowHeight(unsigned height)
     if (!m_isAttached)
         return;
 
-    inspectedViewFrameDidChange(height);
+    NSEdgeInsets webViewInsets = [m_inspectorViewController webView].safeAreaInsets;
+    inspectedViewFrameDidChange(height + webViewInsets.top + webViewInsets.bottom);
 }
 
 void WebInspectorUIProxy::platformSetAttachedWindowWidth(unsigned width)
@@ -903,7 +905,8 @@ void WebInspectorUIProxy::platformSetAttachedWindowWidth(unsigned width)
     if (!m_isAttached)
         return;
 
-    inspectedViewFrameDidChange(width);
+    NSEdgeInsets webViewInsets = [m_inspectorViewController webView].safeAreaInsets;
+    inspectedViewFrameDidChange(width + webViewInsets.left + webViewInsets.right);
 }
 
 void WebInspectorUIProxy::platformSetSheetRect(const FloatRect& rect)
@@ -931,13 +934,13 @@ String WebInspectorUIProxy::inspectorTestPageURL()
 
 DebuggableInfoData WebInspectorUIProxy::infoForLocalDebuggable()
 {
-    NSDictionary *plist = adoptCF(_CFCopySystemVersionDictionary()).bridgingAutorelease();
+    RetainPtr plist = bridge_cast(adoptCF(_CFCopySystemVersionDictionary()));
 
     DebuggableInfoData result;
     result.debuggableType = Inspector::DebuggableType::WebPage;
     result.targetPlatformName = "macOS"_s;
-    result.targetBuildVersion = plist[static_cast<NSString *>(_kCFSystemVersionBuildVersionKey)];
-    result.targetProductVersion = plist[static_cast<NSString *>(_kCFSystemVersionProductUserVisibleVersionKey)];
+    result.targetBuildVersion = plist.get()[static_cast<NSString *>(_kCFSystemVersionBuildVersionKey)];
+    result.targetProductVersion = plist.get()[static_cast<NSString *>(_kCFSystemVersionProductUserVisibleVersionKey)];
     result.targetIsSimulator = false;
 
     return result;
@@ -960,8 +963,8 @@ void WebInspectorUIProxy::applyForcedAppearance()
         break;
     }
 
-    if (NSWindow *window = m_inspectorWindow.get())
-        window.appearance = platformAppearance;
+    if (RetainPtr window = m_inspectorWindow.get())
+        window.get().appearance = platformAppearance;
 
     [m_inspectorViewController webView].appearance = platformAppearance;
 }

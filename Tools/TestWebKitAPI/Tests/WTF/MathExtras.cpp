@@ -466,9 +466,10 @@ TEST(WTF, clampInfinityToInteger)
 
 TEST(WTF, roundUpToPowerOfTwo)
 {
-    EXPECT_EQ(WTF::roundUpToPowerOfTwo(UINT32_MAX), 0U);
-    EXPECT_EQ(WTF::roundUpToPowerOfTwo(1U << 31), (1U << 31));
-    EXPECT_EQ(WTF::roundUpToPowerOfTwo((1U << 31) + 1), 0U);
+    EXPECT_EQ(roundUpToPowerOfTwo(1U), 1U);
+    EXPECT_EQ(roundUpToPowerOfTwo(4U), 4U);
+    EXPECT_EQ(roundUpToPowerOfTwo(120U), 128U);
+    EXPECT_EQ(roundUpToPowerOfTwo(1U << 31), (1U << 31));
 }
 
 TEST(WTF, clz)
@@ -639,6 +640,23 @@ TEST(WTF, fastLog2)
     EXPECT_EQ(WTF::fastLog2(std::numeric_limits<uint32_t>::max() - 2u), 32u);
     EXPECT_EQ(WTF::fastLog2(std::numeric_limits<uint32_t>::max() - 1u), 32u);
     EXPECT_EQ(WTF::fastLog2(std::numeric_limits<uint32_t>::max()), 32u);
+}
+
+TEST(WTF, isIntegral)
+{
+    EXPECT_TRUE(WTF::isIntegral(0));
+    EXPECT_TRUE(WTF::isIntegral(-0));
+    EXPECT_TRUE(WTF::isIntegral(1));
+    EXPECT_TRUE(WTF::isIntegral(-1));
+    EXPECT_FALSE(WTF::isIntegral(0.1f));
+    EXPECT_FALSE(WTF::isIntegral(-0.1f));
+    EXPECT_FALSE(WTF::isIntegral(std::numbers::pi_v<float>));
+    EXPECT_TRUE(WTF::isIntegral(std::numeric_limits<float>::max()));
+    EXPECT_FALSE(WTF::isIntegral(std::numeric_limits<float>::min()));
+    EXPECT_TRUE(WTF::isIntegral(std::numeric_limits<float>::lowest()));
+    EXPECT_FALSE(WTF::isIntegral(std::numeric_limits<float>::infinity()));
+    EXPECT_FALSE(WTF::isIntegral(-std::numeric_limits<float>::infinity()));
+    EXPECT_FALSE(WTF::isIntegral(std::numeric_limits<float>::quiet_NaN()));
 }
 
 TEST(WTF, negate)

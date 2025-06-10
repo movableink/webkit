@@ -75,8 +75,6 @@ messages -> WebProcess : AuxiliaryProcess WantsAsyncDispatchMessage {
 
     SetTextCheckerState(OptionSet<WebKit::TextCheckerState> textCheckerState)
 
-    SetShouldSuppressHDR(bool shouldSuppressHDR)
-
     SetEnhancedAccessibility(bool flag)
     BindAccessibilityFrameWithData(WebCore::FrameIdentifier frameID, std::span<const uint8_t> data);
 
@@ -173,6 +171,7 @@ messages -> WebProcess : AuxiliaryProcess WantsAsyncDispatchMessage {
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
     SendMessageToWebProcessExtension(struct WebKit::UserMessage userMessage)
+    SetAvailableInputDevices(OptionSet<WebKit::AvailableInputDevices> availableInputDevices)
 #endif
 
     SeedResourceLoadStatisticsForTesting(WebCore::RegistrableDomain firstPartyDomain, WebCore::RegistrableDomain thirdPartyDomain, bool shouldScheduleNotification) -> ()

@@ -61,38 +61,16 @@ void ServiceWorkerInspectorProxy::serviceWorkerTerminated()
     m_channel = nullptr;
 }
 
-void ServiceWorkerInspectorProxy::connectToWorker(FrontendChannel& channel)
+void ServiceWorkerInspectorProxy::connectToWorker(FrontendChannel& channel, bool isAutomaticConnection, bool immediatelyPause)
 {
     m_channel = &channel;
 
     RefPtr serviceWorkerThreadProxy = m_serviceWorkerThreadProxy.get();
     SWContextManager::singleton().setAsInspected(serviceWorkerThreadProxy->identifier(), true);
-    serviceWorkerThreadProxy->thread().runLoop().postDebuggerTask([] (ScriptExecutionContext& context) {
-        downcast<WorkerGlobalScope>(context).inspectorController().connectFrontend();
+    serviceWorkerThreadProxy->thread().runLoop().postDebuggerTask([isAutomaticConnection, immediatelyPause] (ScriptExecutionContext& context) {
+        downcast<WorkerGlobalScope>(context).inspectorController().connectFrontend(isAutomaticConnection, immediatelyPause);
     });
 }
-
-#if ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
-
-void ServiceWorkerInspectorProxy::connectToWorker(FrontendChannel& channel, ServiceWorkerDebuggable& debuggable, bool isAutomaticConnection, bool immediatelyPause)
-{
-    m_channel = &channel;
-
-    RefPtr serviceWorkerThreadProxy = m_serviceWorkerThreadProxy.get();
-    SWContextManager::singleton().setAsInspected(serviceWorkerThreadProxy->identifier(), true);
-
-    ThreadSafeWeakPtr weakDebuggable = ThreadSafeWeakPtr { debuggable };
-    serviceWorkerThreadProxy->thread().runLoop().postDebuggerTask(
-        [weakDebuggable, isAutomaticConnection, immediatelyPause](ScriptExecutionContext& context) {
-            Function<void()> handleFrontendInitialized = [weakDebuggable] {
-                if (RefPtr debuggable = weakDebuggable.get())
-                    debuggable->unpauseForInitializedInspector();
-            };
-            downcast<WorkerGlobalScope>(context).inspectorController().connectFrontend(isAutomaticConnection, immediatelyPause, WTFMove(handleFrontendInitialized));
-        });
-}
-
-#endif
 
 void ServiceWorkerInspectorProxy::disconnectFromWorker(FrontendChannel& channel)
 {

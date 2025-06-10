@@ -54,8 +54,8 @@ MediaKeySystemPermissionRequestManager::MediaKeySystemPermissionRequestManager(W
 
 void MediaKeySystemPermissionRequestManager::startMediaKeySystemRequest(MediaKeySystemRequest& request)
 {
-    Document* document = request.document();
-    auto* frame = document ? document->frame() : nullptr;
+    RefPtr document = request.document();
+    RefPtr frame = document ? document->frame() : nullptr;
 
     if (!frame || !document->page()) {
         request.deny(emptyString());
@@ -100,7 +100,7 @@ void MediaKeySystemPermissionRequestManager::cancelMediaKeySystemRequest(MediaKe
     if (auto removedRequest = m_ongoingMediaKeySystemRequests.take(request.identifier()))
         return;
 
-    auto* document = request.document();
+    RefPtr document = request.document();
     if (!document)
         return;
 

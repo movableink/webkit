@@ -81,7 +81,7 @@ static inline std::optional<WebsiteDataType> toWebsiteDataType(NSString *website
         return WebsiteDataType::AlternativeServices;
 #endif
 #if ENABLE(SCREEN_TIME)
-    if ([websiteDataType isEqualToString:_WKWebsiteDataTypeScreenTime])
+    if ([websiteDataType isEqualToString:WKWebsiteDataTypeScreenTime])
         return WebsiteDataType::ScreenTime;
 #endif
     return std::nullopt;
@@ -145,7 +145,7 @@ static inline RetainPtr<NSSet> toWKWebsiteDataTypes(OptionSet<WebKit::WebsiteDat
 #endif
 #if ENABLE(SCREEN_TIME)
     if (websiteDataTypes.contains(WebsiteDataType::ScreenTime))
-        [wkWebsiteDataTypes addObject:_WKWebsiteDataTypeScreenTime];
+        [wkWebsiteDataTypes addObject:WKWebsiteDataTypeScreenTime];
 #endif
 
     return wkWebsiteDataTypes;

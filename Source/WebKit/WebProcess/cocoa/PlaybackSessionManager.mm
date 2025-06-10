@@ -41,6 +41,7 @@
 #import <WebCore/Event.h>
 #import <WebCore/EventNames.h>
 #import <WebCore/HTMLMediaElement.h>
+#import <WebCore/MediaSelectionOption.h>
 #import <WebCore/Navigator.h>
 #import <WebCore/NavigatorMediaSession.h>
 #import <WebCore/Quirks.h>
@@ -98,7 +99,7 @@ void PlaybackSessionInterfaceContext::playbackStartedTimeChanged(double playback
         manager->playbackStartedTimeChanged(m_contextId, playbackStartedTime);
 }
 
-void PlaybackSessionInterfaceContext::seekableRangesChanged(const WebCore::TimeRanges& ranges, double lastModifiedTime, double liveUpdateInterval)
+void PlaybackSessionInterfaceContext::seekableRangesChanged(const WebCore::PlatformTimeRanges& ranges, double lastModifiedTime, double liveUpdateInterval)
 {
     if (RefPtr manager = m_manager.get())
         manager->seekableRangesChanged(m_contextId, ranges, lastModifiedTime, liveUpdateInterval);
@@ -170,19 +171,17 @@ void PlaybackSessionInterfaceContext::isInWindowFullscreenActiveChanged(bool isI
         manager->isInWindowFullscreenActiveChanged(m_contextId, isInWindow);
 }
 
-#if ENABLE(LINEAR_MEDIA_PLAYER)
 void PlaybackSessionInterfaceContext::spatialVideoMetadataChanged(const std::optional<WebCore::SpatialVideoMetadata>& metadata)
 {
     if (m_manager)
         m_manager->spatialVideoMetadataChanged(m_contextId, metadata);
 }
 
-void PlaybackSessionInterfaceContext::isImmersiveVideoChanged(bool value)
+void PlaybackSessionInterfaceContext::videoProjectionMetadataChanged(const std::optional<VideoProjectionMetadata>& value)
 {
     if (m_manager)
-        m_manager->isImmersiveVideoChanged(m_contextId, value);
+        m_manager->videoProjectionMetadataChanged(m_contextId, value);
 }
-#endif
 
 #pragma mark - PlaybackSessionManager
 
@@ -340,7 +339,7 @@ void PlaybackSessionManager::clearPlaybackControlsManager()
 void PlaybackSessionManager::mediaEngineChanged(HTMLMediaElement& mediaElement)
 {
 #if ENABLE(LINEAR_MEDIA_PLAYER)
-    RefPtr player = mediaElement.protectedPlayer();
+    RefPtr player = mediaElement.player();
     bool supportsLinearMediaPlayer = player && player->supportsLinearMediaPlayer();
     Ref { *m_page }->send(Messages::PlaybackSessionManagerProxy::SupportsLinearMediaPlayerChanged(mediaElement.identifier(), supportsLinearMediaPlayer));
 #else
@@ -413,15 +412,9 @@ void PlaybackSessionManager::rateChanged(PlaybackSessionContextIdentifier contex
     m_page->send(Messages::PlaybackSessionManagerProxy::RateChanged(contextId, playbackState, playbackRate, defaultPlaybackRate));
 }
 
-void PlaybackSessionManager::seekableRangesChanged(PlaybackSessionContextIdentifier contextId, const WebCore::TimeRanges& timeRanges, double lastModifiedTime, double liveUpdateInterval)
+void PlaybackSessionManager::seekableRangesChanged(PlaybackSessionContextIdentifier contextId, const WebCore::PlatformTimeRanges& timeRanges, double lastModifiedTime, double liveUpdateInterval)
 {
-    Vector<std::pair<double, double>> rangesVector;
-    for (unsigned i = 0; i < timeRanges.length(); i++) {
-        double start = timeRanges.ranges().start(i).toDouble();
-        double end = timeRanges.ranges().end(i).toDouble();
-        rangesVector.append({ start, end });
-    }
-    m_page->send(Messages::PlaybackSessionManagerProxy::SeekableRangesVectorChanged(contextId, WTFMove(rangesVector), lastModifiedTime, liveUpdateInterval));
+    m_page->send(Messages::PlaybackSessionManagerProxy::SeekableRangesVectorChanged(contextId, timeRanges, lastModifiedTime, liveUpdateInterval));
 }
 
 void PlaybackSessionManager::canPlayFastReverseChanged(PlaybackSessionContextIdentifier contextId, bool value)
@@ -479,17 +472,15 @@ void PlaybackSessionManager::isInWindowFullscreenActiveChanged(PlaybackSessionCo
     m_page->send(Messages::PlaybackSessionManagerProxy::IsInWindowFullscreenActiveChanged(contextId, inWindow));
 }
 
-#if ENABLE(LINEAR_MEDIA_PLAYER)
 void PlaybackSessionManager::spatialVideoMetadataChanged(PlaybackSessionContextIdentifier contextId, const std::optional<WebCore::SpatialVideoMetadata>& metadata)
 {
     m_page->send(Messages::PlaybackSessionManagerProxy::SpatialVideoMetadataChanged(contextId, metadata));
 }
 
-void PlaybackSessionManager::isImmersiveVideoChanged(PlaybackSessionContextIdentifier contextId, bool value)
+void PlaybackSessionManager::videoProjectionMetadataChanged(PlaybackSessionContextIdentifier contextId, const std::optional<VideoProjectionMetadata>& value)
 {
-    m_page->send(Messages::PlaybackSessionManagerProxy::IsImmersiveVideoChanged(contextId, value));
+    m_page->send(Messages::PlaybackSessionManagerProxy::VideoProjectionMetadataChanged(contextId, value));
 }
-#endif
 
 #pragma mark Messages from PlaybackSessionManagerProxy:
 

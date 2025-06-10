@@ -171,6 +171,7 @@ static MTCoreMaterialRecipe materialRecipeForAppleVisualEffect(AppleVisualEffect
     case AppleVisualEffect::HostedBlurMaterial:
     case AppleVisualEffect::HostedThinBlurMaterial:
     case AppleVisualEffect::HostedMediaControlsMaterial:
+    case AppleVisualEffect::HostedThinMediaControlsMaterial:
 #endif
     case AppleVisualEffect::VibrancyLabel:
     case AppleVisualEffect::VibrancySecondaryLabel:
@@ -211,6 +212,7 @@ static MTCoreMaterialVisualStyle materialVisualStyleForAppleVisualEffect(AppleVi
     case AppleVisualEffect::HostedBlurMaterial:
     case AppleVisualEffect::HostedThinBlurMaterial:
     case AppleVisualEffect::HostedMediaControlsMaterial:
+    case AppleVisualEffect::HostedThinMediaControlsMaterial:
 #endif
         ASSERT_NOT_REACHED();
         return nil;
@@ -240,6 +242,7 @@ static MTCoreMaterialVisualStyleCategory materialVisualStyleCategoryForAppleVisu
     case AppleVisualEffect::HostedBlurMaterial:
     case AppleVisualEffect::HostedThinBlurMaterial:
     case AppleVisualEffect::HostedMediaControlsMaterial:
+    case AppleVisualEffect::HostedThinMediaControlsMaterial:
 #endif
         ASSERT_NOT_REACHED();
         return nil;
@@ -257,6 +260,8 @@ static WKHostedMaterialEffectType hostedMaterialEffectTypeForAppleVisualEffect(A
         return WKHostedMaterialEffectTypeThinBlur;
     case AppleVisualEffect::HostedMediaControlsMaterial:
         return WKHostedMaterialEffectTypeMediaControls;
+    case AppleVisualEffect::HostedThinMediaControlsMaterial:
+        return WKHostedMaterialEffectTypeThinMediaControls;
     case AppleVisualEffect::None:
     case AppleVisualEffect::BlurUltraThinMaterial:
     case AppleVisualEffect::BlurThinMaterial:
@@ -290,7 +295,7 @@ static WKHostedMaterialColorScheme hostedMaterialColorSchemeForAppleVisualEffect
 
 static void applyVisualStylingToLayer(CALayer *layer, const AppleVisualEffectData& effectData)
 {
-    MTCoreMaterialRecipe recipe = materialRecipeForAppleVisualEffect(effectData.contextEffect, effectData.colorScheme);
+    RetainPtr recipe = materialRecipeForAppleVisualEffect(effectData.contextEffect, effectData.colorScheme);
     if ([recipe isEqualToString:PAL::get_CoreMaterial_MTCoreMaterialRecipeNone()]) {
         bool isDark = effectData.colorScheme == AppleVisualEffectData::ColorScheme::Dark;
 #if PLATFORM(VISION)
@@ -301,7 +306,7 @@ static void applyVisualStylingToLayer(CALayer *layer, const AppleVisualEffectDat
     }
 
     // Despite the name, MTVisualStylingCreateDictionaryRepresentation returns an autoreleased object.
-    RetainPtr visualStylingDescription = PAL::softLink_CoreMaterial_MTVisualStylingCreateDictionaryRepresentation(recipe, materialVisualStyleCategoryForAppleVisualEffect(effectData.effect), materialVisualStyleForAppleVisualEffect(effectData.effect), nil);
+    RetainPtr visualStylingDescription = PAL::softLink_CoreMaterial_MTVisualStylingCreateDictionaryRepresentation(recipe.get(), materialVisualStyleCategoryForAppleVisualEffect(effectData.effect), materialVisualStyleForAppleVisualEffect(effectData.effect), nil);
 
     RetainPtr<NSArray<NSDictionary<NSString *, id> *>> filterDescriptionsArray = [visualStylingDescription objectForKey:@"filters"];
     RetainPtr filterDescription = [filterDescriptionsArray firstObject];
@@ -412,7 +417,7 @@ void RemoteLayerTreePropertyApplier::applyPropertiesToLayer(CALayer *layer, Remo
         layer.masksToBounds = properties.masksToBounds;
 
     if (properties.changedProperties & LayerChange::NameChanged)
-        layer.name = properties.name;
+        layer.name = properties.name.createNSString().get();
 
     if (properties.changedProperties & LayerChange::BackgroundColorChanged)
         layer.backgroundColor = cgColorFromColor(properties.backgroundColor).get();
@@ -546,8 +551,8 @@ void RemoteLayerTreePropertyApplier::applyPropertiesToLayer(CALayer *layer, Remo
 
     if (properties.changedProperties & LayerChange::ContentsFormatChanged) {
         auto contentsFormat = properties.contentsFormat;
-        if (NSString *formatString = contentsFormatString(contentsFormat))
-            [layer setContentsFormat:formatString];
+        if (RetainPtr formatString = contentsFormatString(contentsFormat))
+            [layer setContentsFormat:formatString.get()];
 #if ENABLE(PIXEL_FORMAT_RGBA16F)
         if (contentsFormat == ContentsFormat::RGBA16F) {
             ALLOW_DEPRECATED_DECLARATIONS_BEGIN
@@ -675,10 +680,10 @@ void RemoteLayerTreePropertyApplier::updateMask(RemoteLayerTreeNode& node, const
     if (!properties.changedProperties.contains(LayerChange::MaskLayerChanged))
         return;
 
-    auto maskOwnerLayer = node.layer();
+    RetainPtr maskOwnerLayer = node.layer();
 
     if (!properties.maskLayerID) {
-        maskOwnerLayer.mask = nullptr;
+        maskOwnerLayer.get().mask = nullptr;
         return;
     }
 
@@ -690,7 +695,7 @@ void RemoteLayerTreePropertyApplier::updateMask(RemoteLayerTreeNode& node, const
     RetainPtr maskLayer = maskNode->layer();
     [maskLayer removeFromSuperlayer];
 
-    maskOwnerLayer.mask = maskLayer.get();
+    maskOwnerLayer.get().mask = maskLayer.get();
 }
 
 #if PLATFORM(IOS_FAMILY)

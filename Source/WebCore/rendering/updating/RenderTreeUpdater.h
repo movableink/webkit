@@ -70,6 +70,8 @@ private:
     bool textRendererIsNeeded(const Text& textNode);
     void storePreviousRenderer(Node&);
 
+    void destroyAndCancelAnimationsForSubtree(RenderElement&);
+
     struct Parent {
         Element* element { nullptr };
         const Style::ElementUpdate* update { nullptr };

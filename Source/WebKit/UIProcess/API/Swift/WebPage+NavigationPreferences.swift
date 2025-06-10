@@ -86,15 +86,15 @@ extension WebPage {
         /// The `WebPage.Configuration.upgradeKnownHostsToHTTPS` property supersedes this property for known hosts.
         public var preferredHTTPSNavigationPolicy: UpgradeToHTTPSPolicy = .keepAsRequested
 
-        var _isLockdownModeEnabled: Bool? = nil
+        var backingIsLockdownModeEnabled: Bool? = nil
 
         /// A Boolean value that indicates whether to use Lockdown Mode in the web page.
         ///
         /// By default, this reflects whether the user has enabled Lockdown Mode on the device. Update this preference to
         /// override the device setting when you implement a per-website or similar setting.
         public var isLockdownModeEnabled: Bool {
-            get { _isLockdownModeEnabled ?? false }
-            set { _isLockdownModeEnabled = newValue }
+            get { backingIsLockdownModeEnabled ?? false }
+            set { backingIsLockdownModeEnabled = newValue }
         }
     }
 }
@@ -103,26 +103,28 @@ extension WebPage {
 
 extension WebPage.NavigationPreferences.ContentMode {
     init(_ wrapped: WKWebpagePreferences.ContentMode) {
-        self = switch wrapped {
-        case .recommended: .recommended
-        case .mobile: .mobile
-        case .desktop: .desktop
-        @unknown default:
-            fatalError()
-        }
+        self =
+            switch wrapped {
+            case .recommended: .recommended
+            case .mobile: .mobile
+            case .desktop: .desktop
+            @unknown default:
+                fatalError()
+            }
     }
 }
 
 extension WebPage.NavigationPreferences.UpgradeToHTTPSPolicy {
     init(_ wrapped: WKWebpagePreferences.UpgradeToHTTPSPolicy) {
-        self = switch wrapped {
-        case .keepAsRequested: .keepAsRequested
-        case .automaticFallbackToHTTP: .automaticFallbackToHTTP
-        case .userMediatedFallbackToHTTP: .userMediatedFallbackToHTTP
-        case .errorOnFailure: .errorOnFailure
-        @unknown default:
-            fatalError()
-        }
+        self =
+            switch wrapped {
+            case .keepAsRequested: .keepAsRequested
+            case .automaticFallbackToHTTP: .automaticFallbackToHTTP
+            case .userMediatedFallbackToHTTP: .userMediatedFallbackToHTTP
+            case .errorOnFailure: .errorOnFailure
+            @unknown default:
+                fatalError()
+            }
     }
 }
 

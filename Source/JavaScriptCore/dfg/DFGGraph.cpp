@@ -233,6 +233,8 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
         out.print(comma, "numberOfBoundArguments = "_s, node->numberOfBoundArguments());
     if (node->hasArrayMode())
         out.print(comma, node->arrayMode());
+    if (node->hasArrayModes())
+        out.print(comma, ArrayModesDump(node->arrayModes()));
     if (node->hasArithUnaryType())
         out.print(comma, "Type:"_s, node->arithUnaryType());
     if (node->hasArithMode())
@@ -460,8 +462,12 @@ void Graph::dumpBlockHeader(PrintStream& out, const char* prefixStr, BasicBlock*
     Prefix myPrefix(prefixStr);
     Prefix& prefix = prefixStr ? myPrefix : m_prefix;
 
-    out.print(prefix, "Block ", *block, " (", inContext(block->at(0)->origin.semantic, context), "):",
-        block->isReachable ? "" : " (skipped)", block->isOSRTarget ? " (OSR target)" : "", block->isCatchEntrypoint ? " (Catch Entrypoint)" : "", "\n");
+    out.print(prefix, "Block ", *block);
+#if ASSERT_ENABLED
+    if (block->cloneSource)
+        out.print("<-", block->cloneSource);
+#endif
+    out.print(" (", inContext(block->at(0)->origin.semantic, context), "):", block->isReachable ? "" : " (skipped)", block->isOSRTarget ? " (OSR target)" : "", block->isCatchEntrypoint ? " (Catch Entrypoint)" : "", "\n");
     if (block->executionCount == block->executionCount)
         out.print(prefix, "  Execution count: ", block->executionCount, "\n");
     out.print(prefix, "  Predecessors:");
@@ -696,9 +702,7 @@ void Graph::dethread()
 {
     if (m_form == LoadStore || m_form == SSA)
         return;
-    
-    dataLogLnIf(logCompilationChanges(), "Dethreading DFG graph.");
-    
+
     for (BlockIndex blockIndex = m_blocks.size(); blockIndex--;) {
         BasicBlock* block = m_blocks[blockIndex].get();
         if (!block)
@@ -1552,7 +1556,7 @@ void Graph::visitChildren(SlotVisitor& visitor) { visitChildrenImpl(visitor); }
 FrozenValue* Graph::freeze(JSValue value)
 {
     RELEASE_ASSERT(!m_plan.isInSafepoint());
-    if (UNLIKELY(!value))
+    if (!value) [[unlikely]]
         return FrozenValue::emptySingleton();
 
     // There are weird relationships in how optimized CodeBlocks
@@ -1562,7 +1566,7 @@ FrozenValue* Graph::freeze(JSValue value)
     RELEASE_ASSERT(!jsDynamicCast<CodeBlock*>(value));
     
     auto result = m_frozenValueMap.add(JSValue::encode(value), nullptr);
-    if (LIKELY(!result.isNewEntry))
+    if (!result.isNewEntry) [[likely]]
         return result.iterator->value;
 
     if (value.isUInt32())
@@ -1876,26 +1880,6 @@ bool Graph::getRegExpPrototypeProperty(JSObject* regExpPrototype, Structure* reg
     return true;
 }
 
-bool Graph::isStringPrototypeMethodSane(JSGlobalObject* globalObject, UniquedStringImpl* uid)
-{
-    ObjectPropertyConditionSet conditions = generateConditionsForPrototypeEquivalenceConcurrently(m_vm, globalObject, globalObject->stringObjectStructure(), globalObject->stringPrototype(), uid);
-
-    if (!conditions.isValid())
-        return false;
-
-    ObjectPropertyCondition equivalenceCondition = conditions.slotBaseCondition();
-    RELEASE_ASSERT(equivalenceCondition.hasRequiredValue());
-    JSFunction* function = jsDynamicCast<JSFunction*>(equivalenceCondition.condition().requiredValue());
-    if (!function)
-        return false;
-
-    if (function->executable()->intrinsicFor(CodeForCall) != StringPrototypeValueOfIntrinsic)
-        return false;
-    
-    return watchConditions(conditions);
-}
-
-
 bool Graph::canOptimizeStringObjectAccess(const CodeOrigin& codeOrigin)
 {
     if (m_plan.isUnlinked())
@@ -1904,13 +1888,7 @@ bool Graph::canOptimizeStringObjectAccess(const CodeOrigin& codeOrigin)
     if (hasExitSite(codeOrigin, BadCache) || hasExitSite(codeOrigin, BadConstantCache))
         return false;
 
-    JSGlobalObject* globalObject = globalObjectFor(codeOrigin);
-    Structure* stringObjectStructure = globalObjectFor(codeOrigin)->stringObjectStructure();
-    registerStructure(stringObjectStructure);
-    ASSERT(stringObjectStructure->storedPrototype().isObject());
-    ASSERT(stringObjectStructure->storedPrototype().asCell()->classInfo() == StringPrototype::info());
-
-    if (!watchConditions(generateConditionsForPropertyMissConcurrently(m_vm, globalObject, stringObjectStructure, m_vm.propertyNames->toPrimitiveSymbol.impl())))
+    if (!isWatchingStringSymbolToPrimitiveWatchpoint(codeOrigin))
         return false;
 
     // We're being conservative here. We want DFG's ToString on StringObject to be
@@ -1918,9 +1896,13 @@ bool Graph::canOptimizeStringObjectAccess(const CodeOrigin& codeOrigin)
     // (that would call toString()). We don't want the DFG to have to distinguish
     // between the two, just because that seems like it would get confusing. So we
     // just require both methods to be sane.
-    if (!isStringPrototypeMethodSane(globalObject, m_vm.propertyNames->valueOf.impl()))
+    if (!isWatchingStringValueOfWatchpoint(codeOrigin))
         return false;
-    return isStringPrototypeMethodSane(globalObject, m_vm.propertyNames->toString.impl());
+
+    if (!isWatchingStringToStringWatchpoint(codeOrigin))
+        return false;
+
+    return true;
 }
 
 bool Graph::willCatchExceptionInMachineFrame(CodeOrigin codeOrigin, CodeOrigin& opCatchOriginOut, HandlerInfo*& catchHandlerOut)

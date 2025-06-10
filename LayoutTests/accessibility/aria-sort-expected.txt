@@ -13,7 +13,7 @@ PASS col3.isAttributeSupported('AXSortDirection') is true
 PASS col3.sortDirection is 'AXUnknownSortDirection'
 PASS link1.isAttributeSupported('AXSortDirection') is true
 PASS link1.sortDirection is 'AXAscendingSortDirection'
-PASS row1.isAttributeSupported('AXSortDirection') is false
+PASS row1.isAttributeSupported('AXSortDirection') is true
 PASS successfullyParsed is true
 
 TEST COMPLETE

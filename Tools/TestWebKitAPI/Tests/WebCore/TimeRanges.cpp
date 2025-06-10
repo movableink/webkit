@@ -29,6 +29,7 @@
  */
 
 #include "config.h"
+#include <WebCore/ExceptionOr.h>
 #include <WebCore/TimeRanges.h>
 
 using namespace WebCore;

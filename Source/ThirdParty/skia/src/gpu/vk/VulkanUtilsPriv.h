@@ -10,7 +10,6 @@
 
 #include "include/core/SkColor.h"
 #include "include/core/SkRefCnt.h"
-#include "include/core/SkTextureCompressionType.h"
 #include "include/gpu/vk/VulkanTypes.h"
 #include "include/private/base/SkAssert.h"
 #include "include/private/gpu/vk/SkiaVulkan.h"
@@ -21,9 +20,13 @@
 #include <android/hardware_buffer.h>
 #endif
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
-#include <cstddef>
+#include <type_traits>
+
+class SkStream;
+class SkWStream;
 
 namespace SkSL {
 
@@ -123,38 +126,6 @@ static constexpr size_t VkFormatBytesPerBlock(VkFormat vkFormat) {
     }
 }
 
-static constexpr SkTextureCompressionType VkFormatToCompressionType(VkFormat vkFormat) {
-    switch (vkFormat) {
-        case VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK: return SkTextureCompressionType::kETC2_RGB8_UNORM;
-        case VK_FORMAT_BC1_RGB_UNORM_BLOCK:     return SkTextureCompressionType::kBC1_RGB8_UNORM;
-        case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:    return SkTextureCompressionType::kBC1_RGBA8_UNORM;
-        default:                                return SkTextureCompressionType::kNone;
-    }
-}
-
-static constexpr int VkFormatIsStencil(VkFormat format) {
-    switch (format) {
-        case VK_FORMAT_S8_UINT:
-        case VK_FORMAT_D24_UNORM_S8_UINT:
-        case VK_FORMAT_D32_SFLOAT_S8_UINT:
-            return true;
-        default:
-            return false;
-    }
-}
-
-static constexpr int VkFormatIsDepth(VkFormat format) {
-    switch (format) {
-        case VK_FORMAT_D16_UNORM:
-        case VK_FORMAT_D32_SFLOAT:
-        case VK_FORMAT_D24_UNORM_S8_UINT:
-        case VK_FORMAT_D32_SFLOAT_S8_UINT:
-            return true;
-        default:
-            return false;
-    }
-}
-
 static constexpr int VkFormatStencilBits(VkFormat format) {
     switch (format) {
         case VK_FORMAT_S8_UINT:
@@ -214,25 +185,35 @@ static constexpr bool VkFormatIsCompressed(VkFormat vkFormat) {
 }
 
 /**
+ * Prepend ptr to the pNext chain at chainStart
+ */
+template <typename VulkanStruct1, typename VulkanStruct2>
+void AddToPNextChain(VulkanStruct1* chainStart, VulkanStruct2* ptr) {
+    // Make sure this function is not called with `&pointer` instead of `pointer`.
+    static_assert(!std::is_pointer<VulkanStruct1>::value);
+    static_assert(!std::is_pointer<VulkanStruct2>::value);
+
+    SkASSERT(ptr->pNext == nullptr);
+
+    VkBaseOutStructure* localPtr = reinterpret_cast<VkBaseOutStructure*>(chainStart);
+    ptr->pNext = localPtr->pNext;
+    localPtr->pNext = reinterpret_cast<VkBaseOutStructure*>(ptr);
+}
+
+/**
  * Returns a ptr to the requested extension feature struct or nullptr if it is not present.
 */
-template<typename T> T* GetExtensionFeatureStruct(const VkPhysicalDeviceFeatures2& features,
-                                                  VkStructureType type) {
+template <typename T>
+const T* GetExtensionFeatureStruct(const VkPhysicalDeviceFeatures2& features,
+                                   VkStructureType type) {
     // All Vulkan structs that could be part of the features chain will start with the
-    // structure type followed by the pNext pointer. We cast to the CommonVulkanHeader
-    // so we can get access to the pNext for the next struct.
-    struct CommonVulkanHeader {
-        VkStructureType sType;
-        void*           pNext;
-    };
-
-    void* pNext = features.pNext;
+    // structure type followed by the pNext pointer, as specified in VkBaseInStructure.
+    const auto* pNext = static_cast<const VkBaseInStructure*>(features.pNext);
     while (pNext) {
-        CommonVulkanHeader* header = static_cast<CommonVulkanHeader*>(pNext);
-        if (header->sType == type) {
-            return static_cast<T*>(pNext);
+        if (pNext->sType == type) {
+            return reinterpret_cast<const T*>(pNext);
         }
-        pNext = header->pNext;
+        pNext = pNext->pNext;
     }
     return nullptr;
 }
@@ -276,6 +257,9 @@ static constexpr const char* VkFormatToStr(VkFormat vkFormat) {
         default:                                 return "Unknown";
     }
 }
+
+[[nodiscard]] bool SerializeVkYCbCrInfo(SkWStream*, const VulkanYcbcrConversionInfo&);
+[[nodiscard]] bool DeserializeVkYCbCrInfo(SkStream*, VulkanYcbcrConversionInfo* out);
 
 #ifdef SK_BUILD_FOR_ANDROID
 /**

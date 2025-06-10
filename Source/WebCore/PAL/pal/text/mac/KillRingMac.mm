@@ -61,7 +61,7 @@ void KillRing::append(const String& string)
     initializeKillRingIfNeeded();
     // Necessary to prevent an implicit new sequence if the previous command was NSPrependToKillRing.
     _NSResetKillRingOperationFlag();
-    _NSAppendToKillRing(string);
+    _NSAppendToKillRing(string.createNSString().get());
 }
 
 void KillRing::prepend(const String& string)
@@ -69,7 +69,7 @@ void KillRing::prepend(const String& string)
     initializeKillRingIfNeeded();
     // Necessary to prevent an implicit new sequence if the previous command was NSAppendToKillRing.
     _NSResetKillRingOperationFlag();
-    _NSPrependToKillRing(string);
+    _NSPrependToKillRing(string.createNSString().get());
 }
 
 String KillRing::yank()

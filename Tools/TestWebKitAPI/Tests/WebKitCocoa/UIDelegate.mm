@@ -1039,6 +1039,43 @@ TEST(WebKit, MouseMoveOverElement)
 
 static BlockPtr<NSEvent*(NSEvent*)> gEventMonitorHandler;
 
+@interface TestLocalEventObserver : NSObject {
+    NSEventMask _mask;
+    id _block;
+    BOOL _isAdditive;
+}
++ (void)initialize;
+- (instancetype)initMatchingEvents:(NSEventMask)mask handler:(NSEvent *(^)(NSEvent *))block;
+- (void)invalidate;
+- (void)dealloc;
+- (void)recomputeObserverMask;
+@end
+
+@implementation TestLocalEventObserver
++ (void)initialize
+{
+}
+
+- (instancetype)initMatchingEvents:(NSEventMask)mask handler:(NSEvent *(^)(NSEvent *))block
+{
+    self = [super init];
+    return self;
+}
+
+- (void)dealloc
+{
+    [super dealloc];
+}
+
+- (void)invalidate
+{
+}
+
+- (void)recomputeObserverMask
+{
+}
+@end
+
 @interface TestEventMonitor : NSObject
 
 + (id)addLocalMonitorForEventsMatchingMask:(NSEventMask)mask handler:(NSEvent* (^)(NSEvent *event))block;
@@ -1050,7 +1087,7 @@ static BlockPtr<NSEvent*(NSEvent*)> gEventMonitorHandler;
 + (id)addLocalMonitorForEventsMatchingMask:(NSEventMask)mask handler:(NSEvent* (^)(NSEvent *event))block
 {
     gEventMonitorHandler = makeBlockPtr(block);
-    return nil;
+    return adoptNS([[TestLocalEventObserver alloc] initMatchingEvents:mask handler:block]).leakRef();
 }
 
 @end

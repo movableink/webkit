@@ -56,11 +56,6 @@ auto ToStyle<CSS::TextShadow>::operator()(const CSS::TextShadow& value, const Bu
 
 // MARK: - Blending
 
-auto Blending<TextShadow>::canBlend(const TextShadow&, const TextShadow&, const RenderStyle&, const RenderStyle&) -> bool
-{
-    return true;
-}
-
 auto Blending<TextShadow>::blend(const TextShadow& a, const TextShadow& b, const RenderStyle& aStyle, const RenderStyle& bStyle, const BlendingContext& context) -> TextShadow
 {
     return {

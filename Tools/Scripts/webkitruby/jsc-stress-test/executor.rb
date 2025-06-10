@@ -40,6 +40,7 @@ class BaseTestsExecutor
         end
         @maxIterations = setMaxIterations(initialMaxAllowedIterations(runlist))
         @logStream = logStream
+        @remainingRetrySeconds = nil
     end
     def log(s)
         @logStream.puts(s) unless @logStream.nil?
@@ -49,6 +50,9 @@ class BaseTestsExecutor
             value = @iterationsCeiling
         end
         @maxIterations = value
+    end
+    def updateRemainingRetrySeconds
+        raise "This method needs to be overridden"
     end
     def iterationsForInfraFailures
         # If we're running remotely, scale the extra iterations to
@@ -127,6 +131,10 @@ class BaseTestsExecutor
             if iteration >= @maxIterations
                 break
             end
+            if not @remainingRetrySeconds.nil? and @remainingRetrySeconds < 0
+                log("Exceeded maximum retry time")
+                break
+            end
             # @remoteHosts (and therefore remoteHosts) will be nil
             # when not executing on remotes.
             remoteHosts = prepareExecution(@remoteHosts)
@@ -163,8 +171,23 @@ class BaseTestsExecutor
                 remoteHostsInfo = ", #{remoteHosts.size}/#{@remoteHosts.size} hosts live"
             end
             log("After try #{iteration + 1}/#{@maxIterations}: #{testsInfo}#{remoteHostsInfo}")
+            updateRemainingRetrySeconds
         }
         statusMap
+    end
+end
+
+class BasicTestsExecutor < BaseTestsExecutor
+    def updateRemainingRetrySeconds
+        return if @treatFailingAsFlaky.nil? or @treatFailingAsFlaky.maxRetrySeconds.nil?
+        if @remainingRetrySeconds.nil?
+            @remainingRetrySeconds = @treatFailingAsFlaky.maxRetrySeconds
+            @prevRetry = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        else
+            consumedSeconds = Process.clock_gettime(Process::CLOCK_MONOTONIC) - @prevRetry
+            @remainingRetrySeconds -= consumedSeconds
+            @prevRetry = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        end
     end
 end
 
@@ -190,6 +213,10 @@ module ExecutorSelfTests
             super(runlist, [], nil, maxIterationsBounds, treatFailingAsFlaky, logStream)
             @iterationResults = iterationResults
             @executedIterations = 0
+            @remainingRetrySeconds = nil
+            if not treatFailingAsFlaky.nil? and not treatFailingAsFlaky.maxRetrySeconds.nil?
+                @remainingRetrySeconds = treatFailingAsFlaky.maxRetrySeconds
+            end
         end
         def prepareArtifacts(remoteHosts)
         end
@@ -197,6 +224,11 @@ module ExecutorSelfTests
             remoteHosts
         end
         def executeTests(remoteHosts)
+        end
+        def updateRemainingRetrySeconds
+            if not @remainingRetrySeconds.nil?
+                @remainingRetrySeconds -= 10
+            end
         end
         def updateStatusMap(iteration, statusMap)
             if iteration >= @iterationResults.size
@@ -387,6 +419,20 @@ module ExecutorSelfTests
                              Iteration.new([tre, tre]),
                          ],
                          [ftre, ftrp]),
+            # Test that we stop at exactly the point where the remaining retry seconds run out.
+            TestCase.new([nil],
+                         [
+                             Iteration.new([trf])
+                         ] * 7,
+                         [ftre],
+                         {
+                             #
+                             :treatFailingAsFlaky => OpenStruct.new(:passPercentage => 0.001,
+                                                                    :maxTries => 100,
+                                                                    :maxFailing => 2,
+                                                                    :maxRetrySeconds => 61),
+                             :acceptIncomplete => true,
+                         })
         ].each_with_index {
             |testcase, testcaseIndex|
             runlist = []

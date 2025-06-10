@@ -643,12 +643,12 @@ void WebExtensionTab::loadURL(URL url, CompletionHandler<void(Expected<void, Web
     static NSString * const apiName = @"tabs.update()";
 
     if (!isValid() || !m_respondsToLoadURL) {
-        [webView() loadRequest:[NSURLRequest requestWithURL:url]];
+        [webView() loadRequest:[NSURLRequest requestWithURL:url.createNSURL().get()]];
         completionHandler({ });
         return;
     }
 
-    [m_delegate loadURL:url forWebExtensionContext:m_extensionContext->wrapper() completionHandler:makeBlockPtr([protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)](NSError *error) mutable {
+    [m_delegate loadURL:url.createNSURL().get() forWebExtensionContext:m_extensionContext->wrapper() completionHandler:makeBlockPtr([protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)](NSError *error) mutable {
         if (error) {
             RELEASE_LOG_ERROR(Extensions, "Error for loadURL: %{public}@", privacyPreservingDescription(error));
             completionHandler(toWebExtensionError(apiName, nullString(), error.localizedDescription));
@@ -860,8 +860,18 @@ WebExtensionTab::WebProcessProxySet WebExtensionTab::processes(WebExtensionEvent
     if (!extensionContext)
         return { };
 
-    return extensionContext->processes({ listenerType }, { contentWorldType }, [&](auto& page, auto& frame) {
-        return webView._page.get() == &page;
+    RefPtr page = webView->_page.get();
+    if (!page)
+        return { };
+
+    WebProcessProxySet pageProcesses;
+    page->forEachWebContentProcess([&](auto& webProcess, auto pageIdentifier) {
+        pageProcesses.add(webProcess);
+    });
+
+    // Return the intersection of processes in the page that listen to the event.
+    return extensionContext->processes({ listenerType }, { contentWorldType }, [&](auto& process, auto& page, auto& frame) {
+        return pageProcesses.contains(process);
     });
 }
 

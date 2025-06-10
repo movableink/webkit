@@ -9,7 +9,6 @@
 
 #include "include/core/SkPath.h"
 #include "include/private/base/SkDebug.h"
-#include "src/base/SkEnumBitMask.h"
 #include "src/core/SkSLTypeShared.h"
 #include "src/gpu/BufferWriter.h"
 #include "src/gpu/graphite/Attribute.h"
@@ -20,7 +19,7 @@
 #include "src/gpu/graphite/PipelineData.h"
 #include "src/gpu/graphite/geom/Geometry.h"
 #include "src/gpu/graphite/geom/Shape.h"
-#include "src/gpu/graphite/geom/Transform_graphite.h"
+#include "src/gpu/graphite/geom/Transform.h"
 #include "src/gpu/graphite/render/CommonDepthStencilSettings.h"
 #include "src/gpu/tessellate/MiddleOutPolygonTriangulator.h"
 
@@ -31,24 +30,23 @@ namespace skgpu::graphite {
 MiddleOutFanRenderStep::MiddleOutFanRenderStep(bool evenOdd)
         : RenderStep(evenOdd ? RenderStepID::kMiddleOutFan_EvenOdd
                              : RenderStepID::kMiddleOutFan_Winding,
-                     Flags::kRequiresMSAA,
+                     Flags::kRequiresMSAA | Flags::kAppendVertices,
                      /*uniforms=*/{{"localToDevice", SkSLType::kFloat4x4}},
                      PrimitiveType::kTriangles,
                      evenOdd ? kEvenOddStencilPass : kWindingStencilPass,
-                     /*vertexAttrs=*/
-                            {{"position", VertexAttribType::kFloat2, SkSLType::kFloat2},
-                             {"depth", VertexAttribType::kFloat, SkSLType::kFloat},
-                             {"ssboIndices", VertexAttribType::kUInt2, SkSLType::kUInt2}},
-                     /*instanceAttrs=*/{}) {}
+                     /*staticAttrs=*/ {},
+                     /*appendAttrs=*/
+                     {{"position", VertexAttribType::kFloat2, SkSLType::kFloat2},
+                     {"depth", VertexAttribType::kFloat, SkSLType::kFloat},
+                     {"ssboIndices", VertexAttribType::kUInt2, SkSLType::kUInt2}}) {}
 
 MiddleOutFanRenderStep::~MiddleOutFanRenderStep() {}
 
 std::string MiddleOutFanRenderStep::vertexSkSL() const {
-    return R"(
-        float4 devPosition = localToDevice * float4(position, 0.0, 1.0);
-        devPosition.z = depth;
-        stepLocalCoords = position;
-    )";
+    return
+        "float4 devPosition = localToDevice * float4(position, 0.0, 1.0);\n"
+        "devPosition.z = depth;\n"
+        "stepLocalCoords = position;\n";
 }
 
 void MiddleOutFanRenderStep::writeVertices(DrawWriter* writer,

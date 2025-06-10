@@ -93,7 +93,7 @@ std::optional<Color> NativeImage::singlePixelSolidColor() const
         return std::nullopt;
 
     std::array<uint8_t, 4> pixel; // RGBA
-    auto bitmapContext = adoptCF(CGBitmapContextCreate(pixel.data(), 1, 1, 8, pixel.size(), sRGBColorSpaceRef(), static_cast<uint32_t>(kCGImageAlphaPremultipliedLast) | static_cast<uint32_t>(kCGBitmapByteOrder32Big)));
+    auto bitmapContext = adoptCF(CGBitmapContextCreate(pixel.data(), 1, 1, 8, pixel.size(), sRGBColorSpaceSingleton(), static_cast<uint32_t>(kCGImageAlphaPremultipliedLast) | static_cast<uint32_t>(kCGBitmapByteOrder32Big)));
 
     if (!bitmapContext)
         return std::nullopt;
@@ -109,47 +109,16 @@ std::optional<Color> NativeImage::singlePixelSolidColor() const
 
 void NativeImage::draw(GraphicsContext& context, const FloatRect& destinationRect, const FloatRect& sourceRect, ImagePaintingOptions options)
 {
-#if !HAVE(CORE_ANIMATION_FIX_FOR_RADAR_93560567)
-    auto colorSpaceForHDRImageBuffer = [](GraphicsContext& context) -> const DestinationColorSpace& {
-#if PLATFORM(IOS_FAMILY)
-        // iOS typically renders into extended range sRGB to preserve wide gamut colors, but we want
-        // a non-extended range colorspace here so that the contents are tone mapped to SDR range.
-        UNUSED_PARAM(context);
-        return DestinationColorSpace::DisplayP3();
-#else
-        // Otherwise, match the colorSpace of the GraphicsContext.
-        return context.colorSpace();
-#endif
-    };
-
-    auto drawHDRNativeImage = [&](GraphicsContext& context, const FloatRect& destinationRect, const FloatRect& sourceRect, ImagePaintingOptions options) -> bool {
-        if (sourceRect.isEmpty() || colorSpace().usesStandardRange())
-            return false;
-
-        // If context and the image have HDR colorSpaces, draw the image directly without
-        // going through the workaround.
-        if (!context.colorSpace().usesStandardRange())
-            return false;
-
-        // Create a temporary ImageBuffer for destinationRect with the current scaleFator.
-        auto imageBuffer = context.createScaledImageBuffer(destinationRect, context.scaleFactor(), colorSpaceForHDRImageBuffer(context), RenderingMode::Unaccelerated, RenderingMethod::Local);
-        if (!imageBuffer)
-            return false;
-
-        // Draw sourceRect from the image into the temporary ImageBuffer.
-        imageBuffer->context().drawNativeImageInternal(*this, destinationRect, sourceRect, options);
-
-        auto sourceRectScaled = FloatRect { { }, sourceRect.size() };
-        auto scaleFactor = destinationRect.size() / sourceRect.size();
-        sourceRectScaled.scale(scaleFactor * context.scaleFactor());
-
-        context.drawImageBuffer(*imageBuffer, destinationRect, sourceRectScaled, { });
-        return true;
-    };
-
-    // FIXME: rdar://105525195 -- Remove this HDR workaround once the system libraries can render images without clipping HDR data.
-    if (drawHDRNativeImage(context, destinationRect, sourceRect, options))
+    if (sourceRect.isEmpty() || !hasHDRContent()) {
+        context.drawNativeImageInternal(*this, destinationRect, sourceRect, options);
         return;
+    }
+
+#if !HAVE(FIX_FOR_RADAR_93560567)
+    if (!context.colorSpace().usesITUR_2100TF()) {
+        drawWithToneMapping(context, destinationRect, sourceRect, options);
+        return;
+    }
 #endif
 
     context.drawNativeImageInternal(*this, destinationRect, sourceRect, options);

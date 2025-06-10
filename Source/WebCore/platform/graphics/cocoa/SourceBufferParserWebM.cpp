@@ -31,6 +31,7 @@
 #include "AudioTrackPrivateWebM.h"
 #include "CMUtilities.h"
 #include "ContentType.h"
+#include "ExceptionOr.h"
 #include "H264UtilitiesCocoa.h"
 #include "InbandTextTrackPrivate.h"
 #include "LibWebRTCMacros.h"
@@ -43,7 +44,6 @@
 #include "VideoTrackPrivateWebM.h"
 #include "WebMAudioUtilitiesCocoa.h"
 #include <webm/webm_parser.h>
-#include <wtf/Algorithms.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/StdList.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -577,7 +577,7 @@ ExceptionOr<int> WebMParser::parse(SourceBufferParser::Segment&& segment)
 
 void WebMParser::setLogger(const Logger& newLogger, uint64_t newLogIdentifier)
 {
-    m_logger = &newLogger;
+    m_logger = newLogger;
     m_logIdentifier = newLogIdentifier;
     ALWAYS_LOG(LOGIDENTIFIER);
 }
@@ -1399,12 +1399,12 @@ WebMParser::ConsumeFrameDataResult WebMParser::AudioTrackData::consumeFrameData(
 
 bool WebMParser::isSupportedVideoCodec(StringView name)
 {
-    return name == "V_VP8"_s || name == "V_VP9"_s || name == "V_MPEG4/ISO/AVC"_s;
+    return name == "V_VP8"_s || name == "V_VP9"_s || (name == "V_MPEG4/ISO/AVC"_s && m_allowLimitedMatroska);
 }
 
 bool WebMParser::isSupportedAudioCodec(StringView name)
 {
-    return name == "A_VORBIS"_s || name == "A_OPUS"_s || name == "A_PCM/FLOAT/IEEE"_s;
+    return name == "A_VORBIS"_s || name == "A_OPUS"_s || (name == "A_PCM/FLOAT/IEEE"_s && m_allowLimitedMatroska);
 }
 
 SourceBufferParserWebM::SourceBufferParserWebM()
@@ -1669,7 +1669,7 @@ void SourceBufferParserWebM::invalidate()
 
 void SourceBufferParserWebM::setLogger(const Logger& newLogger, uint64_t newLogIdentifier)
 {
-    m_logger = &newLogger;
+    m_logger = newLogger;
     m_logIdentifier = newLogIdentifier;
     ALWAYS_LOG(LOGIDENTIFIER);
 

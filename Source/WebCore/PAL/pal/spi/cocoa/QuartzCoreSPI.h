@@ -25,6 +25,8 @@
 
 #pragma once
 
+DECLARE_SYSTEM_HEADER
+
 #import <CoreVideo/CoreVideo.h>
 #import <QuartzCore/QuartzCore.h>
 #import <pal/spi/cg/CoreGraphicsSPI.h>
@@ -121,7 +123,6 @@ typedef struct _CARenderContext CARenderContext;
 #if PLATFORM(MAC)
 @property uint64_t GPURegistryID;
 @property uint32_t commitPriority;
-@property BOOL colorMatchUntaggedContent;
 #endif
 @property (readonly) uint32_t contextId;
 @property (strong) CALayer *layer;

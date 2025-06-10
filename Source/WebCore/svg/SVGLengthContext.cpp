@@ -33,6 +33,7 @@
 #include "RenderView.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGSVGElement.h"
+#include <numbers>
 #include <wtf/MathExtras.h>
 
 namespace WebCore {
@@ -92,7 +93,7 @@ static inline float dimensionForLengthMode(SVGLengthMode mode, FloatSize viewpor
     case SVGLengthMode::Height:
         return viewportSize.height();
     case SVGLengthMode::Other:
-        return viewportSize.diagonalLength() / sqrtOfTwoFloat;
+        return viewportSize.diagonalLength() / std::numbers::sqrt2_v<float>;
     }
     ASSERT_NOT_REACHED();
     return 0;

@@ -240,7 +240,7 @@ void DataOnlyCallLinkInfo::initialize(VM& vm, CodeBlock* owner, CallType callTyp
     m_codeOrigin = codeOrigin;
     m_callType = callType;
     m_mode = static_cast<unsigned>(Mode::Init);
-    if (UNLIKELY(!Options::useLLIntICs()))
+    if (!Options::useLLIntICs()) [[unlikely]]
         setVirtualCall(vm);
 }
 
@@ -269,7 +269,7 @@ void CallLinkInfo::reset(VM&)
 
 void CallLinkInfo::revertCall(VM& vm)
 {
-    if (UNLIKELY(!Options::useLLIntICs() && type() == CallLinkInfo::Type::DataOnly))
+    if (!Options::useLLIntICs() && type() == CallLinkInfo::Type::DataOnly) [[unlikely]]
         setVirtualCall(vm);
     else
         reset(vm);

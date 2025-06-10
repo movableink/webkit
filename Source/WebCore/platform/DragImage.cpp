@@ -29,7 +29,7 @@
 #include "BitmapImage.h"
 #include "FrameSnapshotting.h"
 #include "ImageBuffer.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameView.h"
 #include "NotImplemented.h"
 #include "Position.h"
@@ -295,7 +295,7 @@ DragImage::DragImage(DragImage&& other)
 #else
     : m_dragImageRef { std::exchange(other.m_dragImageRef, nullptr) }
 #endif
-    , m_indicatorData { WTFMove(other.m_indicatorData) }
+    , m_textIndicator { WTFMove(other.m_textIndicator) }
     , m_visiblePath { WTFMove(other.m_visiblePath) }
 {
 }
@@ -314,7 +314,7 @@ DragImage& DragImage::operator=(DragImage&& other)
 #else
     m_dragImageRef = std::exchange(other.m_dragImageRef, nullptr);
 #endif
-    m_indicatorData = WTFMove(other.m_indicatorData);
+    m_textIndicator = WTFMove(other.m_textIndicator);
     m_visiblePath = WTFMove(other.m_visiblePath);
 
     return *this;
@@ -330,7 +330,7 @@ DragImage::~DragImage()
         deleteDragImage(m_dragImageRef);
 }
 
-#if !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN) && !PLATFORM(QT)
+#if !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN) && !PLATFORM(QT) && !(PLATFORM(WPE) && ENABLE(DRAG_SUPPORT) && USE(SKIA))
 
 IntSize dragImageSize(DragImageRef)
 {

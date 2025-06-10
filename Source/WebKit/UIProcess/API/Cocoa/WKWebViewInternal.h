@@ -28,10 +28,8 @@
 #ifdef __cplusplus
 
 #import "PDFPluginIdentifier.h"
-#import "WKIntelligenceReplacementTextEffectCoordinator.h"
-#import "WKIntelligenceSmartReplyTextEffectCoordinator.h"
-#import "WKIntelligenceTextEffectCoordinator.h"
-#import "WKTextAnimationType.h"
+#import <WebCore/CocoaView.h>
+#import <WebCore/CocoaWritingToolsTypes.h>
 #import <WebCore/FixedContainerEdges.h>
 #import <WebKit/WKShareSheet.h>
 #import <WebKit/WKWebViewConfiguration.h>
@@ -39,7 +37,6 @@
 #import "_WKAttachmentInternal.h"
 #import "_WKWebViewPrintFormatterInternal.h"
 #import <pal/spi/cocoa/WritingToolsSPI.h>
-#import <variant>
 #import <wtf/BlockPtr.h>
 #import <wtf/CompletionHandler.h>
 #import <wtf/HashMap.h>
@@ -73,9 +70,9 @@
 #define WK_WEB_VIEW_PROTOCOLS <WKBEScrollViewDelegate, WTWritingToolsDelegate, UITextInputTraits>
 #else
 #define WK_WEB_VIEW_PROTOCOLS <WKBEScrollViewDelegate>
-#endif
+#endif // ENABLE(WRITING_TOOLS)
 
-#endif
+#endif // PLATFORM(IOS_FAMILY)
 
 #if PLATFORM(MAC)
 
@@ -83,9 +80,9 @@
 #define WK_WEB_VIEW_PROTOCOLS <WKShareSheetDelegate, WTWritingToolsDelegate, NSTextInputTraits>
 #else
 #define WK_WEB_VIEW_PROTOCOLS <WKShareSheetDelegate>
-#endif
+#endif // ENABLE(WRITING_TOOLS)
 
-#endif
+#endif // PLATFORM(MAC)
 
 #if !defined(WK_WEB_VIEW_PROTOCOLS)
 #define WK_WEB_VIEW_PROTOCOLS
@@ -108,8 +105,20 @@ class Attachment;
 namespace WebCore {
 struct AppHighlight;
 struct ExceptionDetails;
-struct DigitalCredentialsRequestData;
+struct TextAnimationData;
+enum class BoxSide : uint8_t;
 enum class WheelScrollGestureState : uint8_t;
+
+namespace WritingTools {
+enum class TextSuggestionState : uint8_t;
+}
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+struct DigitalCredentialsRequestData;
+struct MobileDocumentRequest;
+struct OpenID4VPRequest;
+#endif
+
 }
 
 namespace WebKit {
@@ -129,14 +138,18 @@ class WebViewImpl;
 #if PLATFORM(IOS_FAMILY)
 class ViewGestureController;
 #endif
+enum class HideContentInsetFillReason : uint8_t {
+    FullScreen      = 1 << 0,
+    ScrolledToTop   = 1 << 1,
+};
 }
 
+@class WKColorExtensionView;
 @class WKContentView;
 @class WKPasswordView;
 @class WKScrollGeometry;
 @class WKScrollView;
 @class WKTextExtractionItem;
-@class WKTextExtractionRequest;
 @class WKWebViewContentProviderRegistry;
 @class _WKFrameHandle;
 @class _WKWarningView;
@@ -148,6 +161,7 @@ class ViewGestureController;
 #if ENABLE(WRITING_TOOLS)
 @class WTTextSuggestion;
 @class WTSession;
+@protocol WKIntelligenceTextEffectCoordinating;
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -266,6 +280,7 @@ struct PerWebProcessState {
     _WKSelectionAttributes _selectionAttributes;
     _WKRenderingProgressEvents _observedRenderingProgressEvents;
     BOOL _usePlatformFindUI;
+    BOOL _usesAutomaticContentInsetBackgroundFill;
 
     CocoaEdgeInsets _minimumViewportInset;
     CocoaEdgeInsets _maximumViewportInset;
@@ -287,7 +302,6 @@ struct PerWebProcessState {
 #else
     RetainPtr<UIVisualEffectView> _screenTimeBlurredSnapshot;
 #endif
-    BOOL _isBlockedByScreenTime;
 #endif
 
 #if PLATFORM(MAC)
@@ -318,6 +332,10 @@ struct PerWebProcessState {
     };
     std::optional<FindOverlays> _findOverlaysOutsideContentView;
     RetainPtr<UIFindInteraction> _findInteraction;
+#endif
+
+#if HAVE(UI_CONVERSATION_CONTEXT)
+    RetainPtr<UIConversationContext> _conversationContextFromClient;
 #endif
 
     RetainPtr<_WKRemoteObjectRegistry> _remoteObjectRegistry;
@@ -424,6 +442,7 @@ struct PerWebProcessState {
 #endif
 
 #if ENABLE(GAMEPAD)
+    BOOL _gamepadsRecentlyAccessed;
     RetainPtr<id> _gamepadsRecentlyAccessedState;
 #endif
 
@@ -439,6 +458,11 @@ struct PerWebProcessState {
 
 #if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
     std::pair<Markable<WebKit::PDFPluginIdentifier>, RetainPtr<WKPDFPageNumberIndicator>> _pdfPageNumberIndicator;
+#endif
+
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    WebCore::RectEdges<RetainPtr<WKColorExtensionView>> _fixedColorExtensionViews;
+    OptionSet<WebKit::HideContentInsetFillReason> _reasonsToHideTopContentInsetFill;
 #endif
 }
 
@@ -464,11 +488,11 @@ struct PerWebProcessState {
 #endif
 
 #if ENABLE(SCREEN_TIME)
-- (void)_installScreenTimeWebpageController;
+- (void)_installScreenTimeWebpageControllerIfNeeded;
 - (void)_uninstallScreenTimeWebpageController;
 
 - (void)_updateScreenTimeViewGeometry;
-- (void)_updateScreenTimeShieldVisibilityForWindow;
+- (void)_updateScreenTimeBasedOnWindowVisibility;
 #endif
 
 #if ENABLE(WRITING_TOOLS)
@@ -476,15 +500,7 @@ struct PerWebProcessState {
 
 - (void)_proofreadingSessionUpdateState:(WebCore::WritingTools::TextSuggestionState)state forSuggestionWithUUID:(NSUUID *)replacementUUID;
 
-#if PLATFORM(MAC)
-// FIXME: (rdar://130540028) Remove uses of the old WritingToolsAllowedInputOptions API in favor of the new WritingToolsResultOptions API, and remove staging.
-- (PlatformWritingToolsResultOptions)writingToolsAllowedInputOptions;
-- (PlatformWritingToolsResultOptions)allowedWritingToolsResultOptions;
-#else
-// FIXME: (rdar://130540028) Remove uses of the old WritingToolsAllowedInputOptions API in favor of the new WritingToolsResultOptions API, and remove staging.
-- (PlatformWritingToolsResultOptions)writingToolsAllowedInputOptions;
-- (PlatformWritingToolsResultOptions)allowedWritingToolsResultOptions;
-#endif
+- (CocoaWritingToolsResultOptions)allowedWritingToolsResultOptions;
 
 - (void)_didEndPartialIntelligenceTextAnimation;
 - (BOOL)_writingToolsTextReplacementsFinished;
@@ -500,8 +516,8 @@ struct PerWebProcessState {
 
 - (void)_recalculateViewportSizesWithMinimumViewportInset:(CocoaEdgeInsets)minimumViewportInset maximumViewportInset:(CocoaEdgeInsets)maximumViewportInset throwOnInvalidInput:(BOOL)throwOnInvalidInput;
 
-- (void)_showWarningView:(const WebKit::BrowsingWarning&)warning completionHandler:(CompletionHandler<void(std::variant<WebKit::ContinueUnsafeLoad, URL>&&)>&&)completionHandler;
-- (void)_showBrowsingWarning:(const WebKit::BrowsingWarning&)warning completionHandler:(CompletionHandler<void(std::variant<WebKit::ContinueUnsafeLoad, URL>&&)>&&)completionHandler;
+- (void)_showWarningView:(const WebKit::BrowsingWarning&)warning completionHandler:(CompletionHandler<void(Variant<WebKit::ContinueUnsafeLoad, URL>&&)>&&)completionHandler;
+- (void)_showBrowsingWarning:(const WebKit::BrowsingWarning&)warning completionHandler:(CompletionHandler<void(Variant<WebKit::ContinueUnsafeLoad, URL>&&)>&&)completionHandler;
 - (void)_clearWarningView;
 - (void)_clearBrowsingWarning;
 - (void)_clearWarningViewIfForMainFrameNavigation;
@@ -516,6 +532,14 @@ struct PerWebProcessState {
 - (void)_dismissDigitalCredentialsPicker:(WTF::CompletionHandler<void(bool)>&&)completionHandler;
 #endif
 
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+- (void)_updateFixedColorExtensionViews;
+- (void)_updateFixedColorExtensionViewFrames;
+- (BOOL)_hasVisibleColorExtensionView:(WebCore::BoxSide)side;
+- (void)_addReasonToHideTopContentInsetFill:(WebKit::HideContentInsetFillReason)reason;
+- (void)_removeReasonToHideTopContentInsetFill:(WebKit::HideContentInsetFillReason)reason;
+- (void)_updateTopContentInsetFillCaptureColor;
+#endif
 
 #if ENABLE(GAMEPAD)
 - (void)_setGamepadsRecentlyAccessed:(BOOL)gamepadsRecentlyAccessed;
@@ -575,11 +599,6 @@ RetainPtr<NSError> nsErrorFromExceptionDetails(const std::optional<WebCore::Exce
 @end
 #endif
 
-@interface WKWebView (WKTextExtraction)
-- (void)_requestTextExtractionForSwift:(WKTextExtractionRequest *)context;
-- (void)_requestTextExtraction:(CGRect)rect completionHandler:(void(^)(WKTextExtractionItem *))completionHandler;
-@end
-
 #endif // __cplusplus
 
 @interface WKWebView (NonCpp)
@@ -588,13 +607,17 @@ RetainPtr<NSError> nsErrorFromExceptionDetails(const std::optional<WebCore::Exce
 @property (nonatomic, setter=_setAlwaysBounceVertical:) BOOL _alwaysBounceVertical;
 @property (nonatomic, setter=_setAlwaysBounceHorizontal:) BOOL _alwaysBounceHorizontal;
 
-- (void)_setContentOffset:(CGPoint)contentOffset animated:(BOOL)animated;
+- (void)_setContentOffsetX:(NSNumber *)x y:(NSNumber *)y animated:(BOOL)animated NS_SWIFT_NAME(_setContentOffset(x:y:animated:));
 #endif
 
 #if PLATFORM(IOS_FAMILY)
 @property (nonatomic, setter=_setAllowsMagnification:) BOOL _allowsMagnification;
 #endif
 
+@property (nonatomic, readonly) NSString *_nameForVisualIdentificationOverlay;
+
 - (void)_scrollToEdge:(_WKRectEdge)edge animated:(BOOL)animated;
+
+- (void)_requestTextExtraction:(CGRect)rect completionHandler:(void(^)(WKTextExtractionItem *))completionHandler;
 
 @end

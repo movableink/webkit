@@ -87,7 +87,7 @@ bool checkModuleSyntax(JSGlobalObject* globalObject, const SourceCode& source, P
     return !!moduleAnalyzer.analyze(*moduleProgramNode);
 }
 
-RefPtr<CachedBytecode> generateProgramBytecode(VM& vm, const SourceCode& source, FileSystem::PlatformFileHandle fd, BytecodeCacheError& error)
+RefPtr<CachedBytecode> generateProgramBytecode(VM& vm, const SourceCode& source, FileSystem::FileHandle& fileHandle, BytecodeCacheError& error)
 {
     JSLockHolder lock(vm);
     RELEASE_ASSERT(vm.atomStringTable() == Thread::currentSingleton().atomStringTable());
@@ -103,10 +103,10 @@ RefPtr<CachedBytecode> generateProgramBytecode(VM& vm, const SourceCode& source,
     if (!unlinkedCodeBlock)
         return nullptr;
 
-    return serializeBytecode(vm, unlinkedCodeBlock, source, SourceCodeType::ProgramType, lexicallyScopedFeatures, scriptMode, fd, error, { });
+    return serializeBytecode(vm, unlinkedCodeBlock, source, SourceCodeType::ProgramType, lexicallyScopedFeatures, scriptMode, fileHandle, error, { });
 }
 
-RefPtr<CachedBytecode> generateModuleBytecode(VM& vm, const SourceCode& source, FileSystem::PlatformFileHandle fd, BytecodeCacheError& error)
+RefPtr<CachedBytecode> generateModuleBytecode(VM& vm, const SourceCode& source, FileSystem::FileHandle& fileHandle, BytecodeCacheError& error)
 {
     JSLockHolder lock(vm);
     RELEASE_ASSERT(vm.atomStringTable() == Thread::currentSingleton().atomStringTable());
@@ -121,7 +121,7 @@ RefPtr<CachedBytecode> generateModuleBytecode(VM& vm, const SourceCode& source, 
         error = parserError;
     if (!unlinkedCodeBlock)
         return nullptr;
-    return serializeBytecode(vm, unlinkedCodeBlock, source, SourceCodeType::ModuleType, lexicallyScopedFeatures, scriptMode, fd, error, { });
+    return serializeBytecode(vm, unlinkedCodeBlock, source, SourceCodeType::ModuleType, lexicallyScopedFeatures, scriptMode, fileHandle, error, { });
 }
 
 JSValue evaluate(JSGlobalObject* globalObject, const SourceCode& source, JSValue thisValue, NakedPtr<Exception>& returnedException)
@@ -137,7 +137,7 @@ JSValue evaluate(JSGlobalObject* globalObject, const SourceCode& source, JSValue
     JSObject* thisObj = jsCast<JSObject*>(thisValue.toThis(globalObject, ECMAMode::sloppy()));
     JSValue result = vm.interpreter.executeProgram(source, globalObject, thisObj);
 
-    if (UNLIKELY(scope.exception())) {
+    if (scope.exception()) [[unlikely]] {
         returnedException = scope.exception();
         scope.clearException();
         return jsUndefined();
@@ -278,7 +278,7 @@ UncheckedKeyHashMap<RefPtr<UniquedStringImpl>, String> retrieveImportAttributesF
         return { };
 
     auto* optionsObject = jsDynamicCast<JSObject*>(options);
-    if (UNLIKELY(!optionsObject)) {
+    if (!optionsObject) [[unlikely]] {
         throwTypeError(globalObject, scope, "dynamic import's options should be an object"_s);
         return { };
     }
@@ -290,7 +290,7 @@ UncheckedKeyHashMap<RefPtr<UniquedStringImpl>, String> retrieveImportAttributesF
         return { };
 
     auto* attributesObject = jsDynamicCast<JSObject*>(attributes);
-    if (UNLIKELY(!attributesObject)) {
+    if (!attributesObject) [[unlikely]] {
         throwTypeError(globalObject, scope, "dynamic import's options.with should be an object"_s);
         return { };
     }
@@ -304,7 +304,7 @@ UncheckedKeyHashMap<RefPtr<UniquedStringImpl>, String> retrieveImportAttributesF
         JSValue value = attributesObject->get(globalObject, key);
         RETURN_IF_EXCEPTION(scope, { });
 
-        if (UNLIKELY(!value.isString())) {
+        if (!value.isString()) [[unlikely]] {
             throwTypeError(globalObject, scope, "dynamic import's options.with includes non string property"_s);
             return { };
         }
@@ -316,7 +316,7 @@ UncheckedKeyHashMap<RefPtr<UniquedStringImpl>, String> retrieveImportAttributesF
     }
 
     for (auto& [key, value] : result) {
-        if (UNLIKELY(!supportedImportAttributes.contains(key.get()))) {
+        if (!supportedImportAttributes.contains(key.get())) [[unlikely]] {
             throwTypeError(globalObject, scope, makeString("dynamic import's options.with includes unsupported attribute \""_s, StringView(key.get()), "\""_s));
             return { };
         }

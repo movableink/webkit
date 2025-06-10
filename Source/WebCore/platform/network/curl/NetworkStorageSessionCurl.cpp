@@ -100,6 +100,7 @@ NetworkStorageSession::NetworkStorageSession(PAL::SessionID sessionID, const Str
 
 NetworkStorageSession::~NetworkStorageSession()
 {
+    clearCookiesVersionChangeCallbacks();
 }
 
 void NetworkStorageSession::setCookieDatabase(UniqueRef<CookieJarDB>&& cookieDatabase)

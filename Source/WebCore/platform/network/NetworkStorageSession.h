@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,7 @@
 #include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/CompletionHandler.h>
+#include <wtf/Deque.h>
 #include <wtf/Function.h>
 #include <wtf/HashMap.h>
 #include <wtf/RobinHoodHashMap.h>
@@ -71,6 +72,7 @@ typedef struct _SoupCookie SoupCookie;
 #include "CookieStorageObserver.h"
 OBJC_CLASS NSArray;
 OBJC_CLASS NSHTTPCookie;
+OBJC_CLASS NSHTTPCookieStorage;
 OBJC_CLASS NSMutableSet;
 #endif
 
@@ -155,14 +157,6 @@ public:
     PAL::SessionID sessionID() const { return m_sessionID; }
     CredentialStorage& credentialStorage() { return m_credentialStorage; }
 
-#ifdef __OBJC__
-    WEBCORE_EXPORT RetainPtr<NSHTTPCookieStorage> nsCookieStorage() const;
-#endif
-
-#if PLATFORM(COCOA)
-    WEBCORE_EXPORT ~NetworkStorageSession();
-#endif
-
 #if PLATFORM(COCOA) || USE(SOUP)
     enum class IsInMemoryCookieStore : bool { No, Yes };
 #endif
@@ -172,10 +166,14 @@ public:
     WEBCORE_EXPORT static RetainPtr<CFURLStorageSessionRef> createCFStorageSessionForIdentifier(CFStringRef identifier, ShouldDisableCFURLCache = ShouldDisableCFURLCache::No);
     WEBCORE_EXPORT NetworkStorageSession(PAL::SessionID, RetainPtr<CFURLStorageSessionRef>&&, RetainPtr<CFHTTPCookieStorageRef>&&, IsInMemoryCookieStore = IsInMemoryCookieStore::No);
     WEBCORE_EXPORT explicit NetworkStorageSession(PAL::SessionID);
+    WEBCORE_EXPORT ~NetworkStorageSession();
+
+    WEBCORE_EXPORT RetainPtr<NSHTTPCookieStorage> nsCookieStorage() const;
 
     // May be null, in which case a Foundation default should be used.
     CFURLStorageSessionRef platformSession() { return m_platformSession.get(); }
     WEBCORE_EXPORT RetainPtr<CFHTTPCookieStorageRef> cookieStorage() const;
+    CookieStorageObserver& cookieStorageObserver() const;
 #elif USE(SOUP)
     WEBCORE_EXPORT explicit NetworkStorageSession(PAL::SessionID, IsInMemoryCookieStore = IsInMemoryCookieStore::No);
     ~NetworkStorageSession();
@@ -255,7 +253,7 @@ public:
     WEBCORE_EXPORT void setTrackingPreventionEnabled(bool);
     WEBCORE_EXPORT bool trackingPreventionEnabled() const;
     WEBCORE_EXPORT void setTrackingPreventionDebugLoggingEnabled(bool);
-    WEBCORE_EXPORT bool trackingPreventionDebugLoggingEnabled() const;
+    bool trackingPreventionDebugLoggingEnabled() const { return m_isTrackingPreventionDebugLoggingEnabled; }
     WEBCORE_EXPORT ThirdPartyCookieBlockingDecision thirdPartyCookieBlockingDecisionForRequest(const ResourceRequest&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ShouldRelaxThirdPartyCookieBlocking) const;
     ThirdPartyCookieBlockingDecision thirdPartyCookieBlockingDecisionForRequest(const URL& firstPartyForCookies, const URL& resource, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ShouldRelaxThirdPartyCookieBlocking) const;
     WEBCORE_EXPORT bool shouldBlockCookies(const ResourceRequest&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ShouldRelaxThirdPartyCookieBlocking) const;
@@ -266,7 +264,7 @@ public:
     WEBCORE_EXPORT static String cookiePartitionIdentifier(const ResourceRequest&);
     static String cookiePartitionIdentifier(const URL&);
 #if PLATFORM(COCOA)
-    WEBCORE_EXPORT static NSHTTPCookie *capExpiryOfPersistentCookie(NSHTTPCookie *, Seconds cap);
+    WEBCORE_EXPORT static RetainPtr<NSHTTPCookie> capExpiryOfPersistentCookie(NSHTTPCookie *, Seconds cap);
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
     WEBCORE_EXPORT static NSHTTPCookie *setCookiePartition(NSHTTPCookie *, NSString*);
 #endif
@@ -315,6 +313,15 @@ public:
     WEBCORE_EXPORT void resetManagedDomains();
 #endif
 
+    uint64_t cookiesVersion() const { return m_cookiesVersion; }
+    WEBCORE_EXPORT void setCookiesVersion(uint64_t);
+    struct CookieVersionChangeCallback {
+        enum class Reason : uint8_t { VersionChange, SessionClose };
+        uint64_t version;
+        CompletionHandler<void(Reason)> callback;
+    };
+    WEBCORE_EXPORT void addCookiesVersionChangeCallback(CookieVersionChangeCallback&&);
+
 private:
 #if PLATFORM(COCOA)
     enum IncludeHTTPOnlyOrNot { DoNotIncludeHTTPOnly, IncludeHTTPOnly };
@@ -332,6 +339,7 @@ private:
     void registerCookieChangeListenersIfNecessary();
     void unregisterCookieChangeListenersIfNecessary();
 #endif
+    void clearCookiesVersionChangeCallbacks();
 
     PAL::SessionID m_sessionID;
 
@@ -361,6 +369,10 @@ private:
 #if PLATFORM(COCOA)
     RetainPtr<NSMutableSet> m_subscribedDomainsForCookieChanges;
     bool m_didRegisterCookieListeners { false };
+#elif USE(SOUP)
+    void notifyCookie(SoupCookie*, bool added);
+    void notifyCookieAdded(SoupCookie*);
+    void notifyCookieDeleted(SoupCookie*);
 #endif
     MemoryCompactRobinHoodHashMap<String, WeakHashSet<CookieChangeObserver>> m_cookieChangeObservers;
 #endif // HAVE(COOKIE_CHANGE_LISTENER_API)
@@ -395,12 +407,11 @@ private:
     HashSet<RegistrableDomain> m_managedDomains;
 
 #if PLATFORM(COCOA)
-public:
-    CookieStorageObserver& cookieStorageObserver() const;
-
-private:
     mutable std::unique_ptr<CookieStorageObserver> m_cookieStorageObserver;
 #endif
+    uint64_t m_cookiesVersion { 0 };
+    Deque<CookieVersionChangeCallback> m_cookiesVersionChangeCallbacks;
+
     static bool m_processMayUseCookieAPI;
 };
 

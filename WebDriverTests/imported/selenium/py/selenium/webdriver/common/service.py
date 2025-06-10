@@ -152,12 +152,13 @@ class Service(ABC):
             elif isinstance(self.log_output, int):
                 os.close(self.log_output)
 
-        if self.process is not None:
+        if self.process is not None and self.process.poll() is None:
             try:
                 self.send_remote_shutdown_command()
             except TypeError:
                 pass
-            self._terminate_process()
+            finally:
+                self._terminate_process()
 
     def _terminate_process(self) -> None:
         """Terminate the child process.

@@ -639,12 +639,6 @@ extension WebGPU.CommandEncoder {
             return "buffer is not valid";
         }
 
-        if !buffer.isDestroyed() {
-            if buffer.state() != WebGPU.Buffer.State.Unmapped {
-                return "buffer state != Unmapped";
-            }
-        }
-
         if imageCopyBuffer.layout.bytesPerRow != WGPU_COPY_STRIDE_UNDEFINED && (imageCopyBuffer.layout.bytesPerRow % 256 != 0) {
             return "imageCopyBuffer.layout.bytesPerRow is not a multiple of 256"
         }

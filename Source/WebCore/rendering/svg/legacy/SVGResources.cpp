@@ -27,6 +27,7 @@
 #include "LegacyRenderSVGResourceMaskerInlines.h"
 #include "LegacyRenderSVGRoot.h"
 #include "PathOperation.h"
+#include "ReferenceFilterOperation.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGFilterElement.h"
 #include "SVGGradientElement.h"
@@ -197,7 +198,7 @@ static inline bool svgPaintTypeHasURL(const SVGPaintType& paintType)
     return false;
 }
 
-static inline LegacyRenderSVGResourceContainer* paintingResourceFromSVGPaint(TreeScope& treeScope, const SVGPaintType& paintType, const String& paintUri, AtomString& id, bool& hasPendingResource)
+static inline LegacyRenderSVGResourceContainer* paintingResourceFromSVGPaint(TreeScope& treeScope, const SVGPaintType& paintType, const Style::URL& paintUri, AtomString& id, bool& hasPendingResource)
 {
     if (!svgPaintTypeHasURL(paintType))
         return nullptr;
@@ -254,8 +255,8 @@ std::unique_ptr<SVGResources> SVGResources::buildCachedResources(const RenderEle
         if (style.hasFilter()) {
             const FilterOperations& filterOperations = style.filter();
             if (filterOperations.size() == 1) {
-                if (RefPtr referenceFilterOperation = dynamicDowncast<ReferenceFilterOperation>(*filterOperations.at(0))) {
-                    AtomString id = SVGURIReference::fragmentIdentifierFromIRIString(referenceFilterOperation->url(), document);
+                if (RefPtr referenceFilterOperation = dynamicDowncast<Style::ReferenceFilterOperation>(*filterOperations.at(0))) {
+                    auto id = referenceFilterOperation->fragment();
                     if (auto* filter = getRenderSVGResourceById<LegacyRenderSVGResourceFilter>(treeScope, id))
                         ensureResources(foundResources).setFilter(filter);
                     else
@@ -267,10 +268,10 @@ std::unique_ptr<SVGResources> SVGResources::buildCachedResources(const RenderEle
         if (style.hasPositionedMask()) {
             // FIXME: We should support all the values in the CSS mask property, but for now just use the first mask-image if it's a reference.
             RefPtr maskImage = style.maskImage();
-            auto reresolvedURL = maskImage ? maskImage->reresolvedURL(document) : URL();
+            auto maskImageURL = maskImage ? maskImage->url() : Style::URL::none();
 
-            if (!reresolvedURL.isEmpty()) {
-                auto resourceID = SVGURIReference::fragmentIdentifierFromIRIString(reresolvedURL.string(), document);
+            if (!maskImageURL.isNone()) {
+                auto resourceID = SVGURIReference::fragmentIdentifierFromIRIString(maskImageURL, document);
                 if (auto* masker = getRenderSVGResourceById<LegacyRenderSVGResourceMasker>(treeScope, resourceID))
                     ensureResources(foundResources).setMasker(masker);
                 else
@@ -280,7 +281,7 @@ std::unique_ptr<SVGResources> SVGResources::buildCachedResources(const RenderEle
     }
 
     if (markerTags().contains(tagName) && svgStyle.hasMarkers()) {
-        auto buildCachedMarkerResource = [&](const String& markerResource, bool (SVGResources::*setMarker)(LegacyRenderSVGResourceMarker*)) {
+        auto buildCachedMarkerResource = [&](const Style::URL& markerResource, bool (SVGResources::*setMarker)(LegacyRenderSVGResourceMarker*)) {
             auto markerId = SVGURIReference::fragmentIdentifierFromIRIString(markerResource, document);
             if (auto* marker = getRenderSVGResourceById<LegacyRenderSVGResourceMarker>(treeScope, markerId))
                 (ensureResources(foundResources).*setMarker)(marker);
@@ -369,7 +370,7 @@ bool SVGResources::markerReverseStart() const
         && m_markerData->markerStart->markerElement().orientType() == SVGMarkerOrientAutoStartReverse;
 }
 
-void SVGResources::removeClientFromCache(RenderElement& renderer, bool markForInvalidation) const
+void SVGResources::removeClientFromCacheAndMarkForInvalidation(RenderElement& renderer, bool markForInvalidation) const
 {
     if (isEmpty())
         return;
@@ -378,33 +379,33 @@ void SVGResources::removeClientFromCache(RenderElement& renderer, bool markForIn
         ASSERT(!m_clipperFilterMaskerData);
         ASSERT(!m_markerData);
         ASSERT(!m_fillStrokeData);
-        m_linkedResource->removeClientFromCache(renderer, markForInvalidation);
+        m_linkedResource->removeClientFromCacheAndMarkForInvalidation(renderer, markForInvalidation);
         return;
     }
 
     if (m_clipperFilterMaskerData) {
         if (auto* clipper = m_clipperFilterMaskerData->clipper.get())
-            clipper->removeClientFromCache(renderer, markForInvalidation);
+            clipper->removeClientFromCacheAndMarkForInvalidation(renderer, markForInvalidation);
         if (auto* filter = m_clipperFilterMaskerData->filter.get())
-            filter->removeClientFromCache(renderer, markForInvalidation);
+            filter->removeClientFromCacheAndMarkForInvalidation(renderer, markForInvalidation);
         if (auto* masker = m_clipperFilterMaskerData->masker.get())
-            masker->removeClientFromCache(renderer, markForInvalidation);
+            masker->removeClientFromCacheAndMarkForInvalidation(renderer, markForInvalidation);
     }
 
     if (m_markerData) {
         if (auto* markerStart = m_markerData->markerStart.get())
-            markerStart->removeClientFromCache(renderer, markForInvalidation);
+            markerStart->removeClientFromCacheAndMarkForInvalidation(renderer, markForInvalidation);
         if (auto* markerMid = m_markerData->markerMid.get())
-            markerMid->removeClientFromCache(renderer, markForInvalidation);
+            markerMid->removeClientFromCacheAndMarkForInvalidation(renderer, markForInvalidation);
         if (auto* markerEnd = m_markerData->markerEnd.get())
-            markerEnd->removeClientFromCache(renderer, markForInvalidation);
+            markerEnd->removeClientFromCacheAndMarkForInvalidation(renderer, markForInvalidation);
     }
 
     if (m_fillStrokeData) {
         if (auto* fill = m_fillStrokeData->fill.get())
-            fill->removeClientFromCache(renderer, markForInvalidation);
+            fill->removeClientFromCacheAndMarkForInvalidation(renderer, markForInvalidation);
         if (auto* stroke = m_fillStrokeData->stroke.get())
-            stroke->removeClientFromCache(renderer, markForInvalidation);
+            stroke->removeClientFromCacheAndMarkForInvalidation(renderer, markForInvalidation);
     }
 }
 
@@ -417,7 +418,7 @@ bool SVGResources::resourceDestroyed(LegacyRenderSVGResourceContainer& resource)
         ASSERT(!m_clipperFilterMaskerData);
         ASSERT(!m_markerData);
         ASSERT(!m_fillStrokeData);
-        m_linkedResource->removeAllClientsFromCache();
+        m_linkedResource->removeAllClientsFromCacheAndMarkForInvalidation();
         m_linkedResource = nullptr;
         return true;
     }
@@ -428,7 +429,7 @@ bool SVGResources::resourceDestroyed(LegacyRenderSVGResourceContainer& resource)
         if (!m_clipperFilterMaskerData)
             break;
         if (m_clipperFilterMaskerData->masker == &resource) {
-            resource.removeAllClientsFromCache();
+            resource.removeAllClientsFromCacheAndMarkForInvalidation();
             m_clipperFilterMaskerData->masker = nullptr;
             foundResources = true;
         }
@@ -437,17 +438,17 @@ bool SVGResources::resourceDestroyed(LegacyRenderSVGResourceContainer& resource)
         if (!m_markerData)
             break;
         if (m_markerData->markerStart == &resource) {
-            resource.removeAllClientsFromCache();
+            resource.removeAllClientsFromCacheAndMarkForInvalidation();
             m_markerData->markerStart = nullptr;
             foundResources = true;
         }
         if (m_markerData->markerMid == &resource) {
-            resource.removeAllClientsFromCache();
+            resource.removeAllClientsFromCacheAndMarkForInvalidation();
             m_markerData->markerMid = nullptr;
             foundResources = true;
         }
         if (m_markerData->markerEnd == &resource) {
-            resource.removeAllClientsFromCache();
+            resource.removeAllClientsFromCacheAndMarkForInvalidation();
             m_markerData->markerEnd = nullptr;
             foundResources = true;
         }
@@ -458,12 +459,12 @@ bool SVGResources::resourceDestroyed(LegacyRenderSVGResourceContainer& resource)
         if (!m_fillStrokeData)
             break;
         if (m_fillStrokeData->fill == &resource) {
-            resource.removeAllClientsFromCache();
+            resource.removeAllClientsFromCacheAndMarkForInvalidation();
             m_fillStrokeData->fill = nullptr;
             foundResources = true;
         }
         if (m_fillStrokeData->stroke == &resource) {
-            resource.removeAllClientsFromCache();
+            resource.removeAllClientsFromCacheAndMarkForInvalidation();
             m_fillStrokeData->stroke = nullptr;
             foundResources = true;
         }
@@ -472,7 +473,7 @@ bool SVGResources::resourceDestroyed(LegacyRenderSVGResourceContainer& resource)
         if (!m_clipperFilterMaskerData)
             break;
         if (m_clipperFilterMaskerData->filter == &resource) {
-            resource.removeAllClientsFromCache();
+            resource.removeAllClientsFromCacheAndMarkForInvalidation();
             m_clipperFilterMaskerData->filter = nullptr;
             foundResources = true;
         }
@@ -481,7 +482,7 @@ bool SVGResources::resourceDestroyed(LegacyRenderSVGResourceContainer& resource)
         if (!m_clipperFilterMaskerData)
             break;
         if (m_clipperFilterMaskerData->clipper == &resource) {
-            resource.removeAllClientsFromCache();
+            resource.removeAllClientsFromCacheAndMarkForInvalidation();
             m_clipperFilterMaskerData->clipper = nullptr;
             foundResources = true;
         }

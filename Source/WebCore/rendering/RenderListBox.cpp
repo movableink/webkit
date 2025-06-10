@@ -54,6 +54,7 @@
 #include "RenderLayer.h"
 #include "RenderLayerScrollableArea.h"
 #include "RenderLayoutState.h"
+#include "RenderObjectInlines.h"
 #include "RenderScrollbar.h"
 #include "RenderText.h"
 #include "RenderTheme.h"
@@ -67,6 +68,7 @@
 #include "StyleTreeResolver.h"
 #include "UnicodeBidi.h"
 #include "WheelEventTestMonitor.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <math.h>
 #include <wtf/StackStats.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -257,7 +259,7 @@ void RenderListBox::computePreferredLogicalWidths()
 
     RenderBox::computePreferredLogicalWidths(style().logicalMinWidth(), style().logicalMaxWidth(), writingMode().isHorizontal() ? horizontalBorderAndPaddingExtent() : verticalBorderAndPaddingExtent());
 
-    setPreferredLogicalWidthsDirty(false);
+    clearNeedsPreferredWidthsUpdate();
 }
 
 unsigned RenderListBox::size() const
@@ -1197,7 +1199,7 @@ void RenderListBox::destroyScrollbar()
         return;
 
     if (!m_scrollbar->isCustomScrollbar())
-        ScrollableArea::willRemoveScrollbar(m_scrollbar.get(), m_scrollbar->orientation());
+        ScrollableArea::willRemoveScrollbar(*m_scrollbar, m_scrollbar->orientation());
     m_scrollbar->removeFromParent();
     m_scrollbar = nullptr;
 }

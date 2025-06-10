@@ -28,6 +28,10 @@
 #if ENABLE(AX_THREAD_TEXT_APIS)
 
 #include "FloatRect.h"
+#include "TextAffinity.h"
+#include "TextFlags.h"
+#include <CoreText/CTFont.h>
+#include <wtf/FixedVector.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
 
@@ -72,12 +76,24 @@ struct AXTextRun {
     // "Delta"
     // which we combine into |text|: "Charlie Delta"
     // This Vector would then have values: [[2, 10], [11, 16]]
-    Vector<std::array<uint16_t, 2>> textRunDomOffsets;
+    FixedVector<std::array<uint16_t, 2>> textRunDomOffsets;
 
-    AXTextRun(size_t lineIndex, String&& text, Vector<std::array<uint16_t, 2>>&& domOffsets)
+    // An array the size of the run, where each value is the width/advance of each character in the run (in the direction
+    // of the writing mode: horizontal or vertical).
+    FixedVector<uint16_t> characterAdvances;
+
+    float lineHeight;
+
+    // The distance between the RenderText's position and the start of the text run (useful for things that are not left-aligned, like `text-align: center`).
+    float distanceFromBoundsInDirection;
+
+    AXTextRun(size_t lineIndex, String&& text, Vector<std::array<uint16_t, 2>>&& domOffsets, Vector<uint16_t>&& characterAdvances, float lineHeight, float distanceFromBoundsInDirection)
         : lineIndex(lineIndex)
         , text(WTFMove(text))
         , textRunDomOffsets(WTFMove(domOffsets))
+        , characterAdvances(WTFMove(characterAdvances))
+        , lineHeight(lineHeight)
+        , distanceFromBoundsInDirection(distanceFromBoundsInDirection)
     { }
 
     String debugDescription(void* containingBlock) const
@@ -85,7 +101,8 @@ struct AXTextRun {
         AXTextRunLineID lineID = { containingBlock, lineIndex };
         return makeString(lineID.debugDescription(), ": |"_s, makeStringByReplacingAll(text, '\n', "{newline}"_s), "|(len "_s, text.length(), ")"_s);
     }
-    const Vector<std::array<uint16_t, 2>>& domOffsets() const { return textRunDomOffsets; }
+    const FixedVector<std::array<uint16_t, 2>>& domOffsets() const { return textRunDomOffsets; }
+    const FixedVector<uint16_t>& advances() const { return characterAdvances; }
 
     // Convenience methods for TextUnit movement.
     bool startsWithLineBreak() const { return text.startsWith('\n'); }
@@ -98,29 +115,16 @@ struct AXTextRuns {
     // containing blocks, meaning they are rendered on different lines.
     // Do not de-reference. Use for comparison purposes only.
     void* containingBlock { nullptr };
-    Vector<AXTextRun> runs;
+    FixedVector<AXTextRun> runs;
     bool containsOnlyASCII { true };
-    // A rough estimate of the size of the characters in these runs. This is per-AXTextRuns because
-    // AXTextRuns are associated with a single RenderText, which has the same style for all its runs.
-    // This is still an estimate, as characters can have vastly different sizes. We use this to serve
-    // APIs like AXBoundsForTextMarkerRangeAttribute quickly off the main-thread, and get more accurate
-    // sizes on-demand for runs that assistive technologies are actually requesting these APIs from.
-    static constexpr uint8_t defaultEstimatedCharacterWidth = 12;
-    uint8_t estimatedCharacterWidth { defaultEstimatedCharacterWidth };
 
     AXTextRuns() = default;
-    AXTextRuns(RenderBlock* containingBlock, Vector<AXTextRun>&& textRuns, uint8_t estimatedCharacterWidth)
+    AXTextRuns(RenderBlock* containingBlock, Vector<AXTextRun>&& textRuns, bool containsOnlyASCII = true)
         : containingBlock(containingBlock)
         , runs(WTFMove(textRuns))
-        , estimatedCharacterWidth(estimatedCharacterWidth)
-    {
-        for (const auto& run : runs) {
-            if (!run.text.containsOnlyASCII()) {
-                containsOnlyASCII = false;
-                break;
-            }
-        }
-    }
+        , containsOnlyASCII(containsOnlyASCII)
+    { }
+
     String debugDescription() const;
 
     size_t size() const { return runs.size(); }
@@ -141,6 +145,7 @@ struct AXTextRuns {
         RELEASE_ASSERT(runs[index].text.length());
         return runs[index].text.length();
     }
+    size_t lastRunIndex() const { return size() - 1; }
     unsigned lastRunLength() const
     {
         if (runs.isEmpty())
@@ -155,8 +160,7 @@ struct AXTextRuns {
     unsigned runLengthSumTo(size_t index) const;
     unsigned domOffset(unsigned) const;
 
-    size_t indexForOffset(unsigned textOffset) const;
-    AXTextRunLineID lineIDForOffset(unsigned textOffset) const;
+    size_t indexForOffset(unsigned textOffset, Affinity) const;
     AXTextRunLineID lineID(size_t index) const
     {
         RELEASE_ASSERT(index < runs.size());
@@ -172,7 +176,7 @@ struct AXTextRuns {
     //   b|bb|b
     // The local rect would be:
     //   {x: width_of_single_b, y: |lineHeight| * 1, width: width_of_two_b, height: |lineHeight * 1|}
-    FloatRect localRect(unsigned start, unsigned end, float lineHeight) const;
+    FloatRect localRect(unsigned start, unsigned end, FontOrientation) const;
 };
 
 } // namespace WebCore

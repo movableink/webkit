@@ -170,7 +170,6 @@ Child makeNumeric(double value, CSSUnitType unit)
     case CSSUnitType::CSS_QUIRKY_EM:
     case CSSUnitType::CSS_STRING:
     case CSSUnitType::CSS_UNKNOWN:
-    case CSSUnitType::CSS_URI:
     case CSSUnitType::CSS_VALUE_ID:
     case CSSUnitType::CustomIdent:
         break;
@@ -221,6 +220,16 @@ Type getType(const NonCanonicalDimension& root)
 Type getType(const Symbol& root)
 {
     return Type::determineType(root.unit);
+}
+
+Type getType(const SiblingCount&)
+{
+    return Type { };
+}
+
+Type getType(const SiblingIndex&)
+{
+    return Type { };
 }
 
 Type getType(const Child& child)
@@ -449,7 +458,7 @@ std::optional<Type> toType(const ContainerProgress&)
 
 TextStream& operator<<(TextStream& ts, Tree tree)
 {
-    return ts << "CSSCalc::Tree [ " << serializationForCSS(tree, { .range = CSS::All, .serializationContext = CSS::defaultSerializationContext() }) << " ]";
+    return ts << "CSSCalc::Tree [ "_s << serializationForCSS(tree, { .range = CSS::All, .serializationContext = CSS::defaultSerializationContext() }) << " ]"_s;
 }
 
 } // namespace CSSCalc

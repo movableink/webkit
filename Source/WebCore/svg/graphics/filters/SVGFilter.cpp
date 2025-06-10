@@ -26,10 +26,11 @@
 #include "ElementChildIteratorInlines.h"
 #include "FilterResults.h"
 #include "GeometryUtilities.h"
+#include "SVGFilterEffectGraph.h"
 #include "SVGFilterElement.h"
-#include "SVGFilterGraph.h"
+#include "SVGFilterPrimitiveGraph.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
-#include "SourceGraphic.h"
+#include <numbers>
 
 namespace WebCore {
 
@@ -55,11 +56,6 @@ RefPtr<SVGFilter> SVGFilter::create(SVGFilterElement& filterElement, OptionSet<F
     return filter;
 }
 
-Ref<SVGFilter> SVGFilter::create(const FloatRect& targetBoundingBox, SVGUnitTypes::SVGUnitType primitiveUnits, SVGFilterExpression&& expression, FilterEffectVector&& effects, std::optional<RenderingResourceIdentifier> renderingResourceIdentifier)
-{
-    return adoptRef(*new SVGFilter(targetBoundingBox, primitiveUnits, WTFMove(expression), WTFMove(effects), renderingResourceIdentifier));
-}
-
 Ref<SVGFilter> SVGFilter::create(const FloatRect& targetBoundingBox, SVGUnitTypes::SVGUnitType primitiveUnits, SVGFilterExpression&& expression, FilterEffectVector&& effects, std::optional<RenderingResourceIdentifier> renderingResourceIdentifier, OptionSet<FilterRenderingMode> filterRenderingModes, const FloatSize& filterScale, const FloatRect& filterRegion)
 {
     Ref filter = adoptRef(*new SVGFilter(targetBoundingBox, primitiveUnits, WTFMove(expression), WTFMove(effects), renderingResourceIdentifier, filterScale, filterRegion));
@@ -76,15 +72,6 @@ SVGFilter::SVGFilter(const FloatSize& filterScale, const FloatRect& filterRegion
 {
 }
 
-SVGFilter::SVGFilter(const FloatRect& targetBoundingBox, SVGUnitTypes::SVGUnitType primitiveUnits, SVGFilterExpression&& expression, FilterEffectVector&& effects, std::optional<RenderingResourceIdentifier> renderingResourceIdentifier)
-    : Filter(Filter::Type::SVGFilter, renderingResourceIdentifier)
-    , m_targetBoundingBox(targetBoundingBox)
-    , m_primitiveUnits(primitiveUnits)
-    , m_expression(WTFMove(expression))
-    , m_effects(WTFMove(effects))
-{
-}
-
 SVGFilter::SVGFilter(const FloatRect& targetBoundingBox, SVGUnitTypes::SVGUnitType primitiveUnits, SVGFilterExpression&& expression, FilterEffectVector&& effects, std::optional<RenderingResourceIdentifier> renderingResourceIdentifier, const FloatSize& filterScale, const FloatRect& filterRegion)
     : Filter(Filter::Type::SVGFilter, filterScale, filterRegion, renderingResourceIdentifier)
     , m_targetBoundingBox(targetBoundingBox)
@@ -94,13 +81,13 @@ SVGFilter::SVGFilter(const FloatRect& targetBoundingBox, SVGUnitTypes::SVGUnitTy
 {
 }
 
-static std::optional<std::tuple<SVGFilterEffectsGraph, FilterEffectGeometryMap>> buildFilterEffectsGraph(SVGFilterElement& filterElement, const SVGFilter& filter, const GraphicsContext& destinationContext)
+static std::optional<std::tuple<SVGFilterEffectGraph, FilterEffectGeometryMap>> buildFilterEffectGraph(SVGFilterElement& filterElement, const SVGFilter& filter, const GraphicsContext& destinationContext)
 {
     if (filterElement.countChildNodes() > maxCountChildNodes)
         return std::nullopt;
 
     const auto colorSpace = filterElement.colorInterpolation() == ColorInterpolation::LinearRGB ? DestinationColorSpace::LinearSRGB() : DestinationColorSpace::SRGB();
-    SVGFilterEffectsGraph graph(SourceGraphic::create(colorSpace), SourceAlpha::create(colorSpace));
+    SVGFilterEffectGraph graph(SourceGraphic::create(colorSpace), SourceAlpha::create(colorSpace));
     FilterEffectGeometryMap effectGeometryMap;
 
     for (Ref effectElement : childrenOfType<SVGFilterPrimitiveStandardAttributes>(filterElement)) {
@@ -129,11 +116,11 @@ static std::optional<std::tuple<SVGFilterEffectsGraph, FilterEffectGeometryMap>>
 
 std::optional<std::tuple<SVGFilterExpression, FilterEffectVector>> SVGFilter::buildExpression(SVGFilterElement& filterElement, const SVGFilter& filter, const GraphicsContext& destinationContext)
 {
-    auto result = buildFilterEffectsGraph(filterElement, filter, destinationContext);
+    auto result = buildFilterEffectGraph(filterElement, filter, destinationContext);
     if (!result)
         return std::nullopt;
 
-    auto& graph = std::get<SVGFilterEffectsGraph>(*result);
+    auto& graph = std::get<SVGFilterEffectGraph>(*result);
     auto& effectGeometryMap = std::get<FilterEffectGeometryMap>(*result);
 
     auto effectGeometry = [&](FilterEffect& effect) -> std::optional<FilterEffectGeometry> {
@@ -162,17 +149,17 @@ std::optional<std::tuple<SVGFilterExpression, FilterEffectVector>> SVGFilter::bu
     return { { WTFMove(expression), WTFMove(effects) } };
 }
 
-static std::optional<SVGFilterPrimitivesGraph> buildFilterPrimitivesGraph(SVGFilterElement& filterElement)
+static std::optional<SVGFilterPrimitiveGraph> buildFilterPrimitiveGraph(SVGFilterElement& filterElement)
 {
     auto countChildNodes = filterElement.countChildNodes();
     if (!countChildNodes || countChildNodes > maxCountChildNodes)
         return std::nullopt;
 
-    SVGFilterPrimitivesGraph graph;
+    SVGFilterPrimitiveGraph graph;
 
     for (Ref effectElement : childrenOfType<SVGFilterPrimitiveStandardAttributes>(filterElement)) {
         // We should not be strict about not finding the input primitives here because SourceGraphic and SourceAlpha do not have primitives.
-        auto inputs = graph.getNamedNodes(effectElement->filterEffectInputsNames()).value_or(SVGFilterPrimitivesGraph::NodeVector());
+        auto inputs = graph.getNamedNodes(effectElement->filterEffectInputsNames()).value_or(SVGFilterPrimitiveGraph::NodeVector());
         graph.addNamedNode(AtomString { effectElement->result() }, effectElement.copyRef());
         graph.setNodeInputs(effectElement, WTFMove(inputs));
     }
@@ -182,7 +169,7 @@ static std::optional<SVGFilterPrimitivesGraph> buildFilterPrimitivesGraph(SVGFil
 
 bool SVGFilter::isIdentity(SVGFilterElement& filterElement)
 {
-    auto graph = buildFilterPrimitivesGraph(filterElement);
+    auto graph = buildFilterPrimitiveGraph(filterElement);
     if (!graph)
         return false;
 
@@ -197,16 +184,45 @@ bool SVGFilter::isIdentity(SVGFilterElement& filterElement)
 
 IntOutsets SVGFilter::calculateOutsets(SVGFilterElement& filterElement, const FloatRect& targetBoundingBox)
 {
-    auto graph = buildFilterPrimitivesGraph(filterElement);
+    auto graph = buildFilterPrimitiveGraph(filterElement);
     if (!graph)
         return { };
 
-    IntOutsets outsets;
-    bool result = graph->visit([&](SVGFilterPrimitiveStandardAttributes& primitive, unsigned) {
-        outsets += primitive.outsets(targetBoundingBox, filterElement.primitiveUnits());
+    Vector<std::pair<IntOutsets, unsigned>> outsetsStack;
+
+    // Remove the outsets of the last level and return their maximum.
+    auto lastLevelOutsets([](auto& outsetsStack) -> IntOutsets {
+        IntOutsets lastLevelOutsets;
+        for (unsigned lastLevel = outsetsStack.last().second; lastLevel == outsetsStack.last().second; outsetsStack.takeLast())
+            lastLevelOutsets = max(lastLevelOutsets, outsetsStack.last().first);
+        return lastLevelOutsets;
     });
 
-    return result ? outsets : IntOutsets();
+    bool result = graph->visit([&](SVGFilterPrimitiveStandardAttributes& primitive, unsigned level) {
+        auto primitiveOutsets = primitive.outsets(targetBoundingBox, filterElement.primitiveUnits());
+        unsigned lastLevel = outsetsStack.isEmpty() ? 0 : outsetsStack.last().second;
+
+        // Expand the last outsets of this level with the maximum of the outsets of its children.
+        if (level < lastLevel) {
+            auto childrenOutsets = lastLevelOutsets(outsetsStack);
+            outsetsStack.last().first += childrenOutsets;
+        }
+
+        outsetsStack.append(std::make_pair(primitiveOutsets, level));
+    });
+
+    if (!result)
+        return IntOutsets();
+
+    ASSERT(!outsetsStack.isEmpty());
+
+    // Calculate the whole filter outsets by going back to the lastNode of the graph.
+    while (outsetsStack.size() > 1) {
+        auto childrenOutsets = lastLevelOutsets(outsetsStack);
+        outsetsStack.last().first += childrenOutsets;
+    }
+
+    return outsetsStack.takeLast().first;
 }
 
 FloatSize SVGFilter::calculateResolvedSize(const FloatSize& size, const FloatRect& targetBoundingBox, SVGUnitTypes::SVGUnitType primitiveUnits)
@@ -229,7 +245,7 @@ FloatPoint3D SVGFilter::resolvedPoint3D(const FloatPoint3D& point) const
     resolvedPoint.setY(m_targetBoundingBox.y() + point.y() * m_targetBoundingBox.height());
 
     // https://www.w3.org/TR/SVG/filters.html#fePointLightZAttribute and https://www.w3.org/TR/SVG/coords.html#Units_viewport_percentage
-    resolvedPoint.setZ(point.z() * euclidianDistance(m_targetBoundingBox.minXMinYCorner(), m_targetBoundingBox.maxXMaxYCorner()) / sqrtOfTwoFloat);
+    resolvedPoint.setZ(point.z() * euclidianDistance(m_targetBoundingBox.minXMinYCorner(), m_targetBoundingBox.maxXMaxYCorner()) / std::numbers::sqrt2_v<float>);
 
     return resolvedPoint;
 }
@@ -324,6 +340,16 @@ RefPtr<FilterImage> SVGFilter::apply(FilterImage* sourceImage, FilterResults& re
     
     ASSERT(stack.size() == 1);
     return stack.takeLast();
+}
+
+bool SVGFilter::isValidSVGFilterExpression(const SVGFilterExpression& expression, const FilterEffectVector& effects)
+{
+    for (const auto& term : expression) {
+        if (term.index >= effects.size())
+            return false;
+    }
+
+    return true;
 }
 
 FilterStyleVector SVGFilter::createFilterStyles(GraphicsContext& context, const Filter&, const FilterStyle& sourceStyle) const

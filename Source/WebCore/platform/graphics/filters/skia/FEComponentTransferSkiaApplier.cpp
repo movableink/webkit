@@ -43,7 +43,7 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(FEComponentTransferSkiaApplier);
 
-bool FEComponentTransferSkiaApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
+bool FEComponentTransferSkiaApplier::apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
     ASSERT(inputs.size() == 1);
     Ref input = inputs[0];

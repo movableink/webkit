@@ -3,11 +3,8 @@
 <title>Evaluating XPath expressions with orhpaned Attr as context node doesn't crash</title>
 <link rel=author href="mailto:jarhar@chromium.org">
 <link rel=help href="https://bugs.chromium.org/p/chromium/issues/detail?id=1236967">
-<script src="/resources/testharness.js"></script>
-<script src="/resources/testharnessreport.js"></script>
 <body>
 <script>
-test(() => {
 for (const expression of [
     "..",
     "parent",
@@ -19,5 +16,4 @@ for (const expression of [
     const orphanedAttr = document.createAttribute("foo");
     new XPathEvaluator().evaluate(expression, orphanedAttr, null, 2);
 }
-});
 </script>

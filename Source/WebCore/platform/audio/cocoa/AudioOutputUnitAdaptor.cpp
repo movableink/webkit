@@ -28,6 +28,7 @@
 
 #if ENABLE(WEB_AUDIO)
 
+#include "Logging.h"
 #include <pal/cf/AudioToolboxSoftLink.h>
 
 namespace WebCore {

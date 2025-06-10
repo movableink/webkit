@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2010 University of Szeged
  * Copyright (C) 2010 Zoltan Herczeg
- * Copyright (C) 2021-2023 Apple Inc.  All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -77,7 +77,7 @@ protected:
     float m_specularExponent;
     float m_kernelUnitLengthX;
     float m_kernelUnitLengthY;
-    Ref<LightSource> m_lightSource;
+    const Ref<LightSource> m_lightSource;
 };
 
 } // namespace WebCore

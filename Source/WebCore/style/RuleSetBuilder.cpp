@@ -45,6 +45,7 @@
 #include "StyleRuleImport.h"
 #include "StyleScope.h"
 #include "StyleSheetContents.h"
+#include <ranges>
 #include <wtf/CryptographicallyRandomNumber.h>
 
 namespace WebCore {
@@ -55,7 +56,7 @@ RuleSetBuilder::RuleSetBuilder(RuleSet& ruleSet, const MQ::MediaQueryEvaluator& 
     , m_mediaQueryCollector({ evaluator })
     , m_resolver(resolver)
     , m_shrinkToFit(shrinkToFit)
-    , m_shouldResolveNesting(shouldResolveNesting)
+    , m_builderShouldResolveNesting(shouldResolveNesting)
 {
 }
 
@@ -136,10 +137,10 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
         // https://drafts.csswg.org/css-nesting/#nesting-at-scope
         // For the purposes of the style rules in its body and its own <scope-end> selector,
         // the @scope rule is treated as an ancestor style rule, matching the elements matched by its <scope-start> selector.
-        if (m_shouldResolveNesting == ShouldResolveNesting::Yes) {
+        if (m_shouldResolveNestingForSheet) {
             const CSSSelectorList* parentResolvedSelectorList = nullptr;
             if (m_selectorListStack.size())
-                parentResolvedSelectorList =  m_selectorListStack.last();
+                parentResolvedSelectorList = m_selectorListStack.last();
             if (!scopeRule->originalScopeStart().isEmpty())
                 scopeRule->setScopeStart(CSSSelectorParser::resolveNestingParent(scopeRule->originalScopeStart(), parentResolvedSelectorList));
             if (!scopeRule->originalScopeEnd().isEmpty())
@@ -246,6 +247,8 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
 
 void RuleSetBuilder::addRulesFromSheetContents(const StyleSheetContents& sheet)
 {
+    auto nestingResolveScope = SetForScope { m_shouldResolveNestingForSheet, m_builderShouldResolveNesting == ShouldResolveNesting::Yes && !sheet.hasResolvedNesting() };
+
     for (auto& rule : sheet.layerRulesBeforeImportRules())
         registerLayers(rule->nameList());
 
@@ -272,10 +275,15 @@ void RuleSetBuilder::addRulesFromSheetContents(const StyleSheetContents& sheet)
     }
 
     addChildRules(sheet.childRules());
+
+    if (m_shouldResolveNestingForSheet)
+        sheet.setHasResolvedNesting(true);
 }
 
 void RuleSetBuilder::resolveSelectorListWithNesting(StyleRuleWithNesting& rule)
 {
+    ASSERT(m_shouldResolveNestingForSheet);
+
     const CSSSelectorList* parentResolvedSelectorList = nullptr;
     if (m_selectorListStack.size())
         parentResolvedSelectorList = m_selectorListStack.last();
@@ -303,7 +311,7 @@ void RuleSetBuilder::addStyleRuleWithSelectorList(const CSSSelectorList& selecto
 
 void RuleSetBuilder::addStyleRule(StyleRuleWithNesting& rule)
 {
-    if (m_shouldResolveNesting == ShouldResolveNesting::Yes)
+    if (m_shouldResolveNestingForSheet)
         resolveSelectorListWithNesting(rule);
 
     const auto& selectorList = rule.selectorList();
@@ -343,9 +351,11 @@ void RuleSetBuilder::addStyleRule(StyleRuleNestedDeclarations& rule)
             return *m_selectorListStack.last();
         ASSERT(m_ancestorStack.last() == CSSParserEnum::NestedContextType::Scope);
         return CSSSelectorList { MutableCSSSelectorList::from(whereScopeSelector()) };
-    }();
+    };
 
-    rule.wrapperAdoptSelectorList(WTFMove(selectorList));
+    if (m_shouldResolveNestingForSheet)
+        rule.wrapperAdoptSelectorList(selectorList());
+
     addStyleRuleWithSelectorList(rule.selectorList(), rule);
 }
 
@@ -441,7 +451,7 @@ void RuleSetBuilder::updateCascadeLayerPriorities()
         return i + 1;
     });
 
-    std::sort(layersInPriorityOrder.begin(), layersInPriorityOrder.end(), compare);
+    std::ranges::sort(layersInPriorityOrder, compare);
 
     // Priorities matter only relative to each other, so assign them enforcing these constraints:
     // - Layers must get a priority greater than RuleSet::cascadeLayerPriorityForPresentationalHints.
@@ -471,7 +481,7 @@ void RuleSetBuilder::addMutatingRulesToResolver()
     rulesToAdd.appendVector(WTFMove(m_collectedResolverMutatingRules));
 
     if (!m_cascadeLayerIdentifierMap.isEmpty())
-        std::stable_sort(rulesToAdd.begin(), rulesToAdd.end(), compareLayers);
+        std::ranges::stable_sort(rulesToAdd, compareLayers);
 
     for (auto& collectedRule : rulesToAdd) {
         if (collectedRule.layerIdentifier)

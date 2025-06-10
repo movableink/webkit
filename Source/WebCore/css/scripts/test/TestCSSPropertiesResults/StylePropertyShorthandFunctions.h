@@ -6,6 +6,7 @@ namespace WebCore {
 
 class StylePropertyShorthand;
 
+StylePropertyShorthand allShorthand();
 StylePropertyShorthand fontShorthand();
 StylePropertyShorthand testShorthandOneShorthand();
 StylePropertyShorthand testShorthandTwoShorthand();

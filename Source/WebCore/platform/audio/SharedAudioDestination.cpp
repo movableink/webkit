@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,7 +55,7 @@ public:
 
     MediaTime outputLatency() const
     {
-        return protectedDestination()->outputLatency();
+        return m_destination->outputLatency();
     }
 
 #if PLATFORM(IOS_FAMILY)
@@ -75,13 +75,10 @@ private:
 
     SharedAudioDestinationAdapter(const CreationOptions&, AudioDestinationCreationFunction&&);
 
-    void render(AudioBus* sourceBus, AudioBus* destinationBus, size_t framesToProcess, const AudioIOPosition& outputPosition) final;
+    void render(AudioBus& destinationBus, size_t framesToProcess, const AudioIOPosition& outputPosition) final;
     void isPlayingDidChange() final { }
 
     void configureRenderThread(CompletionHandler<void(bool)>&&);
-
-    Ref<AudioDestination> protectedDestination() const { return m_destination; }
-    Ref<AudioBus> protectedWorkBus() { return m_workBus; }
 
     unsigned m_numberOfOutputChannels;
     float m_sampleRate;
@@ -90,8 +87,8 @@ private:
     String m_sceneIdentifier { emptyString() };
 #endif
 
-    Ref<AudioDestination> m_destination;
-    Ref<AudioBus> m_workBus;
+    const Ref<AudioDestination> m_destination;
+    const Ref<AudioBus> m_workBus;
     AudioDestinationCreationFunction m_ensureFunction;
 
     bool m_started { false };
@@ -141,7 +138,7 @@ SharedAudioDestinationAdapter::SharedAudioDestinationAdapter(const CreationOptio
         , options.sceneIdentifier.isNull() ? emptyString() : options.sceneIdentifier
 #endif
         }) }
-    , m_workBus { AudioBus::create(options.numberOfOutputChannels, AudioUtilities::renderQuantumSize).releaseNonNull() }
+    , m_workBus { AudioBus::create(options.numberOfOutputChannels, AudioUtilities::renderQuantumSize) }
     , m_ensureFunction { WTFMove(ensureFunction) }
 {
 }
@@ -154,7 +151,7 @@ SharedAudioDestinationAdapter::~SharedAudioDestinationAdapter()
 #endif
         );
     sharedMap().remove(key);
-    protectedDestination()->clearCallback();
+    m_destination->clearCallback();
 }
 
 void SharedAudioDestinationAdapter::addRenderer(SharedAudioDestination& renderer, CompletionHandler<void(bool)>&& completionHandler)
@@ -198,13 +195,13 @@ void SharedAudioDestinationAdapter::configureRenderThread(CompletionHandler<void
 
     if (shouldStart) {
         m_started = true;
-        protectedDestination()->start(nullptr, WTFMove(completionHandler));
+        m_destination->start(nullptr, WTFMove(completionHandler));
         return;
     }
 
     if (shouldStop) {
         m_started = false;
-        protectedDestination()->stop(WTFMove(completionHandler));
+        m_destination->stop(WTFMove(completionHandler));
         return;
     }
 
@@ -220,7 +217,7 @@ void SharedAudioDestinationAdapter::configureRenderThread(CompletionHandler<void
 }
 
 
-void SharedAudioDestinationAdapter::render(AudioBus* sourceBus, AudioBus* destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
+void SharedAudioDestinationAdapter::render(AudioBus& destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
 {
     if (m_renderLock.tryLock()) {
         Locker locker { AdoptLock, m_renderLock };
@@ -239,15 +236,14 @@ void SharedAudioDestinationAdapter::render(AudioBus* sourceBus, AudioBus* destin
     for (RefPtr renderer : m_configuredRenderers) {
         if (isFirstRenderer) {
             // The first renderer should render directly to destinationBus.
-            renderer->sharedRender(sourceBus, destinationBus, numberOfFrames, outputPosition);
+            renderer->sharedRender(destinationBus, numberOfFrames, outputPosition);
             isFirstRenderer = false;
             continue;
         }
         // Subsequent renderers should render to the m_workBus, which will
         // then be summed to the destinationBus.
-        Ref protectedWorkBus = this->protectedWorkBus();
-        renderer->sharedRender(sourceBus, protectedWorkBus.ptr(), numberOfFrames, outputPosition);
-        destinationBus->sumFrom(protectedWorkBus);
+        renderer->sharedRender(m_workBus, numberOfFrames, outputPosition);
+        destinationBus.sumFrom(m_workBus);
     }
 }
 Ref<SharedAudioDestination> SharedAudioDestination::create(const CreationOptions& options, AudioDestinationCreationFunction&& ensureFunction)
@@ -315,20 +311,20 @@ void SharedAudioDestination::setIsPlaying(bool isPlaying)
     }
 }
 
-void SharedAudioDestination::sharedRender(AudioBus* sourceBus, AudioBus* destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
+void SharedAudioDestination::sharedRender(AudioBus& destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
 {
     if (!m_dispatchToRenderThreadLock.tryLock()) {
-        destinationBus->zero();
+        destinationBus.zero();
         return;
     }
 
     Locker locker { AdoptLock, m_dispatchToRenderThreadLock };
     if (!m_dispatchToRenderThread)
-        callRenderCallback(sourceBus, destinationBus, numberOfFrames, outputPosition);
+        callRenderCallback(destinationBus, numberOfFrames, outputPosition);
     else {
         BinarySemaphore semaphore;
-        m_dispatchToRenderThread([protectedThis = Ref { *this }, sourceBus = RefPtr { sourceBus }, destinationBus = RefPtr { destinationBus }, numberOfFrames, outputPosition, &semaphore]() mutable {
-            protectedThis->callRenderCallback(sourceBus.get(), destinationBus.get(), numberOfFrames, outputPosition);
+        m_dispatchToRenderThread([protectedThis = Ref { *this }, destinationBus = Ref { destinationBus }, numberOfFrames, outputPosition, &semaphore]() mutable {
+            protectedThis->callRenderCallback(destinationBus, numberOfFrames, outputPosition);
             semaphore.signal();
         });
         semaphore.wait();
@@ -344,7 +340,7 @@ public:
         return callback.get();
     }
 private:
-    void render(AudioBus*, AudioBus*, size_t, const AudioIOPosition&) final { }
+    void render(AudioBus&, size_t, const AudioIOPosition&) final { }
     void isPlayingDidChange() final { }
 };
 

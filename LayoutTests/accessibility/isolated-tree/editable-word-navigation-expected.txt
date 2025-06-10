@@ -16,7 +16,7 @@ Pre word start to next word end: Edit me
 
 Current character is: e
 Left word is: me
-Right word is: me
+Right word is:
 Pre word start to next word end: me
 
 

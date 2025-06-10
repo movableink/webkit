@@ -51,6 +51,13 @@ class RenderProgress;
 class RenderStyle;
 class Settings;
 
+template<typename> struct MinimallySerializingSpaceSeparatedRectEdges;
+
+namespace Style {
+struct PaddingEdge;
+using PaddingBox = MinimallySerializingSpaceSeparatedRectEdges<PaddingEdge>;
+}
+
 class RenderTheme {
 protected:
     RenderTheme();
@@ -68,7 +75,7 @@ public:
     // metrics and defaults given the contents of the style.  This includes sophisticated operations like
     // selection of control size based off the font, the disabling of appearance when CSS properties that
     // disable native appearance are set, or if the appearance is not supported by the theme.
-    void adjustStyle(RenderStyle&, const Element*, const RenderStyle* userAgentAppearanceStyle);
+    void adjustStyle(RenderStyle&, const RenderStyle& parentStyle, const Element*);
 
     virtual bool canCreateControlPartForRenderer(const RenderObject&) const { return false; }
     virtual bool canCreateControlPartForBorderOnly(const RenderObject&) const { return false; }
@@ -83,11 +90,11 @@ public:
     bool paint(const RenderBox&, ControlPart&, const PaintInfo&, const LayoutRect&);
     bool paint(const RenderBox&, const PaintInfo&, const LayoutRect&);
     
-    bool paintBorderOnly(const RenderBox&, const PaintInfo&, const LayoutRect&);
+    bool paintBorderOnly(const RenderBox&, const PaintInfo&);
     void paintDecorations(const RenderBox&, const PaintInfo&, const LayoutRect&);
 
     // The remaining methods should be implemented by the platform-specific portion of the theme, e.g.,
-    // RenderThemeMac.cpp for Mac OS X.
+    // RenderThemeMac.cpp for macOS.
 
     virtual String extraDefaultStyleSheet() { return String(); }
 #if ENABLE(VIDEO)
@@ -115,12 +122,12 @@ public:
     virtual bool controlSupportsTints(const RenderObject&) const { return false; }
 
     // Whether or not the control has been styled enough by the author to disable the native appearance.
-    virtual bool isControlStyled(const RenderStyle&, const RenderStyle& userAgentStyle) const;
+    virtual bool isControlStyled(const RenderStyle&) const;
 
     // A general method asking if any control tinting is supported at all.
     virtual bool supportsControlTints() const { return false; }
 
-    // Some controls may spill out of their containers (e.g., the check on an OS X checkbox).  When these controls repaint,
+    // Some controls may spill out of their containers (e.g., the check on a macOS checkbox). When these controls repaint,
     // the theme needs to communicate this inflated rect to the engine so that it can invalidate the whole control.
     virtual void inflateRectForControlRenderer(const RenderObject&, FloatRect&) { }
     virtual void adjustRepaintRect(const RenderBox&, FloatRect&) { }
@@ -137,7 +144,7 @@ public:
     void setUseFormSemanticContext(bool value) { m_useFormSemanticContext = value; }
     virtual bool supportsLargeFormControls() const { return false; }
 
-    virtual bool searchFieldShouldAppearAsTextField(const RenderStyle&) const { return false; }
+    virtual bool searchFieldShouldAppearAsTextField(const RenderStyle&, const Settings&) const { return false; }
 
     // Text selection colors.
     WEBCORE_EXPORT Color activeSelectionBackgroundColor(OptionSet<StyleColorOptions>) const;
@@ -183,7 +190,7 @@ public:
 
     virtual void adjustSliderThumbSize(RenderStyle&, const Element*) const { }
 
-    virtual LengthBox popupInternalPaddingBox(const RenderStyle&) const { return { 0, 0, 0, 0 }; }
+    virtual Style::PaddingBox popupInternalPaddingBox(const RenderStyle&) const;
     virtual bool popupOptionSupportsTextIndent() const { return false; }
     virtual PopupMenuStyle::Size popupMenuSize(const RenderStyle&, IntRect&) const { return PopupMenuStyle::Size::Normal; }
 
@@ -220,7 +227,7 @@ public:
     virtual String fileListNameForWidth(const FileList*, const FontCascade&, int width, bool multipleFilesAllowed) const;
 
     enum class FileUploadDecorations : bool { SingleFile, MultipleFiles };
-    virtual void paintFileUploadIconDecorations(const RenderObject& /*inputRenderer*/, const RenderObject& /*buttonRenderer*/, const PaintInfo&, const IntRect&, Icon*, FileUploadDecorations) { }
+    virtual void paintFileUploadIconDecorations(const RenderObject& /*inputRenderer*/, const RenderObject& /*buttonRenderer*/, const PaintInfo&, const FloatRect&, Icon*, FileUploadDecorations) { }
     
 #if ENABLE(SERVICE_CONTROLS)
     virtual IntSize imageControlsButtonSize() const { return IntSize(); }
@@ -243,6 +250,15 @@ public:
     float switchPointerTrackingMagnitudeProportion() const { return 0.4f; }
     virtual bool hasSwitchHapticFeedback(SwitchTrigger) const { return false; }
     OptionSet<ControlStyle::State> extractControlStyleStatesForRenderer(const RenderObject&) const;
+
+    virtual void paintPlatformResizer(const RenderLayerModelObject&, GraphicsContext&, const LayoutRect&);
+    virtual void paintPlatformResizerFrame(const RenderLayerModelObject&, GraphicsContext&, const LayoutRect&);
+
+    static bool hasAppearanceForElementTypeFromUAStyle(const Element&);
+
+    virtual void adjustTextControlInnerContainerStyle(RenderStyle&, const RenderStyle&, const Element*) const { }
+    virtual void adjustTextControlInnerPlaceholderStyle(RenderStyle&, const RenderStyle&, const Element*) const { }
+    virtual void adjustTextControlInnerTextStyle(RenderStyle&, const RenderStyle&, const Element*) const { }
 
 protected:
     ControlStyle extractControlStyleForRenderer(const RenderObject&) const;
@@ -281,11 +297,16 @@ protected:
     virtual bool paintRadio(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
 
     virtual void adjustButtonStyle(RenderStyle&, const Element*) const;
-    virtual bool paintButton(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintButton(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
 
     virtual void adjustColorWellStyle(RenderStyle&, const Element*) const;
-    virtual bool paintColorWell(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintColorWell(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
     virtual void paintColorWellDecorations(const RenderObject&, const PaintInfo&, const FloatRect&) { }
+
+    virtual void adjustColorWellSwatchStyle(RenderStyle&, const Element*) const { }
+    virtual void adjustColorWellSwatchOverlayStyle(RenderStyle&, const Element*) const { }
+    virtual void adjustColorWellSwatchWrapperStyle(RenderStyle&, const Element*) const { }
+    virtual bool paintColorWellSwatch(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
 
     virtual void adjustInnerSpinButtonStyle(RenderStyle&, const Element*) const;
     virtual bool paintInnerSpinButton(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
@@ -300,14 +321,14 @@ protected:
 
     virtual void adjustMenuListStyle(RenderStyle&, const Element*) const;
     virtual bool paintMenuList(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
-    virtual void paintMenuListDecorations(const RenderObject&, const PaintInfo&, const IntRect&) { }
+    virtual void paintMenuListDecorations(const RenderObject&, const PaintInfo&, const FloatRect&) { }
 
     virtual void adjustMenuListButtonStyle(RenderStyle&, const Element*) const { }
     virtual void paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) { }
-    virtual bool paintMenuListButton(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintMenuListButton(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
 
     virtual void adjustMeterStyle(RenderStyle&, const Element*) const;
-    virtual bool paintMeter(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintMeter(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
 
 #if ENABLE(APPLE_PAY)
     virtual void adjustApplePayButtonStyle(RenderStyle&, const Element*) const { }
@@ -328,35 +349,52 @@ protected:
 #endif
 
     virtual void adjustProgressBarStyle(RenderStyle&, const Element*) const { }
-    virtual bool paintProgressBar(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintProgressBar(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
 
     virtual void adjustSliderTrackStyle(RenderStyle&, const Element*) const { }
-    virtual bool paintSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintSliderTrack(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
 
     virtual void adjustSliderThumbStyle(RenderStyle&, const Element*) const;
-    virtual bool paintSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintSliderThumb(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
 
     virtual void adjustSearchFieldStyle(RenderStyle&, const Element*) const { }
     virtual bool paintSearchField(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
-    virtual void paintSearchFieldDecorations(const RenderBox&, const PaintInfo&, const IntRect&) { }
+    virtual void paintSearchFieldDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) { }
 
     virtual void adjustSearchFieldCancelButtonStyle(RenderStyle&, const Element*) const { }
-    virtual bool paintSearchFieldCancelButton(const RenderBox&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintSearchFieldCancelButton(const RenderBox&, const PaintInfo&, const FloatRect&) { return true; }
 
     virtual void adjustSearchFieldDecorationPartStyle(RenderStyle&, const Element*) const { }
-    virtual bool paintSearchFieldDecorationPart(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintSearchFieldDecorationPart(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
 
     virtual void adjustSearchFieldResultsDecorationPartStyle(RenderStyle&, const Element*) const { }
-    virtual bool paintSearchFieldResultsDecorationPart(const RenderBox&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintSearchFieldResultsDecorationPart(const RenderBox&, const PaintInfo&, const FloatRect&) { return true; }
 
     virtual void adjustSearchFieldResultsButtonStyle(RenderStyle&, const Element*) const { }
-    virtual bool paintSearchFieldResultsButton(const RenderBox&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintSearchFieldResultsButton(const RenderBox&, const PaintInfo&, const FloatRect&) { return true; }
 
     void adjustSwitchStyleDisplay(RenderStyle&) const;
     virtual void adjustSwitchStyle(RenderStyle&, const Element*) const;
     void adjustSwitchThumbOrSwitchTrackStyle(RenderStyle&) const;
     virtual bool paintSwitchThumb(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
     virtual bool paintSwitchTrack(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
+
+    // The font description result should have a zoomed font size.
+    virtual std::optional<FontCascadeDescription> controlFont(StyleAppearance, const FontCascade&, float) const;
+
+    virtual Style::PaddingBox controlPadding(StyleAppearance, const Style::PaddingBox&, float zoomFactor) const;
+
+    // The size here is in zoomed coordinates already. If a new size is returned, it also needs to be in zoomed coordinates.
+    virtual LengthSize controlSize(StyleAppearance, const FontCascade&, const LengthSize&, float) const;
+
+    // Returns the minimum size for a control in zoomed coordinates.
+    LengthSize minimumControlSize(StyleAppearance, const FontCascade&, const LengthSize& zoomedSize, const LengthSize& nonShrinkableZoomedSize, float zoomFactor) const;
+
+    // Allows the theme to modify the existing border.
+    virtual LengthBox controlBorder(StyleAppearance, const FontCascade&, const LengthBox& zoomedBox, float zoomFactor) const;
+
+    // Whether or not whitespace: pre should be forced on always.
+    virtual bool controlRequiresPreWhiteSpace(StyleAppearance) const { return false; }
 
 private:
     OptionSet<ControlStyle::State> extractControlStyleStatesForRendererInternal(const RenderObject&) const;
@@ -414,9 +452,11 @@ protected:
 
     virtual Color autocorrectionReplacementMarkerColor(const RenderText&) const;
 
+    virtual LengthSize minimumControlSize(StyleAppearance, const FontCascade&, const LengthSize& zoomedSize, float zoomFactor) const;
+
 private:
     StyleAppearance autoAppearanceForElement(RenderStyle&, const Element*) const;
-    StyleAppearance adjustAppearanceForElement(RenderStyle&, const Element*, StyleAppearance) const;
+    StyleAppearance adjustAppearanceForElement(RenderStyle&, const RenderStyle& parentStyle, const Element*, StyleAppearance) const;
 
     Color spellingMarkerColor(OptionSet<StyleColorOptions>) const;
     Color dictationAlternativesMarkerColor(OptionSet<StyleColorOptions>) const;

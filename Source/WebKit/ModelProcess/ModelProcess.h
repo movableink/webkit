@@ -82,6 +82,7 @@ public:
 #endif
 
     void webProcessConnectionCountForTesting(CompletionHandler<void(uint64_t)>&&);
+    void modelPlayerCountForTesting(CompletionHandler<void(uint64_t)>&&);
 
 private:
     void lowMemoryHandler(Critical, Synchronous);
@@ -100,7 +101,7 @@ private:
 
     // Message Handlers
     void initializeModelProcess(ModelProcessCreationParameters&&, CompletionHandler<void()>&&);
-    void createModelConnectionToWebProcess(WebCore::ProcessIdentifier, PAL::SessionID, IPC::Connection::Handle&&, ModelProcessConnectionParameters&&, CompletionHandler<void()>&&);
+    void createModelConnectionToWebProcess(WebCore::ProcessIdentifier, PAL::SessionID, IPC::Connection::Handle&&, ModelProcessConnectionParameters&&, const std::optional<String>& attributionTaskID, CompletionHandler<void()>&&);
     void sharedPreferencesForWebProcessDidChange(WebCore::ProcessIdentifier, SharedPreferencesForWebProcess&&, CompletionHandler<void()>&&);
     void addSession(PAL::SessionID);
     void removeSession(PAL::SessionID);

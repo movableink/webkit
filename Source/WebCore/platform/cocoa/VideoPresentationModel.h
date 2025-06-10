@@ -94,6 +94,10 @@ public:
     virtual void didExitFullscreen() { };
     virtual void didCleanupFullscreen() { };
     virtual void fullscreenMayReturnToInline() { };
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    virtual void didEnterExternalPlayback() { };
+    virtual void didExitExternalPlayback() { };
+#endif
     virtual void setRequiresTextTrackRepresentation(bool) { }
     virtual void setTextTrackRepresentationBounds(const IntRect&) { }
 
@@ -131,6 +135,8 @@ public:
     virtual void setPlayerIdentifier(std::optional<MediaPlayerIdentifier>) { }
     virtual void documentVisibilityChanged(bool) { }
     virtual void isChildOfElementFullscreenChanged(bool) { }
+    virtual void audioSessionCategoryChanged(AudioSessionCategory, AudioSessionMode, RouteSharingPolicy) { }
+    virtual void hasBeenInteractedWith() { }
 };
 
 } // namespace WebCore

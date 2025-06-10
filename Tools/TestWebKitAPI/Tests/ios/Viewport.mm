@@ -42,9 +42,9 @@
 
 namespace TestWebKitAPI {
 
-static inline String makeViewportMetaTag(unsigned viewportWidth, float initialScale)
+static inline RetainPtr<NSString> makeViewportMetaTag(unsigned viewportWidth, float initialScale)
 {
-    return makeString("<meta name='viewport' content='width="_s, viewportWidth, ", initial-scale="_s, initialScale, "'>"_s);
+    return makeString("<meta name='viewport' content='width="_s, viewportWidth, ", initial-scale="_s, initialScale, "'>"_s).createNSString();
 }
 
 TEST(Viewport, MinimumEffectiveDeviceWidthWithInitialScale)
@@ -53,7 +53,7 @@ TEST(Viewport, MinimumEffectiveDeviceWidthWithInitialScale)
 
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 690, 690)]);
 
-    [webView synchronouslyLoadHTMLString:makeViewportMetaTag(1000, 0.69)];
+    [webView synchronouslyLoadHTMLString:makeViewportMetaTag(1000, 0.69).get()];
     [webView waitForNextPresentationUpdate];
 
     [webView _setMinimumEffectiveDeviceWidth:1024];
@@ -78,8 +78,8 @@ TEST(Viewport, RespectInitialScaleExceptOnWikipediaDomain)
         auto expectedViewportScale = screenWidth / viewportWidth;
 
         auto request = [NSURLRequest requestWithURL:[NSURL URLWithString:[NSString stringWithUTF8String:requestURL.utf8().data()]]];
-        auto response = makeViewportMetaTag(viewportWidth, expectedViewportScale);
-        [webView loadSimulatedRequest:request responseHTMLString:response];
+        RetainPtr response = makeViewportMetaTag(viewportWidth, expectedViewportScale);
+        [webView loadSimulatedRequest:request responseHTMLString:response.get()];
         [navigationDelegate waitForDidFinishNavigation];
         [webView _doAfterNextPresentationUpdate:makeBlockPtr([&done, &webView, expectedViewportScale, scaleExpectation = WTFMove(scaleExpectation)]() mutable {
             [webView evaluateJavaScript:@"visualViewport.scale" completionHandler:makeBlockPtr([&done, expectedViewportScale, scaleExpectation = WTFMove(scaleExpectation)] (NSNumber *value, NSError *error) mutable {

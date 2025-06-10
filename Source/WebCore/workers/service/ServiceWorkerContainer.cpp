@@ -152,7 +152,7 @@ ServiceWorker* ServiceWorkerContainer::controller() const
     return context ? context->activeServiceWorker() : nullptr;
 }
 
-void ServiceWorkerContainer::addRegistration(std::variant<RefPtr<TrustedScriptURL>, String>&& relativeScriptURL, const RegistrationOptions& options, Ref<DeferredPromise>&& promise)
+void ServiceWorkerContainer::addRegistration(Variant<RefPtr<TrustedScriptURL>, String>&& relativeScriptURL, const RegistrationOptions& options, Ref<DeferredPromise>&& promise)
 {
     auto stringValueHolder = trustedTypeCompliantString(*scriptExecutionContext(), WTFMove(relativeScriptURL), "ServiceWorkerContainer register"_s);
 
@@ -468,7 +468,7 @@ void ServiceWorkerContainer::jobResolvedWithRegistration(ServiceWorkerJob& job, 
                 container->notifyRegistrationIsSettled(iterator->value);
                 container->m_ongoingSettledRegistrations.remove(iterator);
             });
-            if (UNLIKELY(promise->needsAbort()))
+            if (promise->needsAbort()) [[unlikely]]
                 return;
         }
 
@@ -479,7 +479,7 @@ void ServiceWorkerContainer::jobResolvedWithRegistration(ServiceWorkerJob& job, 
 void ServiceWorkerContainer::postMessage(MessageWithMessagePorts&& message, ServiceWorkerData&& sourceData, String&& sourceOrigin)
 {
     auto& context = *scriptExecutionContext();
-    if (UNLIKELY(context.isJSExecutionForbidden()))
+    if (context.isJSExecutionForbidden()) [[unlikely]]
         return;
 
     auto* globalObject = context.globalObject();
@@ -492,7 +492,7 @@ void ServiceWorkerContainer::postMessage(MessageWithMessagePorts&& message, Serv
     MessageEventSource source = RefPtr<ServiceWorker> { ServiceWorker::getOrCreate(context, WTFMove(sourceData)) };
 
     auto messageEvent = MessageEvent::create(*globalObject, message.message.releaseNonNull(), sourceOrigin, { }, WTFMove(source), MessagePort::entanglePorts(context, WTFMove(message.transferredPorts)));
-    if (UNLIKELY(scope.exception())) {
+    if (scope.exception()) [[unlikely]] {
         // Currently, we assume that the only way we can get here is if we have a termination.
         RELEASE_ASSERT(vm.hasPendingTerminationException());
         return;
@@ -599,9 +599,9 @@ SWClientConnection& ServiceWorkerContainer::ensureSWClientConnection()
     if (!m_swConnection || m_swConnection->isClosed()) {
         // Using RefPtr here results in an m_adoptionIsRequired assert.
         if (auto* workerGlobal = dynamicDowncast<WorkerGlobalScope>(*scriptExecutionContext()))
-            m_swConnection = &workerGlobal->swClientConnection();
+            m_swConnection = workerGlobal->swClientConnection();
         else
-            m_swConnection = &mainThreadConnection();
+            m_swConnection = mainThreadConnection();
     }
     return *m_swConnection;
 }

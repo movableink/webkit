@@ -176,7 +176,7 @@ void DynamicContentScalingImageBufferBackend::getPixelBuffer(const WebCore::IntR
     ASSERT_NOT_REACHED();
 }
 
-void DynamicContentScalingImageBufferBackend::putPixelBuffer(const WebCore::PixelBuffer&, const WebCore::IntRect&, const WebCore::IntPoint&, WebCore::AlphaPremultiplication)
+void DynamicContentScalingImageBufferBackend::putPixelBuffer(const WebCore::PixelBufferSourceView&, const WebCore::IntRect&, const WebCore::IntPoint&, WebCore::AlphaPremultiplication)
 {
     ASSERT_NOT_REACHED();
 }

@@ -1,3 +1,4 @@
+<script src="../../../resources/js-test-pre.js"></script>
 <script>
 async function run() {
     let adapter = await navigator.gpu.requestAdapter();
@@ -46,7 +47,7 @@ async function run() {
     renderPassEncoder.setBindGroup(0, bindGroup, [0]);
     renderPassEncoder.drawIndexed(0);
     await device.queue.onSubmittedWorkDone();
-    console.log('Pass')
+    debug('Pass')
     globalThis.testRunner?.notifyDone();
 }
 globalThis.testRunner?.dumpAsText();

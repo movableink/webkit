@@ -326,6 +326,26 @@ void GraphicsContextCG::drawNativeImageInternal(NativeImage& nativeImage, const 
         return adoptCF(CGImageCreateWithImageInRect(image, physicalSubimageRect));
     };
 
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
+    auto setCGDynamicRangeLimitForImage = [](CGContextRef context, CGImageRef image, float dynamicRangeLimit) {
+        float edrStrength = dynamicRangeLimit == 1.0 ? 1 : 0;
+        float cdrStrength = dynamicRangeLimit == 0.5 ? 1 : 0;
+        unsigned averageLightLevel = CGImageGetContentAverageLightLevelNits(image);
+
+        RetainPtr edrStrengthNumber = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberFloatType, &edrStrength));
+        RetainPtr cdrStrengthNumber = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberFloatType, &cdrStrength));
+        RetainPtr averageLightLevelNumber = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &averageLightLevel));
+
+        CFTypeRef toneMappingKeys[] = { kCGContentEDRStrength, kCGContentAverageLightLevel, kCGConstrainedDynamicRange };
+        CFTypeRef toneMappingValues[] = { edrStrengthNumber.get(), averageLightLevelNumber.get(), cdrStrengthNumber.get() };
+
+        RetainPtr toneMappingOptions = adoptCF(CFDictionaryCreate(kCFAllocatorDefault, toneMappingKeys, toneMappingValues, sizeof(toneMappingKeys) / sizeof(toneMappingKeys[0]), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
+
+        CGContentToneMappingInfo toneMappingInfo = { kCGToneMappingReferenceWhiteBased, toneMappingOptions.get() };
+        CGContextSetContentToneMappingInfo(context, toneMappingInfo);
+    };
+#endif
+
     auto context = platformContext();
     CGContextStateSaver stateSaver(context, false);
     auto transform = CGContextGetCTM(context);
@@ -374,25 +394,19 @@ void GraphicsContextCG::drawNativeImageInternal(NativeImage& nativeImage, const 
     auto oldBlendMode = blendMode();
     setCGBlendMode(context, options.compositeOperator(), options.blendMode());
 
-#if HAVE(SUPPORT_HDR_DISPLAY)
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
     auto oldHeadroom = CGContextGetEDRTargetHeadroom(context);
+    auto oldToneMappingInfo = CGContextGetContentToneMappingInfo(context);
 
     auto headroom = options.headroom();
-    auto dynamicRangeLimit = options.dynamicRangeLimit();
-
     if (headroom == Headroom::FromImage)
         headroom = nativeImage.headroom();
 
-    // FIXME: Use CoreGraphics to constrain the brightness of the image more appropriately.
-    if (headroom > Headroom::None) {
-        static constexpr float maxConstrainedHeadroom = 2;
-        if (dynamicRangeLimit == PlatformDynamicRangeLimit::standard())
-            headroom = Headroom::None;
-        else if (dynamicRangeLimit == PlatformDynamicRangeLimit::constrainedHigh())
-            headroom = std::max<float>(Headroom::None, std::min<float>(headroom * dynamicRangeLimit.value(), maxConstrainedHeadroom));
-    }
+    if (headroom > Headroom::None)
+        CGContextSetEDRTargetHeadroom(context, headroom);
 
-    CGContextSetEDRTargetHeadroom(context, headroom);
+    if (options.dynamicRangeLimit() == PlatformDynamicRangeLimit::standard())
+        setCGDynamicRangeLimitForImage(context, subImage.get(), options.dynamicRangeLimit().value());
 #endif
 
     // Make the origin be at adjustedDestRect.location()
@@ -421,7 +435,8 @@ void GraphicsContextCG::drawNativeImageInternal(NativeImage& nativeImage, const 
         CGContextSetShouldAntialias(context, wasAntialiased);
 #endif
         setCGBlendMode(context, oldCompositeOperator, oldBlendMode);
-#if HAVE(SUPPORT_HDR_DISPLAY)
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
+        CGContextSetContentToneMappingInfo(context, oldToneMappingInfo);
         CGContextSetEDRTargetHeadroom(context, oldHeadroom);
 #endif
     }
@@ -805,7 +820,7 @@ void GraphicsContextCG::strokePath(const Path& path)
 
 #if USE(CG_CONTEXT_STROKE_LINE_SEGMENTS_WHEN_STROKING_PATH)
     if (auto line = path.singleDataLine()) {
-        CGPoint cgPoints[2] { line->start, line->end };
+        CGPoint cgPoints[2] { line->start(), line->end() };
         CGContextStrokeLineSegments(context, cgPoints, 2);
         return;
     }
@@ -1325,7 +1340,8 @@ void GraphicsContextCG::setLineDash(const DashArray& dashes, float dashOffset)
         if (length)
             dashOffset = fmod(dashOffset, length) + length;
     }
-    CGContextSetLineDash(platformContext(), dashOffset, dashes.data(), dashes.size());
+    auto dashesSpan = dashes.span();
+    CGContextSetLineDash(platformContext(), dashOffset, dashesSpan.data(), dashesSpan.size());
 }
 
 void GraphicsContextCG::setLineJoin(LineJoin join)
@@ -1405,7 +1421,7 @@ void GraphicsContextCG::drawLinesForText(const FloatPoint& origin, float thickne
     bool changeFillColor = fillColor() != color;
     if (changeFillColor)
         setCGFillColor(platformContext(), color);
-    CGContextFillRects(platformContext(), rects.data(), rects.size());
+    CGContextFillRects(platformContext(), rects.span().data(), rects.size());
     if (changeFillColor)
         setCGFillColor(platformContext(), fillColor());
 }

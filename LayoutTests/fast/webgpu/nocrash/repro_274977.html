@@ -1,4 +1,5 @@
 <!-- webkit-test-runner [ enableMetalShaderValidation=true ] -->
+<script src="../../../resources/js-test-pre.js"></script>
 <script>
   globalThis.testRunner?.dumpAsText();
   globalThis.testRunner?.waitUntilDone();
@@ -76,9 +77,9 @@ fn f() -> @location(0) vec4f {
     if (error) {
       log(error.message);
     } else {
-      log('no validation error');
+      debug('no validation error');
     }
-    console.log('Pass')
+    debug('Pass')
     globalThis.testRunner?.notifyDone();
   };
 </script>

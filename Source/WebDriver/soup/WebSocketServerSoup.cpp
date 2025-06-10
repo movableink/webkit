@@ -30,6 +30,7 @@
 #include "HTTPServer.h"
 #include "Logging.h"
 #include <cstdio>
+#include <glib-object.h>
 #include <libsoup/soup-websocket-connection.h>
 #include <libsoup/soup.h>
 #include <optional>
@@ -170,20 +171,17 @@ std::optional<String> WebSocketServer::listen(const String& host, unsigned port)
 #endif
 }
 
-void WebSocketServer::sendMessage(const String& session, const String& message)
+void WebSocketServer::sendMessage(WebSocketMessageHandler::Connection connection, const String& message)
 {
 #if USE(SOUP2)
-    UNUSED_PARAM(session);
+    UNUSED_PARAM(connection);
     UNUSED_PARAM(message);
     RELEASE_LOG(WebDriverBiDi, "WebSockets support not implemented yet with libsoup2");
 #else
-    for (const auto& pair : m_connectionToSession) {
-        if (pair.value == session) {
-            GRefPtr<GBytes> rawMessage = adoptGRef(g_bytes_new(message.utf8().data(), message.utf8().length()));
-            soup_websocket_connection_send_message(pair.key.get(), SOUP_WEBSOCKET_DATA_TEXT, rawMessage.get());
-            return;
-        }
-    }
+    ASSERT(connection);
+    RELEASE_LOG(WebDriverBiDi, "Sending message: %s", message.utf8().data());
+    GRefPtr<GBytes> rawMessage = adoptGRef(g_bytes_new(message.utf8().data(), message.utf8().length()));
+    soup_websocket_connection_send_message(connection.get(), SOUP_WEBSOCKET_DATA_TEXT, rawMessage.get());
 #endif
 }
 
@@ -192,6 +190,15 @@ void WebSocketServer::disconnect()
 #if USE(SOUP2)
     RELEASE_LOG(WebDriverBiDi, "WebSockets support not implemented yet with libsoup2");
 #else
+    if (!m_soupServer)
+        return;
+
+    for (const auto& connection : m_connectionToSession.keys()) {
+        if (!connection)
+            continue;
+        g_signal_handlers_disconnect_by_data(connection.get(), this);
+    }
+
     soup_server_disconnect(m_soupServer.get());
     m_soupServer = nullptr;
 #endif
@@ -204,10 +211,11 @@ void WebSocketServer::disconnectSession(const String& sessionId)
     RELEASE_LOG(WebDriverBiDi, "WebSockets support not implemented yet with libsoup2");
 #else
     auto connection = this->connection(sessionId);
-    if (!connection)
+    if (!connection || !connection->get())
         return;
 
     soup_websocket_connection_close(connection->get(), SOUP_WEBSOCKET_CLOSE_NORMAL, nullptr);
+    g_signal_handlers_disconnect_by_data(connection->get(), this);
 #endif
 }
 

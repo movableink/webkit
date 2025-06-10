@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2020 Igalia S.L. All rights reserved.
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "JSDOMPromiseDeferredForward.h"
 #include "WebXRFrame.h"
 #include "WebXRInputSourceArray.h"
@@ -39,6 +40,7 @@
 #include "XRReferenceSpaceType.h"
 #include "XRSessionMode.h"
 #include "XRVisibilityState.h"
+#include <numbers>
 #include <wtf/MonotonicTime.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -96,7 +98,7 @@ public:
     void applicationWillEnterForeground() { m_shouldServiceRequestVideoFrameCallbacks = false; }
 
     // EventTarget.
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
     ExceptionOr<void> end(EndPromise&&);
     bool ended() const { return m_ended; }
@@ -154,7 +156,7 @@ private:
     FeatureList m_requestedFeatures;
     RefPtr<WebXRRenderState> m_activeRenderState;
     RefPtr<WebXRRenderState> m_pendingRenderState;
-    Ref<WebXRViewerSpace> m_viewerReferenceSpace;
+    const Ref<WebXRViewerSpace> m_viewerReferenceSpace;
     MonotonicTime m_timeOrigin;
 
     unsigned m_nextCallbackId { 1 };
@@ -166,7 +168,7 @@ private:
     std::optional<PlatformXR::RequestData> m_requestData;
 
     double m_minimumInlineFOV { 0.0 };
-    double m_maximumInlineFOV { piFloat };
+    double m_maximumInlineFOV { std::numbers::pi };
 
     // In meters.
     double m_minimumNearClipPlane { 0.1 };

@@ -45,6 +45,8 @@ MenuListMac::MenuListMac(MenuListPart& owningPart, ControlFactoryMac& controlFac
     ASSERT(m_popUpButtonCell);
 }
 
+MenuListMac::~MenuListMac() = default;
+
 IntSize MenuListMac::cellSize(NSControlSize controlSize, const ControlStyle&) const
 {
     static constexpr std::array sizes {

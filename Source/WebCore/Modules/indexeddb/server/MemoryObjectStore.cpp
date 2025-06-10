@@ -63,6 +63,19 @@ MemoryIndex* MemoryObjectStore::indexForIdentifier(IDBIndexIdentifier identifier
     return m_indexesByIdentifier.get(identifier);
 }
 
+void MemoryObjectStore::transactionFinished(MemoryBackingStoreTransaction& transaction)
+{
+    if (transaction.isWriting())
+        writeTransactionFinished(transaction);
+
+    m_cursors.removeIf([&](auto& pair) {
+        return pair.value->transaction() == &transaction;
+    });
+
+    for (auto& index : m_indexesByIdentifier.values())
+        index->transactionFinished(transaction);
+}
+
 void MemoryObjectStore::writeTransactionStarted(MemoryBackingStoreTransaction& transaction)
 {
     LOG(IndexedDB, "MemoryObjectStore::writeTransactionStarted");
@@ -504,7 +517,7 @@ IDBKeyData MemoryObjectStore::lowestKeyWithRecordInRange(const IDBKeyRangeData& 
         return { };
 
     if (!keyRangeData.upperKey.isNull()) {
-        if (lowestInRange->compare(keyRangeData.upperKey) > 0)
+        if (*lowestInRange > keyRangeData.upperKey)
             return { };
         if (keyRangeData.upperOpen && *lowestInRange == keyRangeData.upperKey)
             return { };
@@ -523,13 +536,16 @@ void MemoryObjectStore::registerIndex(Ref<MemoryIndex>&& index)
     m_indexesByIdentifier.set(identifier, WTFMove(index));
 }
 
-MemoryObjectStoreCursor* MemoryObjectStore::maybeOpenCursor(const IDBCursorInfo& info)
+MemoryObjectStoreCursor* MemoryObjectStore::maybeOpenCursor(const IDBCursorInfo& info, MemoryBackingStoreTransaction& transaction)
 {
+    if (transaction.isWriting() && m_writeTransaction != &transaction)
+        return nullptr;
+
     auto result = m_cursors.add(info.identifier(), nullptr);
     if (!result.isNewEntry)
         return nullptr;
 
-    result.iterator->value = makeUnique<MemoryObjectStoreCursor>(*this, info);
+    result.iterator->value = MemoryObjectStoreCursor::create(*this, info, transaction);
     return result.iterator->value.get();
 }
 

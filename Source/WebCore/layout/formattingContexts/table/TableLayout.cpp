@@ -30,6 +30,7 @@
 #include "LayoutBoxGeometry.h"
 #include "RenderStyleInlines.h"
 #include "TableFormattingGeometry.h"
+#include <ranges>
 
 namespace WebCore {
 namespace Layout {
@@ -159,7 +160,7 @@ static Vector<LayoutUnit> distributeAvailableSpace(const TableGrid& grid, Layout
         // we can resolve overlapping spans starting with the shorter ones e.g.
         // <td colspan=4>#a</td><td>#b</td>
         // <td colspan=2>#c</td><td colspan=3>#d</td>
-        std::sort(spanningCells.begin(), spanningCells.end(), [&] (auto& a, auto& b) {
+        std::ranges::sort(spanningCells, [&](auto& a, auto& b) {
             return SpanType::spanCount(grid.slot(a.position)->cell()) < SpanType::spanCount(grid.slot(b.position)->cell());
         });
 

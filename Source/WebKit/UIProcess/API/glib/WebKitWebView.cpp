@@ -107,6 +107,7 @@
 #endif
 
 #if PLATFORM(WPE)
+#include "WPEUtilities.h"
 #include "WPEWebViewLegacy.h"
 #include "WPEWebViewPlatform.h"
 #include "WebKitOptionMenuPrivate.h"
@@ -904,7 +905,7 @@ static void webkitWebViewConstructed(GObject* object)
         if (priv->display) {
             g_critical("WebKitWebView backend can't be set when display is set too, passed backend is ignored.");
             priv->backend = nullptr;
-        } else if (g_type_class_peek(WPE_TYPE_DISPLAY)) {
+        } else if (WKWPE::isUsingWPEPlatformAPI()) {
             g_critical("WebKitWebView backend can't be set when WPE platform API is already in use, passed backend is ignored.");
             priv->backend = nullptr;
             priv->display = wpe_display_get_default();
@@ -4179,7 +4180,8 @@ enum class RunJavascriptReturnType {
 static void webkitWebViewRunJavaScriptWithParams(WebKitWebView* webView, WebKit::RunJavaScriptParameters&& params, const char* worldName, RunJavascriptReturnType returnType, GRefPtr<GTask>&& task)
 {
     auto world = worldName ? API::ContentWorld::sharedWorldWithName(String::fromUTF8(worldName)) : Ref<API::ContentWorld> { API::ContentWorld::pageContentWorldSingleton() };
-    getPage(webView).runJavaScriptInFrameInScriptWorld(WTFMove(params), std::nullopt, world.get(), [task = WTFMove(task), returnType] (auto&& result) {
+    constexpr bool wantsResult = true;
+    getPage(webView).runJavaScriptInFrameInScriptWorld(WTFMove(params), std::nullopt, world.get(), wantsResult, [task = WTFMove(task), returnType] (auto&& result) {
         if (g_task_return_error_if_cancelled(task.get()))
             return;
 

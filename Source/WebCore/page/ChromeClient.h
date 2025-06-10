@@ -25,11 +25,10 @@
 #include "ContactInfo.h"
 #include "DatabaseDetails.h"
 #include "DeviceOrientationOrMotionPermissionState.h"
-#include "DigitalCredentialsRequestData.h"
-#include "DigitalCredentialsResponseData.h"
 #include "DisabledAdaptations.h"
 #include "DocumentStorageAccess.h"
 #include "ExceptionData.h"
+#include "ExceptionOr.h"
 #include "FocusDirection.h"
 #include "HTMLMediaElementEnums.h"
 #include "HighlightVisibility.h"
@@ -77,6 +76,14 @@ class HTMLModelElement;
 #include "PlatformXR.h"
 #endif
 
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+#include "DigitalCredentialsProtocols.h"
+#include "DigitalCredentialsRequestData.h"
+#include "DigitalCredentialsResponseData.h"
+#include "UnvalidatedDigitalCredentialRequest.h"
+#include "ValidatedMobileDocumentRequest.h"
+#endif
+
 OBJC_CLASS NSResponder;
 
 namespace WebCore {
@@ -113,14 +120,21 @@ class Node;
 class Page;
 class PopupMenu;
 class PopupMenuClient;
+class Region;
 class RegistrableDomain;
 class SearchPopupMenu;
+class SVGImageElement;
 class ScrollingCoordinator;
 class SecurityOrigin;
 class SecurityOriginData;
 class ViewportConstraints;
 class Widget;
 class WorkerClient;
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+struct DigitalCredentialsRequestData;
+struct MobileDocumentRequest;
+#endif
 
 #if ENABLE(WEBGL)
 class GraphicsContextGL;
@@ -129,6 +143,7 @@ struct GraphicsContextGLAttributes;
 
 struct AppHighlight;
 struct ApplePayAMSUIRequest;
+struct CharacterRange;
 struct ContactsRequestData;
 struct ContentRuleListResults;
 struct DataDetectorElementInfo;
@@ -137,6 +152,7 @@ struct FocusOptions;
 struct GraphicsDeviceAdapter;
 struct MockWebAuthenticationConfiguration;
 struct ShareDataWithParsedURL;
+struct SystemPreviewInfo;
 struct TextIndicatorData;
 struct TextRecognitionOptions;
 struct ViewportArguments;
@@ -160,8 +176,6 @@ enum class TextAnimationRunMode : uint8_t;
 enum class MediaProducerMediaState : uint32_t;
 using MediaProducerMediaStateFlags = OptionSet<MediaProducerMediaState>;
 
-template<typename> class ExceptionOr;
-
 namespace ShapeDetection {
 class BarcodeDetector;
 struct BarcodeDetectorOptions;
@@ -172,7 +186,9 @@ class TextDetector;
 }
 
 namespace WritingTools {
+using TextSuggestionID = WTF::UUID;
 using SessionID = WTF::UUID;
+enum class TextSuggestionState : uint8_t;
 }
 
 #if HAVE(WEBGPU_IMPLEMENTATION)
@@ -228,7 +244,7 @@ public:
     virtual void addMessageWithArgumentsToConsole(MessageSource, MessageLevel, const String& message, std::span<const String> messageArguments, unsigned lineNumber, unsigned columnNumber, const String& sourceID) { UNUSED_PARAM(message); UNUSED_PARAM(messageArguments); UNUSED_PARAM(lineNumber); UNUSED_PARAM(columnNumber); UNUSED_PARAM(sourceID); }
 
     virtual bool canRunBeforeUnloadConfirmPanel() = 0;
-    virtual bool runBeforeUnloadConfirmPanel(const String& message, LocalFrame&) = 0;
+    virtual bool runBeforeUnloadConfirmPanel(String&& message, LocalFrame&) = 0;
 
     virtual void closeWindow() = 0;
 
@@ -256,10 +272,11 @@ public:
     virtual IntPoint accessibilityScreenToRootView(const IntPoint&) const = 0;
     virtual IntRect rootViewToAccessibilityScreen(const IntRect&) const = 0;
 #if PLATFORM(IOS_FAMILY)
-    virtual void relayAccessibilityNotification(const String&, const RetainPtr<NSData>&) const = 0;
+    virtual void relayAccessibilityNotification(String&&, RetainPtr<NSData>&&) const = 0;
 #endif
 
     virtual void didFinishLoadingImageForElement(HTMLImageElement&) = 0;
+    virtual void didFinishLoadingImageForSVGImage(SVGImageElement&) { }
 
     virtual PlatformPageClient platformPageClient() const = 0;
 
@@ -373,19 +390,25 @@ public:
     virtual RefPtr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&) = 0;
 
     virtual void setTextIndicator(const TextIndicatorData&) const = 0;
+    virtual void updateTextIndicator(const TextIndicatorData&) const = 0;
 
     virtual void runOpenPanel(LocalFrame&, FileChooser&) = 0;
-    virtual void showShareSheet(ShareDataWithParsedURL&, CompletionHandler<void(bool)>&& callback) { callback(false); }
-    virtual void showContactPicker(const ContactsRequestData&, CompletionHandler<void(std::optional<Vector<ContactInfo>>&&)>&& callback) { callback(std::nullopt); }
+    virtual void showShareSheet(ShareDataWithParsedURL&&, CompletionHandler<void(bool)>&& callback) { callback(false); }
+    virtual void showContactPicker(ContactsRequestData&&, CompletionHandler<void(std::optional<Vector<ContactInfo>>&&)>&& callback) { callback(std::nullopt); }
 
+#if HAVE(DIGITAL_CREDENTIALS_UI)
     virtual void showDigitalCredentialsPicker(const DigitalCredentialsRequestData&, CompletionHandler<void(Expected<DigitalCredentialsResponseData, ExceptionData>&&)>&& completionHandler)
     {
-        completionHandler(makeUnexpected(WebCore::ExceptionData { WebCore::ExceptionCode::NotSupportedError, "Digital credentials are not supported."_s }));
+        completionHandler(makeUnexpected(ExceptionData { ExceptionCode::NotSupportedError, "Digital credentials are not supported."_s }));
     }
+
     virtual void dismissDigitalCredentialsPicker(CompletionHandler<void(bool)>&& completionHandler)
     {
         completionHandler(false);
     }
+
+    WEBCORE_EXPORT virtual ExceptionOr<Vector<ValidatedDigitalCredentialRequest>> validateAndParseDigitalCredentialRequests(const SecurityOrigin&, const Document&, const Vector<UnvalidatedDigitalCredentialRequest>&);
+#endif
 
     // Asynchronous request to load an icon for specified filenames.
     virtual void loadIconForFiles(const Vector<String>&, FileIconLoader&) = 0;
@@ -398,6 +421,8 @@ public:
 
     virtual bool shouldPaintEntireContents() const { return false; }
     virtual bool hasStablePageScaleFactor() const { return true; }
+
+    virtual void setNeedsFixedContainerEdgesUpdate() { }
 
     // Allows ports to customize the type of graphics layers created by this page.
     virtual GraphicsLayerFactory* graphicsLayerFactory() const { return nullptr; }
@@ -492,11 +517,7 @@ public:
 
 #if ENABLE(FULLSCREEN_API)
     virtual bool supportsFullScreenForElement(const Element&, bool) { return false; }
-    virtual void enterFullScreenForElement(Element&, HTMLMediaElementEnums::VideoFullscreenMode, CompletionHandler<void(ExceptionOr<void>)>&& willEnterFullscreen, CompletionHandler<bool(bool)>&& didEnterFullscreen)
-    {
-        willEnterFullscreen({ });
-        didEnterFullscreen(false);
-    }
+    virtual void enterFullScreenForElement(Element&, HTMLMediaElementEnums::VideoFullscreenMode, CompletionHandler<void(ExceptionOr<void>)>&& willEnterFullscreen, CompletionHandler<bool(bool)>&& didEnterFullscreen);
 #if ENABLE(QUICKLOOK_FULLSCREEN)
     virtual void updateImageSource(Element&) { }
 #endif // ENABLE(QUICKLOOK_FULLSCREEN)
@@ -740,8 +761,7 @@ public:
 
 #if ENABLE(DAMAGE_TRACKING)
     virtual void resetDamageHistoryForTesting() { }
-
-    virtual WebCore::FrameDamageHistory* damageHistoryForTesting() const { return nullptr; }
+    virtual void foreachRegionInDamageHistoryForTesting(Function<void(const Region&)>&&) const { }
 #endif
 
     WEBCORE_EXPORT virtual ~ChromeClient();

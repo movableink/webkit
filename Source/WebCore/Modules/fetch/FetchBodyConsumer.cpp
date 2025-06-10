@@ -500,7 +500,7 @@ void FetchBodyConsumer::loadingSucceeded(const String& contentType)
         if (!m_userGestureToken || m_userGestureToken->hasExpired(UserGestureToken::maximumIntervalForUserGestureForwardingForFetch()) || !m_userGestureToken->processingUserGesture())
             resolve(m_consumePromise.releaseNonNull(), contentType, nullptr, nullptr);
         else {
-            UserGestureIndicator gestureIndicator(m_userGestureToken, UserGestureToken::GestureScope::MediaOnly, UserGestureToken::IsPropagatedFromFetch::Yes);
+            UserGestureIndicator gestureIndicator(m_userGestureToken, UserGestureToken::GestureScope::MediaOnly, UserGestureToken::ShouldPropagateToMicroTask::Yes);
             resolve(m_consumePromise.releaseNonNull(), contentType, nullptr, nullptr);
         }
     }

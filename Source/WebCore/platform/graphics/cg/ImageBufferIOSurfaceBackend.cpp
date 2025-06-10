@@ -33,6 +33,7 @@
 #include "IOSurface.h"
 #include "IOSurfacePool.h"
 #include "IntRect.h"
+#include "NativeImage.h"
 #include "PixelBuffer.h"
 #include <CoreGraphics/CoreGraphics.h>
 #include <pal/cg/CoreGraphicsSoftLink.h>
@@ -194,7 +195,7 @@ void ImageBufferIOSurfaceBackend::getPixelBuffer(const IntRect& srcRect, PixelBu
         ImageBufferBackend::getPixelBuffer(srcRect, lock->surfaceSpan(), destination);
 }
 
-void ImageBufferIOSurfaceBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
+void ImageBufferIOSurfaceBackend::putPixelBuffer(const PixelBufferSourceView& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
 {
     prepareForExternalWrite();
     if (auto lock = m_surface->lock<IOSurface::AccessMode::ReadWrite>())
@@ -296,9 +297,6 @@ void ImageBufferIOSurfaceBackend::prepareForExternalWrite()
 
 RetainPtr<CGImageRef> ImageBufferIOSurfaceBackend::createImage()
 {
-    // CGIOSurfaceContextCreateImage flushes, so clear the flush need.
-    if (m_context)
-        m_context->consumeHasDrawn();
     // Consumers may hold on to the image, so mark external writes needing the invalidation marker.
     m_mayHaveOutstandingBackingStoreReferences = true;
     return m_surface->createImage(ensurePlatformContext());
@@ -306,9 +304,6 @@ RetainPtr<CGImageRef> ImageBufferIOSurfaceBackend::createImage()
 
 RetainPtr<CGImageRef> ImageBufferIOSurfaceBackend::createImageReference()
 {
-    // CGIOSurfaceContextCreateImageReference flushes, so clear the flush need.
-    if (m_context)
-        m_context->consumeHasDrawn();
     // The reference is used only in synchronized manner, so after the use ends, we can update
     // externally without invalidation marker. Thus we do not set m_mayHaveOutstandingBackingStoreReferences.
     auto image = adoptCF(CGIOSurfaceContextCreateImageReference(ensurePlatformContext()));

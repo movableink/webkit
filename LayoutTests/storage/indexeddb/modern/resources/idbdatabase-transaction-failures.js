@@ -2,17 +2,14 @@ description("This tests some obvious failures that can happen while calling IDBD
 
 indexedDBTest(prepareDatabase);
 
-
-function done()
-{
-    finishJSTest();
-}
-
 var database;
 
 function prepareDatabase(event)
 {
     debug("Upgrade needed: Old version - " + event.oldVersion + " New version - " + event.newVersion);
+
+    // Set error event handler to null to avoid unexpected error message being printed.
+    event.target.onerror = null;
 
     var versionTransaction = event.target.transaction;
     database = event.target.result;
@@ -20,8 +17,7 @@ function prepareDatabase(event)
     var request = objectStore.put("foo", "bar");
 
     request.onerror = function(event) {
-        debug("put FAILED - " + event);
-        done();
+        endTestWithLog("put FAILED - " + event);
     }
     
     try {
@@ -31,8 +27,7 @@ function prepareDatabase(event)
     }
 
     versionTransaction.onabort = function(event) {
-        debug("versionchange transaction aborted");
-        done();
+        endTestWithLog("versionchange transaction aborted");
     }
 
     versionTransaction.oncomplete = function(event) {
@@ -41,8 +36,7 @@ function prepareDatabase(event)
     }
 
     versionTransaction.onerror = function(event) {
-        debug("versionchange transaction error'ed - " + event);
-        done();
+        endTestWithLog("versionchange transaction error'ed - " + event);
     }
 }
 
@@ -79,5 +73,5 @@ function continueTest()
         debug("Failed to explicitly start a transaction with the close pending flag set - " + e);
     }
     
-    done();
+    finishJSTest();
 }

@@ -520,7 +520,7 @@ TEST(WebKit, DefaultQuota)
 
     // Storing 10 entries of 10 MB should not hit the default quota which is 1GB
     for (int i = 0; i < 10; ++i) {
-        [webView stringByEvaluatingJavaScript:"doTest(10)"_str];
+        [webView stringByEvaluatingJavaScript:@"doTest(10)"];
         [messageHandler setExpectedMessage: @"pass"];
         receivedMessage = false;
         Util::run(&receivedMessage);

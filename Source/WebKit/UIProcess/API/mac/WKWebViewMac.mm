@@ -29,6 +29,7 @@
 #if PLATFORM(MAC)
 
 #import "AppKitSPI.h"
+#import "WKIntelligenceTextEffectCoordinator.h"
 #import "WKTextAnimationType.h"
 #import "WKTextFinderClient.h"
 #import "WKWebViewConfigurationPrivate.h"
@@ -55,11 +56,11 @@ _WKOverlayScrollbarStyle toAPIScrollbarStyle(std::optional<WebCore::ScrollbarOve
         return _WKOverlayScrollbarStyleAutomatic;
     
     switch (coreScrollbarStyle.value()) {
-    case WebCore::ScrollbarOverlayStyleDark:
+    case WebCore::ScrollbarOverlayStyle::Dark:
         return _WKOverlayScrollbarStyleDark;
-    case WebCore::ScrollbarOverlayStyleLight:
+    case WebCore::ScrollbarOverlayStyle::Light:
         return _WKOverlayScrollbarStyleLight;
-    case WebCore::ScrollbarOverlayStyleDefault:
+    case WebCore::ScrollbarOverlayStyle::Default:
         return _WKOverlayScrollbarStyleDefault;
     }
     ASSERT_NOT_REACHED();
@@ -70,15 +71,25 @@ std::optional<WebCore::ScrollbarOverlayStyle> toCoreScrollbarStyle(_WKOverlayScr
 {
     switch (scrollbarStyle) {
     case _WKOverlayScrollbarStyleDark:
-        return WebCore::ScrollbarOverlayStyleDark;
+        return WebCore::ScrollbarOverlayStyle::Dark;
     case _WKOverlayScrollbarStyleLight:
-        return WebCore::ScrollbarOverlayStyleLight;
+        return WebCore::ScrollbarOverlayStyle::Light;
     case _WKOverlayScrollbarStyleDefault:
-        return WebCore::ScrollbarOverlayStyleDefault;
+        return WebCore::ScrollbarOverlayStyle::Default;
     case _WKOverlayScrollbarStyleAutomatic:
         break;
     }
     return std::nullopt;
+}
+
+static WebCore::FloatBoxExtent coreBoxExtentsFromEdgeInsets(NSEdgeInsets insets)
+{
+    return {
+        static_cast<float>(insets.top),
+        static_cast<float>(insets.right),
+        static_cast<float>(insets.bottom),
+        static_cast<float>(insets.left)
+    };
 }
 
 @interface WKWebView (WKImplementationMac) <NSTextInputClient
@@ -90,9 +101,7 @@ std::optional<WebCore::ScrollbarOverlayStyle> toCoreScrollbarStyle(_WKOverlayScr
     , NSFilePromiseProviderDelegate
     , NSDraggingSource
 #endif
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
     , NSScrollViewSeparatorTrackingAdapter
-#endif
     >
 @end
 
@@ -191,8 +200,6 @@ std::optional<WebCore::ScrollbarOverlayStyle> toCoreScrollbarStyle(_WKOverlayScr
         _impl->setUserInterfaceLayoutDirection(userInterfaceLayoutDirection);
 }
 
-#if USE(NSVIEW_SEMANTICCONTEXT)
-
 - (void)_setSemanticContext:(NSViewSemanticContext)semanticContext
 {
     auto wasUsingFormSemanticContext = _impl ? _impl->useFormSemanticContext() : false;
@@ -205,8 +212,6 @@ std::optional<WebCore::ScrollbarOverlayStyle> toCoreScrollbarStyle(_WKOverlayScr
     if (wasUsingFormSemanticContext != _impl->useFormSemanticContext())
         _impl->semanticContextDidChange();
 }
-
-#endif
 
 ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
 - (void)renewGState
@@ -858,7 +863,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 {
     if (!_impl)
         return [super hitTest:point];
-    return _impl->hitTest(NSPointToCGPoint(point));
+    return _impl->hitTest(NSPointToCGPoint(point)).autorelease();
 }
 
 - (NSInteger)conversationIdentifier
@@ -1084,8 +1089,6 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
 #pragma mark - NSScrollViewSeparatorTrackingAdapter
 
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
-
 - (NSRect)scrollViewFrame
 {
     if (!_impl)
@@ -1099,8 +1102,6 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         return NO;
     return _impl->hasScrolledContentsUnderTitlebar();
 }
-
-#endif // HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 
 #pragma mark – NSAdaptiveImageGlyph
 
@@ -1244,8 +1245,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (id)_web_immediateActionAnimationControllerForHitTestResultInternal:(API::HitTestResult*)hitTestResult withType:(uint32_t)type userData:(API::Object*)userData
 {
-    id<NSSecureCoding> data = userData ? static_cast<id<NSSecureCoding>>(userData->wrapper()) : nil;
-    return [self _immediateActionAnimationControllerForHitTestResult:wrapper(*hitTestResult) withType:(_WKImmediateActionType)type userData:data];
+    RetainPtr data = userData ? static_cast<id<NSSecureCoding>>(userData->wrapper()) : nil;
+    return [self _immediateActionAnimationControllerForHitTestResult:wrapper(*hitTestResult) withType:(_WKImmediateActionType)type userData:data.get()];
 }
 
 - (void)_web_prepareForImmediateActionAnimation
@@ -1291,14 +1292,14 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 - (void)_web_suppressContentRelativeChildViews
 {
 #if ENABLE(WRITING_TOOLS)
-    [_intelligenceTextEffectCoordinator hideEffectsWithCompletion:^{ }];
+    [_intelligenceTextEffectCoordinator hideEffectsWithCompletionHandler:^{ }];
 #endif
 }
 
 - (void)_web_restoreContentRelativeChildViews
 {
 #if ENABLE(WRITING_TOOLS)
-    [_intelligenceTextEffectCoordinator showEffectsWithCompletion:^{ }];
+    [_intelligenceTextEffectCoordinator showEffectsWithCompletionHandler:^{ }];
 #endif
 }
 
@@ -1332,6 +1333,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (void)_web_dismissContentRelativeChildWindowsWithAnimation:(BOOL)withAnimation
 {
+    _page->clearTextIndicatorWithAnimation(withAnimation ? WebCore::TextIndicatorDismissalAnimation::FadeOut : WebCore::TextIndicatorDismissalAnimation::None);
     _impl->dismissContentRelativeChildWindowsWithAnimationFromViewOnly(withAnimation);
 }
 
@@ -1360,9 +1362,17 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     _impl->insertText(string, replacementRange);
 }
 
-- (void)_setContentOffset:(CGPoint)contentOffset animated:(BOOL)animated
+- (void)_setContentOffsetX:(NSNumber *)x y:(NSNumber *)y animated:(BOOL)animated
 {
-    _page->setContentOffset(WebCore::IntPoint { contentOffset }, animated ? WebCore::ScrollIsAnimated::Yes : WebCore::ScrollIsAnimated::No);
+    std::optional<int> optionalX = std::nullopt;
+    if (x)
+        optionalX = static_cast<int>([x doubleValue]);
+
+    std::optional<int> optionalY = std::nullopt;
+    if (y)
+        optionalY = static_cast<int>([y doubleValue]);
+
+    _page->setContentOffset(optionalX, optionalY, animated ? WebCore::ScrollIsAnimated::Yes : WebCore::ScrollIsAnimated::No);
 }
 
 #pragma mark - QLPreviewPanelController
@@ -1533,12 +1543,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         return;
     }
 
-    _impl->setObscuredContentInsets({
-        static_cast<float>(insets.top),
-        static_cast<float>(insets.right),
-        static_cast<float>(insets.bottom),
-        static_cast<float>(insets.left)
-    });
+    _impl->setObscuredContentInsets(coreBoxExtentsFromEdgeInsets(insets));
 
     if (immediate)
         _impl->flushPendingObscuredContentInsetChanges();
@@ -1553,6 +1558,24 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         static_cast<CGFloat>(insets.bottom()),
         static_cast<CGFloat>(insets.right())
     );
+}
+
+- (void)_setUsesAutomaticContentInsetBackgroundFill:(BOOL)value
+{
+    if (_usesAutomaticContentInsetBackgroundFill == value)
+        return;
+
+    _usesAutomaticContentInsetBackgroundFill = value;
+
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    _impl->updateTopContentInsetFillStyle();
+    _impl->updateTopContentInsetFillDueToScrolling();
+#endif
+}
+
+- (BOOL)_usesAutomaticContentInsetBackgroundFill
+{
+    return _usesAutomaticContentInsetBackgroundFill;
 }
 
 - (void)_setAutomaticallyAdjustsContentInsets:(BOOL)automaticallyAdjustsContentInsets
@@ -1662,7 +1685,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (NSView *)_inspectorAttachmentView
 {
-    return _impl->inspectorAttachmentView();
+    return _impl->inspectorAttachmentView().autorelease();
 }
 
 - (void)_setInspectorAttachmentView:(NSView *)newView
@@ -1705,7 +1728,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 {
     if (!_impl)
         return nil;
-    return _impl->thumbnailView();
+    return _impl->thumbnailView().autorelease();
 }
 
 - (void)_setIgnoresAllEvents:(BOOL)ignoresAllEvents
@@ -1801,7 +1824,14 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (void)_setCustomSwipeViewsTopContentInset:(float)topContentInset
 {
-    _impl->setCustomSwipeViewsTopContentInset(topContentInset);
+    auto insets = _impl->customSwipeViewsObscuredContentInsets();
+    insets.setTop(topContentInset);
+    _impl->setCustomSwipeViewsObscuredContentInsets(WTFMove(insets));
+}
+
+- (void)_setCustomSwipeViewsObscuredContentInsets:(NSEdgeInsets)insets
+{
+    _impl->setCustomSwipeViewsObscuredContentInsets(coreBoxExtentsFromEdgeInsets(insets));
 }
 
 - (void)_setDidMoveSwipeSnapshotCallback:(void(^)(CGRect))callback
@@ -1832,7 +1862,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 - (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo forFrame:(_WKFrameHandle *)frameHandle
 {
     if (RefPtr webFrameProxy = WebKit::WebFrameProxy::webFrame(frameHandle->_frameHandle->frameID()))
-        return _impl->printOperationWithPrintInfo(printInfo, *webFrameProxy);
+        return _impl->printOperationWithPrintInfo(printInfo, *webFrameProxy).autorelease();
     return nil;
 }
 

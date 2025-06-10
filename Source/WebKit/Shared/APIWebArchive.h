@@ -66,10 +66,10 @@ private:
     WebArchive(API::Data*);
     WebArchive(RefPtr<WebCore::LegacyWebArchive>&&);
 
-    RefPtr<WebCore::LegacyWebArchive> m_legacyWebArchive;
+    const RefPtr<WebCore::LegacyWebArchive> m_legacyWebArchive;
     RefPtr<WebArchiveResource> m_cachedMainResource;
-    RefPtr<API::Array> m_cachedSubresources;
-    RefPtr<API::Array> m_cachedSubframeArchives;
+    const RefPtr<API::Array> m_cachedSubresources;
+    const RefPtr<API::Array> m_cachedSubframeArchives;
 };
 
 } // namespace API

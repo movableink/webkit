@@ -55,8 +55,10 @@
 #include <WebCore/MediaPlayer.h>
 #include <WebCore/MediaPlayerPrivate.h>
 #include <WebCore/NotImplemented.h>
+#include <WebCore/ResourceError.h>
 #include <WebCore/SecurityOrigin.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/MemoryFootprint.h>
 
 #if ENABLE(ENCRYPTED_MEDIA)
 #include "RemoteCDMFactoryProxy.h"
@@ -106,6 +108,9 @@ RemoteMediaPlayerProxy::RemoteMediaPlayerProxy(RemoteMediaPlayerManagerProxy& ma
     RefPtr player = m_player;
     player->setResourceOwner(resourceOwner);
     player->setPresentationSize(m_configuration.presentationSize);
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    player->setPrefersSpatialAudioExperience(m_configuration.prefersSpatialAudioExperience);
+#endif
 }
 
 RemoteMediaPlayerProxy::~RemoteMediaPlayerProxy()
@@ -198,10 +203,6 @@ void RemoteMediaPlayerProxy::loadMediaSource(URL&& url, const MediaPlayer::LoadO
         m_mediaSourceProxy = adoptRef(*new RemoteMediaSourceProxy(*manager, mediaSourceIdentifier, *this));
 
     RefPtr player = m_player;
-#if USE(AVFOUNDATION) && ENABLE(MEDIA_SOURCE)
-    if (auto preferences = sharedPreferencesForWebProcess())
-        player->setDecompressionSessionPreferences(preferences->mediaSourcePrefersDecompressionSession, preferences->mediaSourceCanFallbackToDecompressionSession);
-#endif
     player->load(url, options, *protectedMediaSourceProxy());
 
     if (reattached)
@@ -217,7 +218,7 @@ void RemoteMediaPlayerProxy::cancelLoad()
     protectedPlayer()->cancelLoad();
 }
 
-void RemoteMediaPlayerProxy::prepareForPlayback(bool privateMode, WebCore::MediaPlayerEnums::Preload preload, bool preservesPitch, WebCore::MediaPlayerEnums::PitchCorrectionAlgorithm pitchCorrectionAlgorithm, bool prepareToPlay, bool prepareForRendering, WebCore::IntSize presentationSize, float videoContentScale, WebCore::DynamicRangeMode preferredDynamicRangeMode, PlatformDynamicRangeLimit platformDynamicRangeLimit)
+void RemoteMediaPlayerProxy::prepareForPlayback(bool privateMode, WebCore::MediaPlayerEnums::Preload preload, bool preservesPitch, WebCore::MediaPlayerEnums::PitchCorrectionAlgorithm pitchCorrectionAlgorithm, bool prepareToPlay, bool prepareForRendering, WebCore::IntSize presentationSize, float videoContentScale, bool isFullscreen, WebCore::DynamicRangeMode preferredDynamicRangeMode, PlatformDynamicRangeLimit platformDynamicRangeLimit)
 {
     RefPtr player = m_player;
     player->setPrivateBrowsingMode(privateMode);
@@ -227,6 +228,7 @@ void RemoteMediaPlayerProxy::prepareForPlayback(bool privateMode, WebCore::Media
     player->setPreferredDynamicRangeMode(preferredDynamicRangeMode);
     player->setPlatformDynamicRangeLimit(platformDynamicRangeLimit);
     player->setPresentationSize(presentationSize);
+    player->setInFullscreenOrPictureInPicture(isFullscreen);
     if (prepareToPlay)
         player->prepareToPlay();
     if (prepareForRendering)
@@ -342,6 +344,8 @@ void RemoteMediaPlayerProxy::setRate(double rate)
 void RemoteMediaPlayerProxy::didLoadingProgress(CompletionHandler<void(bool)>&& completionHandler)
 {
     protectedPlayer()->didLoadingProgress(WTFMove(completionHandler));
+
+    protectedConnection()->send(Messages::MediaPlayerPrivateRemote::ReportGPUMemoryFootprint(WTF::memoryFootprint()), m_id);
 }
 
 void RemoteMediaPlayerProxy::setPresentationSize(const WebCore::IntSize& size)
@@ -1366,6 +1370,16 @@ void RemoteMediaPlayerProxy::setSoundStageSize(SoundStageSize size)
     m_soundStageSize = size;
 
     protectedPlayer()->soundStageSizeDidChange();
+}
+
+void RemoteMediaPlayerProxy::setHasMessageClientForTesting(bool hasClient)
+{
+    protectedPlayer()->setMessageClientForTesting(hasClient ? this : nullptr);
+}
+
+void RemoteMediaPlayerProxy::sendInternalMessage(const WebCore::MessageForTesting& message)
+{
+    protectedConnection()->send(Messages::MediaPlayerPrivateRemote::SendInternalMessage { message }, m_id);
 }
 
 } // namespace WebKit

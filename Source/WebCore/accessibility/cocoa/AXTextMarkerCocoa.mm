@@ -84,15 +84,27 @@ RetainPtr<NSAttributedString> AXTextMarkerRange::toAttributedString(AXCoreObject
     if (!end.isValid())
         return nil;
 
+    String listMarkerText = listMarkerTextOnSameLine(start);
+
     if (start.isolatedObject() == end.isolatedObject()) {
         size_t minOffset = std::min(start.offset(), end.offset());
         size_t maxOffset = std::max(start.offset(), end.offset());
         // FIXME: createAttributedString takes a StringView, but we create a full-fledged String. Could we create a
         // new substringView method that returns a StringView?
-        return start.isolatedObject()->createAttributedString(start.runs()->substring(minOffset, maxOffset - minOffset), spellCheck).autorelease();
+        return start.isolatedObject()->createAttributedString(makeString(listMarkerText, start.runs()->substring(minOffset, maxOffset - minOffset)), spellCheck).autorelease();
     }
 
-    RetainPtr<NSMutableAttributedString> result = start.isolatedObject()->createAttributedString(start.runs()->substring(start.offset()), spellCheck);
+    RetainPtr<NSMutableAttributedString> result = start.isolatedObject()->createAttributedString(makeString(listMarkerText, start.runs()->substring(start.offset())), spellCheck);
+    auto appendToResult = [&result] (RetainPtr<NSMutableAttributedString>&& string) {
+        if (!string)
+            return;
+
+        if (result)
+            [result appendAttributedString:string.autorelease()];
+        else
+            result = WTFMove(string);
+    };
+
     auto emitNewlineOnExit = [&] (AXIsolatedObject& object) {
         // FIXME: This function should not just be emitting newlines, but instead handling every character type in TextEmissionBehavior.
         auto behavior = object.textEmissionBehavior();
@@ -105,7 +117,7 @@ RetainPtr<NSAttributedString> AXTextMarkerRange::toAttributedString(AXCoreObject
             // FIXME: This is super inefficient. We are creating a whole new dictionary and attributed string just to append newline(s).
             NSString *newlineString = behavior == TextEmissionBehavior::Newline ? @"\n" : @"\n\n";
             NSDictionary *attributes = [result attributesAtIndex:length - 1 effectiveRange:nil];
-            [result appendAttributedString:adoptNS([[NSAttributedString alloc] initWithString:newlineString attributes:attributes]).get()];
+            appendToResult(adoptNS([[NSMutableAttributedString alloc] initWithString:newlineString attributes:attributes]));
         }
     };
 
@@ -113,10 +125,10 @@ RetainPtr<NSAttributedString> AXTextMarkerRange::toAttributedString(AXCoreObject
     // we may want to detect this and try searching AXDirection::Previous?
     RefPtr current = findObjectWithRuns(*start.isolatedObject(), AXDirection::Next, std::nullopt, emitNewlineOnExit);
     while (current && current->objectID() != end.objectID()) {
-        [result appendAttributedString:current->createAttributedString(current->textRuns()->toString(), spellCheck).autorelease()];
+        appendToResult(current->createAttributedString(current->textRuns()->toString(), spellCheck));
         current = findObjectWithRuns(*current, AXDirection::Next, std::nullopt, emitNewlineOnExit);
     }
-    [result appendAttributedString:end.isolatedObject()->createAttributedString(end.runs()->substring(0, end.offset()), spellCheck).autorelease()];
+    appendToResult(end.isolatedObject()->createAttributedString(end.runs()->substring(0, end.offset()), spellCheck));
 
     return result;
 }
@@ -131,14 +143,11 @@ AXTextMarkerRange::AXTextMarkerRange(AXTextMarkerRangeRef textMarkerRangeRef)
         return;
     }
 
-    auto start = AXTextMarkerRangeCopyStartMarker(textMarkerRangeRef);
-    auto end = AXTextMarkerRangeCopyEndMarker(textMarkerRangeRef);
+    RetainPtr start = adoptCF(AXTextMarkerRangeCopyStartMarker(textMarkerRangeRef));
+    RetainPtr end = adoptCF(AXTextMarkerRangeCopyEndMarker(textMarkerRangeRef));
 
-    m_start = start;
-    m_end = end;
-
-    CFRelease(start);
-    CFRelease(end);
+    m_start = start.get();
+    m_end = end.get();
 }
 
 RetainPtr<AXTextMarkerRangeRef> AXTextMarkerRange::platformData() const

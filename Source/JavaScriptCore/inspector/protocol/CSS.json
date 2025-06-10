@@ -289,7 +289,9 @@
                 "scrollable",
                 "flex",
                 "grid",
-                "event"
+                "event",
+                "slot-assigned",
+                "slot-filled"
             ],
             "description": "Relevant layout information about the node. Things not in this list are not important to Web Inspector."
         },

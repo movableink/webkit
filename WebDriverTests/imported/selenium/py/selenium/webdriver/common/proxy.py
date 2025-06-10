@@ -88,150 +88,150 @@ class Proxy:
     auto_detect = _ProxyTypeDescriptor("autodetect", ProxyType.AUTODETECT)
     """Gets and Sets `auto_detect`
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.auto_detect`
     - Set
         - `self.auto_detect` = `value`
 
-    Parameters
-    ----------
+    Parameters:
+    -----------
     `value`: `str`
     """
 
     ftp_proxy = _ProxyTypeDescriptor("ftpProxy", ProxyType.MANUAL)
     """Gets and Sets `ftp_proxy`
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.ftp_proxy`
     - Set
         - `self.ftp_proxy` = `value`
 
-    Parameters
-    ----------
+    Parameters:
+    -----------
     `value`: `str`
     """
 
     http_proxy = _ProxyTypeDescriptor("httpProxy", ProxyType.MANUAL)
     """Gets and Sets `http_proxy`
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.http_proxy`
     - Set
         - `self.http_proxy` = `value`
 
-    Parameters
-    ----------
+    Parameters:
+    -----------
     `value`: `str`
     """
 
     no_proxy = _ProxyTypeDescriptor("noProxy", ProxyType.MANUAL)
     """Gets and Sets `no_proxy`
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.no_proxy`
     - Set
         - `self.no_proxy` = `value`
 
-    Parameters
-    ----------
+    Parameters:
+    -----------
     `value`: `str`
     """
 
     proxy_autoconfig_url = _ProxyTypeDescriptor("proxyAutoconfigUrl", ProxyType.PAC)
     """Gets and Sets `proxy_autoconfig_url`
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.proxy_autoconfig_url`
     - Set
         - `self.proxy_autoconfig_url` = `value`
 
-    Parameter
-    ---------
+    Parameters:
+    -----------
     `value`: `str`
     """
 
     ssl_proxy = _ProxyTypeDescriptor("sslProxy", ProxyType.MANUAL)
     """Gets and Sets `ssl_proxy`
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.ssl_proxy`
     - Set
         - `self.ssl_proxy` = `value`
 
-    Parameter
-    ---------
+    Parameters:
+    -----------
     `value`: `str`
     """
 
     socks_proxy = _ProxyTypeDescriptor("socksProxy", ProxyType.MANUAL)
     """Gets and Sets `socks_proxy`
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.sock_proxy`
     - Set
         - `self.socks_proxy` = `value`
 
-    Parameter
-    ---------
+    Parameters:
+    -----------
     `value`: `str`
     """
 
     socks_username = _ProxyTypeDescriptor("socksUsername", ProxyType.MANUAL)
     """Gets and Sets `socks_password`
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.socks_password`
     - Set
         - `self.socks_password` = `value`
 
-    Parameter
-    ---------
+    Parameters:
+    -----------
     `value`: `str`
     """
 
     socks_password = _ProxyTypeDescriptor("socksPassword", ProxyType.MANUAL)
     """Gets and Sets `socks_password`
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.socks_password`
     - Set
         - `self.socks_password` = `value`
 
-    Parameter
-    ---------
+    Parameters:
+    -----------
     `value`: `str`
     """
 
     socks_version = _ProxyTypeDescriptor("socksVersion", ProxyType.MANUAL)
     """Gets and Sets `socks_version`
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.socks_version`
     - Set
         - `self.socks_version` = `value`
 
-    Parameter
-    ---------
+    Parameters:
+    -----------
     `value`: `str`
     """
 

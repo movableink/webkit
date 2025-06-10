@@ -40,7 +40,7 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
-#if PLATFORM(GTK) || (PLATFORM(WPE) && ENABLE(WPE_PLATFORM))
+#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
 #include "ScreenManager.h"
 #endif
 
@@ -48,7 +48,8 @@
 #include <gtk/gtk.h>
 #endif
 
-#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM)
+#if ENABLE(WPE_PLATFORM)
+#include "WPEUtilities.h"
 #include <wpe/wpe-platform.h>
 #ifdef WPE_PLATFORM_DRM
 #include <wpe/drm/wpe-drm.h>
@@ -59,7 +60,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GTK/WPE port
 
 namespace WebKit {
 
-#if PLATFORM(GTK) || (PLATFORM(WPE) && ENABLE(WPE_PLATFORM))
+#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
 static std::optional<std::pair<uint32_t, uint32_t>> findCrtc(int fd, PlatformScreen* screen)
 {
     drmModeRes* resources = drmModeGetResources(fd);
@@ -188,7 +189,7 @@ struct DrmNodeWithCrtc {
     UnixFileDescriptor drmNodeFd;
     std::pair<uint32_t, uint32_t> crtcInfo;
 };
-#if PLATFORM(GTK) || (PLATFORM(WPE) && ENABLE(WPE_PLATFORM))
+#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
 static std::optional<DrmNodeWithCrtc> findDrmNodeWithCrtc(PlatformScreen* screen = nullptr)
 #else
 static std::optional<DrmNodeWithCrtc> findDrmNodeWithCrtc()
@@ -205,7 +206,7 @@ static std::optional<DrmNodeWithCrtc> findDrmNodeWithCrtc()
         if (!fd)
             continue;
         std::optional<std::pair<uint32_t, uint32_t>> crtcInfo;
-#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM)
+#if ENABLE(WPE_PLATFORM)
         if (screen)
             crtcInfo = findCrtc(fd.value(), screen);
         else
@@ -235,11 +236,11 @@ static int crtcBitmaskForIndex(uint32_t crtcIndex)
 
 std::unique_ptr<DisplayVBlankMonitor> DisplayVBlankMonitorDRM::create(PlatformDisplayID displayID)
 {
-#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM)
-    static bool usingWPEPlatformAPI = !!g_type_class_peek(WPE_TYPE_DISPLAY);
+#if ENABLE(WPE_PLATFORM)
+    bool usingWPEPlatformAPI = WKWPE::isUsingWPEPlatformAPI();
 #endif
 
-#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM)
+#if ENABLE(WPE_PLATFORM)
     PlatformScreen* screen = nullptr;
     if (usingWPEPlatformAPI) {
         screen = ScreenManager::singleton().screen(displayID);
@@ -259,7 +260,7 @@ std::unique_ptr<DisplayVBlankMonitor> DisplayVBlankMonitorDRM::create(PlatformDi
 #endif
 
     std::optional<DrmNodeWithCrtc> drmNodeWithCrtcInfo;
-#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM)
+#if ENABLE(WPE_PLATFORM)
 #ifdef WPE_PLATFORM_DRM
     if (usingWPEPlatformAPI && WPE_IS_SCREEN_DRM(screen)) {
         String filename = String::fromUTF8(wpe_display_get_drm_device(wpe_display_get_primary()));

@@ -113,8 +113,8 @@ TEST(WebKit, DISABLED_AppHighlightsInImageOverlays)
 
     auto menuBuilder = adoptNS([[TestUIMenuBuilder alloc] init]);
     [webView buildMenuWithBuilder:menuBuilder.get()];
-    EXPECT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTagAddHighlightToNewQuickNote()]);
-    EXPECT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTagAddHighlightToCurrentQuickNote()]);
+    EXPECT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTagAddHighlightToNewQuickNote().createNSString().get()]);
+    EXPECT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTagAddHighlightToCurrentQuickNote().createNSString().get()]);
 
     [webView synchronouslyLoadTestPageNamed:@"simple" asStringWithBaseURL:[NSURL URLWithString:@"http://webkit.org/simple.html"]];
     [webView selectAll:nil];
@@ -122,8 +122,8 @@ TEST(WebKit, DISABLED_AppHighlightsInImageOverlays)
 
     [menuBuilder reset];
     [webView buildMenuWithBuilder:menuBuilder.get()];
-    EXPECT_NOT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTagAddHighlightToNewQuickNote()]);
-    EXPECT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTagAddHighlightToCurrentQuickNote()]);
+    EXPECT_NOT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTagAddHighlightToNewQuickNote().createNSString().get()]);
+    EXPECT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTagAddHighlightToCurrentQuickNote().createNSString().get()]);
 }
 
 #endif // ENABLE(APP_HIGHLIGHTS)

@@ -39,6 +39,7 @@
 #include "SVGPathParser.h"
 #include "SVGPathStringViewSource.h"
 #include "SVGVKernElement.h"
+#include <ranges>
 #include <wtf/Vector.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/text/StringView.h>
@@ -754,7 +755,7 @@ void SVGToOTFFontConverter::appendLigatureSubtable(size_t subtableRecordLocation
     }
     if (ligaturePairs.size() > std::numeric_limits<uint16_t>::max())
         ligaturePairs.clear();
-    std::sort(ligaturePairs.begin(), ligaturePairs.end(), [](auto& lhs, auto& rhs) {
+    std::ranges::sort(ligaturePairs, [](auto& lhs, auto& rhs) {
         return lhs.first[0] < rhs.first[0];
     });
     Vector<size_t> overlappingFirstGlyphSegmentLengths;
@@ -1075,7 +1076,7 @@ template<typename T> inline size_t SVGToOTFFontConverter::appendKERNSubtable(std
 
 size_t SVGToOTFFontConverter::finishAppendingKERNSubtable(Vector<KerningData> kerningData, uint16_t coverage)
 {
-    std::sort(kerningData.begin(), kerningData.end(), [](auto& a, auto& b) {
+    std::ranges::sort(kerningData, [](auto& a, auto& b) {
         return a.glyph1 < b.glyph1 || (a.glyph1 == b.glyph1 && a.glyph2 < b.glyph2);
     });
 
@@ -1395,7 +1396,7 @@ SVGToOTFFontConverter::SVGToOTFFontConverter(const SVGFontElement& fontElement)
         m_xHeight = scaleUnitsPerEm(m_fontFaceElement->xHeight());
         m_capHeight = scaleUnitsPerEm(m_fontFaceElement->capHeight());
 
-        // Some platforms, including OS X, use 0 ascent and descent to mean that the platform should synthesize
+        // Some platforms, including macOS, use 0 ascent and descent to mean that the platform should synthesize
         // a value based on a heuristic. However, SVG fonts can legitimately have 0 for ascent or descent.
         // Specifing a single FUnit gets us as close to 0 as we can without triggering the synthesis.
         if (!m_ascent)
@@ -1434,7 +1435,7 @@ SVGToOTFFontConverter::SVGToOTFFontConverter(const SVGFontElement& fontElement)
         return;
     }
 
-    std::sort(m_glyphs.begin(), m_glyphs.end(), &compareCodepointsLexicographically);
+    std::ranges::sort(m_glyphs, &compareCodepointsLexicographically);
 
     for (Glyph i = 0; i < m_glyphs.size(); ++i) {
         GlyphData& glyph = m_glyphs[i];

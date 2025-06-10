@@ -40,6 +40,7 @@
 #include <WebKit/WKHTTPCookieStoreRef.h>
 #include <WebKit/WKInspector.h>
 #include <WebKit/WKNavigationResponseRef.h>
+#include <WebKit/WKPagePrivate.h>
 #include <WebKit/WKPreferencesRefPrivate.h>
 #include <WebKit/WKProtectionSpace.h>
 #include <WebKit/WKProtectionSpaceCurl.h>
@@ -165,6 +166,7 @@ WebKitBrowserWindow::WebKitBrowserWindow(BrowserWindowClient& client, WKPageConf
     WKViewSetIsInWindow(m_view.get(), true);
 
     auto page = WKViewGetPage(m_view.get());
+    m_isControlledByAutomation = WKPageGetIsControlledByAutomation(page);
 
     WKPageNavigationClientV3 navigationClient = { };
     navigationClient.base.version = 3;
@@ -551,12 +553,84 @@ void WebKitBrowserWindow::didFailProvisionalNavigation(WKPageRef, WKNavigationRe
     MessageBox(thisWindow.m_hMainWnd, text.str().c_str(), L"Provisional Navigation Failure", MB_OK | MB_ICONWARNING);
 }
 
+std::wstring toAuthText(WKProtectionSpaceRef protectionSpace)
+{
+    auto scheme = [&] {
+        switch (WKProtectionSpaceGetAuthenticationScheme(protectionSpace)) {
+        case kWKProtectionSpaceAuthenticationSchemeDefault:
+            return L"Default";
+        case kWKProtectionSpaceAuthenticationSchemeHTTPBasic:
+            return L"HTTPBasic";
+        case kWKProtectionSpaceAuthenticationSchemeHTTPDigest:
+            return L"HTTPDigest";
+        case kWKProtectionSpaceAuthenticationSchemeHTMLForm:
+            return L"HTMLForm";
+        case kWKProtectionSpaceAuthenticationSchemeNTLM:
+            return L"NTLM";
+        case kWKProtectionSpaceAuthenticationSchemeNegotiate:
+            return L"Negotiate";
+        case kWKProtectionSpaceAuthenticationSchemeClientCertificateRequested:
+            return L"ClientCertificateRequested";
+        case kWKProtectionSpaceAuthenticationSchemeServerTrustEvaluationRequested:
+            return L"ServerTrustEvaluationRequested";
+        case kWKProtectionSpaceAuthenticationSchemeOAuth:
+            return L"OAuth";
+        case kWKProtectionSpaceAuthenticationSchemeUnknown:
+            return L"Unknown";
+        }
+        return L"Invalid Value";
+    }();
+
+    auto serverType = [&] {
+        switch (WKProtectionSpaceGetServerType(protectionSpace)) {
+        case kWKProtectionSpaceServerTypeHTTP:
+            return L"ServerTypeHTTP";
+        case kWKProtectionSpaceServerTypeHTTPS:
+            return L"ServerTypeHTTPS";
+        case kWKProtectionSpaceServerTypeFTP:
+            return L"ServerTypeFTP";
+        case kWKProtectionSpaceServerTypeFTPS:
+            return L"ServerTypeFTPS";
+        case kWKProtectionSpaceProxyTypeHTTP:
+            return L"ProxyTypeHTTP";
+        case kWKProtectionSpaceProxyTypeHTTPS:
+            return L"ProxyTypeHTTPS";
+        case kWKProtectionSpaceProxyTypeFTP:
+            return L"ProxyTypeFTP";
+        case kWKProtectionSpaceProxyTypeSOCKS:
+            return L"ProxyTypeSOCKS";
+        }
+        return L"Invalid Value";
+    }();
+
+    auto host = createString(adoptWK(WKProtectionSpaceCopyHost(protectionSpace)).get());
+    auto realm = createString(adoptWK(WKProtectionSpaceCopyRealm(protectionSpace)).get());
+    auto isProxy = WKProtectionSpaceGetIsProxy(protectionSpace);
+
+    std::wstringstream text;
+    text << L"Scheme: " << scheme << L"\r\n";
+    text << L"Host: " << host << L"\r\n";
+    text << L"Port: " << WKProtectionSpaceGetPort(protectionSpace) << L"\r\n";
+    text << L"Server Type: " << serverType << L"\r\n";
+    text << L"isProxy: " << isProxy << L"\r\n";
+    text << L"Realm: " << realm << L"\r\n";
+    return text.str();
+}
+
 void WebKitBrowserWindow::didReceiveAuthenticationChallenge(WKPageRef, WKAuthenticationChallengeRef challenge, const void* clientInfo)
 {
     auto& thisWindow = toWebKitBrowserWindow(clientInfo);
     auto protectionSpace = WKAuthenticationChallengeGetProtectionSpace(challenge);
     auto decisionListener = WKAuthenticationChallengeGetDecisionListener(challenge);
     auto authenticationScheme = WKProtectionSpaceGetAuthenticationScheme(protectionSpace);
+
+    if (thisWindow.m_isControlledByAutomation) {
+        WKRetainPtr<WKStringRef> username = createWKString("accept server trust");
+        WKRetainPtr<WKStringRef> password = createWKString("");
+        WKRetainPtr<WKCredentialRef> wkCredential = adoptWK(WKCredentialCreate(username.get(), password.get(), kWKCredentialPersistenceForSession));
+        WKAuthenticationDecisionListenerUseCredential(decisionListener, wkCredential.get());
+        return;
+    }
 
     if (authenticationScheme == kWKProtectionSpaceAuthenticationSchemeServerTrustEvaluationRequested) {
         if (thisWindow.canTrustServerCertificate(protectionSpace)) {
@@ -567,9 +641,7 @@ void WebKitBrowserWindow::didReceiveAuthenticationChallenge(WKPageRef, WKAuthent
             return;
         }
     } else {
-        WKRetainPtr<WKStringRef> realm(WKProtectionSpaceCopyRealm(protectionSpace));
-
-        if (auto credential = askCredential(thisWindow.hwnd(), createString(realm.get()))) {
+        if (auto credential = askCredential(thisWindow.hwnd(), toAuthText(protectionSpace))) {
             WKRetainPtr<WKStringRef> username = createWKString(credential->username);
             WKRetainPtr<WKStringRef> password = createWKString(credential->password);
             WKRetainPtr<WKCredentialRef> wkCredential = adoptWK(WKCredentialCreate(username.get(), password.get(), kWKCredentialPersistenceForSession));
@@ -671,7 +743,7 @@ void WebKitBrowserWindow::downloadDidFailWithError(WKDownloadRef, WKErrorRef err
 void WebKitBrowserWindow::close(WKPageRef, const void* clientInfo)
 {
     auto& thisWindow = toWebKitBrowserWindow(clientInfo);
-    PostMessage(thisWindow.hwnd(), WM_CLOSE, 0, 0);
+    PostMessage(thisWindow.m_hMainWnd, WM_CLOSE, 0, 0);
 }
 
 WKPageRef WebKitBrowserWindow::createNewPage(WKPageRef, WKPageConfigurationRef pageConf, WKNavigationActionRef, WKWindowFeaturesRef, const void*)

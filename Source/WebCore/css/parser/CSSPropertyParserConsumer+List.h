@@ -51,8 +51,8 @@ struct ListBounds {
 inline constexpr auto ZeroOrMore = ListBounds::minimumOf(0);
 inline constexpr auto OneOrMore = ListBounds::minimumOf(1);
 
-template<char separator, ListBounds bounds, ListOptimization optimization = ListOptimization::None, typename SubConsumer, typename... Args>
-auto consumeListSeparatedBy(CSSParserTokenRange& range, SubConsumer&& subConsumer, Args&&... args) -> std::conditional_t<optimization == ListOptimization::None, RefPtr<CSSValueList>, RefPtr<CSSValue>>
+template<char separator, ListBounds bounds, typename SubConsumer, typename... Args>
+auto consumeListSeparatedByIntoBuilder(CSSParserTokenRange& range, SubConsumer&& subConsumer, Args&&... args) -> std::optional<CSSValueListBuilder>
 {
     auto consumeSeparator = [](auto& range) {
         if constexpr (separator == ',')
@@ -65,12 +65,12 @@ auto consumeListSeparatedBy(CSSParserTokenRange& range, SubConsumer&& subConsume
 
     CSSValueListBuilder list;
     do {
-        auto value = std::invoke(subConsumer, range, std::forward<Args>(args)...);
+        auto value = std::invoke(subConsumer, range, args...);
         if (!value) {
             if constexpr (separator == ',')
-                return nullptr;
+                return { };
             else if constexpr (separator == '/')
-                return nullptr;
+                return { };
             else if constexpr (separator == ' ')
                 break;
         }
@@ -79,24 +79,38 @@ auto consumeListSeparatedBy(CSSParserTokenRange& range, SubConsumer&& subConsume
 
     if constexpr (bounds.min > 0) {
         if (list.size() < bounds.min)
-            return nullptr;
+            return { };
     }
     if constexpr (bounds.max < std::numeric_limits<unsigned>::max()) {
         if (list.size() > bounds.max)
-            return nullptr;
+            return { };
     }
+
+    return { WTFMove(list) };
+}
+
+template<char separator, ListBounds bounds, ListOptimization optimization = ListOptimization::None, typename ListType = CSSValueList, typename SubConsumer, typename... Args>
+auto consumeListSeparatedBy(CSSParserTokenRange& range, SubConsumer&& subConsumer, Args&&... args) -> std::conditional_t<optimization == ListOptimization::None, RefPtr<ListType>, RefPtr<CSSValue>>
+{
+    auto list = consumeListSeparatedByIntoBuilder<separator, bounds>(range, std::forward<SubConsumer>(subConsumer), std::forward<Args>(args)...);
+    if (!list)
+        return nullptr;
 
     if constexpr (optimization == ListOptimization::SingleValue) {
-        if (list.size() == 1)
-            return WTFMove(list[0]);
+        if (list->size() == 1)
+            return WTFMove((*list)[0]);
     }
 
-    if constexpr (separator == ',')
-        return CSSValueList::createCommaSeparated(WTFMove(list));
-    else if constexpr (separator == '/')
-        return CSSValueList::createSlashSeparated(WTFMove(list));
-    else if constexpr (separator == ' ')
-        return CSSValueList::createSpaceSeparated(WTFMove(list));
+    if constexpr (std::is_same_v<ListType, CSSValueList>) {
+        if constexpr (separator == ',')
+            return CSSValueList::createCommaSeparated(WTFMove(*list));
+        else if constexpr (separator == '/')
+            return CSSValueList::createSlashSeparated(WTFMove(*list));
+        else if constexpr (separator == ' ')
+            return CSSValueList::createSpaceSeparated(WTFMove(*list));
+    } else {
+        return ListType::create(WTFMove(*list));
+    }
 }
 
 } // namespace CSSPropertyParserHelpers

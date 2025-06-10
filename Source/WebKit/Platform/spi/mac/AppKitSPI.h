@@ -23,6 +23,10 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
+DECLARE_SYSTEM_HEADER
+
 #if PLATFORM(MAC)
 
 #import <AppKit/AppKit.h>
@@ -37,10 +41,7 @@
 #import <AppKit/NSPreviewRepresentingActivityItem_Private.h>
 #import <AppKit/NSTextInputClient_Private.h>
 #import <AppKit/NSWindow_Private.h>
-
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 #import <AppKit/NSScrollViewSeparatorTrackingAdapter_Private.h>
-#endif
 
 #else
 
@@ -53,14 +54,19 @@
 @property (readonly) NSString *localizedDisplayName;
 @end
 
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 @protocol NSScrollViewSeparatorTrackingAdapter
 @property (readonly) NSRect scrollViewFrame;
 @property (readonly) BOOL hasScrolledContentsUnderTitlebar;
 @end
-#endif
+
+@class NSTextPlaceholder;
 
 @protocol NSTextInputClient_Async
+@optional
+
+- (void)insertTextPlaceholderWithSize:(CGSize)size completionHandler:(void (^)(NSTextPlaceholder *))completionHandler;
+
+- (void)removeTextPlaceholder:(NSTextPlaceholder *)placeholder willInsertText:(BOOL)willInsertText completionHandler:(void (^)(void))completionHandler;
 @end
 
 typedef NS_OPTIONS(NSUInteger, NSWindowShadowOptions) {
@@ -74,10 +80,8 @@ typedef NS_OPTIONS(NSUInteger, NSWindowShadowOptions) {
 @property (readonly) NSWindowShadowOptions shadowOptions;
 @property CGFloat titlebarAlphaValue;
 
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 - (BOOL)registerScrollViewSeparatorTrackingAdapter:(NSObject<NSScrollViewSeparatorTrackingAdapter> *)adapter;
 - (void)unregisterScrollViewSeparatorTrackingAdapter:(NSObject<NSScrollViewSeparatorTrackingAdapter> *)adapter;
-#endif
 
 @end
 

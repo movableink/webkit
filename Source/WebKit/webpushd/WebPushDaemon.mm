@@ -40,6 +40,7 @@
 #import "_WKMockUserNotificationCenter.h"
 #import "_WKWebPushActionInternal.h"
 
+#import <WebCore/ExceptionOr.h>
 #import <WebCore/LocalizedStrings.h>
 #import <WebCore/NotificationData.h>
 #import <WebCore/NotificationPayload.h>
@@ -56,7 +57,7 @@
 #import <wtf/URL.h>
 #import <wtf/WorkQueue.h>
 #import <wtf/cocoa/SpanCocoa.h>
-#import <wtf/spi/darwin/XPCSPI.h>
+#import <wtf/darwin/XPCExtras.h>
 #import <wtf/text/MakeString.h>
 
 #if HAVE(MOBILE_KEY_BAG)
@@ -125,12 +126,12 @@ static bool platformShouldPlaySound(const WebCore::NotificationData& data)
 #endif
 }
 
-static NSString *platformDefaultActionBundleIdentifier(const WebCore::PushSubscriptionSetIdentifier& identifier)
+static RetainPtr<NSString> platformDefaultActionBundleIdentifier(const WebCore::PushSubscriptionSetIdentifier& identifier)
 {
 #if PLATFORM(IOS)
     if (identifier.bundleIdentifier == "com.apple.SafariViewService"_s)
         return @"com.apple.webapp";
-    return (NSString *)identifier.bundleIdentifier;
+    return identifier.bundleIdentifier.createNSString();
 #else
     // FIXME: Calculate appropriate value on macOS
     return nil;
@@ -139,7 +140,7 @@ static NSString *platformDefaultActionBundleIdentifier(const WebCore::PushSubscr
 
 static RetainPtr<NSString> platformNotificationCenterBundleIdentifier(String pushPartition)
 {
-    return [NSString stringWithFormat:@"com.apple.WebKit.PushBundle.%@", (NSString *)pushPartition];
+    return adoptNS([[NSString alloc] initWithFormat:@"com.apple.WebKit.PushBundle.%@", pushPartition.createNSString().get()]);
 }
 
 #endif // HAVE(FULL_FEATURED_USER_NOTIFICATIONS)
@@ -290,8 +291,8 @@ void WebPushDaemon::incomingPushTransactionTimerFired()
 
 static void tryCloseRequestConnection(xpc_object_t request)
 {
-    if (auto connection = xpc_dictionary_get_remote_connection(request))
-        xpc_connection_cancel(connection);
+    if (RetainPtr connection = xpc_dictionary_get_remote_connection(request))
+        xpc_connection_cancel(connection.get());
 }
 
 void WebPushDaemon::connectionEventHandler(xpc_object_t request)
@@ -306,7 +307,7 @@ void WebPushDaemon::connectionEventHandler(xpc_object_t request)
         return;
     }
 
-    auto data = xpc_dictionary_get_data_span(request, protocolEncodedMessageKey);
+    auto data = xpcDictionaryGetData(request, protocolEncodedMessageKey);
     if (!data.data()) {
         RELEASE_LOG_ERROR(Push, "WebPushDaemon::connectionEventHandler - No encoded message data in xpc message");
         tryCloseRequestConnection(request);
@@ -541,15 +542,14 @@ void WebPushDaemon::handleIncomingPush(const PushSubscriptionSetIdentifier& iden
 #if HAVE(FULL_FEATURED_USER_NOTIFICATIONS)
 static bool supportsBuiltinNotifications(const PushSubscriptionSetIdentifier& identifier)
 {
-    if (identifier.pushPartition.isEmpty())
-        return false;
+    bool hasPushPartition = !identifier.pushPartition.isEmpty();
 
+#if PLATFORM(IOS)
+    return hasPushPartition;
+#endif
 #if PLATFORM(MAC)
-    if (identifier.bundleIdentifier == "com.apple.Safari"_s || identifier.bundleIdentifier == "com.apple.SafariTechnologyPreview"_s)
-        return false;
+    return identifier.bundleIdentifier == "com.apple.WebKit.TestWebKitAPI"_s && hasPushPartition;
 #endif // PLATFORM(MAC)
-
-    return true;
 }
 #endif // HAVE(FULL_FEATURED_USER_NOTIFICATIONS)
 
@@ -596,7 +596,7 @@ void WebPushDaemon::notifyClientPushMessageIsAvailable(const WebCore::PushSubscr
 
 #if PLATFORM(MAC)
     CFArrayRef urls = (__bridge CFArrayRef)@[ [NSURL URLWithString:@"x-webkit-app-launch://1"] ];
-    CFStringRef identifier = (__bridge CFStringRef)((NSString *)bundleIdentifier);
+    RetainPtr identifier = bundleIdentifier.createCFString();
 
     CFDictionaryRef options = (__bridge CFDictionaryRef)@{
         (id)_kLSOpenOptionPreferRunningInstanceKey: @(kLSOpenRunningInstanceBehaviorUseRunningProcess),
@@ -606,7 +606,7 @@ void WebPushDaemon::notifyClientPushMessageIsAvailable(const WebCore::PushSubscr
         (id)_kLSOpenOptionHideKey: @YES,
     };
 
-    _LSOpenURLsUsingBundleIdentifierWithCompletionHandler(urls, identifier, options, ^(LSASNRef, Boolean, CFErrorRef cfError) {
+    _LSOpenURLsUsingBundleIdentifierWithCompletionHandler(urls, identifier.get(), options, ^(LSASNRef, Boolean, CFErrorRef cfError) {
         RELEASE_LOG_ERROR_IF(cfError, Push, "Failed to launch process in response to push: %{public}@", (__bridge NSError *)cfError);
     });
 #elif PLATFORM(IOS) || PLATFORM(VISION)
@@ -617,20 +617,22 @@ void WebPushDaemon::notifyClientPushMessageIsAvailable(const WebCore::PushSubscr
 
     if (bundleIdentifier == "com.apple.SafariViewService"_s) {
         const NSString *URLPrefix = @"webapp://web-push/";
-        NSURL *launchURL = [NSURL URLWithString:[URLPrefix stringByAppendingFormat:@"%@", (NSString *)subscriptionSetIdentifier.pushPartition]];
+        RetainPtr launchURL = adoptNS([[NSURL alloc] initWithString:[URLPrefix stringByAppendingFormat:@"%@", subscriptionSetIdentifier.pushPartition.createNSString().get()]]);
 
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         NSDictionary *options = @{
             FBSOpenApplicationOptionKeyActivateForEvent: @{ FBSActivateForEventOptionTypeBackgroundContentFetching: @{ } },
-            FBSOpenApplicationOptionKeyPayloadURL : launchURL,
+            FBSOpenApplicationOptionKeyPayloadURL : launchURL.get(),
             FBSOpenApplicationOptionKeyPayloadOptions : @{ UIApplicationLaunchOptionsSourceApplicationKey : @"com.apple.WebKit.webpushd" },
         };
+ALLOW_DEPRECATED_DECLARATIONS_END
 
         RetainPtr configuration = adoptNS([[_LSOpenConfiguration alloc] init]);
         configuration.get().sensitive = YES;
         configuration.get().frontBoardOptions = options;
         configuration.get().allowURLOverrides = NO;
 
-        [[LSApplicationWorkspace defaultWorkspace] openURL:launchURL configuration:configuration.get() completionHandler:^(NSDictionary<NSString *, id> *result, NSError *error) {
+        [[LSApplicationWorkspace defaultWorkspace] openURL:launchURL.get() configuration:configuration.get() completionHandler:^(NSDictionary<NSString *, id> *result, NSError *error) {
             if (error)
                 RELEASE_LOG_ERROR(Push, "Failed to open app to handle push: %{public}@", error);
         }];
@@ -640,7 +642,7 @@ void WebPushDaemon::notifyClientPushMessageIsAvailable(const WebCore::PushSubscr
 
     NSDictionary *settingsInfo = @{
         pushActionVersionKey(): currentPushActionVersion(),
-        pushActionPartitionKey(): (NSString *)subscriptionSetIdentifier.pushPartition,
+        pushActionPartitionKey(): subscriptionSetIdentifier.pushPartition.createNSString().get(),
         pushActionTypeKey(): _WKWebPushActionTypePushEvent
     };
     RetainPtr<BSMutableSettings> bsSettings = adoptNS([[BSMutableSettings alloc] init]);
@@ -653,18 +655,20 @@ void WebPushDaemon::notifyClientPushMessageIsAvailable(const WebCore::PushSubscr
 
     RetainPtr action = adoptNS([[BSAction alloc] initWithInfo:bsSettings.get() responder:bsResponder.get()]);
 
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     FBSOpenApplicationOptions *options = [FBSOpenApplicationOptions optionsWithDictionary:@{
         FBSOpenApplicationOptionKeyActivateForEvent: @{ FBSActivateForEventOptionTypeBackgroundContentFetching: @{ } },
         FBSOpenApplicationOptionKeyActivateSuspended : @YES,
         FBSOpenApplicationOptionKeyActions : @[ action.get() ],
         FBSOpenApplicationOptionKeyPayloadOptions : @{ UIApplicationLaunchOptionsSourceApplicationKey : @"com.apple.WebKit.webpushd" },
     }];
+ALLOW_DEPRECATED_DECLARATIONS_END
 
     // This function doesn't actually follow the create rule, therefore we don't use adoptNS on it.
     if (!m_openService)
         m_openService = SBSCreateOpenApplicationService();
 
-    [m_openService openApplication:(NSString *)bundleIdentifier withOptions:options completion:^(BSProcessHandle *process, NSError *error) {
+    [m_openService openApplication:bundleIdentifier.createNSString().get() withOptions:options completion:^(BSProcessHandle *process, NSError *error) {
         if (error)
             RELEASE_LOG_ERROR(Push, "Failed to open app to handle push: %{public}@", error);
     }];
@@ -831,7 +835,7 @@ void WebPushDaemon::subscribeToPushService(PushClientConnection& connection, con
 
 #if PLATFORM(IOS)
     const auto& webClipIdentifier = identifier.pushPartition;
-    RetainPtr webClip = [UIWebClip webClipWithIdentifier:(NSString *)webClipIdentifier];
+    RetainPtr webClip = [UIWebClip webClipWithIdentifier:webClipIdentifier.createNSString().get()];
     auto webClipOrigin = SecurityOriginData::fromURL(URL { [webClip pageURL] });
 
     if (origin.isNull() || origin.isOpaque() || origin != webClipOrigin) {
@@ -1003,11 +1007,11 @@ void WebPushDaemon::showNotification(const WebCore::PushSubscriptionSetIdentifie
 {
     RetainPtr content = adoptNS([[UNMutableNotificationContent alloc] init]);
 
-    [content setDefaultActionBundleIdentifier:platformDefaultActionBundleIdentifier(identifier)];
+    [content setDefaultActionBundleIdentifier:platformDefaultActionBundleIdentifier(identifier).get()];
 
-    content.get().targetContentIdentifier = (NSString *)identifier.pushPartition;
-    content.get().title = (NSString *)notificationData.title;
-    content.get().body = (NSString *)notificationData.body;
+    content.get().targetContentIdentifier = identifier.pushPartition.createNSString().get();
+    content.get().title = notificationData.title.createNSString().get();
+    content.get().body = notificationData.body.createNSString().get();
     content.get().categoryIdentifier = @"webpushdCategory";
     content.get().badge = appBadge ? [NSNumber numberWithLongLong:*appBadge] : nil;
 
@@ -1021,17 +1025,17 @@ void WebPushDaemon::showNotification(const WebCore::PushSubscriptionSetIdentifie
 
 #if PLATFORM(IOS)
     const auto& webClipIdentifier = identifier.pushPartition;
-    RetainPtr webClip = [UIWebClip webClipWithIdentifier:(NSString *)webClipIdentifier];
+    RetainPtr webClip = [UIWebClip webClipWithIdentifier:webClipIdentifier.createNSString().get()];
     notificationSourceForDisplay = [webClip title];
 #endif
 
 ALLOW_NONLITERAL_FORMAT_BEGIN
-    content.get().subtitle = [NSString stringWithFormat:(NSString *)WEB_UI_STRING("from %@", "Web Push Notification string to indicate the name of the Web App/Web Site a notification was sent from, such as 'from Wikipedia'"), notificationSourceForDisplay];
+    content.get().subtitle = adoptNS([[NSString alloc] initWithFormat:WEB_UI_STRING("from %@", "Web Push Notification string to indicate the name of the Web App/Web Site a notification was sent from, such as 'from Wikipedia'").createNSString().get(), notificationSourceForDisplay]).get();
 ALLOW_NONLITERAL_FORMAT_END
 
     content.get().userInfo = notificationData.dictionaryRepresentation();
 
-    UNNotificationRequest *request = [UNNotificationRequest requestWithIdentifier:(NSString *)notificationData.notificationID.toString() content:content.get() trigger:nil];
+    RetainPtr request = [UNNotificationRequest requestWithIdentifier:notificationData.notificationID.toString().createNSString().get() content:content.get() trigger:nil];
     RetainPtr<UNUserNotificationCenter> center = adoptNS([[m_userNotificationCenterClass alloc] initWithBundleIdentifier:notificationCenterBundleIdentifier.get()]);
     if (!center)
         RELEASE_LOG_ERROR(Push, "Failed to instantiate UNUserNotificationCenter center");
@@ -1049,7 +1053,7 @@ ALLOW_NONLITERAL_FORMAT_END
         });
     });
 
-    [center addNotificationRequest:request withCompletionHandler:blockPtr.get()];
+    [center addNotificationRequest:request.get() withCompletionHandler:blockPtr.get()];
 }
 
 void WebPushDaemon::getNotifications(PushClientConnection& connection, const URL& registrationURL, const String& tag, CompletionHandler<void(Expected<Vector<WebCore::NotificationData>, WebCore::ExceptionData>&&)>&& completionHandler)
@@ -1100,9 +1104,9 @@ void WebPushDaemon::cancelNotification(PushClientConnection& connection, WebCore
     auto placeholderBundleIdentifier = platformNotificationCenterBundleIdentifier(identifier.pushPartition);
     RetainPtr center = adoptNS([[m_userNotificationCenterClass alloc] initWithBundleIdentifier:placeholderBundleIdentifier.get()]);
 
-    auto identifiers = @[ (NSString *)notificationID.toString() ];
-    [center removePendingNotificationRequestsWithIdentifiers:identifiers];
-    [center removeDeliveredNotificationsWithIdentifiers:identifiers];
+    RetainPtr identifiers = @[ notificationID.toString().createNSString().get() ];
+    [center removePendingNotificationRequestsWithIdentifiers:identifiers.get()];
+    [center removeDeliveredNotificationsWithIdentifiers:identifiers.get()];
 }
 
 void WebPushDaemon::getPushPermissionState(PushClientConnection& connection, const WebCore::SecurityOriginData& origin, CompletionHandler<void(WebCore::PushPermissionState)>&& replySender)
@@ -1121,7 +1125,7 @@ void WebPushDaemon::getPushPermissionState(PushClientConnection& connection, con
     }
 
     const auto& webClipIdentifier = identifier.pushPartition;
-    RetainPtr webClip = [UIWebClip webClipWithIdentifier:(NSString *)webClipIdentifier];
+    RetainPtr webClip = [UIWebClip webClipWithIdentifier:webClipIdentifier.createNSString().get()];
     auto webClipOrigin = WebCore::SecurityOriginData::fromURL(URL { [webClip pageURL] });
 
     if (origin.isNull() || origin.isOpaque() || origin != webClipOrigin) {
@@ -1168,7 +1172,7 @@ void WebPushDaemon::requestPushPermission(PushClientConnection& connection, cons
     }
 
     const auto& webClipIdentifier = identifier.pushPartition;
-    RetainPtr webClip = [UIWebClip webClipWithIdentifier:(NSString *)webClipIdentifier];
+    RetainPtr webClip = [UIWebClip webClipWithIdentifier:webClipIdentifier.createNSString().get()];
     auto webClipOrigin = WebCore::SecurityOriginData::fromURL(URL { [webClip pageURL] });
 
     if (origin.isNull() || origin.isOpaque() || origin != webClipOrigin) {
@@ -1208,7 +1212,7 @@ void WebPushDaemon::setAppBadge(PushClientConnection& connection, WebCore::Secur
 
 #if PLATFORM(IOS)
     auto webClipIdentifier = identifier.pushPartition;
-    RetainPtr webClip = [UIWebClip webClipWithIdentifier:(NSString *)webClipIdentifier];
+    RetainPtr webClip = [UIWebClip webClipWithIdentifier:webClipIdentifier.createNSString().get()];
     appPageURL = [webClip pageURL];
 #elif PLATFORM(MAC)
     // FIXME: Establish the app page URL for Mac apps here
@@ -1226,15 +1230,15 @@ void WebPushDaemon::setAppBadge(PushClientConnection& connection, WebCore::Secur
     state.get().badgeValue = appBadge ? [NSNumber numberWithUnsignedLongLong:*appBadge] : nil;
 #elif PLATFORM(MAC)
     String bundleIdentifier = identifier.pushPartition.isEmpty() ? connection.hostAppCodeSigningIdentifier() : identifier.pushPartition;
-    RetainPtr center = adoptNS([[m_userNotificationCenterClass alloc]  initWithBundleIdentifier:(NSString *)bundleIdentifier]);
+    RetainPtr center = adoptNS([[m_userNotificationCenterClass alloc]  initWithBundleIdentifier:bundleIdentifier.createNSString().get()]);
     if (!center)
         return;
 
     UNMutableNotificationContent *content = [UNMutableNotificationContent new];
     content.badge = appBadge ? [NSNumber numberWithLongLong:*appBadge] : nil;
-    UNNotificationRequest *request = [UNNotificationRequest requestWithIdentifier:NSUUID.UUID.UUIDString content:content trigger:nil];
-    RetainPtr debugDescription = (NSString *)identifier.debugDescription();
-    [center addNotificationRequest:request withCompletionHandler:^(NSError *error) {
+    RetainPtr request = [UNNotificationRequest requestWithIdentifier:NSUUID.UUID.UUIDString content:content trigger:nil];
+    RetainPtr debugDescription = identifier.debugDescription().createNSString().get();
+    [center addNotificationRequest:request.get() withCompletionHandler:^(NSError *error) {
         if (error) {
             RELEASE_LOG_ERROR(Push, "Error attempting to set badge count for web app %{public}@", debugDescription.get());
             return;
@@ -1254,7 +1258,7 @@ void WebPushDaemon::getAppBadgeForTesting(PushClientConnection& connection, Comp
     RELEASE_ASSERT(m_userNotificationCenterClass == _WKMockUserNotificationCenter.class);
 
     String bundleIdentifier = connection.pushPartitionIfExists().isEmpty() ? connection.hostAppCodeSigningIdentifier() : connection.pushPartitionIfExists();
-    RetainPtr center = adoptNS([[_WKMockUserNotificationCenter alloc] initWithBundleIdentifier:(NSString *)bundleIdentifier]);
+    RetainPtr center = adoptNS([[_WKMockUserNotificationCenter alloc] initWithBundleIdentifier:bundleIdentifier.createNSString().get()]);
     NSNumber *centerBadge = [center getAppBadgeForTesting];
 
     if (centerBadge)

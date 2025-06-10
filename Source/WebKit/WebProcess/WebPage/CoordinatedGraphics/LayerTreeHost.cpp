@@ -87,7 +87,7 @@ LayerTreeHost::LayerTreeHost(WebPage& webPage, WebCore::PlatformDisplayID displa
     {
         auto& rootLayer = m_sceneState->rootLayer();
 #if ENABLE(DAMAGE_TRACKING)
-        rootLayer.setDamagePropagation(webPage.corePage()->settings().propagateDamagingInformation());
+        rootLayer.setDamagePropagationEnabled(webPage.corePage()->settings().propagateDamagingInformation());
 #endif
         Locker locker { rootLayer.lock() };
         rootLayer.setAnchorPoint(FloatPoint3D(0, 0, 0));
@@ -106,14 +106,16 @@ LayerTreeHost::LayerTreeHost(WebPage& webPage, WebCore::PlatformDisplayID displa
     m_compositor = ThreadedCompositor::create(*this, *this, displayID);
 #endif
 #if ENABLE(DAMAGE_TRACKING)
-    auto damagePropagation = ([](const Settings& settings) {
-        if (!settings.propagateDamagingInformation())
-            return Damage::Propagation::None;
+    std::optional<OptionSet<ThreadedCompositor::DamagePropagationFlags>> damagePropagationFlags;
+    const auto& settings = webPage.corePage()->settings();
+    if (settings.propagateDamagingInformation()) {
+        damagePropagationFlags = OptionSet<ThreadedCompositor::DamagePropagationFlags> { };
         if (settings.unifyDamagedRegions())
-            return Damage::Propagation::Unified;
-        return Damage::Propagation::Region;
-    })(webPage.corePage()->settings());
-    m_compositor->setDamagePropagation(damagePropagation);
+            damagePropagationFlags->add(ThreadedCompositor::DamagePropagationFlags::Unified);
+        if (settings.useDamagingInformationForCompositing())
+            damagePropagationFlags->add(ThreadedCompositor::DamagePropagationFlags::UseForCompositing);
+    }
+    m_compositor->setDamagePropagationFlags(damagePropagationFlags);
 #endif
     m_layerTreeContext.contextID = m_compositor->surfaceID();
 }
@@ -390,7 +392,7 @@ void LayerTreeHost::backgroundColorDidChange()
 void LayerTreeHost::attachLayer(CoordinatedPlatformLayer& layer)
 {
 #if ENABLE(DAMAGE_TRACKING)
-    layer.setDamagePropagation(webPage().corePage()->settings().propagateDamagingInformation());
+    layer.setDamagePropagationEnabled(webPage().corePage()->settings().propagateDamagingInformation());
 #endif
     m_sceneState->addLayer(layer);
 }
@@ -489,6 +491,10 @@ void LayerTreeHost::didRenderFrame()
 {
     if (auto* drawingArea = m_webPage.drawingArea())
         drawingArea->didCompleteRenderingUpdateDisplay();
+    if (auto fps = m_compositor->fps()) {
+        if (RefPtr document = m_webPage.corePage()->localTopDocument())
+            document->addConsoleMessage(MessageSource::Rendering, MessageLevel::Info, makeString("FPS: "_s, *fps));
+    }
 }
 
 #if HAVE(DISPLAY_LINK)
@@ -653,6 +659,30 @@ void LayerTreeHost::commitTransientZoom(double scale, FloatPoint origin)
 void LayerTreeHost::preferredBufferFormatsDidChange()
 {
     m_compositor->preferredBufferFormatsDidChange();
+}
+#endif
+
+#if ENABLE(DAMAGE_TRACKING)
+void LayerTreeHost::notifyFrameDamageForTesting(Region&& damageRegion)
+{
+    Locker locker { m_frameDamageHistoryForTestingLock };
+    m_frameDamageHistoryForTesting.append(WTFMove(damageRegion));
+}
+
+void LayerTreeHost::resetDamageHistoryForTesting()
+{
+    {
+        Locker locker { m_frameDamageHistoryForTestingLock };
+        m_frameDamageHistoryForTesting.clear();
+    }
+    m_compositor->enableFrameDamageNotificationForTesting();
+}
+
+void LayerTreeHost::foreachRegionInDamageHistoryForTesting(Function<void(const Region&)>&& callback)
+{
+    Locker locker { m_frameDamageHistoryForTestingLock };
+    for (const auto& region : m_frameDamageHistoryForTesting)
+        callback(region);
 }
 #endif
 

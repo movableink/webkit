@@ -42,7 +42,7 @@ public:
     void append(const SharedBuffer& buffer) { m_data.append(buffer); }
     void clear() { m_data.empty(); }
 
-    virtual void deliver(ResourceLoader& loader) { loader.deliverResponseAndData(m_response, m_data.copy()); }
+    virtual void deliver(ResourceLoader& loader) { loader.deliverResponseAndData(ResourceResponse { m_response }, m_data.copy()); }
 
 protected:
     SubstituteResource(URL&& url, ResourceResponse&& response, Ref<FragmentedSharedBuffer>&& data)

@@ -29,7 +29,7 @@
 #if ENABLE(APPLE_PAY_AMS_UI) && ENABLE(PAYMENT_REQUEST)
 
 #include "ApplePayAMSUIRequest.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "JSApplePayAMSUIRequest.h"
 #include "JSDOMConvert.h"
 #include "Page.h"

@@ -99,6 +99,7 @@ TEST(UserAgentTest, Quirks)
     assertUserAgentForURLHasChromeBrowserQuirk("http://www.apple.com/");
 
     assertUserAgentForURLHasFirefoxBrowserQuirk("http://bugzilla.redhat.com/");
+    assertUserAgentForURLHasFirefoxBrowserQuirk("http://www.bilibili.com/");
 
 #if ENABLE(THUNDER)
     assertUserAgentForURLHasFirefoxBrowserQuirk("http://www.netflix.com/");

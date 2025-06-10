@@ -128,6 +128,18 @@ void VideoPresentationInterfaceContext::isChildOfElementFullscreenChanged(bool i
         manager->isChildOfElementFullscreenChanged(m_contextId, isChildOfElementFullscreen);
 }
 
+void VideoPresentationInterfaceContext::audioSessionCategoryChanged(WebCore::AudioSessionCategory category, WebCore::AudioSessionMode mode, WebCore::RouteSharingPolicy policy)
+{
+    if (RefPtr manager = m_manager.get())
+        manager->audioSessionCategoryChanged(m_contextId, category, mode, policy);
+}
+
+void VideoPresentationInterfaceContext::hasBeenInteractedWith()
+{
+    if (RefPtr manager = m_manager.get())
+        manager->hasBeenInteractedWith(m_contextId);
+}
+
 void VideoPresentationInterfaceContext::videoDimensionsChanged(const FloatSize& videoDimensions)
 {
     if (m_manager)
@@ -191,7 +203,7 @@ VideoPresentationManager::ModelInterfaceTuple VideoPresentationManager::createMo
     m_playbackSessionManager->addClientForContext(contextId);
 
     if (createlayerHostingContext)
-        interface->setLayerHostingContext(LayerHostingContext::createForExternalHostingProcess());
+        interface->setLayerHostingContext(LayerHostingContext::create());
 
     model->addClient(interface.get());
 
@@ -581,6 +593,18 @@ void VideoPresentationManager::isChildOfElementFullscreenChanged(PlaybackSession
         page->send(Messages::VideoPresentationManagerProxy::SetIsChildOfElementFullscreen(contextId, isChildOfElementFullscreen));
 }
 
+void VideoPresentationManager::audioSessionCategoryChanged(PlaybackSessionContextIdentifier contextId, WebCore::AudioSessionCategory category, WebCore::AudioSessionMode mode, WebCore::RouteSharingPolicy policy)
+{
+    if (RefPtr page = m_page.get())
+        page->send(Messages::VideoPresentationManagerProxy::AudioSessionCategoryChanged(contextId, category, mode, policy));
+}
+
+void VideoPresentationManager::hasBeenInteractedWith(PlaybackSessionContextIdentifier contextId)
+{
+    if (RefPtr page = m_page.get())
+        page->send(Messages::VideoPresentationManagerProxy::HasBeenInteractedWith(contextId));
+}
+
 void VideoPresentationManager::videoDimensionsChanged(PlaybackSessionContextIdentifier contextId, const FloatSize& videoDimensions)
 {
     if (m_page)
@@ -657,9 +681,9 @@ void VideoPresentationManager::didSetupFullscreen(PlaybackSessionContextIdentifi
     ASSERT(m_page);
     auto [model, interface] = ensureModelAndInterface(contextId);
     INFO_LOG(LOGIDENTIFIER, model->logIdentifier());
-    CALayer* videoLayer = interface->rootLayer().get();
+    RetainPtr videoLayer = interface->rootLayer().get();
 
-    model->setVideoFullscreenLayer(videoLayer, [protectedThis = Ref { *this }, contextId] () mutable {
+    model->setVideoFullscreenLayer(videoLayer.get(), [protectedThis = Ref { *this }, contextId] () mutable {
         RunLoop::protectedMain()->dispatch([protectedThis = WTFMove(protectedThis), contextId] {
             if (RefPtr page = protectedThis->m_page.get())
                 page->send(Messages::VideoPresentationManagerProxy::EnterFullscreen(contextId));
@@ -710,6 +734,32 @@ void VideoPresentationManager::didEnterFullscreen(PlaybackSessionContextIdentifi
             protectedThis->exitVideoFullscreenForVideoElement(*videoElement, [](bool) { });
     });
 }
+
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+void VideoPresentationManager::didEnterExternalPlayback(PlaybackSessionContextIdentifier contextId)
+{
+    auto [model, interface] = ensureModelAndInterface(contextId);
+    INFO_LOG(LOGIDENTIFIER, model->logIdentifier());
+
+    RefPtr<HTMLVideoElement> videoElement = model->videoElement();
+    if (!videoElement)
+        return;
+
+    videoElement->didEnterExternalPlayback();
+}
+
+void VideoPresentationManager::didExitExternalPlayback(PlaybackSessionContextIdentifier contextId)
+{
+    auto [model, interface] = ensureModelAndInterface(contextId);
+    INFO_LOG(LOGIDENTIFIER, model->logIdentifier());
+
+    RefPtr<HTMLVideoElement> videoElement = model->videoElement();
+    if (!videoElement)
+        return;
+
+    videoElement->didExitExternalPlayback();
+}
+#endif
 
 void VideoPresentationManager::failedToEnterFullscreen(PlaybackSessionContextIdentifier contextId)
 {

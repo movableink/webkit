@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 Apple Inc. All rights reserved.
+# Copyright (C) 2023-2025 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -122,7 +122,7 @@ elsif ARMv7
 
     const sc0 = t4
     const sc1 = t5
-    const sc2 = t6
+    const sc2 = csr0
     const sc3 = t7
 else
     const PC = invalidGPR
@@ -150,14 +150,17 @@ const MachineRegisterSize = constexpr (sizeof(CPURegister))
 const SlotSize = constexpr (sizeof(Register))
 
 # amount of memory a local takes up on the stack (16 bytes for a v128)
-const LocalSize = 16
-const StackValueSize = 16
-const StackValueShift = 4
+const V128ISize = 16
+const LocalSize = V128ISize
+const StackValueSize = V128ISize
 
 const wasmInstance = csr0
 if X86_64 or ARM64 or ARM64E or RISCV64
     const memoryBase = csr3
     const boundsCheckingSize = csr4
+elsif ARMv7
+    const memoryBase = t2
+    const boundsCheckingSize = t3
 else
     const memoryBase = invalidGPR
     const boundsCheckingSize = invalidGPR
@@ -198,6 +201,11 @@ end
 # 2. Core interpreter macros #
 ##############################
 
+macro ipintOp(name, impl)
+    instructionLabel(name)
+    impl()
+end
+
 # -----------------------------------
 # 2.1: Core interpreter functionality
 # -----------------------------------
@@ -231,39 +239,6 @@ macro advanceMCByReg(amount)
     addp amount, MC
 end
 
-# Typed push/pop to make code pretty
-macro pushFloat32FT0()
-    pushFPR()
-end
-
-macro pushFloat32FT1()
-    pushFPR1()
-end
-
-macro popFloat32FT0()
-    popFPR()
-end
-
-macro popFloat32FT1()
-    popFPR1()
-end
-
-macro pushFloat64FT0()
-    pushFPR()
-end
-
-macro pushFloat64FT1()
-    pushFPR1()
-end
-
-macro popFloat64FT0()
-    popFPR()
-end
-
-macro popFloat64FT1()
-    popFPR1()
-end
-
 macro decodeLEBVarUInt32(offset, dst, scratch1, scratch2, scratch3, scratch4)
     # if it's a single byte, fastpath it
     const tempPC = scratch4
@@ -293,7 +268,7 @@ end
 
 macro checkStackOverflow(callee, scratch)
     loadi Wasm::IPIntCallee::m_maxFrameSizeInV128[callee], scratch
-    lshiftp 4, scratch
+    mulp V128ISize, scratch
     subp cfr, scratch, scratch
 
 if not ADDRESS64
@@ -354,6 +329,18 @@ macro ipintReloadMemory()
     end
 end
 
+# Call site tracking
+
+macro saveCallSiteIndex()
+if X86_64
+    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
+end
+    loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
+    negp t0
+    addp PC, t0
+    storei t0, CallSiteIndex[cfr]
+end
+
 # Operation Calls
 
 macro operationCall(fn)
@@ -377,10 +364,7 @@ macro operationCall(fn)
 end
 
 macro operationCallMayThrow(fn)
-    loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
-    negq t0
-    addq PC, t0
-    storei t0, CallSiteIndex[cfr]
+    saveCallSiteIndex()
 
     move wasmInstance, a0
     push PC, MC
@@ -390,8 +374,8 @@ macro operationCallMayThrow(fn)
         push PL, IB
     end
     fn()
-    bqneq r0, 1, .continuation
-    storei r1, ArgumentCountIncludingThis + PayloadOffset[cfr]
+    bpneq r1, (constexpr JSC::IPInt::SlowPathExceptionTag), .continuation
+    storei r0, ArgumentCountIncludingThis + PayloadOffset[cfr]
     jmp _wasm_throw_from_slow_path_trampoline
 .continuation:
     if ARM64 or ARM64E
@@ -568,7 +552,9 @@ if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     getIPIntCallee()
 
     # on x86, PL will hold the PC relative offset for argumINT, then IB will take over
-    initPCRelative(ipint_entry, PL)
+    if X86_64
+        initPCRelative(ipint_entry, PL)
+    end
     ipintEntry()
 else
     break
@@ -626,7 +612,13 @@ macro ipintCatchCommon()
     loadp VM::targetInterpreterPCForThrow[t3], PC
     loadp VM::targetInterpreterMetadataPCForThrow[t3], MC
 
+if ARMv7
+    push MC
+end
     getIPIntCallee()
+if ARMv7
+    pop MC
+end
 
     loadp CodeBlock[cfr], wasmInstance
     if ARM64 or ARM64E
@@ -644,16 +636,21 @@ macro ipintCatchCommon()
         loadi Wasm::IPIntCallee::m_numRethrowSlotsToAlloc[ws0], t1
         loadi Wasm::IPIntCallee::m_localSizeToAlloc[ws0], t0
     end
-    addq t1, t0
-    mulq LocalSize, t0
-    addq IPIntCalleeSaveSpaceStackAligned, t0
-    subq cfr, t0, PL
+    addp t1, t0
+    mulp LocalSize, t0
+    addp IPIntCalleeSaveSpaceStackAligned, t0
+    subp cfr, t0, PL
 
     loadi [MC], t0
     addp t1, t0
-    lshiftq StackValueShift, t0
-    addq IPIntCalleeSaveSpaceStackAligned, t0
+    mulp StackValueSize, t0
+    addp IPIntCalleeSaveSpaceStackAligned, t0
+if ARMv7
+    move cfr, sp
+    subp sp, t0, sp
+else
     subp cfr, t0, sp
+end
 
 if X86_64
     loadp UnboxedWasmCalleeStackSlot[cfr], ws0
@@ -704,7 +701,7 @@ end
 
 global _ipint_table_catch_entry
 _ipint_table_catch_entry:
-if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
+if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     ipintCatchCommon()
 if X86_64
     initPCRelative(ipint_table_catch_entry, IB)
@@ -727,7 +724,7 @@ end
 
 global _ipint_table_catch_ref_entry
 _ipint_table_catch_ref_entry:
-if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
+if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     ipintCatchCommon()
 if X86_64
     initPCRelative(ipint_table_catch_ref_entry, IB)
@@ -750,7 +747,7 @@ end
 
 global _ipint_table_catch_all_entry
 _ipint_table_catch_all_entry:
-if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
+if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     ipintCatchCommon()
 if X86_64
     initPCRelative(ipint_table_catch_all_entry, IB)
@@ -760,7 +757,7 @@ end
     # do nothing: 0 in sp for no arguments, call normal operation
 
     move cfr, a1
-    move sp, a2
+    move 0, a2
     move PL, a3
     operationCall(macro() cCall4(_ipint_extern_retrieve_and_clear_exception) end)
 
@@ -773,7 +770,7 @@ end
 
 global _ipint_table_catch_allref_entry
 _ipint_table_catch_allref_entry:
-if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
+if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     ipintCatchCommon()
 if X86_64
     initPCRelative(ipint_table_catch_allref_entry, IB)

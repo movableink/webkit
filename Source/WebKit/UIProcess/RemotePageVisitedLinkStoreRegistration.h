@@ -39,12 +39,12 @@ public:
         : m_page(page)
         , m_process(process)
     {
-        protectedProcess()->addVisitedLinkStoreUser(page.protectedVisitedLinkStore(), page.identifier());
+        protectedProcess()->addVisitedLinkStoreUser(page.visitedLinkStore(), page.identifier());
     }
     ~RemotePageVisitedLinkStoreRegistration()
     {
         if (RefPtr page = m_page.get())
-            protectedProcess()->removeVisitedLinkStoreUser(page->protectedVisitedLinkStore(), page->identifier());
+            protectedProcess()->removeVisitedLinkStoreUser(page->visitedLinkStore(), page->identifier());
     }
 
 private:

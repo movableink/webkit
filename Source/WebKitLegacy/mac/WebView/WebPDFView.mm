@@ -66,6 +66,7 @@
 #import <WebCore/SimpleRange.h>
 #import <WebCore/WebNSAttributedStringExtras.h>
 #import <wtf/Assertions.h>
+#import <wtf/FileHandle.h>
 #import <wtf/FileSystem.h>
 #import <wtf/RuntimeApplicationChecks.h>
 #import <wtf/URL.h>
@@ -1269,13 +1270,13 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     
     path = [temporaryPDFDirectoryPath stringByAppendingPathComponent:filename];
     if ([manager fileExistsAtPath:path]) {
-        auto [fd, pathTemplateRepresentation] = FileSystem::createTemporaryFileInDirectory(temporaryPDFDirectoryPath, makeString('-', filename));
-        if (fd < 0) {
+        auto [fileHandle, pathTemplateRepresentation] = FileSystem::createTemporaryFileInDirectory(temporaryPDFDirectoryPath, makeString('-', filename));
+        if (!fileHandle) {
             // Couldn't create a temporary file! Should never happen; if it does we'll fail silently on non-debug builds.
             ASSERT_NOT_REACHED();
             path = nil;
         } else {
-            close(fd);
+            fileHandle = { };
             path = [manager stringWithFileSystemRepresentation:pathTemplateRepresentation.data() length:pathTemplateRepresentation.length()];
         }
     }

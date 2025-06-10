@@ -77,10 +77,10 @@ WI.loaded = function()
 
     // Targets.
     WI.backendTarget = null;
-    WI._backendTargetAvailablePromise = new WI.WrappedPromise;
+    WI._backendTargetAvailablePromise = Promise.withResolvers();
 
     WI.pageTarget = null;
-    WI._pageTargetAvailablePromise = new WI.WrappedPromise;
+    WI._pageTargetAvailablePromise = Promise.withResolvers();
 
     if (InspectorBackend.hasDomain("Target"))
         WI.targetManager.createMultiplexingBackendTarget();

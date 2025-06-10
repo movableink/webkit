@@ -54,23 +54,23 @@ bool GrVkMSAALoadManager::createMSAALoadProgram(GrVkGpu* gpu) {
     std::string vertShaderText;
     vertShaderText.append(
             "layout(vulkan, set=0, binding=0) uniform vertexUniformBuffer {"
-            "half4 uPosXform;"
+                "half4 uPosXform;"
             "};"
 
-            "// MSAA Load Program VS\n"
+            // MSAA Load Program VS
             "void main() {"
-            "float2 position = float2(sk_VertexID >> 1, sk_VertexID & 1);"
-            "sk_Position.xy = position * uPosXform.xy + uPosXform.zw;"
-            "sk_Position.zw = half2(0, 1);"
+                "float2 position = float2(sk_VertexID >> 1, sk_VertexID & 1);"
+                "sk_Position.xy = position * uPosXform.xy + uPosXform.zw;"
+                "sk_Position.zw = half2(0, 1);"
             "}");
 
     std::string fragShaderText;
     fragShaderText.append(
             "layout(vulkan, input_attachment_index=0, set=2, binding=0) subpassInput uInput;"
 
-            "// MSAA Load Program FS\n"
+            // MSAA Load Program FS
             "void main() {"
-            "sk_FragColor = subpassLoad(uInput);"
+                "sk_FragColor = subpassLoad(uInput);"
             "}");
 
     SkSL::ProgramSettings settings;
@@ -122,9 +122,9 @@ bool GrVkMSAALoadManager::createMSAALoadProgram(GrVkGpu* gpu) {
     layoutCreateInfo.pushConstantRangeCount = 0;
     layoutCreateInfo.pPushConstantRanges = nullptr;
 
-    VkResult err = GR_VK_CALL(
-            gpu->vkInterface(),
-            CreatePipelineLayout(gpu->device(), &layoutCreateInfo, nullptr, &fPipelineLayout));
+    VkResult err;
+    GR_VK_CALL_RESULT(gpu, err, CreatePipelineLayout(
+            gpu->device(), &layoutCreateInfo, nullptr, &fPipelineLayout));
     if (err) {
         this->destroyResources(gpu);
         return false;
@@ -255,4 +255,3 @@ void GrVkMSAALoadManager::destroyResources(GrVkGpu* gpu) {
         fPipelineLayout = VK_NULL_HANDLE;
     }
 }
-

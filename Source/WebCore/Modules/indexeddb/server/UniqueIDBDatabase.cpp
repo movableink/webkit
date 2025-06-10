@@ -44,6 +44,7 @@
 #include "Logging.h"
 #include "UniqueIDBDatabaseConnection.h"
 #include "UniqueIDBDatabaseManager.h"
+#include <algorithm>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -1397,10 +1398,14 @@ RefPtr<UniqueIDBDatabaseTransaction> UniqueIDBDatabase::takeNextRunnableTransact
 {
     hadDeferredTransactions = false;
 
+    // Version change transaction should have exclusive access to database.
+    if (m_versionChangeTransaction)
+        return nullptr;
+
     if (m_pendingTransactions.isEmpty())
         return nullptr;
 
-    bool hasReadWriteTransactionInProgress = WTF::anyOf(m_inProgressTransactions, [&](auto& entry) {
+    bool hasReadWriteTransactionInProgress = std::ranges::any_of(m_inProgressTransactions, [&](auto& entry) {
         return !entry.value->isReadOnly();
     });
     Deque<RefPtr<UniqueIDBDatabaseTransaction>> deferredTransactions;

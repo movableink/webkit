@@ -26,18 +26,21 @@
 #import "config.h"
 #import "JavaScriptEvaluationResult.h"
 
-#include "APIArray.h"
-#include "APIDictionary.h"
-#include "APINumber.h"
-#include "APISerializedScriptValue.h"
-#include "APIString.h"
-#include "CoreIPCNumber.h"
-#include "WKSharedAPICast.h"
-#include <JavaScriptCore/JSContext.h>
-#include <JavaScriptCore/JSValue.h>
-#include <WebCore/ExceptionDetails.h>
-#include <WebCore/SerializedScriptValue.h>
-#include <wtf/RunLoop.h>
+#import "APIArray.h"
+#import "APIDictionary.h"
+#import "APINumber.h"
+#import "APISerializedScriptValue.h"
+#import "APIString.h"
+#import "CoreIPCNumber.h"
+#import "WKSharedAPICast.h"
+#import <JavaScriptCore/JSCJSValue.h>
+#import <JavaScriptCore/JSContext.h>
+#import <JavaScriptCore/JSStringRefCF.h>
+#import <JavaScriptCore/JSValue.h>
+#import <WebCore/ExceptionDetails.h>
+#import <WebCore/SerializedScriptValue.h>
+#import <wtf/RunLoop.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 namespace WebKit {
 
@@ -60,7 +63,7 @@ RetainPtr<id> JavaScriptEvaluationResult::toID(Variant&& root)
     }, [] (CoreIPCNumber&& value) -> RetainPtr<id> {
         return value.toID();
     }, [] (String&& value) -> RetainPtr<id> {
-        return (NSString *)value;
+        return value.createNSString();
     }, [] (Seconds value) -> RetainPtr<id> {
         return [NSDate dateWithTimeIntervalSince1970:value.seconds()];
     }, [&] (Vector<JSObjectID>&& vector) -> RetainPtr<id> {
@@ -150,6 +153,9 @@ auto JavaScriptEvaluationResult::toVariant(id object) -> Variant
     if (!object)
         return NullType::NullPointer;
 
+    if (auto* jsValue = dynamic_objc_cast<JSValue>(object))
+        return jsValueToVariant(jsValue);
+
     if ([object isKindOfClass:NSNull.class])
         return NullType::NSNull;
 
@@ -163,8 +169,8 @@ auto JavaScriptEvaluationResult::toVariant(id object) -> Variant
         return CoreIPCNumber((NSNumber *)object);
     }
 
-    if ([object isKindOfClass:NSString.class])
-        return String((NSString *)object);
+    if (auto* nsString = dynamic_objc_cast<NSString>(object))
+        return String(nsString);
 
     if ([object isKindOfClass:NSDate.class])
         return Seconds([(NSDate *)object timeIntervalSince1970]);
@@ -184,7 +190,7 @@ auto JavaScriptEvaluationResult::toVariant(id object) -> Variant
         return { WTFMove(map) };
     }
 
-    // This object has been null checked and came from JSC::valueToObject which only supports these types.
+    // This object has been null checked and went through isSerializable which only supports these types.
     ASSERT_NOT_REACHED();
     return NullType::NullPointer;
 }
@@ -197,6 +203,11 @@ JSObjectID JavaScriptEvaluationResult::addObjectToMap(id object)
             m_map.add(*m_nullObjectID, Variant { NullType::NullPointer });
         }
         return *m_nullObjectID;
+    }
+
+    if (auto* jsValue = dynamic_objc_cast<JSValue>(object)) {
+        if (jsValue.isArray)
+            return addObjectToMap([jsValue toArray]);
     }
 
     auto it = m_objectsInMap.find(object);
@@ -216,18 +227,13 @@ static std::optional<JSValueRef> roundTripThroughSerializedScriptValue(JSGlobalC
     return std::nullopt;
 }
 
-static RetainPtr<id> convertToObjC(JSGlobalContextRef context, JSValueRef value)
-{
-    return [JSValue valueWithJSValueRef:value inContext:[JSContext contextWithJSGlobalContextRef:context]].toObject;
-}
-
-Expected<JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>> JavaScriptEvaluationResult::extract(JSGlobalContextRef context, JSValueRef value)
+std::optional<JavaScriptEvaluationResult> JavaScriptEvaluationResult::extract(JSGlobalContextRef context, JSValueRef value)
 {
     JSRetainPtr deserializationContext = API::SerializedScriptValue::deserializationContext();
 
     auto result = roundTripThroughSerializedScriptValue(context, deserializationContext.get(), value);
     if (!result)
-        return makeUnexpected(std::nullopt);
+        return std::nullopt;
     return { JavaScriptEvaluationResult { deserializationContext.get(), *result } };
 }
 
@@ -282,11 +288,47 @@ JavaScriptEvaluationResult::JavaScriptEvaluationResult(id object)
     m_nullObjectID = std::nullopt;
 }
 
-JavaScriptEvaluationResult::JavaScriptEvaluationResult(JSGlobalContextRef context, JSValueRef value)
-    : JavaScriptEvaluationResult(convertToObjC(context, value).get())
+// Similar to JSValue's valueToObjectWithoutCopy.
+auto JavaScriptEvaluationResult::jsValueToVariant(JSValue *value) -> Variant
 {
-    // FIXME: This does not need to roundtrip through ObjC.
-    // As a performance improvement we could make a converter directly from JS.
+    if (!value.isObject) {
+        if (value.isBoolean)
+            return static_cast<bool>([value toBool]);
+        if (value.isNumber)
+            return CoreIPCNumber([value toNumber]);
+        if (value.isString)
+            return String([value toString]);
+        if (value.isNull)
+            return NullType::NSNull;
+        return NullType::NullPointer;
+    }
+
+    if (value.isDate)
+        return Seconds([[value toDate] timeIntervalSince1970]);
+
+    if (value.isArray) {
+        RetainPtr nsArray = [value toArray];
+        if (!nsArray)
+            return NullType::NullPointer;
+
+        Vector<JSObjectID> vector([nsArray count], [&](size_t i) {
+            return addObjectToMap([nsArray objectAtIndex:i]);
+        });
+        return WTFMove(vector);
+    }
+
+    RetainPtr object = checked_objc_cast<NSDictionary>([value toObject]);
+    HashMap<JSObjectID, JSObjectID> map;
+    for (id key in object.get())
+        map.add(addObjectToMap(key), addObjectToMap([object objectForKey:key]));
+    return WTFMove(map);
+}
+
+JavaScriptEvaluationResult::JavaScriptEvaluationResult(JSGlobalContextRef context, JSValueRef value)
+    : m_root(addObjectToMap([JSValue valueWithJSValueRef:value inContext:[JSContext contextWithJSGlobalContextRef:context]]))
+{
+    m_jsObjectsInMap.clear();
+    m_nullObjectID = std::nullopt;
 }
 
 JSValueRef JavaScriptEvaluationResult::toJS(JSGlobalContextRef context)

@@ -1,5 +1,3 @@
-//@ skip
-
 function shouldBe(actual, expected) {
     if (actual !== expected)
         throw new Error(`expected ${expected} but got ${actual}`);
@@ -328,7 +326,7 @@ shouldBe(Intl.DateTimeFormat('en-u-ca-hebrew', { timeZone: 'America/Los_Angeles'
 shouldBe(Intl.DateTimeFormat('en-u-ca-indian', { timeZone: 'America/Los_Angeles' }).format(1451099872641), '10/4/1937 Saka');
 shouldBe(Intl.DateTimeFormat('en-u-ca-islamic', { timeZone: 'America/Los_Angeles' }).format(1451099872641), '3/14/1437 AH');
 shouldBe(Intl.DateTimeFormat('en-u-ca-islamicc', { timeZone: 'America/Los_Angeles' }).format(1451099872641), '3/13/1437 AH');
-shouldBe(Intl.DateTimeFormat('en-u-ca-ISO8601', { timeZone: 'America/Los_Angeles' }).format(1451099872641), '12/25/2015');
+shouldBeOneOf(Intl.DateTimeFormat('en-u-ca-ISO8601', { timeZone: 'America/Los_Angeles' }).format(1451099872641), ['12/25/2015', '2015-12-25']);
 shouldBeOneOf(Intl.DateTimeFormat('en-u-ca-japanese', { timeZone: 'America/Los_Angeles' }).format(1451099872641), [ '12/25/27 H', '12/25/H27' ]);
 shouldBe(Intl.DateTimeFormat('en-u-ca-persian', { timeZone: 'America/Los_Angeles' }).format(1451099872641), '10/4/1394 AP');
 shouldBe(Intl.DateTimeFormat('en-u-ca-roc', { timeZone: 'America/Los_Angeles' }).format(1451099872641), '12/25/104 Minguo');

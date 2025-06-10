@@ -178,6 +178,8 @@ public:
     JSRetainPtr<JSStringRef> orientation() const;
     JSRetainPtr<JSStringRef> liveRegionRelevant() const;
     JSRetainPtr<JSStringRef> liveRegionStatus() const;
+    double pageX();
+    double pageY();
     double x();
     double y();
     double width();
@@ -300,6 +302,11 @@ public:
     JSRetainPtr<JSStringRef> rangeForLine(int);
     JSRetainPtr<JSStringRef> rangeForPosition(int x, int y);
     JSRetainPtr<JSStringRef> boundsForRange(unsigned location, unsigned length);
+#if PLATFORM(MAC)
+    JSRetainPtr<JSStringRef> boundsForRangeWithPagePosition(unsigned location, unsigned length);
+#else
+    JSRetainPtr<JSStringRef> boundsForRangeWithPagePosition(unsigned location, unsigned length) { return createJSString(); };
+#endif
     bool setSelectedTextRange(unsigned location, unsigned length);
     JSRetainPtr<JSStringRef> stringForRange(unsigned location, unsigned length);
     JSRetainPtr<JSStringRef> attributedStringForRange(unsigned location, unsigned length);
@@ -360,6 +367,7 @@ public:
     JSRetainPtr<JSStringRef> stringForTextMarkerRange(AccessibilityTextMarkerRange*);
     JSRetainPtr<JSStringRef> rectsForTextMarkerRange(AccessibilityTextMarkerRange*, JSStringRef);
     JSRetainPtr<JSStringRef> attributedStringForTextMarkerRange(AccessibilityTextMarkerRange*);
+    JSRetainPtr<JSStringRef> attributedStringForTextMarkerRangeWithDidSpellCheck(AccessibilityTextMarkerRange*);
     JSRetainPtr<JSStringRef> attributedStringForTextMarkerRangeWithOptions(AccessibilityTextMarkerRange*, bool);
     int textMarkerRangeLength(AccessibilityTextMarkerRange*);
     bool attributedStringForTextMarkerRangeContainsAttribute(JSStringRef, AccessibilityTextMarkerRange*);
@@ -382,6 +390,8 @@ public:
     RefPtr<AccessibilityTextMarker> nextSentenceEndTextMarkerForTextMarker(AccessibilityTextMarker*);
     RefPtr<AccessibilityTextMarker> previousSentenceStartTextMarkerForTextMarker(AccessibilityTextMarker*);
     RefPtr<AccessibilityTextMarkerRange> textMarkerRangeMatchesTextNearMarkers(JSStringRef, AccessibilityTextMarker*, AccessibilityTextMarker*);
+    JSRetainPtr<JSStringRef> textMarkerDebugDescription(AccessibilityTextMarker*);
+    JSRetainPtr<JSStringRef> textMarkerRangeDebugDescription(AccessibilityTextMarkerRange*);
 
     // Returns an ordered list of supported actions for an element.
     JSRetainPtr<JSStringRef> supportedActions() const;
@@ -416,8 +426,6 @@ public:
     bool scrollPageLeft();
     bool scrollPageRight();
     
-    bool hasDocumentRoleAncestor() const;
-    bool hasWebApplicationAncestor() const;
     bool isInDescriptionListDetail() const;
     bool isInDescriptionListTerm() const;
 

@@ -28,6 +28,8 @@
 #include "IdentifierTypes.h"
 #include "WebPage.h"
 #include <WebCore/ScrollTypes.h>
+#include <WebCore/TextManipulationControllerExclusionRule.h>
+#include <WebCore/UserActivity.h>
 #include <WebCore/VisibleSelection.h>
 
 #if ENABLE(APP_HIGHLIGHTS)
@@ -53,6 +55,8 @@ struct WebPage::Internals {
     mutable EditorStateIdentifier lastEditorStateIdentifier;
     HashMap<WebCore::RegistrableDomain, HashSet<WebCore::RegistrableDomain>> domainsWithPageLevelStorageAccess;
     HashSet<WebCore::RegistrableDomain> loadedSubresourceDomains;
+    UserActivity userActivity { "App nap disabled for page due to user activity"_s };
+    std::optional<Vector<WebCore::TextManipulationControllerExclusionRule>> textManipulationExclusionRules;
 #if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
     struct LinkDecorationFilteringConditionals {
         HashSet<WebCore::RegistrableDomain> domains;

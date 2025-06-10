@@ -47,6 +47,11 @@ void AnimationTimeline::animationTimingDidChange(WebAnimation& animation)
 {
     updateGlobalPosition(animation);
 
+    if (animation.pending()) {
+        if (CheckedPtr controller = this->controller())
+            controller->addPendingAnimation(animation);
+    }
+
     if (m_animations.add(animation)) {
         auto* timeline = animation.timeline();
         if (timeline && timeline != this)
@@ -71,9 +76,12 @@ void AnimationTimeline::removeAnimation(WebAnimation& animation)
 {
     ASSERT(!animation.timeline() || animation.timeline() == this);
     m_animations.remove(animation);
-    if (auto* keyframeEffect = dynamicDowncast<KeyframeEffect>(animation.effect())) {
-        if (auto styleable = keyframeEffect->targetStyleable())
+    if (RefPtr keyframeEffect = dynamicDowncast<KeyframeEffect>(animation.effect())) {
+        if (auto styleable = keyframeEffect->targetStyleable()) {
             styleable->animationWasRemoved(animation);
+            if (auto* effectStack = styleable->keyframeEffectStack())
+                effectStack->removeEffect(*keyframeEffect);
+        }
     }
 }
 

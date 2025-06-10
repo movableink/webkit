@@ -256,7 +256,7 @@ JSValue JSInjectedScriptHost::functionDetails(JSGlobalObject* globalObject, Call
     auto* targetFunction = function;
     while (auto* boundFunction = jsDynamicCast<JSBoundFunction*>(targetFunction)) {
         auto* nextTargetFunction = jsDynamicCast<JSFunction*>(boundFunction->targetFunction());
-        if (UNLIKELY(!nextTargetFunction))
+        if (!nextTargetFunction) [[unlikely]]
             break;
         targetFunction = nextTargetFunction;
     }
@@ -755,7 +755,9 @@ JSValue JSInjectedScriptHost::iteratorEntries(JSGlobalObject* globalObject, Call
 
     for (unsigned i = 0; i < numberToFetch; ++i) {
         JSValue next = iteratorStep(globalObject, iterationRecord);
-        if (UNLIKELY(scope.exception()) || next.isFalse())
+        if (scope.exception()) [[unlikely]]
+            break;
+        if (next.isFalse())
             break;
 
         JSValue nextValue = iteratorValue(globalObject, next);
@@ -764,7 +766,7 @@ JSValue JSInjectedScriptHost::iteratorEntries(JSGlobalObject* globalObject, Call
         JSObject* entry = constructEmptyObject(globalObject);
         entry->putDirect(vm, Identifier::fromString(vm, "value"_s), nextValue);
         array->putDirectIndex(globalObject, i, entry);
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             scope.release();
             iteratorClose(globalObject, iterationRecord.iterator);
             break;

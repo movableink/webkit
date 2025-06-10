@@ -37,6 +37,9 @@ public:
     virtual ~RenderSlider();
 
     HTMLInputElement& element() const;
+    Ref<HTMLInputElement> protectedElement() const;
+
+    bool canHaveGeneratedChildren() const override { return false; }
 
     bool inDragMode() const;
 

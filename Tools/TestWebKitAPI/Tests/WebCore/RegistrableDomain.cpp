@@ -26,6 +26,7 @@
 #include "config.h"
 
 #include <WebCore/RegistrableDomain.h>
+#include <WebCore/Site.h>
 #include <wtf/URL.h>
 
 using namespace WebCore;
@@ -97,6 +98,29 @@ TEST(RegistrableDomain, UncheckedCreateFromHost)
     // This test is important for matching cookies' domain attributes which often have a leading dot.
     auto dotWebkitDomainFromHost = RegistrableDomain::uncheckedCreateFromHost(".webkit.org"_s);
     ASSERT_EQ(dotWebkitDomainFromHost, webkitDomainFromString);
+}
+
+TEST(Site, EmptyMapKey)
+{
+    Site empty1 { URL() };
+    Site empty2 { URL("!@#$%^&*NotARealURL)(*&^"_s) };
+    Site empty3 { SecurityOriginData(String(), String(), std::nullopt) };
+    Site empty4 { String(), RegistrableDomain::fromRawString(String()) };
+    Site empty5 { String(), RegistrableDomain() };
+
+    HashMap<Site, int> map;
+    int integer { 1 };
+    for (const auto& site : { empty1, empty2, empty3, empty4 }) {
+        map.add(site, integer++);
+        EXPECT_TRUE(site.isEmpty());
+        EXPECT_EQ(map.size(), 1u);
+        EXPECT_EQ(map.get(site), 1);
+    }
+
+    map.add(empty5, 5);
+    EXPECT_TRUE(empty5.isEmpty());
+    EXPECT_EQ(map.size(), 2u);
+    EXPECT_EQ(map.get(empty5), 5);
 }
 
 } // namespace TestWebKitAPI

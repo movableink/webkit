@@ -140,7 +140,7 @@ static Ref<FormData> toFormData(const HTTPBody& httpBody)
 static void applyFrameState(HistoryItemClient& client, HistoryItem& historyItem, const FrameState& frameState)
 {
     historyItem.setOriginalURLString(frameState.originalURLString);
-    historyItem.setReferrer(frameState.referrer);
+    historyItem.setReferrer(String { frameState.referrer });
     historyItem.setTarget(frameState.target);
     historyItem.setFrameID(frameState.frameID);
 

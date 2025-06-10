@@ -39,6 +39,7 @@
 #import "WebRemoteObjectRegistry.h"
 #import "_WKRemoteObjectInterface.h"
 #import <objc/runtime.h>
+#import <wtf/MainThread.h>
 #import <wtf/ObjCRuntimeExtras.h>
 
 extern "C" const char *_protocol_getMethodTypeEncoding(Protocol *p, SEL sel, BOOL isRequiredMethod, BOOL isInstanceMethod);
@@ -96,8 +97,8 @@ struct PendingReply {
     if (!_remoteObjectProxies)
         _remoteObjectProxies = [NSMapTable strongToWeakObjectsMapTable];
 
-    if (id remoteObjectProxy = [_remoteObjectProxies objectForKey:interface.identifier])
-        return remoteObjectProxy;
+    if (RetainPtr<id> remoteObjectProxy = [_remoteObjectProxies objectForKey:interface.identifier])
+        return remoteObjectProxy.autorelease();
 
     RetainPtr<NSString> identifier = adoptNS([interface.identifier copy]);
     auto remoteObject = adoptNS([[WKRemoteObject alloc] _initWithObjectRegistry:self interface:interface]);
@@ -140,10 +141,12 @@ static uint64_t generateReplyIdentifier()
 
 - (void)_sendInvocation:(NSInvocation *)invocation interface:(_WKRemoteObjectInterface *)interface
 {
+    RELEASE_ASSERT(isMainRunLoop());
+
     std::unique_ptr<WebKit::RemoteObjectInvocation::ReplyInfo> replyInfo;
 
-    NSMethodSignature *methodSignature = invocation.methodSignature;
-    for (NSUInteger i = 0, count = methodSignature.numberOfArguments; i < count; ++i) {
+    RetainPtr<NSMethodSignature> methodSignature = invocation.methodSignature;
+    for (NSUInteger i = 0, count = methodSignature.get().numberOfArguments; i < count; ++i) {
         auto type = unsafeSpan([methodSignature getArgumentTypeAtIndex:i]);
 
         if (!equalSpans(type, "@?"_span))
@@ -200,7 +203,7 @@ static NSString *replyBlockSignature(Protocol *protocol, SEL selector, NSUIntege
     if (!methodTypeEncoding)
         return nil;
 
-    NSMethodSignature *targetMethodSignature = [NSMethodSignature signatureWithObjCTypes:methodTypeEncoding];
+    RetainPtr<NSMethodSignature> targetMethodSignature = [NSMethodSignature signatureWithObjCTypes:methodTypeEncoding];
     ASSERT(targetMethodSignature);
     if (!targetMethodSignature)
         return nil;
@@ -212,24 +215,26 @@ static NSString *replyBlockSignature(Protocol *protocol, SEL selector, NSUIntege
 {
     auto& interfaceIdentifier = remoteObjectInvocation.interfaceIdentifier();
     RefPtr encodedInvocation = remoteObjectInvocation.encodedInvocation();
+    if (!encodedInvocation)
+        return;
 
     auto interfaceAndObject = _exportedObjects.get(interfaceIdentifier);
     if (!interfaceAndObject.second) {
-        NSLog(@"Did not find a registered object for the interface \"%@\"", (NSString *)interfaceIdentifier);
+        NSLog(@"Did not find a registered object for the interface \"%@\"", interfaceIdentifier.createNSString().get());
         return;
     }
 
     RetainPtr<_WKRemoteObjectInterface> interface = interfaceAndObject.second;
 
-    auto decoder = adoptNS([[WKRemoteObjectDecoder alloc] initWithInterface:interface.get() rootObjectDictionary:encodedInvocation.get() replyToSelector:nullptr]);
+    RetainPtr decoder = adoptNS([[WKRemoteObjectDecoder alloc] initWithInterface:interface.get() rootObjectDictionary:encodedInvocation.releaseNonNull() replyToSelector:nullptr]);
 
-    NSInvocation *invocation = [decoder decodeObjectOfClass:[NSInvocation class] forKey:invocationKey];
+    RetainPtr<NSInvocation> invocation = [decoder decodeObjectOfClass:[NSInvocation class] forKey:invocationKey];
 
-    NSMethodSignature *methodSignature = invocation.methodSignature;
+    RetainPtr<NSMethodSignature> methodSignature = invocation.get().methodSignature;
     auto& replyInfo = remoteObjectInvocation.replyInfo();
 
     // Look for the block argument (if any).
-    for (NSUInteger i = 0, count = methodSignature.numberOfArguments; i < count; ++i) {
+    for (NSUInteger i = 0, count = methodSignature.get().numberOfArguments; i < count; ++i) {
         auto type = unsafeSpan([methodSignature getArgumentTypeAtIndex:i]);
 
         if (!equalSpans(type, "@?"_span))
@@ -242,8 +247,8 @@ static NSString *replyBlockSignature(Protocol *protocol, SEL selector, NSUIntege
             return;
         }
 
-        NSString *wireBlockSignature = [NSMethodSignature signatureWithObjCTypes:replyInfo->blockSignature.utf8().data()]._typeString;
-        NSString *expectedBlockSignature = replyBlockSignature([interface protocol], invocation.selector, i);
+        RetainPtr<NSString> wireBlockSignature = [NSMethodSignature signatureWithObjCTypes:replyInfo->blockSignature.utf8().data()]._typeString;
+        RetainPtr<NSString> expectedBlockSignature = replyBlockSignature([interface protocol], invocation.get().selector, i);
 
         if (!expectedBlockSignature) {
             NSLog(@"_invokeMethod: Failed to validate reply block signature: could not find local signature");
@@ -251,8 +256,8 @@ static NSString *replyBlockSignature(Protocol *protocol, SEL selector, NSUIntege
             return;
         }
 
-        if (!WebKit::methodSignaturesAreCompatible(wireBlockSignature, expectedBlockSignature)) {
-            NSLog(@"_invokeMethod: Failed to validate reply block signature: %@ != %@", wireBlockSignature, expectedBlockSignature);
+        if (!WebKit::methodSignaturesAreCompatible(wireBlockSignature.get(), expectedBlockSignature.get())) {
+            NSLog(@"_invokeMethod: Failed to validate reply block signature: %@ != %@", wireBlockSignature.get(), expectedBlockSignature.get());
             ASSERT_NOT_REACHED();
             return;
         }
@@ -294,25 +299,25 @@ static NSString *replyBlockSignature(Protocol *protocol, SEL selector, NSUIntege
         };
 
         RefPtr<ReplyBlockCallChecker> checker = ReplyBlockCallChecker::create(self, replyID);
-        id replyBlock = __NSMakeSpecialForwardingCaptureBlock([wireBlockSignature UTF8String], [interface, remoteObjectRegistry, replyID, checker](NSInvocation *invocation) {
+        auto replyBlock = adoptNS(__NSMakeSpecialForwardingCaptureBlock([wireBlockSignature UTF8String], [interface, remoteObjectRegistry, replyID, checker](NSInvocation *invocation) {
             auto encoder = adoptNS([[WKRemoteObjectEncoder alloc] init]);
             [encoder encodeObject:invocation forKey:invocationKey];
 
             if (RefPtr protectedRemoteObjectRegistry = remoteObjectRegistry->_remoteObjectRegistry)
                 protectedRemoteObjectRegistry->sendReplyBlock(replyID, WebKit::UserData([encoder rootObjectDictionary]));
             checker->didCallReplyBlock();
-        });
+        }));
 
-        [invocation setArgument:&replyBlock atIndex:i];
+        SUPPRESS_UNRETAINED_LOCAL id replyBlockId = replyBlock.get();
+        [invocation setArgument:&replyBlockId atIndex:i];
 
         // Make sure that the block won't be destroyed before the invocation.
-        objc_setAssociatedObject(invocation, replyBlockKey, replyBlock, OBJC_ASSOCIATION_RETAIN);
-        [replyBlock release];
+        objc_setAssociatedObject(invocation.get(), replyBlockKey, replyBlock.get(), OBJC_ASSOCIATION_RETAIN);
 
         break;
     }
 
-    invocation.target = interfaceAndObject.first.get();
+    invocation.get().target = interfaceAndObject.first.get();
 
     @try {
         [invocation invoke];
@@ -334,9 +339,9 @@ static NSString *replyBlockSignature(Protocol *protocol, SEL selector, NSUIntege
     auto pendingReply = it->value;
     _pendingReplies.remove(it);
 
-    auto decoder = adoptNS([[WKRemoteObjectDecoder alloc] initWithInterface:pendingReply.interface.get() rootObjectDictionary:downcast<API::Dictionary>(encodedInvocation.get()) replyToSelector:pendingReply.selector]);
+    auto decoder = adoptNS([[WKRemoteObjectDecoder alloc] initWithInterface:pendingReply.interface.get() rootObjectDictionary:Ref { *downcast<API::Dictionary>(encodedInvocation.get()) } replyToSelector:pendingReply.selector]);
 
-    NSInvocation *replyInvocation = [decoder decodeObjectOfClass:[NSInvocation class] forKey:invocationKey];
+    RetainPtr replyInvocation = [decoder decodeObjectOfClass:[NSInvocation class] forKey:invocationKey];
 
     [replyInvocation setTarget:pendingReply.block.get()];
     [replyInvocation invoke];

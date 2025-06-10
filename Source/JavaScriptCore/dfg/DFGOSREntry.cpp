@@ -173,12 +173,7 @@ void* prepareOSREntry(VM& vm, CallFrame* callFrame, CodeBlock* codeBlock, Byteco
     //    OSR at this time.
     
     for (size_t argument = 0; argument < entry->m_expectedValues.numberOfArguments(); ++argument) {
-        JSValue value;
-        if (!argument)
-            value = callFrame->thisValue();
-        else
-            value = callFrame->argument(argument - 1);
-        
+        JSValue value = callFrame->r(virtualRegisterForArgumentIncludingThis(argument)).asanUnsafeJSValue();
         if (!entry->m_expectedValues.argument(argument).validateOSREntryValue(value, FlushedJSValue)) {
             dataLogLnIf(Options::verboseOSR(),
                 "    OSR failed because argument ", argument, " is ", value,
@@ -232,7 +227,7 @@ void* prepareOSREntry(VM& vm, CallFrame* callFrame, CodeBlock* codeBlock, Byteco
     //    would have otherwise just kept running albeit less quickly.
     
     unsigned frameSizeForCheck = jitCode->common.requiredRegisterCountForExecutionAndExit();
-    if (UNLIKELY(!vm.ensureStackCapacityFor(&callFrame->registers()[virtualRegisterForLocal(frameSizeForCheck - 1).offset()]))) {
+    if (!vm.ensureStackCapacityFor(&callFrame->registers()[virtualRegisterForLocal(frameSizeForCheck - 1).offset()])) [[unlikely]] {
         dataLogLnIf(Options::verboseOSR(), "    OSR failed because stack growth failed.");
         return nullptr;
     }
@@ -403,7 +398,7 @@ CodePtr<ExceptionHandlerPtrTag> prepareCatchOSREntry(VM& vm, CallFrame* callFram
     }
 
     unsigned frameSizeForCheck = dfgCommon->requiredRegisterCountForExecutionAndExit();
-    if (UNLIKELY(!vm.ensureStackCapacityFor(&callFrame->registers()[virtualRegisterForLocal(frameSizeForCheck).offset()])))
+    if (!vm.ensureStackCapacityFor(&callFrame->registers()[virtualRegisterForLocal(frameSizeForCheck).offset()])) [[unlikely]]
         return nullptr;
 
     auto instruction = baselineCodeBlock->instructions().at(callFrame->bytecodeIndex());

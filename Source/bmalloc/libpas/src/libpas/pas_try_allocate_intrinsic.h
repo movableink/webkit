@@ -78,6 +78,7 @@ PAS_BEGIN_EXTERN_C;
         .heap_ref = NULL, \
         .next_heap = PAS_COMPACT_PTR_INITIALIZER, \
         .config_kind = (passed_config).kind, \
+        .is_non_compact_heap = true, \
     }
 
 static PAS_ALWAYS_INLINE pas_allocation_result

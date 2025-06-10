@@ -25,11 +25,16 @@
 #include "HitTestRequest.h"
 #include "LengthFunctions.h"
 #include "RenderObject.h"
+#include "RenderPtr.h"
+#include "RenderStyle.h"
+#include <wtf/CheckedRef.h>
+#include <wtf/MonotonicTime.h>
 #include <wtf/Packed.h>
 
 namespace WebCore {
 
 class Animation;
+class ContainerNode;
 class ContentData;
 class BlendingKeyframes;
 class ReferencedSVGResources;
@@ -64,6 +69,8 @@ public:
     bool hasInitializedStyle() const { return m_hasInitializedStyle; }
 
     const RenderStyle& style() const { return m_style; }
+    // FIXME: Remove checkedStyle once https://github.com/llvm/llvm-project/pull/142485 lands. This is a false positive.
+    const CheckedRef<const RenderStyle> checkedStyle() const { return m_style; }
     const RenderStyle* parentStyle() const { return !m_parent ? nullptr : &m_parent->style(); }
     const RenderStyle& firstLineStyle() const;
 
@@ -84,11 +91,11 @@ public:
     std::unique_ptr<RenderStyle> getUncachedPseudoStyle(const Style::PseudoElementRequest&, const RenderStyle* parentStyle = nullptr, const RenderStyle* ownStyle = nullptr) const;
 
     // This is null for anonymous renderers.
-    Element* element() const { return downcast<Element>(RenderObject::node()); }
-    RefPtr<Element> protectedElement() const { return element(); }
-    Element* nonPseudoElement() const { return downcast<Element>(RenderObject::nonPseudoNode()); }
-    RefPtr<Element> protectedNonPseudoElement() const { return nonPseudoElement(); }
-    Element* generatingElement() const;
+    inline Element* element() const; // Defined in RenderElementInlines.h
+    inline RefPtr<Element> protectedElement() const; // Defined in RenderElementInlines.h
+    inline Element* nonPseudoElement() const; // Defined in RenderElementInlines.h
+    inline RefPtr<Element> protectedNonPseudoElement() const; // Defined in RenderElementInlines.h
+    inline Element* generatingElement() const; // Defined in RenderElementInlines.h
 
     RenderObject* firstChild() const { return m_firstChild.get(); }
     RenderObject* lastChild() const { return m_lastChild.get(); }
@@ -99,16 +106,16 @@ public:
     const Layout::ElementBox* layoutBox() const;
 
     // Note that even if these 2 "canContain" functions return true for a particular renderer, it does not necessarily mean the renderer is the containing block (see containingBlockForAbsolute(Fixed)Position).
-    inline bool canContainFixedPositionObjects() const;
-    inline bool canContainAbsolutelyPositionedObjects() const;
+    inline bool canContainFixedPositionObjects(const RenderStyle* styleToUse = nullptr) const;
+    inline bool canContainAbsolutelyPositionedObjects(const RenderStyle* styleToUse = nullptr) const;
     bool canEstablishContainingBlockWithTransform() const;
 
-    inline bool shouldApplyLayoutContainment() const;
+    inline bool shouldApplyLayoutContainment(const RenderStyle* styleToUse = nullptr) const;
     inline bool shouldApplySizeContainment() const;
     inline bool shouldApplyInlineSizeContainment() const;
     inline bool shouldApplySizeOrInlineSizeContainment() const;
     inline bool shouldApplyStyleContainment() const;
-    inline bool shouldApplyPaintContainment() const;
+    inline bool shouldApplyPaintContainment(const RenderStyle* styleToUse = nullptr) const;
     inline bool shouldApplyAnyContainment() const;
 
     bool hasEligibleContainmentForSizeQuery() const;
@@ -261,8 +268,8 @@ public:
     RenderPtr<RenderObject> detachRendererInternal(RenderObject&);
 
     virtual bool startAnimation(double /* timeOffset */, const Animation&, const BlendingKeyframes&) { return false; }
-    virtual void animationPaused(double /* timeOffset */, const String& /* name */) { }
-    virtual void animationFinished(const String& /* name */) { }
+    virtual void animationPaused(double /* timeOffset */, const BlendingKeyframes&) { }
+    virtual void animationFinished(const BlendingKeyframes&) { }
     virtual void transformRelatedPropertyDidChange() { }
 
     // https://www.w3.org/TR/css-transforms-1/#transform-box
@@ -303,8 +310,33 @@ public:
     bool renderBoxHasShapeOutsideInfo() const { return m_renderBoxHasShapeOutsideInfo; }
     bool hasCachedSVGResource() const { return m_hasCachedSVGResource; }
 
-    const Element* defaultAnchor() const;
-    const RenderElement* defaultAnchorRenderer() const;
+    bool isAnonymousBlock() const;
+    bool isAnonymousForPercentageResolution() const { return isAnonymous() && !isViewTransitionPseudo(); }
+    inline bool isBlockBox() const;
+    inline bool isBlockLevelBox() const;
+    inline bool isBlockContainer() const;
+
+    RenderBoxModelObject* offsetParent() const;
+    // Pushes state onto RenderGeometryMap about how to map coordinates from this renderer to its container, or ancestorToStopAt (whichever is encountered first).
+    // Returns the renderer which was mapped to (container or ancestorToStopAt).
+    virtual const RenderElement* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const;
+
+    bool isFixedPositioned() const { return isOutOfFlowPositioned() && style().position() == PositionType::Fixed; }
+    bool isAbsolutelyPositioned() const { return isOutOfFlowPositioned() && style().position() == PositionType::Absolute; }
+
+    bool isViewTransitionContainer() const { return style().pseudoElementType() == PseudoId::ViewTransition || style().pseudoElementType() == PseudoId::ViewTransitionGroup || style().pseudoElementType() == PseudoId::ViewTransitionImagePair; }
+    bool isViewTransitionPseudo() const { return isRenderViewTransitionCapture() || isViewTransitionContainer(); }
+
+    inline bool hasPotentiallyScrollableOverflow() const;
+
+    inline bool isBeforeContent() const;
+    inline bool isAfterContent() const;
+    inline bool isBeforeOrAfterContent() const;
+    static bool isBeforeContent(const RenderElement*);
+    static bool isAfterContent(const RenderElement*);
+    static bool isBeforeOrAfterContent(const RenderElement*);
+
+    WritingMode writingMode() const { return style().writingMode(); }
 
 protected:
     RenderElement(Type, Element&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);
@@ -327,6 +359,8 @@ protected:
     void willBeRemovedFromTree() override;
     void willBeDestroyed() override;
     void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) override;
+
+    void pushOntoGeometryMap(RenderGeometryMap&, const RenderLayerModelObject* repaintContainer, RenderElement* container, bool containerSkipped) const;
 
     void setHasContinuationChainNode(bool b) { m_hasContinuationChainNode = b; }
 
@@ -364,6 +398,8 @@ private:
     RenderObject* firstChildSlow() const final { return firstChild(); }
     RenderObject* lastChildSlow() const final { return lastChild(); }
 
+    inline bool mayContainOutOfFlowPositionedObjects(const RenderStyle* styleToUse = nullptr) const;
+
     RenderElement* rendererForPseudoStyleAcrossShadowBoundary() const;
 
     // Called when an object that was floating or positioned becomes a normal flow object
@@ -383,6 +419,7 @@ private:
     VisibleInViewportState imageFrameAvailable(CachedImage&, ImageAnimatingState, const IntRect* changeRect) final;
     VisibleInViewportState imageVisibleInViewport(const Document&) const final;
     void didRemoveCachedImageClient(CachedImage&) final;
+    void imageContentChanged(CachedImage&) final;
     void scheduleRenderingUpdateForImage(CachedImage&) final;
 
     bool getLeadingCorner(FloatPoint& output, bool& insideFixed) const;
@@ -414,12 +451,14 @@ private:
     unsigned m_renderBoxHasShapeOutsideInfo : 1 { false };
     unsigned m_hasCachedSVGResource : 1 { false };
     unsigned m_renderBlockFlowLineLayoutPath : 3;
+    // 1 bit free.
 
     SingleThreadPackedWeakPtr<RenderObject> m_lastChild;
 
     unsigned m_isRegisteredForVisibleInViewportCallback : 1;
     unsigned m_visibleInViewportState : 2;
     unsigned m_didContributeToVisuallyNonEmptyPixelCount : 1;
+    // 12 bits free.
 
     RenderStyle m_style;
 };
@@ -427,7 +466,6 @@ private:
 inline int adjustForAbsoluteZoom(int, const RenderElement&);
 inline LayoutUnit adjustLayoutUnitForAbsoluteZoom(LayoutUnit, const RenderElement&);
 inline LayoutSize adjustLayoutSizeForAbsoluteZoom(LayoutSize, const RenderElement&);
-inline bool isSkippedContentRoot(const RenderElement&);
 
 inline void RenderElement::setChildNeedsLayout(MarkingBehavior markParents)
 {
@@ -439,38 +477,9 @@ inline void RenderElement::setChildNeedsLayout(MarkingBehavior markParents)
         scheduleLayout(markContainingBlocksForLayout());
 }
 
-inline Element* RenderElement::generatingElement() const
-{
-    return downcast<Element>(RenderObject::generatingNode());
-}
-
 inline bool RenderElement::canEstablishContainingBlockWithTransform() const
 {
     return isRenderBlock() || (isTablePart() && !isRenderTableCol());
-}
-
-inline const RenderStyle& RenderObject::style() const
-{
-    if (isRenderText())
-        return m_parent->style();
-    return downcast<RenderElement>(*this).style();
-}
-
-inline const RenderStyle& RenderObject::firstLineStyle() const
-{
-    if (isRenderText())
-        return m_parent->firstLineStyle();
-    return downcast<RenderElement>(*this).firstLineStyle();
-}
-
-inline RenderElement* ContainerNode::renderer() const
-{
-    return downcast<RenderElement>(Node::renderer());
-}
-
-inline CheckedPtr<RenderElement> ContainerNode::checkedRenderer() const
-{
-    return renderer();
 }
 
 inline RenderObject* RenderElement::firstInFlowChild() const

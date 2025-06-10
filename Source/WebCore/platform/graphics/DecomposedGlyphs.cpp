@@ -32,21 +32,19 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(DecomposedGlyphs);
 
-Ref<DecomposedGlyphs> DecomposedGlyphs::create(std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& localAnchor, FontSmoothingMode mode, RenderingResourceIdentifier renderingResourceIdentifier)
+Ref<DecomposedGlyphs> DecomposedGlyphs::create(Vector<GlyphBufferGlyph>&& glyphs, Vector<GlyphBufferAdvance>&& advances, const FloatPoint& localAnchor, FontSmoothingMode fontSmoothingMode, RenderingResourceIdentifier identifier)
 {
-    return adoptRef(*new DecomposedGlyphs({ Vector(glyphs), Vector(advances), localAnchor, mode }, renderingResourceIdentifier));
+    return adoptRef(*new DecomposedGlyphs(WTFMove(glyphs), WTFMove(advances), localAnchor, fontSmoothingMode, identifier));
 }
 
-Ref<DecomposedGlyphs> DecomposedGlyphs::create(PositionedGlyphs&& positionedGlyphs, RenderingResourceIdentifier renderingResourceIdentifier)
+DecomposedGlyphs::DecomposedGlyphs(Vector<GlyphBufferGlyph>&& glyphs, Vector<GlyphBufferAdvance>&& advances, const FloatPoint& localAnchor, FontSmoothingMode fontSmoothingMode, RenderingResourceIdentifier identifier)
+    : RenderingResource(identifier)
+    , m_glyphs(WTFMove(glyphs))
+    , m_advances(WTFMove(advances))
+    , m_localAnchor(localAnchor)
+    , m_fontSmoothingMode(fontSmoothingMode)
 {
-    return adoptRef(*new DecomposedGlyphs(WTFMove(positionedGlyphs), renderingResourceIdentifier));
-}
-
-DecomposedGlyphs::DecomposedGlyphs(PositionedGlyphs&& positionedGlyphs, RenderingResourceIdentifier renderingResourceIdentifier)
-    : RenderingResource(renderingResourceIdentifier)
-    , m_positionedGlyphs(WTFMove(positionedGlyphs))
-{
-    ASSERT(m_positionedGlyphs.glyphs.size() == m_positionedGlyphs.advances.size());
+    ASSERT(m_glyphs.size() == m_advances.size());
 }
 
 DecomposedGlyphs::~DecomposedGlyphs()

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -301,8 +301,8 @@ GPUExternalTexture* GPUDevice::externalTextureForDescriptor(const GPUExternalTex
 #endif
         if (!videoElement->get())
             return nullptr;
-        HTMLVideoElement& v = *videoElement->get();
-        if (m_previouslyImportedExternalTexture.first.get() == &v)
+        Ref v = *videoElement->get();
+        if (m_previouslyImportedExternalTexture.first.get() == v.ptr())
             return m_previouslyImportedExternalTexture.second.get();
 
         auto it = m_videoElementToExternalTextureMap.find(v);
@@ -332,13 +332,14 @@ private:
 
     bool hasCallback() const final { return true; }
 
-    CallbackResult<void> handleEvent(double, const VideoFrameMetadata&) override
+    CallbackResult<void> invoke(double, const VideoFrameMetadata&) override
     {
-        if (!m_videoElement)
+        RefPtr videoElement = m_videoElement.get();
+        if (!videoElement)
             return { };
         if (!m_gpuDevice)
             return { };
-        auto texture = m_gpuDevice->takeExternalTextureForVideoElement(*m_videoElement);
+        auto texture = m_gpuDevice->takeExternalTextureForVideoElement(*videoElement);
         if (!texture)
             return { };
         if (texture.get() == m_externalTexture.ptr())
@@ -346,12 +347,12 @@ private:
         return { };
     }
 
-    CallbackResult<void> handleEventRethrowingException(double now, const VideoFrameMetadata& metadata) override
+    CallbackResult<void> invokeRethrowingException(double now, const VideoFrameMetadata& metadata) override
     {
-        return handleEvent(now, metadata);
+        return invoke(now, metadata);
     }
 
-    Ref<GPUExternalTexture> m_externalTexture;
+    const Ref<GPUExternalTexture> m_externalTexture;
     WeakPtr<HTMLVideoElement> m_videoElement;
     WeakPtr<GPUDevice, WeakPtrImplWithEventTargetData> m_gpuDevice;
 };
@@ -431,7 +432,7 @@ RefPtr<GPUPipelineLayout> GPUDevice::createAutoPipelineLayout()
 
 ExceptionOr<Ref<GPUPipelineLayout>> GPUDevice::createPipelineLayout(const GPUPipelineLayoutDescriptor& pipelineLayoutDescriptor)
 {
-    RefPtr pipelineLayout = m_backing->createPipelineLayout(pipelineLayoutDescriptor.convertToBacking());
+    RefPtr pipelineLayout = m_backing->createPipelineLayout(pipelineLayoutDescriptor.convertToBacking(m_backing));
     if (!pipelineLayout)
         return Exception { ExceptionCode::InvalidStateError, "GPUDevice.createPipelineLayout: Unable to make pipeline layout."_s };
     return GPUPipelineLayout::create(pipelineLayout.releaseNonNull());

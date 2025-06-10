@@ -37,12 +37,12 @@
 #include "CSSPropertyParserConsumer+Easing.h"
 #include "CSSSelector.h"
 #include "CSSSerializationContext.h"
-#include "CSSStyleDeclaration.h"
+#include "CSSStyleProperties.h"
 #include "CSSTransition.h"
 #include "CSSUnitValue.h"
 #include "CSSValue.h"
 #include "CSSValueKeywords.h"
-#include "ComputedStyleExtractor.h"
+#include "CSSValuePool.h"
 #include "DocumentInlines.h"
 #include "Element.h"
 #include "FontCascade.h"
@@ -60,10 +60,12 @@
 #include "RenderBox.h"
 #include "RenderBoxModelObject.h"
 #include "RenderElement.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "Settings.h"
 #include "StyleAdjuster.h"
 #include "StyleEasingFunction.h"
+#include "StyleExtractor.h"
 #include "StyleInterpolation.h"
 #include "StylePendingResources.h"
 #include "StyleProperties.h"
@@ -78,6 +80,7 @@
 #include "TranslateTransformOperation.h"
 #include "ViewTimeline.h"
 #include <JavaScriptCore/Exception.h>
+#include <ranges>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/UUID.h>
 #include <wtf/text/TextStream.h>
@@ -144,7 +147,7 @@ static inline CSSPropertyID IDLAttributeNameToAnimationPropertyName(const AtomSt
         return CSSPropertyFontWidth;
 
     // 4. Otherwise, return the result of applying the IDL attribute to CSS property algorithm [CSSOM] to attribute.
-    auto cssPropertyId = CSSStyleDeclaration::getCSSPropertyIDFromJavaScriptPropertyName(idlAttributeName);
+    auto cssPropertyId = CSSStyleProperties::getCSSPropertyIDFromJavaScriptPropertyName(idlAttributeName);
 
     if (cssPropertyId == CSSPropertyInvalid && isCustomPropertyName(idlAttributeName))
         return CSSPropertyCustom;
@@ -206,7 +209,7 @@ static String rangeStringFromSingleTimelineRangeName(SingleTimelineRange::Name r
     return "normal"_s;
 }
 
-static std::optional<std::variant<double, TimelineRangeOffset>> doubleOrTimelineRangeOffsetFromString(const String& offsetString, const Document& document)
+static std::optional<Variant<double, TimelineRangeOffset>> doubleOrTimelineRangeOffsetFromString(const String& offsetString, const Document& document)
 {
     bool doubleParsingSuccess = true;
     auto doubleValue = offsetString.toDouble(&doubleParsingSuccess);
@@ -214,9 +217,7 @@ static std::optional<std::variant<double, TimelineRangeOffset>> doubleOrTimeline
         return { doubleValue };
 
     CSSParserContext parserContext(document);
-    CSSTokenizer tokenizer(offsetString);
-    auto tokenRange = tokenizer.tokenRange();
-    auto offsets = CSSPropertyParserHelpers::consumeKeyframeKeyList(tokenRange, parserContext);
+    auto offsets = CSSPropertyParserHelpers::parseKeyframeKeyList(offsetString, parserContext);
     if (offsets.size() != 1)
         return { };
 
@@ -377,7 +378,7 @@ static inline ExceptionOr<KeyframeEffect::KeyframeLikeObject> processKeyframeLik
     KeyframeEffect::BasePropertyIndexedKeyframe baseProperties;
     if (allowLists) {
         auto basePropertiesConversionResult = convert<IDLDictionary<KeyframeEffect::BasePropertyIndexedKeyframe>>(lexicalGlobalObject, keyframesInput.get());
-        if (UNLIKELY(basePropertiesConversionResult.hasException(scope)))
+        if (basePropertiesConversionResult.hasException(scope)) [[unlikely]]
             return Exception { ExceptionCode::TypeError };
         baseProperties = basePropertiesConversionResult.releaseReturnValue();
 
@@ -398,7 +399,7 @@ static inline ExceptionOr<KeyframeEffect::KeyframeLikeObject> processKeyframeLik
         }
     } else {
         auto baseKeyframeConversionResult = convert<IDLDictionary<KeyframeEffect::BaseKeyframe>>(lexicalGlobalObject, keyframesInput.get());
-        if (UNLIKELY(baseKeyframeConversionResult.hasException(scope)))
+        if (baseKeyframeConversionResult.hasException(scope)) [[unlikely]]
             return Exception { ExceptionCode::TypeError };
 
         auto baseKeyframe = baseKeyframeConversionResult.releaseReturnValue();
@@ -474,9 +475,7 @@ static inline ExceptionOr<KeyframeEffect::KeyframeLikeObject> processKeyframeLik
 
     // 5. Sort animation properties in ascending order by the Unicode codepoints that define each property name.
     auto sortPropertiesInAscendingOrder = [](auto& properties) {
-        std::sort(properties.begin(), properties.end(), [](auto& lhs, auto& rhs) {
-            return codePointCompareLessThan(lhs.string().string(), rhs.string().string());
-        });
+        std::ranges::sort(properties, codePointCompareLessThan, &JSC::Identifier::string);
     };
     sortPropertiesInAscendingOrder(logicalShorthands);
     sortPropertiesInAscendingOrder(physicalShorthands);
@@ -508,7 +507,7 @@ static inline ExceptionOr<KeyframeEffect::KeyframeLikeObject> processKeyframeLik
             // If property values is a single DOMString, replace property values with a sequence of DOMStrings with the original value of property
             // Values as the only element.
             auto propertyValuesConversionResult = convert<IDLUnion<IDLDOMString, IDLSequence<IDLDOMString>>>(lexicalGlobalObject, rawValue);
-            if (UNLIKELY(propertyValuesConversionResult.hasException(scope)))
+            if (propertyValuesConversionResult.hasException(scope)) [[unlikely]]
                 return Exception { ExceptionCode::TypeError };
 
             propertyValues = WTF::switchOn(propertyValuesConversionResult.releaseReturnValue(),
@@ -523,7 +522,7 @@ static inline ExceptionOr<KeyframeEffect::KeyframeLikeObject> processKeyframeLik
             // Otherwise,
             // Let property values be the result of converting raw value to a DOMString using the procedure for converting an ECMAScript value to a DOMString.
             auto propertyValuesConversionResult = convert<IDLDOMString>(lexicalGlobalObject, rawValue);
-            if (UNLIKELY(propertyValuesConversionResult.hasException(scope)))
+            if (propertyValuesConversionResult.hasException(scope)) [[unlikely]]
                 return Exception { ExceptionCode::TypeError };
 
             propertyValues = { propertyValuesConversionResult.releaseReturnValue() };
@@ -661,7 +660,7 @@ static inline ExceptionOr<void> processPropertyIndexedKeyframes(JSGlobalObject& 
     }
 
     // 3. Sort processed keyframes by the computed keyframe offset of each keyframe in increasing order.
-    std::sort(parsedKeyframes.begin(), parsedKeyframes.end(), [](auto& lhs, auto& rhs) {
+    std::ranges::sort(parsedKeyframes, [](auto& lhs, auto& rhs) {
         if (!std::isnan(lhs.computedOffset) && !std::isnan(rhs.computedOffset))
             return lhs.computedOffset < rhs.computedOffset;
         // This will sort nullopt values prior to other values.
@@ -697,7 +696,7 @@ static inline ExceptionOr<void> processPropertyIndexedKeyframes(JSGlobalObject& 
         }
         // Since we've processed this keyframe, we can remove it and keep i the same
         // so that we process the next keyframe in the next loop iteration.
-        parsedKeyframes.remove(i);
+        parsedKeyframes.removeAt(i);
     }
 
     // 5. Let offsets be a sequence of nullable double values assigned based on the type of the “offset” member of the property-indexed keyframe as follows:
@@ -790,7 +789,7 @@ static inline ExceptionOr<void> processPropertyIndexedKeyframes(JSGlobalObject& 
     return { };
 }
 
-ExceptionOr<Ref<KeyframeEffect>> KeyframeEffect::create(JSGlobalObject& lexicalGlobalObject, Document& document, Element* target, Strong<JSObject>&& keyframes, std::optional<std::variant<double, KeyframeEffectOptions>>&& options)
+ExceptionOr<Ref<KeyframeEffect>> KeyframeEffect::create(JSGlobalObject& lexicalGlobalObject, Document& document, Element* target, Strong<JSObject>&& keyframes, std::optional<Variant<double, KeyframeEffectOptions>>&& options)
 {
     auto keyframeEffect = adoptRef(*new KeyframeEffect(target, { }));
     keyframeEffect->m_document = document;
@@ -799,7 +798,7 @@ ExceptionOr<Ref<KeyframeEffect>> KeyframeEffect::create(JSGlobalObject& lexicalG
         OptionalEffectTiming timing;
         auto optionsValue = options.value();
         if (std::holds_alternative<double>(optionsValue)) {
-            std::variant<double, String> duration = std::get<double>(optionsValue);
+            Variant<double, String> duration = std::get<double>(optionsValue);
             timing.duration = duration;
         } else {
             auto keyframeEffectOptions = std::get<KeyframeEffectOptions>(optionsValue);
@@ -851,8 +850,7 @@ Ref<KeyframeEffect> KeyframeEffect::create(const Element& target, const std::opt
 }
 
 KeyframeEffect::KeyframeEffect(Element* target, const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier)
-    : m_keyframesName(makeAtomString("keyframe-effect-"_s, WTF::UUID::createVersion4Weak()))
-    , m_target(target)
+    : m_target(target)
     , m_pseudoElementIdentifier(pseudoElementIdentifier)
 {
     if (m_target)
@@ -891,7 +889,7 @@ void KeyframeEffect::copyPropertiesFromSource(Ref<KeyframeEffect>&& source)
     setIterationStart(source->iterationStart());
     setIterationDuration(source->specifiedIterationDuration());
 
-    BlendingKeyframes blendingKeyframes(m_keyframesName);
+    BlendingKeyframes blendingKeyframes(m_blendingKeyframes.identifier());
     blendingKeyframes.copyKeyframes(source->m_blendingKeyframes);
     setBlendingKeyframes(WTFMove(blendingKeyframes));
 }
@@ -933,9 +931,9 @@ auto KeyframeEffect::getKeyframes() -> Vector<ComputedKeyframe>
     auto* lastStyleChangeEventStyle = targetStyleable()->lastStyleChangeEventStyle();
     auto& elementStyle = lastStyleChangeEventStyle ? *lastStyleChangeEventStyle : currentStyle();
 
-    ComputedStyleExtractor computedStyleExtractor { target, false, m_pseudoElementIdentifier };
+    Style::Extractor computedStyleExtractor { target, false, m_pseudoElementIdentifier };
 
-    BlendingKeyframes computedBlendingKeyframes(m_blendingKeyframes.animationName());
+    BlendingKeyframes computedBlendingKeyframes(m_blendingKeyframes.identifier());
     computedBlendingKeyframes.copyKeyframes(m_blendingKeyframes);
 
     if (computedBlendingKeyframes.hasKeyframeNotUsingRangeOffset() || activeViewTimeline())
@@ -954,7 +952,7 @@ auto KeyframeEffect::getKeyframes() -> Vector<ComputedKeyframe>
         if (!styleScope)
             return { };
 
-        return styleScope->resolver().keyframeRulesForName(computedBlendingKeyframes.animationName(), backingAnimation.timingFunction());
+        return styleScope->resolver().keyframeRulesForName(computedBlendingKeyframes.keyframesName(), backingAnimation.timingFunction());
     }();
 
     auto matchingStyleRuleKeyframe = [&](const BlendingKeyframe& keyframe) -> StyleRuleKeyframe* {
@@ -1050,10 +1048,8 @@ auto KeyframeEffect::getKeyframes() -> Vector<ComputedKeyframe>
                         styleString = styleProperties->getPropertyValue(cssPropertyId);
                 }
             }
-            if (styleString.isEmpty()) {
-                if (auto cssValue = computedStyleExtractor.valueForPropertyInStyle(style, cssPropertyId, nullptr, ComputedStyleExtractor::PropertyValueType::Computed))
-                    styleString = cssValue->cssText(CSS::defaultSerializationContext());
-            }
+            if (styleString.isEmpty())
+                styleString = computedStyleExtractor.propertyValueSerializationInStyle(style, cssPropertyId, CSS::defaultSerializationContext(), CSSValuePool::singleton(), nullptr, Style::ExtractorState::PropertyValueType::Computed);
             computedKeyframe.styleStrings.set(cssPropertyId, styleString);
         };
 
@@ -1252,7 +1248,7 @@ void KeyframeEffect::updateBlendingKeyframes(RenderStyle& elementStyle, const St
     if (!m_blendingKeyframes.isEmpty() || !m_target)
         return;
 
-    BlendingKeyframes blendingKeyframes(m_keyframesName);
+    BlendingKeyframes blendingKeyframes(m_blendingKeyframes.identifier());
     auto& styleResolver = m_target->styleResolver();
 
     for (auto& keyframe : m_parsedKeyframes) {
@@ -1472,7 +1468,7 @@ void KeyframeEffect::computeCSSTransitionBlendingKeyframes(const RenderStyle& ol
     if (m_target)
         Style::loadPendingResources(*toStyle, *document(), m_target.get());
 
-    BlendingKeyframes blendingKeyframes(m_keyframesName);
+    BlendingKeyframes blendingKeyframes(m_blendingKeyframes.identifier());
 
     BlendingKeyframe fromBlendingKeyframe(0, RenderStyle::clonePtr(oldStyle));
     fromBlendingKeyframe.addProperty(property);
@@ -1652,7 +1648,7 @@ void KeyframeEffect::didChangeTargetStyleable(const std::optional<const Styleabl
         newTargetStyleable->ensureKeyframeEffectStack().addEffect(*this);
 }
 
-OptionSet<AnimationImpact> KeyframeEffect::apply(RenderStyle& targetStyle, const Style::ResolutionContext& resolutionContext, std::optional<Seconds> startTime)
+OptionSet<AnimationImpact> KeyframeEffect::apply(RenderStyle& targetStyle, const Style::ResolutionContext& resolutionContext)
 {
     OptionSet<AnimationImpact> impact;
     if (!m_target)
@@ -1660,16 +1656,15 @@ OptionSet<AnimationImpact> KeyframeEffect::apply(RenderStyle& targetStyle, const
 
     updateBlendingKeyframes(targetStyle, resolutionContext);
 
-    auto computedTiming = getComputedTiming(startTime);
-    if (!startTime) {
-        if (m_phaseAtLastApplication != computedTiming.phase) {
-            m_phaseAtLastApplication = computedTiming.phase;
-            impact.add(AnimationImpact::RequiresRecomposite);
-        }
+    auto computedTiming = getComputedTiming();
 
-        if (auto target = targetStyleable())
-            InspectorInstrumentation::willApplyKeyframeEffect(*target, *this, computedTiming);
+    if (m_phaseAtLastApplication != computedTiming.phase) {
+        m_phaseAtLastApplication = computedTiming.phase;
+        impact.add(AnimationImpact::RequiresRecomposite);
     }
+
+    if (auto target = targetStyleable())
+        InspectorInstrumentation::willApplyKeyframeEffect(*target, *this, computedTiming);
 
     if (!computedTiming.progress)
         return impact;
@@ -2150,6 +2145,13 @@ void KeyframeEffect::animationDidFinish()
 #endif
 }
 
+void KeyframeEffect::animationPlaybackRateDidChange()
+{
+    AnimationEffect::animationPlaybackRateDidChange();
+
+    updateAcceleratedAnimationIfNecessary();
+}
+
 void KeyframeEffect::transformRelatedPropertyDidChange()
 {
     ASSERT(isRunningAcceleratedTransformRelatedAnimation());
@@ -2342,7 +2344,7 @@ void KeyframeEffect::applyPendingAcceleratedActions()
 
     auto startAnimation = [&]() -> RunningAccelerated {
         if (isRunningAccelerated())
-            renderer->animationFinished(m_blendingKeyframes.animationName());
+            renderer->animationFinished(m_blendingKeyframes);
 
         ASSERT(m_target);
         auto* effectStack = m_target->keyframeEffectStack(m_pseudoElementIdentifier);
@@ -2374,7 +2376,7 @@ void KeyframeEffect::applyPendingAcceleratedActions()
                 effect->setAnimatedPropertiesInStyle(*underlyingStyle, computedTiming);
         }
 
-        BlendingKeyframes explicitKeyframes(m_blendingKeyframes.animationName());
+        BlendingKeyframes explicitKeyframes(m_blendingKeyframes.identifier());
         explicitKeyframes.copyKeyframes(m_blendingKeyframes);
         explicitKeyframes.fillImplicitKeyframes(*this, *underlyingStyle);
         return renderer->startAnimation(timeOffset(), backingAnimationForCompositedRenderer(), explicitKeyframes) ? RunningAccelerated::Yes : RunningAccelerated::Failed;
@@ -2384,24 +2386,24 @@ void KeyframeEffect::applyPendingAcceleratedActions()
         switch (action) {
         case AcceleratedAction::Play:
             m_runningAccelerated = startAnimation();
-            LOG_WITH_STREAM(Animations, stream << "KeyframeEffect " << this << " applyPendingAcceleratedActions " << m_blendingKeyframes.animationName() << " Play, started accelerated: " << isRunningAccelerated());
+            LOG_WITH_STREAM(Animations, stream << "KeyframeEffect " << this << " applyPendingAcceleratedActions " << m_blendingKeyframes.acceleratedAnimationName() << " Play, started accelerated: " << isRunningAccelerated());
             if (!isRunningAccelerated()) {
                 m_lastRecordedAcceleratedAction = AcceleratedAction::Stop;
                 return;
             }
             break;
         case AcceleratedAction::Pause:
-            renderer->animationPaused(timeOffset(), m_blendingKeyframes.animationName());
+            renderer->animationPaused(timeOffset(), m_blendingKeyframes);
             break;
         case AcceleratedAction::UpdateProperties:
             m_runningAccelerated = startAnimation();
-            LOG_WITH_STREAM(Animations, stream << "KeyframeEffect " << this << " applyPendingAcceleratedActions " << m_blendingKeyframes.animationName() << " UpdateProperties, started accelerated: " << isRunningAccelerated());
+            LOG_WITH_STREAM(Animations, stream << "KeyframeEffect " << this << " applyPendingAcceleratedActions " << m_blendingKeyframes.acceleratedAnimationName() << " UpdateProperties, started accelerated: " << isRunningAccelerated());
             if (animation()->playState() == WebAnimation::PlayState::Paused)
-                renderer->animationPaused(timeOffset(), m_blendingKeyframes.animationName());
+                renderer->animationPaused(timeOffset(), m_blendingKeyframes);
             break;
         case AcceleratedAction::Stop:
             ASSERT(document());
-            renderer->animationFinished(m_blendingKeyframes.animationName());
+            renderer->animationFinished(m_blendingKeyframes);
             if (!document()->renderTreeBeingDestroyed())
                 m_target->invalidateStyleAndLayerComposition();
             m_runningAccelerated = canBeAccelerated() ? RunningAccelerated::NotStarted : RunningAccelerated::Prevented;
@@ -2485,7 +2487,7 @@ const RenderStyle& KeyframeEffect::currentStyle() const
 {
     if (auto* renderer = this->renderer())
         return renderer->style();
-    return RenderStyle::defaultStyle();
+    return RenderStyle::defaultStyleSingleton();
 }
 
 bool KeyframeEffect::computeExtentOfTransformAnimation(LayoutRect& bounds) const

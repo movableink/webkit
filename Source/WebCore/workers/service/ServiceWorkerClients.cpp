@@ -34,6 +34,7 @@
 #include "ServiceWorkerGlobalScope.h"
 #include "ServiceWorkerThread.h"
 #include "WebCoreOpaqueRoot.h"
+#include <ranges>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
@@ -70,7 +71,7 @@ static inline void matchAllCompleted(ServiceWorkerGlobalScope& scope, DeferredPr
     auto clients = WTF::map(WTFMove(clientsData), [&] (ServiceWorkerClientData&& clientData) {
         return ServiceWorkerClient::create(scope, WTFMove(clientData));
     });
-    std::sort(clients.begin(), clients.end(), [&] (auto& a, auto& b) {
+    std::ranges::sort(clients, [&](auto& a, auto& b) {
         return a->data().focusOrder > b->data().focusOrder;
     });
     promise.resolve<IDLSequence<IDLInterface<ServiceWorkerClient>>>(WTFMove(clients));

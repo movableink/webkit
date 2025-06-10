@@ -47,6 +47,7 @@
 #include <WebCore/Color.h>
 #include <WebCore/Document.h>
 #include <WebCore/DocumentLoader.h>
+#include <WebCore/ExceptionOr.h>
 #include <WebCore/LoaderStrategy.h>
 #include <WebCore/LocalFrame.h>
 #include <WebCore/MediaStrategy.h>
@@ -305,7 +306,7 @@ void WebPlatformStrategies::updateSupportedTypeIdentifiers(const Vector<String>&
 
 #endif // PLATFORM(COCOA)
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(WPE)
 // PasteboardStrategy
 
 Vector<String> WebPlatformStrategies::types(const String& pasteboardName)
@@ -315,9 +316,9 @@ Vector<String> WebPlatformStrategies::types(const String& pasteboardName)
     return result;
 }
 
-String WebPlatformStrategies::readTextFromClipboard(const String& pasteboardName)
+String WebPlatformStrategies::readTextFromClipboard(const String& pasteboardName, const String& pasteboardType)
 {
-    auto sendResult = WebProcess::singleton().parentProcessConnection()->sendSync(Messages::WebPasteboardProxy::ReadText(pasteboardName), 0);
+    auto sendResult = WebProcess::singleton().parentProcessConnection()->sendSync(Messages::WebPasteboardProxy::ReadText(pasteboardName, pasteboardType), 0);
     auto [result] = sendResult.takeReplyOr(String { });
     return result;
 }
@@ -353,9 +354,7 @@ int64_t WebPlatformStrategies::changeCount(const String& pasteboardName)
     return changeCount;
 }
 
-#endif // PLATFORM(GTK)
-
-#if USE(LIBWPE)
+#elif USE(LIBWPE)
 // PasteboardStrategy
 
 void WebPlatformStrategies::getTypes(Vector<String>& types)

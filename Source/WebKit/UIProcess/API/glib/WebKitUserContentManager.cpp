@@ -22,6 +22,7 @@
 
 #include "APISerializedScriptValue.h"
 #include "InjectUserScriptImmediately.h"
+#include "JavaScriptEvaluationResult.h"
 #include "WebKitInitialize.h"
 #include "WebKitUserContentManagerPrivate.h"
 #include "WebKitUserContentPrivate.h"
@@ -407,12 +408,12 @@ public:
 
     void didPostMessage(WebPageProxy&, FrameInfoData&&, API::ContentWorld&, JavaScriptEvaluationResult&& jsMessage) override
     {
-        Ref serializedScriptValue = API::SerializedScriptValue::createFromWireBytes(jsMessage.wireBytes());
         if (!m_manager) {
             g_critical("Script message %s received after the WebKitUserContentManager has been destroyed. You must unregister the message handler!", g_quark_to_string(m_handlerName));
             return;
         }
 
+        Ref serializedScriptValue = API::SerializedScriptValue::createFromWireBytes(jsMessage.wireBytes());
 #if ENABLE(2022_GLIB_API)
         GRefPtr<JSCValue> value = API::SerializedScriptValue::deserialize(serializedScriptValue->internalRepresentation());
         g_signal_emit(m_manager.get(), signals[SCRIPT_MESSAGE_RECEIVED], m_handlerName, value.get());

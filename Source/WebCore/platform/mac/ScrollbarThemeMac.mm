@@ -50,6 +50,10 @@
 #import <wtf/SetForScope.h>
 #import <wtf/StdLibExtras.h>
 
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/ScrollbarThemeMacAdditions.mm>)
+#import <WebKitAdditions/ScrollbarThemeMacAdditions.mm>
+#endif
+
 // FIXME: There are repainting problems due to Aqua scroll bar buttons' visual overflow.
 
 namespace WebCore {
@@ -247,13 +251,13 @@ void ScrollbarThemeMac::updateScrollbarOverlayStyle(Scrollbar& scrollbar)
     BEGIN_BLOCK_OBJC_EXCEPTIONS
     NSScrollerImp *painter = scrollerImpForScrollbar(scrollbar);
     switch (scrollbar.scrollableArea().scrollbarOverlayStyle()) {
-    case ScrollbarOverlayStyleDefault:
+    case ScrollbarOverlayStyle::Default:
         [painter setKnobStyle:NSScrollerKnobStyleDefault];
         break;
-    case ScrollbarOverlayStyleDark:
+    case ScrollbarOverlayStyle::Dark:
         [painter setKnobStyle:NSScrollerKnobStyleDark];
         break;
-    case ScrollbarOverlayStyleLight:
+    case ScrollbarOverlayStyle::Light:
         [painter setKnobStyle:NSScrollerKnobStyleLight];
         break;
     }
@@ -550,12 +554,14 @@ bool ScrollbarThemeMac::paint(Scrollbar& scrollbar, GraphicsContext& context, co
         context.translate(scrollbarRect.location());
         paintScrollbar(scrollbar, context);
     } else {
-        auto imageBuffer = [&] {
-            auto buffer = context.createImageBuffer(scrollbarRect.size(), scrollbar.deviceScaleFactor(), DestinationColorSpace::SRGB(), context.renderingMode(), RenderingMethod::Local);
-            paintScrollbar(scrollbar, buffer->context());
-            return buffer;
-        }();
-        context.drawImageBuffer(*imageBuffer, scrollbarRect);
+        if (auto imageBuffer = [&] -> RefPtr<ImageBuffer> {
+            if (auto buffer = context.createImageBuffer(scrollbarRect.size(), scrollbar.deviceScaleFactor(), DestinationColorSpace::SRGB(), context.renderingMode(), RenderingMethod::Local)) {
+                paintScrollbar(scrollbar, buffer->context());
+                return buffer;
+            }
+            return nullptr;
+        }())
+            context.drawImageBuffer(*imageBuffer, scrollbarRect);
     }
 
     return true;
@@ -569,6 +575,10 @@ void ScrollbarThemeMac::paintScrollCorner(ScrollableArea& area, GraphicsContext&
     // Keep this in sync with ScrollAnimatorMac's effectiveAppearanceForScrollerImp:.
     LocalDefaultSystemAppearance localAppearance(area.useDarkAppearanceForScrollbars());
 
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintScrollCornerForVectorBasedControls(area, context, cornerRect))
+        return;
+#endif
     context.drawSystemImage(ScrollbarTrackCornerSystemImageMac::create(), cornerRect);
 }
 

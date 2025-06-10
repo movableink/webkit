@@ -38,6 +38,7 @@
 #include "MediaElementSession.h"
 #include "MediaPlaybackTarget.h"
 #include "RemotePlaybackAvailabilityCallback.h"
+#include "UserGestureIndicator.h"
 #include "WebCoreOpaqueRootInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -122,7 +123,7 @@ void RemotePlayback::watchAvailability(Ref<RemotePlaybackAvailabilityCallback>&&
                 if (foundCallback == playback.m_callbackMap.end())
                     return;
 
-                foundCallback->value->handleEvent(available);
+                foundCallback->value->invoke(available);
             });
 
             // 8.2 Run the algorithm to monitor the list of available remote playback devices.
@@ -294,8 +295,8 @@ void RemotePlayback::shouldPlayToRemoteTargetChanged(bool shouldPlayToRemoteTarg
     else
         disconnect();
 
-    if (m_mediaElement)
-        m_mediaElement->remoteHasAvailabilityCallbacksChanged();
+    if (RefPtr mediaElement = m_mediaElement.get())
+        mediaElement->remoteHasAvailabilityCallbacksChanged();
 }
 
 void RemotePlayback::setState(State state)
@@ -386,8 +387,8 @@ void RemotePlayback::playbackTargetPickerWasDismissed()
     for (auto& promise : std::exchange(m_promptPromises, { }))
         promise->reject(ExceptionCode::NotAllowedError);
 
-    if (m_mediaElement)
-        m_mediaElement->remoteHasAvailabilityCallbacksChanged();
+    if (RefPtr mediaElement = m_mediaElement.get())
+        mediaElement->remoteHasAvailabilityCallbacksChanged();
 }
 
 void RemotePlayback::isPlayingToRemoteTargetChanged(bool isPlayingToTarget)
@@ -433,7 +434,7 @@ void RemotePlayback::availabilityChanged(bool available)
 
         // Protect m_callbackMap against mutation while it's being iterated over.
         for (auto& callback : copyToVector(playback.m_callbackMap.values()))
-            callback->handleEvent(available);
+            callback->invoke(available);
     });
 }
 

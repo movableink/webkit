@@ -179,7 +179,7 @@ static WKSyntheticClickType toWKSyntheticClickType(WebKit::WebMouseEventSyntheti
 
 - (NSURL *)_originalURL
 {
-    return Ref { *_navigationAction }->originalURL();
+    return Ref { *_navigationAction }->originalURL().createNSURL().autorelease();
 }
 
 - (BOOL)_isUserInitiated
@@ -217,6 +217,11 @@ static WKSyntheticClickType toWKSyntheticClickType(WebKit::WebMouseEventSyntheti
     return wrapper(_navigationAction->protectedUserInitiatedAction().get());
 }
 
+- (BOOL)_isContentExtensionRedirect
+{
+    return _navigationAction->isContentExtensionRedirect();
+}
+
 - (BOOL)_isRedirect
 {
     return _navigationAction->isRedirect();
@@ -233,7 +238,7 @@ static WKSyntheticClickType toWKSyntheticClickType(WebKit::WebMouseEventSyntheti
     RefPtr mainFrameNavigation = _navigationAction->mainFrameNavigation();
     if (!mainFrameNavigation)
         return;
-    auto& privateClickMeasurement = mainFrameNavigation->privateClickMeasurement();
+    auto* privateClickMeasurement = mainFrameNavigation->privateClickMeasurement();
     if (!privateClickMeasurement || !privateClickMeasurement->isSKAdNetworkAttribution())
         return;
     RefPtr sourceFrame = _navigationAction->sourceFrame();
@@ -270,7 +275,7 @@ static WKSyntheticClickType toWKSyntheticClickType(WebKit::WebMouseEventSyntheti
     auto& name = _navigationAction->targetFrameName();
     if (name.isNull())
         return nil;
-    return name;
+    return name.createNSString().autorelease();
 }
 
 - (BOOL)_hasOpener

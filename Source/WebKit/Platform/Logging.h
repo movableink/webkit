@@ -26,6 +26,7 @@
 #pragma once
 
 #include <wtf/Assertions.h>
+#include <wtf/Platform.h>
 #include <wtf/text/WTFString.h>
 
 #if __has_include("WebKitLogDefinitions.h")
@@ -94,6 +95,7 @@ extern "C" {
     M(BackForwardCache) \
     M(CacheStorage) \
     M(ContentObservation) \
+    M(ContentRuleLists) \
     M(ContextMenu) \
     M(DigitalCredentials) \
     M(DisplayLink) \
@@ -134,6 +136,7 @@ extern "C" {
     M(PDF) \
     M(PDFAsyncRendering) \
     M(PageLoadObserver) \
+    M(Pasteboard) \
     M(PerformanceLogging) \
     M(Plugins) \
     M(Printing) \
@@ -148,6 +151,7 @@ extern "C" {
     M(RemoteLayerTree) \
     M(Resize) \
     M(ResourceLoadStatistics) \
+    M(ResourceMonitoring) \
     M(Sandbox) \
     M(ScreenTime) \
     M(ScrollAnimations) \

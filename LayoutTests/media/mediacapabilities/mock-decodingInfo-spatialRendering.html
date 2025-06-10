@@ -20,25 +20,25 @@
 
         info = await shouldResolve(promise);
         testExpected('info.supported', true);
-        testExpected('typeof info.supportedConfiguration.audio.spatialRendering', 'undefined');
+        testExpected('typeof info.configuration.audio.spatialRendering', 'undefined');
 
         run("promise = navigator.mediaCapabilities.decodingInfo({ type: 'file', audio: { contentType: 'audio/mp4; codecs=\"mp4a.40.2\"', channels: '5.1', bitrate: 1000, samplerate: 44100, spatialRendering: true } });");
 
         info = await shouldResolve(promise);
         testExpected('info.supported', true);
-        testExpected('info.supportedConfiguration.audio.spatialRendering', true);
+        testExpected('info.configuration.audio.spatialRendering', true);
 
         run("promise = navigator.mediaCapabilities.decodingInfo({ type: 'file', audio: { contentType: 'audio/mp4; codecs=\"mp4a.40.2\"', channels: '2', bitrate: 1000, samplerate: 44100, spatialRendering: true } });");
 
         info = await shouldResolve(promise);
         testExpected('info.supported', false);
-        testExpected('info.supportedConfiguration.audio.spatialRendering', true);
+        testExpected('info.configuration.audio.spatialRendering', true);
 
         run("promise = navigator.mediaCapabilities.decodingInfo({ type: 'file', audio: { contentType: 'audio/mp4; codecs=\"mp4a.40.2\"', channels: '2', bitrate: 1000, samplerate: 44100, spatialRendering: false } });");
 
         info = await shouldResolve(promise);
         testExpected('info.supported', true);
-        testExpected('info.supportedConfiguration.audio.spatialRendering', false);
+        testExpected('info.configuration.audio.spatialRendering', false);
 
         endTest();
     }

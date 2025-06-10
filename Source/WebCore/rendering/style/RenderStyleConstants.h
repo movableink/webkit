@@ -26,6 +26,7 @@
 #pragma once
 
 #include <initializer_list>
+#include <limits>
 #include <optional>
 
 namespace WTF {
@@ -240,11 +241,6 @@ enum class BorderPrecedence : uint8_t {
     RowGroup,
     Row,
     Cell
-};
-
-enum class OutlineIsAuto : bool {
-    Off,
-    On
 };
 
 enum class PositionType : uint8_t {
@@ -1052,16 +1048,6 @@ enum GridAutoFlow : uint8_t {
     AutoFlowColumn = InternalAutoFlowAlgorithmSparse | InternalAutoFlowDirectionColumn,
     AutoFlowRowDense = InternalAutoFlowAlgorithmDense | InternalAutoFlowDirectionRow,
     AutoFlowColumnDense = InternalAutoFlowAlgorithmDense | InternalAutoFlowDirectionColumn
-};
-
-enum class MasonryAutoFlowPlacementAlgorithm {
-    Pack,
-    Next
-};
-
-enum class MasonryAutoFlowPlacementOrder {
-    DefiniteFirst,
-    Ordered
 };
 
 enum class AutoRepeatType : uint8_t {

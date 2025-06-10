@@ -163,7 +163,7 @@ public:
     const Vector<RetainPtr<nw_proxy_config_t>>& proxyConfigs() const { return m_nwProxyConfigs; }
 
     void clearProxyConfigData() final;
-    void setProxyConfigData(const Vector<std::pair<Vector<uint8_t>, WTF::UUID>>&) final;
+    void setProxyConfigData(const Vector<std::pair<Vector<uint8_t>, std::optional<WTF::UUID>>>&) final;
 
     void applyProxyConfigurationToSessionConfiguration(NSURLSessionConfiguration *);
 #endif
@@ -193,14 +193,14 @@ private:
     void addWebSocketTask(WebPageProxyIdentifier, WebSocketTask&) final;
     void removeWebSocketTask(SessionSet&, WebSocketTask&) final;
 
-    void loadImageForDecoding(WebCore::ResourceRequest&&, WebPageProxyIdentifier, size_t, CompletionHandler<void(std::variant<WebCore::ResourceError, Ref<WebCore::FragmentedSharedBuffer>>&&)>&&) final;
+    void loadImageForDecoding(WebCore::ResourceRequest&&, WebPageProxyIdentifier, size_t, CompletionHandler<void(Expected<Ref<WebCore::FragmentedSharedBuffer>, WebCore::ResourceError>&&)>&&) final;
     void dataTaskWithRequest(WebPageProxyIdentifier, WebCore::ResourceRequest&&, const std::optional<WebCore::SecurityOriginData>& topOrigin, CompletionHandler<void(DataTaskIdentifier)>&&) final;
     void cancelDataTask(DataTaskIdentifier) final;
     void addWebPageNetworkParameters(WebPageProxyIdentifier, WebPageNetworkParameters&&) final;
     void removeWebPageNetworkParameters(WebPageProxyIdentifier) final;
     size_t countNonDefaultSessionSets() const final;
 
-    void forEachSessionWrapper(Function<void(SessionWrapper&)>&&);
+    void forEachSessionWrapper(NOESCAPE const Function<void(SessionWrapper&)>&);
 
     bool isNetworkSessionCocoa() const final { return true; }
 

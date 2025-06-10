@@ -23,6 +23,10 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
+DECLARE_SYSTEM_HEADER
+
 #import <wtf/Platform.h>
 
 #if PLATFORM(MAC)
@@ -30,18 +34,6 @@
 #if USE(APPLE_INTERNAL_SDK)
 
 #import <AppKit/NSMenu_Private.h>
-
-@interface NSMenuItem (Staging_129192954)
-
-+ (NSMenuItem *)standardWritingToolsMenuItem;
-
-@end
-
-#elif USE(APPLE_INTERNAL_SDK)
-
-WTF_EXTERN_C_BEGIN
-#import <AppKit/NSMenu_Private.h>
-WTF_EXTERN_C_END
 
 #else
 

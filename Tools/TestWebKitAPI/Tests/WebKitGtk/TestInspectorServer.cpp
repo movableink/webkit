@@ -133,7 +133,7 @@ public:
             const char* mainResourceData = this->mainResourceData(mainResourceDataSize);
             g_assert_nonnull(mainResourceData);
             if (g_strrstr_len(mainResourceData, mainResourceDataSize, "No targets found")) {
-                webkit_web_view_reload(m_webView);
+                webkit_web_view_reload(m_webView.get());
                 waitUntilLoadFinished();
                 continue;
             }

@@ -21,6 +21,7 @@
 #include "config.h"
 #include "RenderView.h"
 
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "Element.h"
 #include "FloatQuad.h"
@@ -41,6 +42,7 @@
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
+#include "NodeInlines.h"
 #include "NodeTraversal.h"
 #include "Page.h"
 #include "RenderBoxInlines.h"
@@ -93,7 +95,7 @@ RenderView::RenderView(Document& document, RenderStyle&& style)
     m_minPreferredLogicalWidth = 0;
     m_maxPreferredLogicalWidth = 0;
 
-    setPreferredLogicalWidthsDirty(true, MarkOnlyThis);
+    setNeedsPreferredWidthsUpdate(MarkOnlyThis);
     
     setPositionState(PositionType::Absolute); // to 0,0 :)
 
@@ -102,7 +104,7 @@ RenderView::RenderView(Document& document, RenderStyle&& style)
 
 RenderView::~RenderView()
 {
-    ASSERT_WITH_MESSAGE(m_rendererCount == 1, "All other renderers in this render tree should have been destroyed");
+    ASSERT_WITH_MESSAGE(!m_rendererCount, "All renderers should be in the process of being deleted.");
 
     deleteLines();
 }
@@ -284,7 +286,7 @@ void RenderView::mapLocalToContainer(const RenderLayerModelObject* ancestorConta
     }
 }
 
-const RenderObject* RenderView::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
+const RenderElement* RenderView::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
 {
     // If a container was specified, and was not nullptr or the RenderView,
     // then we should have found it by now.
@@ -500,7 +502,8 @@ void RenderView::repaintViewRectangle(const LayoutRect& repaintRect) const
         auto* ownerBox = ownerElement->renderBox();
         if (!ownerBox)
             return;
-        LayoutRect viewRect = this->viewRect();
+
+        auto viewRect = LayoutRect { this->viewRect() };
 #if PLATFORM(IOS_FAMILY)
         // Don't clip using the visible rect since clipping is handled at a higher level on iPhone.
         // FIXME: This statement is wrong for iframes.
@@ -511,6 +514,13 @@ void RenderView::repaintViewRectangle(const LayoutRect& repaintRect) const
         if (adjustedRect.isEmpty())
             return;
 
+        if (adjustedRect == viewRect) {
+            // We know this RenderView isn't composited here, which means it has no composited descendants, so it's OK to trigger `setNeedsFullRepaint`
+            // which would otherwise force all compositing layers to repaint.
+            ASSERT(!isComposited());
+            frameView().layoutContext().setNeedsFullRepaint();
+        }
+
         adjustedRect.moveBy(-viewRect.location());
         adjustedRect.moveBy(ownerBox->contentBoxRect().location());
 
@@ -520,7 +530,7 @@ void RenderView::repaintViewRectangle(const LayoutRect& repaintRect) const
         // and the Renderer that contains the iframe. This transformation must account for a
         // left scrollbar (if one exists).
         Ref frameView = this->frameView();
-        if (frameView->shouldPlaceVerticalScrollbarOnLeft() && frameView->verticalScrollbar())
+        if (frameView->verticalScrollbar() && frameView->shouldPlaceVerticalScrollbarOnLeft())
             adjustedRect.move(LayoutSize(frameView->protectedVerticalScrollbar()->occupiedWidth(), 0));
 
         ownerBox->repaintRectangle(adjustedRect);
@@ -989,7 +999,7 @@ void RenderView::updatePlayStateForAllAnimations(const IntRect& visibleRect)
             }
         };
 
-        for (RefPtr layer = &renderElement.style().backgroundLayers(); layer; layer = layer->next())
+        for (RefPtr layer = renderElement.style().backgroundLayers(); layer; layer = layer->next())
             updateAnimation(layer->image() ? layer->image()->cachedImage() : nullptr);
 
         if (auto* renderImage = dynamicDowncast<RenderImage>(renderElement))
@@ -1122,17 +1132,17 @@ SingleThreadWeakHashSet<RenderCounter> RenderView::takeCountersNeedingUpdate()
     return std::exchange(m_countersNeedingUpdate, { });
 }
 
-SingleThreadWeakPtr<RenderElement> RenderView::viewTransitionRoot() const
+SingleThreadWeakPtr<RenderBlockFlow> RenderView::viewTransitionContainingBlock() const
 {
-    return m_viewTransitionRoot;
+    return m_viewTransitionContainingBlock;
 }
 
-void RenderView::setViewTransitionRoot(RenderElement& renderer)
+void RenderView::setViewTransitionContainingBlock(RenderBlockFlow& renderer)
 {
-    m_viewTransitionRoot = renderer;
+    m_viewTransitionContainingBlock = renderer;
 }
 
-void RenderView::addViewTransitionGroup(const AtomString& name, RenderElement& group)
+void RenderView::addViewTransitionGroup(const AtomString& name, RenderBox& group)
 {
     m_viewTransitionGroups.set(name, &group);
 }
@@ -1142,7 +1152,7 @@ void RenderView::removeViewTransitionGroup(const AtomString& name)
     m_viewTransitionGroups.remove(name);
 }
 
-RenderElement* RenderView::viewTransitionGroupForName(const AtomString& name)
+RenderBox* RenderView::viewTransitionGroupForName(const AtomString& name)
 {
     return m_viewTransitionGroups.get(name).get();
 }

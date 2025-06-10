@@ -2,6 +2,7 @@ set_property(DIRECTORY . PROPERTY FOLDER "mock-platform")
 
 add_library(WPEMockPlatform MODULE
     WPEDisplayMock.cpp
+    WPEViewMock.cpp
 )
 
 set_target_properties(WPEMockPlatform PROPERTIES

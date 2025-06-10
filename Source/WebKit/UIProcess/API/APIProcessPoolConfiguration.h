@@ -193,7 +193,7 @@ private:
     bool m_shouldConfigureJSCForTesting { false };
     bool m_isJITEnabled { true };
     bool m_usesSingleWebProcess { false };
-#if PLATFORM(GTK) && !USE(GTK4)
+#if PLATFORM(GTK) && !USE(GTK4) && USE(CAIRO)
     bool m_useSystemAppearanceForScrollbars { false };
 #endif
 #if PLATFORM(PLAYSTATION)
@@ -217,3 +217,5 @@ private:
 };
 
 } // namespace API
+
+SPECIALIZE_TYPE_TRAITS_API_OBJECT(ProcessPoolConfiguration);

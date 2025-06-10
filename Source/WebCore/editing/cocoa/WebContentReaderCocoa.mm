@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -122,16 +122,16 @@ static NSDictionary *attributesForAttributedStringConversion(bool useInterchange
         [excludedElements addObject:@"object"];
 #endif
 
-    NSURL *baseURL = URL::fakeURLWithRelativePart(emptyString());
+    RetainPtr baseURL = URL::fakeURLWithRelativePart(emptyString()).createNSURL();
 
     // The output base URL needs +1 refcount to work around the fact that NSHTMLReader over-releases it.
-    CFRetain((__bridge CFTypeRef)baseURL);
+    CFRetain((__bridge CFTypeRef)baseURL.get());
 
     return @{
         NSExcludedElementsDocumentAttribute: excludedElements.get(),
         @"InterchangeNewline": @(useInterchangeNewlines),
         @"CoalesceTabSpans": @YES,
-        @"OutputBaseURL": baseURL,
+        @"OutputBaseURL": baseURL.get(),
         @"WebResourceHandler": adoptNS([WebArchiveResourceWebResourceHandler new]).get(),
     };
 }
@@ -202,7 +202,7 @@ public:
 
 private:
     WeakPtr<LocalFrame> m_frame;
-    Ref<CachedResourceLoader> m_cachedResourceLoader;
+    const Ref<CachedResourceLoader> m_cachedResourceLoader;
     bool m_didEnabledDeferredLoading { false };
     bool m_didDisableImage { false };
 };
@@ -759,7 +759,7 @@ bool WebContentReader::readPlainText(const String& text)
     if (!m_allowPlainText)
         return false;
 
-    String precomposedString = [text precomposedStringWithCanonicalMapping];
+    String precomposedString = [text.createNSString() precomposedStringWithCanonicalMapping];
     if (RefPtr page = frame().page())
         precomposedString = page->applyLinkDecorationFiltering(precomposedString, LinkDecorationFilteringTrigger::Paste);
 
@@ -907,11 +907,11 @@ bool WebContentReader::readURL(const URL& url, const String& title)
 #if PLATFORM(IOS_FAMILY)
     // FIXME: This code shouldn't be accessing selection and changing the behavior.
     if (!frame->editor().client()->hasRichlyEditableSelection()) {
-        if (readPlainText([(NSURL *)url absoluteString]))
+        if (readPlainText([url.createNSURL() absoluteString]))
             return true;
     }
 
-    if ([(NSURL *)url isFileURL])
+    if ([url.createNSURL() isFileURL])
         return false;
 #endif // PLATFORM(IOS_FAMILY)
 
@@ -925,7 +925,7 @@ bool WebContentReader::readURL(const URL& url, const String& title)
     auto anchor = HTMLAnchorElement::create(document.get());
     anchor->setAttributeWithoutSynchronization(HTMLNames::hrefAttr, AtomString { sanitizedURLString });
 
-    NSString *linkText = title.isEmpty() ? sanitizedURLString : title;
+    RetainPtr linkText = title.isEmpty() ? sanitizedURLString.createNSString() : title.createNSString();
     anchor->appendChild(document->createTextNode([linkText precomposedStringWithCanonicalMapping]));
 
     auto newFragment = document->createDocumentFragment();

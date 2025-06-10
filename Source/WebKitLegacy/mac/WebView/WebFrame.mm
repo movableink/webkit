@@ -63,7 +63,7 @@
 #import <WebCore/AXObjectCache.h>
 #import <WebCore/AccessibilityObject.h>
 #import <WebCore/BoundaryPointInlines.h>
-#import <WebCore/CSSStyleDeclaration.h>
+#import <WebCore/CSSStyleProperties.h>
 #import <WebCore/CachedResourceLoader.h>
 #import <WebCore/CaptionUserPreferences.h>
 #import <WebCore/Chrome.h>
@@ -105,6 +105,7 @@
 #import <WebCore/PrintContext.h>
 #import <WebCore/Range.h>
 #import <WebCore/RemoteUserInputEventData.h>
+#import <WebCore/RenderElementInlines.h>
 #import <WebCore/RenderLayer.h>
 #import <WebCore/RenderLayerCompositor.h>
 #import <WebCore/RenderLayerScrollableArea.h>
@@ -318,7 +319,7 @@ WebView *getWebView(WebFrame *webFrame)
 
     auto coreFrame = WebCore::LocalFrame::createSubframe(page, [frame] (auto&, auto& frameLoader) {
         return makeUniqueRefWithoutRefCountedCheck<WebFrameLoaderClient>(frameLoader, frame.get());
-    }, WebCore::FrameIdentifier::generate(), effectiveSandboxFlags, ownerElement);
+    }, WebCore::generateFrameIdentifier(), effectiveSandboxFlags, ownerElement, WebCore::FrameTreeSyncData::create());
     frame->_private->coreFrame = coreFrame.ptr();
 
     coreFrame.get().tree().setSpecifiedName(name);
@@ -463,9 +464,7 @@ static NSURL *createUniqueWebDataURL();
         if (auto* view = frame->view()) {
             view->setTransparent(!drawsBackground);
 #if !PLATFORM(IOS_FAMILY)
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-            auto color = WebCore::colorFromCocoaColor([backgroundColor colorUsingColorSpaceName:NSDeviceRGBColorSpace]);
-ALLOW_DEPRECATED_DECLARATIONS_END
+            auto color = WebCore::colorFromCocoaColor([backgroundColor colorUsingColorSpace:NSColorSpace.deviceRGBColorSpace]);
 #else
             WebCore::Color color(WebCore::roundAndClampToSRGBALossy(backgroundColor));
 #endif
@@ -601,14 +600,14 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (NSString *)_selectedString
 {
-    return _private->coreFrame->displayStringModifiedByEncoding(_private->coreFrame->editor().selectedText());
+    return _private->coreFrame->displayStringModifiedByEncoding(_private->coreFrame->editor().selectedText()).createNSString().autorelease();
 }
 
 - (NSString *)_stringForRange:(DOMRange *)range
 {
     if (!range)
         return @"";
-    return plainText(makeSimpleRange(*core(range)), { }, true);
+    return plainText(makeSimpleRange(*core(range)), { }, true).createNSString().autorelease();
 }
 
 - (OptionSet<WebCore::PaintBehavior>)_paintBehaviorForDestinationContext:(CGContextRef)context
@@ -723,7 +722,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     auto* lexicalGlobalObject = _private->coreFrame->script().globalObject(WebCore::mainThreadNormalWorldSingleton());
     JSC::JSLockHolder lock(lexicalGlobalObject);
 #endif
-    return result.toWTFString(lexicalGlobalObject);
+    return result.toWTFString(lexicalGlobalObject).createNSString().autorelease();
 }
 
 - (NSRect)_caretRectAtPosition:(const WebCore::Position&)pos affinity:(NSSelectionAffinity)affinity
@@ -941,15 +940,20 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     RefPtr<WebCore::MutableStyleProperties> typingStyle = _private->coreFrame->selection().copyTypingStyle();
     if (!typingStyle)
         return nil;
-    return kit(&typingStyle->ensureCSSStyleDeclaration());
+    return kit(&typingStyle->ensureCSSStyleProperties());
 }
 
 - (void)_setTypingStyle:(DOMCSSStyleDeclaration *)style withUndoAction:(WebCore::EditAction)undoAction
 {
     if (!_private->coreFrame || !style)
         return;
+
+    RefPtr styleProperties = dynamicDowncast<WebCore::CSSStyleProperties>(core(style));
+    if (!styleProperties)
+        return;
+
     // FIXME: We shouldn't have to create a copy here.
-    Ref<WebCore::MutableStyleProperties> properties(core(style)->copyProperties());
+    Ref<WebCore::MutableStyleProperties> properties(styleProperties->copyProperties());
     _private->coreFrame->editor().computeAndSetTypingStyle(properties.get(), undoAction);
 }
 
@@ -1269,9 +1273,11 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 - (CGSize)renderedSizeOfNode:(DOMNode *)node constrainedToWidth:(float)width
 {
     WebCore::Node* n = core(node);
-    auto* renderer = n ? n->renderer() : nullptr;
-    float w = std::min((float)renderer->maxPreferredLogicalWidth(), width);
-    return is<WebCore::RenderBox>(renderer) ? CGSizeMake(w, downcast<WebCore::RenderBox>(*renderer).height()) : CGSizeMake(0, 0);
+    if (!n)
+        return CGSizeMake(0, 0);
+    if (auto* renderBox = dynamicDowncast<WebCore::RenderBox>(n->renderer()))
+        return CGSizeMake(std::min((float)renderBox->maxPreferredLogicalWidth(), width), renderBox->height());
+    return CGSizeMake(0, 0);
 }
 
 - (DOMNode *)deepestNodeAtViewportLocation:(CGPoint)aViewportLocation
@@ -1780,7 +1786,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
     PAL::TextEncoding encoding(textEncodingName);
     if (!encoding.isValid())
         encoding = PAL::WindowsLatin1Encoding();
-    return encoding.decode(span(data));
+    return encoding.decode(span(data)).createNSString().autorelease();
 }
 
 - (NSRect)caretRectAtNode:(DOMNode *)node offset:(int)offset affinity:(NSSelectionAffinity)affinity
@@ -2100,7 +2106,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 
     auto* lexicalGlobalObject = anyWorldGlobalObject;
     JSC::JSLockHolder lock(lexicalGlobalObject);
-    return result.toWTFString(lexicalGlobalObject);
+    return result.toWTFString(lexicalGlobalObject).createNSString().autorelease();
 }
 
 - (JSGlobalContextRef)_globalContextForScriptWorld:(WebScriptWorld *)world
@@ -2166,13 +2172,13 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
     WebCore::AXObjectCache::setEnhancedUserInterfaceAccessibility(enable);
 }
 
-- (NSString*)_layerTreeAsText
+- (NSString *)_layerTreeAsText
 {
     auto coreFrame = _private->coreFrame;
     if (!coreFrame)
         return @"";
 
-    return coreFrame->contentRenderer()->compositor().layerTreeAsText();
+    return coreFrame->contentRenderer()->compositor().layerTreeAsText().createNSString().autorelease();
 }
 
 - (id)accessibilityRoot
@@ -2265,7 +2271,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 - (DOMDocumentFragment *)_documentFragmentForImageData:(NSData *)data withRelativeURLPart:(NSString *)relativeURLPart andMIMEType:(NSString *)mimeType
 {
     auto resource = adoptNS([[WebResource alloc] initWithData:data
-        URL:URL::fakeURLWithRelativePart(String { relativeURLPart })
+        URL:URL::fakeURLWithRelativePart(String { relativeURLPart }).createNSURL().get()
         MIMEType:mimeType textEncodingName:nil frameName:nil]);
     return [[self _dataSource] _documentFragmentWithImageResource:resource.get()];
 }
@@ -2374,7 +2380,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     auto coreFrame = _private->coreFrame;
     if (!coreFrame)
         return nil;
-    return coreFrame->tree().uniqueName();
+    return coreFrame->tree().uniqueName().createNSString().autorelease();
 }
 
 - (WebFrameView *)frameView
@@ -2446,7 +2452,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (!resourceRequest.url().isValid() && !resourceRequest.url().isEmpty())
         resourceRequest.setURL([NSURL URLWithString:[@"file:" stringByAppendingString:[[request URL] absoluteString]]]);
 
-    coreFrame->loader().load(WebCore::FrameLoadRequest(*coreFrame, resourceRequest));
+    coreFrame->loader().load(WebCore::FrameLoadRequest(*coreFrame, WTFMove(resourceRequest)));
 }
 
 static NSURL *createUniqueWebDataURL()
@@ -2463,30 +2469,31 @@ static NSURL *createUniqueWebDataURL()
         return [[self _webkit_invokeOnMainThread] _loadData:data MIMEType:MIMEType textEncodingName:encodingName baseURL:baseURL unreachableURL:unreachableURL];
 #endif
 
-    NSURL *responseURL = nil;
+    RetainPtr<NSURL> responseURL;
+    RetainPtr<NSURL> absoluteBaseURL;
     if (baseURL)
-        baseURL = [baseURL absoluteURL];
+        absoluteBaseURL = [baseURL absoluteURL];
     else {
-        baseURL = aboutBlankURL();
+        absoluteBaseURL = aboutBlankURL().createNSURL();
         responseURL = createUniqueWebDataURL();
     }
     
 #if USE(QUICK_LOOK)
     if (WebCore::shouldUseQuickLookForMIMEType(MIMEType)) {
-        NSURL *quickLookURL = responseURL ? responseURL : baseURL;
-        if (auto request = WebCore::registerQLPreviewConverterIfNeeded(quickLookURL, MIMEType, data)) {
+        RetainPtr quickLookURL = responseURL ? responseURL : absoluteBaseURL;
+        if (auto request = WebCore::registerQLPreviewConverterIfNeeded(quickLookURL.get(), MIMEType, data)) {
             _private->coreFrame->loader().load(WebCore::FrameLoadRequest(*_private->coreFrame, request.get()));
             return;
         }
     }
 #endif
 
-    WebCore::ResourceRequest request(baseURL);
+    WebCore::ResourceRequest request(absoluteBaseURL.get());
 
-    WebCore::ResourceResponse response(responseURL, MIMEType, [data length], encodingName);
-    WebCore::SubstituteData substituteData(WebCore::SharedBuffer::create(data), [unreachableURL absoluteURL], response, WebCore::SubstituteData::SessionHistoryVisibility::Hidden);
+    WebCore::ResourceResponse response(responseURL.get(), MIMEType, [data length], encodingName);
+    WebCore::SubstituteData substituteData(WebCore::SharedBuffer::create(data), [unreachableURL absoluteURL], WTFMove(response), WebCore::SubstituteData::SessionHistoryVisibility::Hidden);
 
-    _private->coreFrame->loader().load(WebCore::FrameLoadRequest(*_private->coreFrame, request, substituteData));
+    _private->coreFrame->loader().load(WebCore::FrameLoadRequest(*_private->coreFrame, WTFMove(request), WTFMove(substituteData)));
 }
 
 - (void)loadData:(NSData *)data MIMEType:(NSString *)MIMEType textEncodingName:(NSString *)encodingName baseURL:(NSURL *)baseURL

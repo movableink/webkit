@@ -33,6 +33,7 @@
 #include "UniqueIDBDatabase.h"
 #include "UniqueIDBDatabaseConnection.h"
 #include "UniqueIDBDatabaseManager.h"
+#include <algorithm>
 
 namespace WebCore {
 namespace IDBServer {
@@ -128,7 +129,7 @@ bool UniqueIDBDatabaseTransaction::shouldAbortDueToUnhandledRequestError(uint64_
     }
 
     auto pendingRequestResults = m_requestResults.subspan(handledRequestResultsCount);
-    return WTF::anyOf(pendingRequestResults, [&] (auto& error) {
+    return std::ranges::any_of(pendingRequestResults, [&](auto& error) {
         return !error.isNull();
     });
 }
@@ -157,7 +158,7 @@ void UniqueIDBDatabaseTransaction::createObjectStore(const IDBRequestData& reque
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::createObjectStore");
 
-    ASSERT(isVersionChange());
+    RELEASE_ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
     auto* database = this->database();
@@ -182,7 +183,7 @@ void UniqueIDBDatabaseTransaction::deleteObjectStore(const IDBRequestData& reque
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::deleteObjectStore");
 
-    ASSERT(isVersionChange());
+    RELEASE_ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
     auto* database = this->database();
@@ -209,7 +210,7 @@ void UniqueIDBDatabaseTransaction::renameObjectStore(const IDBRequestData& reque
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::renameObjectStore");
 
-    ASSERT(isVersionChange());
+    RELEASE_ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
     auto* database = this->database();
@@ -260,7 +261,7 @@ void UniqueIDBDatabaseTransaction::deleteIndex(const IDBRequestData& requestData
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::deleteIndex");
 
-    ASSERT(isVersionChange());
+    RELEASE_ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
     auto* database = this->database();
@@ -285,7 +286,7 @@ void UniqueIDBDatabaseTransaction::renameIndex(const IDBRequestData& requestData
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::renameIndex");
 
-    ASSERT(isVersionChange());
+    RELEASE_ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
     auto* database = this->database();

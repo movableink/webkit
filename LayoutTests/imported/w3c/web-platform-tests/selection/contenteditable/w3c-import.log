@@ -17,6 +17,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/selection/contenteditable/cefalse-on-boundaries.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/contenteditable/collapse.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/contenteditable/initial-selection-on-focus.tentative.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/contenteditable/modify-around-non-editable-span.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/contenteditable/modify.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/contenteditable/modifying-selection-with-non-primary-mouse-button.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/contenteditable/modifying-selection-with-primary-mouse-button.tentative.html

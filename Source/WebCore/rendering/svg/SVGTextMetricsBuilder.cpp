@@ -20,6 +20,7 @@
 #include "config.h"
 #include "SVGTextMetricsBuilder.h"
 
+#include "FontCascadeCache.h"
 #include "RenderChildIterator.h"
 #include "RenderSVGInline.h"
 #include "RenderSVGInlineText.h"
@@ -75,8 +76,27 @@ void SVGTextMetricsBuilder::advanceSimpleText()
 void SVGTextMetricsBuilder::advanceComplexText()
 {
     unsigned metricsLength = currentCharacterStartsSurrogatePair() ? 2 : 1;
+
+    // FIXME: NON-COCOA platforms shifts some pixels for SVGText when x,y, and rotate are used.
+    // webkit.org/b/291636
+#if PLATFORM(COCOA)
+    float beforeWidth = 0;
+    float afterWidth = 0;
+
+    m_complexTextController->advance(m_textPosition, nullptr);
+    beforeWidth = m_complexTextController->runWidthSoFar();
+
+    m_complexTextController->advance(m_textPosition + metricsLength, nullptr);
+    afterWidth = m_complexTextController->runWidthSoFar();
+
+    m_currentMetrics = SVGTextMetrics(*m_text, metricsLength, afterWidth - beforeWidth);
+    m_complexStartToCurrentMetrics = SVGTextMetrics(*m_text, m_textPosition + metricsLength, afterWidth);
+
+#else
     m_currentMetrics = SVGTextMetrics::measureCharacterRange(*m_text, m_textPosition, metricsLength);
     m_complexStartToCurrentMetrics = SVGTextMetrics::measureCharacterRange(*m_text, 0, m_textPosition + metricsLength);
+#endif
+
     ASSERT(m_currentMetrics.length() == metricsLength);
 
     // Frequent case for Arabic text: when measuring a single character the arabic isolated form is taken
@@ -92,7 +112,7 @@ void SVGTextMetricsBuilder::advanceComplexText()
 
 void SVGTextMetricsBuilder::initializeMeasurementWithTextRenderer(RenderSVGInlineText& text)
 {
-    m_text = &text;
+    m_text = text;
     m_textPosition = 0;
     m_currentMetrics = SVGTextMetrics();
     m_complexStartToCurrentMetrics = SVGTextMetrics();
@@ -101,6 +121,9 @@ void SVGTextMetricsBuilder::initializeMeasurementWithTextRenderer(RenderSVGInlin
     const FontCascade& scaledFont = text.scaledFont();
     m_run = SVGTextMetrics::constructTextRun(text);
     m_isComplexText = scaledFont.codePath(m_run) == FontCascade::CodePath::Complex;
+
+    if (m_isComplexText)
+        FontCascadeCache::forCurrentThread().invalidate();
 
     m_canUseSimplifiedTextMeasuring = false;
     if (!m_isComplexText) {
@@ -186,6 +209,10 @@ std::tuple<unsigned, UChar> SVGTextMetricsBuilder::measureTextRenderer(RenderSVG
 
     if (!m_isComplexText)
         m_simpleWidthIterator = makeUnique<WidthIterator>(scaledFont, m_run);
+#if PLATFORM(COCOA)
+    else
+        m_complexTextController = makeUnique<ComplexTextController>(scaledFont, m_run, true, nullptr);
+#endif
 
     int surrogatePairCharacters = 0;
     unsigned skippedCharacters = 0;
@@ -214,6 +241,9 @@ std::tuple<unsigned, UChar> SVGTextMetricsBuilder::measureTextRenderer(RenderSVG
     }
 
     m_simpleWidthIterator = nullptr;
+#if PLATFORM(COCOA)
+    m_complexTextController = nullptr;
+#endif
     return std::tuple { valueListPosition + m_textPosition - skippedCharacters, lastCharacter };
 }
 

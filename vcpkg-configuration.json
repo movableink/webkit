@@ -1,0 +1,24 @@
+{
+  "default-registry": {
+    "kind": "git",
+    "baseline": "dbe35ceb30c688bf72e952ab23778e009a578f18",
+    "repository": "https://github.com/microsoft/vcpkg"
+  },
+  "registries": [
+    {
+      "kind": "git",
+      "baseline": "a8c7798b3751d63d6b160df431031cd5e5c940d9",
+      "repository": "https://github.com/WebKitForWindows/WebKitRequirements",
+      "packages": [
+        "cairo",
+        "curl",
+        "icu",
+        "openssl",
+        "zlib"
+      ]
+    }
+  ],
+  "overlay-triplets": [
+    "./WebKitLibraries/triplets"
+  ]
+}

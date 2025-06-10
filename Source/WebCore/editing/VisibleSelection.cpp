@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2006, 2015 Apple Inc.  All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,7 @@
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include "TextIterator.h"
+#include "TreeScopeInlines.h"
 #include "VisibleUnits.h"
 #include <stdio.h>
 #include <wtf/Assertions.h>
@@ -107,9 +108,7 @@ std::optional<SimpleRange> VisibleSelection::range() const
 {
     auto start = uncanonicalizedStart();
     auto end = uncanonicalizedEnd();
-    ASSERT(!start.document() || !end.document()
-        || start.document()->settings().liveRangeSelectionEnabled() == end.document()->settings().liveRangeSelectionEnabled());
-    if (start.document() && start.document()->settings().liveRangeSelectionEnabled())
+    if (start.document())
         return makeSimpleRange(start, end);
     return makeSimpleRange(start.parentAnchoredEquivalent(), end.parentAnchoredEquivalent());
 }
@@ -140,9 +139,9 @@ bool VisibleSelection::isOrphan() const
 {
     if (m_base.isOrphan() || m_extent.isOrphan() || m_start.isOrphan() || m_end.isOrphan())
         return true;
-    if (m_anchor.isOrphan() && m_anchor.document()->settings().liveRangeSelectionEnabled())
+    if (m_anchor.isOrphan())
         return true;
-    if (m_focus.isOrphan() && m_focus.document()->settings().liveRangeSelectionEnabled())
+    if (m_focus.isOrphan())
         return true;
     return false;
 }
@@ -152,14 +151,14 @@ RefPtr<Document> VisibleSelection::document() const
     RefPtr document { m_base.document() };
     if (!document) {
         document = m_anchor.document();
-        if (!document || !document->settings().liveRangeSelectionEnabled())
+        if (!document)
             return nullptr;
     }
 
     if (m_extent.document() != document.get() || m_start.document() != document.get() || m_end.document() != document.get())
         return nullptr;
 
-    if (document->settings().liveRangeSelectionEnabled() && (m_anchor.document() != document.get() || m_focus.document() != document.get()))
+    if (m_anchor.document() != document.get() || m_focus.document() != document.get())
         return nullptr;
 
     return document;
@@ -759,17 +758,17 @@ void VisibleSelection::showTreeForThis() const
 
 #endif
 
-TextStream& operator<<(TextStream& stream, const VisibleSelection& v)
+TextStream& operator<<(TextStream& ts, const VisibleSelection& v)
 {
-    TextStream::GroupScope scope(stream);
-    stream << "VisibleSelection " << &v;
+    TextStream::GroupScope scope(ts);
+    ts << "VisibleSelection "_s << &v;
 
-    stream.dumpProperty("base", v.base());
-    stream.dumpProperty("extent", v.extent());
-    stream.dumpProperty("start", v.start());
-    stream.dumpProperty("end", v.end());
+    ts.dumpProperty("base"_s, v.base());
+    ts.dumpProperty("extent"_s, v.extent());
+    ts.dumpProperty("start"_s, v.start());
+    ts.dumpProperty("end"_s, v.end());
 
-    return stream;
+    return ts;
 }
 
 } // namespace WebCore

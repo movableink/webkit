@@ -39,6 +39,7 @@
 #include "WebsiteDataStore.h"
 #include <WebCore/NotificationData.h>
 #include <WebCore/SecurityOriginData.h>
+#include <ranges>
 
 namespace WebKit {
 using namespace WebCore;
@@ -373,7 +374,7 @@ void WebNotificationManagerProxy::getNotifications(const URL& url, const String&
         notifications.append(notification.ptr());
     }
     // Let's sort as per https://notifications.spec.whatwg.org/#dom-serviceworkerregistration-getnotifications.
-    std::sort(notifications.begin(), notifications.end(), [](auto& a, auto& b) {
+    std::ranges::sort(notifications, [](auto& a, auto& b) {
         if (a->data().creationTime < b->data().creationTime)
             return true;
         return a->data().creationTime == b->data().creationTime && a->identifier() < b->identifier();

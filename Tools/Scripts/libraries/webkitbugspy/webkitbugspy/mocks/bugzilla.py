@@ -38,8 +38,8 @@ class Bugzilla(Base, mocks.Requests):
 
     @classmethod
     def time_string(cls, timestamp):
-        from datetime import datetime, timedelta
-        return datetime.utcfromtimestamp(timestamp - timedelta(hours=7).seconds).strftime('%Y-%m-%dT%H:%M:%SZ')
+        from datetime import datetime, timedelta, timezone
+        return datetime.fromtimestamp(timestamp - timedelta(hours=7).seconds, timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
     @classmethod
     def transform_user(cls, user):
@@ -166,6 +166,8 @@ class Bugzilla(Base, mocks.Requests):
                 issue['related']['regressed_by'] = data['regressed_by']
             if data.get('regressions'):
                 issue['related']['regressions'] = data['regressions']
+            if data.get('see_also'):
+                issue['related_links'] = data['see_also']['add']
 
             keywords = data.get('keywords', {})
             if keywords:
@@ -241,7 +243,7 @@ class Bugzilla(Base, mocks.Requests):
                     ) for user in issue.get('watchers', [])
                 ], see_also=[
                     'https://{}/show_bug.cgi?id={}'.format(self.hosts[0], n) for n in issue.get('references', [])
-                ],
+                ] + issue.get('related_links', []),
             )],
         ), url=url)
 

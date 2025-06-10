@@ -54,7 +54,6 @@ private:
     bool isLabelable() const final { return true; }
 
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
-    bool childShouldCreateRenderer(const Node&) const final;
     RenderProgress* renderProgress() const;
 
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
@@ -68,7 +67,9 @@ private:
 
     bool canContainRangeEndPoint() const final { return false; }
 
-    WeakPtr<ProgressValueElement, WeakPtrImplWithEventTargetData> m_value;
+    RefPtr<ProgressValueElement> protectedValueElement();
+
+    WeakPtr<ProgressValueElement, WeakPtrImplWithEventTargetData> m_valueElement;
     bool m_isDeterminate { false };
 };
 

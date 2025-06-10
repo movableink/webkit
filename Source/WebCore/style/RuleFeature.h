@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "CSSSelector.h"
+#include "CSSSelectorList.h"
 #include "CommonAtomStrings.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
@@ -85,9 +85,9 @@ struct RuleFeature : public RuleAndSelector {
 static_assert(sizeof(RuleFeature) <= 16, "RuleFeature is a frequently allocated object. Keep it small.");
 
 struct RuleFeatureWithInvalidationSelector : public RuleFeature {
-    RuleFeatureWithInvalidationSelector(const RuleData&, MatchElement, IsNegation, const CSSSelector* invalidationSelector);
+    RuleFeatureWithInvalidationSelector(const RuleData&, MatchElement, IsNegation, CSSSelectorList&& invalidationSelector);
 
-    const CSSSelector* invalidationSelector { nullptr };
+    CSSSelectorList invalidationSelector;
 };
 #pragma pack(pop)
 
@@ -111,8 +111,6 @@ struct RuleFeatureSet {
     UncheckedKeyHashSet<AtomString> attributeLowercaseLocalNamesInRules;
     UncheckedKeyHashSet<AtomString> attributeLocalNamesInRules;
     UncheckedKeyHashSet<AtomString> contentAttributeNamesInRules;
-    Vector<RuleAndSelector> siblingRules;
-    Vector<RuleAndSelector> uncommonAttributeRules;
 
     UncheckedKeyHashMap<AtomString, std::unique_ptr<RuleFeatureVector>> idRules;
     UncheckedKeyHashMap<AtomString, std::unique_ptr<RuleFeatureVector>> classRules;
@@ -134,8 +132,6 @@ struct RuleFeatureSet {
 
 private:
     struct SelectorFeatures {
-        bool hasSiblingSelector { false };
-
         using InvalidationFeature = std::tuple<const CSSSelector*, MatchElement, IsNegation>;
         using HasInvalidationFeature = std::tuple<const CSSSelector*, MatchElement, IsNegation, DoesBreakScope>;
 

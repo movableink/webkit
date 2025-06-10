@@ -106,16 +106,15 @@ public:
     Ref<PageConfiguration> copy() const;
     void copyDataFrom(const PageConfiguration&);
 
-    WebKit::BrowsingContextGroup& browsingContextGroup() const;
-    void setBrowsingContextGroup(RefPtr<WebKit::BrowsingContextGroup>&&);
-
     struct OpenerInfo {
         Ref<WebKit::WebProcessProxy> process;
+        Ref<WebKit::BrowsingContextGroup> browsingContextGroup;
         WebCore::FrameIdentifier frameID;
         bool operator==(const OpenerInfo&) const;
     };
     const std::optional<OpenerInfo>& openerInfo() const;
     void setOpenerInfo(std::optional<OpenerInfo>&&);
+    void consumeOpenerInfo();
 
     const WebCore::Site& openedSite() const;
     void setOpenedSite(const WebCore::Site&);
@@ -395,6 +394,9 @@ public:
     bool showsSystemScreenTimeBlockingView() const { return m_data.showsSystemScreenTimeBlockingView; }
     void setShowsSystemScreenTimeBlockingView(bool shows) { m_data.showsSystemScreenTimeBlockingView = shows; }
 
+    bool shouldSendConsoleLogsToUIProcessForTesting() const { return m_data.shouldSendConsoleLogsToUIProcessForTesting; }
+    void setShouldSendConsoleLogsToUIProcessForTesting(bool should) { m_data.shouldSendConsoleLogsToUIProcessForTesting = should; }
+
     bool shouldDeferAsynchronousScriptsUntilAfterDocumentLoad() const { return m_data.shouldDeferAsynchronousScriptsUntilAfterDocumentLoad; }
     void setShouldDeferAsynchronousScriptsUntilAfterDocumentLoad(bool defer) { m_data.shouldDeferAsynchronousScriptsUntilAfterDocumentLoad = defer; }
 
@@ -474,7 +476,7 @@ private:
         template<typename T, Ref<T>(*initializer)()> class LazyInitializedRef {
         public:
             LazyInitializedRef() = default;
-            void operator=(const LazyInitializedRef& other) { m_value = &other.get(); }
+            void operator=(const LazyInitializedRef& other) { m_value = other.get(); }
             void operator=(RefPtr<T>&& t) { m_value = WTFMove(t); }
             T& get() const
             {
@@ -486,7 +488,6 @@ private:
         private:
             mutable RefPtr<T> m_value;
         };
-        static Ref<WebKit::BrowsingContextGroup> createBrowsingContextGroup();
         static Ref<WebKit::WebProcessPool> createWebProcessPool();
         static Ref<WebKit::WebUserContentControllerProxy> createWebUserContentControllerProxy();
         static Ref<WebKit::WebPreferences> createWebPreferences();
@@ -500,7 +501,6 @@ private:
         uintptr_t defaultMediaTypesRequiringUserActionForPlayback();
 #endif
 
-        LazyInitializedRef<WebKit::BrowsingContextGroup, createBrowsingContextGroup> browsingContextGroup;
         LazyInitializedRef<WebKit::WebProcessPool, createWebProcessPool> processPool;
         LazyInitializedRef<WebKit::WebUserContentControllerProxy, createWebUserContentControllerProxy> userContentController;
         LazyInitializedRef<WebKit::WebPreferences, createWebPreferences> preferences;
@@ -515,7 +515,7 @@ private:
 #endif
         RefPtr<WebKit::WebPageGroup> pageGroup;
         WeakPtr<WebKit::WebPageProxy> relatedPage;
-        std::optional<OpenerInfo> openerInfo;
+        Box<std::optional<OpenerInfo>> openerInfo;
         WebCore::Site openedSite;
         WTF::String openedMainFrameName;
         std::optional<WebCore::WindowFeatures> windowFeatures;
@@ -634,6 +634,7 @@ private:
         bool scrollToTextFragmentIndicatorEnabled { true };
         bool scrollToTextFragmentMarkingEnabled { true };
         bool showsSystemScreenTimeBlockingView { true };
+        bool shouldSendConsoleLogsToUIProcessForTesting { false };
 #if PLATFORM(VISION)
 
 #if ENABLE(GAMEPAD)
@@ -665,3 +666,5 @@ private:
 };
 
 } // namespace API
+
+SPECIALIZE_TYPE_TRAITS_API_OBJECT(PageConfiguration);

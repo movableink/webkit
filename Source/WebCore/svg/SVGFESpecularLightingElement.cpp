@@ -23,6 +23,7 @@
 #include "config.h"
 #include "SVGFESpecularLightingElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "FESpecularLighting.h"
 #include "NodeName.h"
 #include "RenderElement.h"

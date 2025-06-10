@@ -26,6 +26,7 @@
 #pragma once
 
 #include "Element.h"
+#include "NodeInlines.h"
 #include "PseudoElement.h"
 #include "PseudoElementIdentifier.h"
 #include "RenderStyleConstants.h"
@@ -78,7 +79,7 @@ struct Styleable {
 
     bool mayHaveNonZeroOpacity() const;
 
-    bool isRunningAcceleratedTransformAnimation() const;
+    bool isRunningAcceleratedAnimationOfProperty(CSSPropertyID) const;
 
     bool hasRunningAcceleratedAnimations() const;
 

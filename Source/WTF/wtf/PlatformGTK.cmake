@@ -16,7 +16,9 @@ list(APPEND WTF_SOURCES
     glib/URLGLib.cpp
 
     posix/CPUTimePOSIX.cpp
+    posix/FileHandlePOSIX.cpp
     posix/FileSystemPOSIX.cpp
+    posix/MappedFileDataPOSIX.cpp
     posix/OSAllocatorPOSIX.cpp
     posix/ThreadingPOSIX.cpp
 

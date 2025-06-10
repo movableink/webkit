@@ -90,24 +90,18 @@ void RenderButton::setInnerRenderer(RenderBlock& innerRenderer)
 void RenderButton::updateAnonymousChildStyle(RenderStyle& childStyle) const
 {
     childStyle.setFlexGrow(1.0f);
-
     // min-inline-size: 0; is needed for correct shrinking.
     // Use margin-block:auto instead of align-items:center to get safe centering, i.e.
     // when the content overflows, treat it the same as align-items: flex-start.
     if (isHorizontalWritingMode()) {
         childStyle.setMinWidth(Length(0, LengthType::Fixed));
-        childStyle.setMarginTop(Length());
-        childStyle.setMarginBottom(Length());
+        childStyle.setMarginTop(CSS::Keyword::Auto { });
+        childStyle.setMarginBottom(CSS::Keyword::Auto { });
     } else {
         childStyle.setMinHeight(Length(0, LengthType::Fixed));
-        childStyle.setMarginLeft(Length());
-        childStyle.setMarginRight(Length());
+        childStyle.setMarginLeft(CSS::Keyword::Auto { });
+        childStyle.setMarginRight(CSS::Keyword::Auto { });
     }
-    childStyle.setFlexDirection(style().flexDirection());
-    childStyle.setJustifyContent(style().justifyContent());
-    childStyle.setFlexWrap(style().flexWrap());
-    childStyle.setAlignItems(style().alignItems());
-    childStyle.setAlignContent(style().alignContent());
     childStyle.setTextBoxTrim(style().textBoxTrim());
 }
 

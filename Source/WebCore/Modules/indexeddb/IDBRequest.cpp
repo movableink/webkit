@@ -30,6 +30,7 @@
 #include "Event.h"
 #include "EventDispatcher.h"
 #include "EventNames.h"
+#include "EventTargetInterfaces.h"
 #include "IDBBindingUtilities.h"
 #include "IDBConnectionProxy.h"
 #include "IDBCursor.h"
@@ -46,7 +47,6 @@
 #include "ThreadSafeDataBuffer.h"
 #include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/StrongInlines.h>
-#include <variant>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -292,7 +292,7 @@ void IDBRequest::dispatchEvent(Event& event)
 
     Ref protectedThis { *this };
     if (!event.isTrusted()) {
-        EventDispatcher::dispatchEvent({ this }, event);
+        EventDispatcher::dispatchEvent(std::initializer_list<EventTarget*>({ this }), event);
         return;
     }
 
@@ -313,16 +313,18 @@ void IDBRequest::dispatchEvent(Event& event)
         }
     }
 
-    Vector<EventTarget*> targets { this };
-
+    bool shouldDispatchOnTransaction = false;
     if (&event == m_openDatabaseSuccessEvent)
         m_openDatabaseSuccessEvent = nullptr;
     else if (m_transaction && !m_transaction->didDispatchAbortOrCommit())
-        targets = { this, m_transaction.get(), &m_transaction->database() };
+        shouldDispatchOnTransaction = true;
 
     {
         TransactionActivator activator(transaction().get());
-        EventDispatcher::dispatchEvent(targets, event);
+        if (shouldDispatchOnTransaction)
+            EventDispatcher::dispatchEvent(std::initializer_list<EventTarget*>({ this, m_transaction.get(), &m_transaction->database() }), event);
+        else
+            EventDispatcher::dispatchEvent(std::initializer_list<EventTarget*>({ this }), event);
     }
 
     m_eventBeingDispatched = nullptr;

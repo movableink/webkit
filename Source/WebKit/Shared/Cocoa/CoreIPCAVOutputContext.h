@@ -44,9 +44,10 @@ struct CoreIPCAVOutputContextData {
 class CoreIPCAVOutputContext {
     WTF_MAKE_TZONE_ALLOCATED(CoreIPCAVOutputContext);
 public:
-    CoreIPCAVOutputContext(AVOutputContext *);
+    CoreIPCAVOutputContext() = default;
+    explicit CoreIPCAVOutputContext(AVOutputContext *);
 
-    CoreIPCAVOutputContext(CoreIPCAVOutputContextData&& data)
+    explicit CoreIPCAVOutputContext(CoreIPCAVOutputContextData&& data)
         : m_data(WTFMove(data))
     {
     }

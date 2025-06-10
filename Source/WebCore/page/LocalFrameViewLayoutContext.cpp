@@ -29,27 +29,28 @@
 #include "DebugPageOverlays.h"
 #include "Document.h"
 #include "InspectorInstrumentation.h"
+#include "LayoutBoxGeometry.h"
+#include "LayoutContext.h"
 #include "LayoutDisallowedScope.h"
+#include "LayoutIntegrationLineLayout.h"
+#include "LayoutState.h"
+#include "LayoutTreeBuilder.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
 #include "Quirks.h"
+#include "RenderBoxInlines.h"
+#include "RenderDescendantIterator.h"
 #include "RenderElement.h"
 #include "RenderElementInlines.h"
+#include "RenderLayerCompositor.h"
 #include "RenderLayoutState.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyle.h"
 #include "RenderStyleInlines.h"
 #include "RenderView.h"
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
 #include "StyleScope.h"
-#include "LayoutBoxGeometry.h"
-#include "LayoutContext.h"
-#include "LayoutIntegrationLineLayout.h"
-#include "LayoutState.h"
-#include "LayoutTreeBuilder.h"
-#include "RenderDescendantIterator.h"
-#include "RenderLayerCompositor.h"
-#include "RenderStyleInlines.h"
 #include <wtf/SetForScope.h>
 #include <wtf/SystemTracing.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -670,16 +671,26 @@ void LocalFrameViewLayoutContext::addLayoutDelta(const LayoutSize& delta)
 
 bool LocalFrameViewLayoutContext::isSkippedContentForLayout(const RenderElement& renderer) const
 {
-    if (needsSkippedContentLayout())
+    if (isVisiblityHiddenIgnored() || isVisiblityAutoIgnored()) {
+        // In theory we should only descend into a hidden/auto subree when hidden/auto root is ignored (see isSkippedContentRootForLayout below).
         return false;
+    }
     return renderer.isSkippedContent();
 }
 
-bool LocalFrameViewLayoutContext::isSkippedContentRootForLayout(const RenderElement& renderer) const
+bool LocalFrameViewLayoutContext::isSkippedContentRootForLayout(const RenderBox& renderBox) const
 {
-    if (needsSkippedContentLayout())
+    if (!isSkippedContentRoot(renderBox))
         return false;
-    return isSkippedContentRoot(renderer);
+
+    auto contentVisibility = renderBox.style().contentVisibility();
+    if (contentVisibility == ContentVisibility::Hidden && isVisiblityHiddenIgnored())
+        return false;
+
+    if (contentVisibility == ContentVisibility::Auto && isVisiblityAutoIgnored())
+        return false;
+
+    return true;
 }
 
 #if ASSERT_ENABLED
@@ -740,6 +751,27 @@ void LocalFrameViewLayoutContext::popLayoutState()
             layoutState->setLegacyLineClamp(currentLineClamp);
         }
     }
+}
+
+bool LocalFrameViewLayoutContext::DetachedRendererList::append(RenderPtr<RenderObject>&& detachedRenderer)
+{
+    ASSERT(!detachedRenderer->parent());
+    ASSERT(!detachedRenderer->beingDestroyed());
+
+    if (detachedRenderer->renderTreeBeingDestroyed())
+        return false;
+
+    if (is<RenderWidget>(detachedRenderer)) {
+        // FIXME: Cleanup RenderWidget's destruction process (ref vs. delete this. see RenderObject::destroy)
+        return false;
+    }
+
+    static constexpr int maximumNumberOfDetachedRenderers = 5000;
+    if (m_renderers.size() == maximumNumberOfDetachedRenderers)
+        clear();
+
+    m_renderers.append(detachedRenderer.release());
+    return true;
 }
 
 void LocalFrameViewLayoutContext::setBoxNeedsTransformUpdateAfterContainerLayout(RenderBox& box, RenderBlock& container)

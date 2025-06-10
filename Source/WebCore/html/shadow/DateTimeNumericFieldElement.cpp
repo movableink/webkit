@@ -31,6 +31,7 @@
 #include "FontCascade.h"
 #include "HTMLNames.h"
 #include "KeyboardEvent.h"
+#include "PathOperation.h"
 #include "PlatformLocale.h"
 #include "RenderBlock.h"
 #include "RenderStyleSetters.h"
@@ -152,9 +153,11 @@ void DateTimeNumericFieldElement::stepUp()
     setValueAsIntegerByStepping(newValue);
 }
 
-String DateTimeNumericFieldElement::value() const
+ValueOrReference<String> DateTimeNumericFieldElement::value() const
 {
-    return m_hasValue ? formatValue(m_value) : emptyString();
+    if (m_hasValue)
+        return formatValue(m_value);
+    return emptyString();
 }
 
 String DateTimeNumericFieldElement::placeholderValue() const

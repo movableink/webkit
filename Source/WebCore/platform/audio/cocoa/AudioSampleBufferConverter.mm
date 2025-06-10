@@ -367,14 +367,14 @@ Expected<RetainPtr<CMSampleBufferRef>, OSStatus> AudioSampleBufferConverter::sam
         if (!PAL::AudioConverterGetPropertyInfo(m_converter, kAudioConverterCompressionMagicCookie, &cookieSize, nullptr) && !!cookieSize) {
             cookie.grow(cookieSize);
 
-            if (auto error = PAL::AudioConverterGetProperty(m_converter, kAudioConverterCompressionMagicCookie, &cookieSize, cookie.data())) {
+            if (auto error = PAL::AudioConverterGetProperty(m_converter, kAudioConverterCompressionMagicCookie, &cookieSize, cookie.mutableSpan().data())) {
                 RELEASE_LOG_ERROR(MediaStream, "AudioSampleBufferConverter getting kAudioConverterCompressionMagicCookie failed with %d", static_cast<int>(error));
                 return makeUnexpected(error);
             }
         }
 
         CMFormatDescriptionRef destinationFormatDescription;
-        if (auto error = PAL::CMAudioFormatDescriptionCreate(kCFAllocatorDefault, &m_destinationFormat, 0, nullptr, cookieSize, cookie.data(), nullptr, &destinationFormatDescription)) {
+        if (auto error = PAL::CMAudioFormatDescriptionCreate(kCFAllocatorDefault, &m_destinationFormat, 0, nullptr, cookieSize, cookie.span().data(), nullptr, &destinationFormatDescription)) {
             RELEASE_LOG_ERROR(MediaStream, "AudioSampleBufferConverter CMAudioFormatDescriptionCreate failed with %d", static_cast<int>(error));
             return makeUnexpected(error);
         }
@@ -383,7 +383,7 @@ Expected<RetainPtr<CMSampleBufferRef>, OSStatus> AudioSampleBufferConverter::sam
     }
 
     CMSampleBufferRef rawSampleBuffer;
-    if (auto error = PAL::CMAudioSampleBufferCreateWithPacketDescriptions(kCFAllocatorDefault, nullptr, false, nullptr, nullptr, m_destinationFormatDescription.get(), numSamples, m_currentNativePresentationTimeStamp, isPCM() ? nullptr : m_destinationPacketDescriptions.data(), &rawSampleBuffer)) {
+    if (auto error = PAL::CMAudioSampleBufferCreateWithPacketDescriptions(kCFAllocatorDefault, nullptr, false, nullptr, nullptr, m_destinationFormatDescription.get(), numSamples, m_currentNativePresentationTimeStamp, isPCM() ? nullptr : m_destinationPacketDescriptions.span().data(), &rawSampleBuffer)) {
         RELEASE_LOG_ERROR(MediaStream, "AudioSampleBufferConverter CMAudioSampleBufferCreateWithPacketDescriptions failed with %d", static_cast<int>(error));
         return makeUnexpected(error);
     }
@@ -441,7 +441,7 @@ OSStatus AudioSampleBufferConverter::provideSourceDataNumOutputPackets(UInt32* n
     m_packetDescriptions = getPacketDescriptions(sampleBuffer.get());
     if (packetDescriptionOut) {
         *numOutputPacketsPtr = m_packetDescriptions.size();
-        *packetDescriptionOut = m_packetDescriptions.data();
+        *packetDescriptionOut = m_packetDescriptions.mutableSpan().data();
     } else if (m_sourceFormat.mFormatID == kAudioFormatLinearPCM) {
         ASSERT(audioBufferList->mNumberBuffers && m_sourceFormat.mBytesPerPacket);
         *numOutputPacketsPtr = (audioBufferListSpan[0].mDataByteSize / m_sourceFormat.mBytesPerPacket);
@@ -496,7 +496,7 @@ void AudioSampleBufferConverter::processSampleBuffers()
             ASSERT(fillBufferList.bufferCount() == 1);
             auto* buffer = fillBufferList.buffer(0);
             buffer->mDataByteSize = m_destinationBuffer.capacity();
-            buffer->mData = m_destinationBuffer.data();
+            buffer->mData = m_destinationBuffer.mutableSpan().data();
         }
         size_t sizeRemaining = fillBufferList.buffer(0)->mDataByteSize;
         size_t bytesWritten = 0;
@@ -514,7 +514,7 @@ void AudioSampleBufferConverter::processSampleBuffers()
                     buffer.mData = span.data();
                 }
             }
-            if (auto error = AudioConverterFillComplexBuffer(m_converter, audioConverterComplexInputDataProc, this, &numOutputPackets, fillBufferList.list(), isPCM() ? nullptr : m_destinationPacketDescriptions.data())) {
+            if (auto error = AudioConverterFillComplexBuffer(m_converter, audioConverterComplexInputDataProc, this, &numOutputPackets, fillBufferList.list(), isPCM() ? nullptr : m_destinationPacketDescriptions.mutableSpan().data())) {
                 if (error != kNoMoreDataErr) {
                     RELEASE_LOG_ERROR(MediaStream, "AudioSampleBufferConverter AudioConverterFillComplexBuffer failed with %d", static_cast<int>(error));
                     m_lastError = error;

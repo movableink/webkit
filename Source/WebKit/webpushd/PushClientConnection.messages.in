@@ -25,7 +25,7 @@
 [ExceptionForEnabledBy]
 messages -> WebPushD::PushClientConnection NotUsingIPCConnection {
     SetPushAndNotificationsEnabledForOrigin(String originString, bool enabled) -> ()
-    GetPendingPushMessage() -> (std::optional<WebKit::WebPushMessage> message)
+    GetPendingPushMessage() -> (struct std::optional<WebKit::WebPushMessage> message)
     GetPendingPushMessages() -> (Vector<WebKit::WebPushMessage> messages)
     InitializeConnection(WebKit::WebPushD::WebPushDaemonConnectionConfiguration configuration)
     InjectPushMessageForTesting(WebKit::WebPushD::PushMessageForTesting message) -> (String error)

@@ -95,16 +95,6 @@ void FontCascade::drawGlyphs(GraphicsContext& graphicsContext, const Font& font,
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
-bool FontCascade::canReturnFallbackFontsForComplexText()
-{
-    return false;
-}
-
-bool FontCascade::canExpandAroundIdeographsInComplexText()
-{
-    return false;
-}
-
 bool FontCascade::canUseGlyphDisplayList(const RenderStyle&)
 {
     return true;

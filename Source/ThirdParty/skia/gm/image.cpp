@@ -10,7 +10,6 @@
 #include "include/core/SkBitmap.h"
 #include "include/core/SkCanvas.h"
 #include "include/core/SkColor.h"
-#include "include/core/SkColorPriv.h"
 #include "include/core/SkColorSpace.h"
 #include "include/core/SkData.h"
 #include "include/core/SkFont.h"
@@ -36,24 +35,23 @@
 #include "include/gpu/ganesh/SkSurfaceGanesh.h"
 #include "include/private/base/SkMalloc.h"
 #include "src/core/SkAutoPixmapStorage.h"
+#include "src/core/SkColorPriv.h"
 #include "src/core/SkReadBuffer.h"
 #include "src/core/SkWriteBuffer.h"
 #include "src/image/SkImage_Base.h"
+#include "tools/DecodeUtils.h"
 #include "tools/GpuToolUtils.h"
 #include "tools/ToolUtils.h"
 #include "tools/fonts/FontToolUtils.h"
 
 #if defined(SK_GRAPHITE)
+#include "include/gpu/graphite/Image.h"
 #include "include/gpu/graphite/Recorder.h"
 #include "include/gpu/graphite/Surface.h"
 #endif
 
 #include <functional>
 #include <utility>
-
-#if defined(SK_GRAPHITE)
-#include "include/gpu/graphite/Image.h"
-#endif
 
 const SkSamplingOptions gSamplings[] = {
     SkSamplingOptions(SkFilterMode::kNearest),
@@ -222,7 +220,7 @@ static void show_scaled_pixels(SkCanvas* canvas, SkImage* image, bool useImageSc
         canvas->save();
         for (auto s : gSamplings) {
             if (useImageScaling) {
-                if (auto scaled = image->makeScaled(canvas->recorder() ,info, s)) {
+                if (auto scaled = image->makeScaled(canvas->baseRecorder(), info, s)) {
                     canvas->drawImage(scaled, 0, 0);
                 }
             } else {

@@ -132,19 +132,15 @@ public:
     void containsURLStringSuitableForLoading(IPC::Connection&, const String& pasteboardName, std::optional<WebPageProxyIdentifier>, CompletionHandler<void(bool)>&&);
     void urlStringSuitableForLoading(IPC::Connection&, const String& pasteboardName, std::optional<WebPageProxyIdentifier>, CompletionHandler<void(String&& url, String&& title)>&&);
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(WPE)
     void getTypes(const String& pasteboardName, CompletionHandler<void(Vector<String>&&)>&&);
-    void readText(IPC::Connection&, const String& pasteboardName, CompletionHandler<void(String&&)>&&);
+    void readText(IPC::Connection&, const String& pasteboardName, const String& pasteboardType, CompletionHandler<void(String&&)>&&);
     void readFilePaths(IPC::Connection&, const String& pasteboardName, CompletionHandler<void(Vector<String>&&)>&&);
     void readBuffer(IPC::Connection&, const String& pasteboardName, const String& pasteboardType, CompletionHandler<void(RefPtr<WebCore::SharedBuffer>&&)>&&);
     void writeToClipboard(const String& pasteboardName, WebCore::SelectionData&&);
     void clearClipboard(const String& pasteboardName);
     void getPasteboardChangeCount(IPC::Connection&, const String& pasteboardName, CompletionHandler<void(int64_t)>&&);
-
-    WebFrameProxy* m_primarySelectionOwner { nullptr };
-#endif // PLATFORM(GTK)
-
-#if USE(LIBWPE)
+#elif USE(LIBWPE)
     void getPasteboardTypes(CompletionHandler<void(Vector<String>&&)>&&);
     void writeWebContentToPasteboard(const WebCore::PasteboardWebContent&);
     void writeStringToPasteboard(const String& pasteboardType, const String&);
@@ -163,6 +159,10 @@ public:
 #endif
 
     WeakHashSet<WebProcessProxy> m_webProcessProxySet;
+
+#if PLATFORM(GTK)
+    WebFrameProxy* m_primarySelectionOwner { nullptr };
+#endif
 
 #if PLATFORM(COCOA)
     struct PasteboardAccessInformation {

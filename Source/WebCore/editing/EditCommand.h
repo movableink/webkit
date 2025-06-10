@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -67,7 +67,6 @@ protected:
     explicit EditCommand(Ref<Document>&&, EditAction = EditAction::Unspecified);
     EditCommand(Ref<Document>&&, const VisibleSelection&, const VisibleSelection&);
 
-    Ref<Document> protectedDocument() const { return m_document.copyRef(); }
     const Document& document() const { return m_document; }
     Document& document() { return m_document; }
     CompositeEditCommand* parent() const { return m_parent.get(); }
@@ -80,7 +79,7 @@ protected:
     void postTextStateChangeNotification(AXTextEditType, const String&, const VisiblePosition&);
 
 private:
-    Ref<Document> m_document;
+    const Ref<Document> m_document;
     VisibleSelection m_startingSelection;
     VisibleSelection m_endingSelection;
     WeakPtr<CompositeEditCommand> m_parent;

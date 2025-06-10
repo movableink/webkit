@@ -2,7 +2,7 @@
 
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 file = __file__.split(':/cygwin')[-1]
 http_root = os.path.dirname(os.path.dirname(os.path.abspath(os.path.dirname(file))))
@@ -16,7 +16,7 @@ def hostname_is_equal_to_string(hostname):
 
 
 def reset_cookies_for_current_origin():
-    expires = datetime.utcnow() - timedelta(seconds=86400)
+    expires = datetime.now(timezone.utc) - timedelta(seconds=86400)
     for cookie in get_cookies().keys():
         sys.stdout.write('Set-Cookie: {}=deleted; expires={} GMT; Max-Age=0; path=/\r\n'.format(cookie, expires.strftime('%a, %d-%b-%Y %H:%M:%S')))
 

@@ -23,7 +23,12 @@
 #include "CharacterData.h"
 #include "Document.h"
 #include "Element.h"
+#include "InspectorInstrumentationPublic.h"
+#include "LayoutRect.h"
 #include "Node.h"
+#include "PseudoElement.h"
+#include "RenderBox.h"
+#include "TreeScopeInlines.h"
 #include "WebCoreOpaqueRoot.h"
 
 namespace WebCore {
@@ -42,9 +47,29 @@ inline WebCoreOpaqueRoot Node::opaqueRoot() const
     return traverseToOpaqueRoot();
 }
 
+inline Document& Node::document() const
+{
+    return treeScope().documentScope();
+}
+
 inline Ref<Document> Node::protectedDocument() const
 {
     return document();
+}
+
+inline Ref<TreeScope> Node::protectedTreeScope() const
+{
+    return treeScope();
+}
+
+inline RenderBox* Node::renderBox() const
+{
+    return dynamicDowncast<RenderBox>(renderer());
+}
+
+inline RenderBoxModelObject* Node::renderBoxModelObject() const
+{
+    return dynamicDowncast<RenderBoxModelObject>(renderer());
 }
 
 inline bool Node::hasAttributes() const
@@ -60,6 +85,19 @@ inline NamedNodeMap* Node::attributesMap() const
     return nullptr;
 }
 
+CheckedPtr<RenderObject> Node::checkedRenderer() const
+{
+    return renderer();
+}
+
+inline void Node::setRenderer(RenderObject* renderer)
+{
+    m_renderer = renderer;
+
+    if (InspectorInstrumentationPublic::hasFrontends()) [[unlikely]]
+        notifyInspectorOfRendererChange();
+}
+
 inline Element* Node::parentElement() const
 {
     return dynamicDowncast<Element>(parentNode());
@@ -68,6 +106,23 @@ inline Element* Node::parentElement() const
 inline RefPtr<Element> Node::protectedParentElement() const
 {
     return parentElement();
+}
+
+bool Node::isBeforePseudoElement() const
+{
+    return pseudoId() == PseudoId::Before;
+}
+
+bool Node::isAfterPseudoElement() const
+{
+    return pseudoId() == PseudoId::After;
+}
+
+PseudoId Node::pseudoId() const
+{
+    if (auto* pseudoElement = dynamicDowncast<PseudoElement>(*this))
+        return pseudoElement->pseudoId();
+    return PseudoId::None;
 }
 
 inline void Node::setTabIndexState(TabIndexState state)
@@ -140,6 +195,83 @@ inline void Node::setParentNode(ContainerNode* parent)
 inline RefPtr<ContainerNode> Node::protectedParentNode() const
 {
     return parentNode();
+}
+
+ALWAYS_INLINE bool Node::hasOneRef() const
+{
+    ASSERT(!deletionHasBegun());
+    ASSERT(!m_inRemovedLastRefFunction);
+    return refCount() == 1;
+}
+
+ALWAYS_INLINE void Node::clearStyleFlags(OptionSet<NodeStyleFlag> flags)
+{
+    auto bitfields = styleBitfields();
+    bitfields.clearFlags(flags);
+    setStyleBitfields(bitfields);
+}
+
+inline void Node::clearChildNeedsStyleRecalc()
+{
+    auto bitfields = styleBitfields();
+    bitfields.clearDescendantsNeedStyleResolution();
+    setStyleBitfields(bitfields);
+}
+
+inline void Node::setHasValidStyle()
+{
+    auto bitfields = styleBitfields();
+    bitfields.setStyleValidity(Style::Validity::Valid);
+    setStyleBitfields(bitfields);
+    clearStateFlag(StateFlag::IsComputedStyleInvalidFlag);
+    clearStateFlag(StateFlag::HasInvalidRenderer);
+    clearStateFlag(StateFlag::StyleResolutionShouldRecompositeLayer);
+}
+
+inline void Node::setTreeScopeRecursively(TreeScope& newTreeScope)
+{
+    ASSERT(!isDocumentNode());
+    ASSERT(!deletionHasBegun());
+    if (m_treeScope != &newTreeScope) {
+        Ref oldTreeScope = *m_treeScope;
+        moveTreeToNewScope(*this, oldTreeScope, newTreeScope);
+    }
+}
+
+inline ContainerNode* Node::parentNodeGuaranteedHostFree() const
+{
+    ASSERT(!isShadowRoot());
+    return parentNode();
+}
+
+template<typename NodeClass>
+inline NodeClass& Node::traverseToRootNodeInternal(const NodeClass& node)
+{
+    auto* current = const_cast<NodeClass*>(&node);
+    while (current->parentNode())
+        current = current->parentNode();
+    return *current;
+}
+
+inline void Node::relaxAdoptionRequirement()
+{
+#if ASSERT_ENABLED
+    ASSERT_WITH_SECURITY_IMPLICATION(!deletionHasBegun());
+    ASSERT(m_adoptionIsRequired);
+    m_adoptionIsRequired = false;
+#endif
+}
+
+inline IntRect Node::pixelSnappedAbsoluteBoundingRect(bool* isReplaced)
+{
+    return snappedIntRect(absoluteBoundingRect(isReplaced));
+}
+
+// Used in Node::addSubresourceAttributeURLs() and in addSubresourceStyleURLs()
+inline void addSubresourceURL(ListHashSet<URL>& urls, const URL& url)
+{
+    if (!url.isNull())
+        urls.add(url);
 }
 
 inline void collectChildNodes(Node& node, NodeVector& children)

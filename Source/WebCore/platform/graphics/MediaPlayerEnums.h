@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/OptionSet.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -148,6 +149,13 @@ String convertEnumerationToString(MediaPlayerEnums::NetworkState);
 String convertEnumerationToString(MediaPlayerEnums::Preload);
 String convertEnumerationToString(MediaPlayerEnums::SupportsType);
 String convertEnumerationToString(MediaPlayerEnums::BufferingPolicy);
+
+enum class VideoMediaSampleRendererPreference : uint8_t {
+    PrefersDecompressionSession = 1 << 0,
+    ProtectedFallbackDisabled = 1 << 1,
+    UseDecompressionSessionForProtectedContent = 1 << 2
+};
+using VideoMediaSampleRendererPreferences = OptionSet<VideoMediaSampleRendererPreference>;
 
 } // namespace WebCore
 

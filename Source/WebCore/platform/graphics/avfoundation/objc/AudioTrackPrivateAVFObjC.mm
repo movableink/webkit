@@ -36,21 +36,21 @@ namespace WebCore {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioTrackPrivateAVFObjC);
 
 AudioTrackPrivateAVFObjC::AudioTrackPrivateAVFObjC(AVPlayerItemTrack* track)
-    : AudioTrackPrivateAVFObjC(makeUnique<AVTrackPrivateAVFObjCImpl>(track))
+    : AudioTrackPrivateAVFObjC(AVTrackPrivateAVFObjCImpl::create(track))
 {
 }
 
 AudioTrackPrivateAVFObjC::AudioTrackPrivateAVFObjC(AVAssetTrack* track)
-    : AudioTrackPrivateAVFObjC(makeUnique<AVTrackPrivateAVFObjCImpl>(track))
+    : AudioTrackPrivateAVFObjC(AVTrackPrivateAVFObjCImpl::create(track))
 {
 }
 
 AudioTrackPrivateAVFObjC::AudioTrackPrivateAVFObjC(MediaSelectionOptionAVFObjC& option)
-    : AudioTrackPrivateAVFObjC(makeUnique<AVTrackPrivateAVFObjCImpl>(option))
+    : AudioTrackPrivateAVFObjC(AVTrackPrivateAVFObjCImpl::create(option))
 {
 }
 
-AudioTrackPrivateAVFObjC::AudioTrackPrivateAVFObjC(std::unique_ptr<AVTrackPrivateAVFObjCImpl>&& impl)
+AudioTrackPrivateAVFObjC::AudioTrackPrivateAVFObjC(Ref<AVTrackPrivateAVFObjCImpl>&& impl)
     : m_impl(WTFMove(impl))
     , m_audioTrackConfigurationObserver([this] { audioTrackConfigurationChanged(); })
 {
@@ -71,7 +71,18 @@ void AudioTrackPrivateAVFObjC::resetPropertiesFromTrack()
     setId(m_impl->id());
     setLabel(m_impl->label());
     setLanguage(m_impl->language());
-    setConfiguration(m_impl->audioTrackConfiguration());
+
+    // Occasionally, when tearing down an AVAssetTrack in a HLS stream, the track
+    // will go from having a formatDescription (and therefore having valid values
+    // for properties that are derived from the format description, like codec() or
+    // sampleRate()) to not having a format description. AVAssetTrack is ostensibly an
+    // invariant, and properties like formatDescription should never move from
+    // non-null to null. When this happens, ignore the configuration change.
+    auto newConfiguration = m_impl->audioTrackConfiguration();
+    if (!configuration().codec.isEmpty() && newConfiguration.codec.isEmpty())
+        return;
+
+    setConfiguration(WTFMove(newConfiguration));
 }
 
 void AudioTrackPrivateAVFObjC::audioTrackConfigurationChanged()

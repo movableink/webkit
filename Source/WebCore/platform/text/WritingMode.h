@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Google Inc. All rights reserved.
+ * Copyright (c) 2012 Google Inc. All rights reserved.
  * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -443,8 +443,8 @@ inline TextStream& operator<<(TextStream& stream, StyleWritingMode writingMode)
 inline TextStream& operator<<(TextStream& ts, TextDirection textDirection)
 {
     switch (textDirection) {
-    case TextDirection::LTR: ts << "ltr"; break;
-    case TextDirection::RTL: ts << "rtl"; break;
+    case TextDirection::LTR: ts << "ltr"_s; break;
+    case TextDirection::RTL: ts << "rtl"_s; break;
     }
     return ts;
 }

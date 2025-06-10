@@ -53,12 +53,9 @@ namespace JSC { namespace B3 { namespace Air {
 namespace Greedy {
 
 // Experiments
-static constexpr bool eagerGroups = true;
-static constexpr bool eagerGroupsSplitFully = false;
 static constexpr bool eagerGroupsExhaustiveSearch = false;
 static constexpr bool spillCostDivideBySize = true;
 static constexpr bool spillCostSizeBias = 1000; // Only relevant when spillCostDivideBySize
-static constexpr bool evictHeuristicAggregatorIsMax = false;
 
 // Quickly filters out short ranges from live range splitting consideration.
 static constexpr size_t splitMinRangeSize = 8;
@@ -402,11 +399,17 @@ public:
 
     void add(Tmp tmp, LiveRange& range)
     {
-        ASSERT(!hasConflict(range)); // Can't add overlapping LiveRanges
+        ASSERT(!hasConflict(range, Width64)); // Can't add overlapping LiveRanges
         for (auto& interval : range.intervals()) {
             ASSERT(interval != Interval()); // Strict ordering requires no empty intervals.
             m_allocations.insert({ tmp, interval });
         }
+    }
+
+    void addClobberHigh64(Reg reg, Point point)
+    {
+        ASSERT(reg.isFPR());
+        m_allocationsHigh64.insert({ Tmp(reg), Interval(point) });
     }
 
     void evict(Tmp tmp, LiveRange& range)
@@ -417,10 +420,10 @@ public:
         }
     }
 
-    bool hasConflict(LiveRange& range)
+    bool hasConflict(LiveRange& range, Width width)
     {
         bool hasConflict = false;
-        forEachConflict(range, [&](auto&) -> IterationStatus {
+        forEachConflict(range, width, [&](auto&) -> IterationStatus {
             hasConflict = true;
             return IterationStatus::Done;
         });
@@ -433,25 +436,60 @@ public:
     // func is allowed to modify this RegisterRange, e.g. by calling evict().
     // func must not modify 'range' for the duration of this forEachConflict invocation.
     template<typename Func>
-    void forEachConflict(const LiveRange& range, const Func& func)
+    void forEachConflict(const LiveRange& range, Width width, const Func& func)
+    {
+        auto status = forEachConflictImpl(m_allocations, range, func);
+        if (width > Width64) [[unlikely]] {
+            if (status == IterationStatus::Continue)
+                forEachConflictImpl(m_allocationsHigh64, range, func);
+        }
+    }
+
+    bool isEmpty() const
+    {
+        return m_allocations.empty() && m_allocationsHigh64.empty();
+    }
+
+    void dump(PrintStream& out) const
+    {
+        auto dumpSet = [&out](const AllocatedIntervalSet& allocationSet) {
+            CommaPrinter comma;
+            out.print("[");
+            for (auto& alloc : allocationSet) {
+                out.print(comma);
+                out.print(alloc);
+            }
+            out.print("]");
+        };
+
+        dumpSet(m_allocations);
+        if (!m_allocationsHigh64.empty()) {
+            out.print(", ↑");
+            dumpSet(m_allocationsHigh64);
+        }
+    }
+
+private:
+    template<typename Func>
+    static IterationStatus forEachConflictImpl(AllocatedIntervalSet& allocatedSet, const LiveRange& range, const Func& func)
     {
         auto rangeIter = range.intervals().begin();
         auto rangeEnd = range.intervals().end();
 
         if (rangeIter == rangeEnd)
-            return;
+            return IterationStatus::Continue;
         Point nextSearch = rangeIter->begin();
 
         while (true) {
             AllocatedInterval conflict;
             {
-                auto conflictIter = findFirstIntervalEndingAfter(nextSearch);
-                if (conflictIter == m_allocations.end())
-                    return; // End of 'm_allocations', so no more potential conflicts
+                auto conflictIter = findFirstIntervalEndingAfter(allocatedSet, nextSearch);
+                if (conflictIter == allocatedSet.end())
+                    return IterationStatus::Continue; // End of 'm_allocations', so no more potential conflicts
                 if (rangeIter->end() <= conflictIter->interval.begin()) {
                     // No more conflicts with this 'range' interval. Move on to the next interval in 'range'.
                     if (++rangeIter == rangeEnd)
-                        return; // End of 'range', so no more potential conflicts
+                        return IterationStatus::Continue; // End of 'range', so no more potential conflicts
                     // Start searching for conflicts of the next 'range' interval.
                     nextSearch = rangeIter->begin();
                     continue;
@@ -463,43 +501,35 @@ public:
             }
             // 'func' can invalidate iterators of 'm_allocations'.
             if (func(conflict) == IterationStatus::Done)
-                return;
+                return IterationStatus::Done;
         }
     }
 
-    bool isEmpty() const
-    {
-        return m_allocations.empty();
-    }
-
-    void dump(PrintStream& out) const
-    {
-        CommaPrinter comma;
-        out.print("[");
-        for (auto& alloc : m_allocations) {
-            out.print(comma);
-            out.print(alloc);
-        }
-        out.print("]");
-    }
-
-private:
-    AllocatedIntervalSet::iterator findFirstIntervalEndingAfter(Point point)
+    static AllocatedIntervalSet::iterator findFirstIntervalEndingAfter(AllocatedIntervalSet& allocatedSet, Point point)
     {
         Interval query(point);
         // pos can be 0, yet we can't express a non-empty interval with end==0, so instead of looking
         // for the first interval ending after pos we find the first interval ending at or after pos+1.
         ASSERT(query.end() == point + 1);
-        auto iter = m_allocations.lower_bound({ Tmp(), query });
-        ASSERT(iter == m_allocations.end() || iter->interval.end() > point);
+        auto iter = allocatedSet.lower_bound({ Tmp(), query });
+        ASSERT(iter == allocatedSet.end() || iter->interval.end() > point);
         return iter;
     }
 
     AllocatedIntervalSet m_allocations;
+    AllocatedIntervalSet m_allocationsHigh64; // Tracks clobbers to vector registers that preserve lower 64-bits
 };
 
-// Auxillary register allocator data per Tmp.
+// Auxiliary register allocator data per Tmp.
 struct TmpData {
+    // When an unspillable or fastTmp is coalesced with another tmp, we don't want the spillCost of the
+    // group to be unspillableCost or fastTmpCost, so this property is tracked independent of useDefCost.
+    enum class Spillability : uint8_t {
+        Spillable,
+        FastTmp,
+        Unspillable,
+    };
+
     struct CoalescableWith {
         void dump(PrintStream& out) const
         {
@@ -514,7 +544,7 @@ struct TmpData {
     {
         out.print("{stage = ", stage, " liveRange = ", liveRange, ", preferredReg = ", preferredReg,
             ", coalescables = ", listDump(coalescables), ", subGroup0 = ", subGroup0, ", subGroup1 = ", subGroup1,
-            ", useDefCost = ", useDefCost, ", unspillable = ", unspillable, ", assigned = ", assigned, ", spilled = ", pointerDump(spillSlot), ", splitMetadataIndex = ", splitMetadataIndex, "}");
+            ", useDefCost = ", useDefCost, ", spillability = ", spillability, ", assigned = ", assigned, ", spilled = ", pointerDump(spillSlot), ", splitMetadataIndex = ", splitMetadataIndex, "}");
     }
 
     bool isGroup()
@@ -526,9 +556,16 @@ struct TmpData {
     float spillCost()
     {
         ASSERT(liveRange.size()); // 0-sized ranges shouldn't be allocated
-        if (unspillable)
+        switch (spillability) {
+        case Spillability::Unspillable:
             return unspillableCost;
-
+        case Spillability::FastTmp:
+            return fastTmpSpillCost;
+        case Spillability::Spillable:
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+        }
         // Heuristic that favors not spilling higher use/def frequency-adjusted counts and
         // shorter ranges. The spillCostSizeBias causes the penalty for larger ranges to
         // be more dramatic as the range size gets larger.
@@ -559,7 +596,7 @@ struct TmpData {
     Tmp subGroup0, subGroup1;
     uint32_t splitMetadataIndex { 0 };
     Stage stage { Stage::New };
-    bool unspillable { false };
+    Spillability spillability { Spillability::Spillable };
     Reg preferredReg;
     Reg assigned;
 };
@@ -621,11 +658,14 @@ public:
 
         m_stats[GP].numTmpsOut = m_code.numTmps(GP);
         m_stats[FP].numTmpsOut = m_code.numTmps(FP);
-
     }
 
     void dump(PrintStream& out) const
     {
+        out.println("usesSIMD=", m_code.usesSIMD());
+        out.println("Block to Point:");
+        for (BasicBlock* block : m_code)
+            out.println("    BB", pointerDump(block), ": ", positionOfHead(block));
         out.println("RegRanges:");
         dumpRegRanges<GP>(out);
         dumpRegRanges<FP>(out);
@@ -640,8 +680,10 @@ public:
         for (Reg r : m_allowedRegistersInPriorityOrder[FP])
             dumpRegTmpData(r);
         m_code.forEachTmp([&](Tmp tmp) {
-            out.println("    ", tmp, ": ", m_map[tmp]);
+            out.println("    ", tmp, ": ", m_map[tmp], " useWidth=", m_tmpWidth.useWidth(tmp));
         });
+        out.println("Stats (GP):", m_stats[GP]);
+        out.println("Stats (FP):", m_stats[FP]);
     }
 
 private:
@@ -663,7 +705,6 @@ private:
             for (Reg r : m_allowedRegistersInPriorityOrder[bank])
                 m_allAllowedRegisters.add(r, IgnoreVectors);
         });
-        m_allAllowedRegistersWholeWidth = m_allAllowedRegisters.toRegisterSet().includeWholeRegisterWidth();
     }
 
     void buildIndices()
@@ -694,7 +735,7 @@ private:
         return block;
     }
 
-    Point positionOfHead(BasicBlock* block)
+    Point positionOfHead(BasicBlock* block) const
     {
         return m_blockToHeadPoint[block];
     }
@@ -711,18 +752,19 @@ private:
 
     static Point positionOfEarly(Interval interval)
     {
-        return interval.begin() & ~static_cast<Point>(1);
+        static_assert(!(pointsPerInst & (pointsPerInst - 1)));
+        return interval.begin() & ~static_cast<Point>(pointsPerInst - 1);
     }
 
     static Interval earlyInterval(Point positionOfEarly)
     {
-        ASSERT(!(positionOfEarly & 1));
+        ASSERT(!(positionOfEarly % pointsPerInst));
         return Interval(positionOfEarly);
     }
 
     static Interval lateInterval(Point positionOfEarly)
     {
-        ASSERT(!(positionOfEarly & 1));
+        ASSERT(!(positionOfEarly % pointsPerInst));
         return Interval(positionOfEarly + 1);
     }
 
@@ -784,9 +826,20 @@ private:
     float adjustedBlockFrequency(BasicBlock* block)
     {
         float freq = block->frequency();
-        if (UNLIKELY(!m_fastBlocks.saw(block)))
+        if (!m_fastBlocks.saw(block)) [[unlikely]]
             freq *= Options::rareBlockPenalty();
         return freq;
+    }
+
+    template<Bank bank>
+    Width widthForConflicts(Tmp tmp)
+    {
+        if constexpr (bank == GP)
+            return Width64;
+        ASSERT(bank == FP);
+        // For FP, the top 64-bits of vector registers are checked for conflicts only when
+        // those top 64-bits of the tmp are used. The low 64-bits are always checked.
+        return m_tmpWidth.useWidth(tmp);
     }
 
     // Debug code to verify that the results of register allocation and finalization fixup is valid.
@@ -850,7 +903,11 @@ private:
     {
         CompilerTimingScope timingScope("Air"_s, "GreedyRegAlloc::buildLiveRanges"_s);
         UnifiedTmpLiveness liveness(m_code);
-        TmpMap<Interval> activeIntervals(m_code);
+        TmpMap<Point> activeEnds(m_code);
+        TmpMap<Point> liveAtTailMarkers(m_code, std::numeric_limits<Point>::max());
+#if ASSERT_ENABLED
+        UnifiedTmpLiveness::LiveAtHead assertOnlyLiveAtHead = liveness.liveAtHead();
+#endif
 
         // Find non-rare blocks.
         m_fastBlocks.push(m_code[0]);
@@ -892,7 +949,7 @@ private:
         };
 
         auto isLiveAt = [&](Tmp tmp, Point point) {
-            if (activeIntervals[tmp])
+            if (activeEnds[tmp])
                 return true;
             // Tmp may have had a dead def at point (e.g. clobber).
             auto& intervals = m_map[tmp].liveRange.intervals();
@@ -922,10 +979,18 @@ private:
             });
         };
 
-        auto closeInterval = [&](Tmp tmp) {
-            ASSERT(activeIntervals[tmp] != Interval());
-            m_map[tmp].liveRange.prepend(activeIntervals[tmp]);
-            activeIntervals[tmp] = Interval();
+        auto markUse = [&](Tmp tmp, Point point) {
+            Point& end = activeEnds[tmp];
+            ASSERT(!end || point < end);
+            if (!end)
+                end = point + 1; // +1 since Interval end is not inclusive
+        };
+        auto markDef = [&](Tmp tmp, Point point)  {
+            Point end = activeEnds[tmp];
+            if (!end) [[unlikely]]
+                end = point + 1; // Dead def / clobber
+            m_map[tmp].liveRange.prepend({ point, end });
+            activeEnds[tmp] = 0;
         };
 
         // First pass: collect all the potential coalescable pairs of Tmps.
@@ -956,6 +1021,7 @@ private:
         // prune conflicts from the coalescables.
         BasicBlock* blockAfter = nullptr;
         Vector<Tmp, 8> earlyUses, earlyDefs, lateUses, lateDefs;
+        Vector<Reg, 8> earlyClobbersHigh64, lateClobbersHigh64;
         for (size_t blockIndex = m_code.size(); blockIndex--;) {
             BasicBlock* block = m_code[blockIndex];
             if (!block)
@@ -969,16 +1035,20 @@ private:
                 dataLog("  positionOfTail = ", positionOfTail, "\n");
             }
 
-            for (Tmp tmp : liveness.liveAtTail(block))
-                activeIntervals[tmp] |= Interval(positionOfTail); // FIXME: could just set interval start
-
+            for (Tmp tmp : liveness.liveAtTail(block)) {
+                markUse(tmp, positionOfTail);
+                liveAtTailMarkers[tmp] = positionOfTail;
+            }
             if (blockAfter) {
+                Point blockAfterPositionOfHead = this->positionOfHead(blockAfter);
                 for (Tmp tmp : liveness.liveAtHead(blockAfter)) {
-                    if (!activeIntervals[tmp].contains(positionOfTail)) {
-                        // If tmp was live at the head of the next block but no longer live, close
-                        // the current interval.
-                        ASSERT(activeIntervals[tmp].begin() == this->positionOfHead(blockAfter));
-                        closeInterval(tmp);
+                    // FIXME: rdar://145150735, remove pinned register liveness special cases
+                    ASSERT(activeEnds[tmp] || (tmp.isReg() && !m_allAllowedRegisters.contains(tmp.reg(), IgnoreVectors)));
+                    // If tmp was live at the head of the next block but not live at the
+                    // tail of the current block, close the interval.
+                    if (liveAtTailMarkers[tmp] > positionOfTail) {
+                        if (activeEnds[tmp]) [[likely]]
+                            markDef(tmp, blockAfterPositionOfHead);
                     }
                 }
             }
@@ -986,11 +1056,14 @@ private:
             for (unsigned instIndex = block->size(); instIndex--;) {
                 Inst& inst = block->at(instIndex);
                 Point positionOfEarly = positionOfHead + instIndex * pointsPerInst;
+                Point positionOfLate = positionOfEarly + 1;
 
                 lateUses.shrink(0);
                 lateDefs.shrink(0);
+                lateClobbersHigh64.shrink(0);
                 earlyUses.shrink(0);
                 earlyDefs.shrink(0);
+                earlyClobbersHigh64.shrink(0);
                 inst.forEachTmp([&](Tmp& tmp, Arg::Role role, Bank, Width) {
                     if (Arg::isLateUse(role))
                         lateUses.append(tmp);
@@ -1001,54 +1074,59 @@ private:
                     if (Arg::isEarlyDef(role))
                         earlyDefs.append(tmp);
                 });
-                for (Tmp tmp : lateUses)
-                    activeIntervals[tmp] |= lateInterval(positionOfEarly);
-                for (Tmp tmp : lateDefs) {
-                    activeIntervals[tmp] |= lateInterval(positionOfEarly);
-                    closeInterval(tmp);
-                    pruneCoalescable(inst, tmp, positionOfEarly + 1);
+                if (inst.kind.opcode == Patch) [[unlikely]] {
+                    inst.extraEarlyClobberedRegs().forEachWithWidthAndPreserved(
+                        [&](Reg reg, Width, PreservedWidth preservedWidth) {
+                            ASSERT(preservedWidth == PreservesNothing || preservedWidth == Preserves64);
+                            if (preservedWidth == PreservesNothing)
+                                earlyDefs.append(Tmp(reg));
+                            else
+                                earlyClobbersHigh64.append(reg);
+                        });
+                    inst.extraClobberedRegs().forEachWithWidthAndPreserved(
+                        [&](Reg reg, Width, PreservedWidth preservedWidth) {
+                            ASSERT(preservedWidth == PreservesNothing || preservedWidth == Preserves64);
+                            if (preservedWidth == PreservesNothing)
+                                lateDefs.append(Tmp(reg));
+                            else
+                                lateClobbersHigh64.append(reg);
+                        });
                 }
+
+                for (Tmp tmp : lateUses)
+                    markUse(tmp, positionOfLate);
+                for (Tmp tmp : lateDefs) {
+                    markDef(tmp, positionOfLate);
+                    pruneCoalescable(inst, tmp, positionOfLate);
+                }
+                for (Reg reg : lateClobbersHigh64)
+                    m_regRanges[reg].addClobberHigh64(reg, positionOfLate);
+
                 for (Tmp tmp : earlyUses)
-                    activeIntervals[tmp] |= earlyInterval(positionOfEarly);
+                    markUse(tmp, positionOfEarly);
                 for (Tmp tmp : earlyDefs) {
-                    activeIntervals[tmp] |= earlyInterval(positionOfEarly);
-                    closeInterval(tmp);
+                    markDef(tmp, positionOfEarly);
                     pruneCoalescable(inst, tmp, positionOfEarly);
                 }
-                if (inst.kind.opcode == Patch) {
-                    auto clobberReg = [&](Reg reg, Interval interval) {
-                        Tmp tmp = Tmp(reg);
-                        bool isAlive = !!activeIntervals[tmp];
-                        activeIntervals[tmp] |= interval;
-                        if (!isAlive)
-                            closeInterval(tmp);
-                    };
-                    inst.extraClobberedRegs().forEachWithWidthAndPreserved(
-                        [&](Reg reg, Width, PreservedWidth) {
-                            clobberReg(reg, lateInterval(positionOfEarly));
-                        });
-                    inst.extraEarlyClobberedRegs().forEachWithWidthAndPreserved(
-                        [&](Reg reg, Width, PreservedWidth) {
-                            clobberReg(reg, earlyInterval(positionOfEarly));
-                        });
-                }
-
+                for (Reg reg : earlyClobbersHigh64)
+                    m_regRanges[reg].addClobberHigh64(reg, positionOfEarly);
             }
-            for (Tmp tmp : liveness.liveAtHead(block))
-                activeIntervals[tmp] |= Interval(positionOfHead);
-
+#if ASSERT_ENABLED
+            m_code.forEachTmp([&](Tmp tmp) {
+                ASSERT(!!activeEnds[tmp] == assertOnlyLiveAtHead.isLiveAtHead(block, tmp));
+            });
+#endif
             blockAfter = block;
         }
         if (blockAfter) {
-            for (Tmp tmp : liveness.liveAtHead(blockAfter)) {
-                ASSERT(activeIntervals[tmp].begin() == this->positionOfHead(blockAfter));
-                closeInterval(tmp);
-            }
+            Point firstBlockPositionOfHead = this->positionOfHead(blockAfter);
+            for (Tmp tmp : liveness.liveAtHead(blockAfter))
+                markDef(tmp, firstBlockPositionOfHead);
         }
 
 #if ASSERT_ENABLED
         m_code.forEachTmp([&](Tmp tmp) {
-            ASSERT(!activeIntervals[tmp]);
+            ASSERT(!activeEnds[tmp]);
         });
 #endif
     }
@@ -1095,17 +1173,12 @@ private:
                         return aSize < bSize;
                     return a.tmp.tmpIndex(bank) < b.tmp.tmpIndex(bank);
             });
-
-            if (!eagerGroups)
-                return;
-
             for (auto& with : m_map[tmp].coalescables) {
                 if (tmp.tmpIndex(bank) < with.tmp.tmpIndex(bank))
                     moves.append({ tmp, with.tmp, with.moveCost });
             }
         });
 
-        ASSERT_IMPLIES(!eagerGroups, moves.isEmpty());
         std::sort(moves.begin(), moves.end(),
             [](Move& a, Move& b) -> bool {
                 if (a.cost != b.cost)
@@ -1216,9 +1289,8 @@ private:
         }
 
         for (Reg reg : m_allowedRegistersInPriorityOrder[bank])
-            m_map[Tmp(reg)].unspillable = true;
+            m_map[Tmp(reg)].spillability = TmpData::Spillability::Unspillable;
 
-        // FIXME: tmps alive only in one gap should be unspillable.
         m_code.forEachTmp<bank>([&](Tmp tmp) {
             ASSERT(tmp.bank() == bank);
             ASSERT(!tmp.isReg());
@@ -1232,7 +1304,7 @@ private:
 
             if (cannotSpillInPlace.contains(tmp)
                 && tmpData.liveRange.intervals().size() == 1 && tmpData.liveRange.size() <= pointsPerInst) {
-                tmpData.unspillable = true;
+                tmpData.spillability = TmpData::Spillability::Unspillable;
                 m_stats[bank].numUnspillableTmps++;
             }
             tmpData.validate();
@@ -1240,8 +1312,8 @@ private:
         m_code.forEachFastTmp([&](Tmp tmp) {
             if (tmp.bank() != bank)
                 return;
-            m_map[tmp].unspillable = true;
-            m_stats[bank].numUnspillableTmps++;
+            m_map[tmp].spillability = TmpData::Spillability::FastTmp;
+            m_stats[bank].numFastTmps++;
             dataLogLnIf(verbose(), "FastTmp: ", tmp);
         });
     }
@@ -1264,7 +1336,7 @@ private:
     Tmp addSpillTmpWithInterval(Tmp spilledTmp, Interval interval)
     {
         Tmp tmp = newTmp(spilledTmp, 0, interval);
-        m_map[tmp].unspillable = true;
+        m_map[tmp].spillability = TmpData::Spillability::Unspillable;
         dataLogLnIf(verbose(), "New spill for ", spilledTmp, " tmp: ", tmp, ": ", m_map[tmp]);
         setStageAndEnqueue(tmp, m_map[tmp], Stage::Unspillable);
         m_stats[tmp.bank()].numSpillTmps++;
@@ -1277,7 +1349,6 @@ private:
         ASSERT(m_map[tmp].liveRange.size()); // 0-size ranges don't need a register and spillCost() depends on size() != 0
         ASSERT(stage == Stage::Unspillable || stage == Stage::TryAllocate || stage == Stage::TrySplit || stage == Stage::Spill);
         ASSERT(!tmpData.parentGroup); // Group member should not be enquened
-        ASSERT_IMPLIES(!eagerGroups, !tmpData.isGroup());
         tmpData.validate();
 
         tmpData.stage = stage;
@@ -1308,10 +1379,8 @@ private:
         m_code.forEachTmp<bank>([&](Tmp tmp) {
             ASSERT(!tmp.isReg());
             TmpData& tmpData = m_map[tmp];
-            if (tmpData.parentGroup) {
-                ASSERT(eagerGroups);
+            if (tmpData.parentGroup)
                 return;
-            }
             if (tmpData.liveRange.intervals().isEmpty())
                 return;
             setStageAndEnqueue(tmp, tmpData, Stage::TryAllocate);
@@ -1383,10 +1452,12 @@ private:
         ASSERT(!assignedReg(tmp));
         ASSERT(!tmpData.parentGroup);
 
+        Width width = widthForConflicts<bank>(tmp);
+
         auto tryAllocateToReg = [&](Reg r) {
             LiveRange& liveRange = tmpData.liveRange;
             RegisterRange& regRanges = m_regRanges[r];
-            if (!regRanges.hasConflict(liveRange)) {
+            if (!regRanges.hasConflict(liveRange, width)) {
                 assign(tmp, tmpData, r);
                 return true;
             }
@@ -1444,14 +1515,36 @@ private:
         ASSERT(&m_map[tmp] == &tmpData);
         ASSERT(tmp.bank() == bank);
 
+        auto failOutOfRegisters = [this](Tmp tmp) {
+            insertFixupCode(); // So that the log shows the fixup code too
+            StringPrintStream out;
+            out.println("FATAL: no register for ", tmp);
+            out.println("Unspillable Conflicts:");
+            for (Reg r : m_allowedRegistersInPriorityOrder[bank]) {
+                out.print("  ", r, ": ");
+                m_regRanges[r].forEachConflict(m_map[tmp].liveRange, widthForConflicts<bank>(tmp),
+                    [&](auto& conflict) -> IterationStatus {
+                        if (m_map[conflict.tmp].spillCost() == unspillableCost)
+                            out.print("{", conflict.tmp, ", ", conflict.interval, "}, ");
+                        return IterationStatus::Continue;
+                    });
+                out.println("");
+            }
+            out.println("Code:", m_code);
+            out.println("Register Allocator State:\n", pointerDump(this));
+            dataLogLn(out.toCString());
+            RELEASE_ASSERT_NOT_REACHED();
+        };
+
         Reg bestEvictReg;
         float minSpillCost = unspillableCost;
         BitVector visited(m_code.numTmps(bank));
         LiveRange& liveRange = tmpData.liveRange;
+        Width width = widthForConflicts<bank>(tmp);
         for (Reg r : m_allowedRegistersInPriorityOrder[bank]) {
             float conflictsSpillCost = 0.0f;
             visited.clearAll();
-            m_regRanges[r].forEachConflict(liveRange,
+            m_regRanges[r].forEachConflict(liveRange, width,
                 [&](auto& conflict) -> IterationStatus {
                     if (conflict.tmp.isReg()) {
                         // Conflicts with a fixed register use/def, cannot evict.
@@ -1467,8 +1560,9 @@ private:
                         conflictsSpillCost = unspillableCost;
                         return IterationStatus::Done;
                     }
-                    if (evictHeuristicAggregatorIsMax)
-                        conflictsSpillCost = std::max(conflictsSpillCost, cost);
+                    if (cost == std::numeric_limits<float>::max()
+                        || conflictsSpillCost == std::numeric_limits<float>::max()) [[unlikely]]
+                        conflictsSpillCost = std::numeric_limits<float>::max();
                     else
                         conflictsSpillCost += cost;
                     return conflictsSpillCost >= minSpillCost ? IterationStatus::Done : IterationStatus::Continue;
@@ -1480,11 +1574,12 @@ private:
         }
         if (minSpillCost >= tmpData.spillCost()) {
             // If 'tmp' was unspillable, we better have found at least one suitable register.
-            RELEASE_ASSERT(tmpData.spillCost() != unspillableCost);
+            if (tmpData.spillCost() == unspillableCost) [[unlikely]]
+                failOutOfRegisters(tmp);
             return false;
         }
         // It's cheaper to spill all the already-assigned conflicting tmps, so evict them in favor of assigning 'tmp'.
-        m_regRanges[bestEvictReg].forEachConflict(liveRange,
+        m_regRanges[bestEvictReg].forEachConflict(liveRange, widthForConflicts<bank>(tmp),
             [&](auto& conflict) -> IterationStatus {
                 TmpData& conflictData = m_map[conflict.tmp];
                 evict(conflict.tmp, conflictData, bestEvictReg);
@@ -1530,20 +1625,12 @@ private:
     {
         if (!tmpData.isGroup())
             return false;
-        ASSERT(eagerGroups);
         auto enqueueSubgroup = [&](Tmp subGrp) {
             m_map[subGrp].parentGroup = Tmp();
             setStageAndEnqueue(subGrp, m_map[subGrp], Stage::TryAllocate);
         };
-        if (eagerGroupsSplitFully) {
-            forEachTmpInGroup(tmp, [&](Tmp member) {
-                enqueueSubgroup(member);
-                return IterationStatus::Continue;
-            });
-        } else {
-            enqueueSubgroup(tmpData.subGroup0);
-            enqueueSubgroup(tmpData.subGroup1);
-        }
+        enqueueSubgroup(tmpData.subGroup0);
+        enqueueSubgroup(tmpData.subGroup1);
         tmpData.stage = Stage::Replaced;
         dataLogLnIf(verbose(), "Split (group) ", tmp);
         tmpData.validate();
@@ -1568,9 +1655,10 @@ private:
 
         Reg bestSplitReg;
         float minSplitCost = unspillableCost;
+        Width width = widthForConflicts<bank>(tmp);
         for (Reg r : m_allowedRegistersInPriorityOrder[bank]) {
             float splitCost = 0.0f;
-            m_regRanges[r].forEachConflict(tmpData.liveRange,
+            m_regRanges[r].forEachConflict(tmpData.liveRange, width,
                 [&](auto& conflict) -> IterationStatus {
                     if (conflict.tmp.isReg() && conflict.interval.distance() == 1) {
                         // Block freq * rare block penalty
@@ -1607,7 +1695,7 @@ private:
             return false; // Better to spill than to split
 
         LiveRange holeRange;
-        m_regRanges[bestSplitReg].forEachConflict(tmpData.liveRange,
+        m_regRanges[bestSplitReg].forEachConflict(tmpData.liveRange, width,
             [&](auto& conflict) -> IterationStatus {
                 ASSERT(conflict.tmp.isReg() && conflict.interval.distance() == 1);
                 // Punched hole should always include the instructions late interval so the
@@ -1765,9 +1853,10 @@ private:
                         if (!inst.admitsStack(arg)) {
                             switch (inst.kind.opcode) {
                             case Move:
+                            case Move32:
                             case MoveDouble:
                             case MoveFloat:
-                            case Move32: {
+                            case MoveVector: {
                                 unsigned argIndex = &arg - &inst.args[0];
                                 unsigned otherArgIndex = argIndex ^ 1;
                                 Arg otherArg = inst.args[otherArgIndex];
@@ -1784,12 +1873,29 @@ private:
                             }
                         }
                         // If the Tmp holds a constant then we want to rematerialize its
-                        // value rather than loading it from the stack. In order for that
-                        // optimization to kick in, we need to avoid placing the Tmp's stack
-                        // address into the instruction.
-                        if (!Arg::isColdUse(role) && m_useCounts.isConstDef<bank>(AbsoluteTmpMapper<bank>::absoluteIndex(arg.tmp())))
+                        // value rather than loading it from the stack.
+                        unsigned tmpIndex = AbsoluteTmpMapper<bank>::absoluteIndex(arg.tmp());
+                        if (!Arg::isColdUse(role) && m_useCounts.isConstDef<bank>(tmpIndex)) {
+                            int64_t value = m_useCounts.constant<bank>(tmpIndex);
+                            Arg oldArg = arg;
+                            Arg imm;
+                            if (Arg::isValidImmForm(value))
+                                imm = Arg::imm(value);
+                            else
+                                imm = Arg::bigImm(value);
+                            ASSERT(inst.isValidForm());
+                            arg = imm;
+                            if (inst.isValidForm()) {
+                                m_stats[bank].numRematerializeConst++;
+                                dataLogLnIf(verbose(), "Rematerialized (direct imm), arg=", oldArg, ", inst=", inst);
+                                return;
+                            }
+                            // Couldn't insert the immediate into the instruction directly, so undo.
+                            arg = oldArg;
+                            // We can still rematerialize it into a register. In order for that optimization to kick in,
+                            // we need to avoid placing the Tmp's stack address into the instruction.
                             return;
-
+                        }
                         Width spillWidth = m_tmpWidth.requiredWidth(arg.tmp());
                         if (Arg::isAnyDef(role) && width < spillWidth) {
                             // Either there are users of this tmp who will use more than width,
@@ -1827,6 +1933,7 @@ private:
                     inst.args.append(tmp);
                     RELEASE_ASSERT(inst.args.size() == 3);
                     m_stats[bank].numMoveSpillSpillInsts++;
+                    ASSERT(inst.isValidForm());
                     // WTF::Liveness and Air::LivenessAdapter do not handle a late-def/use followed by early-def
                     // correctly. While this register allocator does handle it correctly (since it models distinct
                     // late and early points between instructions (i.e. intervalForSpill() won't overlap for different
@@ -2012,7 +2119,6 @@ private:
     Code& m_code;
     Vector<Reg> m_allowedRegistersInPriorityOrder[numBanks];
     ScalarRegisterSet m_allAllowedRegisters;
-    RegisterSet m_allAllowedRegistersWholeWidth;
     IndexMap<BasicBlock*, Point> m_blockToHeadPoint;
     Vector<Point> m_tailPoints;
     TmpMap<TmpData> m_map;
@@ -2031,7 +2137,6 @@ private:
 
 void allocateRegistersByGreedy(Code& code)
 {
-    RELEASE_ASSERT(!code.usesSIMD());
     PhaseScope phaseScope(code, "allocateRegistersAndStackByGreedy"_s);
     dataLogIf(Greedy::verbose(), "Air before greedy register allocation:\n", code);
     Greedy::GreedyAllocator allocator(code);

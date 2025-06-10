@@ -53,14 +53,16 @@ private:
                                                               Protected::kNo,
                                                               Renderable::kYes);
 
-        RenderPassDesc coverageRenderPassDesc = RenderPassDesc::Make(caps,
-                                                                     info,
-                                                                     LoadOp::kClear,
-                                                                     StoreOp::kStore,
-                                                                     DepthStencilFlags::kDepth,
-                                                                     { 0.0f, 0.0f, 0.0f, 0.0f },
-                                                                     /* requiresMSAA= */ false,
-                                                                     skgpu::Swizzle("a000"));
+        RenderPassDesc coverageRenderPassDesc = RenderPassDesc::Make(
+                caps,
+                info,
+                LoadOp::kClear,
+                StoreOp::kStore,
+                DepthStencilFlags::kDepth,
+                { 0.0f, 0.0f, 0.0f, 0.0f },
+                /* requiresMSAA= */ false,
+                skgpu::Swizzle("a000"),
+                caps->getDstReadStrategy());
 
         PrecompileImageFiltersPriv::CreateBlurImageFilterPipelines(keyContext, gatherer,
                                                                    coverageRenderPassDesc,
@@ -96,7 +98,7 @@ private:
             coverageOptions.priv().buildCombinations(
                     keyContext,
                     gatherer,
-                    static_cast<DrawTypeFlags>(InternalDrawTypeFlags::kAnalyticRRect),
+                    DrawTypeFlags::kAnalyticRRect,
                     /* withPrimitiveBlender= */ false,
                     Coverage::kSingleChannel,
                     coverageRenderPassDesc,

@@ -28,6 +28,14 @@
 #import <objc/runtime.h>
 #import <wtf/Assertions.h>
 
+#ifndef NS_RETURNS_RETAINED
+#if __has_feature(attribute_ns_returns_retained)
+#define NS_RETURNS_RETAINED __attribute__((ns_returns_retained))
+#else
+#define NS_RETURNS_RETAINED
+#endif
+#endif
+
 #define _STORE_IN_DLSYM_SECTION __attribute__((section("__TEXT,__dlsym_cstr")))
 #define _STORE_IN_GETCLASS_SECTION __attribute__((section("__TEXT,__getClass_cstr")))
 
@@ -206,25 +214,26 @@ static void* lib##Library() \
     @class className; \
     static Class init##className(); \
     static Class (*get##className##Class)() = init##className; \
-    static Class class##className; \
+    struct Class##className##Wrapper { SUPPRESS_UNCOUNTED_MEMBER Class classObject; }; \
+    static Class##className##Wrapper class##className; \
     \
     static Class className##Function() \
     { \
-        return class##className; \
+        return class##className.classObject; \
     } \
     \
     static Class init##className() \
     { \
         framework##Library(); \
         _STORE_IN_GETCLASS_SECTION static char const auditedClassName[] = #className; \
-        class##className = objc_getClass(auditedClassName); \
-        RELEASE_ASSERT(class##className); \
+        class##className.classObject = objc_getClass(auditedClassName); \
+        RELEASE_ASSERT(class##className.classObject); \
         get##className##Class = className##Function; \
-        return class##className; \
+        return class##className.classObject; \
     } \
     _Pragma("clang diagnostic push") \
     _Pragma("clang diagnostic ignored \"-Wunused-function\"") \
-    static className *alloc##className##Instance() \
+    static className *alloc##className##Instance() NS_RETURNS_RETAINED \
     { \
         return [get##className##Class() alloc]; \
     } \
@@ -234,24 +243,25 @@ static void* lib##Library() \
     @class className; \
     static Class init##className(); \
     static Class (*get##className##Class)() = init##className; \
-    static Class class##className; \
+    struct class##className##Wrapper { SUPPRESS_UNCOUNTED_MEMBER Class classObject; }; \
+    static class##className##Wrapper class##className; \
     \
     static Class className##Function() \
     { \
-        return class##className; \
+        return class##className.classObject; \
     } \
     \
     static Class init##className() \
     { \
         framework##Library(); \
         _STORE_IN_GETCLASS_SECTION static char const auditedClassName[] = #className; \
-        class##className = objc_getClass(auditedClassName); \
+        class##className.classObject = objc_getClass(auditedClassName); \
         get##className##Class = className##Function; \
-        return class##className; \
+        return class##className.classObject; \
     } \
     _Pragma("clang diagnostic push") \
     _Pragma("clang diagnostic ignored \"-Wunused-function\"") \
-    static className *alloc##className##Instance() \
+    static className *alloc##className##Instance() NS_RETURNS_RETAINED \
     { \
         return [get##className##Class() alloc]; \
     } \
@@ -300,11 +310,12 @@ static void* lib##Library() \
 #define SOFT_LINK_CONSTANT(framework, name, type) \
     static type init##name(); \
     static type (*get##name)() = init##name; \
-    static type constant##name; \
+    struct Constant##name##Wrapper { SUPPRESS_UNRETAINED_LOCAL type constant; }; \
+    static Constant##name##Wrapper constant##name; \
     \
     static type name##Function() \
     { \
-        return constant##name; \
+        return constant##name.constant; \
     } \
     \
     static type init##name() \
@@ -312,19 +323,20 @@ static void* lib##Library() \
         _STORE_IN_DLSYM_SECTION static char const auditedName[] = #name; \
         void* constant = dlsym(framework##Library(), auditedName); \
         RELEASE_ASSERT_WITH_MESSAGE(constant, "%s", dlerror()); \
-        constant##name = *static_cast<type const *>(constant); \
+        constant##name.constant = *static_cast<type const *>(constant); \
         get##name = name##Function; \
-        return constant##name; \
+        return constant##name.constant; \
     }
 
 #define SOFT_LINK_CONSTANT_MAY_FAIL(framework, name, type) \
     static bool init##name(); \
     static type (*get##name)() = 0; \
-    static type constant##name; \
+    struct Constant##name##Wrapper { SUPPRESS_UNRETAINED_LOCAL type constant; }; \
+    static Constant##name##Wrapper constant##name; \
     \
     static type name##Function() \
     { \
-        return constant##name; \
+        return constant##name.constant; \
     } \
     \
     static bool canLoad##name() \
@@ -340,7 +352,7 @@ static void* lib##Library() \
         void* constant = dlsym(framework##Library(), auditedName); \
         if (!constant) \
             return false; \
-        constant##name = *static_cast<type const *>(constant); \
+        constant##name.constant = *static_cast<type const *>(constant); \
         get##name = name##Function; \
         return true; \
     }
@@ -432,8 +444,8 @@ static void* lib##Library() \
     @class className; \
     namespace functionNamespace { \
     extern Class (*get##className##Class)(); \
-    className *alloc##className##Instance(); \
-    inline className *alloc##className##Instance() \
+    className *alloc##className##Instance() NS_RETURNS_RETAINED; \
+    inline className *alloc##className##Instance() NS_RETURNS_RETAINED \
     { \
         return [get##className##Class() alloc]; \
     } \
@@ -451,7 +463,7 @@ static void* lib##Library() \
     namespace functionNamespace { \
     static Class init##className(); \
     export Class (*get##className##Class)() = init##className; \
-    static Class class##className; \
+    SUPPRESS_UNRETAINED_LOCAL static Class class##className; \
     \
     static Class className##Function() \
     { \
@@ -493,8 +505,8 @@ static void* lib##Library() \
     SOFT_LINK_CLASS_FOR_SOURCE_WITH_EXPORT_AND_IS_OPTIONAL(functionNamespace, framework, className, , SOFT_LINK_IS_OPTIONAL)
 
 #define SOFT_LINK_CLASS_ALLOC_FUNCTION(className, availability) \
-    className *alloc##className##Instance() availability; \
-    className *alloc##className##Instance() availability \
+    NS_RETURNS_RETAINED className *alloc##className##Instance() availability; \
+    NS_RETURNS_RETAINED className *alloc##className##Instance() availability \
     { \
         return [get##className##Class() alloc]; \
     } \
@@ -512,7 +524,7 @@ static void* lib##Library() \
     export variableType get_##framework##_##variableName(); \
     variableType get_##framework##_##variableName() \
     { \
-        static variableType constant##framework##variableName; \
+        SUPPRESS_UNRETAINED_LOCAL static variableType constant##framework##variableName; \
         static dispatch_once_t once; \
         dispatch_once(&once, ^{ \
             _STORE_IN_DLSYM_SECTION static char const auditedName[] = #variableName; \
@@ -563,17 +575,23 @@ static void* lib##Library() \
 #define SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE(functionNamespace, framework, variableName, variableType) \
     SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(functionNamespace, framework, variableName, variableType, )
 
-#define SOFT_LINK_FUNCTION_FOR_HEADER(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames) \
+#define SOFT_LINK_FUNCTION_FOR_HEADER_INTERNAL(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames, functionAttributes) \
     WTF_EXTERN_C_BEGIN \
     resultType functionName parameterDeclarations; \
     WTF_EXTERN_C_END \
     namespace functionNamespace { \
     extern resultType (*softLink##framework##functionName) parameterDeclarations; \
-    inline resultType softLink_##framework##_##functionName parameterDeclarations \
+    inline functionAttributes resultType softLink_##framework##_##functionName parameterDeclarations \
     { \
         return softLink##framework##functionName parameterNames; \
     } \
     } \
+
+#define SOFT_LINK_FUNCTION_FOR_HEADER(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames) \
+    SOFT_LINK_FUNCTION_FOR_HEADER_INTERNAL(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames, )
+
+#define SOFT_LINK_FUNCTION_FOR_HEADER_WITH_CF_RETURNS_RETAINED(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames) \
+    SOFT_LINK_FUNCTION_FOR_HEADER_INTERNAL(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames, CF_RETURNS_RETAINED)
 
 #define SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames, export) \
     WTF_EXTERN_C_BEGIN \

@@ -126,7 +126,7 @@ private:
     void disableICECandidateFiltering() final;
     bool isNegotiationNeeded(uint32_t) const final;
 
-    Ref<LibWebRTCMediaEndpoint> m_endpoint;
+    const Ref<LibWebRTCMediaEndpoint> m_endpoint;
     bool m_isLocalDescriptionSet { false };
     bool m_isRemoteDescriptionSet { false };
 

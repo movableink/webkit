@@ -26,13 +26,13 @@
 #include "config.h"
 #include "InlineLineBoxBuilder.h"
 
-#include "CSSLineBoxContainValue.h"
 #include "InlineLevelBoxInlines.h"
 #include "InlineLineBoxVerticalAligner.h"
 #include "InlineLineBuilder.h"
 #include "LayoutBoxGeometry.h"
 #include "RenderStyleInlines.h"
 #include "RubyFormattingContext.h"
+#include "StyleLineBoxContain.h"
 
 namespace WebCore {
 namespace Layout {
@@ -509,7 +509,7 @@ void LineBoxBuilder::adjustInlineBoxHeightsForLineBoxContainIfApplicable(LineBox
     // Collect layout bounds based on the contain property and set them on the inline boxes when they are applicable.
     UncheckedKeyHashMap<InlineLevelBox*, TextUtil::EnclosingAscentDescent> inlineBoxBoundsMap;
 
-    if (lineBoxContain.contains(LineBoxContain::InlineBox)) {
+    if (lineBoxContain.contains(Style::LineBoxContain::InlineBox)) {
         for (auto& inlineLevelBox : lineBox.nonRootInlineLevelBoxes()) {
             if (!inlineLevelBox.isInlineBox())
                 continue;
@@ -520,7 +520,7 @@ void LineBoxBuilder::adjustInlineBoxHeightsForLineBoxContainIfApplicable(LineBox
         }
     }
 
-    if (lineBoxContain.contains(LineBoxContain::Font)) {
+    if (lineBoxContain.contains(Style::LineBoxContain::Font)) {
         // Assign font based layout bounds to all inline boxes.
         auto ensureFontMetricsBasedHeight = [&] (auto& inlineBox) {
             ASSERT(inlineBox.isInlineBox());
@@ -545,7 +545,7 @@ void LineBoxBuilder::adjustInlineBoxHeightsForLineBoxContainIfApplicable(LineBox
         }
     }
 
-    if (lineBoxContain.contains(LineBoxContain::Glyphs)) {
+    if (lineBoxContain.contains(Style::LineBoxContain::Glyphs)) {
         // Compute text content (glyphs) hugging inline box layout bounds.
         for (auto run : lineLayoutResult().inlineContent) {
             if (!run.isText())
@@ -565,7 +565,7 @@ void LineBoxBuilder::adjustInlineBoxHeightsForLineBoxContainIfApplicable(LineBox
         }
     }
 
-    if (lineBoxContain.contains(LineBoxContain::InitialLetter)) {
+    if (lineBoxContain.contains(Style::LineBoxContain::InitialLetter)) {
         // Initial letter contain is based on the font metrics cap geometry and we hug descent.
         auto& rootInlineBox = lineBox.rootInlineBox();
         auto& fontMetrics = rootInlineBox.primarymetricsOfPrimaryFont();
@@ -596,7 +596,7 @@ void LineBoxBuilder::adjustInlineBoxHeightsForLineBoxContainIfApplicable(LineBox
         auto inlineBoxLayoutBounds = inlineBox->layoutBounds();
 
         // "line-box-container: block" The extended block progression dimension of the root inline box must fit within the line box.
-        auto mayShrinkLineBox = inlineBox->isRootInlineBox() ? !lineBoxContain.contains(LineBoxContain::Block) : true;
+        auto mayShrinkLineBox = inlineBox->isRootInlineBox() ? !lineBoxContain.contains(Style::LineBoxContain::Block) : true;
         auto ascent = mayShrinkLineBox ? enclosingAscentDescentForInlineBox.ascent : std::max(enclosingAscentDescentForInlineBox.ascent, inlineBoxLayoutBounds.ascent);
         auto descent = mayShrinkLineBox ? enclosingAscentDescentForInlineBox.descent : std::max(enclosingAscentDescentForInlineBox.descent, inlineBoxLayoutBounds.descent);
         inlineBox->setLayoutBounds({ ceilf(ascent), ceilf(descent) });
@@ -693,8 +693,9 @@ static TextEdge effectiveTextBoxEdge(const InlineLevelBox& rootInlineBox, const 
     return lineFitEdge;
 }
 
-InlineLayoutUnit LineBoxBuilder::applyTextBoxTrimOnLineBoxIfNeeded(InlineLayoutUnit lineBoxLogicalHeight, InlineLevelBox& rootInlineBox) const
+InlineLayoutUnit LineBoxBuilder::applyTextBoxTrimOnLineBoxIfNeeded(InlineLayoutUnit lineBoxLogicalHeight, LineBox& lineBox) const
 {
+    auto& rootInlineBox = lineBox.rootInlineBox();
     auto textBoxTrim = blockLayoutState().textBoxTrim();
     auto textBoxEdge = effectiveTextBoxEdge(rootInlineBox, blockLayoutState());
     auto shouldTrimBlockStartOfLineBox = isFirstLine() && textBoxTrim.contains(BlockLayoutState::TextBoxTrimSide::Start) && textBoxEdge.over != TextEdgeType::Auto;
@@ -745,7 +746,17 @@ InlineLayoutUnit LineBoxBuilder::applyTextBoxTrimOnLineBoxIfNeeded(InlineLayoutU
         auto needToTrimThisMuch = std::max(0.f, lineLayoutResult().lineGeometry.initialLetterClearGap.value_or(0_lu) + rootInlineBox.logicalTop() + textBoxEdgeOverForRootInlineBox());
         lineBoxLogicalHeight -= needToTrimThisMuch;
 
-        rootInlineBox.setLogicalTop(rootInlineBox.logicalTop() - needToTrimThisMuch);
+        auto adjustRootInlineAndBottomAlignedBoxes = [&] {
+            // When trimming makes the line box move up, bottom aligned boxes has to follow the root inline box.
+            // All other boxes can keep their vertical positions relative to the line box top.
+            for (auto& inlineLevelBox : lineBox.nonRootInlineLevelBoxes()) {
+                if (inlineLevelBox.verticalAlign().type != VerticalAlign::Bottom)
+                    continue;
+                inlineLevelBox.setLogicalTop(inlineLevelBox.logicalTop() - needToTrimThisMuch);
+            }
+            rootInlineBox.setLogicalTop(rootInlineBox.logicalTop() - needToTrimThisMuch);
+        };
+        adjustRootInlineAndBottomAlignedBoxes();
         m_lineLayoutResult.firstLineStartTrim = needToTrimThisMuch;
     }
     return lineBoxLogicalHeight;
@@ -753,7 +764,9 @@ InlineLayoutUnit LineBoxBuilder::applyTextBoxTrimOnLineBoxIfNeeded(InlineLayoutU
 
 void LineBoxBuilder::computeLineBoxGeometry(LineBox& lineBox) const
 {
-    auto lineBoxLogicalHeight = applyTextBoxTrimOnLineBoxIfNeeded(LineBoxVerticalAligner { formattingContext() }.computeLogicalHeightAndAlign(lineBox), lineBox.rootInlineBox());
+    auto lineBoxLogicalHeight = applyTextBoxTrimOnLineBoxIfNeeded(LineBoxVerticalAligner { formattingContext() }.computeLogicalHeightAndAlign(lineBox), lineBox);
+    if (formattingContext().quirks().shouldCollapseLineBoxHeight(lineLayoutResult().inlineContent, m_outsideListMarkers.size()))
+        lineBoxLogicalHeight = { };
     lineBox.setLogicalRect({ lineLayoutResult().lineGeometry.logicalTopLeft, lineLayoutResult().lineGeometry.logicalWidth, lineBoxLogicalHeight });
 }
 

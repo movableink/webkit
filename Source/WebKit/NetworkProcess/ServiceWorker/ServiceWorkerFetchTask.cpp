@@ -112,7 +112,7 @@ ServiceWorkerFetchTask::ServiceWorkerFetchTask(WebSWServerConnection& swServerCo
     bool shouldDoNavigationPreload = session && isNavigationRequest(loader.parameters().options.destination) && m_currentRequest.httpMethod() == "GET"_s;
 
     if (shouldDoNavigationPreload && (!isWorkerReady || registration.navigationPreloadState().enabled)) {
-        NetworkLoadParameters parameters = loader.parameters();
+        NetworkLoadParameters parameters = loader.parameters().networkLoadParameters();
         parameters.request = m_currentRequest;
         m_preloader = makeUnique<ServiceWorkerNavigationPreloader>(*session, WTFMove(parameters), registration.navigationPreloadState(), loader.shouldCaptureExtraNetworkLoadMetrics());
         session->addNavigationPreloaderTask(*this);
@@ -141,7 +141,7 @@ RefPtr<IPC::Connection> ServiceWorkerFetchTask::serviceWorkerConnection()
     if (!serviceWorkerConnection)
         return { };
 
-    return serviceWorkerConnection->protectedIPCConnection();
+    return serviceWorkerConnection->ipcConnection();
 }
 
 template<typename Message> bool ServiceWorkerFetchTask::sendToClient(Message&& message)
@@ -288,7 +288,7 @@ void ServiceWorkerFetchTask::processResponse(ResourceResponse&& response, bool n
         loader->setResponse(WTFMove(response));
 }
 
-void ServiceWorkerFetchTask::didReceiveData(const IPC::SharedBufferReference& data, uint64_t encodedDataLength)
+void ServiceWorkerFetchTask::didReceiveData(const IPC::SharedBufferReference& data)
 {
     if (m_isDone)
         return;
@@ -299,13 +299,13 @@ void ServiceWorkerFetchTask::didReceiveData(const IPC::SharedBufferReference& da
     RefPtr buffer = data.unsafeBuffer();
     if (!buffer)
         return;
-    if (!protectedLoader()->continueAfterServiceWorkerReceivedData(*buffer, encodedDataLength))
+    if (!protectedLoader()->continueAfterServiceWorkerReceivedData(*buffer))
         return;
 #endif
-    sendToClient(Messages::WebResourceLoader::DidReceiveData { IPC::SharedBufferReference(data), encodedDataLength, 0 });
+    sendToClient(Messages::WebResourceLoader::DidReceiveData { IPC::SharedBufferReference(data), 0 });
 }
 
-void ServiceWorkerFetchTask::didReceiveDataFromPreloader(const WebCore::FragmentedSharedBuffer& data, uint64_t encodedDataLength)
+void ServiceWorkerFetchTask::didReceiveDataFromPreloader(const WebCore::FragmentedSharedBuffer& data)
 {
     if (m_isDone)
         return;
@@ -316,10 +316,10 @@ void ServiceWorkerFetchTask::didReceiveDataFromPreloader(const WebCore::Fragment
     RefPtr buffer = data.makeContiguous();
     if (!buffer)
         return;
-    if (!protectedLoader()->continueAfterServiceWorkerReceivedData(*buffer, encodedDataLength))
+    if (!protectedLoader()->continueAfterServiceWorkerReceivedData(*buffer))
         return;
 #endif
-    sendToClient(Messages::WebResourceLoader::DidReceiveData { IPC::SharedBufferReference(data), encodedDataLength, 0 });
+    sendToClient(Messages::WebResourceLoader::DidReceiveData { IPC::SharedBufferReference(data), 0 });
 }
 
 void ServiceWorkerFetchTask::didReceiveFormData(const IPC::FormDataReference& formData)
@@ -541,7 +541,7 @@ void ServiceWorkerFetchTask::loadBodyFromPreloader()
         return;
     }
 
-    m_preloader->waitForBody([weakThis = WeakPtr { *this }](auto&& chunk, uint64_t length) {
+    m_preloader->waitForBody([weakThis = WeakPtr { *this }](RefPtr<const WebCore::FragmentedSharedBuffer>&& chunk) {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
@@ -554,7 +554,7 @@ void ServiceWorkerFetchTask::loadBodyFromPreloader()
             protectedThis->didFinish(protectedThis->m_preloader->networkLoadMetrics());
             return;
         }
-        protectedThis->didReceiveDataFromPreloader(const_cast<WebCore::FragmentedSharedBuffer&>(*chunk), length);
+        protectedThis->didReceiveDataFromPreloader(chunk.releaseNonNull());
     });
 }
 

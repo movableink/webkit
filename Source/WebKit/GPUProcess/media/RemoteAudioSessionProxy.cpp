@@ -181,7 +181,7 @@ Ref<RemoteAudioSessionProxyManager> RemoteAudioSessionProxy::protectedAudioSessi
 
 Ref<IPC::Connection> RemoteAudioSessionProxy::protectedConnection() const
 {
-    return m_gpuConnection.get()->protectedConnection();
+    return m_gpuConnection.get()->connection();
 }
 
 void RemoteAudioSessionProxy::triggerBeginInterruptionForTesting()

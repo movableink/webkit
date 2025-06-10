@@ -85,7 +85,7 @@ using ReplyCallbackAggregator = EagerCallbackAggregator<void(id, IsDefaultReply)
     if (!(self = [super init]))
         return nil;
 
-    _aggregator = &aggregator;
+    _aggregator = aggregator;
 
     return self;
 }
@@ -157,7 +157,7 @@ bool WebExtensionAPIRuntime::parseConnectOptions(NSDictionary *options, std::opt
 
 bool WebExtensionAPIRuntime::isPropertyAllowed(const ASCIILiteral& name, WebPage*)
 {
-    if (UNLIKELY(extensionContext().isUnsupportedAPI(propertyPath(), name)))
+    if (extensionContext().isUnsupportedAPI(propertyPath(), name)) [[unlikely]]
         return false;
 
     if (name == "connectNative"_s || name == "sendNativeMessage"_s)
@@ -171,7 +171,7 @@ NSURL *WebExtensionAPIRuntime::getURL(NSString *resourcePath, NSString **outExce
 {
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/runtime/getURL
 
-    return URL { extensionContext().baseURL(), resourcePath };
+    return URL { extensionContext().baseURL(), resourcePath }.createNSURL().autorelease();
 }
 
 NSDictionary *WebExtensionAPIRuntime::getManifest()
@@ -185,7 +185,7 @@ NSString *WebExtensionAPIRuntime::runtimeIdentifier()
 {
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/runtime/id
 
-    return extensionContext().uniqueIdentifier();
+    return extensionContext().uniqueIdentifier().createNSString().autorelease();
 }
 
 void WebExtensionAPIRuntime::getPlatformInfo(Ref<WebExtensionCallbackHandler>&& callback)
@@ -227,7 +227,7 @@ void WebExtensionAPIRuntime::getBackgroundPage(Ref<WebExtensionCallbackHandler>&
 
     WebProcess::singleton().sendWithAsyncReply(Messages::WebExtensionContext::RuntimeGetBackgroundPage(), [protectedThis = Ref { *this }, callback = WTFMove(callback)](Expected<std::optional<WebCore::PageIdentifier>, WebExtensionError>&& result) {
         if (!result) {
-            callback->reportError(result.error());
+            callback->reportError(result.error().createNSString().get());
             return;
         }
 
@@ -275,7 +275,7 @@ void WebExtensionAPIRuntime::openOptionsPage(Ref<WebExtensionCallbackHandler>&& 
 
     WebProcess::singleton().sendWithAsyncReply(Messages::WebExtensionContext::RuntimeOpenOptionsPage(), [protectedThis = Ref { *this }, callback = WTFMove(callback)](Expected<void, WebExtensionError>&& result) {
         if (!result) {
-            callback->reportError(result.error());
+            callback->reportError(result.error().createNSString().get());
             return;
         }
 
@@ -304,13 +304,13 @@ void WebExtensionAPIRuntime::sendMessage(WebPageProxyIdentifier webPageProxyIden
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/runtime/sendMessage
 
     if (messageJSON.length > webExtensionMaxMessageLength) {
-        *outExceptionString = toErrorString(nullString(), @"message", @"it exceeded the maximum allowed length");
+        *outExceptionString = toErrorString(nullString(), @"message", @"it exceeded the maximum allowed length").createNSString().autorelease();
         return;
     }
 
     auto documentIdentifier = toDocumentIdentifier(frame);
     if (!documentIdentifier) {
-        *outExceptionString = toErrorString(nullString(), nullString(), @"an unexpected error occured");
+        *outExceptionString = toErrorString(nullString(), nullString(), @"an unexpected error occured").createNSString().autorelease();
         return;
     }
 
@@ -328,11 +328,11 @@ void WebExtensionAPIRuntime::sendMessage(WebPageProxyIdentifier webPageProxyIden
 
     WebProcess::singleton().sendWithAsyncReply(Messages::WebExtensionContext::RuntimeSendMessage(extensionID, messageJSON, senderParameters), [protectedThis = Ref { *this }, callback = WTFMove(callback)](Expected<String, WebExtensionError>&& result) {
         if (!result) {
-            callback->reportError(result.error());
+            callback->reportError(result.error().createNSString().get());
             return;
         }
 
-        callback->call(parseJSON(result.value(), JSONOptions::FragmentsAllowed));
+        callback->call(parseJSON(result.value().createNSString().get(), JSONOptions::FragmentsAllowed));
     }, extensionContext().identifier());
 }
 
@@ -342,7 +342,7 @@ RefPtr<WebExtensionAPIPort> WebExtensionAPIRuntime::connect(WebPageProxyIdentifi
 
     auto documentIdentifier = toDocumentIdentifier(frame);
     if (!documentIdentifier) {
-        *outExceptionString = toErrorString(nullString(), nullString(), @"an unexpected error occured");
+        *outExceptionString = toErrorString(nullString(), nullString(), @"an unexpected error occured").createNSString().autorelease();
         return nullptr;
     }
 
@@ -368,7 +368,7 @@ RefPtr<WebExtensionAPIPort> WebExtensionAPIRuntime::connect(WebPageProxyIdentifi
         if (result)
             return;
 
-        port->setError(runtime().reportError(result.error(), globalContext.get()));
+        port->setError(runtime().reportError(result.error().createNSString().get(), globalContext.get()));
         port->disconnect();
     }, extensionContext().identifier());
 
@@ -381,11 +381,11 @@ void WebExtensionAPIRuntime::sendNativeMessage(WebFrame& frame, NSString *applic
 
     WebProcess::singleton().sendWithAsyncReply(Messages::WebExtensionContext::RuntimeSendNativeMessage(applicationID, messageJSON), [protectedThis = Ref { *this }, callback = WTFMove(callback)](Expected<String, WebExtensionError>&& result) {
         if (!result) {
-            callback->reportError(result.error());
+            callback->reportError(result.error().createNSString().get());
             return;
         }
 
-        callback->call(parseJSON(result.value(), JSONOptions::FragmentsAllowed));
+        callback->call(parseJSON(result.value().createNSString().get(), JSONOptions::FragmentsAllowed));
     }, extensionContext().identifier());
 }
 
@@ -399,7 +399,7 @@ RefPtr<WebExtensionAPIPort> WebExtensionAPIRuntime::connectNative(WebPageProxyId
         if (result)
             return;
 
-        port->setError(runtime().reportError(result.error(), globalContext.get()));
+        port->setError(runtime().reportError(result.error().createNSString().get(), globalContext.get()));
         port->disconnect();
     }, extensionContext().identifier());
 
@@ -411,13 +411,13 @@ void WebExtensionAPIWebPageRuntime::sendMessage(WebPage& page, WebFrame& frame, 
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/runtime/sendMessage
 
     if (messageJSON.length > webExtensionMaxMessageLength) {
-        *outExceptionString = toErrorString(nullString(), @"message", @"it exceeded the maximum allowed length");
+        *outExceptionString = toErrorString(nullString(), @"message", @"it exceeded the maximum allowed length").createNSString().autorelease();
         return;
     }
 
     auto documentIdentifier = toDocumentIdentifier(frame);
     if (!documentIdentifier) {
-        *outExceptionString = toErrorString(nullString(), nullString(), @"an unexpected error occured");
+        *outExceptionString = toErrorString(nullString(), nullString(), @"an unexpected error occured").createNSString().autorelease();
         return;
     }
 
@@ -447,7 +447,7 @@ void WebExtensionAPIWebPageRuntime::sendMessage(WebPage& page, WebFrame& frame, 
             return;
         }
 
-        callback->call(parseJSON(result.value(), JSONOptions::FragmentsAllowed));
+        callback->call(parseJSON(result.value().createNSString().get(), JSONOptions::FragmentsAllowed));
     }, destinationExtensionContext->identifier());
 }
 
@@ -461,7 +461,7 @@ RefPtr<WebExtensionAPIPort> WebExtensionAPIWebPageRuntime::connect(WebPage& page
 
     auto documentIdentifier = toDocumentIdentifier(frame);
     if (!documentIdentifier) {
-        *outExceptionString = toErrorString(nullString(), nullString(), @"an unexpected error occured");
+        *outExceptionString = toErrorString(nullString(), nullString(), @"an unexpected error occured").createNSString().autorelease();
         return nullptr;
     }
 
@@ -495,7 +495,7 @@ RefPtr<WebExtensionAPIPort> WebExtensionAPIWebPageRuntime::connect(WebPage& page
         if (result)
             return;
 
-        port->setError(runtime().reportError(result.error(), globalContext.get()));
+        port->setError(runtime().reportError(result.error().createNSString().get(), globalContext.get()));
         port->disconnect();
     }, destinationExtensionContext->identifier());
 
@@ -567,7 +567,7 @@ NSDictionary *toWebAPI(const WebExtensionMessageSenderParameters& parameters, co
     NSMutableDictionary *result = [NSMutableDictionary dictionary];
 
     if (parameters.extensionUniqueIdentifier)
-        result[idKey] = (NSString *)parameters.extensionUniqueIdentifier.value();
+        result[idKey] = parameters.extensionUniqueIdentifier.value().createNSString().get();
 
     if (parameters.tabParameters)
         result[tabKey] = toWebAPI(parameters.tabParameters.value());
@@ -581,15 +581,15 @@ NSDictionary *toWebAPI(const WebExtensionMessageSenderParameters& parameters, co
         auto baseURLOrigin = makeString(baseURL.protocol(), "://"_s, baseURL.host());
 
         if (equalIgnoringASCIICase(securityOrigin, baseURLOrigin))
-            result[originKey] = (NSString *)baseURLOrigin;
+            result[originKey] = baseURLOrigin.createNSString().get();
         else
-            result[originKey] = (NSString *)securityOrigin;
+            result[originKey] = securityOrigin.createNSString().get();
 
-        result[urlKey] = (NSString *)parameters.url.string();
+        result[urlKey] = parameters.url.string().createNSString().get();
     }
 
     if (parameters.documentIdentifier.isValid())
-        result[documentIdKey] = (NSString *)parameters.documentIdentifier.toString();
+        result[documentIdKey] = parameters.documentIdentifier.toString().createNSString().get();
 
     return [result copy];
 }
@@ -599,7 +599,11 @@ static bool matches(WebFrame& frame, const std::optional<WebExtensionMessageTarg
     if (!targetParameters)
         return true;
 
-    // Skip all frames / documents that don't match the target parameters.
+    // Skip all pages / frames / documents that don't match the target parameters.
+    auto& pageProxyIdentifier = targetParameters.value().pageProxyIdentifier;
+    if (pageProxyIdentifier && pageProxyIdentifier != frame.protectedPage()->webPageProxyIdentifier())
+        return false;
+
     auto& frameIdentifier = targetParameters.value().frameIdentifier;
     if (frameIdentifier && !matchesFrame(frameIdentifier.value(), frame))
         return false;
@@ -624,7 +628,7 @@ void WebExtensionContextProxy::internalDispatchRuntimeMessageEvent(WebExtensionC
         return;
     }
 
-    id message = parseJSON(messageJSON, JSONOptions::FragmentsAllowed);
+    id message = parseJSON(messageJSON.createNSString().get(), JSONOptions::FragmentsAllowed);
     auto *senderInfo = toWebAPI(senderParameters, baseURL());
     auto sourceContentWorldType = senderParameters.contentWorldType;
 
@@ -806,7 +810,7 @@ void WebExtensionContextProxy::dispatchRuntimeInstalledEvent(WebExtensionContext
     NSDictionary *details;
 
     if (installReason == WebExtensionContext::InstallReason::ExtensionUpdate)
-        details = @{ reasonKey: toWebAPI(installReason), previousVersionKey: (NSString *)previousVersion };
+        details = @{ reasonKey: toWebAPI(installReason), previousVersionKey: previousVersion.createNSString().get() };
     else
         details = @{ reasonKey: toWebAPI(installReason) };
 

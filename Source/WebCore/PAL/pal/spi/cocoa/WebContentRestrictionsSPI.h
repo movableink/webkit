@@ -37,6 +37,11 @@
 + (BOOL)shouldEvaluateURLs;
 - (void)evaluateURL:(NSURL *)url withCompletion:(void (^)(BOOL shouldBlock, NSData * _Nullable blockPageRepresentation))completion onCompletionQueue:(dispatch_queue_t)queue;
 - (void)allowURL:(NSURL *)url withCompletion:(void (^)(BOOL didAllow, NSError *error))completion;
+
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+- (instancetype)initWithConfigurationAtPath:(NSString *)configurationPath;
++ (BOOL)shouldEvaluateURLsForConfigurationAtPath:(NSString *)configurationPath;
+#endif
 @end
 
 #endif // USE(APPLE_INTERNAL_SDK)

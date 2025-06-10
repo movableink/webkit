@@ -701,7 +701,7 @@ sub AddToIncludesForIDLType
     }
 
     if ($type->isUnion) {
-        AddToIncludes("<variant>", $includesRef, $conditional);
+        AddToIncludes("<wtf/Variant.h>", $includesRef, $conditional);
         AddToIncludes("JSDOMConvertUnion.h", $includesRef, $conditional);
 
         foreach my $memberType (@{$type->subtypes}) {
@@ -830,7 +830,7 @@ sub GenerateIndexedGetter
         # In the common case, the implementation getter will do a bound check and return null if the index is out of range.
         # We can thus call item() right away and do a null check instead of first checking if `index < length` and then calling
         # item(). This avoids duplicates bounds check, which is especially useful when `length()` is virtual, like on NodeList.
-        $itemGetterCondition = "auto item = thisObject->wrapped().${indexedGetterFunctionName}(${indexExpression}); LIKELY(!!item)";
+        $itemGetterCondition = "auto item = thisObject->wrapped().${indexedGetterFunctionName}(${indexExpression}); !!item";
         $nativeToJSConversion = NativeToJSValueUsingPointers($indexedGetterOperation, $interface, "WTFMove(item)", "*thisObject->globalObject()");
     }
     return ($itemGetterCondition, $nativeToJSConversion, StringifyJSCAttributes(\@attributes));
@@ -920,7 +920,7 @@ sub GenerateGetOwnPropertySlot
         # NOTE: GenerateIndexedGetter implements steps 1.2.1 - 1.2.8.
         
         my ($itemGetterCondition, $nativeToJSConversion, $attributeString) = GenerateIndexedGetter($interface, $indexedGetterOperation, "index.value()");
-        push(@$outputArray, "        if ($itemGetterCondition) {\n");
+        push(@$outputArray, "        if ($itemGetterCondition) [[likely]] {\n");
         
         push(@$outputArray, "            auto value = ${nativeToJSConversion};\n");
         push(@$outputArray, "            RETURN_IF_EXCEPTION(throwScope, false);\n");
@@ -1031,14 +1031,14 @@ sub GenerateGetOwnPropertySlotByIndex
     # 1. If O supports indexed properties and P is an array index property name, then:
     if ($indexedGetterOperation) {
         # 1.1. Let index be the result of calling ToUint32(P).
-        push(@$outputArray, "    if (LIKELY(index <= MAX_ARRAY_INDEX)) {\n");
+        push(@$outputArray, "    if (index <= MAX_ARRAY_INDEX) [[likely]] {\n");
         
         # 1.2. If index is a supported property index, then:
         # FIXME: This should support non-contiguous indices.
         # NOTE: GenerateIndexedGetter implements steps 1.2.1 - 1.2.8.
         
         my ($itemGetterCondition, $nativeToJSConversion, $attributeString) = GenerateIndexedGetter($interface, $indexedGetterOperation, "index");
-        push(@$outputArray, "        if ($itemGetterCondition) {\n");
+        push(@$outputArray, "        if ($itemGetterCondition) [[likely]] {\n");
         
         push(@$outputArray, "            auto value = ${nativeToJSConversion};\n");
         push(@$outputArray, "            RETURN_IF_EXCEPTION(throwScope, false);\n");
@@ -1164,7 +1164,7 @@ sub GenerateInvokeIndexedPropertySetter
     my $nativeValue = JSValueToNative($interface, $argument, $value, $indexedSetterOperation->extendedAttributes->{Conditional}, "lexicalGlobalObject", "*lexicalGlobalObject", "thisObject", "", "");
 
     push(@$outputArray, $indent . "auto nativeValue = ${nativeValue};\n");
-    push(@$outputArray, $indent . "if (UNLIKELY(nativeValue.hasException(throwScope)))\n");
+    push(@$outputArray, $indent . "if (nativeValue.hasException(throwScope)) [[unlikely]]\n");
     push(@$outputArray, $indent . "    return true;\n");
 
     my $indexedSetterFunctionName = $indexedSetterOperation->name || "setItem";
@@ -1182,7 +1182,7 @@ sub GenerateInvokeNamedPropertySetter
     my $nativeValue = JSValueToNative($interface, $argument, $value, $namedSetterOperation->extendedAttributes->{Conditional}, "lexicalGlobalObject", "*lexicalGlobalObject", "thisObject", "", "");
     
     push(@$outputArray, $indent . "auto nativeValue = ${nativeValue};\n");
-    push(@$outputArray, $indent . "if (UNLIKELY(nativeValue.hasException(throwScope)))\n");
+    push(@$outputArray, $indent . "if (nativeValue.hasException(throwScope)) [[unlikely]]\n");
     push(@$outputArray, $indent . "    return true;\n");
 
     my $namedSetterFunctionName = $namedSetterOperation->name || "setNamedItem";
@@ -1204,7 +1204,7 @@ sub GeneratePut
     push(@$outputArray, "{\n");
     push(@$outputArray, "    auto* thisObject = jsCast<${className}*>(cell);\n");
     push(@$outputArray, "    ASSERT_GC_OBJECT_INHERITS(thisObject, info());\n\n");
-    push(@$outputArray, "    if (UNLIKELY(thisObject != putPropertySlot.thisValue()))\n");
+    push(@$outputArray, "    if (thisObject != putPropertySlot.thisValue()) [[unlikely]]\n");
     push(@$outputArray, "        return JSObject::put(thisObject, lexicalGlobalObject, propertyName, value, putPropertySlot);\n");
 
     # Temporary quirk for ungap/@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.
@@ -1214,7 +1214,7 @@ sub GeneratePut
        AddToImplIncludes("Quirks.h");
        push(@$outputArray, "\n    // Temporary quirk for ungap/\@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.\n");
        push(@$outputArray, "    if (auto* document = dynamicDowncast<Document>(jsDynamicCast<JSDOMGlobalObject*>(lexicalGlobalObject)->scriptExecutionContext())) {\n");
-       push(@$outputArray, "        if (UNLIKELY(document->quirks().needsConfigurableIndexedPropertiesQuirk()))\n");
+       push(@$outputArray, "        if (document->quirks().needsConfigurableIndexedPropertiesQuirk()) [[unlikely]]\n");
        push(@$outputArray, "            return JSObject::put(thisObject, lexicalGlobalObject, propertyName, value, putPropertySlot);\n");
        push(@$outputArray, "    }\n\n");
     }
@@ -1325,7 +1325,7 @@ sub GeneratePutByIndex
        AddToImplIncludes("Quirks.h");
        push(@$outputArray, "\n    // Temporary quirk for ungap/\@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.\n");
        push(@$outputArray, "    if (auto* document = dynamicDowncast<Document>(jsDynamicCast<JSDOMGlobalObject*>(lexicalGlobalObject)->scriptExecutionContext())) {\n");
-       push(@$outputArray, "        if (UNLIKELY(document->quirks().needsConfigurableIndexedPropertiesQuirk()))\n");
+       push(@$outputArray, "        if (document->quirks().needsConfigurableIndexedPropertiesQuirk()) [[unlikely]]\n");
        push(@$outputArray, "            return JSObject::putByIndex(cell, lexicalGlobalObject, index, value, shouldThrow);\n");
        push(@$outputArray, "    }\n\n");
     }
@@ -1346,7 +1346,7 @@ sub GeneratePutByIndex
     }
     
     if ($indexedSetterOperation) {
-        push(@$outputArray, "    if (LIKELY(index <= MAX_ARRAY_INDEX)) {\n");
+        push(@$outputArray, "    if (index <= MAX_ARRAY_INDEX) [[likely]] {\n");
         
         GenerateInvokeIndexedPropertySetter($outputArray, "        ", $interface, $indexedSetterOperation, "index", "value");
         
@@ -1617,7 +1617,7 @@ sub GenerateDeleteProperty
        AddToImplIncludes("Quirks.h");
        push(@$outputArray, "\n    // Temporary quirk for ungap/\@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.\n");
        push(@$outputArray, "    if (auto* document = dynamicDowncast<Document>(jsDynamicCast<JSDOMGlobalObject*>(lexicalGlobalObject)->scriptExecutionContext())) {\n");
-       push(@$outputArray, "        if (UNLIKELY(document->quirks().needsConfigurableIndexedPropertiesQuirk()))\n");
+       push(@$outputArray, "        if (document->quirks().needsConfigurableIndexedPropertiesQuirk()) [[unlikely]]\n");
        push(@$outputArray, "            return JSObject::deleteProperty(cell, lexicalGlobalObject, propertyName, slot);\n");
        push(@$outputArray, "    }\n\n");
     }
@@ -1670,7 +1670,7 @@ sub GenerateDeletePropertyByIndex
        AddToImplIncludes("Quirks.h");
        push(@$outputArray, "\n    // Temporary quirk for ungap/\@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.\n");
        push(@$outputArray, "    if (auto* document = dynamicDowncast<Document>(jsDynamicCast<JSDOMGlobalObject*>(lexicalGlobalObject)->scriptExecutionContext())) {\n");
-       push(@$outputArray, "        if (UNLIKELY(document->quirks().needsConfigurableIndexedPropertiesQuirk()))\n");
+       push(@$outputArray, "        if (document->quirks().needsConfigurableIndexedPropertiesQuirk()) [[unlikely]]\n");
        push(@$outputArray, "            return JSObject::deletePropertyByIndex(cell, lexicalGlobalObject, index);\n");
        push(@$outputArray, "    }\n\n");
     }
@@ -2475,13 +2475,7 @@ sub GetEnumerationValueName
     return "EmptyString" if $name eq "";
     return "WebRTC" if $name eq "webrtc";
 
-    my @parts = split("-", $name);
-    @parts = map {
-        my $part = $_;
-        my @dotParts = split(/\./, $part);
-        join("", map { $codeGenerator->WK_ucfirst($_) } @dotParts)
-    } @parts;
-    $name = join("", @parts);
+    $name = join("", map { $codeGenerator->WK_ucfirst($_) } split("-", $name));
     $name = "_$name" if $name =~ /^\d/;
     return $name;
 }
@@ -2581,7 +2575,7 @@ sub GenerateEnumerationImplementationContent
     }
     $result .= "    };\n";
     $result .= "    static constexpr SortedArrayMap enumerationMapping { mappings };\n";
-    $result .= "    if (auto* enumerationValue = enumerationMapping.tryGet(stringValue); LIKELY(enumerationValue))\n";
+    $result .= "    if (auto* enumerationValue = enumerationMapping.tryGet(stringValue); enumerationValue) [[likely]]\n";
     $result .= "        return *enumerationValue;\n";
     $result .= "    return std::nullopt;\n";
     $result .= "}\n\n";
@@ -2805,7 +2799,7 @@ sub GenerateDictionaryImplementationContent
         $result .= "    auto* object = isNullOrUndefined ? nullptr : value.getObject();\n";
 
         # 1. If Type(V) is not Undefined, Null or Object, then throw a TypeError.
-        $result .= "    if (UNLIKELY(!isNullOrUndefined && !object)) {\n";
+        $result .= "    if (!isNullOrUndefined && !object) [[unlikely]] {\n";
         $result .= "        throwTypeError(&lexicalGlobalObject, throwScope);\n";
         $result .= "        return ConversionResultException { };\n";
         $result .= "    }\n";
@@ -2869,7 +2863,7 @@ sub GenerateDictionaryImplementationContent
                     $result .= "${indent}    }\n";
 
                     $result .= "${indent}    auto ${implementedAsKey}ConversionResult = ${conversion};\n";
-                    $result .= "${indent}    if (UNLIKELY(${implementedAsKey}ConversionResult.hasException(throwScope)))\n";
+                    $result .= "${indent}    if (${implementedAsKey}ConversionResult.hasException(throwScope)) [[unlikely]]\n";
                     $result .= "${indent}        return ConversionResultException { };\n";
                     $result .= "${indent}    result.$implementedAsKey = ${implementedAsKey}ConversionResult.releaseReturnValue();\n";
                 } elsif (defined $member->default) {
@@ -2877,7 +2871,7 @@ sub GenerateDictionaryImplementationContent
                     my $conversion = JSValueToNative($typeScope, $member, "${key}Value", $conditional, "&lexicalGlobalObject", "lexicalGlobalObject", "", "*jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject)", undef, undef, 1, $defaultValueFunctor);
 
                     $result .= "${indent}    auto ${implementedAsKey}ConversionResult = ${conversion};\n";
-                    $result .= "${indent}    if (UNLIKELY(${implementedAsKey}ConversionResult.hasException(throwScope)))\n";
+                    $result .= "${indent}    if (${implementedAsKey}ConversionResult.hasException(throwScope)) [[unlikely]]\n";
                     $result .= "${indent}        return ConversionResultException { };\n";
                     $result .= "${indent}    result.$implementedAsKey = ${implementedAsKey}ConversionResult.releaseReturnValue();\n";
                 } else {
@@ -2886,7 +2880,7 @@ sub GenerateDictionaryImplementationContent
 
                     $result .= "${indent}    if (!${key}Value.isUndefined()) {\n";
                     $result .= "${indent}        auto ${implementedAsKey}ConversionResult = ${conversion};\n";
-                    $result .= "${indent}        if (UNLIKELY(${implementedAsKey}ConversionResult.hasException(throwScope)))\n";
+                    $result .= "${indent}        if (${implementedAsKey}ConversionResult.hasException(throwScope)) [[unlikely]]\n";
                     $result .= "${indent}            return ConversionResultException { };\n";
                     $result .= "${indent}        result.$implementedAsKey = ${implementedAsKey}ConversionResult.releaseReturnValue();\n";
                     $result .= "${indent}    }\n";
@@ -3085,6 +3079,7 @@ sub GenerateHeader
     }
 
     $headerIncludes{"JSWindowProxy.h"} = 1 if $interfaceName eq "DOMWindow";
+    $headerIncludes{"EventTargetInlines.h"} = 1 if $parentClassName eq "JSEventTarget";
 
     my $exportMacro = GetExportMacroForJSClass($interface);
 
@@ -3377,7 +3372,7 @@ sub GenerateHeader
             my $conditionalString = $codeGenerator->GenerateConditionalString($operation);
             push(@headerContent, "#if ${conditionalString}\n") if $conditionalString;
 
-            my $functionImplementationName = $operation->extendedAttributes->{ImplementedAs} || $codeGenerator->WK_lcfirst($operation->name);
+            my $functionImplementationName = $codeGenerator->OperationName($operation);
 
             my @functionArguments = ();
             push(@functionArguments, "JSC::JSGlobalObject&");
@@ -3486,6 +3481,7 @@ sub GenerateHeader
         push(@headerContent, "inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, $implType* impl) { return impl ? toJS(lexicalGlobalObject, globalObject, *impl) : JSC::jsNull(); }\n");
 
         push(@headerContent, "JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject*, JSDOMGlobalObject*, Ref<$implType>&&);\n");
+        push(@headerContent, "ALWAYS_INLINE JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, $implType& impl) { return toJSNewlyCreated(lexicalGlobalObject, globalObject, Ref { impl }); }\n");
         push(@headerContent, "inline JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, RefPtr<$implType>&& impl) { return impl ? toJSNewlyCreated(lexicalGlobalObject, globalObject, impl.releaseNonNull()) : JSC::jsNull(); }\n");
    }
 
@@ -4289,7 +4285,8 @@ sub GenerateRuntimeEnableConditionalString
 
         my @flags = split(/&/, $context->extendedAttributes->{EnabledBySetting});
         my $exposedToWindowOnly = $interface->extendedAttributes->{Exposed} && $interface->extendedAttributes->{Exposed} eq "Window";
-        AddToImplIncludes($exposedToWindowOnly ? "Document.h" : "ScriptExecutionContext.h");
+        AddToImplIncludes($exposedToWindowOnly ? "DocumentInlines.h" : "ScriptExecutionContext.h");
+        AddToImplIncludes("Settings.h");
         foreach my $flag (@flags) {
             my @orflags = split(/\|/, $flag);
             my @orconjuncts;
@@ -4517,6 +4514,7 @@ sub GenerateImplementation
 
     AddToImplIncludes("${implType}.h") if $interface->isNamespaceObject;
     AddToImplIncludes("ElementInlines.h") if $interfaceName eq "Node";
+    AddToImplIncludes("DocumentInlines.h") if $interfaceName =~ /Document/;
 
     @implContent = ();
 
@@ -5176,7 +5174,7 @@ sub GenerateImplementation
         push(@implContent, "    SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);\n");
         push(@implContent, "    auto throwScope = DECLARE_THROW_SCOPE(vm);\n");
         push(@implContent, "    auto* prototype = jsDynamicCast<${className}Prototype*>(JSValue::decode(thisValue));\n");
-        push(@implContent, "    if (UNLIKELY(!prototype))\n");
+        push(@implContent, "    if (!prototype) [[unlikely]]\n");
         push(@implContent, "        return throwVMTypeError(lexicalGlobalObject, throwScope);\n");
         push(@implContent, "    return JSValue::encode(${className}::getConstructor(vm, prototype->globalObject()));\n");
         push(@implContent, "}\n\n");
@@ -5274,6 +5272,7 @@ sub GenerateImplementation
 
     if (NeedsImplementationClass($interface) && !$interface->extendedAttributes->{CustomHeapSnapshot}) {
         AddToImplIncludes("<JavaScriptCore/HeapAnalyzer.h>");
+        AddToImplIncludes("ContextDestructionObserverInlines.h");
         AddToImplIncludes("ScriptExecutionContext.h");
         AddToImplIncludes("<wtf/URL.h>");
         AddToImplIncludes("<wtf/text/MakeString.h>");
@@ -5318,7 +5317,7 @@ sub GenerateImplementation
             $emittedJSCast = 1;
             push(@implContent, "    SUPPRESS_UNCOUNTED_LOCAL auto& wrapped = js${interfaceName}->wrapped();\n");
             push(@implContent, "    if (!wrapped.isContextStopped() && wrapped.hasPendingActivity()) {\n");
-            push(@implContent, "        if (UNLIKELY(reason))\n");
+            push(@implContent, "        if (reason) [[unlikely]]\n");
             push(@implContent, "            *reason = \"ActiveDOMObject with pending activity\"_s;\n");
             push(@implContent, "        return true;\n");
             push(@implContent, "     }\n");
@@ -5342,13 +5341,13 @@ sub GenerateImplementation
             my $rootString;
             if (GetGenerateIsReachable($interface) eq "Impl") {
                 $rootString  = "    ${implType}* owner = &js${interfaceName}->wrapped();\n";
-                $rootString .= "    if (UNLIKELY(reason))\n";
+                $rootString .= "    if (reason) [[unlikely]]\n";
                 $rootString .= "        *reason = \"Reachable from ${interfaceName}\"_s;\n";
             } elsif (GetGenerateIsReachable($interface) eq "ReachableFromDOMWindow") {
                 $rootString  = "    auto* owner = WTF::getPtr(js${interfaceName}->wrapped().window());\n";
                 $rootString .= "    if (!owner)\n";
                 $rootString .= "        return false;\n";
-                $rootString .= "    if (UNLIKELY(reason))\n";
+                $rootString .= "    if (reason) [[unlikely]]\n";
                 $rootString .= "        *reason = \"Reachable from Window\"_s;\n";
             } elsif (GetGenerateIsReachable($interface) eq "ReachableFromNavigator") {
                 $implIncludes{"Navigator.h"} = 1;
@@ -5356,17 +5355,17 @@ sub GenerateImplementation
                 $rootString  = "    NavigatorBase* owner = WTF::getPtr(js${interfaceName}->wrapped().navigator());\n";
                 $rootString .= "    if (!owner)\n";
                 $rootString .= "        return false;\n";
-                $rootString .= "    if (UNLIKELY(reason))\n";
+                $rootString .= "    if (reason) [[unlikely]]\n";
                 $rootString .= "        *reason = \"Reachable from Navigator\"_s;\n";
             } elsif (GetGenerateIsReachable($interface) eq "ImplCanvasBase") {
                 $rootString  = "    auto& owner = js${interfaceName}->wrapped().canvasBase();\n";
-                $rootString .= "    if (UNLIKELY(reason))\n";
+                $rootString .= "    if (reason) [[unlikely]]\n";
                 $rootString .= "        *reason = \"Reachable from CanvasBase\"_s;\n";
             } elsif (GetGenerateIsReachable($interface) eq "ImplDocument") {
                 $rootString  = "    Document* owner = WTF::getPtr(js${interfaceName}->wrapped().document());\n";
                 $rootString .= "    if (!owner)\n";
                 $rootString .= "        return false;\n";
-                $rootString .= "    if (UNLIKELY(reason))\n";
+                $rootString .= "    if (reason) [[unlikely]]\n";
                 $rootString .= "        *reason = \"Reachable from Document\"_s;\n";
             } elsif (GetGenerateIsReachable($interface) eq "ImplElementRoot") {
                 $implIncludes{"Element.h"} = 1;
@@ -5374,29 +5373,29 @@ sub GenerateImplementation
                 $rootString  = "    Element* owner = WTF::getPtr(js${interfaceName}->wrapped().element());\n";
                 $rootString .= "    if (!owner)\n";
                 $rootString .= "        return false;\n";
-                $rootString .= "    if (UNLIKELY(reason))\n";
+                $rootString .= "    if (reason) [[unlikely]]\n";
                 $rootString .= "        *reason = \"Reachable from ${interfaceName}Owner\"_s;\n";
             } elsif (GetGenerateIsReachable($interface) eq "ImplOwnerNodeRoot") {
                 $implIncludes{"Element.h"} = 1;
                 $implIncludes{"JSNodeCustom.h"} = 1;
                 $rootString  = "    auto* owner = WTF::getPtr(js${interfaceName}->wrapped().ownerNode());\n";
-                $rootString .= "    if (UNLIKELY(reason))\n";
+                $rootString .= "    if (reason) [[unlikely]]\n";
                 $rootString .= "        *reason = \"Reachable from ${interfaceName} ownerNode\"_s;\n";
             } elsif (GetGenerateIsReachable($interface) eq "ImplScriptExecutionContext") {
                 $rootString  = "    ScriptExecutionContext* owner = WTF::getPtr(js${interfaceName}->wrapped().scriptExecutionContext());\n";
                 $rootString .= "    if (!owner)\n";
                 $rootString .= "        return false;\n";
-                $rootString .= "    if (UNLIKELY(reason))\n";
+                $rootString .= "    if (reason) [[unlikely]]\n";
                 $rootString .= "        *reason = \"Reachable from ScriptExecutionContext\"_s;\n";
             } elsif (GetGenerateIsReachable($interface) eq "ImplWebXRSessionRoot") {
                 $rootString  = "    WebXRSession* owner = WTF::getPtr(js${interfaceName}->wrapped().session());\n";
                 $rootString .= "    if (!owner)\n";
                 $rootString .= "        return false;\n";
-                $rootString .= "    if (UNLIKELY(reason))\n";
+                $rootString .= "    if (reason) [[unlikely]]\n";
                 $rootString .= "        *reason = \"Reachable from WebXRSession\"_s;\n";
             } else {
                 $rootString  = "    auto& owner = js${interfaceName}->wrapped();\n";
-                $rootString .= "    if (UNLIKELY(reason))\n";
+                $rootString .= "    if (reason) [[unlikely]]\n";
                 $rootString .= "        *reason = \"Reachable from js${interfaceName}\"_s;\n";
             }
 
@@ -5779,7 +5778,7 @@ sub GenerateAttributeSetterBodyDefinition
         push(@$outputArray, "    RETURN_IF_EXCEPTION(throwScope, false);\n");
         
         # 3.5.9.2. If Type(Q) is not Object, then throw a TypeError.
-        push(@$outputArray, "    if (UNLIKELY(!valueToForwardTo.isObject())) {\n");
+        push(@$outputArray, "    if (!valueToForwardTo.isObject()) [[unlikely]] {\n");
         push(@$outputArray, "        throwTypeError(&lexicalGlobalObject, throwScope);\n");
         push(@$outputArray, "        return false;\n");
         push(@$outputArray, "    }\n");
@@ -5839,7 +5838,7 @@ sub GenerateAttributeSetterBodyDefinition
 
             push(@$outputArray, "    auto optionalNativeValue = parseEnumeration<" . GetEnumerationClassName($attribute->type, $interface) . ">(lexicalGlobalObject, value);\n");
             push(@$outputArray, "    RETURN_IF_EXCEPTION(throwScope, false);\n");
-            push(@$outputArray, "    if (UNLIKELY(!optionalNativeValue))\n");
+            push(@$outputArray, "    if (!optionalNativeValue) [[unlikely]]\n");
             push(@$outputArray, "        return false;\n");
 
             $readValue = "optionalNativeValue.value()";
@@ -5850,7 +5849,7 @@ sub GenerateAttributeSetterBodyDefinition
 
             my $toNativeExpression = JSValueToNative($interface, $attribute, "value", $attribute->extendedAttributes->{Conditional}, "&lexicalGlobalObject", "lexicalGlobalObject", "thisObject", $globalObjectReference, $exceptionThrower);
             push(@$outputArray, "    auto nativeValueConversionResult = ${toNativeExpression};\n");
-            push(@$outputArray, "    if (UNLIKELY(nativeValueConversionResult.hasException(throwScope)))\n");
+            push(@$outputArray, "    if (nativeValueConversionResult.hasException(throwScope)) [[unlikely]]\n");
             push(@$outputArray, "        return false;\n");
 
             $readValue = "nativeValueConversionResult.returnValue()";
@@ -6065,7 +6064,7 @@ sub GenerateOperationDefinition
     AddToImplIncludes("JSDOMOperationReturningPromise.h", $conditional) if $hasPromiseReturnType || $operation->extendedAttributes->{ReturnsPromisePair};
 
     my $functionName = GetFunctionName($interface, $className, $operation);
-    my $functionImplementationName = $operation->extendedAttributes->{ImplementedAs} || $codeGenerator->WK_lcfirst($operation->name);
+    my $functionImplementationName = $codeGenerator->OperationName($operation);
     my $functionBodyName = ($isOverloaded ? $functionName . $operation->{overloadIndex} : $functionName) . "Body";
 
     GenerateOperationBodyDefinition($outputArray, $interface, $className, $operation, $functionName, $functionImplementationName, $functionBodyName, $isOverloaded);
@@ -6331,14 +6330,14 @@ sub GenerateCallWith
     # Script execution context of current realm (https://html.spec.whatwg.org/multipage/webappapis.html#concept-current-everything)
     if ($codeGenerator->ExtendedAttributeContains($callWith, "CurrentScriptExecutionContext")) {
         push(@$outputArray, $indent . "auto* context = ${scriptExecutionContextAccessor}->scriptExecutionContext();\n");
-        push(@$outputArray, $indent . "if (UNLIKELY(!context))\n");
+        push(@$outputArray, $indent . "if (!context) [[unlikely]]\n");
         push(@$outputArray, $indent . "    return" . ($contextMissing ? " " . $contextMissing : "") . ";\n");
         push(@callWithArgs, "*context");
     }
     # Script execution context of relevant realm (https://html.spec.whatwg.org/multipage/webappapis.html#concept-relevant-everything)
     if ($codeGenerator->ExtendedAttributeContains($callWith, "RelevantScriptExecutionContext")) {
         push(@$outputArray, $indent . "auto* context = ${relevantGlobalObjectPointer}->scriptExecutionContext();\n");
-        push(@$outputArray, $indent . "if (UNLIKELY(!context))\n");
+        push(@$outputArray, $indent . "if (!context) [[unlikely]]\n");
         push(@$outputArray, $indent . "    return" . ($contextMissing ? " " . $contextMissing : "") . ";\n");
         push(@callWithArgs, "*context");
     }
@@ -6346,7 +6345,7 @@ sub GenerateCallWith
     if ($codeGenerator->ExtendedAttributeContains($callWith, "CurrentDocument")) {
         AddToImplIncludes("Document.h");
         push(@$outputArray, $indent . "RefPtr context = ${scriptExecutionContextAccessor}->scriptExecutionContext();\n");
-        push(@$outputArray, $indent . "if (UNLIKELY(!context))\n");
+        push(@$outputArray, $indent . "if (!context) [[unlikely]]\n");
         push(@$outputArray, $indent . "    return" . ($contextMissing ? " " . $contextMissing : "") . ";\n");
         push(@$outputArray, $indent . "Ref document = downcast<Document>(*context);\n");
         push(@callWithArgs, "document.get()");
@@ -6355,7 +6354,7 @@ sub GenerateCallWith
     if ($codeGenerator->ExtendedAttributeContains($callWith, "RelevantDocument")) {
         AddToImplIncludes("Document.h");
         push(@$outputArray, $indent . "RefPtr context = ${relevantGlobalObjectPointer}->scriptExecutionContext();\n");
-        push(@$outputArray, $indent . "if (UNLIKELY(!context))\n");
+        push(@$outputArray, $indent . "if (!context) [[unlikely]]\n");
         push(@$outputArray, $indent . "    return" . ($contextMissing ? " " . $contextMissing : "") . ";\n");
         push(@$outputArray, $indent . "Ref document = downcast<Document>(*context);\n");
         push(@callWithArgs, "document.get()");
@@ -6424,7 +6423,7 @@ sub GenerateArgumentsCountCheck
         }
     }
     if ($numMandatoryArguments >= 1) {
-        push(@$outputArray, $indent . "if (UNLIKELY(callFrame->argumentCount() < $numMandatoryArguments))\n");
+        push(@$outputArray, $indent . "if (callFrame->argumentCount() < $numMandatoryArguments) [[unlikely]]\n");
         push(@$outputArray, $indent . "    return throwVMError(lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(lexicalGlobalObject));\n");
     }
 }
@@ -6555,7 +6554,7 @@ sub GenerateParametersCheck
             my $nativeValue = JSValueToNative($interface, $argument, $argumentLookupForConversion, $conditional, "lexicalGlobalObject", "*lexicalGlobalObject", "*castedThis", $globalObjectReference, $argumentExceptionThrowerFunctor, $functionImplementationName, $optional, $argumentDefaultValueFunctor);
 
             push(@$outputArray, $indent . "auto ${name}ConversionResult = ${nativeValue};\n");
-            push(@$outputArray, $indent . "if (UNLIKELY(${name}ConversionResult.hasException(throwScope)))\n");
+            push(@$outputArray, $indent . "if (${name}ConversionResult.hasException(throwScope)) [[unlikely]]\n");
             push(@$outputArray, $indent . "   return encodedJSValue();\n");
 
             $value = PassArgumentExpression("${name}ConversionResult.releaseReturnValue()", $argument);
@@ -6776,8 +6775,7 @@ sub GenerateCallbackHeaderContent
 
             my $nativeReturnType = "CallbackResult<typename " . GetIDLType($interfaceOrCallback, $operation->type) . "::CallbackReturnType>";
             
-            # FIXME: Change the default name (used for callback functions) to something other than handleEvent. It makes little sense.
-            my $functionName = $operation->extendedAttributes->{ImplementedAs} || $operation->name || "handleEvent";
+            my $functionName = $operation->extendedAttributes->{ImplementedAs} || $operation->name || "invoke";
             push(@$contentRef, "    ${nativeReturnType} ${functionName}(" . join(", ", @arguments) . ") override;\n");
 
             # Unless the callback function returns a promise, also generate a version that rethrows any exception it might encounter.
@@ -6823,8 +6821,7 @@ sub GenerateCallbackImplementationOperationBody
 
     my $nativeReturnType = "CallbackResult<typename " . GetIDLType($interfaceOrCallback, $operation->type) . "::CallbackReturnType>";
 
-    # FIXME: Change the default name (used for callback functions) to something other than handleEvent. It makes little sense.
-    my $functionName = $operation->name || "handleEvent";
+    my $functionName = $operation->name || "invoke";
 
     my $functionImplementationName = $operation->extendedAttributes->{ImplementedAs} || $functionName;
     $functionImplementationName .= "RethrowingException" if $isForRethrowingHandler;
@@ -6929,7 +6926,7 @@ sub GenerateCallbackImplementationOperationBody
 
         push(@$contentRef, "    auto throwScope = DECLARE_THROW_SCOPE(vm);\n");
         push(@$contentRef, "    auto returnValue = ${nativeValue};\n");
-        push(@$contentRef, "    if (UNLIKELY(returnValue.hasException(throwScope)))\n");
+        push(@$contentRef, "    if (returnValue.hasException(throwScope)) [[unlikely]]\n");
         push(@$contentRef, "        return CallbackResultType::ExceptionThrown;\n");
         push(@$contentRef, "    return { returnValue.releaseReturnValue() };\n");
     }
@@ -7970,6 +7967,9 @@ sub WriteData
         $include = "\"$include\"" unless $include =~ /^["<]/; # "
 
         if ($condition eq 1) {
+            if ($include eq "\"JSEventTarget.h\"") {
+                push @includes, "\"EventTargetInlines.h\"";
+            }
             push @includes, $include;
         } else {
             push @{$implIncludeConditions{$codeGenerator->GenerateConditionalStringFromAttributeValue($condition)}}, $include;
@@ -8569,7 +8569,7 @@ sub GenerateCallTracer()
 
     AddToImplIncludes($callTracer . ".h");
 
-    push(@$outputArray, $indent . "if (UNLIKELY(impl.hasActive" . $callTracer . "()))\n");
+    push(@$outputArray, $indent . "if (impl.hasActive" . $callTracer . "()) [[unlikely]]\n");
     push(@$outputArray, $indent . "    " . $callTracer . "::recordAction(impl, \"" . $name . "\"_s");
     if (scalar(@$arguments)) {
         push(@$outputArray, ", { " . join(", ", map { $callTracer . "::processArgument(impl, " . $_ . ")" } @$arguments) . " }");

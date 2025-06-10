@@ -114,8 +114,8 @@ public:
     Ref<TextureMapperGPUBuffer> acquireBufferFromPool(size_t, TextureMapperGPUBuffer::Type);
 
 #if ENABLE(DAMAGE_TRACKING)
-    void setDamage(const Damage& damage) { m_damage = damage; }
-    const Damage& damage() const { return m_damage; }
+    void setDamage(const std::optional<Damage>& damage) { m_damage = damage; }
+    const std::optional<Damage>& damage() const { return m_damage; }
 #endif
 
 private:
@@ -152,7 +152,7 @@ private:
     TextureMapperGLData* m_data;
     ClipStack m_clipStack;
 #if ENABLE(DAMAGE_TRACKING)
-    Damage m_damage;
+    std::optional<Damage> m_damage;
 #endif
 };
 

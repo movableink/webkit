@@ -97,7 +97,7 @@ private:
 #endif
 
     NSMenu *platformMenu() const override;
-    NSArray *platformData() const override;
+    RetainPtr<NSArray> platformData() const override;
 
     RetainPtr<NSMenu> m_menu;
     RetainPtr<WKMenuDelegate> m_menuDelegate;

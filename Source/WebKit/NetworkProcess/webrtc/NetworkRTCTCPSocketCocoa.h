@@ -45,7 +45,8 @@ public:
     NetworkRTCTCPSocketCocoa(WebCore::LibWebRTCSocketIdentifier, NetworkRTCProvider&, const rtc::SocketAddress&, int options, const String& attributedBundleIdentifier, bool isFirstParty, bool isRelayDisabled, const WebCore::RegistrableDomain&, Ref<IPC::Connection>&&);
     ~NetworkRTCTCPSocketCocoa();
 
-    static void getInterfaceName(NetworkRTCProvider&, const URL&, const String& attributedBundleIdentifier, bool isFirstParty, bool isRelayDisabled, const WebCore::RegistrableDomain&, CompletionHandler<void(String&&)>&&);
+    using NamePromise = NativePromise<String, void>;
+    static Ref<NamePromise> getInterfaceName(NetworkRTCProvider&, const URL&, const String& attributedBundleIdentifier, bool isFirstParty, bool isRelayDisabled, const WebCore::RegistrableDomain&);
 
 private:
     // NetworkRTCProvider::Socket.

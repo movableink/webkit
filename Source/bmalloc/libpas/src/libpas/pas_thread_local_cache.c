@@ -43,7 +43,9 @@
 #include "pas_thread_local_cache_layout.h"
 #include "pas_thread_local_cache_node.h"
 #include "pas_thread_suspend_lock.h"
+#if !PAS_OS(WINDOWS)
 #include <unistd.h>
+#endif
 #if PAS_OS(DARWIN)
 #include <mach/thread_act.h>
 #endif
@@ -54,7 +56,11 @@
 PAS_BEGIN_EXTERN_C;
 
 #if PAS_HAVE_THREAD_KEYWORD
+#if PAS_OS(WINDOWS)
+__declspec(thread) void* pas_thread_local_cache_pointer = NULL;
+#else
 __thread void* pas_thread_local_cache_pointer = NULL;
+#endif
 #endif
 
 pas_fast_tls pas_thread_local_cache_fast_tls = PAS_FAST_TLS_INITIALIZER;
@@ -675,7 +681,7 @@ process_deallocation_log_with_config(pas_thread_local_cache* cache,
             break;
 
         case pas_segregated_page_config_kind_pas_utility_small:
-            PAS_ASSERT(!"Should not be reached");
+            PAS_ASSERT_NOT_REACHED();
             break;
 
         default:

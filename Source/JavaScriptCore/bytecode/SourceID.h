@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <limits>
+
 namespace JSC {
 
 using SourceID = uint32_t;

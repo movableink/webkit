@@ -23,9 +23,12 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if defined(TARGET_OS_VISION) && TARGET_OS_VISION
-#import "RealityKitBridging.h"
 #import <Foundation/Foundation.h>
+#import <wtf/Platform.h>
+
+#if ENABLE(MODEL_PROCESS)
+
+#import "WKRKEntity.h"
 #import <simd/simd.h>
 
 NS_ASSUME_NONNULL_BEGIN
@@ -43,7 +46,7 @@ typedef NS_ENUM(NSInteger, WKStageModeOperation) {
 @property (nonatomic, readonly) REEntityRef interactionContainerRef;
 @property (nonatomic, readonly) bool stageModeInteractionInProgress;
 
-- (instancetype)initWithModel:(WKSRKEntity *)model container:(REEntityRef)container delegate:(id<WKStageModeInteractionAware> _Nullable)delegate NS_SWIFT_NAME(init(with:container:delegate:));
+- (instancetype)initWithModel:(WKRKEntity *)model container:(REEntityRef)container delegate:(id<WKStageModeInteractionAware> _Nullable)delegate NS_SWIFT_NAME(init(with:container:delegate:));
 - (void)setContainerTransformInPortal NS_SWIFT_NAME(setContainerTransformInPortal());
 - (void)interactionDidBegin:(simd_float4x4)transform NS_SWIFT_NAME(interactionDidBegin(_:));
 - (void)interactionDidUpdate:(simd_float4x4)transform NS_SWIFT_NAME(interactionDidUpdate(_:));

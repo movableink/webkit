@@ -52,7 +52,7 @@ struct RobinHoodHash : public DefaultHash<T> {
 
 static constexpr unsigned capacityForSize(unsigned size)
 {
-    unsigned capacity = WTF::roundUpToPowerOfTwo(size);
+    unsigned capacity = roundUpToPowerOfTwo(size);
     if (size * 100 >= capacity * 95)
         return capacity * 2;
     return capacity;

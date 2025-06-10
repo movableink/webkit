@@ -27,7 +27,8 @@
 
 #if ENABLE(ENCRYPTED_MEDIA)
 
-#include "Document.h"
+#include "DocumentInlines.h"
+#include "FrameInlines.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaKeySystemAccess.h"
 #include "LocalFrame.h"
@@ -40,14 +41,14 @@
 
 namespace WebCore {
 
-Ref<MediaKeySystemRequest> MediaKeySystemRequest::create(Document& document, const String& keySystem, Ref<DeferredPromise>&& promise)
+Ref<MediaKeySystemRequest> MediaKeySystemRequest::create(Document& document, const String& keySystem, RefPtr<DeferredPromise>&& promise)
 {
     auto result = adoptRef(*new MediaKeySystemRequest(document, keySystem, WTFMove(promise)));
     result->suspendIfNeeded();
     return result;
 }
 
-MediaKeySystemRequest::MediaKeySystemRequest(Document& document, const String& keySystem, Ref<DeferredPromise>&& promise)
+MediaKeySystemRequest::MediaKeySystemRequest(Document& document, const String& keySystem, RefPtr<DeferredPromise>&& promise)
     : ActiveDOMObject(document)
     , m_keySystem(keySystem)
     , m_promise(WTFMove(promise))
@@ -98,7 +99,7 @@ void MediaKeySystemRequest::allow(String&& mediaKeysHashSalt)
 
 void MediaKeySystemRequest::deny(const String& message)
 {
-    if (!scriptExecutionContext())
+    if (!scriptExecutionContext() || !m_promise)
         return;
 
     ExceptionCode code = ExceptionCode::NotSupportedError;

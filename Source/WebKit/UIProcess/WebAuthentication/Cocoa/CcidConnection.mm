@@ -30,7 +30,6 @@
 #import "CcidService.h"
 #import <CryptoTokenKit/TKSmartCard.h>
 #import <WebCore/FidoConstants.h>
-#import <wtf/Algorithms.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/cocoa/VectorCocoa.h>

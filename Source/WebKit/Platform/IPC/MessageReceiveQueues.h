@@ -46,7 +46,7 @@ public:
     void enqueueMessage(Connection& connection, UniqueRef<Decoder>&& message) final
     {
         m_dispatcher.dispatch([connection = Ref { connection }, message = WTFMove(message), receiver = Ref { m_receiver.get() }]() mutable {
-            connection->dispatchMessageReceiverMessage(receiver, WTFMove(message));
+            connection->dispatchMessageReceiverMessage(receiver.get(), WTFMove(message));
         });
     }
 private:

@@ -28,8 +28,11 @@
 
 #include "Test.h"
 #include "Utilities.h"
+#include <ranges>
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/MainThread.h>
+#include <wtf/MappedFileData.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/StringExtras.h>
 #include <wtf/text/MakeString.h>
@@ -40,11 +43,10 @@ constexpr auto FileSystemTestData = "This is a test"_s;
 
 static void createTestFile(const String& path)
 {
-    auto fileHandle = FileSystem::openFile(path, FileSystem::FileOpenMode::Truncate);
-    EXPECT_TRUE(FileSystem::isHandleValid(fileHandle));
-    FileSystem::writeToFile(fileHandle, FileSystemTestData.span8());
-    FileSystem::closeFile(fileHandle);
-};
+    auto written = FileSystem::overwriteEntireFile(path, FileSystemTestData.span8());
+    EXPECT_TRUE(written);
+    EXPECT_GE(*written, 0u);
+}
 
 // FIXME: Refactor FileSystemTest and FragmentedSharedBufferTest as a single class.
 class FileSystemTest : public testing::Test {
@@ -56,9 +58,9 @@ public:
         // create temp file.
         auto result = FileSystem::openTemporaryFile("tempTestFile"_s);
         m_tempFilePath = result.first;
-        auto handle = result.second;
-        FileSystem::writeToFile(handle, FileSystemTestData.span8());
-        FileSystem::closeFile(handle);
+        auto handle = WTFMove(result.second);
+        handle.write(FileSystemTestData.span8());
+        handle = { };
 
         m_tempFileSymlinkPath = FileSystem::createTemporaryFile("tempTestFile-symlink"_s);
         FileSystem::deleteFile(m_tempFileSymlinkPath);
@@ -113,28 +115,23 @@ private:
 
 TEST_F(FileSystemTest, MappingMissingFile)
 {
-    bool success;
-    FileSystem::MappedFileData mappedFileData(String("not_existing_file"_s), FileSystem::MappedFileMode::Shared, success);
-    EXPECT_FALSE(success);
-    EXPECT_TRUE(!mappedFileData);
+    auto mappedFileData = FileSystem::mapFile(String("not_existing_file"_s), FileSystem::MappedFileMode::Shared);
+    EXPECT_FALSE(!!mappedFileData);
 }
 
 TEST_F(FileSystemTest, MappingExistingFile)
 {
-    bool success;
-    FileSystem::MappedFileData mappedFileData(tempFilePath(), FileSystem::MappedFileMode::Shared, success);
-    EXPECT_TRUE(success);
+    auto mappedFileData = FileSystem::mapFile(tempFilePath(), FileSystem::MappedFileMode::Shared);
     EXPECT_TRUE(!!mappedFileData);
-    EXPECT_TRUE(mappedFileData.size() == strlen(FileSystemTestData));
-    EXPECT_TRUE(contains(FileSystemTestData.span(), mappedFileData.span()));
+    EXPECT_TRUE(mappedFileData->size() == strlen(FileSystemTestData));
+    EXPECT_TRUE(contains(FileSystemTestData.span(), mappedFileData->span()));
 }
 
 TEST_F(FileSystemTest, MappingExistingEmptyFile)
 {
-    bool success;
-    FileSystem::MappedFileData mappedFileData(tempEmptyFilePath(), FileSystem::MappedFileMode::Shared, success);
-    EXPECT_TRUE(success);
-    EXPECT_TRUE(!mappedFileData);
+    auto mappedFileData = FileSystem::mapFile(tempEmptyFilePath(), FileSystem::MappedFileMode::Shared);
+    EXPECT_TRUE(!!mappedFileData);
+    EXPECT_TRUE(!*mappedFileData);
 }
 
 TEST_F(FileSystemTest, FilesHaveSameVolume)
@@ -234,19 +231,19 @@ TEST_F(FileSystemTest, UnicodeDirectoryName)
 // --------------------- Truncate ----------------------------
 TEST_F(FileSystemTest, openExistingFileTruncate)
 {
-    auto handle = FileSystem::openFile(tempFilePath(), FileSystem::FileOpenMode::Truncate, FileSystem::FileAccessPermission::All, false);
-    EXPECT_TRUE(FileSystem::isHandleValid(handle));
+    auto handle = FileSystem::openFile(tempFilePath(), FileSystem::FileOpenMode::Truncate, FileSystem::FileAccessPermission::All, { }, false);
+    EXPECT_TRUE(!!handle);
     // Check the existing file WAS truncated when the operation succeded.
     EXPECT_EQ(FileSystem::fileSize(tempFilePath()), 0);
     // Write data to it and check the file size grows.
-    FileSystem::writeToFile(handle, FileSystemTestData.span8());
+    handle.write(FileSystemTestData.span8());
     EXPECT_EQ(FileSystem::fileSize(tempFilePath()), strlen(FileSystemTestData));
-    FileSystem::closeFile(handle);
 }
+
 TEST_F(FileSystemTest, openExistingFileTruncateFailIfFileExists)
 {
-    auto handle = FileSystem::openFile(tempFilePath(), FileSystem::FileOpenMode::Truncate, FileSystem::FileAccessPermission::All, true);
-    EXPECT_FALSE(FileSystem::isHandleValid(handle));
+    auto handle = FileSystem::openFile(tempFilePath(), FileSystem::FileOpenMode::Truncate, FileSystem::FileAccessPermission::All, { }, true);
+    EXPECT_TRUE(!handle);
     // Check the existing file wasn't truncated when the operation failed.
     EXPECT_EQ(FileSystem::fileSize(tempFilePath()), strlen(FileSystemTestData));
 }
@@ -254,20 +251,20 @@ TEST_F(FileSystemTest, openExistingFileTruncateFailIfFileExists)
 // -------------------- ReadWrite ----------------------------
 TEST_F(FileSystemTest, openExistingFileReadWrite)
 {
-    auto handle = FileSystem::openFile(tempFilePath(), FileSystem::FileOpenMode::ReadWrite, FileSystem::FileAccessPermission::All, false);
-    EXPECT_TRUE(FileSystem::isHandleValid(handle));
+    auto handle = FileSystem::openFile(tempFilePath(), FileSystem::FileOpenMode::ReadWrite, FileSystem::FileAccessPermission::All, { }, false);
+    EXPECT_TRUE(!!handle);
     // ReadWrite mode shouldn't truncate the contents of the file.
     EXPECT_EQ(FileSystem::fileSize(tempFilePath()), strlen(FileSystemTestData));
     // Write data to it and check the file size grows.
-    FileSystem::writeToFile(handle, FileSystemTestData.span8());
-    FileSystem::writeToFile(handle, FileSystemTestData.span8());
+    handle.write(FileSystemTestData.span8());
+    handle.write(FileSystemTestData.span8());
     EXPECT_EQ(FileSystem::fileSize(tempFilePath()), strlen(FileSystemTestData) * 2);
-    FileSystem::closeFile(handle);
 }
+
 TEST_F(FileSystemTest, openExistingFileReadWriteFailIfFileExists)
 {
-    auto handle = FileSystem::openFile(tempFilePath(), FileSystem::FileOpenMode::ReadWrite, FileSystem::FileAccessPermission::All, true);
-    EXPECT_FALSE(FileSystem::isHandleValid(handle));
+    auto handle = FileSystem::openFile(tempFilePath(), FileSystem::FileOpenMode::ReadWrite, FileSystem::FileAccessPermission::All, { }, true);
+    EXPECT_TRUE(!handle);
     // Check the existing file wasn't truncated when the operation failed.
     EXPECT_EQ(FileSystem::fileSize(tempFilePath()), strlen(FileSystemTestData));
 }
@@ -276,7 +273,7 @@ TEST_F(FileSystemTest, openExistingFileReadWriteFailIfFileExists)
 TEST_F(FileSystemTest, openExistingFileReadOnly)
 {
     auto handle = FileSystem::openFile(tempFilePath(), FileSystem::FileOpenMode::Read, FileSystem::FileAccessPermission::All);
-    EXPECT_TRUE(FileSystem::isHandleValid(handle));
+    EXPECT_TRUE(!!handle);
     EXPECT_EQ(FileSystem::fileSize(tempFilePath()), strlen(FileSystemTestData));
 }
 
@@ -289,11 +286,11 @@ TEST_F(FileSystemTest, openNonExistingFileTruncate)
     auto doesNotExistPath = FileSystem::pathByAppendingComponent(tempEmptyFolderPath(), "does-not-exist"_s);
     EXPECT_FALSE(FileSystem::fileExists(doesNotExistPath));
 
-    auto handle = FileSystem::openFile(doesNotExistPath, FileSystem::FileOpenMode::Truncate, FileSystem::FileAccessPermission::All, false);
-    EXPECT_TRUE(FileSystem::isHandleValid(handle));
+    auto handle = FileSystem::openFile(doesNotExistPath, FileSystem::FileOpenMode::Truncate, FileSystem::FileAccessPermission::All, { }, false);
+    EXPECT_TRUE(!!handle);
 
     // The file exists at the latest by the time we request a flush (or close the handle).
-    FileSystem::flushFile(handle);
+    handle.flush();
     EXPECT_TRUE(FileSystem::fileExists(doesNotExistPath));
 }
 
@@ -302,11 +299,11 @@ TEST_F(FileSystemTest, openNonExistingFileTruncateFailIfFileExists)
     auto doesNotExistPath = FileSystem::pathByAppendingComponent(tempEmptyFolderPath(), "does-not-exist"_s);
     EXPECT_FALSE(FileSystem::fileExists(doesNotExistPath));
 
-    auto handle = FileSystem::openFile(doesNotExistPath, FileSystem::FileOpenMode::Truncate, FileSystem::FileAccessPermission::All, true);
-    EXPECT_TRUE(FileSystem::isHandleValid(handle));
+    auto handle = FileSystem::openFile(doesNotExistPath, FileSystem::FileOpenMode::Truncate, FileSystem::FileAccessPermission::All, { }, true);
+    EXPECT_TRUE(!!handle);
 
     // The file exists at the latest by the time we request a flush (or close the handle).
-    FileSystem::flushFile(handle);
+    handle.flush();
     EXPECT_TRUE(FileSystem::fileExists(doesNotExistPath));
 }
 
@@ -317,11 +314,11 @@ TEST_F(FileSystemTest, openNonExistingFileReadWrite)
     auto doesNotExistPath = FileSystem::pathByAppendingComponent(tempEmptyFolderPath(), "does-not-exist"_s);
     EXPECT_FALSE(FileSystem::fileExists(doesNotExistPath));
 
-    auto handle = FileSystem::openFile(doesNotExistPath, FileSystem::FileOpenMode::ReadWrite, FileSystem::FileAccessPermission::All, false);
-    EXPECT_TRUE(FileSystem::isHandleValid(handle));
+    auto handle = FileSystem::openFile(doesNotExistPath, FileSystem::FileOpenMode::ReadWrite, FileSystem::FileAccessPermission::All, { }, false);
+    EXPECT_TRUE(!!handle);
 
     // The file exists at the latest by the time we request a flush (or close the handle).
-    FileSystem::flushFile(handle);
+    handle.flush();
     EXPECT_TRUE(FileSystem::fileExists(doesNotExistPath));
 }
 TEST_F(FileSystemTest, openNonExistingFileReadWriteFailIfFileExists)
@@ -329,11 +326,11 @@ TEST_F(FileSystemTest, openNonExistingFileReadWriteFailIfFileExists)
     auto doesNotExistPath = FileSystem::pathByAppendingComponent(tempEmptyFolderPath(), "does-not-exist"_s);
     EXPECT_FALSE(FileSystem::fileExists(doesNotExistPath));
 
-    auto handle = FileSystem::openFile(doesNotExistPath, FileSystem::FileOpenMode::ReadWrite, FileSystem::FileAccessPermission::All, true);
-    EXPECT_TRUE(FileSystem::isHandleValid(handle));
+    auto handle = FileSystem::openFile(doesNotExistPath, FileSystem::FileOpenMode::ReadWrite, FileSystem::FileAccessPermission::All, { }, true);
+    EXPECT_TRUE(!!handle);
 
     // The file exists at the latest by the time we request a flush (or close the handle).
-    FileSystem::flushFile(handle);
+    handle.flush();
     EXPECT_TRUE(FileSystem::fileExists(doesNotExistPath));
 }
 
@@ -344,7 +341,7 @@ TEST_F(FileSystemTest, openNonExistingFileReadOnly)
     EXPECT_FALSE(FileSystem::fileExists(doesNotExistPath));
 
     auto handle = FileSystem::openFile(doesNotExistPath, FileSystem::FileOpenMode::Read, FileSystem::FileAccessPermission::All);
-    EXPECT_FALSE(FileSystem::isHandleValid(handle));
+    EXPECT_TRUE(!handle);
 }
 
 // ===========================================================
@@ -354,11 +351,11 @@ TEST_F(FileSystemTest, deleteNonEmptyDirectory)
     auto temporaryTestFolder = FileSystem::createTemporaryFile("deleteNonEmptyDirectoryTest"_s);
 
     EXPECT_TRUE(FileSystem::deleteFile(temporaryTestFolder));
-    EXPECT_TRUE(FileSystem::makeAllDirectories(FileSystem::pathByAppendingComponents(temporaryTestFolder, { "subfolder"_s })));
+    EXPECT_TRUE(FileSystem::makeAllDirectories(FileSystem::pathByAppendingComponents(temporaryTestFolder, std::initializer_list<StringView>({ "subfolder"_s }))));
     createTestFile(FileSystem::pathByAppendingComponent(temporaryTestFolder, "file1.txt"_s));
     createTestFile(FileSystem::pathByAppendingComponent(temporaryTestFolder, "file2.txt"_s));
-    createTestFile(FileSystem::pathByAppendingComponents(temporaryTestFolder, { "subfolder"_s, "file3.txt"_s }));
-    createTestFile(FileSystem::pathByAppendingComponents(temporaryTestFolder, { "subfolder"_s, "file4.txt"_s }));
+    createTestFile(FileSystem::pathByAppendingComponents(temporaryTestFolder, std::initializer_list<StringView>({ "subfolder"_s, "file3.txt"_s })));
+    createTestFile(FileSystem::pathByAppendingComponents(temporaryTestFolder, std::initializer_list<StringView>({ "subfolder"_s, "file4.txt"_s })));
     EXPECT_FALSE(FileSystem::deleteEmptyDirectory(temporaryTestFolder));
     EXPECT_TRUE(FileSystem::fileExists(temporaryTestFolder));
     EXPECT_TRUE(FileSystem::deleteNonEmptyDirectory(temporaryTestFolder));
@@ -453,8 +450,8 @@ TEST_F(FileSystemTest, deleteEmptyDirectoryContainingDSStoreFile)
     // Create .DSStore file.
     auto dsStorePath = FileSystem::pathByAppendingComponent(tempEmptyFolderPath(), ".DS_Store"_s);
     auto dsStoreHandle = FileSystem::openFile(dsStorePath, FileSystem::FileOpenMode::Truncate);
-    FileSystem::writeToFile(dsStoreHandle, FileSystemTestData.span8());
-    FileSystem::closeFile(dsStoreHandle);
+    dsStoreHandle.write(FileSystemTestData.span8());
+    dsStoreHandle = { };
     EXPECT_TRUE(FileSystem::fileExists(dsStorePath));
 
     EXPECT_TRUE(FileSystem::deleteEmptyDirectory(tempEmptyFolderPath()));
@@ -469,15 +466,15 @@ TEST_F(FileSystemTest, deleteEmptyDirectoryOnNonEmptyDirectory)
     // Create .DSStore file.
     auto dsStorePath = FileSystem::pathByAppendingComponent(tempEmptyFolderPath(), ".DS_Store"_s);
     auto dsStoreHandle = FileSystem::openFile(dsStorePath, FileSystem::FileOpenMode::Truncate);
-    FileSystem::writeToFile(dsStoreHandle, FileSystemTestData.span8());
-    FileSystem::closeFile(dsStoreHandle);
+    dsStoreHandle.write(FileSystemTestData.span8());
+    dsStoreHandle = { };
     EXPECT_TRUE(FileSystem::fileExists(dsStorePath));
 
     // Create a dummy file.
     auto dummyFilePath = FileSystem::pathByAppendingComponent(tempEmptyFolderPath(), "dummyFile"_s);
     auto dummyFileHandle = FileSystem::openFile(dummyFilePath, FileSystem::FileOpenMode::Truncate);
-    FileSystem::writeToFile(dummyFileHandle, FileSystemTestData.span8());
-    FileSystem::closeFile(dummyFileHandle);
+    dummyFileHandle.write(FileSystemTestData.span8());
+    dummyFileHandle = { };
     EXPECT_TRUE(FileSystem::fileExists(dummyFilePath));
 
     EXPECT_FALSE(FileSystem::deleteEmptyDirectory(tempEmptyFolderPath()));
@@ -544,8 +541,8 @@ TEST_F(FileSystemTest, moveDirectory)
     EXPECT_TRUE(FileSystem::makeAllDirectories(temporaryTestFolder));
     auto testFilePath = FileSystem::pathByAppendingComponent(temporaryTestFolder, "testFile"_s);
     auto fileHandle = FileSystem::openFile(testFilePath, FileSystem::FileOpenMode::Truncate);
-    FileSystem::writeToFile(fileHandle, FileSystemTestData.span8());
-    FileSystem::closeFile(fileHandle);
+    fileHandle.write(FileSystemTestData.span8());
+    fileHandle = { };
 
     EXPECT_TRUE(FileSystem::fileExists(testFilePath));
 
@@ -583,7 +580,7 @@ TEST_F(FileSystemTest, makeAllDirectories)
     EXPECT_TRUE(FileSystem::fileExists(tempEmptyFolderPath()));
     EXPECT_EQ(FileSystem::fileType(tempEmptyFolderPath()), FileSystem::FileType::Directory);
     EXPECT_TRUE(FileSystem::makeAllDirectories(tempEmptyFolderPath()));
-    String subFolderPath = FileSystem::pathByAppendingComponents(tempEmptyFolderPath(), { "subFolder1"_s, "subFolder2"_s, "subFolder3"_s });
+    String subFolderPath = FileSystem::pathByAppendingComponents(tempEmptyFolderPath(), std::initializer_list<StringView>({ "subFolder1"_s, "subFolder2"_s, "subFolder3"_s }));
     EXPECT_FALSE(FileSystem::fileExists(subFolderPath));
     EXPECT_TRUE(FileSystem::makeAllDirectories(subFolderPath));
     EXPECT_TRUE(FileSystem::fileExists(subFolderPath));
@@ -755,9 +752,9 @@ static void runGetFileModificationTimeTest(const String& path, Function<std::opt
 
     // Modify the file.
     auto fileHandle = FileSystem::openFile(path, FileSystem::FileOpenMode::ReadWrite);
-    EXPECT_TRUE(FileSystem::isHandleValid(fileHandle));
-    FileSystem::writeToFile(fileHandle, "foo"_span8);
-    FileSystem::closeFile(fileHandle);
+    EXPECT_TRUE(!!fileHandle);
+    fileHandle.write("foo"_span8);
+    fileHandle = { };
 
     auto newModificationTime = fileModificationTime(path);
     EXPECT_TRUE(!!newModificationTime);
@@ -798,7 +795,7 @@ TEST_F(FileSystemTest, updateFileModificationTime)
 
 TEST_F(FileSystemTest, pathFileName)
 {
-    auto testPath = FileSystem::pathByAppendingComponents(tempEmptyFolderPath(), { "subfolder"_s, "filename.txt"_s });
+    auto testPath = FileSystem::pathByAppendingComponents(tempEmptyFolderPath(), std::initializer_list<StringView>({ "subfolder"_s, "filename.txt"_s }));
     EXPECT_STREQ("filename.txt", FileSystem::pathFileName(testPath).utf8().data());
 
 #if OS(UNIX)
@@ -820,7 +817,7 @@ TEST_F(FileSystemTest, pathFileName)
 
 TEST_F(FileSystemTest, parentPath)
 {
-    auto testPath = FileSystem::pathByAppendingComponents(tempEmptyFolderPath(), { "subfolder"_s, "filename.txt"_s });
+    auto testPath = FileSystem::pathByAppendingComponents(tempEmptyFolderPath(), std::initializer_list<StringView>({ "subfolder"_s, "filename.txt"_s }));
     EXPECT_STREQ(FileSystem::pathByAppendingComponent(tempEmptyFolderPath(), "subfolder"_s).utf8().data(), FileSystem::parentPath(testPath).utf8().data());
 #if OS(UNIX)
     EXPECT_STREQ("/var/tmp", FileSystem::parentPath("/var/tmp/example.txt"_s).utf8().data());
@@ -854,19 +851,19 @@ TEST_F(FileSystemTest, pathByAppendingComponent)
 TEST_F(FileSystemTest, pathByAppendingComponents)
 {
     EXPECT_STREQ(tempEmptyFolderPath().utf8().data(), FileSystem::pathByAppendingComponents(tempEmptyFolderPath(), { }).utf8().data());
-    EXPECT_STREQ(FileSystem::pathByAppendingComponent(tempEmptyFolderPath(), "file.txt"_s).utf8().data(), FileSystem::pathByAppendingComponents(tempEmptyFolderPath(), { "file.txt"_s }).utf8().data());
+    EXPECT_STREQ(FileSystem::pathByAppendingComponent(tempEmptyFolderPath(), "file.txt"_s).utf8().data(), FileSystem::pathByAppendingComponents(tempEmptyFolderPath(), std::initializer_list<StringView>({ "file.txt"_s })).utf8().data());
 #if OS(UNIX)
-    EXPECT_STREQ("/var/tmp/file.txt", FileSystem::pathByAppendingComponents("/"_s, { "var"_s, "tmp"_s, "file.txt"_s }).utf8().data());
-    EXPECT_STREQ("/var/tmp/file.txt", FileSystem::pathByAppendingComponents("/var"_s, { "tmp"_s, "file.txt"_s }).utf8().data());
-    EXPECT_STREQ("/var/tmp/file.txt", FileSystem::pathByAppendingComponents("/var/"_s, { "tmp"_s, "file.txt"_s }).utf8().data());
-    EXPECT_STREQ("/var/tmp/file.txt", FileSystem::pathByAppendingComponents("/var/tmp"_s, { "file.txt"_s }).utf8().data());
+    EXPECT_STREQ("/var/tmp/file.txt", FileSystem::pathByAppendingComponents("/"_s, std::initializer_list<StringView>({ "var"_s, "tmp"_s, "file.txt"_s })).utf8().data());
+    EXPECT_STREQ("/var/tmp/file.txt", FileSystem::pathByAppendingComponents("/var"_s, std::initializer_list<StringView>({ "tmp"_s, "file.txt"_s })).utf8().data());
+    EXPECT_STREQ("/var/tmp/file.txt", FileSystem::pathByAppendingComponents("/var/"_s, std::initializer_list<StringView>({ "tmp"_s, "file.txt"_s })).utf8().data());
+    EXPECT_STREQ("/var/tmp/file.txt", FileSystem::pathByAppendingComponents("/var/tmp"_s, std::initializer_list<StringView>({ "file.txt"_s })).utf8().data());
 #endif
 #if OS(WINDOWS)
-    EXPECT_STREQ("C:\\Foo\\Bar\\File.txt", FileSystem::pathByAppendingComponents("C:\\"_s, { "Foo"_s, "Bar"_s, "File.txt"_s }).utf8().data());
-    EXPECT_STREQ("C:\\Foo\\Bar\\File.txt", FileSystem::pathByAppendingComponents("C:\\Foo"_s, { "Bar"_s, "File.txt"_s }).utf8().data());
-    EXPECT_STREQ("C:\\Foo\\Bar\\File.txt", FileSystem::pathByAppendingComponents("C:\\Foo\\"_s, { "Bar"_s, "File.txt"_s }).utf8().data());
-    EXPECT_STREQ("C:\\Foo\\Bar\\File.txt", FileSystem::pathByAppendingComponents("C:\\Foo\\Bar"_s, { "File.txt"_s }).utf8().data());
-    EXPECT_STREQ("C:\\Foo\\Bar\\File.txt", FileSystem::pathByAppendingComponents("C:\\Foo\\Bar\\"_s, { "File.txt"_s }).utf8().data());
+    EXPECT_STREQ("C:\\Foo\\Bar\\File.txt", FileSystem::pathByAppendingComponents("C:\\"_s, std::initializer_list<StringView>({ "Foo"_s, "Bar"_s, "File.txt"_s })).utf8().data());
+    EXPECT_STREQ("C:\\Foo\\Bar\\File.txt", FileSystem::pathByAppendingComponents("C:\\Foo"_s, std::initializer_list<StringView>({ "Bar"_s, "File.txt"_s })).utf8().data());
+    EXPECT_STREQ("C:\\Foo\\Bar\\File.txt", FileSystem::pathByAppendingComponents("C:\\Foo\\"_s, std::initializer_list<StringView>({ "Bar"_s, "File.txt"_s })).utf8().data());
+    EXPECT_STREQ("C:\\Foo\\Bar\\File.txt", FileSystem::pathByAppendingComponents("C:\\Foo\\Bar"_s, std::initializer_list<StringView>({ "File.txt"_s })).utf8().data());
+    EXPECT_STREQ("C:\\Foo\\Bar\\File.txt", FileSystem::pathByAppendingComponents("C:\\Foo\\Bar\\"_s, std::initializer_list<StringView>({ "File.txt"_s })).utf8().data());
 #endif
 }
 
@@ -877,12 +874,12 @@ TEST_F(FileSystemTest, listDirectory)
     createTestFile(FileSystem::pathByAppendingComponent(tempEmptyFolderPath(), "bar.png"_s));
     createTestFile(FileSystem::pathByAppendingComponent(tempEmptyFolderPath(), "foo.png"_s));
     FileSystem::makeAllDirectories(FileSystem::pathByAppendingComponent(tempEmptyFolderPath(), "subfolder"_s));
-    createTestFile(FileSystem::pathByAppendingComponents(tempEmptyFolderPath(), { "subfolder"_s, "c.txt"_s }));
-    createTestFile(FileSystem::pathByAppendingComponents(tempEmptyFolderPath(), { "subfolder"_s, "d.txt"_s }));
+    createTestFile(FileSystem::pathByAppendingComponents(tempEmptyFolderPath(), std::initializer_list<StringView>({ "subfolder"_s, "c.txt"_s })));
+    createTestFile(FileSystem::pathByAppendingComponents(tempEmptyFolderPath(), std::initializer_list<StringView>({ "subfolder"_s, "d.txt"_s })));
 
     auto matches = FileSystem::listDirectory(tempEmptyFolderPath());
     ASSERT_EQ(matches.size(), 5U);
-    std::sort(matches.begin(), matches.end(), WTF::codePointCompareLessThan);
+    std::ranges::sort(matches, WTF::codePointCompareLessThan);
     EXPECT_STREQ(matches[0].utf8().data(), "a.txt");
     EXPECT_STREQ(matches[1].utf8().data(), "b.txt");
     EXPECT_STREQ(matches[2].utf8().data(), "bar.png");
@@ -891,7 +888,7 @@ TEST_F(FileSystemTest, listDirectory)
 
     matches = FileSystem::listDirectory(FileSystem::pathByAppendingComponent(tempEmptyFolderPath(), "subfolder"_s));
     ASSERT_EQ(matches.size(), 2U);
-    std::sort(matches.begin(), matches.end(), WTF::codePointCompareLessThan);
+    std::ranges::sort(matches, WTF::codePointCompareLessThan);
     EXPECT_STREQ(matches[0].utf8().data(), "c.txt");
     EXPECT_STREQ(matches[1].utf8().data(), "d.txt");
 
@@ -928,14 +925,15 @@ TEST_F(FileSystemTest, realPath)
     FileSystem::makeAllDirectories(subFolderPath);
     auto resolvedSubFolderPath = FileSystem::realPath(subFolderPath);
     EXPECT_STREQ(FileSystem::realPath(FileSystem::pathByAppendingComponent(subFolderPath, ".."_s)).utf8().data(), resolvedTempEmptyFolderPath.utf8().data()); // Should resolve "..".
-    EXPECT_STREQ(FileSystem::realPath(FileSystem::pathByAppendingComponents(subFolderPath, { ".."_s, "subfolder"_s })).utf8().data(), resolvedSubFolderPath.utf8().data()); // Should resolve "..".
-    EXPECT_STREQ(FileSystem::realPath(FileSystem::pathByAppendingComponents(subFolderPath, { ".."_s, "."_s, "."_s, "subfolder"_s })).utf8().data(), resolvedSubFolderPath.utf8().data()); // Should resolve ".." and "."
+    EXPECT_STREQ(FileSystem::realPath(FileSystem::pathByAppendingComponents(subFolderPath, std::initializer_list<StringView>({ ".."_s, "subfolder"_s }))).utf8().data(), resolvedSubFolderPath.utf8().data()); // Should resolve "..".
+    EXPECT_STREQ(FileSystem::realPath(FileSystem::pathByAppendingComponents(subFolderPath, std::initializer_list<StringView>({ ".."_s, "."_s, "."_s, "subfolder"_s }))).utf8().data(), resolvedSubFolderPath.utf8().data()); // Should resolve ".." and "."
 }
 #endif
 
 TEST_F(FileSystemTest, readEntireFile)
 {
-    EXPECT_FALSE(FileSystem::readEntireFile(FileSystem::invalidPlatformFileHandle));
+    FileSystem::FileHandle fileHandle;
+    EXPECT_FALSE(fileHandle.readAll());
     EXPECT_FALSE(FileSystem::readEntireFile(emptyString()));
     EXPECT_FALSE(FileSystem::readEntireFile(FileSystem::pathByAppendingComponent(tempEmptyFolderPath(), "does-not-exist"_s)));
     EXPECT_FALSE(FileSystem::readEntireFile(tempEmptyFilePath()));
@@ -973,7 +971,7 @@ TEST_F(FileSystemTest, isAncestor)
         { { "a/b/c", "a/b/c/" }, false },
         { { "/a/b/c", "a/b/c/" }, false }
     };
-    std::for_each(narrowString.begin(), narrowString.end(), [](auto input) {
+    std::ranges::for_each(narrowString, [](auto input) {
         EXPECT_EQ(
             input.second,
                 FileSystem::isAncestor(
@@ -997,7 +995,7 @@ TEST_F(FileSystemTest, isAncestor)
         { { u"a/b/c", u"a/b/c/" }, false },
         { { u"/a/b/c", u"a/b/c/" }, false }
     };
-    std::for_each(wideString.begin(), wideString.end(), [](auto input) {
+    std::ranges::for_each(wideString, [](auto input) {
         EXPECT_EQ(
             input.second,
                 FileSystem::isAncestor(

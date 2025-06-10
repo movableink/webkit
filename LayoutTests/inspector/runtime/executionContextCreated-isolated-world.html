@@ -21,19 +21,19 @@ function test()
         name: "Runtime.executionContextCreated.IsolatedWorld.Internal",
         description: "Test that Runtime.executionContextCreated events are dispatched for internal isolated worlds.",
         async test() {
-            let completion = new WI.WrappedPromise;
+            let completion = new Promise((resolve, reject) => {
+                let listener = InspectorProtocol.addEventListener("Runtime.executionContextCreated", (messageObject) => {
+                    let {id, name, type} = messageObject.params.context;
+                    if (name !== "InspectorTestInternalIsolatedWorld")
+                        return;
 
-            let listener = InspectorProtocol.addEventListener("Runtime.executionContextCreated", (messageObject) => {
-                let {id, name, type} = messageObject.params.context;
-                if (name !== "InspectorTestInternalIsolatedWorld")
-                    return;
+                    InspectorProtocol.removeEventListener("Runtime.executionContextCreated", listener);
 
-                InspectorProtocol.removeEventListener("Runtime.executionContextCreated", listener);
+                    ProtocolTest.pass("Received event for internal isolated world.");
+                    ProtocolTest.expectEqual(type, "internal", "Execution context should be internal.");
 
-                ProtocolTest.pass("Received event for internal isolated world.");
-                ProtocolTest.expectEqual(type, "internal", "Execution context should be internal.");
-
-                completion.resolve();
+                    resolve();
+                });
             });
 
             await Promise.all([
@@ -48,7 +48,7 @@ function test()
                 },
             });
 
-            await completion.promise;
+            await completion;
         },
     });
 

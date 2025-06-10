@@ -28,6 +28,7 @@
 #pragma once
 
 #include <JavaScriptCore/BuiltinUtils.h>
+#include <JavaScriptCore/CommonIdentifiers.h>
 
 #if USE(APPLE_INTERNAL_SDK)
 #include <WebKitAdditions/WebCoreBuiltinNamesAdditions.h>
@@ -154,6 +155,7 @@ namespace WebCore {
     macro(CSSOKLab) \
     macro(CSSPaintSize) \
     macro(CSSPerspective) \
+    macro(CSSPositionTryDescriptors) \
     macro(CSSPositionTryRule) \
     macro(CSSRGB) \
     macro(CSSRotate) \

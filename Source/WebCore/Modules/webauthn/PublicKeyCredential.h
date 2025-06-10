@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,6 @@
 
 #include "AuthenticationResponseJSON.h"
 #include "BasicCredential.h"
-#include "ExceptionOr.h"
 #include "IDLTypes.h"
 #include "RegistrationResponseJSON.h"
 #include <wtf/Forward.h>
@@ -39,8 +38,9 @@ namespace WebCore {
 enum class AuthenticatorAttachment : uint8_t;
 class AuthenticatorResponse;
 class Document;
+
 typedef IDLRecord<IDLDOMString, IDLBoolean> PublicKeyCredentialClientCapabilities;
-typedef std::variant<RegistrationResponseJSON, AuthenticationResponseJSON> PublicKeyCredentialJSON;
+typedef Variant<RegistrationResponseJSON, AuthenticationResponseJSON> PublicKeyCredentialJSON;
 
 struct PublicKeyCredentialCreationOptions;
 struct PublicKeyCredentialCreationOptionsJSON;
@@ -52,6 +52,7 @@ struct AllAcceptedCredentialsOptions;
 struct CurrentUserDetailsOptions;
 
 template<typename IDLType> class DOMPromiseDeferred;
+template<typename> class ExceptionOr;
 
 class PublicKeyCredential final : public BasicCredential {
 public:
@@ -80,7 +81,7 @@ private:
 
     Type credentialType() const final { return Type::PublicKey; }
 
-    Ref<AuthenticatorResponse> m_response;
+    const Ref<AuthenticatorResponse> m_response;
 };
 
 } // namespace WebCore

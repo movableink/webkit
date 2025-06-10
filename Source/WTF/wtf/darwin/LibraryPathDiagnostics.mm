@@ -72,8 +72,8 @@ public:
     void log(void);
 private:
     void logJSONPayload(const JSON::Object&);
-    void logString(const Vector<String>& path, const String&);
-    void logObject(const Vector<String>& path, Ref<JSON::Object>&&);
+    void logString(std::span<const String> path, const String&);
+    void logObject(std::span<const String> path, Ref<JSON::Object>&&);
     void logError(const char*, ...);
 
     void logExecutablePath(void);
@@ -103,7 +103,7 @@ void LibraryPathDiagnosticsLogger::logJSONPayload(const JSON::Object &object)
     os_log(m_osLog, "%{public}s", textRepresentation.utf8().data());
 }
 
-void LibraryPathDiagnosticsLogger::logString(const Vector<String>& path, const String& string)
+void LibraryPathDiagnosticsLogger::logString(std::span<const String> path, const String& string)
 {
     auto payload = JSON::Object::create();
     auto iter = path.rbegin();
@@ -117,7 +117,7 @@ void LibraryPathDiagnosticsLogger::logString(const Vector<String>& path, const S
     logJSONPayload(payload);
 }
 
-void LibraryPathDiagnosticsLogger::logObject(const Vector<String>& path, Ref<JSON::Object>&& object)
+void LibraryPathDiagnosticsLogger::logObject(std::span<const String> path, Ref<JSON::Object>&& object)
 {
     auto payload = JSON::Object::create();
     auto iter = path.rbegin();
@@ -146,7 +146,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 void LibraryPathDiagnosticsLogger::logExecutablePath(void)
 {
-    logString({ "Path"_s }, FileSystem::realPath(String::fromUTF8(_CFProcessPath())));
+    logString(std::initializer_list<String> { "Path"_s }, FileSystem::realPath(String::fromUTF8(_CFProcessPath())));
 }
 
 void LibraryPathDiagnosticsLogger::logDYLDSharedCacheInfo(void)
@@ -158,7 +158,7 @@ void LibraryPathDiagnosticsLogger::logDYLDSharedCacheInfo(void)
     sharedCacheInfo->setString("Path"_s, FileSystem::realPath(String::fromUTF8(dyld_shared_cache_file_path())));
     sharedCacheInfo->setString("UUID"_s, uuidToString(uuid));
 
-    logObject({ "SharedCache"_s }, WTFMove(sharedCacheInfo));
+    logObject(std::initializer_list<String> { "SharedCache"_s }, WTFMove(sharedCacheInfo));
 }
 
 #if HAVE(DYLD_DLOPEN_IMAGE_HEADER_SPI)
@@ -203,7 +203,7 @@ void LibraryPathDiagnosticsLogger::logDynamicLibraryInfo(const String& installNa
     libraryObject->setBoolean("InSharedCache"_s, isAddressInSharedRegion(header));
 #endif
 
-    logObject({ "Libraries"_s, installName }, WTFMove(libraryObject));
+    logObject(std::initializer_list<String> { "Libraries"_s, installName }, WTFMove(libraryObject));
 }
 
 void LibraryPathDiagnosticsLogger::logDynamicLibraryInfo(void)
@@ -235,7 +235,7 @@ void LibraryPathDiagnosticsLogger::logBundleInfo(const String& bundleIdentifier)
     else
         bundleInfo->setValue("Version"_s, JSON::Value::null());
 
-    logObject({ "Bundles"_s, bundleIdentifier }, WTFMove(bundleInfo));
+    logObject(std::initializer_list<String> { "Bundles"_s, bundleIdentifier }, WTFMove(bundleInfo));
 }
 
 void LibraryPathDiagnosticsLogger::logBundleInfo(void)
@@ -263,7 +263,7 @@ void LibraryPathDiagnosticsLogger::logCryptexCanaryInfo(canary_cryptex_t which, 
     cryptex->setString("Version"_s, String::fromUTF8(metadata->cm_get_version()));
     cryptex->setString("Variant"_s, String::fromUTF8(metadata->cm_get_variant()));
 
-    logObject({ "Canary"_s, description }, WTFMove(cryptex));
+    logObject(std::initializer_list<String> { "Canary"_s, description }, WTFMove(cryptex));
 }
 
 void LibraryPathDiagnosticsLogger::logCryptexCanaryInfo(void)

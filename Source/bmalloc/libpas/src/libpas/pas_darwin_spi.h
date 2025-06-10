@@ -27,7 +27,7 @@
 #define PAS_DARWIN_SPI_H
 
 #include "pas_utils.h"
-#include <pthread.h>
+#include "pas_thread.h"
 
 #if PAS_OS(DARWIN)
 #if defined(__has_include) && __has_include(<pthread/private.h>)

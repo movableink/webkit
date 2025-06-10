@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2020-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,9 +60,9 @@ public:
 private:
     // DateTimeFormat::TokenHandler functions:
     void visitField(DateTimeFormat::FieldType, int);
-    void visitLiteral(String&&);
+    void visitLiteral(const String&);
 
-    Ref<DateTimeEditElement> m_editElement;
+    const Ref<DateTimeEditElement> m_editElement;
     const DateTimeEditElement::LayoutParameters& m_parameters;
 };
 
@@ -167,7 +167,7 @@ void DateTimeEditBuilder::visitField(DateTimeFormat::FieldType fieldType, int co
     }
 }
 
-void DateTimeEditBuilder::visitLiteral(String&& text)
+void DateTimeEditBuilder::visitLiteral(const String& text)
 {
     ASSERT(text.length());
 
@@ -185,7 +185,7 @@ void DateTimeEditBuilder::visitLiteral(String&& text)
     if (text.endsWith(' '))
         element->setInlineStyleProperty(CSSPropertyMarginInlineEnd, -1, CSSUnitType::CSS_PX);
 
-    element->appendChild(Text::create(m_editElement->document(), WTFMove(text)));
+    element->appendChild(Text::create(m_editElement->document(), String { text }));
     m_editElement->fieldsWrapperElement().appendChild(element);
 }
 

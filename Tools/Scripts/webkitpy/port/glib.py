@@ -96,10 +96,11 @@ class GLibPort(Port):
         self._copy_values_from_environ_with_prefix(environment, 'GST_')
 
         gst_feature_rank_override = os.environ.get('GST_PLUGIN_FEATURE_RANK')
-        # Disable hardware-accelerated encoders and decoders. Depending on the underlying platform
+        # Disable hardware-accelerated device providers, encoders and decoders. Depending on the underlying platform
         # they might be selected and decrease tests reproducibility. They can still be re-enabled by
         # setting the GST_PLUGIN_FEATURE_RANK variable accordingly when calling run-webkit-tests.
-        downranked_elements = ['vah264dec', 'vah264enc', 'vah265dec', 'vah265enc', 'vaav1dec', 'vaav1enc', 'vajpegdec', 'vavp9dec', 'vavp8dec']
+        disabled_device_providers = ['alsa', 'decklink', 'oss', 'pipewire', 'pulse', 'v4l2', 'vulkan']
+        downranked_elements = ['vah264dec', 'vah264enc', 'vah265dec', 'vah265enc', 'vaav1dec', 'vaav1enc', 'vajpegdec', 'vavp9dec', 'vavp8dec'] + [f'{provider}deviceprovider' for provider in disabled_device_providers]
         environment['GST_PLUGIN_FEATURE_RANK'] = 'fakeaudiosink:max,' + ','.join(['%s:0' % element for element in downranked_elements])
         if gst_feature_rank_override:
             environment['GST_PLUGIN_FEATURE_RANK'] += ',%s' % gst_feature_rank_override
@@ -116,6 +117,13 @@ class GLibPort(Port):
 
         environment['WEBKIT_GST_ALLOW_PLAYBACK_OF_INVISIBLE_VIDEOS'] = '1'
         environment['WEBKIT_GST_WEBRTC_FORCE_EARLY_VIDEO_DECODING'] = '1'
+
+        # Match our WebRTC stats cache expiration time with LibWebRTC, since some tests actually expect this.
+        environment['WEBKIT_GST_WEBRTC_STATS_CACHE_EXPIRATION_TIME_MS'] = '50'
+
+        # Fake a sound card with 2 output channels. Apparently we cannot assume test bots have an
+        # actual sound card.
+        environment['WEBKIT_GST_MAX_NUMBER_OF_AUDIO_OUTPUT_CHANNELS'] = '2'
 
         # Disable SIMD optimization in GStreamer's ORC. Some bots (WPE release) crash in ORC's optimizations.
         environment['ORC_CODE'] = 'backup'

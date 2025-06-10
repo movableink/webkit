@@ -148,7 +148,7 @@ void PlatformCALayerRemote::moveToContext(RemoteLayerTreeContext& context)
     if (RefPtr protectedContext = m_context.get())
         protectedContext->layerWillLeaveContext(*this);
 
-    m_context = &context;
+    m_context = context;
 
     context.layerDidEnterContext(*this, layerType());
 
@@ -294,12 +294,19 @@ void PlatformCALayerRemote::ensureBackingStore()
 
 DestinationColorSpace PlatformCALayerRemote::displayColorSpace() const
 {
+#if PLATFORM(IOS_FAMILY)
     if (auto displayColorSpace = contentsFormatExtendedColorSpace(contentsFormat()))
         return displayColorSpace.value();
-
-#if !PLATFORM(IOS_FAMILY)
-    if (auto displayColorSpace = m_context ? m_context->displayColorSpace() : std::nullopt)
+#else
+    if (auto displayColorSpace = m_context ? m_context->displayColorSpace() : std::nullopt) {
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+        if (contentsFormat() == ContentsFormat::RGBA16F) {
+            if (auto extendedDisplayColorSpace = displayColorSpace->asExtended())
+                return extendedDisplayColorSpace.value();
+        }
+#endif
         return displayColorSpace.value();
+    }
 #endif
 
     return DestinationColorSpace::SRGB();
@@ -400,7 +407,7 @@ void PlatformCALayerRemote::removeSublayer(PlatformCALayerRemote* layer)
 {
     size_t childIndex = m_children.find(layer);
     if (childIndex != notFound)
-        m_children.remove(childIndex);
+        m_children.removeAt(childIndex);
     layer->m_superlayer = nullptr;
     m_properties.notePropertiesChanged(LayerChange::ChildrenChanged);
 }
@@ -471,7 +478,7 @@ void PlatformCALayerRemote::adoptSublayers(PlatformCALayer& source)
         for (const auto& layer : *customLayers) {
             size_t layerIndex = layersToMove.find(layer);
             if (layerIndex != notFound)
-                layersToMove.remove(layerIndex);
+                layersToMove.removeAt(layerIndex);
         }
     }
 

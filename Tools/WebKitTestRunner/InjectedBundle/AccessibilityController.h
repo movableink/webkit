@@ -54,7 +54,7 @@ public:
 
     void makeWindowObject(JSContextRef);
     virtual JSClassRef wrapperClass();
-    
+
     // Enhanced accessibility.
     void enableEnhancedAccessibility(bool);
     bool enhancedAccessibilityEnabled();

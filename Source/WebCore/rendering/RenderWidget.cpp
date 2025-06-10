@@ -32,13 +32,16 @@
 #include "LocalFrame.h"
 #include "RemoteFrame.h"
 #include "RemoteFrameView.h"
+#include "RenderBox.h"
 #include "RenderBoxInlines.h"
 #include "RenderElementInlines.h"
 #include "RenderEmbeddedObject.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
 #include "RenderLayerScrollableArea.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
+#include "RenderWidgetInlines.h"
 #include "SecurityOrigin.h"
 #include <wtf/Ref.h>
 #include <wtf/StackStats.h>
@@ -105,8 +108,9 @@ RenderWidget::RenderWidget(Type type, HTMLFrameOwnerElement& element, RenderStyl
 void RenderWidget::willBeDestroyed()
 {
     if (CheckedPtr cache = document().existingAXObjectCache()) {
-        cache->childrenChanged(this->parent());
-        cache->remove(this);
+        if (auto* parent = this->parent())
+            cache->childrenChanged(*parent);
+        cache->remove(*this);
     }
 
     if (renderTreeBeingDestroyed() && document().backForwardCacheState() == Document::NotInBackForwardCache && m_widget)
@@ -212,7 +216,7 @@ void RenderWidget::setWidget(RefPtr<Widget>&& widget)
     }
 
     if (CheckedPtr cache = document().existingAXObjectCache())
-        cache->childrenChanged(this);
+        cache->childrenChanged(*this);
 }
 
 void RenderWidget::layout()
@@ -239,6 +243,8 @@ void RenderWidget::styleDidChange(StyleDifference diff, const RenderStyle* oldSt
 
 void RenderWidget::paintContents(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
+    ASSERT(!isSkippedContentRoot(*this));
+
     if (paintInfo.requireSecurityOriginAccessForWidgets) {
         if (auto contentDocument = frameOwnerElement().contentDocument()) {
             if (!document().protectedSecurityOrigin()->isSameOriginDomain(contentDocument->securityOrigin()))
@@ -463,9 +469,9 @@ RemoteFrame* RenderWidget::remoteFrame() const
     return dynamicDowncast<RemoteFrame>(frameOwnerElement().contentFrame());
 }
 
-bool RenderWidget::needsPreferredWidthsRecalculation() const
+bool RenderWidget::shouldInvalidatePreferredWidths() const
 {
-    if (RenderReplaced::needsPreferredWidthsRecalculation())
+    if (RenderReplaced::shouldInvalidatePreferredWidths())
         return true;
     return embeddedContentBox();
 }

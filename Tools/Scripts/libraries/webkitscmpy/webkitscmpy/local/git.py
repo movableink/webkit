@@ -991,6 +991,23 @@ class Git(Scm):
             if log and log.poll() is None:
                 log.kill()
 
+    def last_commits_on(self, path, count=5):
+        """
+        Return the last `count` Commit objects that modified the specified file.
+        """
+        try:
+            output = run(
+                [self.executable(), 'log', f'--max-count={count}', '--follow', '--format=%H', '--', path],
+                cwd=self.root_path, capture_output=True, encoding='utf-8', check=True,
+            )
+            return [
+                self.find(commit_hash.strip())
+                for commit_hash in output.stdout.strip().splitlines()
+                if commit_hash.strip()
+            ]
+        except Exception:
+            return []
+
     def find(self, argument, include_log=True, include_identifier=True):
         if not isinstance(argument, string_utils.basestring):
             raise ValueError("Expected 'argument' to be a string, not '{}'".format(type(argument)))

@@ -28,7 +28,7 @@
 
 #include "BidiResolver.h"
 #include "DecomposedGlyphs.h"
-#include "DisplayListReplayer.h"
+#include "DisplayList.h"
 #include "Filter.h"
 #include "FilterImage.h"
 #include "FloatRoundedRect.h"
@@ -191,10 +191,15 @@ void GraphicsContext::drawGlyphs(const Font& font, std::span<const GlyphBufferGl
     FontCascade::drawGlyphs(*this, font, glyphs, advances, point, fontSmoothingMode);
 }
 
+void GraphicsContext::drawGlyphsImmediate(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& point, FontSmoothingMode fontSmoothingMode)
+{
+    // Called by implementations that transform drawGlyphs into drawGlyphsImmediate or drawDecomposedGlyphs.
+    drawGlyphs(font, glyphs, advances, point, fontSmoothingMode);
+}
+
 void GraphicsContext::drawDecomposedGlyphs(const Font& font, const DecomposedGlyphs& decomposedGlyphs)
 {
-    auto positionedGlyphs = decomposedGlyphs.positionedGlyphs();
-    FontCascade::drawGlyphs(*this, font, positionedGlyphs.glyphs.span(), positionedGlyphs.advances.span(), positionedGlyphs.localAnchor, positionedGlyphs.smoothingMode);
+    FontCascade::drawGlyphs(*this, font, decomposedGlyphs.glyphs(), decomposedGlyphs.advances(), decomposedGlyphs.localAnchor(), decomposedGlyphs.fontSmoothingMode());
 }
 
 void GraphicsContext::drawEmphasisMarks(const FontCascade& font, const TextRun& run, const AtomString& mark, const FloatPoint& point, unsigned from, std::optional<unsigned> to)
@@ -601,6 +606,20 @@ void GraphicsContext::drawLineForText(const FloatRect& rect, bool isPrinting, bo
 {
     FloatSegment line[1] { { 0, rect.width() } };
     drawLinesForText(rect.location(), rect.height(), line, isPrinting, doubleUnderlines, style);
+}
+
+void GraphicsContext::drawDisplayList(const DisplayList::DisplayList& displayList)
+{
+    Ref controlFactory = ControlFactory::shared();
+    drawDisplayList(displayList, controlFactory);
+}
+
+void GraphicsContext::drawDisplayList(const DisplayList::DisplayList& displayList, ControlFactory& controlFactory)
+{
+    // FIXME: ControlFactory should be property of the context and not passed this way here.
+    // Currently this mutates each ControlPart which is unsuitable for display lists.
+    for (auto& item : displayList.items())
+        applyItem(*this, controlFactory, item);
 }
 
 FloatRect GraphicsContext::computeUnderlineBoundsForText(const FloatRect& rect, bool printing)

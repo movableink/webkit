@@ -308,7 +308,7 @@ private:
     NEVER_INLINE UnexpectedResult WARN_UNUSED_RETURN validationFail(const Args&... args) const
     {
         using namespace FailureHelper; // See ADL comment in WasmParser.h.
-        if (UNLIKELY(ASSERT_ENABLED && Options::crashOnFailedWasmValidate()))
+        if (ASSERT_ENABLED && Options::crashOnFailedWasmValidate())
             WTFBreakpointTrap();
 
         StringPrintStream out;
@@ -360,7 +360,7 @@ private:
 
 
 #define WASM_VALIDATOR_FAIL_IF(condition, ...) do { \
-        if (UNLIKELY(condition)) \
+        if (condition) [[unlikely]] \
             return validationFail(__VA_ARGS__); \
     } while (0) \
 
@@ -461,7 +461,7 @@ auto FunctionParser<Context>::parse() -> Result
         totalNumberOfLocals += numberOfLocals;
         WASM_PARSER_FAIL_IF(totalNumberOfLocals > maxFunctionLocals, "Function's number of locals is too big "_s, totalNumberOfLocals, " maximum "_s, maxFunctionLocals);
         WASM_PARSER_FAIL_IF(!parseValueType(m_info, typeOfLocal), "can't get Function local's type in group "_s, i);
-        if (UNLIKELY(!isDefaultableType(typeOfLocal)))
+        if (!isDefaultableType(typeOfLocal)) [[unlikely]]
             totalNonDefaultableLocals++;
 
         if (typeOfLocal.isV128()) {
@@ -520,7 +520,7 @@ auto FunctionParser<Context>::parseBody() -> PartialResult
 
         m_currentOpcode = static_cast<OpType>(op);
 #if ENABLE(WEBASSEMBLY_OMGJIT)
-        if (UNLIKELY(Options::dumpWasmOpcodeStatistics()))
+        if (Options::dumpWasmOpcodeStatistics()) [[unlikely]]
             WasmOpcodeCounter::singleton().increment(m_currentOpcode);
 #endif
 
@@ -1854,10 +1854,10 @@ ALWAYS_INLINE auto FunctionParser<Context>::parseNestedBlocksEagerly(bool& shoul
         BlockSignature inlineSignature;
 
         // Only attempt to parse the most optimistic case of a single non-ref or void return signature.
-        if (LIKELY(peekInt7(kindByte) && isValidTypeKind(kindByte))) {
+        if (peekInt7(kindByte) && isValidTypeKind(kindByte)) [[likely]] {
             TypeKind typeKind = static_cast<TypeKind>(kindByte);
             Type type = { typeKind, TypeDefinition::invalidIndex };
-            if (UNLIKELY(!(type.isVoid() || isValueType(type))))
+            if (!(type.isVoid() || isValueType(type))) [[unlikely]]
                 return { };
             inlineSignature = { m_typeInformation.thunkFor(type), nullptr };
             m_offset++;
@@ -2222,7 +2222,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             WASM_TRY_ADD_TO_CONTEXT(addRefI31(value, result));
 
             m_expressionStack.constructAndAppend(Type { TypeKind::Ref, static_cast<TypeIndex>(TypeKind::I31ref) }, result);
-            return { };
+            break;
         }
         case ExtGCOpType::I31GetS: {
             TypedExpression ref;
@@ -2233,7 +2233,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             WASM_TRY_ADD_TO_CONTEXT(addI31GetS(ref, result));
 
             m_expressionStack.constructAndAppend(Types::I32, result);
-            return { };
+            break;
         }
         case ExtGCOpType::I31GetU: {
             TypedExpression ref;
@@ -2244,7 +2244,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             WASM_TRY_ADD_TO_CONTEXT(addI31GetU(ref, result));
 
             m_expressionStack.constructAndAppend(Types::I32, result);
-            return { };
+            break;
         }
         case ExtGCOpType::ArrayNew: {
             uint32_t typeIndex;
@@ -2270,7 +2270,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
 
             m_expressionStack.constructAndAppend(arrayRefType, result);
 
-            return { };
+            break;
         }
         case ExtGCOpType::ArrayNewDefault: {
             uint32_t typeIndex;
@@ -2287,7 +2287,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             WASM_TRY_ADD_TO_CONTEXT(addArrayNewDefault(typeIndex, size, result));
 
             m_expressionStack.constructAndAppend(arrayRefType, result);
-            return { };
+            break;
         }
         case ExtGCOpType::ArrayNewFixed: {
             // Get the array type and element type
@@ -2332,7 +2332,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             ExpressionType result;
             WASM_TRY_ADD_TO_CONTEXT(addArrayNewFixed(typeIndex, args, result));
             m_expressionStack.constructAndAppend(arrayRefType, result);
-            return { };
+            break;
         }
         case ExtGCOpType::ArrayNewData: {
             uint32_t typeIndex;
@@ -2362,7 +2362,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             ExpressionType result;
             WASM_TRY_ADD_TO_CONTEXT(addArrayNewData(typeIndex, dataIndex, size, offset, result));
             m_expressionStack.constructAndAppend(arrayRefType, result);
-            return { };
+            break;
         }
         case ExtGCOpType::ArrayNewElem: {
             uint32_t typeIndex;
@@ -2404,7 +2404,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             ExpressionType result;
             WASM_TRY_ADD_TO_CONTEXT(addArrayNewElem(typeIndex, elemSegmentIndex, size, offset, result));
             m_expressionStack.constructAndAppend(arrayRefType, result);
-            return { };
+            break;
         }
         case ExtGCOpType::ArrayGet:
         case ExtGCOpType::ArrayGetS:
@@ -2443,7 +2443,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             WASM_TRY_ADD_TO_CONTEXT(addArrayGet(op, typeIndex, arrayref, index, result));
 
             m_expressionStack.constructAndAppend(resultType, result);
-            return { };
+            break;
         }
         case ExtGCOpType::ArraySet: {
             uint32_t typeIndex;
@@ -2472,7 +2472,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
 
             WASM_TRY_ADD_TO_CONTEXT(addArraySet(typeIndex, arrayref, index, value));
 
-            return { };
+            break;
         }
         case ExtGCOpType::ArrayLen: {
             TypedExpression arrayref;
@@ -2483,7 +2483,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             WASM_TRY_ADD_TO_CONTEXT(addArrayLen(arrayref, result));
 
             m_expressionStack.constructAndAppend(Types::I32, result);
-            return { };
+            break;
         }
         case ExtGCOpType::ArrayFill: {
             uint32_t typeIndex;
@@ -2511,7 +2511,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             }
 
             WASM_TRY_ADD_TO_CONTEXT(addArrayFill(typeIndex, arrayref, offset, value, size));
-            return { };
+            break;
         }
         case ExtGCOpType::ArrayCopy: {
             uint32_t dstTypeIndex;
@@ -2539,7 +2539,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != size.type().kind, "array.copy size to type ", size.type(), " expected ", TypeKind::I32);
 
             WASM_TRY_ADD_TO_CONTEXT(addArrayCopy(dstTypeIndex, dst, dstOffset, srcTypeIndex, src, srcOffset, size));
-            return { };
+            break;
         }
         case ExtGCOpType::ArrayInitElem: {
             uint32_t dstTypeIndex;
@@ -2570,7 +2570,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != size.type().kind, "array.init_elem size to type ", size.type(), " expected ", TypeKind::I32);
 
             WASM_TRY_ADD_TO_CONTEXT(addArrayInitElem(dstTypeIndex, dst, dstOffset, elemSegmentIndex, srcOffset, size));
-            return { };
+            break;
         }
         case ExtGCOpType::ArrayInitData: {
             uint32_t dstTypeIndex;
@@ -2595,7 +2595,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != size.type().kind, "array.init_data size to type "_s, size.type(), " expected "_s, TypeKind::I32);
 
             WASM_TRY_ADD_TO_CONTEXT(addArrayInitData(dstTypeIndex, dst, dstOffset, dataSegmentIndex, srcOffset, size));
-            return { };
+            break;
         }
         case ExtGCOpType::StructNew: {
             uint32_t typeIndex;
@@ -2632,7 +2632,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             ExpressionType result;
             WASM_TRY_ADD_TO_CONTEXT(addStructNew(typeIndex, args, result));
             m_expressionStack.constructAndAppend(Type { TypeKind::Ref, typeDefinition->index() }, result);
-            return { };
+            break;
         }
         case ExtGCOpType::StructNewDefault: {
             uint32_t typeIndex;
@@ -2647,7 +2647,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             ExpressionType result;
             WASM_TRY_ADD_TO_CONTEXT(addStructNewDefault(typeIndex, result));
             m_expressionStack.constructAndAppend(Type { TypeKind::Ref, typeDefinition->index() }, result);
-            return { };
+            break;
         }
         case ExtGCOpType::StructGet:
         case ExtGCOpType::StructGetS:
@@ -2674,7 +2674,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             WASM_TRY_ADD_TO_CONTEXT(addStructGet(op, structGetInput.structReference, structType, structGetInput.indices.fieldIndex, result));
 
             m_expressionStack.constructAndAppend(structGetInput.field.type.unpacked(), result);
-            return { };
+            break;
         }
         case ExtGCOpType::StructSet: {
             TypedExpression value;
@@ -2695,7 +2695,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
 
             const auto& structType = *m_info.typeSignatures[structSetInput.indices.structTypeIndex]->expand().template as<StructType>();
             WASM_TRY_ADD_TO_CONTEXT(addStructSet(structSetInput.structReference, structType, structSetInput.indices.fieldIndex, value));
-            return { };
+            break;
         }
         case ExtGCOpType::RefTest:
         case ExtGCOpType::RefTestNull:
@@ -2754,7 +2754,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
                 m_expressionStack.constructAndAppend(Types::I32, result);
             }
 
-            return { };
+            break;
         }
         case ExtGCOpType::BrOnCast:
         case ExtGCOpType::BrOnCastFail: {
@@ -2811,7 +2811,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
 
             WASM_TRY_ADD_TO_CONTEXT(addBranchCast(data, ref, m_expressionStack, hasNull2, heapType2, op == ExtGCOpType::BrOnCastFail));
 
-            return { };
+            break;
         }
         case ExtGCOpType::AnyConvertExtern: {
             TypedExpression reference;
@@ -2821,7 +2821,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             ExpressionType result;
             WASM_TRY_ADD_TO_CONTEXT(addAnyConvertExtern(reference, result));
             m_expressionStack.constructAndAppend(anyrefType(reference.type().isNullable()), result);
-            return { };
+            break;
         }
         case ExtGCOpType::ExternConvertAny: {
             TypedExpression reference;
@@ -2831,12 +2831,13 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             ExpressionType result;
             WASM_TRY_ADD_TO_CONTEXT(addExternConvertAny(reference, result));
             m_expressionStack.constructAndAppend(externrefType(reference.type().isNullable()), result);
-            return { };
+            break;
         }
         default:
             WASM_PARSER_FAIL_IF(true, "invalid extended GC op "_s, m_currentExtOp);
             break;
         }
+
         return { };
     }
 
@@ -2846,7 +2847,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
 
         ExtAtomicOpType op = static_cast<ExtAtomicOpType>(m_currentExtOp);
 #if ENABLE(WEBASSEMBLY_OMGJIT)
-        if (UNLIKELY(Options::dumpWasmOpcodeStatistics()))
+        if (Options::dumpWasmOpcodeStatistics()) [[unlikely]]
             WasmOpcodeCounter::singleton().increment(op);
 #endif
 
@@ -3079,7 +3080,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
 
     case TailCall:
         WASM_PARSER_FAIL_IF(!Options::useWasmTailCalls(), "wasm tail calls are not enabled"_s);
-        FALLTHROUGH;
+        [[fallthrough]];
     case Call: {
         FunctionSpaceIndex functionIndex;
         WASM_FAIL_IF_HELPER_FAILS(parseFunctionIndex(functionIndex));
@@ -3113,7 +3114,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             WASM_PARSER_FAIL_IF(calleeSignature.returnCount() != callerSignature.returnCount(), "tail call function index "_s, functionIndex, " with return count "_s, calleeSignature.returnCount(), ", but the caller's signature has "_s, callerSignature.returnCount(), " return values"_s);
 
             for (unsigned i = 0; i < calleeSignature.returnCount(); ++i)
-                WASM_VALIDATOR_FAIL_IF(calleeSignature.returnType(i) != callerSignature.returnType(i), "tail call function index "_s, functionIndex, " return type mismatch: "_s , "expected "_s, callerSignature.returnType(i), ", got "_s, calleeSignature.returnType(i));
+                WASM_VALIDATOR_FAIL_IF(!isSubtype(calleeSignature.returnType(i), callerSignature.returnType(i)), "tail call function index "_s, functionIndex, " return type mismatch: "_s , "expected "_s, callerSignature.returnType(i), ", got "_s, calleeSignature.returnType(i));
 
             WASM_TRY_ADD_TO_CONTEXT(addCall(functionIndex, typeDefinition, args, results, CallType::TailCall));
 
@@ -3141,7 +3142,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
 
     case TailCallIndirect:
         WASM_PARSER_FAIL_IF(!Options::useWasmTailCalls(), "wasm tail calls are not enabled"_s);
-        FALLTHROUGH;
+        [[fallthrough]];
     case CallIndirect: {
         uint32_t signatureIndex;
         uint32_t tableIndex;
@@ -3183,7 +3184,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             WASM_PARSER_FAIL_IF(calleeSignature.returnCount() != callerSignature.returnCount(), "tail call indirect function with return count "_s, calleeSignature.returnCount(), "_s, but the caller's signature has "_s, callerSignature.returnCount(), " return values"_s);
 
             for (unsigned i = 0; i < calleeSignature.returnCount(); ++i)
-                WASM_VALIDATOR_FAIL_IF(calleeSignature.returnType(i) != callerSignature.returnType(i), "tail call indirect return type mismatch: "_s , "expected "_s, callerSignature.returnType(i), ", got "_s, calleeSignature.returnType(i));
+                WASM_VALIDATOR_FAIL_IF(!isSubtype(calleeSignature.returnType(i), callerSignature.returnType(i)), "tail call indirect return type mismatch: "_s , "expected "_s, callerSignature.returnType(i), ", got "_s, calleeSignature.returnType(i));
 
             WASM_TRY_ADD_TO_CONTEXT(addCallIndirect(tableIndex, typeDefinition, args, results, CallType::TailCall));
 
@@ -3210,7 +3211,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
 
     case TailCallRef:
         WASM_PARSER_FAIL_IF(!Options::useWasmTailCalls(), "wasm tail calls are not enabled"_s);
-        FALLTHROUGH;
+        [[fallthrough]];
     case CallRef: {
         uint32_t typeIndex;
         WASM_PARSER_FAIL_IF(!parseVarUInt32(typeIndex), "can't get call_ref's signature index"_s);
@@ -3364,6 +3365,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
     }
 
     case Try: {
+        m_info.m_usesLegacyExceptions.storeRelaxed(true);
         BlockSignature inlineSignature;
         WASM_PARSER_FAIL_IF(!parseBlockSignatureAndNotifySIMDUseIfNeeded(inlineSignature), "can't get try's signature"_s);
 
@@ -3413,6 +3415,8 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             m_expressionStack.constructAndAppend(argumentType, results[i]);
         }
         resetLocalInitStackToHeight(controlEntry.localInitStackHeight);
+
+        ASSERT(m_info.m_usesLegacyExceptions.loadRelaxed());
         return { };
     }
 
@@ -3429,10 +3433,13 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         m_expressionStack.swap(preCatchStack);
         WASM_TRY_ADD_TO_CONTEXT(addCatchAll(preCatchStack, controlEntry.controlData));
         resetLocalInitStackToHeight(controlEntry.localInitStackHeight);
+
+        ASSERT(m_info.m_usesLegacyExceptions.loadRelaxed());
         return { };
     }
 
     case TryTable: {
+        m_info.m_usesModernExceptions.storeRelaxed(true);
         BlockSignature inlineSignature;
         WASM_PARSER_FAIL_IF(!parseBlockSignatureAndNotifySIMDUseIfNeeded(inlineSignature), "can't get try_table's signature"_s);
 
@@ -3569,7 +3576,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
     case ThrowRef: {
         TypedExpression exn;
         WASM_TRY_POP_EXPRESSION_STACK_INTO(exn, "exception reference"_s);
-        WASM_VALIDATOR_FAIL_IF(exn.type() != exnrefType(), "throw_ref expected an exception reference"_s);
+        WASM_VALIDATOR_FAIL_IF(!isSubtype(exn.type(), exnrefType()), "throw_ref expected an exception reference"_s);
 
         WASM_TRY_ADD_TO_CONTEXT(addThrowRef(exn, m_expressionStack));
         m_unreachableBlocks = 1;
@@ -3621,12 +3628,12 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         String errorMessage;
         targets.appendUsingFunctor(numberOfTargets, [&](size_t i) -> ControlType* {
             uint32_t target;
-            if (UNLIKELY(!parseVarUInt32(target))) {
+            if (!parseVarUInt32(target)) [[unlikely]] {
                 if (errorMessage.isNull())
                     errorMessage = WTF::makeString("can't get "_s, i, "th target for br_table"_s);
                 return nullptr;
             }
-            if (UNLIKELY(target >= m_controlStack.size())) {
+            if (target >= m_controlStack.size()) [[unlikely]] {
                 if (errorMessage.isNull())
                     errorMessage = WTF::makeString("br_table's "_s, i, "th target "_s, target, " exceeds control stack size "_s, m_controlStack.size());
                 return nullptr;
@@ -3739,7 +3746,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         constexpr bool isReachable = true;
 
         ExtSIMDOpType op = static_cast<ExtSIMDOpType>(m_currentExtOp);
-        if (UNLIKELY(Options::dumpWasmOpcodeStatistics()))
+        if (Options::dumpWasmOpcodeStatistics()) [[unlikely]]
             WasmOpcodeCounter::singleton().increment(op);
 
         switch (op) {
@@ -3893,6 +3900,8 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
     }
 
     case TryTable: {
+        m_unreachableBlocks++;
+
         BlockSignature unused;
         uint32_t numberOfCatches;
         WASM_PARSER_FAIL_IF(!parseBlockSignatureAndNotifySIMDUseIfNeeded(unused), "can't get try_table's signature in unreachable context"_s);
@@ -3914,7 +3923,7 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
 
     case TailCallIndirect:
         WASM_PARSER_FAIL_IF(!Options::useWasmTailCalls(), "wasm tail calls are not enabled"_s);
-        FALLTHROUGH;
+        [[fallthrough]];
     case CallIndirect: {
         uint32_t unused;
         uint32_t unused2;
@@ -3925,7 +3934,7 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
 
     case TailCallRef:
         WASM_PARSER_FAIL_IF(!Options::useWasmTailCalls(), "wasm tail calls are not enabled"_s);
-        FALLTHROUGH;
+        [[fallthrough]];
     case CallRef: {
         uint32_t unused;
         WASM_PARSER_FAIL_IF(!parseVarUInt32(unused), "can't call_ref's signature index in unreachable context"_s);
@@ -3977,7 +3986,7 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
 
     case TailCall:
         WASM_PARSER_FAIL_IF(!Options::useWasmTailCalls(), "wasm tail calls are not enabled"_s);
-        FALLTHROUGH;
+        [[fallthrough]];
     case Call: {
         FunctionSpaceIndex functionIndex;
         WASM_FAIL_IF_HELPER_FAILS(parseFunctionIndex(functionIndex));
@@ -4090,10 +4099,15 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
     case TableSet: {
         unsigned tableIndex;
         WASM_PARSER_FAIL_IF(!parseVarUInt32(tableIndex), "can't parse table index"_s);
-        FALLTHROUGH;
+        [[fallthrough]];
     }
-    case RefIsNull:
+    case RefIsNull: {
+        return { };
+    }
+
     case RefNull: {
+        int32_t unused;
+        WASM_PARSER_FAIL_IF(!parseHeapType(m_info, unused), "can't get heap type for "_s, m_currentOpcode, " in unreachable context"_s);
         return { };
     }
 
@@ -4121,7 +4135,7 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
 
         ExtGCOpType op = static_cast<ExtGCOpType>(m_currentExtOp);
 #if ENABLE(WEBASSEMBLY_OMGJIT)
-        if (UNLIKELY(Options::dumpWasmOpcodeStatistics()))
+        if (Options::dumpWasmOpcodeStatistics()) [[unlikely]]
             WasmOpcodeCounter::singleton().increment(op);
 #endif
 
@@ -4138,6 +4152,24 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
         case ExtGCOpType::ArrayNewDefault: {
             uint32_t unused;
             WASM_PARSER_FAIL_IF(!parseVarUInt32(unused), "can't get type index immediate for array.new_default in unreachable context"_s);
+            return { };
+        }
+        case ExtGCOpType::ArrayNewFixed: {
+            uint32_t unused;
+            WASM_PARSER_FAIL_IF(!parseVarUInt32(unused), "can't get type index immediate for array.new_fixed in unreachable context"_s);
+            WASM_PARSER_FAIL_IF(!parseVarUInt32(unused), "can't get argument count for array.new_fixed in unreachable context"_s);
+            return { };
+        }
+        case ExtGCOpType::ArrayNewData: {
+            uint32_t unused;
+            WASM_PARSER_FAIL_IF(!parseVarUInt32(unused), "can't get type index immediate for array.new_data in unreachable context"_s);
+            WASM_PARSER_FAIL_IF(!parseVarUInt32(unused), "can't get data segment index for array.new_data in unreachable context"_s);
+            return { };
+        }
+        case ExtGCOpType::ArrayNewElem: {
+            uint32_t unused;
+            WASM_PARSER_FAIL_IF(!parseVarUInt32(unused), "can't get type index immediate for array.new_elem in unreachable context"_s);
+            WASM_PARSER_FAIL_IF(!parseVarUInt32(unused), "can't get elements segment index for array.new_elem in unreachable context"_s);
             return { };
         }
         case ExtGCOpType::ArrayGet: {
@@ -4200,6 +4232,16 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
             WASM_FAIL_IF_HELPER_FAILS(parseStructTypeIndexAndFieldIndex(unused, "struct.get"_s));
             return { };
         }
+        case ExtGCOpType::StructGetS: {
+            StructTypeIndexAndFieldIndex unused;
+            WASM_FAIL_IF_HELPER_FAILS(parseStructTypeIndexAndFieldIndex(unused, "struct.get_s"_s));
+            return { };
+        }
+        case ExtGCOpType::StructGetU: {
+            StructTypeIndexAndFieldIndex unused;
+            WASM_FAIL_IF_HELPER_FAILS(parseStructTypeIndexAndFieldIndex(unused, "struct.get_u"_s));
+            return { };
+        }
         case ExtGCOpType::StructSet: {
             StructTypeIndexAndFieldIndex unused;
             WASM_FAIL_IF_HELPER_FAILS(parseStructTypeIndexAndFieldIndex(unused, "struct.set"_s));
@@ -4214,6 +4256,38 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
             WASM_PARSER_FAIL_IF(!parseHeapType(m_info, unused), "can't get heap type for "_s, opName);
             return { };
         }
+        case ExtGCOpType::BrOnCast:
+        case ExtGCOpType::BrOnCastFail: {
+            auto opName = op == ExtGCOpType::BrOnCast ? "br_on_cast"_s : "br_on_cast_fail"_s;
+            uint8_t flags;
+            WASM_VALIDATOR_FAIL_IF(!parseUInt8(flags), "can't get flags byte for "_s, opName);
+            bool hasNull1 = flags & 0x1;
+            bool hasNull2 = flags & 0x2;
+
+            uint32_t unused;
+            WASM_FAIL_IF_HELPER_FAILS(parseBranchTarget(unused));
+
+            int32_t heapType1, heapType2;
+            WASM_PARSER_FAIL_IF(!parseHeapType(m_info, heapType1), "can't get first heap type for "_s, opName);
+            WASM_PARSER_FAIL_IF(!parseHeapType(m_info, heapType2), "can't get second heap type for "_s, opName);
+
+            TypeIndex typeIndex1, typeIndex2;
+            if (isTypeIndexHeapType(heapType1))
+                typeIndex1 = m_info.typeSignatures[heapType1].get().index();
+            else
+                typeIndex1 = static_cast<TypeIndex>(heapType1);
+
+            if (isTypeIndexHeapType(heapType2))
+                typeIndex2 = m_info.typeSignatures[heapType2].get().index();
+            else
+                typeIndex2 = static_cast<TypeIndex>(heapType2);
+
+            WASM_VALIDATOR_FAIL_IF(!isSubtype(Type { hasNull2 ? TypeKind::RefNull : TypeKind::Ref, typeIndex2 }, Type { hasNull1 ? TypeKind::RefNull : TypeKind::Ref, typeIndex1 }), "target heaptype was not a subtype of source heaptype for "_s, opName);
+            return { };
+        }
+        case ExtGCOpType::AnyConvertExtern:
+        case ExtGCOpType::ExternConvertAny:
+            return { };
         default:
             WASM_PARSER_FAIL_IF(true, "invalid extended GC op "_s, m_currentExtOp);
             break;

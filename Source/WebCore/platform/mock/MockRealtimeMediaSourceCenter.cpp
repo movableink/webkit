@@ -35,6 +35,7 @@
 #include "MediaConstraints.h"
 #include "MockRealtimeAudioSource.h"
 #include "MockRealtimeVideoSource.h"
+#include "NativeImage.h"
 #include "NotImplemented.h"
 #include "RealtimeMediaSourceSettings.h"
 #include <math.h>
@@ -499,7 +500,8 @@ static bool shouldBeDefaultDevice(const MockMediaDevice& device)
 
 void MockRealtimeMediaSourceCenter::addDevice(const MockMediaDevice& device)
 {
-    bool isDefault = shouldBeDefaultDevice(device);
+    bool isDefault = device.isDefault || shouldBeDefaultDevice(device);
+
     if (isDefault)
         devices().insert(0, device);
     else

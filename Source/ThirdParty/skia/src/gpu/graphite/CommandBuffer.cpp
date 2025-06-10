@@ -93,29 +93,27 @@ bool CommandBuffer::addRenderPass(const RenderPassDesc& renderPassDesc,
                                   sk_sp<Texture> depthStencilTexture,
                                   const Texture* dstCopy,
                                   SkIRect dstReadBounds,
+                                  SkIPoint resolveOffset,
                                   SkISize viewportDims,
                                   const DrawPassList& drawPasses) {
     TRACE_EVENT0("skia.gpu", TRACE_FUNC);
-
-    fColorAttachmentSize = colorTexture->dimensions();
-    SkIRect colorAttachmentBounds = SkIRect::MakeSize(fColorAttachmentSize);
 
     SkIRect renderPassBounds;
     for (const auto& drawPass : drawPasses) {
         renderPassBounds.join(drawPass->bounds());
     }
     if (renderPassDesc.fColorAttachment.fLoadOp == LoadOp::kClear) {
-        renderPassBounds.join(colorAttachmentBounds);
+        renderPassBounds.join(fRenderPassBounds);
     }
     renderPassBounds.offset(fReplayTranslation.x(), fReplayTranslation.y());
-    if (!renderPassBounds.intersect(colorAttachmentBounds)) {
+    if (!renderPassBounds.intersect(fRenderPassBounds)) {
         // The entire RenderPass is offscreen given the replay translation so skip adding the pass
         // at all
         return true;
     }
 
-    dstReadBounds.offset(fReplayTranslation.x(), fReplayTranslation.y());
-    if (!dstReadBounds.intersect(colorAttachmentBounds)) {
+    dstReadBounds.offset(fReplayTranslation);
+    if (!dstReadBounds.intersect(fRenderPassBounds)) {
         // The draws within the RenderPass that would sample from the dstCopy have been translated
         // off screen. Set the bounds to empty and let the GPU clipping do its job.
         dstReadBounds = SkIRect::MakeEmpty();
@@ -143,6 +141,7 @@ bool CommandBuffer::addRenderPass(const RenderPassDesc& renderPassDesc,
                                colorTexture.get(),
                                resolveTexture.get(),
                                depthStencilTexture.get(),
+                               resolveOffset,
                                viewport,
                                drawPasses)) {
         return false;
@@ -285,6 +284,22 @@ bool CommandBuffer::clearBuffer(const Buffer* buffer, size_t offset, size_t size
     }
 
     SkDEBUGCODE(fHasWork = true;)
+
+    return true;
+}
+
+bool CommandBuffer::setReplayTranslationAndClip(const SkIVector& translation,
+                                                const SkIRect& clip,
+                                                const SkIRect& renderTargetBounds) {
+    fReplayTranslation = translation;
+    fRenderPassBounds = renderTargetBounds;
+
+    // If a replay clip is defined, we intersect it with the render target bounds.
+    if (!clip.isEmpty()) {
+        if (!fRenderPassBounds.intersect(clip.makeOffset(translation))) {
+            return false;
+        }
+    }
 
     return true;
 }

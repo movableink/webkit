@@ -84,19 +84,18 @@ void WebInspector::setFrontendConnection(IPC::Connection::Handle&& connectionHan
 {
     // We might receive multiple updates if this web process got swapped into a WebPageProxy
     // shortly after another process established the connection.
-    if (m_frontendConnection) {
-        m_frontendConnection->invalidate();
-        m_frontendConnection = nullptr;
-    }
+    if (RefPtr frontendConnection = std::exchange(m_frontendConnection, nullptr))
+        frontendConnection->invalidate();
 
     if (!connectionHandle)
         return;
 
-    m_frontendConnection = IPC::Connection::createClientConnection(IPC::Connection::Identifier { WTFMove(connectionHandle) });
-    m_frontendConnection->open(*this);
+    Ref frontendConnection = IPC::Connection::createClientConnection(IPC::Connection::Identifier { WTFMove(connectionHandle) });
+    m_frontendConnection = frontendConnection.copyRef();
+    frontendConnection->open(*this);
 
     for (auto& callback : m_frontendConnectionActions)
-        callback();
+        callback(frontendConnection.get());
     m_frontendConnectionActions.clear();
 }
 
@@ -121,10 +120,10 @@ void WebInspector::bringToFront()
     WebProcess::singleton().parentProcessConnection()->send(Messages::WebInspectorUIProxy::BringToFront(), m_page->identifier());
 }
 
-void WebInspector::whenFrontendConnectionEstablished(Function<void()>&& callback)
+void WebInspector::whenFrontendConnectionEstablished(Function<void(IPC::Connection&)>&& callback)
 {
-    if (m_frontendConnection) {
-        callback();
+    if (RefPtr connection = m_frontendConnection) {
+        callback(*connection);
         return;
     }
 
@@ -166,8 +165,8 @@ void WebInspector::showConsole()
     if (!m_page->corePage())
         return;
 
-    whenFrontendConnectionEstablished([frontendConnection = m_frontendConnection] {
-        frontendConnection->send(Messages::WebInspectorUI::ShowConsole(), 0);
+    whenFrontendConnectionEstablished([](auto& frontendConnection) {
+        frontendConnection.send(Messages::WebInspectorUI::ShowConsole(), 0);
     });
 }
 
@@ -176,8 +175,8 @@ void WebInspector::showResources()
     if (!m_page->corePage())
         return;
 
-    whenFrontendConnectionEstablished([frontendConnection = m_frontendConnection] {
-        frontendConnection->send(Messages::WebInspectorUI::ShowResources(), 0);
+    whenFrontendConnectionEstablished([](auto& frontendConnection) {
+        frontendConnection.send(Messages::WebInspectorUI::ShowResources(), 0);
     });
 }
 
@@ -192,8 +191,8 @@ void WebInspector::showMainResourceForFrame(WebCore::FrameIdentifier frameIdenti
 
     String inspectorFrameIdentifier = m_page->corePage()->inspectorController().ensurePageAgent().frameId(frame->coreLocalFrame());
 
-    whenFrontendConnectionEstablished([frontendConnection = m_frontendConnection, inspectorFrameIdentifier] {
-        frontendConnection->send(Messages::WebInspectorUI::ShowMainResourceForFrame(inspectorFrameIdentifier), 0);
+    whenFrontendConnectionEstablished([inspectorFrameIdentifier](auto& frontendConnection) {
+        frontendConnection.send(Messages::WebInspectorUI::ShowMainResourceForFrame(inspectorFrameIdentifier), 0);
     });
 }
 
@@ -202,8 +201,8 @@ void WebInspector::startPageProfiling()
     if (!m_page->corePage())
         return;
 
-    whenFrontendConnectionEstablished([frontendConnection = m_frontendConnection] {
-        frontendConnection->send(Messages::WebInspectorUI::StartPageProfiling(), 0);
+    whenFrontendConnectionEstablished([](auto& frontendConnection) {
+        frontendConnection.send(Messages::WebInspectorUI::StartPageProfiling(), 0);
     });
 }
 
@@ -212,8 +211,8 @@ void WebInspector::stopPageProfiling()
     if (!m_page->corePage())
         return;
 
-    whenFrontendConnectionEstablished([frontendConnection = m_frontendConnection] {
-        frontendConnection->send(Messages::WebInspectorUI::StopPageProfiling(), 0);
+    whenFrontendConnectionEstablished([](auto& frontendConnection) {
+        frontendConnection.send(Messages::WebInspectorUI::StopPageProfiling(), 0);
     });
 }
 
@@ -222,8 +221,8 @@ void WebInspector::startElementSelection()
     if (!m_page->corePage())
         return;
 
-    whenFrontendConnectionEstablished([frontendConnection = m_frontendConnection] {
-        frontendConnection->send(Messages::WebInspectorUI::StartElementSelection(), 0);
+    whenFrontendConnectionEstablished([](auto& frontendConnection) {
+        frontendConnection.send(Messages::WebInspectorUI::StartElementSelection(), 0);
     });
 }
 
@@ -232,8 +231,8 @@ void WebInspector::stopElementSelection()
     if (!m_page->corePage())
         return;
 
-    whenFrontendConnectionEstablished([frontendConnection = m_frontendConnection] {
-        frontendConnection->send(Messages::WebInspectorUI::StopElementSelection(), 0);
+    whenFrontendConnectionEstablished([](auto& frontendConnection) {
+        frontendConnection.send(Messages::WebInspectorUI::StopElementSelection(), 0);
     });
 }
 

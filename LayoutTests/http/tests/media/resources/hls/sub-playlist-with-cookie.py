@@ -4,7 +4,7 @@
 
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 sys.stdout.write(
     'status: 200\r\n'
@@ -24,10 +24,10 @@ sys.stdout.write(
     '#EXTM3U\n'
     '#EXT-X-TARGETDURATION:7\n'
     '#EXT-X-VERSION:4\n'
-    '#EXT-X-MEDIA-SEQUENCE:{}\n'.format(int(datetime.utcnow().timestamp() / chunk_duration) % 100)
+    '#EXT-X-MEDIA-SEQUENCE:{}\n'.format(int(datetime.now(timezone.utc).timestamp() / chunk_duration) % 100)
 )
 
-time = datetime.utcnow()
+time = datetime.now(timezone.utc)
 time = time.timestamp() - time.timestamp() % chunk_duration
 
 for _ in range(0, chunk_count):

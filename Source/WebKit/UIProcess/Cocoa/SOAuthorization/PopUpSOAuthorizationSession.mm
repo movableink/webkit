@@ -164,7 +164,7 @@ void PopUpSOAuthorizationSession::completeInternal(const WebCore::ResourceRespon
     }
 
     m_newPageCallback(m_secretWebView->_page.get());
-    [m_secretWebView loadData:data MIMEType:@"text/html" characterEncodingName:@"UTF-8" baseURL:response.url()];
+    [m_secretWebView loadData:data MIMEType:@"text/html" characterEncodingName:@"UTF-8" baseURL:response.url().createNSURL().get()];
 }
 
 void PopUpSOAuthorizationSession::close(WKWebView *webView)

@@ -89,12 +89,12 @@ void ProcessWarming::prewarmGlobally()
 
 WebCore::PrewarmInformation ProcessWarming::collectPrewarmInformation()
 {
-    return { FontCache::forCurrentThread().collectPrewarmInformation() };
+    return { FontCache::forCurrentThread()->collectPrewarmInformation() };
 }
 
 void ProcessWarming::prewarmWithInformation(PrewarmInformation&& prewarmInfo)
 {
-    FontCache::forCurrentThread().prewarm(WTFMove(prewarmInfo.fontCache));
+    FontCache::forCurrentThread()->prewarm(WTFMove(prewarmInfo.fontCache));
 }
 
 }

@@ -86,7 +86,7 @@ public:
     // or if maxChannelCount() equals 0, then numberOfOutputChannels must be 2.
     static unsigned long maxChannelCount();
 
-    void callRenderCallback(AudioBus* sourceBus, AudioBus* destinationBus, size_t framesToProcess, const AudioIOPosition& outputPosition);
+    void callRenderCallback(AudioBus& destinationBus, size_t framesToProcess, const AudioIOPosition& outputPosition);
 
     const String& inputDeviceId() const { return m_inputDeviceId; }
     unsigned numberOfInputChannels() const { return m_numberOfInputChannels; }
@@ -132,16 +132,16 @@ inline void AudioDestination::clearCallback()
     m_callback = nullptr;
 }
 
-inline void AudioDestination::callRenderCallback(AudioBus* sourceBus, AudioBus* destinationBus, size_t framesToProcess, const AudioIOPosition& outputPosition)
+inline void AudioDestination::callRenderCallback(AudioBus& destinationBus, size_t framesToProcess, const AudioIOPosition& outputPosition)
 {
     if (m_callbackLock.tryLock()) {
         Locker locker { AdoptLock, m_callbackLock };
         if (m_callback) {
-            m_callback->render(sourceBus, destinationBus, framesToProcess, outputPosition);
+            m_callback->render(destinationBus, framesToProcess, outputPosition);
             return;
         }
     }
-    destinationBus->zero();
+    destinationBus.zero();
 }
 
 } // namespace WebCore

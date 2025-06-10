@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2015-2018 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,7 @@
 
 #include "BoundaryPoint.h"
 #include "CSSComputedStyleDeclaration.h"
+#include "ContainerNodeInlines.h"
 #include "EditingInlines.h"
 #include "ElementInlines.h"
 #include "HTMLBRElement.h"
@@ -51,6 +52,7 @@
 #include "RenderInline.h"
 #include "RenderIterator.h"
 #include "RenderLineBreak.h"
+#include "RenderObjectInlines.h"
 #include "RenderText.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGTextElement.h"
@@ -349,7 +351,7 @@ RefPtr<Element> Position::anchorElementAncestor() const
 
 Position Position::previous(PositionMoveType moveType) const
 {
-    auto node = protectedDeprecatedNode();
+    RefPtr node = deprecatedNode();
     if (!node)
         return *this;
 
@@ -406,7 +408,7 @@ Position Position::next(PositionMoveType moveType) const
 {
     ASSERT(moveType != BackwardDeletion);
 
-    auto node = protectedDeprecatedNode();
+    RefPtr node = deprecatedNode();
     if (!node)
         return *this;
 
@@ -895,34 +897,35 @@ unsigned Position::positionCountBetweenPositions(const Position& a, const Positi
     return posCount;
 }
 
-static int boundingBoxLogicalHeight(RenderObject *o, const IntRect &rect)
-{
-    return o->writingMode().isHorizontal() ? rect.height() : rect.width();
-}
-
 bool Position::hasRenderedNonAnonymousDescendantsWithHeight(const RenderElement& renderer)
 {
-    RenderObject* stop = renderer.nextInPreOrderAfterChildren();
-    for (RenderObject* o = renderer.firstChild(); o && o != stop; o = o->nextInPreOrder()) {
-        if (!o->nonPseudoNode())
+    auto isHorizontal = renderer.isHorizontalWritingMode();
+    auto* stop = renderer.nextInPreOrderAfterChildren();
+    for (CheckedPtr descendant = renderer.firstChild(); descendant && descendant != stop; descendant = descendant->nextInPreOrder()) {
+        if (!descendant->nonPseudoNode())
             continue;
-        if (auto* renderText = dynamicDowncast<RenderText>(*o)) {
-            if (boundingBoxLogicalHeight(o, renderText->linesBoundingBox()))
+
+        auto boundingBoxLogicalHeight = [&](auto rect) {
+            return isHorizontal ? rect.height() : rect.width();
+        };
+
+        if (CheckedPtr renderText = dynamicDowncast<RenderText>(*descendant)) {
+            if (boundingBoxLogicalHeight(renderText->linesBoundingBox()))
                 return true;
             continue;
         }
-        if (auto* renderLineBreak = dynamicDowncast<RenderLineBreak>(*o)) {
-            if (boundingBoxLogicalHeight(o, renderLineBreak->linesBoundingBox()))
+        if (CheckedPtr renderLineBreak = dynamicDowncast<RenderLineBreak>(*descendant)) {
+            if (boundingBoxLogicalHeight(renderLineBreak->linesBoundingBox()))
                 return true;
             continue;
         }
-        if (auto* renderBox = dynamicDowncast<RenderBox>(*o)) {
+        if (CheckedPtr renderInline = dynamicDowncast<RenderInline>(*descendant)) {
+            if (isEmptyInline(*renderInline) && boundingBoxLogicalHeight(renderInline->linesBoundingBox()))
+                return true;
+            continue;
+        }
+        if (CheckedPtr renderBox = dynamicDowncast<RenderBox>(*descendant)) {
             if (roundToInt(renderBox->logicalHeight()))
-                return true;
-            continue;
-        }
-        if (auto* renderInline = dynamicDowncast<RenderInline>(*o)) {
-            if (isEmptyInline(*renderInline) && boundingBoxLogicalHeight(o, renderInline->linesBoundingBox()))
                 return true;
             continue;
         }
@@ -1200,7 +1203,7 @@ InlineBoxAndOffset Position::inlineBoxAndOffset(Affinity affinity, TextDirection
 {
     auto caretOffset = static_cast<unsigned>(deprecatedEditingOffset());
 
-    auto node = protectedDeprecatedNode();
+    RefPtr node = deprecatedNode();
     if (!node)
         return { { }, caretOffset };
     auto renderer = node->renderer();
@@ -1555,16 +1558,16 @@ static TextStream& operator<<(TextStream& stream, Position::AnchorType anchorTyp
     return stream;
 }
 
-TextStream& operator<<(TextStream& stream, const Position& position)
+TextStream& operator<<(TextStream& ts, const Position& position)
 {
-    TextStream::GroupScope scope(stream);
-    stream << "Position " << &position;
+    TextStream::GroupScope scope(ts);
+    ts  << "Position "_s << &position;
 
-    stream.dumpProperty("anchor node", position.anchorNode());
-    stream.dumpProperty("offset", position.offsetInContainerNode());
-    stream.dumpProperty("anchor type", position.anchorType());
+    ts.dumpProperty("anchor node"_s, position.anchorNode());
+    ts.dumpProperty("offset"_s, position.offsetInContainerNode());
+    ts.dumpProperty("anchor type"_s, position.anchorType());
 
-    return stream;
+    return ts;
 }
 
 Node* commonInclusiveAncestor(const Position& a, const Position& b)
@@ -1641,7 +1644,7 @@ template<TreeType treeType> std::partial_ordering treeOrder(const Position& a, c
     return treeOrder<treeType>(*makeBoundaryPoint(a), *makeBoundaryPoint(b));
 }
 
-std::partial_ordering documentOrder(const Position& a, const Position& b)
+std::partial_ordering operator<=>(const Position& a, const Position& b)
 {
     return treeOrder<ComposedTree>(a, b);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include "SVGElementTypeHelpers.h"
 
 #if ENABLE(DRAG_SUPPORT)
+#include "BoundaryPointInlines.h"
 #include "CachedImage.h"
 #include "CachedResourceLoader.h"
 #include "ColorSerialization.h"
@@ -77,7 +78,7 @@
 #include "PlatformMouseEvent.h"
 #include "PluginDocument.h"
 #include "PluginViewBase.h"
-#include "Position.h"
+#include "PositionInlines.h"
 #include "PromisedAttachmentInfo.h"
 #include "Range.h"
 #include "RemoteFrame.h"
@@ -98,6 +99,7 @@
 #include "VisiblePosition.h"
 #include "WebContentReader.h"
 #include "markup.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/SetForScope.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
@@ -291,9 +293,9 @@ bool DragController::performDragOperation(DragData&& dragData)
         return false;
 
     client().willPerformDragDestinationAction(DragDestinationAction::Load, dragData);
-    ResourceRequest resourceRequest { urlString };
+    ResourceRequest resourceRequest { WTFMove(urlString) };
     resourceRequest.setIsAppInitiated(false);
-    FrameLoadRequest frameLoadRequest { *localMainFrame, resourceRequest };
+    FrameLoadRequest frameLoadRequest { *localMainFrame, WTFMove(resourceRequest) };
     frameLoadRequest.setShouldOpenExternalURLsPolicy(shouldOpenExternalURLsPolicy);
     frameLoadRequest.setIsRequestFromClientOrUserInput();
     localMainFrame->protectedLoader()->load(WTFMove(frameLoadRequest));
@@ -311,7 +313,7 @@ void DragController::mouseMovedIntoDocument(RefPtr<Document>&& newDocument)
     m_documentUnderMouse = WTFMove(newDocument);
 }
 
-std::variant<std::optional<DragOperation>, RemoteUserInputEventData> DragController::dragEnteredOrUpdated(LocalFrame& frame, DragData&& dragData)
+Variant<std::optional<DragOperation>, RemoteUserInputEventData> DragController::dragEnteredOrUpdated(LocalFrame& frame, DragData&& dragData)
 {
     auto point = frame.protectedView()->windowToContents(dragData.clientPosition());
     auto hitTestResult = HitTestResult(point);
@@ -980,7 +982,7 @@ std::optional<HitTestResult> DragController::hitTestResultForDragStart(LocalFram
     constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::AllowChildFrameContent };
     auto hitTestResult = source.eventHandler().hitTestResultAtPoint(location, hitType);
 
-    bool sourceContainsHitNode = element.containsIncludingShadowDOM(hitTestResult.innerNode());
+    bool sourceContainsHitNode = element.isShadowIncludingInclusiveAncestorOf(hitTestResult.innerNode());
     if (!sourceContainsHitNode) {
         // The original node being dragged isn't under the drag origin anymore... maybe it was
         // hidden or moved out from under the cursor. Regardless, we don't want to start a drag on
@@ -1095,7 +1097,7 @@ bool DragController::startDrag(LocalFrame& src, const DragState& state, OptionSe
             TextIndicatorData textIndicator;
             dragImage = DragImage { dissolveDragImageToFraction(createDragImageForSelection(src, textIndicator), DragImageAlpha) };
             if (textIndicator.contentImage)
-                dragImage.setIndicatorData(textIndicator);
+                dragImage.setTextIndicator(TextIndicator::create(textIndicator));
             dragLoc = dragLocForSelectionDrag(src);
             m_dragOffset = IntPoint(dragOrigin.x() - dragLoc.x(), dragOrigin.y() - dragLoc.y());
         }
@@ -1195,7 +1197,7 @@ bool DragController::startDrag(LocalFrame& src, const DragState& state, OptionSe
                 dragLoc = IntPoint(dragOrigin.x() + m_dragOffset.x(), dragOrigin.y() + m_dragOffset.y());
                 dragImage = DragImage { platformAdjustDragImageForDeviceScaleFactor(dragImage.get(), m_page->deviceScaleFactor()) };
                 if (textIndicator.contentImage)
-                    dragImage.setIndicatorData(textIndicator);
+                    dragImage.setTextIndicator(TextIndicator::create(textIndicator));
             }
         }
 
@@ -1246,7 +1248,7 @@ bool DragController::startDrag(LocalFrame& src, const DragState& state, OptionSe
             if (attachmentRenderer)
                 attachmentRenderer->setShouldDrawBorder(true);
             if (textIndicator.contentImage)
-                dragImage.setIndicatorData(textIndicator);
+                dragImage.setTextIndicator(TextIndicator::create(textIndicator));
             dragLoc = dragLocForSelectionDrag(src);
             m_dragOffset = IntPoint(dragOrigin.x() - dragLoc.x(), dragOrigin.y() - dragLoc.y());
         }
@@ -1399,6 +1401,8 @@ void DragController::doSystemDrag(DragImage image, const IntPoint& dragLoc, cons
     item.eventPositionInContentCoordinates = mainFrameView->rootViewToContents(eventPositionInRootViewCoordinates);
     item.dragLocationInContentCoordinates = mainFrameView->rootViewToContents(dragLocationInRootViewCoordinates);
     item.dragLocationInWindowCoordinates = mainFrameView->contentsToWindow(item.dragLocationInContentCoordinates);
+
+    std::optional<ElementIdentifier> elementID;
     if (RefPtr element = state.source) {
         RefPtr dataTransferImageElement = state.dataTransfer->dragImageElement();
         if (state.type == DragSourceAction::DHTML) {
@@ -1427,8 +1431,9 @@ void DragController::doSystemDrag(DragImage image, const IntPoint& dragLoc, cons
         if (RefPtr modelElement = dynamicDowncast<HTMLModelElement>(state.source); modelElement && m_dragSourceAction.contains(DragSourceAction::Model))
             item.modelLayerID = modelElement->layerID();
 #endif
+        elementID = element->identifier();
     }
-    client().startDrag(WTFMove(item), *state.dataTransfer, mainFrame.get());
+    client().startDrag(WTFMove(item), *state.dataTransfer, mainFrame.get(), elementID);
     // DragClient::startDrag can cause our Page to dispear, deallocating |this|.
     if (!mainFrame->page())
         return;
@@ -1459,7 +1464,7 @@ bool DragController::tryToUpdateDroppedImagePlaceholders(const DragData& dragDat
     auto pasteboard = Pasteboard::create(dragData);
     pasteboard->read(reader);
 
-    RefPtr fragment = reader.protectedFragment();
+    RefPtr fragment = reader.fragment();
     if (!fragment)
         return false;
 

@@ -43,19 +43,33 @@ CURRENT_HOSTNAME = socket.gethostname().strip()
 GITHUB_URL = 'https://github.com/'
 SCAN_BUILD_OUTPUT_DIR = 'scan-build-output'
 LLVM_DIR = 'llvm-project'
-LLVM_REVISION = 'f811649256a6fde6fcfbe013adbdb3e62de7814f'
+LLVM_REVISION = '73fdce86e309266923251886a99f124549d59707'
 
 
 class ShellMixin(object):
-    WINDOWS_SHELL_PLATFORMS = ['win']
+    WINDOWS_SHELL_PLATFORMS = ['win', 'playstation']
 
     def has_windows_shell(self):
         return self.getProperty('platform', '*') in self.WINDOWS_SHELL_PLATFORMS
 
-    def shell_command(self, command):
-        if self.has_windows_shell():
-            return ['sh', '-c', command]
-        return ['/bin/sh', '-c', command]
+    def shell_command(self, command, pipefail=True):
+        if pipefail:
+            # -o pipefail is new in POSIX 2024, and on systems using `dash` to provide
+            # `sh` (e.g., Debian and Ubuntu) this is unsupported, as it is currently
+            # only supported in pre-release versions of `dash`. For now, we use `bash`
+            # in its POSIX mode (which is also its default when it is invoked as `sh`)
+            # to try and reduce the risk of bashisms slipping in.
+            if self.has_windows_shell():
+                shell = 'bash'
+            else:
+                shell = '/bin/bash'
+            return [shell, '--posix', '-o', 'pipefail', '-c', command]
+        else:
+            if self.has_windows_shell():
+                shell = 'sh'
+            else:
+                shell = '/bin/sh'
+            return [shell, '-c', command]
 
     def shell_exit_0(self):
         if self.has_windows_shell():
@@ -311,3 +325,13 @@ class PrintClangVersionAfterUpdate(PrintClangVersion, ShellMixin):
         if self.results != SUCCESS:
             self.build.buildFinished(['Failed to set up analyzer, retrying build'], RETRY)
         return super().getResultSummary()
+
+
+class PruneCoreSymbolicationdCacheIfTooLarge(shell.ShellCommandNewStyle):
+    name = "prune-coresymbolicationd-cache-if-too-large"
+    description = ["pruning coresymbolicationd cache to < 10GB"]
+    descriptionDone = ["pruned coresymbolicationd cache"]
+    flunkOnFailure = False
+    haltOnFailure = False
+    command = ["sudo", "python3", "Tools/Scripts/delete-if-too-large",
+               "/System/Library/Caches/com.apple.coresymbolicationd"]

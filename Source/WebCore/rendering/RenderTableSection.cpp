@@ -47,6 +47,7 @@
 #include "RenderView.h"
 #include "StyleInheritedData.h"
 #include <limits>
+#include <ranges>
 #include <wtf/HashSet.h>
 #include <wtf/StackStats.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -107,6 +108,11 @@ RenderTableSection::RenderTableSection(Document& document, RenderStyle&& style)
 }
 
 RenderTableSection::~RenderTableSection() = default;
+
+ASCIILiteral RenderTableSection::renderName() const
+{
+    return (isAnonymous() || isPseudoElement()) ? "RenderTableSection (anonymous)"_s : "RenderTableSection"_s;
+}
 
 void RenderTableSection::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
@@ -247,6 +253,7 @@ LayoutUnit RenderTableSection::calcRowLogicalHeight()
 
     for (unsigned r = 0; r < totalRows; r++) {
         m_grid[r].baseline = 0;
+        LayoutUnit baselineDescent;
 
         if (m_grid[r].logicalHeight.isSpecified()) {
         // Our base size is the biggest logical height from our cells' styles (excluding row spanning cells).
@@ -306,8 +313,18 @@ LayoutUnit RenderTableSection::calcRowLogicalHeight()
                 if (cell->isBaselineAligned()) {
                     LayoutUnit baselinePosition = cell->cellBaselinePosition() - cell->intrinsicPaddingBefore();
                     LayoutUnit borderAndComputedPaddingBefore = cell->borderAndPaddingBefore() - cell->intrinsicPaddingBefore();
-                    if (baselinePosition > borderAndComputedPaddingBefore)
+                    if (baselinePosition > borderAndComputedPaddingBefore) {
                         m_grid[cellStartRow].baseline = std::max(m_grid[cellStartRow].baseline, baselinePosition);
+                        // The descent of a cell that spans multiple rows does not affect the height of the first row it spans, so don't let it
+                        // become the baseline descent applied to the rest of the row. Also we don't account for the baseline descent of
+                        // non-spanning cells when computing a spanning cell's extent.
+                        LayoutUnit cellStartRowBaselineDescent;
+                        if (cell->rowSpan() == 1) {
+                            baselineDescent = std::max(baselineDescent, cellLogicalHeight - baselinePosition);
+                            cellStartRowBaselineDescent = baselineDescent;
+                        }
+                        m_rowPos[cellStartRow + 1] = std::max(m_rowPos[cellStartRow + 1], m_rowPos[cellStartRow] + m_grid[cellStartRow].baseline + cellStartRowBaselineDescent);
+                    }
                 }
             }
         }
@@ -1041,7 +1058,7 @@ CellSpan RenderTableSection::dirtiedColumns(const LayoutRect& damageRect) const
 CellSpan RenderTableSection::spannedRows(const LayoutRect& flippedRect, ShouldIncludeAllIntersectingCells shouldIncludeAllIntersectionCells) const
 {
     // Find the first row that starts after rect top.
-    unsigned nextRow = std::upper_bound(m_rowPos.begin(), m_rowPos.end(), flippedRect.y()) - m_rowPos.begin();
+    unsigned nextRow = std::ranges::upper_bound(m_rowPos, flippedRect.y()) - m_rowPos.begin();
     if (shouldIncludeAllIntersectionCells == IncludeAllIntersectingCells && nextRow && m_rowPos[nextRow - 1] == flippedRect.y())
         --nextRow;
 
@@ -1072,7 +1089,7 @@ CellSpan RenderTableSection::spannedColumns(const LayoutRect& flippedRect, Shoul
     // cell on the logical top/left.
     // upper_bound on the other hand properly returns the cell on the logical bottom/right, which also
     // matches the behavior of other browsers.
-    unsigned nextColumn = std::upper_bound(columnPos.begin(), columnPos.end(), flippedRect.x()) - columnPos.begin();
+    unsigned nextColumn = std::ranges::upper_bound(columnPos, flippedRect.x()) - columnPos.begin();
     if (shouldIncludeAllIntersectionCells == IncludeAllIntersectingCells && nextColumn && columnPos[nextColumn - 1] == flippedRect.x())
         --nextColumn;
 
@@ -1333,9 +1350,9 @@ void RenderTableSection::paintObject(PaintInfo& paintInfo, const LayoutPoint& pa
 
         // Sort the dirty cells by paint order.
         if (m_overflowingCells.isEmptyIgnoringNullReferences())
-            std::stable_sort(cells.begin(), cells.end(), compareCellPositions);
+            std::ranges::stable_sort(cells, compareCellPositions);
         else
-            std::sort(cells.begin(), cells.end(), compareCellPositionsWithOverflowingCells);
+            std::ranges::sort(cells, compareCellPositionsWithOverflowingCells);
 
         if (paintInfo.phase == PaintPhase::CollapsedTableBorders) {
             for (unsigned i = cells.size(); i > 0; --i) {
@@ -1585,18 +1602,6 @@ CollapsedBorderValue RenderTableSection::cachedCollapsedBorder(const RenderTable
     if (it == m_cellsCollapsedBorders.end())
         return CollapsedBorderValue(BorderValue(), Color(), BorderPrecedence::Cell);
     return it->value;
-}
-
-RenderPtr<RenderTableSection> RenderTableSection::createTableSectionWithStyle(Document& document, const RenderStyle& style)
-{
-    auto section = createRenderer<RenderTableSection>(document, RenderStyle::createAnonymousStyleWithDisplay(style, DisplayType::TableRowGroup));
-    section->initializeStyle();
-    return section;
-}
-
-RenderPtr<RenderTableSection> RenderTableSection::createAnonymousWithParentRenderer(const RenderTable& parent)
-{
-    return RenderTableSection::createTableSectionWithStyle(parent.document(), parent.style());
 }
 
 void RenderTableSection::setLogicalPositionForCell(RenderTableCell* cell, unsigned effectiveColumn) const

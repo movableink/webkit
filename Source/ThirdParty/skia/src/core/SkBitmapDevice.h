@@ -14,6 +14,7 @@
 #include "include/core/SkRect.h"
 #include "include/core/SkRefCnt.h"
 #include "include/core/SkSamplingOptions.h"
+#include "src/core/SkCPURecorderImpl.h"
 #include "src/core/SkDevice.h"
 #include "src/core/SkGlyphRunPainter.h"
 #include "src/core/SkRasterClipStack.h"
@@ -29,6 +30,7 @@ class SkPath;
 class SkPixmap;
 class SkRRect;
 class SkRasterHandleAllocator;
+class SkRecorder;
 class SkRegion;
 class SkShader;
 class SkSpecialImage;
@@ -36,10 +38,10 @@ class SkSurface;
 class SkSurfaceProps;
 class SkVertices;
 enum class SkClipOp;
-namespace sktext { class GlyphRunList; }
 struct SkImageInfo;
 struct SkPoint;
 struct SkRSXform;
+namespace sktext { class GlyphRunList; }
 
 ///////////////////////////////////////////////////////////////////////////////
 class SkBitmapDevice final : public SkDevice {
@@ -57,6 +59,12 @@ public:
      *  any drawing to this device will have no effect.
      */
     SkBitmapDevice(const SkBitmap& bitmap, const SkSurfaceProps& surfaceProps,
+                   void* externalHandle = nullptr);
+
+    SkBitmapDevice(skcpu::RecorderImpl*, const SkBitmap& bitmap);
+    SkBitmapDevice(skcpu::RecorderImpl*,
+                   const SkBitmap& bitmap,
+                   const SkSurfaceProps& surfaceProps,
                    void* externalHandle = nullptr);
 
     static sk_sp<SkBitmapDevice> Create(const SkImageInfo&, const SkSurfaceProps&,
@@ -103,8 +111,6 @@ public:
     void drawSpecial(SkSpecialImage*, const SkMatrix&, const SkSamplingOptions&,
                      const SkPaint&, SkCanvas::SrcRectConstraint) override;
 
-    sk_sp<SkSpecialImage> makeSpecial(const SkBitmap&) override;
-    sk_sp<SkSpecialImage> makeSpecial(const SkImage*) override;
     sk_sp<SkSpecialImage> snapSpecial(const SkIRect&, bool forceCopy = false) override;
 
     sk_sp<SkDevice> createDevice(const CreateInfo&, const SkPaint*) override;
@@ -114,6 +120,8 @@ public:
     void setImmutable() override { fBitmap.setImmutable(); }
 
     void* getRasterHandle() const override { return fRasterHandle; }
+
+    SkRecorder* baseRecorder() const override { return fRecorder; }
 
 private:
     friend class SkDraw;
@@ -139,9 +147,10 @@ private:
     void drawBitmap(const SkBitmap&, const SkMatrix&, const SkRect* dstOrNull,
                     const SkSamplingOptions&, const SkPaint&);
 
-    SkBitmap    fBitmap;
-    void*       fRasterHandle = nullptr;
-    SkRasterClipStack  fRCStack;
+    void* fRasterHandle = nullptr;
+    skcpu::RecorderImpl* fRecorder = nullptr;
+    SkBitmap fBitmap;
+    SkRasterClipStack fRCStack;
     SkGlyphRunListPainterCPU fGlyphPainter;
 };
 

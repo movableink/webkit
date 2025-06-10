@@ -30,6 +30,7 @@
 #include "ProcessIdentity.h"
 #include <CoreMedia/CMTime.h>
 #include <atomic>
+#include <wtf/Expected.h>
 #include <wtf/Function.h>
 #include <wtf/Lock.h>
 #include <wtf/MediaTime.h>
@@ -40,7 +41,7 @@
 #include <wtf/WorkQueue.h>
 
 typedef struct opaqueCMSampleBuffer *CMSampleBufferRef;
-typedef struct __CVBuffer *CVPixelBufferRef;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVPixelBufferRef;
 typedef struct __CVBuffer *CVImageBufferRef;
 typedef UInt32 VTDecodeInfoFlags;
 typedef struct OpaqueVTDecompressionSession*  VTDecompressionSessionRef;
@@ -60,11 +61,12 @@ public:
 
     WEBCORE_EXPORT RetainPtr<CVPixelBufferRef> decodeSampleSync(CMSampleBufferRef);
 
-    using DecodingPromise = NativePromise<RetainPtr<CMSampleBufferRef>, OSStatus>;
+    using DecodingPromise = NativePromise<Vector<RetainPtr<CMSampleBufferRef>>, OSStatus>;
     WEBCORE_EXPORT Ref<DecodingPromise> decodeSample(CMSampleBufferRef, bool displaying);
     WEBCORE_EXPORT void flush();
 
     void setResourceOwner(const ProcessIdentity& resourceOwner) { m_resourceOwner = resourceOwner; }
+    bool isHardwareAccelerated() const;
 
 private:
     enum Mode {
@@ -73,10 +75,9 @@ private:
     };
     WEBCORE_EXPORT explicit WebCoreDecompressionSession(Mode);
 
-    RetainPtr<VTDecompressionSessionRef> ensureDecompressionSessionForSample(CMSampleBufferRef);
+    Expected<RetainPtr<VTDecompressionSessionRef>, OSStatus> ensureDecompressionSessionForSample(CMSampleBufferRef);
 
     Ref<DecodingPromise> decodeSampleInternal(CMSampleBufferRef, bool displaying);
-    void handleDecompressionOutput(bool displaying, OSStatus, VTDecodeInfoFlags, CVImageBufferRef, CMTime presentationTimeStamp, CMTime presentationDuration);
     void assignResourceOwner(CVImageBufferRef);
 
     Ref<MediaPromise> initializeVideoDecoder(FourCharCode, std::span<const uint8_t>, const std::optional<PlatformVideoColorSpace>&);
@@ -86,6 +87,7 @@ private:
     mutable Lock m_lock;
     RetainPtr<VTDecompressionSessionRef> m_decompressionSession WTF_GUARDED_BY_LOCK(m_lock);
     const Ref<WorkQueue> m_decompressionQueue;
+    mutable std::optional<bool> m_isHardwareAccelerated WTF_GUARDED_BY_LOCK(m_lock);
 
     std::atomic<uint32_t> m_flushId { 0 };
     RefPtr<VideoDecoder> m_videoDecoder WTF_GUARDED_BY_LOCK(m_lock);
@@ -94,7 +96,7 @@ private:
         bool displaying { false };
     };
     std::optional<PendingDecodeData> m_pendingDecodeData WTF_GUARDED_BY_CAPABILITY(m_decompressionQueue.get());
-    RetainPtr<CMSampleBufferRef> m_lastDecodedSample WTF_GUARDED_BY_CAPABILITY(m_decompressionQueue.get());
+    Vector<RetainPtr<CMSampleBufferRef>> m_lastDecodedSamples WTF_GUARDED_BY_CAPABILITY(m_decompressionQueue.get());
     OSStatus m_lastDecodingError WTF_GUARDED_BY_CAPABILITY(m_decompressionQueue.get()) { noErr };
 
     std::atomic<bool> m_invalidated { false };

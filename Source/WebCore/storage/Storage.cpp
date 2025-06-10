@@ -27,6 +27,7 @@
 #include "Storage.h"
 
 #include "Document.h"
+#include "ExceptionOr.h"
 #include "LegacySchemeRegistry.h"
 #include "LocalFrame.h"
 #include "Page.h"

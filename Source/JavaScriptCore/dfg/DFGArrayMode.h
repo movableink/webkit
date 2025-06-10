@@ -190,6 +190,11 @@ public:
     Array::Action action() const { return static_cast<Array::Action>(u.asBytes.action); }
     bool mayBeLargeTypedArray() const { return u.asBytes.mayBeLargeTypedArray; }
     bool mayBeResizableOrGrowableSharedTypedArray() const { return u.asBytes.mayBeResizableOrGrowableSharedTypedArray; }
+
+    void setSpeculation(Array::Speculation speculation)
+    {
+        u.asBytes.speculation = speculation;
+    }
     
     unsigned asWord() const { return u.asWord; }
     
@@ -609,7 +614,7 @@ private:
         case Array::Array:
             if (hasInt32(shape) || hasDouble(shape) || hasContiguous(shape))
                 return asArrayModesIgnoringTypedArrays(shape | IsArray) | asArrayModesIgnoringTypedArrays(shape | IsArray | CopyOnWrite);
-            FALLTHROUGH;
+            [[fallthrough]];
         case Array::OriginalNonCopyOnWriteArray:
             return asArrayModesIgnoringTypedArrays(shape | IsArray);
         case Array::PossiblyArray:

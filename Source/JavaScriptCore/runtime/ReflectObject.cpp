@@ -116,7 +116,7 @@ JSC_DEFINE_HOST_FUNCTION(reflectObjectConstruct, (JSGlobalObject* globalObject, 
         return true;
     });
     RETURN_IF_EXCEPTION(scope, (arguments.overflowCheckNotNeeded(), encodedJSValue()));
-    if (UNLIKELY(arguments.hasOverflowed())) {
+    if (arguments.hasOverflowed()) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return encodedJSValue();
     }
@@ -139,7 +139,7 @@ JSC_DEFINE_HOST_FUNCTION(reflectObjectDefineProperty, (JSGlobalObject* globalObj
     PropertyDescriptor descriptor;
     bool success = toPropertyDescriptor(globalObject, callFrame->argument(2), descriptor);
     EXCEPTION_ASSERT(!scope.exception() == success);
-    if (UNLIKELY(!success))
+    if (!success) [[unlikely]]
         return encodedJSValue();
     ASSERT((descriptor.attributes() & PropertyAttribute::Accessor) || (!descriptor.isAccessorDescriptor()));
     scope.assertNoException();

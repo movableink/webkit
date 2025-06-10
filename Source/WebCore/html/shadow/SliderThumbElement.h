@@ -74,7 +74,7 @@ private:
 #endif
     void willDetachRenderers() final;
 
-    std::optional<Style::ResolvedStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle*) final;
+    std::optional<Style::UnadjustedStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle*) final;
 
     void startDragging();
     void stopDragging();

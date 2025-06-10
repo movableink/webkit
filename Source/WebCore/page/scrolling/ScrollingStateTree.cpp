@@ -438,7 +438,7 @@ void ScrollingStateTree::removeNodeAndAllDescendants(ScrollingStateNode& node)
             return child.ptr() == &node;
         });
         if (index != notFound)
-            children.remove(index);
+            children.removeAt(index);
         else
             ASSERT_NOT_REACHED();
     }

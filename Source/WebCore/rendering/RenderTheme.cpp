@@ -49,6 +49,7 @@
 #include "HTMLProgressElement.h"
 #include "HTMLSelectElement.h"
 #include "HTMLTextAreaElement.h"
+#include "ImageAdapter.h"
 #include "ImageControlsButtonPart.h"
 #include "InnerSpinButtonPart.h"
 #include "LocalFrame.h"
@@ -71,6 +72,7 @@
 #include "SliderTrackPart.h"
 #include "SpinButtonElement.h"
 #include "StringTruncator.h"
+#include "StylePadding.h"
 #include "SwitchThumbPart.h"
 #include "SwitchTrackPart.h"
 #include "TextAreaPart.h"
@@ -90,6 +92,7 @@
 
 namespace WebCore {
 
+using namespace CSS::Literals;
 using namespace HTMLNames;
 
 RenderTheme::RenderTheme()
@@ -98,11 +101,27 @@ RenderTheme::RenderTheme()
 
 RenderTheme::~RenderTheme() = default;
 
-StyleAppearance RenderTheme::adjustAppearanceForElement(RenderStyle& style, const Element* element, StyleAppearance autoAppearance) const
+StyleAppearance RenderTheme::adjustAppearanceForElement(RenderStyle& style, const RenderStyle& parentStyle, const Element* element, StyleAppearance autoAppearance) const
 {
     if (!element) {
         style.setUsedAppearance(StyleAppearance::None);
         return StyleAppearance::None;
+    }
+
+    // Each user agent part for input type='color' controls
+    // should use StyleAppearance::None if their parent is
+    // using primitive appearance.
+
+    // FIXME: (rdar://148625484) If the parent devolves
+    // after the initial styles are applied, the children
+    // are not immediately updated to match.
+
+    if ((autoAppearance == StyleAppearance::ColorWellSwatch
+        || autoAppearance == StyleAppearance::ColorWellSwatchOverlay
+        || autoAppearance == StyleAppearance::ColorWellSwatchWrapper)
+        && (parentStyle.usedAppearance() == StyleAppearance::None)) {
+            style.setUsedAppearance(StyleAppearance::None);
+            return StyleAppearance::None;
     }
 
     auto appearance = style.usedAppearance();
@@ -212,10 +231,24 @@ static bool shouldCheckLegacyStylesForNativeAppearance(const Element* element)
 #endif
 }
 
-void RenderTheme::adjustStyle(RenderStyle& style, const Element* element, const RenderStyle* userAgentAppearanceStyle)
+bool RenderTheme::hasAppearanceForElementTypeFromUAStyle(const Element& element)
+{
+    // NOTE: This is just a legacy hard-coded list of elements that have some appearance value in html.css
+    // FIXME: Remove when devolvable widgets are universally enabled.
+    const auto& localName = element.localName();
+    return localName == HTMLNames::inputTag
+        || localName == HTMLNames::textareaTag
+        || localName == HTMLNames::buttonTag
+        || localName == HTMLNames::progressTag
+        || localName == HTMLNames::selectTag
+        || localName == HTMLNames::meterTag
+        || (element.isInUserAgentShadowTree() && element.userAgentPart() == UserAgentParts::webkitListButton());
+}
+
+void RenderTheme::adjustStyle(RenderStyle& style, const RenderStyle& parentStyle, const Element* element)
 {
     auto autoAppearance = autoAppearanceForElement(style, element);
-    auto appearance = adjustAppearanceForElement(style, element, autoAppearance);
+    auto appearance = adjustAppearanceForElement(style, parentStyle, element, autoAppearance);
     if (appearance == StyleAppearance::None || appearance == StyleAppearance::Base)
         return;
 
@@ -230,9 +263,10 @@ void RenderTheme::adjustStyle(RenderStyle& style, const Element* element, const 
 
     bool widgetMayDevolve = devolvableWidgetsEnabledAndSupported(element);
     bool widgetHasNativeAppearanceDisabled = widgetMayDevolve && element->isDevolvableWidget() && style.nativeAppearanceDisabled() && !isAppearanceAllowedForAllElements(appearance);
+    bool hasAppearanceFromUAStyle = element && hasAppearanceForElementTypeFromUAStyle(*element);
 
     if (!widgetMayDevolve || shouldCheckLegacyStylesForNativeAppearance(element))
-        widgetHasNativeAppearanceDisabled |= userAgentAppearanceStyle && isControlStyled(style, *userAgentAppearanceStyle);
+        widgetHasNativeAppearanceDisabled |= hasAppearanceFromUAStyle && isControlStyled(style);
 
     if (widgetHasNativeAppearanceDisabled) {
         switch (appearance) {
@@ -253,22 +287,22 @@ void RenderTheme::adjustStyle(RenderStyle& style, const Element* element, const 
         style.setUsedAppearance(appearance);
     }
 
-    if (appearance == StyleAppearance::SearchField && searchFieldShouldAppearAsTextField(style)) {
+    if (appearance == StyleAppearance::SearchField && searchFieldShouldAppearAsTextField(style, element->document().settings())) {
         appearance = StyleAppearance::TextField;
         style.setUsedAppearance(appearance);
     }
 
     if (!isAppearanceAllowedForAllElements(appearance)
-        && !userAgentAppearanceStyle
+        && !hasAppearanceFromUAStyle
         && autoAppearance == StyleAppearance::None
-        && !style.borderAndBackgroundEqual(RenderStyle::defaultStyle()))
+        && !style.borderAndBackgroundEqual(RenderStyle::defaultStyleSingleton()))
         style.setUsedAppearance(StyleAppearance::None);
 
     if (!style.hasUsedAppearance())
         return;
 
     if (!supportsBoxShadow(style))
-        style.setBoxShadow(nullptr);
+        style.setBoxShadow({ });
 
     switch (appearance) {
     case StyleAppearance::Checkbox:
@@ -277,6 +311,12 @@ void RenderTheme::adjustStyle(RenderStyle& style, const Element* element, const 
         return adjustRadioStyle(style, element);
     case StyleAppearance::ColorWell:
         return adjustColorWellStyle(style, element);
+    case StyleAppearance::ColorWellSwatch:
+        return adjustColorWellSwatchStyle(style, element);
+    case StyleAppearance::ColorWellSwatchOverlay:
+        return adjustColorWellSwatchOverlayStyle(style, element);
+    case StyleAppearance::ColorWellSwatchWrapper:
+        return adjustColorWellSwatchWrapperStyle(style, element);
     case StyleAppearance::PushButton:
     case StyleAppearance::SquareButton:
     case StyleAppearance::DefaultButton:
@@ -435,6 +475,15 @@ StyleAppearance RenderTheme::autoAppearanceForElement(RenderStyle& style, const 
 
         if (part == UserAgentParts::webkitInnerSpinButton())
             return StyleAppearance::InnerSpinButton;
+
+        if (part == UserAgentParts::internalColorSwatchOverlay())
+            return StyleAppearance::ColorWellSwatchOverlay;
+
+        if (part == UserAgentParts::webkitColorSwatch())
+            return StyleAppearance::ColorWellSwatch;
+
+        if (part == UserAgentParts::webkitColorSwatchWrapper())
+            return StyleAppearance::ColorWellSwatchWrapper;
 
         if (part == UserAgentParts::thumb())
             return StyleAppearance::SwitchThumb;
@@ -610,6 +659,11 @@ RefPtr<ControlPart> RenderTheme::createControlPart(const RenderObject& renderer)
     case StyleAppearance::TextField:
         return TextFieldPart::create();
 
+    case StyleAppearance::ColorWellSwatch:
+    case StyleAppearance::ColorWellSwatchOverlay:
+    case StyleAppearance::ColorWellSwatchWrapper:
+        break;
+
     case StyleAppearance::ColorWell:
         return ColorWellPart::create();
 
@@ -700,7 +754,7 @@ OptionSet<ControlStyle::State> RenderTheme::extractControlStyleStatesForRenderer
         if (isSpinUpButtonPartPressed(renderer))
             states.add(ControlStyle::State::SpinUp);
     }
-    if (isFocused(renderer) && renderer.style().outlineStyleIsAuto() == OutlineIsAuto::On)
+    if (isFocused(renderer) && renderer.style().hasAutoOutlineStyle())
         states.add(ControlStyle::State::Focused);
     if (isEnabled(renderer))
         states.add(ControlStyle::State::Enabled);
@@ -816,10 +870,9 @@ bool RenderTheme::paint(const RenderBox& box, const PaintInfo& paintInfo, const 
     
     auto appearance = box.style().usedAppearance();
 
-    if (UNLIKELY(!canPaint(paintInfo, box.settings(), appearance)))
+    if (!canPaint(paintInfo, box.settings(), appearance)) [[unlikely]]
         return false;
 
-    IntRect integralSnappedRect = snappedIntRect(rect);
     float deviceScaleFactor = box.document().deviceScaleFactor();
     FloatRect devicePixelSnappedRect = snapRectToDevicePixels(rect, deviceScaleFactor);
 
@@ -829,28 +882,32 @@ bool RenderTheme::paint(const RenderBox& box, const PaintInfo& paintInfo, const 
     case StyleAppearance::Radio:
         return paintRadio(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::ColorWell:
-        return paintColorWell(box, paintInfo, integralSnappedRect);
+        return paintColorWell(box, paintInfo, devicePixelSnappedRect);
+    case StyleAppearance::ColorWellSwatch:
+        return paintColorWellSwatch(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::PushButton:
     case StyleAppearance::SquareButton:
     case StyleAppearance::DefaultButton:
     case StyleAppearance::Button:
-        return paintButton(box, paintInfo, integralSnappedRect);
+        return paintButton(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::Menulist:
         return paintMenuList(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::MenulistButton:
-        return paintMenuListButton(box, paintInfo, integralSnappedRect);
+        return paintMenuListButton(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::Meter:
-        return paintMeter(box, paintInfo, integralSnappedRect);
+        return paintMeter(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::ProgressBar:
-        return paintProgressBar(box, paintInfo, integralSnappedRect);
+        return paintProgressBar(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::SliderHorizontal:
     case StyleAppearance::SliderVertical:
-        return paintSliderTrack(box, paintInfo, integralSnappedRect);
+        return paintSliderTrack(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::SliderThumbHorizontal:
     case StyleAppearance::SliderThumbVertical:
-        return paintSliderThumb(box, paintInfo, integralSnappedRect);
+        return paintSliderThumb(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::TextField:
+        return paintTextField(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::TextArea:
+        return paintTextArea(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::Listbox:
         return true;
     case StyleAppearance::InnerSpinButton:
@@ -858,13 +915,13 @@ bool RenderTheme::paint(const RenderBox& box, const PaintInfo& paintInfo, const 
     case StyleAppearance::SearchField:
         return paintSearchField(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::SearchFieldCancelButton:
-        return paintSearchFieldCancelButton(box, paintInfo, integralSnappedRect);
+        return paintSearchFieldCancelButton(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::SearchFieldDecoration:
-        return paintSearchFieldDecorationPart(box, paintInfo, integralSnappedRect);
+        return paintSearchFieldDecorationPart(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::SearchFieldResultsDecoration:
-        return paintSearchFieldResultsDecorationPart(box, paintInfo, integralSnappedRect);
+        return paintSearchFieldResultsDecorationPart(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::SearchFieldResultsButton:
-        return paintSearchFieldResultsButton(box, paintInfo, integralSnappedRect);
+        return paintSearchFieldResultsButton(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::Switch:
         return true;
     case StyleAppearance::SwitchThumb:
@@ -873,14 +930,14 @@ bool RenderTheme::paint(const RenderBox& box, const PaintInfo& paintInfo, const 
         return paintSwitchTrack(box, paintInfo, devicePixelSnappedRect);
 #if ENABLE(SERVICE_CONTROLS)
     case StyleAppearance::ImageControlsButton:
-        return paintImageControlsButton(box, paintInfo, integralSnappedRect);
+        return paintImageControlsButton(box, paintInfo, snappedIntRect(rect));
 #endif
     case StyleAppearance::ListButton:
         return paintListButton(box, paintInfo, devicePixelSnappedRect);
 #if ENABLE(ATTACHMENT_ELEMENT)
     case StyleAppearance::Attachment:
     case StyleAppearance::BorderlessAttachment:
-        return paintAttachment(box, paintInfo, integralSnappedRect);
+        return paintAttachment(box, paintInfo, snappedIntRect(rect));
 #endif
     default:
         break;
@@ -889,23 +946,19 @@ bool RenderTheme::paint(const RenderBox& box, const PaintInfo& paintInfo, const 
     return true; // We don't support the appearance, so let the normal background/border paint.
 }
 
-bool RenderTheme::paintBorderOnly(const RenderBox& box, const PaintInfo& paintInfo, const LayoutRect& rect)
+bool RenderTheme::paintBorderOnly(const RenderBox& box, const PaintInfo& paintInfo)
 {
     if (paintInfo.context().paintingDisabled())
         return false;
 
 #if PLATFORM(IOS_FAMILY)
-    UNUSED_PARAM(rect);
     return box.style().usedAppearance() != StyleAppearance::None && box.style().usedAppearance() != StyleAppearance::Base;
 #else
-    FloatRect devicePixelSnappedRect = snapRectToDevicePixels(rect, box.document().deviceScaleFactor());
     // Call the appropriate paint method based off the appearance value.
     switch (box.style().usedAppearance()) {
     case StyleAppearance::TextField:
-        return paintTextField(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::Listbox:
     case StyleAppearance::TextArea:
-        return paintTextArea(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::MenulistButton:
     case StyleAppearance::SearchField:
         return true;
@@ -943,10 +996,6 @@ void RenderTheme::paintDecorations(const RenderBox& box, const PaintInfo& paintI
     if (paintInfo.context().paintingDisabled())
         return;
 
-    // FIXME: Investigate whether all controls can use a device-pixel-snapped rect
-    // rather than an integral-snapped rect.
-
-    IntRect integralSnappedRect = snappedIntRect(rect);
     FloatRect devicePixelSnappedRect = snapRectToDevicePixels(rect, box.document().deviceScaleFactor());
 
     // Call the appropriate paint method based off the appearance value.
@@ -964,11 +1013,11 @@ void RenderTheme::paintDecorations(const RenderBox& box, const PaintInfo& paintI
         paintColorWellDecorations(box, paintInfo, devicePixelSnappedRect);
         break;
     case StyleAppearance::Menulist:
-        paintMenuListDecorations(box, paintInfo, integralSnappedRect);
+        paintMenuListDecorations(box, paintInfo, devicePixelSnappedRect);
         break;
     case StyleAppearance::SliderThumbHorizontal:
     case StyleAppearance::SearchField:
-        paintSearchFieldDecorations(box, paintInfo, integralSnappedRect);
+        paintSearchFieldDecorations(box, paintInfo, devicePixelSnappedRect);
         break;
     case StyleAppearance::Meter:
     case StyleAppearance::ProgressBar:
@@ -1116,7 +1165,7 @@ bool RenderTheme::isControlContainer(StyleAppearance appearance) const
     return appearance != StyleAppearance::Checkbox && appearance != StyleAppearance::Radio;
 }
 
-bool RenderTheme::isControlStyled(const RenderStyle& style, const RenderStyle& userAgentStyle) const
+bool RenderTheme::isControlStyled(const RenderStyle& style) const
 {
     switch (style.usedAppearance()) {
     case StyleAppearance::PushButton:
@@ -1132,7 +1181,7 @@ bool RenderTheme::isControlStyled(const RenderStyle& style, const RenderStyle& u
     case StyleAppearance::TextField:
     case StyleAppearance::TextArea:
         // Test the style to see if the UA border and background match.
-        return !style.borderAndBackgroundEqual(userAgentStyle);
+        return style.nativeAppearanceDisabled();
     default:
         return false;
     }
@@ -1251,6 +1300,61 @@ bool RenderTheme::hasListButtonPressed(const RenderObject& renderer) const
     return input && input->dataListButtonElement() && input->dataListButtonElement()->active();
 }
 
+std::optional<FontCascadeDescription> RenderTheme::controlFont(StyleAppearance, const FontCascade&, float) const
+{
+    return std::nullopt;
+}
+
+Style::PaddingBox RenderTheme::controlPadding(StyleAppearance appearance, const Style::PaddingBox& padding, float) const
+{
+    switch (appearance) {
+    case StyleAppearance::Menulist:
+    case StyleAppearance::MenulistButton:
+    case StyleAppearance::Checkbox:
+    case StyleAppearance::Radio:
+        return Style::PaddingBox { 0_css_px };
+    default:
+        return padding;
+    }
+}
+
+LengthSize RenderTheme::controlSize(StyleAppearance, const FontCascade&, const LengthSize& zoomedSize, float) const
+{
+    return zoomedSize;
+}
+
+LengthSize RenderTheme::minimumControlSize(StyleAppearance appearance, const FontCascade& fontCascade, const LengthSize& zoomedSize, const LengthSize& nonShrinkableZoomedSize, float zoom) const
+{
+    auto minSize = minimumControlSize(appearance, fontCascade, zoomedSize, zoom);
+    // Other StyleAppearance types are composed controls with shadow subtree.
+    if (appearance == StyleAppearance::Radio || appearance == StyleAppearance::Checkbox) {
+        if (zoomedSize.width.isIntrinsicOrAuto())
+            minSize.width = nonShrinkableZoomedSize.width;
+        if (zoomedSize.height.isIntrinsicOrAuto())
+            minSize.height = nonShrinkableZoomedSize.height;
+    }
+    return minSize;
+}
+
+LengthSize RenderTheme::minimumControlSize(StyleAppearance, const FontCascade&, const LengthSize&, float) const
+{
+    return { { 0, LengthType::Fixed }, { 0, LengthType::Fixed } };
+}
+
+LengthBox RenderTheme::controlBorder(StyleAppearance appearance, const FontCascade&, const LengthBox& zoomedBox, float) const
+{
+    switch (appearance) {
+    case StyleAppearance::PushButton:
+    case StyleAppearance::Menulist:
+    case StyleAppearance::SearchField:
+    case StyleAppearance::Checkbox:
+    case StyleAppearance::Radio:
+        return LengthBox(0);
+    default:
+        return zoomedBox;
+    }
+}
+
 // FIXME: iOS does not use this so arguably this should be better abstracted. Or maybe we should
 // investigate if we can bring the various ports closer together.
 void RenderTheme::adjustButtonOrCheckboxOrColorWellOrInnerSpinButtonOrRadioStyle(RenderStyle& style, const Element* element) const
@@ -1258,7 +1362,7 @@ void RenderTheme::adjustButtonOrCheckboxOrColorWellOrInnerSpinButtonOrRadioStyle
     auto appearance = style.usedAppearance();
 
     LengthBox borderBox(style.borderTopWidth(), style.borderRightWidth(), style.borderBottomWidth(), style.borderLeftWidth());
-    borderBox = Theme::singleton().controlBorder(appearance, style.fontCascade(), borderBox, style.usedZoom());
+    borderBox = controlBorder(appearance, style.fontCascade(), borderBox, style.usedZoom());
 
     auto supportsVerticalWritingMode = [](StyleAppearance appearance) {
         return appearance == StyleAppearance::Button
@@ -1299,12 +1403,12 @@ void RenderTheme::adjustButtonOrCheckboxOrColorWellOrInnerSpinButtonOrRadioStyle
     }
 
     // Padding
-    LengthBox paddingBox = Theme::singleton().controlPadding(appearance, style.fontCascade(), style.paddingBox(), style.usedZoom());
+    auto paddingBox = controlPadding(appearance, style.paddingBox(), style.usedZoom());
     if (paddingBox != style.paddingBox())
         style.setPaddingBox(WTFMove(paddingBox));
 
     // Whitespace
-    if (Theme::singleton().controlRequiresPreWhiteSpace(appearance)) {
+    if (controlRequiresPreWhiteSpace(appearance)) {
         style.setWhiteSpaceCollapse(WhiteSpaceCollapse::Preserve);
         style.setTextWrapMode(TextWrapMode::NoWrap);
     }
@@ -1312,24 +1416,25 @@ void RenderTheme::adjustButtonOrCheckboxOrColorWellOrInnerSpinButtonOrRadioStyle
     // Width / Height
     // The width and height here are affected by the zoom.
     // FIXME: Check is flawed, since it doesn't take min-width/max-width into account.
-    LengthSize controlSize = Theme::singleton().controlSize(appearance, style.fontCascade(), { style.width(), style.height() }, style.usedZoom());
+    auto controlSize = this->controlSize(appearance, style.fontCascade(), { style.width(), style.height() }, style.usedZoom());
     if (controlSize.width != style.width())
         style.setWidth(WTFMove(controlSize.width));
     if (controlSize.height != style.height())
         style.setHeight(WTFMove(controlSize.height));
 
     // Min-Width / Min-Height
-    LengthSize minControlSize = Theme::singleton().minimumControlSize(appearance, style.fontCascade(), { style.minWidth(), style.minHeight() }, { style.width(), style.height() }, style.usedZoom());
-    if (minControlSize.width.value() > style.minWidth().value())
-        style.setMinWidth(WTFMove(minControlSize.width));
-    if (minControlSize.height.value() > style.minHeight().value())
-        style.setMinHeight(WTFMove(minControlSize.height));
+    auto minimumControlSize = this->minimumControlSize(appearance, style.fontCascade(), { style.minWidth(), style.minHeight() }, { style.width(), style.height() }, style.usedZoom());
+    // FIXME: This check makes no sense for cases when the LengthType of the values are different.
+    if (minimumControlSize.width.value() > style.minWidth().value())
+        style.setMinWidth(WTFMove(minimumControlSize.width));
+    if (minimumControlSize.height.value() > style.minHeight().value())
+        style.setMinHeight(WTFMove(minimumControlSize.height));
 
     // Font
-    if (auto themeFont = Theme::singleton().controlFont(appearance, style.fontCascade(), style.usedZoom())) {
+    if (auto controlFont = this->controlFont(appearance, style.fontCascade(), style.usedZoom())) {
         // If overriding the specified font with the theme font, also override the line height with the standard line height.
         style.setLineHeight(RenderStyle::initialLineHeight());
-        style.setFontDescription(WTFMove(themeFont.value()));
+        style.setFontDescription(WTFMove(controlFont.value()));
     }
 
     // Special style that tells enabled default buttons in active windows to use the ActiveButtonText color.
@@ -1370,7 +1475,7 @@ void RenderTheme::adjustMenuListStyle(RenderStyle& style, const Element*) const
 
 void RenderTheme::adjustMeterStyle(RenderStyle& style, const Element*) const
 {
-    style.setBoxShadow(nullptr);
+    style.setBoxShadow({ });
 }
 
 FloatSize RenderTheme::meterSizeForBounds(const RenderMeter&, const FloatRect& bounds) const
@@ -1407,9 +1512,8 @@ void RenderTheme::paintSliderTicks(const RenderObject& renderer, const PaintInfo
     bool isHorizontal = appearance == StyleAppearance::SliderHorizontal;
 
     IntSize thumbSize;
-    const RenderObject* thumbRenderer = input->sliderThumbElement()->renderer();
-    if (thumbRenderer) {
-        const RenderStyle& thumbStyle = thumbRenderer->style();
+    if (CheckedPtr thumbRenderer = input->sliderThumbElement()->renderer()) {
+        auto& thumbStyle = thumbRenderer->style();
         int thumbWidth = thumbStyle.width().intValue();
         int thumbHeight = thumbStyle.height().intValue();
         thumbSize.setWidth(isHorizontal ? thumbWidth : thumbHeight);
@@ -1462,6 +1566,50 @@ void RenderTheme::paintSliderTicks(const RenderObject& renderer, const PaintInfo
     }
 }
 
+void RenderTheme::paintPlatformResizer(const RenderLayerModelObject& renderer, GraphicsContext& context, const LayoutRect& resizerCornerRect)
+{
+    RefPtr<Image> resizeCornerImage;
+    FloatSize cornerResizerSize;
+    Ref document = renderer.document();
+    if (document->deviceScaleFactor() >= 2) {
+        static NeverDestroyed<Image*> resizeCornerImageHiRes(&ImageAdapter::loadPlatformResource("textAreaResizeCorner@2x").leakRef());
+        resizeCornerImage = resizeCornerImageHiRes;
+        cornerResizerSize = resizeCornerImage->size();
+        cornerResizerSize.scale(0.5f);
+    } else {
+        static NeverDestroyed<Image*> resizeCornerImageLoRes(&ImageAdapter::loadPlatformResource("textAreaResizeCorner").leakRef());
+        resizeCornerImage = resizeCornerImageLoRes;
+        cornerResizerSize = resizeCornerImage->size();
+    }
+
+    if (renderer.shouldPlaceVerticalScrollbarOnLeft()) {
+        GraphicsContextStateSaver stateSaver(context);
+        context.translate(resizerCornerRect.x() + cornerResizerSize.width(), resizerCornerRect.y() + resizerCornerRect.height() - cornerResizerSize.height());
+        context.scale(FloatSize(-1.0, 1.0));
+        if (resizeCornerImage)
+            context.drawImage(*resizeCornerImage, FloatRect(FloatPoint(), cornerResizerSize));
+        return;
+    }
+
+    if (!resizeCornerImage)
+        return;
+    FloatRect imageRect = snapRectToDevicePixels(LayoutRect(resizerCornerRect.maxXMaxYCorner() - cornerResizerSize, cornerResizerSize), document->deviceScaleFactor());
+    context.drawImage(*resizeCornerImage, imageRect);
+}
+
+void RenderTheme::paintPlatformResizerFrame(const RenderLayerModelObject&, GraphicsContext& context, const LayoutRect& resizerAbsRect)
+{
+    // Clipping will exclude the right and bottom edges of this frame.
+    GraphicsContextStateSaver stateSaver(context);
+    context.clip(resizerAbsRect);
+    LayoutRect largerCorner = resizerAbsRect;
+    largerCorner.setSize(LayoutSize(largerCorner.width() + 1_lu, largerCorner.height() + 1_lu));
+    context.setStrokeColor(SRGBA<uint8_t> { 217, 217, 217 });
+    context.setStrokeThickness(1.0f);
+    context.setFillColor(Color::transparentBlack);
+    context.drawRect(snappedIntRect(largerCorner));
+}
+
 bool RenderTheme::shouldHaveSpinButton(const HTMLInputElement& inputElement) const
 {
     return inputElement.isSteppable() && !inputElement.isRangeControl();
@@ -1499,7 +1647,7 @@ void RenderTheme::adjustSwitchStyle(RenderStyle& style, const Element*) const
     // FIXME: This probably has the same flaw as
     // RenderTheme::adjustButtonOrCheckboxOrColorWellOrInnerSpinButtonOrRadioStyle() by not taking
     // min-width/min-height into account.
-    auto controlSize = Theme::singleton().controlSize(StyleAppearance::Switch, style.fontCascade(), { style.logicalWidth(), style.logicalHeight() }, style.usedZoom());
+    auto controlSize = this->controlSize(StyleAppearance::Switch, style.fontCascade(), { style.logicalWidth(), style.logicalHeight() }, style.usedZoom());
     style.setLogicalWidth(WTFMove(controlSize.width));
     style.setLogicalHeight(WTFMove(controlSize.height));
 
@@ -1513,6 +1661,11 @@ void RenderTheme::adjustSwitchThumbOrSwitchTrackStyle(RenderStyle& style) const
 
     style.setGridItemRowStart(position);
     style.setGridItemColumnStart(position);
+}
+
+Style::PaddingBox RenderTheme::popupInternalPaddingBox(const RenderStyle&) const
+{
+    return Style::PaddingBox { 0_css_px };
 }
 
 void RenderTheme::purgeCaches()

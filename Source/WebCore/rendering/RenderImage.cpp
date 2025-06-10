@@ -58,6 +58,7 @@
 #include "RenderElementInlines.h"
 #include "RenderFragmentedFlow.h"
 #include "RenderImageResourceStyleImage.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderStyleSetters.h"
 #include "RenderTheme.h"
@@ -409,7 +410,9 @@ void RenderImage::repaintOrMarkForLayout(ImageSizeChangeType imageSizeChange, co
         if (rect) {
             // The image changed rect is in source image coordinates (pre-zooming),
             // so map from the bounds of the image to the contentsBox.
-            repaintRect.intersect(enclosingIntRect(mapRect(*rect, FloatRect(FloatPoint(), imageResource().imageSize(1.0f)), repaintRect)));
+            RefPtr<Image> srcImg = imageResource().image(flooredIntSize(contentBoxSize()));
+            FloatSize sourceSize = srcImg->size() / style().usedZoom();
+            repaintRect.intersect(enclosingIntRect(mapRect(*rect, FloatRect(FloatPoint(), sourceSize), repaintRect)));
         }
         repaintRectangle(repaintRect);
     }
@@ -431,15 +434,8 @@ void RenderImage::notifyFinished(CachedResource& newImage, const NetworkLoadMetr
         contentChanged(ContentChangeType::Image);
     }
 
-    if (RefPtr image = dynamicDowncast<HTMLImageElement>(element())) {
+    if (RefPtr image = dynamicDowncast<HTMLImageElement>(element()))
         page().didFinishLoadingImageForElement(*image);
-#if HAVE(SUPPORT_HDR_DISPLAY)
-        if (!document().hasPaintedHDRContent()) {
-            if (cachedImage() && cachedImage()->isHDR())
-                document().setHasPaintedHDRContent();
-        }
-#endif
-    }
 
     RenderReplaced::notifyFinished(newImage, metrics, loadWillContinueInAnotherProcess);
 }
@@ -506,6 +502,8 @@ static bool isDeferredImage(Element* element)
 
 void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
+    ASSERT(!isSkippedContentRoot(*this));
+
     GraphicsContext& context = paintInfo.context();
     if (context.invalidatingImagesWithAsyncDecodes()) {
         if (cachedImage() && cachedImage()->isClientWaitingForAsyncDecoding(*this))
@@ -906,9 +904,9 @@ void RenderImage::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, Flo
     }
 }
 
-bool RenderImage::needsPreferredWidthsRecalculation() const
+bool RenderImage::shouldInvalidatePreferredWidths() const
 {
-    if (RenderReplaced::needsPreferredWidthsRecalculation())
+    if (RenderReplaced::shouldInvalidatePreferredWidths())
         return true;
     return embeddedContentBox();
 }

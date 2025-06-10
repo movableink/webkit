@@ -10,7 +10,7 @@ import math
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.parse import parse_qs
 
 https = os.environ.get('HTTPS', None)
@@ -69,7 +69,7 @@ def answering():
         sys.stdout.flush()
         sys.exit(0)
 
-    last_modified = datetime.utcnow()
+    last_modified = datetime.now(timezone.utc)
     sys.stdout.write(
         'Last-Modified: {} GMT\r\n'
         'Cache-Control: no-cache\r\n'

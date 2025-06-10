@@ -91,7 +91,7 @@ struct _WebKitWebAudioSrcPrivate {
 
     _WebKitWebAudioSrcPrivate()
     {
-        sourcePad = webkitGstGhostPadFromStaticTemplate(&webAudioSrcTemplate, "src", nullptr);
+        sourcePad = webkitGstGhostPadFromStaticTemplate(&webAudioSrcTemplate, "src"_s, nullptr);
 
         g_rec_mutex_init(&mutex);
     }
@@ -218,7 +218,7 @@ static void webKitWebAudioSrcConstructed(GObject* object)
     auto taskName = makeString("webaudioSrcTask"_s, taskId.exchangeAdd(1));
     gst_object_set_name(GST_OBJECT_CAST(priv->task.get()), taskName.ascii().data());
 
-    priv->source = makeGStreamerElement("appsrc", "webaudioSrc");
+    priv->source = makeGStreamerElement("appsrc"_s, "webaudioSrc"_s);
 
     // Configure the appsrc for minimal latency.
     g_object_set(priv->source.get(), "block", TRUE, "blocksize", priv->bufferSize, "format", GST_FORMAT_TIME, "is-live", TRUE, nullptr);
@@ -340,7 +340,7 @@ static void webKitWebAudioSrcRenderAndPushFrames(const GRefPtr<GstElement>& elem
 
     // FIXME: Add support for local/live audio input.
     if (priv->bus)
-        priv->destination->callRenderCallback(nullptr, priv->bus.get(), priv->framesToPull, outputTimestamp);
+        priv->destination->callRenderCallback(*priv->bus, priv->framesToPull, outputTimestamp);
 
     if (!priv->hasRenderedAudibleFrame && !priv->bus->isSilent()) {
         priv->destination->notifyIsPlaying(true);
@@ -438,7 +438,7 @@ static GstStateChangeReturn webKitWebAudioSrcChangeState(GstElement* element, Gs
     }
 
     returnValue = GST_ELEMENT_CLASS(webkit_web_audio_src_parent_class)->change_state(element, transition);
-    if (UNLIKELY(returnValue == GST_STATE_CHANGE_FAILURE)) {
+    if (returnValue == GST_STATE_CHANGE_FAILURE) [[unlikely]] {
         GST_DEBUG_OBJECT(src, "State change failed");
         return returnValue;
     }

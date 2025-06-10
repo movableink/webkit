@@ -3,10 +3,8 @@ function shouldBe(actual, expected) {
         throw new Error(`expected ${expected} but got ${actual}`);
 }
 
-const runs = 1e5;
-
 let count = 0;
-for (let i = 0; i < runs; i++) {
+for (let i = 0; i < testLoopCount; i++) {
     try {
         const arr = [101, 101];
         arr[Symbol.iterator] = function () { return 3; };
@@ -15,10 +13,10 @@ for (let i = 0; i < runs; i++) {
         count++;
     }
 }
-shouldBe(count, runs);
+shouldBe(count, testLoopCount);
 count = 0;
 
-for (let i = 0; i < runs; i++) {
+for (let i = 0; i < testLoopCount; i++) {
     try {
         const arr = [101, 101];
         arr[Symbol.iterator] = function () { return "foo"; };
@@ -27,10 +25,10 @@ for (let i = 0; i < runs; i++) {
         count++;
     }
 }
-shouldBe(count, runs);
+shouldBe(count, testLoopCount);
 count = 0;
 
-for (let i = 0; i < runs; i++) {
+for (let i = 0; i < testLoopCount; i++) {
     try {
         const arr = [101, 101];
         arr[Symbol.iterator] = function () { return true; };
@@ -39,10 +37,10 @@ for (let i = 0; i < runs; i++) {
         count++;
     }
 }
-shouldBe(count, runs);
+shouldBe(count, testLoopCount);
 count = 0;
 
-for (let i = 0; i < runs; i++) {
+for (let i = 0; i < testLoopCount; i++) {
     try {
         const arr = [101, 101];
         arr[Symbol.iterator] = function () { return null; };
@@ -51,10 +49,10 @@ for (let i = 0; i < runs; i++) {
         count++;
     }
 }
-shouldBe(count, runs);
+shouldBe(count, testLoopCount);
 count = 0;
 
-for (let i = 0; i < runs; i++) {
+for (let i = 0; i < testLoopCount; i++) {
     try {
         const arr = [101, 101];
         arr[Symbol.iterator] = function () { return undefined; };
@@ -63,10 +61,10 @@ for (let i = 0; i < runs; i++) {
         count++;
     }
 }
-shouldBe(count, runs);
+shouldBe(count, testLoopCount);
 count = 0;
 
-for (let i = 0; i < runs; i++) {
+for (let i = 0; i < testLoopCount; i++) {
     try {
         const arr = [101, 101];
         arr[Symbol.iterator] = function () { return Symbol("foo"); };
@@ -75,10 +73,10 @@ for (let i = 0; i < runs; i++) {
         count++;
     }
 }
-shouldBe(count, runs);
+shouldBe(count, testLoopCount);
 count = 0;
 
-for (let i = 0; i < runs; i++) {
+for (let i = 0; i < testLoopCount; i++) {
     try {
         const arr = [101, 101];
         arr[Symbol.iterator] = function () { return 3n; };
@@ -87,5 +85,5 @@ for (let i = 0; i < runs; i++) {
         count++;
     }
 }
-shouldBe(count, runs);
+shouldBe(count, testLoopCount);
 count = 0;

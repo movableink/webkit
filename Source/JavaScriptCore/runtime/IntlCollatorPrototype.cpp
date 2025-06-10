@@ -84,7 +84,7 @@ JSC_DEFINE_HOST_FUNCTION(intlCollatorFuncCompare, (JSGlobalObject* globalObject,
     // 1. Let collator be the this value.
     // 2. Assert: Type(collator) is Object and collator has an [[initializedCollator]] internal slot whose value is true.
     IntlCollator* collator = jsDynamicCast<IntlCollator*>(callFrame->thisValue());
-    if (UNLIKELY(!collator))
+    if (!collator) [[unlikely]]
         return JSValue::encode(throwTypeError(globalObject, scope, "Intl.Collator.prototype.compare called on value that's not a Collator"_s));
 
     // 3. If x is not provided, let x be undefined.
@@ -115,7 +115,7 @@ JSC_DEFINE_CUSTOM_GETTER(intlCollatorPrototypeGetterCompare, (JSGlobalObject* gl
     // 10.3.3 Intl.Collator.prototype.compare (ECMA-402 2.0)
     // 1. Let collator be this Collator object.
     IntlCollator* collator = jsDynamicCast<IntlCollator*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!collator))
+    if (!collator) [[unlikely]]
         return JSValue::encode(throwTypeError(globalObject, scope, "Intl.Collator.prototype.compare called on value that's not a Collator"_s));
 
     JSBoundFunction* boundCompare = collator->boundCompare();
@@ -146,7 +146,7 @@ JSC_DEFINE_HOST_FUNCTION(intlCollatorPrototypeFuncResolvedOptions, (JSGlobalObje
 
     // 10.3.5 Intl.Collator.prototype.resolvedOptions() (ECMA-402 2.0)
     IntlCollator* collator = jsDynamicCast<IntlCollator*>(callFrame->thisValue());
-    if (UNLIKELY(!collator))
+    if (!collator) [[unlikely]]
         return JSValue::encode(throwTypeError(globalObject, scope, "Intl.Collator.prototype.resolvedOptions called on value that's not a Collator"_s));
 
     RELEASE_AND_RETURN(scope, JSValue::encode(collator->resolvedOptions(globalObject)));

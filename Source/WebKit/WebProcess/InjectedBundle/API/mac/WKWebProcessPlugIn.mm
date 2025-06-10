@@ -58,7 +58,7 @@
 static void didCreatePage(WKBundleRef bundle, WKBundlePageRef page, const void* clientInfo)
 {
     auto plugInController = (__bridge WKWebProcessPlugInController *)clientInfo;
-    id <WKWebProcessPlugIn> principalClassInstance = plugInController->_principalClassInstance.get();
+    RetainPtr principalClassInstance = plugInController->_principalClassInstance.get();
 
     if ([principalClassInstance respondsToSelector:@selector(webProcessPlugIn:didCreateBrowserContextController:)])
         [principalClassInstance webProcessPlugIn:plugInController didCreateBrowserContextController:wrapper(*WebKit::toImpl(page))];
@@ -67,7 +67,7 @@ static void didCreatePage(WKBundleRef bundle, WKBundlePageRef page, const void* 
 static void willDestroyPage(WKBundleRef bundle, WKBundlePageRef page, const void* clientInfo)
 {
     auto plugInController = (__bridge WKWebProcessPlugInController *)clientInfo;
-    id <WKWebProcessPlugIn> principalClassInstance = plugInController->_principalClassInstance.get();
+    RetainPtr principalClassInstance = plugInController->_principalClassInstance.get();
 
     if ([principalClassInstance respondsToSelector:@selector(webProcessPlugIn:willDestroyBrowserContextController:)])
         [principalClassInstance webProcessPlugIn:plugInController willDestroyBrowserContextController:wrapper(*WebKit::toImpl(page))];

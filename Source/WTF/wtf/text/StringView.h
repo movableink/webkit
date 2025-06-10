@@ -262,7 +262,6 @@ bool startsWithLettersIgnoringASCIICase(StringView, ASCIILiteral);
 
 inline bool operator==(StringView a, StringView b) { return equal(a, b); }
 inline bool operator==(StringView a, ASCIILiteral b) { return equal(a, b); }
-inline bool operator==(ASCIILiteral a, StringView b) { return equal(b, a); }
 
 struct StringViewWithUnderlyingString;
 
@@ -306,14 +305,14 @@ inline StringView::StringView()
 
 inline String StringViewWithUnderlyingString::toString() const
 {
-    if (LIKELY(view.length() == underlyingString.length()))
+    if (view.length() == underlyingString.length()) [[likely]]
         return underlyingString;
     return view.toString();
 }
 
 inline AtomString StringViewWithUnderlyingString::toAtomString() const
 {
-    if (LIKELY(view.length() == underlyingString.length()))
+    if (view.length() == underlyingString.length()) [[likely]]
         return AtomString { underlyingString };
     return view.toAtomString();
 }
@@ -1186,7 +1185,7 @@ inline bool equalIgnoringNullity(StringView a, StringView b)
     return equal(a, b);
 }
 
-WTF_EXPORT_PRIVATE int codePointCompare(StringView, StringView);
+WTF_EXPORT_PRIVATE std::strong_ordering codePointCompare(StringView, StringView);
 
 inline bool hasUnpairedSurrogate(StringView string)
 {

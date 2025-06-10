@@ -7,6 +7,7 @@
 //   Performance test for ANGLE replaying traces.
 //
 
+#include "tests/perf_tests/TracePerfTest.h"
 #include <gtest/gtest.h>
 #include "common/PackedEnums.h"
 #include "common/string_utils.h"
@@ -50,61 +51,6 @@ using namespace egl_platform;
 
 namespace
 {
-constexpr size_t kMaxPath = 1024;
-
-struct TracePerfParams final : public RenderTestParams
-{
-    // Common default options
-    TracePerfParams(const TraceInfo &traceInfoIn,
-                    GLESDriverType driverType,
-                    EGLenum platformType,
-                    EGLenum deviceType)
-        : traceInfo(traceInfoIn)
-    {
-        majorVersion = traceInfo.contextClientMajorVersion;
-        minorVersion = traceInfo.contextClientMinorVersion;
-        windowWidth  = traceInfo.drawSurfaceWidth;
-        windowHeight = traceInfo.drawSurfaceHeight;
-        colorSpace   = traceInfo.drawSurfaceColorSpace;
-
-        // Display the frame after every drawBenchmark invocation
-        iterationsPerStep = 1;
-
-        driver                   = driverType;
-        eglParameters.renderer   = platformType;
-        eglParameters.deviceType = deviceType;
-
-        ASSERT(!gOffscreen || !gVsync);
-
-        if (gOffscreen)
-        {
-            surfaceType = SurfaceType::Offscreen;
-        }
-        if (gVsync)
-        {
-            surfaceType = SurfaceType::WindowWithVSync;
-        }
-
-        // Force on features if we're validating serialization.
-        if (gTraceTestValidation)
-        {
-            // Enable limits when validating traces because we usually turn off capture.
-            eglParameters.enable(Feature::EnableCaptureLimits);
-
-            // This feature should also be enabled in capture to mirror the replay.
-            eglParameters.enable(Feature::ForceInitShaderVariables);
-        }
-    }
-
-    std::string story() const override
-    {
-        std::stringstream strstr;
-        strstr << RenderTestParams::story() << "_" << traceInfo.name;
-        return strstr.str();
-    }
-
-    TraceInfo traceInfo = {};
-};
 
 class TracePerfTest : public ANGLERenderTest
 {
@@ -188,6 +134,9 @@ class TracePerfTest : public ANGLERenderTest
         return strncmp(name, mParams->traceInfo.name, kTraceInfoMaxNameLen) == 0;
     }
 
+    bool loadTestExpectationsFromFileWithConfig(const GPUTestConfig &config,
+                                                const std::string &fileName);
+
   private:
     struct QueryInfo
     {
@@ -243,6 +192,7 @@ class TracePerfTest : public ANGLERenderTest
     bool mScreenshotSaved                                               = false;
     int32_t mScreenshotFrame                                            = gScreenshotFrame;
     std::unique_ptr<TraceLibrary> mTraceReplay;
+    GPUTestExpectationsParser mTestExpectationsParser;
 };
 
 TracePerfTest *gCurrentTracePerfTest = nullptr;
@@ -419,6 +369,15 @@ void KHRONOS_APIENTRY DrawElementsInstancedMinimizedProc(GLenum mode,
     glDrawElementsInstanced(GL_POINTS, 1, type, indices, 1);
 }
 
+void KHRONOS_APIENTRY DrawElementsInstancedEXTMinimizedProc(GLenum mode,
+                                                            GLsizei count,
+                                                            GLenum type,
+                                                            const void *indices,
+                                                            GLsizei instancecount)
+{
+    glDrawElementsInstancedEXT(GL_POINTS, 1, type, indices, 1);
+}
+
 void KHRONOS_APIENTRY DrawElementsBaseVertexMinimizedProc(GLenum mode,
                                                           GLsizei count,
                                                           GLenum type,
@@ -426,6 +385,24 @@ void KHRONOS_APIENTRY DrawElementsBaseVertexMinimizedProc(GLenum mode,
                                                           GLint basevertex)
 {
     glDrawElementsBaseVertex(GL_POINTS, 1, type, indices, basevertex);
+}
+
+void KHRONOS_APIENTRY DrawElementsBaseVertexEXTMinimizedProc(GLenum mode,
+                                                             GLsizei count,
+                                                             GLenum type,
+                                                             const void *indices,
+                                                             GLint basevertex)
+{
+    glDrawElementsBaseVertexEXT(GL_POINTS, 1, type, indices, basevertex);
+}
+
+void KHRONOS_APIENTRY DrawElementsBaseVertexOESMinimizedProc(GLenum mode,
+                                                             GLsizei count,
+                                                             GLenum type,
+                                                             const void *indices,
+                                                             GLint basevertex)
+{
+    glDrawElementsBaseVertexOES(GL_POINTS, 1, type, indices, basevertex);
 }
 
 void KHRONOS_APIENTRY DrawElementsInstancedBaseVertexMinimizedProc(GLenum mode,
@@ -436,6 +413,26 @@ void KHRONOS_APIENTRY DrawElementsInstancedBaseVertexMinimizedProc(GLenum mode,
                                                                    GLint basevertex)
 {
     glDrawElementsInstancedBaseVertex(GL_POINTS, 1, type, indices, 1, basevertex);
+}
+
+void KHRONOS_APIENTRY DrawElementsInstancedBaseVertexEXTMinimizedProc(GLenum mode,
+                                                                      GLsizei count,
+                                                                      GLenum type,
+                                                                      const void *indices,
+                                                                      GLsizei instancecount,
+                                                                      GLint basevertex)
+{
+    glDrawElementsInstancedBaseVertexEXT(GL_POINTS, 1, type, indices, 1, basevertex);
+}
+
+void KHRONOS_APIENTRY DrawElementsInstancedBaseVertexOESMinimizedProc(GLenum mode,
+                                                                      GLsizei count,
+                                                                      GLenum type,
+                                                                      const void *indices,
+                                                                      GLsizei instancecount,
+                                                                      GLint basevertex)
+{
+    glDrawElementsInstancedBaseVertexOES(GL_POINTS, 1, type, indices, 1, basevertex);
 }
 
 void KHRONOS_APIENTRY DrawRangeElementsMinimizedProc(GLenum mode,
@@ -459,6 +456,14 @@ void KHRONOS_APIENTRY DrawArraysInstancedMinimizedProc(GLenum mode,
                                                        GLsizei instancecount)
 {
     glDrawArraysInstanced(GL_POINTS, first, 1, 1);
+}
+
+void KHRONOS_APIENTRY DrawArraysInstancedEXTMinimizedProc(GLenum mode,
+                                                          GLint first,
+                                                          GLsizei count,
+                                                          GLsizei instancecount)
+{
+    glDrawArraysInstancedEXT(GL_POINTS, first, 1, 1);
 }
 
 void KHRONOS_APIENTRY DrawArraysIndirectMinimizedProc(GLenum mode, const void *indirect)
@@ -504,6 +509,15 @@ void *KHRONOS_APIENTRY MapBufferRangeMinimizedProc(GLenum target,
 {
     access |= GL_MAP_UNSYNCHRONIZED_BIT;
     return glMapBufferRange(target, offset, length, access);
+}
+
+void *KHRONOS_APIENTRY MapBufferRangeEXTMinimizedProc(GLenum target,
+                                                      GLintptr offset,
+                                                      GLsizeiptr length,
+                                                      GLbitfield access)
+{
+    access |= GL_MAP_UNSYNCHRONIZED_BIT;
+    return glMapBufferRangeEXT(target, offset, length, access);
 }
 
 void KHRONOS_APIENTRY TexImage2DMinimizedProc(GLenum target,
@@ -592,6 +606,8 @@ void KHRONOS_APIENTRY GenerateMipmapMinimizedProc(GLenum target)
     // other issues. If this turns out to be a real issue with app traces, we can turn this into a
     // glTexImage2D call for each generated level.
 }
+
+void KHRONOS_APIENTRY GenerateMipmapOESMinimizedProc(GLenum target) {}
 
 void KHRONOS_APIENTRY BlitFramebufferMinimizedProc(GLint srcX0,
                                                    GLint srcY0,
@@ -716,116 +732,48 @@ angle::GenericProc KHRONOS_APIENTRY TraceLoadProc(const char *procName)
 
     if (gMinimizeGPUWork)
     {
-        if (strcmp(procName, "glViewport") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(ViewportMinimizedProc);
-        }
+#define MINIMIZED(EntryPoint)                                                   \
+    if (strcmp(procName, "gl" #EntryPoint) == 0)                                \
+    {                                                                           \
+        return reinterpret_cast<angle::GenericProc>(EntryPoint##MinimizedProc); \
+    }
 
-        if (strcmp(procName, "glScissor") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(ScissorMinimizedProc);
-        }
+        MINIMIZED(Viewport)
+        MINIMIZED(Scissor)
 
         // Interpose the calls that generate actual GPU work
-        if (strcmp(procName, "glDrawElements") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(DrawElementsMinimizedProc);
-        }
-        if (strcmp(procName, "glDrawElementsIndirect") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(DrawElementsIndirectMinimizedProc);
-        }
-        if (strcmp(procName, "glDrawElementsInstanced") == 0 ||
-            strcmp(procName, "glDrawElementsInstancedEXT") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(DrawElementsInstancedMinimizedProc);
-        }
-        if (strcmp(procName, "glDrawElementsBaseVertex") == 0 ||
-            strcmp(procName, "glDrawElementsBaseVertexEXT") == 0 ||
-            strcmp(procName, "glDrawElementsBaseVertexOES") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(DrawElementsBaseVertexMinimizedProc);
-        }
-        if (strcmp(procName, "glDrawElementsInstancedBaseVertex") == 0 ||
-            strcmp(procName, "glDrawElementsInstancedBaseVertexEXT") == 0 ||
-            strcmp(procName, "glDrawElementsInstancedBaseVertexOES") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(
-                DrawElementsInstancedBaseVertexMinimizedProc);
-        }
-        if (strcmp(procName, "glDrawRangeElements") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(DrawRangeElementsMinimizedProc);
-        }
-        if (strcmp(procName, "glDrawArrays") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(DrawArraysMinimizedProc);
-        }
-        if (strcmp(procName, "glDrawArraysInstanced") == 0 ||
-            strcmp(procName, "glDrawArraysInstancedEXT") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(DrawArraysInstancedMinimizedProc);
-        }
-        if (strcmp(procName, "glDrawArraysIndirect") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(DrawArraysIndirectMinimizedProc);
-        }
-        if (strcmp(procName, "glDispatchCompute") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(DispatchComputeMinimizedProc);
-        }
-        if (strcmp(procName, "glDispatchComputeIndirect") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(DispatchComputeIndirectMinimizedProc);
-        }
+        MINIMIZED(DrawElements)
+        MINIMIZED(DrawElementsIndirect)
+        MINIMIZED(DrawElementsInstanced)
+        MINIMIZED(DrawElementsInstancedEXT)
+        MINIMIZED(DrawElementsBaseVertex)
+        MINIMIZED(DrawElementsBaseVertexEXT)
+        MINIMIZED(DrawElementsBaseVertexOES)
+        MINIMIZED(DrawElementsInstancedBaseVertex)
+        MINIMIZED(DrawElementsInstancedBaseVertexEXT)
+        MINIMIZED(DrawElementsInstancedBaseVertexOES)
+        MINIMIZED(DrawRangeElements)
+        MINIMIZED(DrawArrays)
+        MINIMIZED(DrawArraysInstanced)
+        MINIMIZED(DrawArraysInstancedEXT)
+        MINIMIZED(DrawArraysIndirect)
+        MINIMIZED(DispatchCompute)
+        MINIMIZED(DispatchComputeIndirect)
 
         // Interpose the calls that generate data copying work
-        if (strcmp(procName, "glBufferData") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(BufferDataMinimizedProc);
-        }
-        if (strcmp(procName, "glBufferSubData") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(BufferSubDataMinimizedProc);
-        }
-        if (strcmp(procName, "glMapBufferRange") == 0 ||
-            strcmp(procName, "glMapBufferRangeEXT") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(MapBufferRangeMinimizedProc);
-        }
-        if (strcmp(procName, "glTexImage2D") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(TexImage2DMinimizedProc);
-        }
-        if (strcmp(procName, "glTexImage3D") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(TexImage3DMinimizedProc);
-        }
-        if (strcmp(procName, "glTexSubImage2D") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(TexSubImage2DMinimizedProc);
-        }
-        if (strcmp(procName, "glTexSubImage3D") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(TexSubImage3DMinimizedProc);
-        }
-        if (strcmp(procName, "glGenerateMipmap") == 0 ||
-            strcmp(procName, "glGenerateMipmapOES") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(GenerateMipmapMinimizedProc);
-        }
-        if (strcmp(procName, "glBlitFramebuffer") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(BlitFramebufferMinimizedProc);
-        }
-        if (strcmp(procName, "glReadPixels") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(ReadPixelsMinimizedProc);
-        }
-        if (strcmp(procName, "glBeginTransformFeedback") == 0)
-        {
-            return reinterpret_cast<angle::GenericProc>(BeginTransformFeedbackMinimizedProc);
-        }
+        MINIMIZED(BufferData)
+        MINIMIZED(BufferSubData)
+        MINIMIZED(MapBufferRange)
+        MINIMIZED(MapBufferRangeEXT)
+        MINIMIZED(TexImage2D)
+        MINIMIZED(TexImage3D)
+        MINIMIZED(TexSubImage2D)
+        MINIMIZED(TexSubImage3D)
+        MINIMIZED(GenerateMipmap)
+        MINIMIZED(GenerateMipmapOES)
+        MINIMIZED(BlitFramebuffer)
+        MINIMIZED(ReadPixels)
+        MINIMIZED(BeginTransformFeedback)
     }
 
     return gCurrentTracePerfTest->getGLWindow()->getProcAddress(procName);
@@ -835,8 +783,6 @@ void ValidateSerializedState(const char *serializedState, const char *fileName, 
 {
     gCurrentTracePerfTest->validateSerializedState(serializedState, fileName, line);
 }
-
-constexpr char kTraceTestFolder[] = "src/tests/restricted_traces";
 
 bool FindTraceTestDataPath(const char *traceName, char *testDataDirOut, size_t maxDataDirLen)
 {
@@ -851,35 +797,105 @@ bool FindRootTraceTestDataPath(char *testDataDirOut, size_t maxDataDirLen)
     return angle::FindTestDataPath(kTraceTestFolder, testDataDirOut, maxDataDirLen);
 }
 
+GPUTestConfig::API getTestConfigAPIFromRenderer(angle::GLESDriverType driverType,
+                                                EGLenum renderer,
+                                                EGLenum deviceType)
+{
+    if (driverType == angle::GLESDriverType::SystemEGL ||
+        driverType == angle::GLESDriverType::SystemWGL)
+    {
+        return GPUTestConfig::kAPINative;
+    }
+
+    if (driverType != angle::GLESDriverType::AngleEGL &&
+        driverType != angle::GLESDriverType::AngleVulkanSecondariesEGL)
+    {
+        return GPUTestConfig::kAPIUnknown;
+    }
+
+    switch (renderer)
+    {
+        case EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE:
+            return GPUTestConfig::kAPID3D11;
+        case EGL_PLATFORM_ANGLE_TYPE_D3D9_ANGLE:
+            return GPUTestConfig::kAPID3D9;
+        case EGL_PLATFORM_ANGLE_TYPE_OPENGL_ANGLE:
+            return GPUTestConfig::kAPIGLDesktop;
+        case EGL_PLATFORM_ANGLE_TYPE_OPENGLES_ANGLE:
+            return GPUTestConfig::kAPIGLES;
+        case EGL_PLATFORM_ANGLE_TYPE_VULKAN_ANGLE:
+            if (deviceType == EGL_PLATFORM_ANGLE_DEVICE_TYPE_SWIFTSHADER_ANGLE)
+            {
+                return GPUTestConfig::kAPISwiftShader;
+            }
+            else
+            {
+                return GPUTestConfig::kAPIVulkan;
+            }
+        case EGL_PLATFORM_ANGLE_TYPE_METAL_ANGLE:
+            return GPUTestConfig::kAPIMetal;
+        case EGL_PLATFORM_ANGLE_TYPE_WEBGPU_ANGLE:
+            return GPUTestConfig::kAPIWgpu;
+        default:
+            std::cerr << "Unknown Renderer enum: 0x" << std::hex << renderer << "\n";
+            return GPUTestConfig::kAPIUnknown;
+    }
+}
+
+bool TracePerfTest::loadTestExpectationsFromFileWithConfig(const GPUTestConfig &config,
+                                                           const std::string &fileName)
+{
+    if (!mTestExpectationsParser.loadTestExpectationsFromFile(config, fileName))
+    {
+        std::stringstream errorMsgStream;
+        for (const auto &message : mTestExpectationsParser.getErrorMessages())
+        {
+            errorMsgStream << std::endl << " " << message;
+        }
+
+        std::cerr << "Failed to load test expectations." << errorMsgStream.str() << std::endl;
+        return false;
+    }
+    return true;
+}
+
 TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
     : ANGLERenderTest("TracePerf", *params.get(), "ms"),
       mParams(std::move(params)),
       mStartFrame(0),
       mEndFrame(0)
 {
-    bool isAMD            = IsAMD() && !mParams->isSwiftshader();
-    bool isAMDLinux       = isAMD && IsLinux();
-    bool isAMDLinuxANGLE  = isAMDLinux && mParams->isANGLE();
-    bool isAMDLinuxNative = isAMDLinux && !mParams->isANGLE();
-    bool isAMDWin         = isAMD && IsWindows();
-    bool isAMDWinANGLE    = isAMDWin && mParams->isANGLE();
-    // bool isAMDWinNative   = isAMDWin && !mParams->isANGLE();
+    constexpr char kTestExpectationsPath[] =
+        "src/tests/perf_tests/angle_trace_tests_expectations.txt";
+    constexpr size_t kMaxPath = 512;
+    std::array<char, kMaxPath> foundDataPath;
+    if (!angle::FindTestDataPath(kTestExpectationsPath, foundDataPath.data(), foundDataPath.size()))
+    {
+        failTest(std::string("Unable to find ANGLE trace tests expectations path: ") +
+                 std::string(kTestExpectationsPath));
+        return;
+    }
 
-    bool isIntel            = IsIntel() && !mParams->isSwiftshader();
-    bool isIntelLinux       = isIntel && IsLinux();
-    bool isIntelLinuxANGLE  = isIntelLinux && mParams->isANGLE();
-    bool isIntelLinuxNative = isIntelLinux && !mParams->isANGLE();
-    bool isIntelWin         = IsWindows() && isIntel;
-    bool isIntelWinANGLE    = isIntelWin && mParams->isANGLE();
-    bool isIntelWinNative   = isIntelWin && !mParams->isANGLE();
+    angle::GPUTestConfig::API api = getTestConfigAPIFromRenderer(
+        mParams->driver, mParams->eglParameters.renderer, mParams->eglParameters.deviceType);
 
-    bool isNVIDIA            = IsNVIDIA() && !mParams->isSwiftshader();
-    bool isNVIDIALinux       = isNVIDIA && IsLinux();
-    bool isNVIDIALinuxANGLE  = isNVIDIALinux && mParams->isANGLE();
-    bool isNVIDIALinuxNative = isNVIDIALinux && !mParams->isANGLE();
-    bool isNVIDIAWin         = isNVIDIA && IsWindows();
-    bool isNVIDIAWinANGLE    = isNVIDIAWin && mParams->isANGLE();
-    bool isNVIDIAWinNative   = isNVIDIAWin && !mParams->isANGLE();
+    GPUTestConfig testConfig = GPUTestConfig(api, 0);
+    if (!loadTestExpectationsFromFileWithConfig(testConfig, std::string(foundDataPath.data())))
+    {
+        failTest(std::string("Unable to load ANGLE trace tests expectations file: ") +
+                 std::string(foundDataPath.data()));
+        return;
+    }
+    else
+    {
+        int32_t testExpectation =
+            mTestExpectationsParser.getTestExpectation(mParams->traceInfo.name);
+
+        if (testExpectation == GPUTestExpectationsParser::kGpuTestSkip)
+        {
+            skipTest("Test skipped on this config");
+        }
+    }
 
     if (!mParams->traceInfo.initialized)
     {
@@ -919,60 +935,29 @@ TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
         }
     }
 
-    if (isIntelWinANGLE && traceNameIs("manhattan_10"))
-    {
-        skipTest(
-            "TODO: http://anglebug.com/40096690 This fails after the upgrade to the 26.20.100.7870 "
-            "driver");
-    }
+    // Configuration-specific test exceptions. Only include exceptions that are outside the scope
+    // of the trace tests expectations file, "angle_trace_tests_expectations.txt".
 
-    if (isIntelWinNative && traceNameIs("angry_birds_2_1500"))
+    if (traceNameIs("modern_combat_5"))
     {
-        skipTest(
-            "TODO: http://anglebug.com/40096702 Fails on older Intel drivers. Passes in newer");
-    }
-
-    if (traceNameIs("cod_mobile"))
-    {
-        if (isIntelWin)
+        if (IsPixel6() && !IsAndroid14OrNewer())
         {
-            skipTest("http://anglebug.com/42265065 Flaky on Intel/windows");
+            skipTest(
+                "https://issuetracker.google.com/42267261 Causing thermal failures on Pixel 6 with "
+                "Android 13");
         }
     }
 
-    if (isIntelLinuxANGLE && traceNameIs("octopath_traveler"))
+    if (traceNameIs("genshin_impact"))
     {
-        skipTest("TODO: http://anglebug.com/378666645 Non-deterministic image on Ubuntu 22.04");
+        if (!Is64Bit())
+        {
+            skipTest("Genshin is too large to handle in 32-bit mode");
+        }
     }
 
-    if (isIntelLinuxANGLE && traceNameIs("dead_by_daylight"))
-    {
-        skipTest("TODO: http://anglebug.com/378666645 Non-deterministic image on Ubuntu 22.04");
-    }
-
-    if (isIntelWinANGLE && traceNameIs("black_desert_mobile"))
-    {
-        skipTest(
-            "TODO: http://anglebug.com/42266346 Non-deterministic image on 31.0.101.2111 driver");
-    }
-
-    if (isIntelWinANGLE && traceNameIs("the_gardens_between"))
-    {
-        skipTest(
-            "TODO: http://anglebug.com/42266346 Non-deterministic image on 31.0.101.2111 driver");
-    }
-
-    if (isIntelWinANGLE && traceNameIs("animal_crossing"))
-    {
-        skipTest(
-            "TODO: http://anglebug.com/353690308 Non-deterministic image on UHD770 31.0.101.5333");
-    }
-
-    if (isIntelWinANGLE && traceNameIs("black_clover_m"))
-    {
-        skipTest(
-            "TODO: http://anglebug.com/353690308 Non-deterministic image on UHD770 31.0.101.5333");
-    }
+    // Legacy trace-specific extension dependencies. For new traces this information will be
+    // included in the trace's json file.
 
     if (traceNameIs("brawl_stars"))
     {
@@ -1013,14 +998,6 @@ TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
     if (traceNameIs("saint_seiya_awakening"))
     {
         addExtensionPrerequisite("GL_EXT_shadow_samplers");
-
-        if (isIntelLinuxANGLE)
-        {
-            skipTest(
-                "TODO: https://anglebug.com/42264055 Linux+Intel generates 'Framebuffer is "
-                "incomplete' "
-                "errors");
-        }
     }
 
     if (traceNameIs("magic_tiles_3"))
@@ -1036,12 +1013,6 @@ TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
 
         // Intel doesn't support external images.
         addExtensionPrerequisite("GL_OES_EGL_image_external");
-
-        if (isIntelLinuxNative || isAMDLinuxNative)
-        {
-            skipTest(
-                "http://anglebug.com/42264358 Failing on Linux Intel and AMD due to invalid enum");
-        }
     }
 
     if (traceNameIs("asphalt_8"))
@@ -1052,16 +1023,6 @@ TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
     if (traceNameIs("hearthstone"))
     {
         addExtensionPrerequisite("GL_KHR_texture_compression_astc_ldr");
-    }
-
-    if (traceNameIs("efootball_pes_2021"))
-    {
-        if (isIntelLinuxANGLE)
-        {
-            skipTest(
-                "TODO: https://anglebug.com/42264055 Linux+Intel generate 'Framebuffer is "
-                "incomplete' errors with the Vulkan backend");
-        }
     }
 
     if (traceNameIs("shadow_fight_2"))
@@ -1075,73 +1036,14 @@ TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
         addExtensionPrerequisite("GL_OES_EGL_image_external");
     }
 
-    if (traceNameIs("happy_color"))
-    {
-        if (isAMDWinANGLE)
-        {
-            skipTest(
-                "http://anglebug.com/42264158 Generates incorrect results on AMD Windows Vulkan");
-        }
-    }
-
-    if (traceNameIs("bus_simulator_indonesia"))
-    {
-        if (isIntelLinuxNative || isAMDLinuxNative)
-        {
-            skipTest(
-                "TODO: https://anglebug.com/42264164 native GLES generates GL_INVALID_OPERATION");
-        }
-    }
-
-    if (traceNameIs("messenger_lite"))
-    {
-        if (isNVIDIAWinANGLE)
-        {
-            skipTest(
-                "https://anglebug.com/42264199 Incorrect pixels on NVIDIA Windows for first frame");
-        }
-    }
-
     if (traceNameIs("among_us"))
     {
         addExtensionPrerequisite("GL_KHR_texture_compression_astc_ldr");
     }
 
-    if (traceNameIs("car_parking_multiplayer"))
-    {
-        if (isNVIDIAWinNative || isNVIDIALinuxNative)
-        {
-            skipTest(
-                "TODO: https://anglebug.com/42264147 NVIDIA native driver spews undefined behavior "
-                "warnings");
-        }
-        if (isIntelWinANGLE)
-        {
-            skipTest("https://anglebug.com/42264261 Device lost on Win Intel");
-        }
-    }
-
-    if (traceNameIs("fifa_mobile"))
-    {
-        if (isIntelWinANGLE)
-        {
-            skipTest(
-                "TODO: http://anglebug.com/42264415 Intel Windows Vulkan flakily renders entirely "
-                "black");
-        }
-    }
-
     if (traceNameIs("extreme_car_driving_simulator"))
     {
         addExtensionPrerequisite("GL_KHR_texture_compression_astc_ldr");
-    }
-
-    if (traceNameIs("plants_vs_zombies_2"))
-    {
-        if (isAMDWinANGLE)
-        {
-            skipTest("TODO: http://crbug.com/1187752 Corrupted image");
-        }
     }
 
     if (traceNameIs("junes_journey"))
@@ -1159,47 +1061,16 @@ TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
     {
         addExtensionPrerequisite("GL_OES_EGL_image_external");
         addExtensionPrerequisite("GL_KHR_texture_compression_astc_ldr");
-
-        if (isIntelLinuxANGLE)
-        {
-            skipTest("TODO: http://anglebug.com/42264351 Trace is crashing on Intel Linux");
-        }
     }
 
     if (traceNameIs("aztec_ruins"))
     {
-        if (isIntelWinANGLE)
-        {
-            skipTest(
-                "TODO: http://anglebug.com/353690308 Non-deterministic image on UHD770 "
-                "31.0.101.5333");
-        }
-
         addExtensionPrerequisite("GL_KHR_texture_compression_astc_ldr");
     }
 
     if (traceNameIs("dragon_raja"))
     {
         addExtensionPrerequisite("GL_OES_EGL_image_external");
-
-        if (isIntelLinuxANGLE)
-        {
-            skipTest(
-                "TODO: http://anglebug.com/42264343 Intel Linux errors with 'Framebuffer is "
-                "incomplete' on Vulkan");
-        }
-    }
-
-    if (traceNameIs("hill_climb_racing") || traceNameIs("dead_trigger_2") ||
-        traceNameIs("disney_mirrorverse") || traceNameIs("cut_the_rope") ||
-        traceNameIs("geometry_dash") || traceNameIs("critical_ops"))
-    {
-        if (IsAndroid() && (IsPixel4() || IsPixel4XL()) && !mParams->isANGLE())
-        {
-            skipTest(
-                "http://anglebug.com/42264359 Adreno gives a driver error with empty/small draw "
-                "calls");
-        }
     }
 
     if (traceNameIs("avakin_life"))
@@ -1207,122 +1078,25 @@ TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
         addExtensionPrerequisite("GL_OES_EGL_image_external");
     }
 
-    if (traceNameIs("professional_baseball_spirits"))
-    {
-        if (isIntelLinuxANGLE || isAMDLinuxNative)
-        {
-            skipTest(
-                "TODO: https://anglebug.com/42264363 Linux+Mesa/RADV Vulkan generates "
-                "GL_INVALID_FRAMEBUFFER_OPERATION. Mesa versions below 20.3.5 produce the same "
-                "issue on Linux+Mesa/Intel Vulkan");
-        }
-    }
-
-    if (traceNameIs("call_break_offline_card_game"))
-    {
-        if (isIntelLinuxANGLE)
-        {
-            skipTest(
-                "TODO: http://anglebug.com/42264374 Intel Linux Vulkan errors with 'Framebuffer is "
-                "incomplete'");
-        }
-    }
-
     if (traceNameIs("ludo_king"))
     {
         addExtensionPrerequisite("GL_KHR_texture_compression_astc_ldr");
-    }
-
-    if (traceNameIs("summoners_war"))
-    {
-        if (isIntelWinANGLE)
-        {
-            skipTest("TODO: http://anglebug.com/42264477 GL_INVALID_ENUM on Windows/Intel");
-        }
-
-        if (isIntelLinuxNative)
-        {
-            skipTest("https://anglebug.com/42267118 fails on newer OS/driver");
-        }
     }
 
     if (traceNameIs("pokemon_go"))
     {
         addExtensionPrerequisite("GL_EXT_texture_cube_map_array");
         addExtensionPrerequisite("GL_KHR_texture_compression_astc_ldr");
-
-        if (isIntelLinuxANGLE)
-        {
-            skipTest("TODO: http://anglebug.com/42264520 Intel Linux crashing on teardown");
-        }
-
-        if (isIntelLinuxNative)
-        {
-            skipTest("TODO: http://anglebug.com/392938092 flaky crash");
-        }
-
-        if (isIntelWinANGLE)
-        {
-            skipTest("TODO: http://anglebug.com/42264526 Intel Windows timing out periodically");
-        }
     }
 
     if (traceNameIs("cookie_run_kingdom"))
     {
-        addExtensionPrerequisite("GL_EXT_texture_cube_map_array");
         addExtensionPrerequisite("GL_OES_EGL_image_external");
-    }
-
-    if (traceNameIs("genshin_impact"))
-    {
-        addExtensionPrerequisite("GL_KHR_texture_compression_astc_ldr");
-
-        if (isNVIDIAWinANGLE || isNVIDIALinuxANGLE)
-        {
-            skipTest("http://anglebug.com/42265965 Nondeterministic noise between runs");
-        }
-
-        if (isIntelLinuxANGLE)
-        {
-            skipTest("TODO: http://anglebug.com/42264560 Crashes on Linux Intel Vulkan");
-        }
-
-        if (IsQualcomm() && mParams->isVulkan())
-        {
-            skipTest("TODO: http://anglebug.com/378464990 Crashes on Qualcomm (Pixel 4)");
-        }
-
-        if (!Is64Bit())
-        {
-            skipTest("Genshin is too large to handle in 32-bit mode");
-        }
-    }
-
-    if (traceNameIs("mario_kart_tour"))
-    {
-        if (isIntelLinuxNative)
-        {
-            skipTest("http://anglebug.com/42265205 Fails on native Mesa");
-        }
     }
 
     if (traceNameIs("pubg_mobile_skydive") || traceNameIs("pubg_mobile_battle_royale"))
     {
         addExtensionPrerequisite("GL_EXT_texture_buffer");
-
-        if (isIntelWinNative || isNVIDIALinuxNative || isNVIDIAWinNative)
-        {
-            skipTest(
-                "TODO: http://anglebug.com/42264759 Internal errors on Windows/Intel and NVIDIA");
-        }
-    }
-
-    if (traceNameIs("sakura_school_simulator"))
-    {
-        if (isIntelWin)
-        {
-            skipTest("http://anglebug.com/42264813 Flaky on Intel");
-        }
     }
 
     if (traceNameIs("scrabble_go"))
@@ -1333,10 +1107,6 @@ TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
     if (traceNameIs("world_of_kings"))
     {
         addExtensionPrerequisite("GL_OES_EGL_image_external");
-        if (isIntelWin)
-        {
-            skipTest("http://anglebug.com/42264888 Flaky on Intel");
-        }
     }
 
     if (traceNameIs("nier_reincarnation"))
@@ -1344,53 +1114,9 @@ TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
         addExtensionPrerequisite("GL_KHR_texture_compression_astc_ldr");
     }
 
-    if (traceNameIs("mini_world"))
-    {
-        if ((IsPixel4() || IsPixel4XL()) && mParams->isVulkan())
-        {
-            skipTest(
-                "TODO: http://anglebug.com/42264956 Vulkan Test failure on Pixel4XL due to vulkan "
-                "validation error VUID-vkDestroyBuffer-buffer-00922");
-        }
-        if (isIntelWinNative)
-        {
-            skipTest("https://anglebug.com/42266865 Flaky on native Win Intel");
-        }
-    }
-
-    if (traceNameIs("pokemon_unite"))
-    {
-        addExtensionPrerequisite("GL_KHR_texture_compression_astc_ldr");
-
-        if (IsIntel())
-        {
-            skipTest(
-                "http://anglebug.com/42265045 nondeterministic on Intel+Windows. Crashes on Linux "
-                "Intel");
-        }
-    }
-
     if (traceNameIs("world_cricket_championship_2"))
     {
         addExtensionPrerequisite("GL_KHR_texture_compression_astc_ldr");
-
-        if (isIntelLinuxNative)
-        {
-            skipTest("http://anglebug.com/42265152 Native test timing out on Intel Linux");
-        }
-    }
-
-    if (traceNameIs("zillow"))
-    {
-        if (isNVIDIAWinANGLE || isNVIDIALinuxANGLE)
-        {
-            skipTest("http://anglebug.com/42265153 Crashing in Vulkan backend");
-        }
-
-        if (isIntelLinuxNative)
-        {
-            skipTest("https://anglebug.com/42267118 fails on newer OS/driver");
-        }
     }
 
     if (traceNameIs("township"))
@@ -1401,22 +1127,6 @@ TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
     if (traceNameIs("asphalt_9"))
     {
         addExtensionPrerequisite("GL_KHR_texture_compression_astc_ldr");
-    }
-
-    if (traceNameIs("pubg_mobile_launch"))
-    {
-        if (isNVIDIALinuxNative)
-        {
-            skipTest("http://anglebug.com/40644857 Crashing in Nvidia GLES driver");
-        }
-    }
-
-    if (traceNameIs("star_wars_kotor"))
-    {
-        if (IsLinux() && mParams->isSwiftshader())
-        {
-            skipTest("TODO: http://anglebug.com/42266034 Flaky on Swiftshader");
-        }
     }
 
     if (traceNameIs("dead_by_daylight"))
@@ -1435,26 +1145,9 @@ TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
         addExtensionPrerequisite("GL_EXT_texture_storage");
     }
 
-    if (traceNameIs("marvel_strike_force"))
-    {
-        if ((IsAndroid() && IsQualcomm()) && !mParams->isANGLE())
-        {
-            skipTest(
-                "http://anglebug.com/42265489 Qualcomm native driver gets confused about the state "
-                "of "
-                "a buffer that was recreated during the trace");
-        }
-    }
-
     if (traceNameIs("real_racing3"))
     {
         addExtensionPrerequisite("GL_EXT_shader_framebuffer_fetch");
-        if (isNVIDIAWinANGLE || isNVIDIALinuxANGLE)
-        {
-            skipTest(
-                "http://anglebug.com/377923479 SYNC-HAZARD-WRITE-AFTER-WRITE on Linux 535.183.01 "
-                "Windows 31.0.15.4601");
-        }
     }
 
     if (traceNameIs("blade_and_soul_revolution"))
@@ -1471,21 +1164,6 @@ TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
 
     if (traceNameIs("car_chase"))
     {
-        if (isIntelWin)
-        {
-            skipTest("http://anglebug.com/42265648 Fails on Intel HD 630 Mobile");
-        }
-
-        if (isIntelLinux)
-        {
-            skipTest("http://anglebug.com/42265598#comment9 Flaky hang on UHD630 Mesa 20.0.8");
-        }
-
-        if (isNVIDIAWinANGLE || isNVIDIALinuxANGLE)
-        {
-            skipTest("http://anglebug.com/42265598 Renders incorrectly on NVIDIA");
-        }
-
         addExtensionPrerequisite("GL_EXT_geometry_shader");
         addExtensionPrerequisite("GL_EXT_primitive_bounding_box");
         addExtensionPrerequisite("GL_EXT_tessellation_shader");
@@ -1493,25 +1171,8 @@ TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
         addExtensionPrerequisite("GL_EXT_texture_cube_map_array");
     }
 
-    if (traceNameIs("pokemon_masters_ex"))
-    {
-        if (isIntelLinux)
-        {
-            skipTest(
-                "https://issuetracker.google.com/u/2/issues/326199738#comment3 Renders incorrectly "
-                "on Intel Linux");
-        }
-    }
-
     if (traceNameIs("aztec_ruins_high"))
     {
-        if (isIntelWinANGLE)
-        {
-            skipTest(
-                "TODO: http://anglebug.com/353690308 Non-deterministic image on UHD770 "
-                "31.0.101.5333");
-        }
-
         addExtensionPrerequisite("GL_KHR_texture_compression_astc_ldr");
     }
 
@@ -1522,11 +1183,6 @@ TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
 
     if (traceNameIs("tessellation"))
     {
-        if (isNVIDIAWinANGLE || isNVIDIALinuxANGLE)
-        {
-            skipTest("http://anglebug.com/42265714 Tessellation driver bugs on Nvidia");
-        }
-
         addExtensionPrerequisite("GL_EXT_geometry_shader");
         addExtensionPrerequisite("GL_EXT_primitive_bounding_box");
         addExtensionPrerequisite("GL_EXT_tessellation_shader");
@@ -1557,16 +1213,6 @@ TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
 
     if (traceNameIs("antutu_refinery"))
     {
-        if (isIntelLinuxANGLE || isAMDLinuxANGLE)
-        {
-            skipTest("https://anglebug.com/342545097 fails on Mesa 23.2.1");
-        }
-
-        if (isIntelWinANGLE)
-        {
-            skipTest("https://anglebug.com/379886383 times out on Windows Intel");
-        }
-
         addExtensionPrerequisite("GL_ANDROID_extension_pack_es31a");
     }
 
@@ -1575,64 +1221,20 @@ TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
         addExtensionPrerequisite("GL_KHR_texture_compression_astc_ldr");
     }
 
-    if (traceNameIs("eve_echoes"))
-    {
-        if (IsQualcomm() && mParams->isVulkan())
-        {
-            skipTest(
-                "TODO: http://anglebug.com/42266157 Test crashes in LLVM on Qualcomm (Pixel 4)");
-        }
-    }
-
     if (traceNameIs("life_is_strange"))
     {
-        if (isNVIDIAWinANGLE)
-        {
-            skipTest("http://anglebug.com/42266193 Renders incorrectly on Nvidia Windows");
-        }
-
-        if (isNVIDIALinuxANGLE)
-        {
-            skipTest("https://anglebug.com/362728695 Renders incorrectly on Linux/NVIDIA");
-        }
-
         addExtensionPrerequisite("GL_EXT_texture_buffer");
         addExtensionPrerequisite("GL_EXT_texture_cube_map_array");
     }
 
-    if (traceNameIs("survivor_io"))
-    {
-        if (isNVIDIAWinANGLE)
-        {
-            skipTest("http://anglebug.com/42266203 Renders incorrectly on Nvidia Windows");
-        }
-
-        if (isIntelWinNative)
-        {
-            skipTest(
-                "http://anglebug.com/42266207 Programs fail to link on Intel Windows native "
-                "driver, "
-                "citing MAX_UNIFORM_LOCATIONS exceeded");
-        }
-    }
-
     if (traceNameIs("minetest"))
     {
-        if (isIntelLinuxNative)
-        {
-            skipTest("https://anglebug.com/42267118 fails on newer OS/driver");
-        }
         addExtensionPrerequisite("GL_EXT_texture_format_BGRA8888");
         addIntegerPrerequisite(GL_MAX_TEXTURE_UNITS, 4);
     }
 
     if (traceNameIs("diablo_immortal"))
     {
-        if (IsQualcomm() && mParams->isVulkan())
-        {
-            skipTest("TODO: http://anglebug.com/378464990 Crashes on Qualcomm (Pixel 4)");
-        }
-
         addExtensionPrerequisite("GL_EXT_shader_framebuffer_fetch");
     }
 
@@ -1648,46 +1250,6 @@ TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
         addExtensionPrerequisite("GL_EXT_shader_framebuffer_fetch");
     }
 
-    if (traceNameIs("five_nights_at_freddys"))
-    {
-        if (isIntelWinANGLE)
-        {
-            skipTest("http://anglebug.com/42266395 Too slow on Win Intel Vulkan");
-        }
-    }
-
-    if (traceNameIs("pubg_mobile_launch"))
-    {
-        if (isIntelWinNative || isIntelWinANGLE)
-        {
-            skipTest("http://anglebug.com/42266395 Too slow on Win Intel native and Vulkan");
-        }
-    }
-
-    if (traceNameIs("beach_buggy_racing"))
-    {
-        if (isIntelWinANGLE)
-        {
-            skipTest("http://anglebug.com/42266401 Flaky context lost on Win Intel Vulkan");
-        }
-    }
-
-    if (traceNameIs("aliexpress"))
-    {
-        if (isIntelWinNative)
-        {
-            skipTest("http://anglebug.com/42266401 Flaky failure on Win Intel native");
-        }
-    }
-
-    if (traceNameIs("final_fantasy"))
-    {
-        if (IsAndroid() && IsPixel6() && !mParams->isANGLE())
-        {
-            skipTest("http://anglebug.com/42266403 Crashes on Pixel 6 native");
-        }
-    }
-
     if (traceNameIs("limbo"))
     {
         addExtensionPrerequisite("GL_EXT_shader_framebuffer_fetch");
@@ -1696,80 +1258,15 @@ TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
         addExtensionPrerequisite("GL_EXT_texture_storage");
     }
 
-    if (traceNameIs("into_the_dead_2"))
-    {
-        if (isNVIDIAWinANGLE)
-        {
-            skipTest("http://anglebug.com/42266499 Non-deterministic trace");
-        }
-    }
-
     if (traceNameIs("arknights"))
     {
         // Intel doesn't support external images.
         addExtensionPrerequisite("GL_OES_EGL_image_external");
     }
 
-    if (traceNameIs("street_fighter_duel"))
-    {
-        if (isNVIDIAWinANGLE)
-        {
-            skipTest("https://anglebug.com/42266525 NVIDIA Windows flaky diffs");
-        }
-    }
-
     if (traceNameIs("honkai_star_rail"))
     {
         addExtensionPrerequisite("GL_KHR_texture_compression_astc_ldr");
-        if (isIntelWin)
-        {
-            skipTest("https://anglebug.com/42266613 Consistently stuck on Intel/windows");
-        }
-    }
-
-    if (traceNameIs("gangstar_vegas"))
-    {
-        if (mParams->isSwiftshader())
-        {
-            skipTest("TODO: http://anglebug.com/42266611 Missing shadows on Swiftshader");
-        }
-    }
-
-    if (traceNameIs("respawnables"))
-    {
-        if (!mParams->isANGLE() && (IsWindows() || IsLinux()))
-        {
-            skipTest("TODO: https://anglebug.com/42266627 Undefined behavior on native");
-        }
-    }
-
-    if (traceNameIs("street_fighter_iv_ce"))
-    {
-        if (isIntelLinuxNative)
-        {
-            skipTest("https://anglebug.com/42267118 fails on newer OS/driver");
-        }
-
-        if (mParams->isSwiftshader())
-        {
-            skipTest("https://anglebug.com/42266679 Too slow on Swiftshader (large keyframe)");
-        }
-    }
-
-    if (traceNameIs("monster_hunter_stories"))
-    {
-        if (isIntelWinANGLE)
-        {
-            skipTest("http://anglebug.com/42266025 Flaky context lost on Win Intel Vulkan");
-        }
-    }
-
-    if (traceNameIs("injustice_2"))
-    {
-        if (isNVIDIAWinANGLE)
-        {
-            skipTest("https://anglebug.com/42266746 NVIDIA Windows flaky diffs");
-        }
     }
 
     if (traceNameIs("toca_life_world"))
@@ -1783,72 +1280,6 @@ TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
         addIntegerPrerequisite(GL_MAX_TEXTURE_SIZE, 16383);
     }
 
-    if (traceNameIs("dr_driving"))
-    {
-        if (isIntelLinuxNative)
-        {
-            skipTest("https://anglebug.com/42267118 fails on newer OS/driver");
-        }
-    }
-
-    if (traceNameIs("plague_inc"))
-    {
-        if (isIntelLinuxNative)
-        {
-            skipTest("https://anglebug.com/42267118 fails on newer OS/driver");
-        }
-    }
-
-    if (traceNameIs("sonic_the_hedgehog"))
-    {
-        if (isIntelLinuxNative)
-        {
-            skipTest("https://anglebug.com/42267118 fails on newer OS/driver");
-        }
-    }
-
-    if (traceNameIs("wayward_souls"))
-    {
-        if (isIntelLinuxNative)
-        {
-            skipTest("https://anglebug.com/42267118 fails on newer OS/driver");
-        }
-    }
-
-    if (traceNameIs("wordscapes"))
-    {
-        if (isIntelLinuxNative)
-        {
-            skipTest("https://anglebug.com/42267118 fails on newer OS/driver");
-        }
-    }
-
-    if (traceNameIs("zenonia_4"))
-    {
-        if (isIntelLinuxNative)
-        {
-            skipTest("https://anglebug.com/42267118 fails on newer OS/driver");
-        }
-    }
-
-    if (traceNameIs("zombie_smasher"))
-    {
-        if (isIntelLinuxNative)
-        {
-            skipTest("https://anglebug.com/42267118 fails on newer OS/driver");
-        }
-    }
-
-    if (traceNameIs("modern_combat_5"))
-    {
-        if (IsPixel6() && !IsAndroid14OrNewer())
-        {
-            skipTest(
-                "https://issuetracker.google.com/42267261 Causing thermal failures on Pixel 6 with "
-                "Android 13");
-        }
-    }
-
     if (traceNameIs("grand_mountain_adventure"))
     {
         addIntegerPrerequisite(GL_MAX_TEXTURE_SIZE, 11016);
@@ -1856,82 +1287,7 @@ TracePerfTest::TracePerfTest(std::unique_ptr<const TracePerfParams> params)
 
     if (traceNameIs("passmark_simple"))
     {
-        if (isIntelLinuxNative)
-        {
-            skipTest("https://anglebug.com/42267118 fails on newer OS/driver");
-        }
         addExtensionPrerequisite("GL_OES_framebuffer_object");
-    }
-
-    if (traceNameIs("passmark_complex"))
-    {
-        if (isIntelLinuxNative)
-        {
-            skipTest("b/362801312 eglCreateContext fails on Mesa 23.2.1");
-        }
-    }
-
-    if (traceNameIs("critical_ops"))
-    {
-        if (isNVIDIALinuxANGLE || isNVIDIAWinANGLE)
-        {
-            skipTest("https://anglebug.com/365524876 Renders incorrectly on Nvidia");
-        }
-    }
-
-    if (traceNameIs("dota_underlords"))
-    {
-        if (isNVIDIALinuxANGLE || isNVIDIAWinANGLE)
-        {
-            skipTest(
-                "https://anglebug.com/369533074 Flaky on Nvidia Linux 535.183.1.0 Windows "
-                "31.0.15.4601");
-        }
-    }
-
-    if (traceNameIs("going_balls"))
-    {
-        if (isIntelWinANGLE)
-        {
-            skipTest("https://issuetracker.google.com/372513853 Nondeterministic on Windows Intel");
-        }
-    }
-
-    if (traceNameIs("solar_smash"))
-    {
-        if (isIntelWinANGLE)
-        {
-            skipTest("https://issuetracker.google.com/378900717 Nondeterministic on Windows Intel");
-        }
-    }
-
-    if (traceNameIs("balatro"))
-    {
-        if (isNVIDIALinuxANGLE || isNVIDIAWinANGLE)
-        {
-            skipTest("https://anglebug.com/382960265 Renders incorrectly on Nvidia");
-        }
-    }
-
-    if (traceNameIs("monopoly_go"))
-    {
-        if (isNVIDIALinuxANGLE || isIntelWinANGLE)
-        {
-            skipTest("https://anglebug.com/385226328 crashes in UpdateClientBufferData()");
-        }
-    }
-
-    if (IsGalaxyS22())
-    {
-        if (traceNameIs("cod_mobile") || traceNameIs("dota_underlords") ||
-            traceNameIs("marvel_snap") || traceNameIs("nier_reincarnation") ||
-            traceNameIs("pokemon_unite") || traceNameIs("slingshot_test1") ||
-            traceNameIs("slingshot_test2") || traceNameIs("supertuxkart") ||
-            traceNameIs("the_witcher_monster_slayer") || traceNameIs("warcraft_rumble") ||
-            traceNameIs("critical_ops"))
-        {
-            skipTest("https://issuetracker.google.com/267953710 Trace needs triage on Galaxy S22");
-        }
     }
 
     // glDebugMessageControlKHR and glDebugMessageCallbackKHR crash on ARM GLES1.
@@ -2979,7 +2335,11 @@ void RegisterTraceTests()
             continue;
         }
 
-        auto factory = [params]() {
+        std::function<ANGLEPerfTest *()> factory = [params]() -> ANGLEPerfTest * {
+            if (params.isCL)
+            {
+                return CreateTracePerfTestCL(std::make_unique<TracePerfParams>(params));
+            }
             return new TracePerfTest(std::make_unique<TracePerfParams>(params));
         };
         testing::RegisterTest("TraceTest", traceInfo.name, nullptr, nullptr, __FILE__, __LINE__,

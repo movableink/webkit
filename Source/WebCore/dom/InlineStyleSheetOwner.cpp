@@ -152,7 +152,7 @@ void InlineStyleSheetOwner::createSheet(Element& element, const String& text)
         return;
     }
 
-    auto mediaQueries = MQ::MediaQueryParser::parse(m_media, MediaQueryParserContext(document));
+    auto mediaQueries = MQ::MediaQueryParser::parse(m_media, document->cssParserContext());
 
     if (CheckedPtr scope = m_styleScope.get())
         scope->addPendingSheet(element);

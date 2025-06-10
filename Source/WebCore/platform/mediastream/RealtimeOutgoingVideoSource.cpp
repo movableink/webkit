@@ -97,7 +97,7 @@ void RealtimeOutgoingVideoSource::setSource(Ref<MediaStreamTrackPrivate>&& newSo
 
     if (!m_areSinksAskingToApplyRotation)
         return;
-    if (!m_videoSource->source().setShouldApplyRotation(true))
+    if (!m_videoSource->source().setShouldApplyRotation())
         m_shouldApplyRotation = true;
 }
 
@@ -108,7 +108,7 @@ void RealtimeOutgoingVideoSource::applyRotation()
             return;
 
         m_areSinksAskingToApplyRotation = true;
-        if (!m_videoSource->source().setShouldApplyRotation(true))
+        if (!m_videoSource->source().setShouldApplyRotation())
             m_shouldApplyRotation = true;
     });
 }

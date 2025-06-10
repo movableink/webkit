@@ -23,10 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NetworkCacheSpeculativeLoadManager_h
-#define NetworkCacheSpeculativeLoadManager_h
-
-#if ENABLE(NETWORK_CACHE_SPECULATIVE_REVALIDATION)
+#pragma once
 
 #include "NetworkCache.h"
 #include "NetworkCacheStorage.h"
@@ -108,7 +105,3 @@ private:
 } // namespace NetworkCache
 
 } // namespace WebKit
-
-#endif // ENABLE(NETWORK_CACHE_SPECULATIVE_REVALIDATION)
-
-#endif // NetworkCacheSpeculativeLoadManager_h

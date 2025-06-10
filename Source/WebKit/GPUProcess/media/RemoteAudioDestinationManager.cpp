@@ -186,6 +186,9 @@ private:
         ASSERT(!isMainRunLoop());
 
         OSStatus status = -1;
+        if (!m_ringBuffer)
+            return status;
+
         if (m_ringBuffer->fetchIfHasEnoughData(ioData, numberOfFrames, m_startFrame)) {
             m_startFrame += numberOfFrames;
             status = noErr;

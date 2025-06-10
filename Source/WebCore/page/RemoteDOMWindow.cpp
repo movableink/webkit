@@ -141,7 +141,7 @@ void RemoteDOMWindow::setLocation(LocalDOMWindow& activeWindow, const URL& compl
         return;
 
     RefPtr frame = this->frame();
-    if (UNLIKELY(navigationState != CanNavigateState::Able))
+    if (navigationState != CanNavigateState::Able) [[unlikely]]
         navigationState = activeDocument->canNavigate(frame.get(), completedURL);
     if (navigationState == CanNavigateState::Unable)
         return;

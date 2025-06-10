@@ -2,7 +2,7 @@
 
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 file = __file__.split(':/cygwin')[-1]
 http_root = os.path.dirname(os.path.dirname(os.path.abspath(os.path.dirname(file))))
@@ -19,7 +19,7 @@ cookies = get_cookies()
 purpose = cookies.get('Purpose', None)
 
 if purpose is not None:
-    expires= datetime.utcnow() - timedelta(seconds=3600)
+    expires = datetime.now(timezone.utc) - timedelta(seconds=3600)
     sys.stdout.write(
         'Set-Cookie: Purpose=deleted, expires={} GMT; Max-Age=0\r\n\r\n'
         '<h1>The cookie was set!</h1>'

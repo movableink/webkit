@@ -52,9 +52,6 @@
 #include <wtf/RunLoop.h>
 #include <wtf/URL.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/MakeString.h>
-#include <wtf/text/StringBuilder.h>
-#include <wtf/unicode/CharacterNames.h>
 
 #if USE(CF) && !PLATFORM(QT)
 #include "WebArchiveDumpSupport.h"
@@ -156,11 +153,6 @@ static WTF::String styleDecToStr(WKBundleCSSStyleDeclarationRef)
     return "<DOMCSSStyleDeclaration ADDRESS>"_s;
 }
 
-static WTF::String string(WKSecurityOriginRef origin)
-{
-    return makeString('{', adoptWK(WKSecurityOriginCopyProtocol(origin)).get(), ", "_s, adoptWK(WKSecurityOriginCopyHost(origin)).get(), ", "_s, WKSecurityOriginGetPort(origin), '}');
-}
-
 static WTF::String string(WKBundleFrameRef frame)
 {
     auto name = adoptWK(WKBundleFrameCopyName(frame));
@@ -194,7 +186,7 @@ WTF::String pathSuitableForTestResult(WKURLRef fileURL)
         mainFrameURL = adoptWK(WKBundleFrameCopyProvisionalURL(mainFrame));
 
     String pathString = toWTFString(adoptWK(WKURLCopyPath(fileURL)));
-    String mainFrameURLPathString = toWTFString(adoptWK(WKURLCopyPath(mainFrameURL.get())));
+    String mainFrameURLPathString = mainFrameURL ? toWTFString(adoptWK(WKURLCopyPath(mainFrameURL.get()))) : ""_s;
     auto basePath = StringView(mainFrameURLPathString).left(mainFrameURLPathString.reverseFind(divider) + 1);
     
     if (!basePath.isEmpty() && pathString.startsWith(basePath))
@@ -283,31 +275,6 @@ InjectedBundlePage::InjectedBundlePage(WKBundlePageRef page)
         0 // shouldUseCredentialStorage
     };
     WKBundlePageSetResourceLoadClient(m_page, &resourceLoadClient.base);
-
-    WKBundlePageUIClientV2 uiClient = {
-        { 2, this },
-        willAddMessageToConsole,
-        willSetStatusbarText,
-        willRunJavaScriptAlert,
-        willRunJavaScriptConfirm,
-        willRunJavaScriptPrompt,
-        0, /*mouseDidMoveOverElement*/
-        0, /*pageDidScroll*/
-        0, /*paintCustomOverhangArea*/
-        0, /*shouldGenerateFileForUpload*/
-        0, /*generateFileForUpload*/
-        0, /*shouldRubberBandInDirection*/
-        0, /*statusBarIsVisible*/
-        0, /*menuBarIsVisible*/
-        0, /*toolbarsAreVisible*/
-        0, /*didReachApplicationCacheOriginQuota*/
-        didExceedDatabaseQuota,
-        0, /*plugInStartLabelTitle*/
-        0, /*plugInStartLabelSubtitle*/
-        0, /*plugInExtraStyleSheet*/
-        0, /*plugInExtraScript*/
-    };
-    WKBundlePageSetUIClient(m_page, &uiClient.base);
 
     WKBundlePageEditorClientV1 editorClient = {
         { 1, this },
@@ -1114,162 +1081,6 @@ bool InjectedBundlePage::shouldCacheResponse(WKBundlePageRef, WKBundleFrameRef, 
 
     // The default behavior is the cache the response.
     return true;
-}
-
-// UI Client Callbacks
-
-void InjectedBundlePage::willAddMessageToConsole(WKBundlePageRef page, WKStringRef message, uint32_t /* lineNumber */, const void *clientInfo)
-{
-    static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->willAddMessageToConsole(message);
-}
-
-void InjectedBundlePage::willSetStatusbarText(WKBundlePageRef page, WKStringRef statusbarText, const void *clientInfo)
-{
-    static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->willSetStatusbarText(statusbarText);
-}
-
-void InjectedBundlePage::willRunJavaScriptAlert(WKBundlePageRef page, WKStringRef message, WKBundleFrameRef frame, const void *clientInfo)
-{
-    static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->willRunJavaScriptAlert(message, frame);
-}
-
-void InjectedBundlePage::willRunJavaScriptConfirm(WKBundlePageRef page, WKStringRef message, WKBundleFrameRef frame, const void *clientInfo)
-{
-    return static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->willRunJavaScriptConfirm(message, frame);
-}
-
-void InjectedBundlePage::willRunJavaScriptPrompt(WKBundlePageRef page, WKStringRef message, WKStringRef defaultValue, WKBundleFrameRef frame, const void *clientInfo)
-{
-    static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->willRunJavaScriptPrompt(message, defaultValue, frame);
-}
-
-uint64_t InjectedBundlePage::didExceedDatabaseQuota(WKBundlePageRef page, WKSecurityOriginRef origin, WKStringRef databaseName, WKStringRef databaseDisplayName, uint64_t currentQuotaBytes, uint64_t currentOriginUsageBytes, uint64_t currentDatabaseUsageBytes, uint64_t expectedUsageBytes, const void* clientInfo)
-{
-    return static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->didExceedDatabaseQuota(origin, databaseName, databaseDisplayName, currentQuotaBytes, currentOriginUsageBytes, currentDatabaseUsageBytes, expectedUsageBytes);
-}
-
-static WTF::String stripTrailingSpacesAddNewline(const WTF::String& string)
-{
-    StringBuilder builder;
-    for (auto line : StringView(string).splitAllowingEmptyEntries('\n')) {
-        while (line.endsWith(' '))
-            line = line.left(line.length() - 1);
-        builder.append(line, '\n');
-    }
-    return builder.toString();
-}
-
-static WTF::String addLeadingSpaceStripTrailingSpacesAddNewline(const WTF::String& string)
-{
-    auto result = stripTrailingSpacesAddNewline(string);
-    return (result.isEmpty() || result.startsWith('\n')) ? result : makeString(' ', result);
-}
-
-static StringView lastFileURLPathComponent(StringView path)
-{
-    auto pos = path.find("file://"_s);
-    ASSERT(WTF::notFound != pos);
-
-    auto tmpPath = path.substring(pos + 7);
-    if (tmpPath.length() < 2) // Keep the lone slash to avoid empty output.
-        return tmpPath;
-
-    // Remove the trailing delimiter
-    if (tmpPath[tmpPath.length() - 1] == '/')
-        tmpPath = tmpPath.left(tmpPath.length() - 1);
-
-    pos = tmpPath.reverseFind('/');
-    if (WTF::notFound != pos)
-        return tmpPath.substring(pos + 1);
-
-    return tmpPath;
-}
-
-void InjectedBundlePage::willAddMessageToConsole(WKStringRef message)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    if (!injectedBundle.isTestRunning())
-        return;
-
-    auto messageString = toWTFString(message);
-    messageString = messageString.left(messageString.find(nullCharacter));
-
-    size_t fileProtocolStart = messageString.find("file://"_s);
-    if (fileProtocolStart != WTF::notFound) {
-        StringView messageStringView { messageString };
-        // FIXME: The code below does not handle additional text after url nor multiple urls. This matches DumpRenderTree implementation.
-        messageString = makeString(messageStringView.left(fileProtocolStart), lastFileURLPathComponent(messageStringView.substring(fileProtocolStart)));
-    }
-    messageString = makeString("CONSOLE MESSAGE:"_s, addLeadingSpaceStripTrailingSpacesAddNewline(messageString));
-    if (injectedBundle.dumpJSConsoleLogInStdErr())
-        injectedBundle.dumpToStdErr(messageString);
-    else
-        injectedBundle.outputText(messageString);
-}
-
-void InjectedBundlePage::willSetStatusbarText(WKStringRef statusbarText)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    RefPtr testRunner = injectedBundle.testRunner();
-    if (!testRunner)
-        return;
-
-    if (!testRunner->shouldDumpStatusCallbacks())
-        return;
-
-    injectedBundle.outputText(makeString("UI DELEGATE STATUS CALLBACK: setStatusText:"_s, statusbarText, '\n'));
-}
-
-void InjectedBundlePage::willRunJavaScriptAlert(WKStringRef message, WKBundleFrameRef)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    if (!injectedBundle.isTestRunning())
-        return;
-
-    injectedBundle.outputText(makeString("ALERT:"_s, addLeadingSpaceStripTrailingSpacesAddNewline(toWTFString(message))));
-}
-
-void InjectedBundlePage::willRunJavaScriptConfirm(WKStringRef message, WKBundleFrameRef)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    if (!injectedBundle.isTestRunning())
-        return;
-
-    injectedBundle.outputText(makeString("CONFIRM:"_s, addLeadingSpaceStripTrailingSpacesAddNewline(toWTFString(message))));
-}
-
-void InjectedBundlePage::willRunJavaScriptPrompt(WKStringRef message, WKStringRef defaultValue, WKBundleFrameRef)
-{
-    InjectedBundle::singleton().outputText(makeString("PROMPT: "_s, message, ", default text:"_s, addLeadingSpaceStripTrailingSpacesAddNewline(toWTFString(defaultValue))));
-}
-
-uint64_t InjectedBundlePage::didExceedDatabaseQuota(WKSecurityOriginRef origin, WKStringRef databaseName, WKStringRef databaseDisplayName, uint64_t currentQuotaBytes, uint64_t currentOriginUsageBytes, uint64_t currentDatabaseUsageBytes, uint64_t expectedUsageBytes)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    RefPtr testRunner = injectedBundle.testRunner();
-    if (!testRunner) {
-        ASSERT_NOT_REACHED();
-        return 0;
-    }
-
-    if (testRunner->shouldDumpDatabaseCallbacks())
-        injectedBundle.outputText(makeString("UI DELEGATE DATABASE CALLBACK: exceededDatabaseQuotaForSecurityOrigin:"_s, string(origin), " database:"_s, databaseName, '\n'));
-
-    uint64_t defaultQuota = 5 * 1024 * 1024;
-    double testDefaultQuota = testRunner->databaseDefaultQuota();
-    if (testDefaultQuota >= 0)
-        defaultQuota = testDefaultQuota;
-
-    unsigned long long newQuota = defaultQuota;
-
-    double maxQuota = testRunner->databaseMaxQuota();
-    if (maxQuota >= 0) {
-        if (defaultQuota < expectedUsageBytes && expectedUsageBytes <= maxQuota) {
-            newQuota = expectedUsageBytes;
-            injectedBundle.outputText(makeString("UI DELEGATE DATABASE CALLBACK: increased quota to "_s, newQuota, '\n'));
-        }
-    }
-    return newQuota;
 }
 
 // Editor Client Callbacks

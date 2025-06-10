@@ -80,10 +80,11 @@
                               (children 1
                                 (GraphicsLayer
                                   (anchor 0.00 0.00)
-                                  (backingStoreAttached 0)
-                                  (visible rect 0.00, 0.00 0.00 x 0.00)
+                                  (bounds 400.00 300.00)
+                                  (backingStoreAttached 1)
+                                  (visible rect 0.00, 0.00 300.00 x 150.00)
                                   (coverage rect 0.00, 0.00 300.00 x 150.00)
-                                  (intersects coverage rect 0)
+                                  (intersects coverage rect 1)
                                   (contentsScale 2.00)
                                 )
                               )
@@ -157,10 +158,11 @@
                               (children 1
                                 (GraphicsLayer
                                   (anchor 0.00 0.00)
-                                  (backingStoreAttached 0)
-                                  (visible rect 0.00, 0.00 0.00 x 0.00)
+                                  (bounds 400.00 300.00)
+                                  (backingStoreAttached 1)
+                                  (visible rect 0.00, 0.00 300.00 x 150.00)
                                   (coverage rect 0.00, 0.00 300.00 x 150.00)
-                                  (intersects coverage rect 0)
+                                  (intersects coverage rect 1)
                                   (contentsScale 2.00)
                                 )
                               )
@@ -234,10 +236,11 @@
                               (children 1
                                 (GraphicsLayer
                                   (anchor 0.00 0.00)
-                                  (backingStoreAttached 0)
-                                  (visible rect 0.00, 0.00 0.00 x 0.00)
+                                  (bounds 400.00 300.00)
+                                  (backingStoreAttached 1)
+                                  (visible rect 0.00, 0.00 300.00 x 150.00)
                                   (coverage rect 0.00, 0.00 300.00 x 150.00)
-                                  (intersects coverage rect 0)
+                                  (intersects coverage rect 1)
                                   (contentsScale 2.00)
                                 )
                               )

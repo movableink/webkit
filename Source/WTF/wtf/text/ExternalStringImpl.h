@@ -34,7 +34,7 @@ class ExternalStringImpl;
 
 using ExternalStringImplFreeFunction = Function<void(ExternalStringImpl*, void*, unsigned)>;
 
-class SUPPRESS_REFCOUNTED_WITHOUT_VIRTUAL_DESTRUCTOR ExternalStringImpl final : public StringImpl {
+class ExternalStringImpl final : public StringImpl {
 public:
     WTF_EXPORT_PRIVATE static Ref<ExternalStringImpl> create(std::span<const LChar> characters, ExternalStringImplFreeFunction&&);
     WTF_EXPORT_PRIVATE static Ref<ExternalStringImpl> create(std::span<const UChar> characters, ExternalStringImplFreeFunction&&);

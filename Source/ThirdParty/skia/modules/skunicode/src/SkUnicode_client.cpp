@@ -4,14 +4,14 @@
 * Use of this source code is governed by a BSD-style license that can be
 * found in the LICENSE file.
 */
-#include "modules/skunicode/include/SkUnicode_client.h"
-
 #include "include/core/SkSpan.h"
 #include "include/core/SkString.h"
 #include "include/core/SkTypes.h"
+#include "include/private/base/SkAssert.h"
 #include "include/private/base/SkTArray.h"
 #include "include/private/base/SkTo.h"
 #include "modules/skunicode/include/SkUnicode.h"
+#include "modules/skunicode/include/SkUnicode_client.h"
 #include "modules/skunicode/src/SkBidiFactory_icu_subset.h"
 #include "modules/skunicode/src/SkUnicode_hardcoded.h"
 #include "modules/skunicode/src/SkUnicode_icu_bidi.h"
@@ -147,6 +147,9 @@ public:
                 if (this->isControl(unichar)) {
                     results->at(i) |= SkUnicode::kControl;
                 }
+                if (this->isIdeographic(unichar)) {
+                    results->at(i) |= SkUnicode::kIdeographic;
+                }
             }
         }
         return true;
@@ -164,6 +167,21 @@ public:
         }
         for (auto& grapheme : fData->fGraphemeBreaks) {
             (*results)[grapheme] |= CodeUnitFlags::kGraphemeStart;
+        }
+        for (auto i = 0; i < utf16Units; ++i) {
+            auto unichar = utf16[i];
+            if (this->isSpace(unichar)) {
+                results->at(i) |= SkUnicode::kPartOfIntraWordBreak;
+            }
+            if (this->isWhitespace(unichar)) {
+                results->at(i) |= SkUnicode::kPartOfWhiteSpaceBreak;
+            }
+            if (this->isControl(unichar)) {
+                results->at(i) |= SkUnicode::kControl;
+            }
+            if (this->isIdeographic(unichar)) {
+                results->at(i) |= SkUnicode::kIdeographic;
+            }
         }
         return true;
     }
@@ -184,6 +202,11 @@ public:
     void reorderVisual(const BidiLevel runLevels[],
                        int levelsCount,
                        int32_t logicalFromVisual[]) override {
+        if (levelsCount == 0) {
+            // To avoid an assert in unicode
+            return;
+        }
+        SkASSERT(runLevels != nullptr);
         fBidiFact->bidi_reorderVisual(runLevels, levelsCount, logicalFromVisual);
     }
 private:
@@ -257,7 +280,7 @@ sk_sp<SkUnicode> Make(
                                         std::move(words),
                                         std::move(graphemeBreaks),
                                         std::move(lineBreaks));
-}
+    }
 }
 
 

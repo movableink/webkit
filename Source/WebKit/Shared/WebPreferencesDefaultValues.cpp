@@ -64,12 +64,6 @@ bool defaultPassiveTouchListenersAsDefaultOnDocument()
     return result;
 }
 
-bool defaultCSSOMViewScrollingAPIEnabled()
-{
-    static bool result = WTF::IOSApplication::isIMDb() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::NoIMDbCSSOMViewScrollingQuirk);
-    return !result;
-}
-
 bool defaultShouldPrintBackgrounds()
 {
     static bool result = !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::DefaultsToExcludingBackgroundsWhenPrinting);
@@ -159,7 +153,7 @@ bool defaultManageCaptureStatusBarInGPUProcessEnabled()
 #if ENABLE(MEDIA_SOURCE)
 bool defaultManagedMediaSourceEnabled()
 {
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
     return true;
 #else
     return false;
@@ -230,16 +224,6 @@ bool defaultLinearMediaPlayerEnabled()
 #else
     return false;
 #endif
-}
-
-bool defaultLiveRangeSelectionEnabled()
-{
-#if PLATFORM(IOS_FAMILY)
-    static bool enableForAllApps = linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::LiveRangeSelectionEnabledForAllApps);
-    if (!enableForAllApps && WTF::IOSApplication::isGmail())
-        return false;
-#endif
-    return true;
 }
 
 bool defaultShowModalDialogEnabled()
@@ -337,6 +321,18 @@ bool defaultBuiltInNotificationsEnabled()
 }
 #endif
 
+#if ENABLE(DEVICE_ORIENTATION)
+bool defaultDeviceOrientationPermissionAPIEnabled()
+{
+#if PLATFORM(IOS_FAMILY)
+    return linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::SupportsDeviceOrientationAndMotionPermissionAPI);
+#else
+    return false;
+#endif
+}
+#endif
+
+#if ENABLE(REQUIRES_PAGE_VISIBILITY_FOR_NOW_PLAYING)
 bool defaultRequiresPageVisibilityForVideoToBeNowPlaying()
 {
 #if USE(APPLE_INTERNAL_SDK)
@@ -346,6 +342,7 @@ bool defaultRequiresPageVisibilityForVideoToBeNowPlaying()
 
     return false;
 }
+#endif
 
 bool defaultCookieStoreAPIEnabled()
 {
@@ -406,5 +403,12 @@ bool defaultTrustedTypesEnabled()
     return true;
 #endif
 }
+
+#if !ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+bool defaultContentInsetBackgroundFillEnabled()
+{
+    return false;
+}
+#endif
 
 } // namespace WebKit

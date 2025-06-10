@@ -2,17 +2,6 @@ description("This tests that if deleteDatabase is called while there is already 
 
 indexedDBTest(prepareDatabase, openSuccess);
 
-
-function done()
-{
-    finishJSTest();
-}
-
-function log(message)
-{
-    debug(message);
-}
-
 function openSuccess() {
     debug("open db success");
 }
@@ -40,13 +29,11 @@ function prepareDatabase(e)
     }
     event.target.transaction.onabort = function()
     {
-        debug("Version change unexpected abort");
-        done();
+        endTestWithLog("Version change unexpected abort");
     }
     event.target.transaction.onerror = function()
     {
-        debug("Version change unexpected error");
-        done();
+        endTestWithLog("Version change unexpected error");
     }
 }
 
@@ -61,13 +48,11 @@ function continueTest1()
     }
     request.onerror = function(e)
     {
-        debug("Delete database unexpected error");
-        done();
+        endTestWithLog("Delete database unexpected error");
     }
     request.onupgradeneeded = function(e)
     {
-        debug("Delete database unexpected upgradeneeded");
-    	done();
+    	endTestWithLog("Delete database unexpected upgradeneeded");
     }
 }
 
@@ -89,32 +74,27 @@ function continueTest2()
 
         versionTransaction.oncomplete = function(e)
         {
-            debug("Second database upgrade success");
-            done();
+            endTestWithLog("Second database upgrade success");
         }
         
         versionTransaction.onabort = function(e)
         {
-            debug("Second database upgrade unexpected abort");
-            done();
+            endTestWithLog("Second database upgrade unexpected abort");
         }
             
         versionTransaction.onerror = function(e)
         {
-            debug("Second database upgrade unexpected error");
-            done();
+            endTestWithLog("Second database upgrade unexpected error");
         }
     }
 
     request.onsuccess = function(e)
     {
-        debug("Second database opening unexpected success");
-        done();
+        endTestWithLog("Second database opening unexpected success");
     }
     
     request.onerror = function(e)
     {
-        debug("Second database opening unexpected error");
-        done();
+        endTestWithLog("Second database opening unexpected error");
     }
 }

@@ -21,43 +21,41 @@ function test() {
     let siblingNode = null;
 
     async function addListener(node) {
-        let promise = new WI.WrappedPromise;
-        let listener = node.addEventListener(WI.DOMNode.Event.EventListenersChanged, (event) => {
-            if (!promise.settled)
-                promise.resolve(true);
-        });
-        InspectorTest.singleFireEventListener("addListener", (event) => {
-            node.removeEventListener(WI.DOMNode.Event.EventListenersChanged, listener);
+        let promise = new Promise((resolve, reject) => {
+            let listener = node.addEventListener(WI.DOMNode.Event.EventListenersChanged, (event) => {
+                resolve(true);
+            });
+            InspectorTest.singleFireEventListener("addListener", (event) => {
+                node.removeEventListener(WI.DOMNode.Event.EventListenersChanged, listener);
 
-            if (!promise.settled)
-                promise.resolve(false);
+                resolve(false);
+            });
         });
 
         let selector = node.escapedIdSelector;
         InspectorTest.log(`Adding listener to ${selector}...`);
         await InspectorTest.evaluateInPage(`addListener("${selector}")`);
 
-        return promise.promise;
+        return promise;
     }
 
     async function removeListener(node) {
-        let promise = new WI.WrappedPromise;
-        let listener = node.addEventListener(WI.DOMNode.Event.EventListenersChanged, (event) => {
-            if (!promise.settled)
-                promise.resolve(true);
-        });
-        InspectorTest.singleFireEventListener("removeListener", (event) => {
-            node.removeEventListener(WI.DOMNode.Event.EventListenersChanged, listener);
+        let promise = new Promise((resolve, reject) => {
+            let listener = node.addEventListener(WI.DOMNode.Event.EventListenersChanged, (event) => {
+                resolve(true);
+            });
+            InspectorTest.singleFireEventListener("removeListener", (event) => {
+                node.removeEventListener(WI.DOMNode.Event.EventListenersChanged, listener);
 
-            if (!promise.settled)
-                promise.resolve(false);
+                resolve(false);
+            });
         });
 
         let selector = node.escapedIdSelector;
         InspectorTest.log(`Removing listener from ${selector}...`);
         await InspectorTest.evaluateInPage(`removeListener("${selector}")`);
 
-        return promise.promise;
+        return promise;
     }
 
     async function checkTestEventListener(node, expected) {

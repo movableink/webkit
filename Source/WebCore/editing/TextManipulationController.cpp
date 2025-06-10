@@ -32,6 +32,7 @@
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementRareData.h"
 #include "EventLoop.h"
+#include "EventTargetInlines.h"
 #include "HTMLBRElement.h"
 #include "HTMLElement.h"
 #include "HTMLInputElement.h"
@@ -40,6 +41,7 @@
 #include "InputTypeNames.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
+#include "NodeInlines.h"
 #include "NodeRenderStyle.h"
 #include "NodeTraversal.h"
 #include "PseudoElement.h"
@@ -50,6 +52,7 @@
 #include "TextIterator.h"
 #include "TextManipulationItem.h"
 #include "VisibleUnits.h"
+#include <algorithm>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -686,9 +689,10 @@ void TextManipulationController::flushPendingItemsForCallback()
     m_pendingItemsForCallback.clear();
 }
 
-auto TextManipulationController::completeManipulation(const Vector<WebCore::TextManipulationItem>& completionItems) -> Vector<ManipulationFailure>
+TextManipulationController::ManipulationResult TextManipulationController::completeManipulation(const Vector<TextManipulationItem>& completionItems)
 {
     Vector<ManipulationFailure> failures;
+    Vector<uint64_t> succeededIndexes;
     NodeSet containersWithoutVisualOverflowBeforeReplacement;
     for (unsigned i = 0; i < completionItems.size(); ++i) {
         auto& itemToComplete = completionItems[i];
@@ -716,8 +720,12 @@ auto TextManipulationController::completeManipulation(const Vector<WebCore::Text
         std::exchange(itemData, itemDataIterator->value);
         m_items.remove(itemDataIterator);
 
-        if (auto failureOrNullopt = replace(itemData, itemToComplete.tokens, containersWithoutVisualOverflowBeforeReplacement))
+        if (auto failureOrNullopt = replace(itemData, itemToComplete.tokens, containersWithoutVisualOverflowBeforeReplacement)) {
             failures.append(ManipulationFailure { *frameID, itemID, i, *failureOrNullopt });
+            continue;
+        }
+
+        succeededIndexes.append(i);
     }
 
     if (!containersWithoutVisualOverflowBeforeReplacement.isEmpty()) {
@@ -741,7 +749,7 @@ auto TextManipulationController::completeManipulation(const Vector<WebCore::Text
         }
     }
 
-    return failures;
+    return { WTFMove(failures), WTFMove(succeededIndexes) };
 }
 
 struct TokenExchangeData {
@@ -817,7 +825,7 @@ auto TextManipulationController::replace(const ManipulationItemData& item, const
             newValue.append(replacementTokens[i].content);
         }
         if (item.attributeName == nullQName())
-            element->setTextContent(newValue.toString());
+            element->setTextContent(String { newValue.toString() });
         else if (RefPtr input = dynamicDowncast<HTMLInputElement>(*element); input && item.attributeName == HTMLNames::valueAttr)
             input->setValue(newValue.toString());
         else
@@ -860,7 +868,7 @@ auto TextManipulationController::replace(const ManipulationItemData& item, const
         } else
             tokensInCurrentNode = createUnit(content.text, *content.node).tokens;
 
-        bool isNodeIncluded = WTF::anyOf(tokensInCurrentNode, [] (auto& token) {
+        bool isNodeIncluded = std::ranges::any_of(tokensInCurrentNode, [](auto& token) {
             return !token.isExcluded;
         });
         for (auto& token : tokensInCurrentNode) {

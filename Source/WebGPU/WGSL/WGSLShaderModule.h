@@ -221,7 +221,7 @@ public:
         auto& vector = const_cast<Vector<T, size>&>(constVector);
         vector.insert(position, std::forward<T>(value));
         m_replacements.append([&vector, position]() {
-            vector.remove(position);
+            vector.removeAt(position);
         });
     }
 
@@ -231,7 +231,7 @@ public:
         auto& vector = const_cast<Vector<T, size>&>(constVector);
         vector.insertVector(position, value);
         m_replacements.append([&vector, position, length = value.size()]() {
-            vector.remove(position, length);
+            vector.removeAt(position, length);
         });
     }
 
@@ -243,7 +243,7 @@ public:
         m_replacements.append([&vector, position, entry]() mutable {
             vector.insert(position, entry);
         });
-        vector.remove(position);
+        vector.removeAt(position);
     }
 
     template<typename T, size_t size>

@@ -435,7 +435,7 @@ void NetworkLoadChecker::checkCORSRequest(ResourceRequest&& request, ValidationH
             checkCORSRequestWithPreflight(WTFMove(request), WTFMove(handler));
             return;
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     case PreflightPolicy::Prevent:
         updateRequestForAccessControl(request, *origin(), m_storedCredentialsPolicy);
         handler(WTFMove(request));
@@ -561,7 +561,7 @@ void NetworkLoadChecker::processContentRuleListsForLoad(ResourceRequest&& reques
             return;
         }
 
-        auto results = backend.processContentRuleListsForPingLoad(request.url(), protectedThis->m_mainDocumentURL, protectedThis->m_frameURL);
+        auto results = backend.processContentRuleListsForPingLoad(request.url(), protectedThis->m_mainDocumentURL, protectedThis->m_frameURL, request.httpMethod());
         WebCore::ContentExtensions::applyResultsToRequest(ContentRuleListResults { results }, nullptr, request);
         callback(ContentExtensionResult { WTFMove(request), results });
     });

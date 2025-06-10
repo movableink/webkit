@@ -74,7 +74,7 @@ private:
     // This is computed only once and must not be affected by subsequent URL changes.
     mutable std::optional<SharedStringHash> m_storedVisitedLinkHash;
 
-    std::unique_ptr<DOMTokenList> m_relList;
+    const std::unique_ptr<DOMTokenList> m_relList;
 };
 
 } // namespace WebCore

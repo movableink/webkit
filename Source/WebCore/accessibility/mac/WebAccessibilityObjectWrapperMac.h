@@ -40,6 +40,7 @@ extern "C" AXUIElementRef NSAccessibilityCreateAXUIElementRef(id element);
 #define _AXStartTextMarkerForTextMarkerRangeAttribute @"_AXStartTextMarkerForTextMarkerRange"
 #define _AXEndTextMarkerForTextMarkerRangeAttribute @"_AXEndTextMarkerForTextMarkerRange"
 #define _AXTextMarkerRangeForNSRangeAttribute @"_AXTextMarkerRangeForNSRange"
+#define _AXPageBoundsForTextMarkerRangeAttribute @"_AXPageBoundsForTextMarkerRange"
 
 #if ENABLE(TREE_DEBUGGING)
 #define AXTextMarkerDebugDescriptionAttribute @"AXTextMarkerDebugDescription"

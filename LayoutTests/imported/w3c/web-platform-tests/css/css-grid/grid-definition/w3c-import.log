@@ -21,6 +21,10 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/grid-definition/flex-content-resolution-rows-001.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/grid-definition/flex-content-resolution-rows-002.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/grid-definition/flex-factor-sum-less-than-1-001.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-grid/grid-definition/flex-item-grid-container-auto-repeat-001-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-grid/grid-definition/flex-item-grid-container-auto-repeat-001.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-grid/grid-definition/flex-item-grid-container-auto-repeat-002-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-grid/grid-definition/flex-item-grid-container-auto-repeat-002.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/grid-definition/flex-item-grid-container-percentage-rows-001-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/grid-definition/flex-item-grid-container-percentage-rows-001.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/grid-definition/fr-unit-expected.html

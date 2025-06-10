@@ -86,7 +86,6 @@ public:
     Vector<RefPtr<BlobDataFileReference>> filesInBlob(const URL&, const std::optional<WebCore::SecurityOriginData>& topOrigin = std::nullopt) const;
 
     void setFileDirectory(String&&);
-    void setPartitioningEnabled(bool);
 
 private:
     void registerBlobURLOptionallyFileBacked(const URL&, const URL& srcURL, RefPtr<BlobDataFileReference>&&, const String& contentType, const PolicyContainer&, const std::optional<SecurityOriginData>& topOrigin = std::nullopt);
@@ -96,7 +95,7 @@ private:
     HashCountedSet<String> m_blobReferences;
     MemoryCompactRobinHoodHashMap<String, RefPtr<BlobData>> m_blobs;
     using URLToTopOriginHashMap = MemoryCompactRobinHoodHashMap<String, WebCore::SecurityOriginData>;
-    std::optional<URLToTopOriginHashMap> m_allowedBlobURLTopOrigins;
+    URLToTopOriginHashMap m_allowedBlobURLTopOrigins;
     String m_fileDirectory;
 };
 

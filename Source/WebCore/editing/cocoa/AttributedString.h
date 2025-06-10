@@ -207,7 +207,7 @@ struct WEBCORE_EXPORT AttributedString {
     };
 
     struct AttributeValue {
-        std::variant<
+        Variant<
             double,
             String,
             URL,

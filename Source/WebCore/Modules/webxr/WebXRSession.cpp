@@ -29,7 +29,8 @@
 
 #if ENABLE(WEBXR)
 
-#include "Document.h"
+#include "ContextDestructionObserverInlines.h"
+#include "DocumentInlines.h"
 #include "EventNames.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSWebXRReferenceSpace.h"
@@ -430,6 +431,11 @@ void WebXRSession::didCompleteShutdown()
     queueTaskToDispatchEvent(*this, TaskSource::WebXR, WTFMove(event));
 }
 
+ScriptExecutionContext* WebXRSession::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
+}
+
 // https://immersive-web.github.io/webxr/#dom-xrsession-end
 ExceptionOr<void> WebXRSession::end(EndPromise&& promise)
 {
@@ -677,7 +683,7 @@ void WebXRSession::onFrame(PlatformXR::FrameData&& frameData)
                     continue;
                 callback->setFiredOrCancelled();
                 //  6.7.Invoke the Web IDL callback function for entry, passing now and frame as the arguments
-                callback->handleEvent(now, frame.get());
+                callback->invoke(now, frame.get());
 
                 //  6.8.If an exception is thrown, report the exception.
             }

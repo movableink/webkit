@@ -32,6 +32,7 @@
 #include "StyleScopeOrdinal.h"
 #include "ShadowRootMode.h"
 #include "SlotAssignmentMode.h"
+#include "TreeScope.h"
 #include <wtf/HashMap.h>
 
 namespace WebCore {
@@ -104,11 +105,11 @@ public:
     bool hasScopedCustomElementRegistry() const { return m_hasScopedCustomElementRegistry; }
     CustomElementRegistry* registryForBindings() const;
 
-    ExceptionOr<void> setHTMLUnsafe(std::variant<RefPtr<TrustedHTML>, String>&&);
+    ExceptionOr<void> setHTMLUnsafe(Variant<RefPtr<TrustedHTML>, String>&&);
     String getHTML(GetHTMLOptions&&) const;
 
     String innerHTML() const;
-    ExceptionOr<void> setInnerHTML(std::variant<RefPtr<TrustedHTML>, String>&&);
+    ExceptionOr<void> setInnerHTML(Variant<RefPtr<TrustedHTML>, String>&&);
 
     Ref<Node> cloneNodeInternal(Document&, CloningOperation, CustomElementRegistry*) override;
 
@@ -130,7 +131,7 @@ public:
     void slotFallbackDidChange(HTMLSlotElement&);
     void resolveSlotsBeforeNodeInsertionOrRemoval();
     void willRemoveAllChildren(ContainerNode&);
-    void willRemoveAssignedNode(const Node&);
+    void willRemoveAssignedNode(Node&);
 
     void didRemoveAllChildrenOfShadowHost();
     void didMutateTextNodesOfShadowHost();

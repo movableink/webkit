@@ -30,6 +30,7 @@
 
 #include "AudioTrack.h"
 #include "ContextDestructionObserverInlines.h"
+#include "EventTargetInterfaces.h"
 
 namespace WebCore {
 

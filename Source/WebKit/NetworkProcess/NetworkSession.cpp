@@ -116,6 +116,11 @@ NetworkStorageSession* NetworkSession::networkStorageSession() const
     return storageSession;
 }
 
+CheckedPtr<NetworkStorageSession> NetworkSession::checkedNetworkStorageSession() const
+{
+    return networkStorageSession();
+}
+
 static Ref<PCM::ManagerInterface> managerOrProxy(NetworkSession& networkSession, NetworkProcess& networkProcess, const NetworkSessionCreationParameters& parameters)
 {
     if (!parameters.pcmMachServiceName.isEmpty() && !networkSession.sessionID().isEphemeral())
@@ -184,6 +189,10 @@ NetworkSession::NetworkSession(NetworkProcess& networkProcess, const NetworkSess
 #if ENABLE(CONTENT_EXTENSIONS)
     , m_resourceMonitorThrottlerDirectory(parameters.resourceMonitorThrottlerDirectory)
 #endif
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    , m_webContentRestrictionsConfigurationFile(parameters.webContentRestrictionsConfigurationFile)
+#endif
+    , m_dataStoreIdentifier(parameters.dataStoreIdentifier)
 {
     if (!m_sessionID.isEphemeral()) {
         String networkCacheDirectory = parameters.networkCacheDirectory;
@@ -191,10 +200,8 @@ NetworkSession::NetworkSession(NetworkProcess& networkProcess, const NetworkSess
             SandboxExtension::consumePermanently(parameters.networkCacheDirectoryExtensionHandle);
 
             auto cacheOptions = networkProcess.cacheOptions();
-#if ENABLE(NETWORK_CACHE_SPECULATIVE_REVALIDATION)
             if (parameters.networkCacheSpeculativeValidationEnabled)
                 cacheOptions.add(NetworkCache::CacheOption::SpeculativeRevalidation);
-#endif
             if (parameters.shouldUseTestingNetworkSession)
                 cacheOptions.add(NetworkCache::CacheOption::TestingMode);
 
@@ -216,7 +223,6 @@ NetworkSession::NetworkSession(NetworkProcess& networkProcess, const NetworkSess
 
     setTrackingPreventionEnabled(parameters.resourceLoadStatisticsParameters.enabled);
 
-    setBlobRegistryTopOriginPartitioningEnabled(parameters.isBlobRegistryTopOriginPartitioningEnabled);
     setShouldSendPrivateTokenIPCForTesting(parameters.shouldSendPrivateTokenIPCForTesting);
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
     setOptInCookiePartitioningEnabled(parameters.isOptInCookiePartitioningEnabled);
@@ -230,6 +236,9 @@ NetworkSession::NetworkSession(NetworkProcess& networkProcess, const NetworkSess
 
 #if ENABLE(CONTENT_EXTENSIONS)
     SandboxExtension::consumePermanently(parameters.resourceMonitorThrottlerDirectoryExtensionHandle);
+#endif
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    SandboxExtension::consumePermanently(parameters.webContentRestrictionsConfigurationExtensionHandle);
 #endif
 }
 
@@ -265,6 +274,9 @@ void NetworkSession::invalidateAndCancel()
         m_cache = nullptr;
         FileSystem::markPurgeable(networkCacheDirectory);
     }
+
+    if (auto server = std::exchange(m_swServer, { }))
+        server->close();
 }
 
 void NetworkSession::destroyPrivateClickMeasurementStore(CompletionHandler<void()>&& completionHandler)
@@ -448,10 +460,11 @@ void NetworkSession::handlePrivateClickMeasurementConversion(WebCore::PCM::Attri
             return;
 
         // Insert ephemeral measurement right before attribution.
-        m_privateClickMeasurement->storeUnattributed(WTFMove(ephemeralMeasurement), [this, weakThis = WeakPtr { *this }, attributionTriggerData = WTFMove(attributionTriggerData), requestURL, redirectDomain = WTFMove(redirectDomain), firstPartyForCookies = WTFMove(firstPartyForCookies), appBundleID = WTFMove(appBundleID)] () mutable {
-            if (!weakThis)
+        m_privateClickMeasurement->storeUnattributed(WTFMove(ephemeralMeasurement), [weakThis = WeakPtr { *this }, attributionTriggerData = WTFMove(attributionTriggerData), requestURL, redirectDomain = WTFMove(redirectDomain), firstPartyForCookies = WTFMove(firstPartyForCookies), appBundleID = WTFMove(appBundleID)] () mutable {
+            CheckedPtr checkedThis = weakThis.get();
+            if (!checkedThis)
                 return;
-            m_privateClickMeasurement->handleAttribution(WTFMove(attributionTriggerData), requestURL, WTFMove(redirectDomain), firstPartyForCookies, appBundleID);
+            checkedThis->m_privateClickMeasurement->handleAttribution(WTFMove(attributionTriggerData), requestURL, WTFMove(redirectDomain), firstPartyForCookies, appBundleID);
         });
         return;
     }
@@ -529,12 +542,6 @@ void NetworkSession::setPrivateClickMeasurementDebugMode(bool enabled)
 void NetworkSession::firePrivateClickMeasurementTimerImmediatelyForTesting()
 {
     m_privateClickMeasurement->startTimerImmediatelyForTesting();
-}
-
-void NetworkSession::setBlobRegistryTopOriginPartitioningEnabled(bool enabled)
-{
-    RELEASE_LOG(Storage, "NetworkSession::setBlobRegistryTopOriginPartitioningEnabled as %" PUBLIC_LOG_STRING " for session %" PRIu64, enabled ? "enabled" : "disabled", m_sessionID.toUInt64());
-    m_blobRegistry.setPartitioningEnabled(enabled);
 }
 
 void NetworkSession::setShouldSendPrivateTokenIPCForTesting(bool enabled)
@@ -946,8 +953,10 @@ Ref<NetworkBroadcastChannelRegistry> NetworkSession::protectedBroadcastChannelRe
 #if ENABLE(CONTENT_EXTENSIONS)
 WebCore::ResourceMonitorThrottlerHolder& NetworkSession::resourceMonitorThrottler()
 {
-    if (!m_resourceMonitorThrottler)
+    if (!m_resourceMonitorThrottler) {
+        RELEASE_LOG(ResourceMonitoring, "NetworkSession::resourceMonitorThrottler sessionID=%" PRIu64 ", ResourceMonitorThrottler is created.", m_sessionID.toUInt64());
         m_resourceMonitorThrottler = WebCore::ResourceMonitorThrottlerHolder::create(m_resourceMonitorThrottlerDirectory);
+    }
 
     return *m_resourceMonitorThrottler;
 }
@@ -959,16 +968,9 @@ Ref<WebCore::ResourceMonitorThrottlerHolder> NetworkSession::protectedResourceMo
 
 void NetworkSession::clearResourceMonitorThrottlerData(CompletionHandler<void()>&& completionHandler)
 {
-    if (RefPtr throttler = m_resourceMonitorThrottler)
-        throttler->clearAllData(WTFMove(completionHandler));
-    else
-        completionHandler();
+    protectedResourceMonitorThrottler()->clearAllData(WTFMove(completionHandler));
 }
 
-void NetworkSession::resetResourceMonitorThrottlerForTesting()
-{
-    m_resourceMonitorThrottler = nullptr;
-}
 #endif
 
 } // namespace WebKit

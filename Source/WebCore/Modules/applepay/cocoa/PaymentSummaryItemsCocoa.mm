@@ -37,7 +37,7 @@ NSDecimalNumber *toDecimalNumber(const String& amount)
 {
     if (!amount)
         return [NSDecimalNumber zero];
-    return [NSDecimalNumber decimalNumberWithString:amount locale:@{ NSLocaleDecimalSeparator : @"." }];
+    return [NSDecimalNumber decimalNumberWithString:amount.createNSString().get() locale:@{ NSLocaleDecimalSeparator : @"." }];
 }
 
 static PKPaymentSummaryItemType toPKPaymentSummaryItemType(ApplePayLineItem::Type type)
@@ -88,7 +88,7 @@ static NSCalendarUnit toCalendarUnit(ApplePayRecurringPaymentDateUnit unit)
 PKRecurringPaymentSummaryItem *platformRecurringSummaryItem(const ApplePayLineItem& lineItem)
 {
     ASSERT(lineItem.paymentTiming == ApplePayPaymentTiming::Recurring);
-    PKRecurringPaymentSummaryItem *summaryItem = [PAL::getPKRecurringPaymentSummaryItemClass() summaryItemWithLabel:lineItem.label amount:toDecimalNumber(lineItem.amount) type:toPKPaymentSummaryItemType(lineItem.type)];
+    PKRecurringPaymentSummaryItem *summaryItem = [PAL::getPKRecurringPaymentSummaryItemClass() summaryItemWithLabel:lineItem.label.createNSString().get() amount:toDecimalNumber(lineItem.amount) type:toPKPaymentSummaryItemType(lineItem.type)];
     if (!lineItem.recurringPaymentStartDate.isNaN())
         summaryItem.startDate = toDate(lineItem.recurringPaymentStartDate);
     summaryItem.intervalUnit = toCalendarUnit(lineItem.recurringPaymentIntervalUnit);
@@ -105,7 +105,7 @@ PKRecurringPaymentSummaryItem *platformRecurringSummaryItem(const ApplePayLineIt
 PKDeferredPaymentSummaryItem *platformDeferredSummaryItem(const ApplePayLineItem& lineItem)
 {
     ASSERT(lineItem.paymentTiming == ApplePayPaymentTiming::Deferred);
-    PKDeferredPaymentSummaryItem *summaryItem = [PAL::getPKDeferredPaymentSummaryItemClass() summaryItemWithLabel:lineItem.label amount:toDecimalNumber(lineItem.amount) type:toPKPaymentSummaryItemType(lineItem.type)];
+    PKDeferredPaymentSummaryItem *summaryItem = [PAL::getPKDeferredPaymentSummaryItemClass() summaryItemWithLabel:lineItem.label.createNSString().get() amount:toDecimalNumber(lineItem.amount) type:toPKPaymentSummaryItemType(lineItem.type)];
     if (!lineItem.deferredPaymentDate.isNaN())
         summaryItem.deferredDate = toDate(lineItem.deferredPaymentDate);
     return summaryItem;
@@ -118,7 +118,7 @@ PKDeferredPaymentSummaryItem *platformDeferredSummaryItem(const ApplePayLineItem
 PKAutomaticReloadPaymentSummaryItem *platformAutomaticReloadSummaryItem(const ApplePayLineItem& lineItem)
 {
     ASSERT(lineItem.paymentTiming == ApplePayPaymentTiming::AutomaticReload);
-    PKAutomaticReloadPaymentSummaryItem *summaryItem = [PAL::getPKAutomaticReloadPaymentSummaryItemClass() summaryItemWithLabel:lineItem.label amount:toDecimalNumber(lineItem.amount) type:toPKPaymentSummaryItemType(lineItem.type)];
+    PKAutomaticReloadPaymentSummaryItem *summaryItem = [PAL::getPKAutomaticReloadPaymentSummaryItemClass() summaryItemWithLabel:lineItem.label.createNSString().get() amount:toDecimalNumber(lineItem.amount) type:toPKPaymentSummaryItemType(lineItem.type)];
     summaryItem.thresholdAmount = toDecimalNumber(lineItem.automaticReloadPaymentThresholdAmount);
     return summaryItem;
 }
@@ -130,14 +130,14 @@ PKAutomaticReloadPaymentSummaryItem *platformAutomaticReloadSummaryItem(const Ap
 PKDisbursementSummaryItem *platformDisbursementSummaryItem(const ApplePayLineItem& lineItem)
 {
     ASSERT(lineItem.disbursementLineItemType == ApplePayLineItem::DisbursementLineItemType::Disbursement);
-    PKDisbursementSummaryItem *summaryItem = [PAL::getPKDisbursementSummaryItemClass() summaryItemWithLabel:lineItem.label amount:toDecimalNumber(lineItem.amount)];
+    PKDisbursementSummaryItem *summaryItem = [PAL::getPKDisbursementSummaryItemClass() summaryItemWithLabel:lineItem.label.createNSString().get() amount:toDecimalNumber(lineItem.amount)];
     return summaryItem;
 }
 
 PKInstantFundsOutFeeSummaryItem *platformInstantFundsOutFeeSummaryItem(const ApplePayLineItem& lineItem)
 {
     ASSERT(lineItem.disbursementLineItemType == ApplePayLineItem::DisbursementLineItemType::InstantFundsOutFee);
-    PKInstantFundsOutFeeSummaryItem *summaryItem = [PAL::getPKInstantFundsOutFeeSummaryItemClass() summaryItemWithLabel:lineItem.label amount:toDecimalNumber(lineItem.amount)];
+    PKInstantFundsOutFeeSummaryItem *summaryItem = [PAL::getPKInstantFundsOutFeeSummaryItemClass() summaryItemWithLabel:lineItem.label.createNSString().get() amount:toDecimalNumber(lineItem.amount)];
     return summaryItem;
 }
 
@@ -176,7 +176,7 @@ PKPaymentSummaryItem *platformSummaryItem(const ApplePayLineItem& lineItem)
 #endif
     }
 
-    return [PAL::getPKPaymentSummaryItemClass() summaryItemWithLabel:lineItem.label amount:toDecimalNumber(lineItem.amount) type:toPKPaymentSummaryItemType(lineItem.type)];
+    return [PAL::getPKPaymentSummaryItemClass() summaryItemWithLabel:lineItem.label.createNSString().get() amount:toDecimalNumber(lineItem.amount) type:toPKPaymentSummaryItemType(lineItem.type)];
 }
 
 #if HAVE(PASSKIT_DISBURSEMENTS)

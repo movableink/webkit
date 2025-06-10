@@ -29,6 +29,7 @@
 
 #import "ClassMethodSwizzler.h"
 #import "DragAndDropSimulator.h"
+#import "ModelLoadingMessageHandler.h"
 #import "NSItemProviderAdditions.h"
 #import "PlatformUtilities.h"
 #import "TestURLSchemeHandler.h"
@@ -98,28 +99,6 @@ static NSData *testZIPArchive()
 }
 
 @end
-
-@interface ModelLoadingMessageHandler : NSObject <WKScriptMessageHandler>
-
-@property (nonatomic) BOOL didLoadModel;
-@property (nonatomic) BOOL modelIsReady;
-
-@end
-
-@implementation ModelLoadingMessageHandler
-- (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message
-{
-    if ([[message body] isEqualToString:@"LOADED"])
-        _didLoadModel = YES;
-    else if ([[message body] isEqualToString:@"READY"])
-        _modelIsReady = YES;
-    else {
-        EXPECT_TRUE(false);
-        NSLog(@"Unexpected message received: %@", [message body]);
-    }
-}
-@end
-
 
 static void loadTestPageAndEnsureInputSession(DragAndDropSimulator *simulator, NSString *testPageName)
 {
@@ -2334,6 +2313,41 @@ TEST(DragAndDropTests, CanHitTestStageModeModel)
 
     RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500) configuration:configuration.get()]);
     [webView synchronouslyLoadTestPageNamed:@"stagemode-model-page"];
+    while (![messageHandler didLoadModel])
+        Util::spinRunLoop();
+
+    RetainPtr simulator = adoptNS([[DragAndDropSimulator alloc] initWithWebView:webView.get()]);
+
+    // Case 1: Hitting out of the model should fail
+    [simulator hitTestForStageModeAt:CGPointMake(320, 500)];
+
+    while ([simulator awaitingStageModeHitResult])
+        Util::spinRunLoop();
+
+    EXPECT_FALSE([simulator stageModeHitTestValidModel]);
+
+    // Case 2: Hitting a model with stagemode='orbit' should succeed
+    [simulator hitTestForStageModeAt:CGPointMake(50, 50)];
+
+    while ([simulator awaitingStageModeHitResult])
+        Util::spinRunLoop();
+
+    EXPECT_TRUE([simulator stageModeHitTestValidModel]);
+}
+
+TEST(DragAndDropTests, CanHitTestNestedStageModeModel)
+{
+    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    for (_WKFeature *feature in [WKPreferences _features]) {
+        if ([feature.key isEqualToString:@"ModelElementEnabled"] || [feature.key isEqualToString:@"ModelProcessEnabled"])
+            [[configuration preferences] _setEnabled:YES forFeature:feature];
+    }
+
+    RetainPtr messageHandler = adoptNS([[ModelLoadingMessageHandler alloc] init]);
+    [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"modelLoading"];
+
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500) configuration:configuration.get()]);
+    [webView synchronouslyLoadTestPageNamed:@"simple-nested-model-page"];
     while (![messageHandler didLoadModel])
         Util::spinRunLoop();
 

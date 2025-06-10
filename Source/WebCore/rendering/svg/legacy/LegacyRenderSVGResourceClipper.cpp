@@ -59,19 +59,15 @@ LegacyRenderSVGResourceClipper::LegacyRenderSVGResourceClipper(SVGClipPathElemen
 
 LegacyRenderSVGResourceClipper::~LegacyRenderSVGResourceClipper() = default;
 
-void LegacyRenderSVGResourceClipper::removeAllClientsFromCacheIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers)
+void LegacyRenderSVGResourceClipper::removeAllClientsFromCache()
 {
     m_clipBoundaries.fill(FloatRect { });
     m_clipperMap.clear();
-
-    markAllClientsForInvalidationIfNeeded(markForInvalidation ? LayoutAndBoundariesInvalidation : ParentOnlyInvalidation, visitedRenderers);
 }
 
-void LegacyRenderSVGResourceClipper::removeClientFromCache(RenderElement& client, bool markForInvalidation)
+void LegacyRenderSVGResourceClipper::removeClientFromCache(RenderElement& client)
 {
     m_clipperMap.remove(client);
-
-    markClientForInvalidation(client, markForInvalidation ? BoundariesInvalidation : ParentOnlyInvalidation);
 }
 
 auto LegacyRenderSVGResourceClipper::applyResource(RenderElement& renderer, const RenderStyle&, GraphicsContext*& context, OptionSet<RenderSVGResourceMode> resourceMode) -> OptionSet<ApplyResult>
@@ -96,7 +92,7 @@ auto LegacyRenderSVGResourceClipper::pathOnlyClipping(GraphicsContext& context, 
     WindRule clipRule = WindRule::NonZero;
     Path clipPath;
 
-    auto rendererRequiresMaskClipping = [&clipPath](RenderObject& renderer) {
+    auto rendererRequiresMaskClipping = [&clipPath](auto& renderer) {
         // Only shapes or paths are supported for direct clipping. We need to fall back to masking for texts.
         if (is<RenderSVGText>(renderer))
             return true;
@@ -301,8 +297,8 @@ void LegacyRenderSVGResourceClipper::calculateClipContentRepaintRect(RepaintRect
 {
     // This is a rough heuristic to appraise the clip size and doesn't consider clip on clip.
     for (Node* childNode = clipPathElement().firstChild(); childNode; childNode = childNode->nextSibling()) {
-        RenderObject* renderer = childNode->renderer();
-        if (!childNode->isSVGElement() || !renderer)
+        CheckedPtr renderer = dynamicDowncast<RenderElement>(childNode->renderer());
+        if (!renderer || !childNode->isSVGElement())
             continue;
         if (!renderer->isRenderOrLegacyRenderSVGShape() && !renderer->isRenderSVGText() && !childNode->hasTagName(SVGNames::useTag))
             continue;

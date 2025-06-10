@@ -104,18 +104,24 @@ private:
     bool m_containsDirectionAwareProperty { false };
 };
 
+using KeyframesIdentifier = Variant<AtomString, uint64_t>;
+
 class BlendingKeyframes {
 public:
-    explicit BlendingKeyframes(const AtomString& animationName)
-        : m_animationName(animationName)
-    {
-    }
+    BlendingKeyframes()
+        : m_identifier(nextAnonymousIdentifier())
+    { }
+    explicit BlendingKeyframes(const KeyframesIdentifier& identifier)
+        : m_identifier(identifier)
+    { }
     ~BlendingKeyframes();
 
     BlendingKeyframes& operator=(BlendingKeyframes&&) = default;
     bool operator==(const BlendingKeyframes&) const;
 
-    const AtomString& animationName() const { return m_animationName; }
+    const KeyframesIdentifier& identifier() const { return m_identifier; }
+    const AtomString& keyframesName() const { return std::holds_alternative<AtomString>(m_identifier) ? std::get<AtomString>(m_identifier) : nullAtom(); }
+    const String& acceleratedAnimationName() const;
 
     void insert(BlendingKeyframe&&);
 
@@ -129,15 +135,15 @@ public:
     void clear();
     bool isEmpty() const { return m_keyframes.isEmpty(); }
     size_t size() const { return m_keyframes.size(); }
-    const BlendingKeyframe& operator[](size_t index) const { return m_keyframes[index]; }
+    const BlendingKeyframe& operator[](size_t index) const LIFETIME_BOUND { return m_keyframes[index]; }
 
     void copyKeyframes(const BlendingKeyframes&);
     bool hasImplicitKeyframes() const;
     bool hasImplicitKeyframeForProperty(AnimatableCSSProperty) const;
     void fillImplicitKeyframes(const KeyframeEffect&, const RenderStyle& elementStyle);
 
-    auto begin() const { return m_keyframes.begin(); }
-    auto end() const { return m_keyframes.end(); }
+    auto begin() const LIFETIME_BOUND { return m_keyframes.begin(); }
+    auto end() const LIFETIME_BOUND { return m_keyframes.end(); }
 
     bool usesContainerUnits() const;
     bool usesRelativeFontWeight() const;
@@ -160,7 +166,10 @@ public:
 private:
     void analyzeKeyframe(const BlendingKeyframe&);
 
-    AtomString m_animationName;
+    static uint64_t nextAnonymousIdentifier();
+
+    KeyframesIdentifier m_identifier;
+    mutable String m_acceleratedAnimationName;
     Vector<BlendingKeyframe> m_keyframes; // Kept sorted by key.
     UncheckedKeyHashSet<AnimatableCSSProperty> m_properties; // The properties being animated.
     UncheckedKeyHashSet<AnimatableCSSProperty> m_explicitToProperties; // The properties with an explicit value for the 100% keyframe.

@@ -26,7 +26,7 @@
 #include "src/gpu/graphite/DrawWriter.h"
 #include "src/gpu/graphite/PipelineData.h"
 #include "src/gpu/graphite/geom/Geometry.h"
-#include "src/gpu/graphite/geom/Transform_graphite.h"
+#include "src/gpu/graphite/geom/Transform.h"
 #include "src/gpu/graphite/render/CommonDepthStencilSettings.h"
 
 #include <cstdint>
@@ -106,15 +106,15 @@ RenderStep::RenderStepID variant_id(PrimitiveType type, bool hasColor, bool hasT
 
 VerticesRenderStep::VerticesRenderStep(PrimitiveType type, bool hasColor, bool hasTexCoords)
         : RenderStep(variant_id(type, hasColor, hasTexCoords),
-                     hasColor ? Flags::kEmitsPrimitiveColor | Flags::kPerformsShading
-                              : Flags::kPerformsShading,
+                     (hasColor ? Flags::kEmitsPrimitiveColor : Flags::kNone) |
+                     Flags::kPerformsShading | Flags::kAppendVertices,
                      /*uniforms=*/{{"localToDevice", SkSLType::kFloat4x4},
                                    {"depth", SkSLType::kFloat}},
                      type,
                      kDirectDepthGEqualPass,
-                     /*vertexAttrs=*/  kAttributes[2*hasTexCoords + hasColor],
-                     /*instanceAttrs=*/{},
-                     /*varyings=*/     kVaryings[hasColor])
+                     /*staticAttrs=*/ {},
+                     /*appendAttrs=*/kAttributes[2*hasTexCoords + hasColor],
+                     /*varyings=*/   kVaryings[hasColor])
         , fHasColor(hasColor)
         , fHasTexCoords(hasTexCoords) {}
 
@@ -122,31 +122,27 @@ VerticesRenderStep::~VerticesRenderStep() {}
 
 std::string VerticesRenderStep::vertexSkSL() const {
     if (fHasColor && fHasTexCoords) {
-        return R"(
-            color = half4(vertColor.bgr * vertColor.a, vertColor.a);
-            float4 devPosition = localToDevice * float4(position, 0.0, 1.0);
-            devPosition.z = depth;
-            stepLocalCoords = texCoords;
-        )";
+        return
+            "color = half4(vertColor.bgr * vertColor.a, vertColor.a);\n"
+            "float4 devPosition = localToDevice * float4(position, 0.0, 1.0);\n"
+            "devPosition.z = depth;\n"
+            "stepLocalCoords = texCoords;\n";
     } else if (fHasTexCoords) {
-        return R"(
-            float4 devPosition = localToDevice * float4(position, 0.0, 1.0);
-            devPosition.z = depth;
-            stepLocalCoords = texCoords;
-        )";
+        return
+            "float4 devPosition = localToDevice * float4(position, 0.0, 1.0);\n"
+            "devPosition.z = depth;\n"
+            "stepLocalCoords = texCoords;\n";
     } else if (fHasColor) {
-        return R"(
-            color = half4(vertColor.bgr * vertColor.a, vertColor.a);
-            float4 devPosition = localToDevice * float4(position, 0.0, 1.0);
-            devPosition.z = depth;
-            stepLocalCoords = position;
-        )";
+        return
+            "color = half4(vertColor.bgr * vertColor.a, vertColor.a);\n"
+            "float4 devPosition = localToDevice * float4(position, 0.0, 1.0);\n"
+            "devPosition.z = depth;\n"
+            "stepLocalCoords = position;\n";
     } else {
-        return R"(
-            float4 devPosition = localToDevice * float4(position, 0.0, 1.0);
-            devPosition.z = depth;
-            stepLocalCoords = position;
-        )";
+        return
+            "float4 devPosition = localToDevice * float4(position, 0.0, 1.0);\n"
+            "devPosition.z = depth;\n"
+            "stepLocalCoords = position;\n";
     }
 }
 

@@ -377,7 +377,7 @@ void WebInspectorFrontendClient::logDiagnosticEvent(const String& eventName, con
 
 void WebInspectorFrontendClient::updateWindowTitle() const
 {
-    NSString *title = [NSString stringWithFormat:UI_STRING_INTERNAL("Web Inspector — %@", "Web Inspector window title"), (NSString *)m_inspectedURL];
+    NSString *title = [NSString stringWithFormat:UI_STRING_INTERNAL("Web Inspector — %@", "Web Inspector window title"), m_inspectedURL.createNSString().get()];
     [[m_frontendWindowController.get() window] setTitle:title];
 }
 
@@ -406,7 +406,7 @@ void WebInspectorFrontendClient::save(Vector<InspectorFrontendClient::SaveData>&
 
     NSURL *platformURL = m_suggestedToActualURLMap.get(suggestedURL).get();
     if (!platformURL) {
-        platformURL = [NSURL URLWithString:suggestedURL];
+        platformURL = [NSURL URLWithString:suggestedURL.createNSString().get()];
         // The user must confirm new filenames before we can save to them.
         forceSaveAs = true;
     }
@@ -432,7 +432,7 @@ void WebInspectorFrontendClient::save(Vector<InspectorFrontendClient::SaveData>&
             RetainPtr dataContent = toNSData(decodedData->span());
             [dataContent writeToURL:actualURL atomically:YES];
         } else
-            [contentCopy writeToURL:actualURL atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+            [contentCopy.createNSString() writeToURL:actualURL atomically:YES encoding:NSUTF8StringEncoding error:NULL];
     };
 
     if (!forceSaveAs) {

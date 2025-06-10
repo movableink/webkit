@@ -1,4 +1,5 @@
 <!-- webkit-test-runner [ enableMetalDebugDevice=true ] -->
+<script src="../../../resources/js-test-pre.js"></script>
 <script>
 async function run() {
     let adapter0 = await navigator.gpu.requestAdapter();
@@ -38,7 +39,7 @@ async function run() {
     renderPassEncoder8.setBindGroup(0, bindGroup17);
     renderPassEncoder8.draw(54, 42, 4_294_967_295)
     await device0.queue.onSubmittedWorkDone();
-    console.log('Pass')
+    debug('Pass')
     globalThis.testRunner?.notifyDone();
 }
 globalThis.testRunner?.dumpAsText();

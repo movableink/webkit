@@ -333,9 +333,9 @@ RenderBoxFragmentInfo* RenderFragmentContainer::setRenderBoxFragmentInfo(const R
     return boxInfo.get();
 }
 
-std::unique_ptr<RenderBoxFragmentInfo> RenderFragmentContainer::takeRenderBoxFragmentInfo(const RenderBox* box)
+std::unique_ptr<RenderBoxFragmentInfo> RenderFragmentContainer::takeRenderBoxFragmentInfo(const RenderBox& box)
 {
-    return m_renderBoxFragmentInfo.take(*box);
+    return m_renderBoxFragmentInfo.take(box);
 }
 
 void RenderFragmentContainer::removeRenderBoxFragmentInfo(const RenderBox& box)
@@ -386,7 +386,7 @@ void RenderFragmentContainer::computeIntrinsicLogicalWidths(LayoutUnit& minLogic
 
 void RenderFragmentContainer::computePreferredLogicalWidths()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
 
     if (!isValid()) {
         RenderBlockFlow::computePreferredLogicalWidths();
@@ -405,7 +405,7 @@ void RenderFragmentContainer::computePreferredLogicalWidths()
 
     RenderBox::computePreferredLogicalWidths(style().logicalMinWidth(), style().logicalMaxWidth(), borderAndPaddingLogicalWidth());
 
-    setPreferredLogicalWidthsDirty(false);
+    clearNeedsPreferredWidthsUpdate();
 }
 
 LayoutRect RenderFragmentContainer::computedVisualOverflowRectForBox(const RenderBox& box) const

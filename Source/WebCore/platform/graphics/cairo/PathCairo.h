@@ -39,10 +39,9 @@ class PathStream;
 
 class PathCairo final : public PathImpl {
 public:
-    static Ref<PathCairo> create();
-    static Ref<PathCairo> create(const PathSegment&);
-    static Ref<PathCairo> create(const PathStream&);
+    static Ref<PathCairo> create(std::span<const PathSegment> = { });
     static Ref<PathCairo> create(RefPtr<cairo_t>&&, RefPtr<PathStream>&& = nullptr);
+    static PlatformPathPtr emptyPlatformPath();
 
     PathCairo();
     PathCairo(RefPtr<cairo_t>&&, RefPtr<PathStream>&&);
@@ -77,8 +76,6 @@ public:
     FloatRect strokeBoundingRect(NOESCAPE const Function<void(GraphicsContext&)>& strokeStyleApplier) const;
 
 private:
-    bool isEmpty() const final;
-
     FloatPoint currentPoint() const final;
 
     FloatRect fastBoundingRect() const final;

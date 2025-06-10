@@ -23,6 +23,7 @@
 #include "HTMLDetailsElement.h"
 
 #include "AXObjectCache.h"
+#include "ContainerNodeInlines.h"
 #include "DocumentInlines.h"
 #include "ElementChildIteratorInlines.h"
 #include "ElementRareData.h"

@@ -1,23 +1,24 @@
 description("This tests deleting an object store with an index, when aborting the transaction would *not* restore that object store, and makes sure the transaction successfully aborts");
 
+var openRequest = null;
 indexedDBTest(prepareDatabase);
 
 function prepareDatabase(event)
 {
+    openRequest = event.target;
     tx = event.target.transaction;
     tx.onabort = function() {
-        debug("Aborted!");
-        finishJSTest();
+        // Set event handler to null to avoid unexpected error message being printed.
+        openRequest.onerror = null;
+        endTestWithLog("Aborted!");
     }
     tx.onerror = function() {
-        debug("Unexpected error");
-        finishJSTest();
+        endTestWithLog("Unexpected error");
     }
     tx.oncomplete = function() {
-        debug("Unexpected completion");
-        finishJSTest();
+        endTestWithLog("Unexpected completion");
     }
-    
+
     db = event.target.result;
     db.createObjectStore("name");
     db.deleteObjectStore("name");

@@ -34,7 +34,6 @@ set(WebKit_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/NetworkProcess/webtransport"
     "${WEBKIT_DIR}/Platform"
     "${WEBKIT_DIR}/Platform/IPC"
-    "${WEBKIT_DIR}/PluginProcess"
     "${WEBKIT_DIR}/Shared"
     "${WEBKIT_DIR}/Shared/API"
     "${WEBKIT_DIR}/Shared/API/c"
@@ -291,6 +290,7 @@ set(WebKit_MESSAGES_IN_FILES
     UIProcess/SpeechRecognitionRemoteRealtimeMediaSourceManager
     UIProcess/SpeechRecognitionServer
     UIProcess/VisitedLinkStore
+    UIProcess/WebFrameProxy
     UIProcess/WebFullScreenManagerProxy
     UIProcess/WebGeolocationManagerProxy
     UIProcess/WebLockRegistryProxy
@@ -323,6 +323,8 @@ set(WebKit_MESSAGES_IN_FILES
     WebProcess/Automation/WebAutomationSessionProxy
 
     WebProcess/Databases/IndexedDB/WebIDBConnectionToServer
+
+    WebProcess/DigitalCredentials/DigitalCredentialsCoordinator
 
     WebProcess/Extensions/WebExtensionContextProxy
     WebProcess/Extensions/WebExtensionControllerProxy
@@ -396,6 +398,7 @@ set(WebKit_MESSAGES_IN_FILES
     WebProcess/WebPage/DrawingArea
     WebProcess/WebPage/EventDispatcher
     WebProcess/WebPage/VisitedLinkTableController
+    WebProcess/WebPage/WebFrame
     WebProcess/WebPage/WebPage
     WebProcess/WebPage/WebPageTesting
 
@@ -459,7 +462,6 @@ set(WebKit_SERIALIZATION_IN_FILES
     Shared/ContextMenuContextData.serialization.in
     Shared/CoordinateSystem.serialization.in
     Shared/DebuggableInfoData.serialization.in
-    Shared/DisplayListArgumentCoders.serialization.in
     Shared/DocumentEditingContext.serialization.in
     Shared/DragControllerAction.serialization.in
     Shared/DrawingAreaInfo.serialization.in
@@ -494,6 +496,7 @@ set(WebKit_SERIALIZATION_IN_FILES
     Shared/ProvisionalFrameCreationParameters.serialization.in
     Shared/RTCNetwork.serialization.in
     Shared/RTCPacketOptions.serialization.in
+    Shared/RemoteWebTouchEvent.serialization.in
     Shared/RemoteWorkerInitializationData.serialization.in
     Shared/RemoteWorkerType.serialization.in
     Shared/ResourceLoadInfo.serialization.in
@@ -725,7 +728,6 @@ endif ()
 set(WebProcess_LIBRARIES WebKit)
 set(NetworkProcess_LIBRARIES WebKit)
 set(GPUProcess_LIBRARIES WebKit)
-set(PluginProcess_LIBRARIES WebKit)
 
 # For platforms that want to use system-provided OpenGL (ES) / EGL headers,
 # these include directories, libraries or definitions need to be
@@ -791,11 +793,6 @@ if (ENABLE_GPU_PROCESS)
     list(APPEND WebKit_INTERFACE_DEPENDENCIES GPUProcess)
 endif ()
 
-if (ENABLE_PLUGIN_PROCESS)
-    WEBKIT_EXECUTABLE_DECLARE(PluginProcess)
-    list(APPEND WebKit_INTERFACE_DEPENDENCIES PluginProcess)
-endif ()
-
 set(WebKit_GENERATED_SERIALIZERS_SUFFIX cpp)
 
 WEBKIT_FRAMEWORK_DECLARE(WebKit)
@@ -804,6 +801,7 @@ WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 if (PORT STREQUAL GTK OR PORT STREQUAL WPE)
     WEBKIT_ADD_TARGET_CXX_FLAGS(WebKit
         -Wunsafe-buffer-usage
+        -Wunsafe-buffer-usage-in-libc-call
         -fsafe-buffer-usage-suggestions
     )
 endif ()
@@ -964,6 +962,9 @@ set(WebKit_WEBDRIVER_BIDI_PROTOCOL_GENERATOR_INPUTS
     ${WEBKIT_DIR}/UIProcess/Automation/protocol/BidiBrowser.json
     ${WEBKIT_DIR}/UIProcess/Automation/protocol/BidiBrowsingContext.json
     ${WEBKIT_DIR}/UIProcess/Automation/protocol/BidiLog.json
+    ${WEBKIT_DIR}/UIProcess/Automation/protocol/BidiScript.json
+    ${WEBKIT_DIR}/UIProcess/Automation/protocol/BidiSession.json
+    ${WEBKIT_DIR}/UIProcess/Automation/protocol/BidiStorage.json
 )
 
 add_custom_command(
@@ -1084,21 +1085,12 @@ if (ENABLE_GPU_PROCESS)
     ADD_WEBKIT_PREFIX_HEADER(GPUProcess)
 endif ()
 
-if (ENABLE_PLUGIN_PROCESS)
-    list(APPEND PluginProcess_PRIVATE_INCLUDE_DIRECTORIES $<TARGET_PROPERTY:WebKit,INCLUDE_DIRECTORIES>)
-    WEBKIT_EXECUTABLE(PluginProcess)
-    ADD_WEBKIT_PREFIX_HEADER(PluginProcess)
-endif ()
-
 if (COMPILER_IS_GCC_OR_CLANG)
     WEBKIT_ADD_TARGET_CXX_FLAGS(WebKit -Wno-unused-parameter)
     WEBKIT_ADD_TARGET_CXX_FLAGS(WebProcess -Wno-unused-parameter)
     WEBKIT_ADD_TARGET_CXX_FLAGS(NetworkProcess -Wno-unused-parameter)
     if (ENABLE_GPU_PROCESS)
         WEBKIT_ADD_TARGET_CXX_FLAGS(GPUProcess -Wno-unused-parameter)
-    endif ()
-    if (ENABLE_PLUGIN_PROCESS)
-        WEBKIT_ADD_TARGET_CXX_FLAGS(PluginProcess -Wno-unused-parameter)
     endif ()
 endif ()
 

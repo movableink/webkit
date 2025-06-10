@@ -64,8 +64,8 @@ public:
     bool requiresDisplayCapture() const { return m_request.type == WebCore::MediaStreamRequest::Type::DisplayMedia || m_request.type == WebCore::MediaStreamRequest::Type::DisplayMediaWithAudio; }
     bool requiresDisplayCaptureWithAudio() const { return m_request.type == WebCore::MediaStreamRequest::Type::DisplayMediaWithAudio; }
 
-    void setEligibleVideoDeviceUIDs(Vector<WebCore::CaptureDevice>&& devices) { m_eligibleVideoDevices = WTFMove(devices); }
-    void setEligibleAudioDeviceUIDs(Vector<WebCore::CaptureDevice>&& devices) { m_eligibleAudioDevices = WTFMove(devices); }
+    void setEligibleVideoDevices(Vector<WebCore::CaptureDevice>&& devices) { m_eligibleVideoDevices = WTFMove(devices); }
+    void setEligibleAudioDevices(Vector<WebCore::CaptureDevice>&& devices) { m_eligibleAudioDevices = WTFMove(devices); }
 
     Vector<String> videoDeviceUIDs() const;
     Vector<String> audioDeviceUIDs() const;
@@ -78,7 +78,7 @@ public:
     std::optional<WebCore::UserMediaRequestIdentifier> userMediaID() const { return m_userMediaID; }
     WebCore::FrameIdentifier mainFrameID() const { return m_mainFrameID; }
     const FrameInfoData& frameInfo() const { return m_frameInfo; }
-    WebCore::FrameIdentifier frameID() const { return *m_frameInfo.frameID; }
+    WebCore::FrameIdentifier frameID() const { return m_frameInfo.frameID; }
 
     WebCore::SecurityOrigin& topLevelDocumentSecurityOrigin() { return m_topLevelDocumentSecurityOrigin.get(); }
     WebCore::SecurityOrigin& userMediaDocumentSecurityOrigin() { return m_userMediaDocumentSecurityOrigin.get(); }
@@ -130,6 +130,10 @@ private:
 String convertEnumerationToString(UserMediaPermissionRequestProxy::UserMediaAccessDenialReason);
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::UserMediaPermissionRequestProxy)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::UserMediaPermissionRequest; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 namespace WTF {
 

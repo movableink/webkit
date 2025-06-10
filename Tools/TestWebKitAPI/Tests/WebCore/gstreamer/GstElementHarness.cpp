@@ -31,7 +31,9 @@
 #include "Test.h"
 #include <WebCore/GStreamerCommon.h>
 #include <WebCore/GStreamerElementHarness.h>
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
+#include <wtf/glib/GUniquePtr.h>
 
 using namespace WebCore;
 
@@ -259,7 +261,7 @@ TEST_F(GStreamerTest, harnessParseMP4)
     auto handle = FileSystem::openFile(unsafeSpan(filePath.get()), FileSystem::FileOpenMode::Read);
 
     size_t totalRead = 0;
-    auto size = FileSystem::fileSize(handle).value_or(0);
+    auto size = handle.size().value_or(0);
     auto caps = adoptGRef(gst_caps_new_empty_simple("video/quicktime"));
     while (totalRead < size) {
         size_t bytesToRead = 1024;
@@ -269,7 +271,7 @@ TEST_F(GStreamerTest, harnessParseMP4)
         auto buffer = adoptGRef(gst_buffer_new_allocate(nullptr, bytesToRead, nullptr));
         {
             GstMappedBuffer mappedBuffer(buffer.get(), GST_MAP_WRITE);
-            FileSystem::readFromFile(handle, mappedBuffer.mutableSpan<uint8_t>());
+            handle.read(mappedBuffer.mutableSpan<uint8_t>());
         }
         auto sample = adoptGRef(gst_sample_new(buffer.get(), caps.get(), nullptr, nullptr));
         EXPECT_TRUE(harness->pushSample(WTFMove(sample)));
@@ -317,7 +319,7 @@ TEST_F(GStreamerTest, harnessDecodeMP4Video)
     GRefPtr<GstElement> element = gst_element_factory_make("decodebin3", nullptr);
 
     // Disable internal buffering in decodebin3.
-    for (auto child : GstIteratorAdaptor<GstElement>(GUniquePtr<GstIterator>(gst_bin_iterate_recurse(GST_BIN_CAST(element.get()))))) {
+    for (auto child : GstIteratorAdaptor<GstElement>(gst_bin_iterate_recurse(GST_BIN_CAST(element.get())))) {
         if (g_str_has_prefix(GST_OBJECT_NAME(GST_OBJECT_CAST(child)), "multiqueue")) {
             g_object_set(child, "max-size-buffers", 1, nullptr);
             break;
@@ -347,7 +349,7 @@ TEST_F(GStreamerTest, harnessDecodeMP4Video)
     auto handle = FileSystem::openFile(unsafeSpan(filePath.get()), FileSystem::FileOpenMode::Read);
 
     size_t totalRead = 0;
-    auto size = FileSystem::fileSize(handle).value_or(0);
+    auto size = handle.size().value_or(0);
     GRefPtr<GstStreamCollection> collection;
     RefPtr<GStreamerElementHarness::Stream> harnessedStream;
     while (totalRead < size) {
@@ -358,7 +360,7 @@ TEST_F(GStreamerTest, harnessDecodeMP4Video)
         auto buffer = adoptGRef(gst_buffer_new_allocate(nullptr, bytesToRead, nullptr));
         {
             GstMappedBuffer mappedBuffer(buffer.get(), GST_MAP_WRITE);
-            FileSystem::readFromFile(handle, mappedBuffer.mutableSpan<uint8_t>());
+            handle.read(mappedBuffer.mutableSpan<uint8_t>());
         }
         EXPECT_TRUE(harness->pushBuffer(WTFMove(buffer)));
         totalRead += bytesToRead;
@@ -408,7 +410,7 @@ TEST_F(GStreamerTest, harnessDecodeMP4Video)
         auto buffer = adoptGRef(gst_buffer_new_allocate(nullptr, bytesToRead, nullptr));
         {
             GstMappedBuffer mappedBuffer(buffer.get(), GST_MAP_WRITE);
-            FileSystem::readFromFile(handle, mappedBuffer.mutableSpan<uint8_t>());
+            handle.read(mappedBuffer.mutableSpan<uint8_t>());
         }
         EXPECT_TRUE(harness->pushBuffer(WTFMove(buffer)));
 

@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WPEDisplayMock.h"
 
+#include "WPEViewMock.h"
 #include <gio/gio.h>
 #include <gmodule.h>
 
@@ -34,6 +35,16 @@ struct _WPEDisplayMock {
 };
 
 G_DEFINE_DYNAMIC_TYPE(WPEDisplayMock, wpe_display_mock, WPE_TYPE_DISPLAY)
+
+static void wpeDisplayMockConstructed(GObject* object)
+{
+    G_OBJECT_CLASS(wpe_display_mock_parent_class)->constructed(object);
+
+    // FIXME: wpe platform tests expect the mock display to be the default, but we are using the WebKit
+    // GLib tests helpers that create a headless display. We should not use WebKit GLib tests helpers,
+    // but in the meantime we can just set the mock display as primary on creation.
+    wpe_display_set_primary(WPE_DISPLAY(object));
+}
 
 static void wpeDisplayMockDispose(GObject* object)
 {
@@ -47,10 +58,10 @@ static gboolean wpeDisplayMockConnect(WPEDisplay* display, GError** error)
 
 static WPEView* wpeDisplayMockCreateView(WPEDisplay* display)
 {
-    return nullptr;
+    return WPE_VIEW(g_object_new(WPE_TYPE_VIEW_MOCK, "display", display, nullptr));
 }
 
-static WPEInputMethodContext* wpeDisplayMockCreateInputMethodContext(WPEDisplay* display)
+static WPEInputMethodContext* wpeDisplayMockCreateInputMethodContext(WPEDisplay* display, WPEView*)
 {
     return nullptr;
 }
@@ -61,7 +72,7 @@ static gpointer wpeDisplayMockGetEGLDisplay(WPEDisplay* display, GError** error)
     return nullptr;
 }
 
-static WPEKeymap* wpeDisplayMockGetKeymap(WPEDisplay* display, GError** error)
+static WPEKeymap* wpeDisplayMockGetKeymap(WPEDisplay* display)
 {
     return nullptr;
 }
@@ -99,6 +110,7 @@ static gboolean wpeDisplayMockUseExplicitSync(WPEDisplay* display)
 static void wpe_display_mock_class_init(WPEDisplayMockClass* displayMockClass)
 {
     GObjectClass* objectClass = G_OBJECT_CLASS(displayMockClass);
+    objectClass->constructed = wpeDisplayMockConstructed;
     objectClass->dispose = wpeDisplayMockDispose;
 
     WPEDisplayClass* displayClass = WPE_DISPLAY_CLASS(displayMockClass);

@@ -39,6 +39,7 @@ enum class DidFilterLinkDecoration : bool;
 enum class IsLoggedIn : uint8_t;
 enum class StorageAccessPromptWasShown : bool;
 enum class StorageAccessWasGranted : uint8_t;
+struct SystemPreviewInfo;
 struct TextRecognitionOptions;
 }
 
@@ -57,12 +58,10 @@ public:
     WebChromeClient(WebPage&);
     ~WebChromeClient();
 
-    // FIXME: these functions should return (ref) pointers that should be null-checked at callsites.
-    WebPage& page() const { return *m_page; }
-    Ref<WebPage> protectedPage() const;
+    WebPage* page() const { return m_page.get(); }
 
 #if PLATFORM(IOS_FAMILY)
-    void relayAccessibilityNotification(const String&, const RetainPtr<NSData>&) const final;
+    void relayAccessibilityNotification(String&&, RetainPtr<NSData>&&) const final;
 #endif
 
 private:
@@ -113,7 +112,7 @@ private:
     void addMessageWithArgumentsToConsole(JSC::MessageSource, JSC::MessageLevel, const String& message, std::span<const String> messageArguments, unsigned lineNumber, unsigned columnNumber, const String& sourceID) final;
     
     bool canRunBeforeUnloadConfirmPanel() final;
-    bool runBeforeUnloadConfirmPanel(const String& message, WebCore::LocalFrame&) final;
+    bool runBeforeUnloadConfirmPanel(String&& message, WebCore::LocalFrame&) final;
     
     void closeWindow() final;
 
@@ -207,8 +206,8 @@ private:
 #endif
 
     void runOpenPanel(WebCore::LocalFrame&, WebCore::FileChooser&) final;
-    void showShareSheet(WebCore::ShareDataWithParsedURL&, WTF::CompletionHandler<void(bool)>&&) final;
-    void showContactPicker(const WebCore::ContactsRequestData&, WTF::CompletionHandler<void(std::optional<Vector<WebCore::ContactInfo>>&&)>&&) final;
+    void showShareSheet(WebCore::ShareDataWithParsedURL&&, WTF::CompletionHandler<void(bool)>&&) final;
+    void showContactPicker(WebCore::ContactsRequestData&&, WTF::CompletionHandler<void(std::optional<Vector<WebCore::ContactInfo>>&&)>&&) final;
 
 #if HAVE(DIGITAL_CREDENTIALS_UI)
     void showDigitalCredentialsPicker(const WebCore::DigitalCredentialsRequestData&, WTF::CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&&) final;
@@ -403,6 +402,7 @@ private:
     void handleAutoplayEvent(WebCore::AutoplayEvent, OptionSet<WebCore::AutoplayEventFlags>) final;
 
     void setTextIndicator(const WebCore::TextIndicatorData&) const final;
+    void updateTextIndicator(const WebCore::TextIndicatorData&) const final;
 
 #if ENABLE(TELEPHONE_NUMBER_DETECTION) && PLATFORM(MAC)
     void handleTelephoneNumberClick(const String& number, const WebCore::IntPoint&, const WebCore::IntRect&) final;
@@ -563,9 +563,10 @@ private:
 
 #if ENABLE(DAMAGE_TRACKING)
     void resetDamageHistoryForTesting() final;
-
-    WebCore::FrameDamageHistory* damageHistoryForTesting() const final;
+    void foreachRegionInDamageHistoryForTesting(Function<void(const WebCore::Region&)>&& callback) const final;
 #endif
+
+    void setNeedsFixedContainerEdgesUpdate() final;
 
     mutable bool m_cachedMainFrameHasHorizontalScrollbar { false };
     mutable bool m_cachedMainFrameHasVerticalScrollbar { false };
@@ -577,7 +578,7 @@ class AXRelayProcessSuspendedNotification {
 public:
     enum class AutomaticallySend : bool { No, Yes };
 
-    explicit AXRelayProcessSuspendedNotification(Ref<WebPage>, AutomaticallySend = AutomaticallySend::Yes);
+    explicit AXRelayProcessSuspendedNotification(WebPage&, AutomaticallySend = AutomaticallySend::Yes);
     ~AXRelayProcessSuspendedNotification();
 
     void sendProcessSuspendMessage(bool suspended);

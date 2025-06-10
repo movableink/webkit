@@ -33,6 +33,7 @@
 #include "StyleColor.h"
 
 #include "CSSKeywordColor.h"
+#include "CSSValuePool.h"
 #include "Document.h"
 #include "RenderStyle.h"
 #include "RenderTheme.h"
@@ -308,16 +309,22 @@ String serializationForCSS(const CSS::SerializationContext& context, const Color
 
 void serializationForCSS(StringBuilder& builder, const CSS::SerializationContext& context, const Color& value)
 {
-    return WTF::switchOn(value, [&](const auto& kind) { WebCore::Style::serializationForCSS(builder, context, kind); });
+    WTF::switchOn(value, [&](const auto& kind) { WebCore::Style::serializationForCSS(builder, context, kind); });
+}
+
+void Serialize<Color>::operator()(StringBuilder& builder, const CSS::SerializationContext&, const RenderStyle& style, const Color& value)
+{
+    // NOTE: The specialization of Style::Serialize is used for computed value serialization, so the resolved "used" value is used.
+    builder.append(serializationForCSS(style.colorResolvingCurrentColor(value)));
 }
 
 // MARK: - TextStream.
 
 TextStream& operator<<(TextStream& ts, const Color& value)
 {
-    ts << "Style::Color[";
+    ts << "Style::Color["_s;
     WTF::switchOn(value, [&](const auto& kind) { ts << kind; });
-    ts << "]";
+    ts << ']';
 
     return ts;
 }
@@ -340,18 +347,6 @@ Color toStyleColor(const CSS::Color& value, Ref<const Document> document, const 
     return toStyleColor(value, resolutionState);
 }
 
-Color toStyleColorWithResolvedCurrentColor(const CSS::Color& value, Ref<const Document> document, RenderStyle& style, const CSSToLengthConversionData& conversionData, ForVisitedLink forVisitedLink)
-{
-    // FIXME: 'currentcolor' should be resolved at use time to make it inherit correctly. https://bugs.webkit.org/show_bug.cgi?id=210005
-    if (CSS::containsCurrentColor(value)) {
-        // Color is an inherited property so depending on it effectively makes the property inherited.
-        style.setHasExplicitlyInheritedProperties();
-        style.setDisallowsFastPathInheritance();
-    }
-
-    return toStyleColor(value, document, style, conversionData, forVisitedLink);
-}
-
 auto ToCSS<Color>::operator()(const Color& value, const RenderStyle& style) -> CSS::Color
 {
     return CSS::Color { CSS::ResolvedColor { style.colorResolvingCurrentColor(value) } };
@@ -365,6 +360,11 @@ auto ToStyle<CSS::Color>::operator()(const CSS::Color& value, const BuilderState
 auto ToStyle<CSS::Color>::operator()(const CSS::Color& value, const BuilderState& builderState) -> Color
 {
     return toStyle(value, builderState, ForVisitedLink::No);
+}
+
+Ref<CSSValue> CSSValueCreation<Color>::operator()(CSSValuePool& pool, const RenderStyle& style, const Color& value)
+{
+    return pool.createColorValue(style.colorResolvingCurrentColor(value));
 }
 
 } // namespace Style

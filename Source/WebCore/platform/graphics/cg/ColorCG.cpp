@@ -227,8 +227,8 @@ ColorComponents<float, 4> platformConvertColorComponents(ColorSpace inputColorSp
     auto transform = adoptCF(CGColorTransformCreate(outputColorSpace.platformColorSpace(), nullptr));
     auto result = CGColorTransformConvertColorComponents(transform.get(), cgInputColorSpace, kCGRenderingIntentDefault, sourceComponents.data(), destinationComponents.data());
     ASSERT_UNUSED(result, result);
-    // FIXME: CGColorTransformConvertColorComponents doesn't copy over any alpha component.
-    return { static_cast<float>(destinationComponents[0]), static_cast<float>(destinationComponents[1]), static_cast<float>(destinationComponents[2]), static_cast<float>(destinationComponents[3]) };
+    // CGColorTransformConvertColorComponents doesn't copy over any alpha component.
+    return { static_cast<float>(destinationComponents[0]), static_cast<float>(destinationComponents[1]), static_cast<float>(destinationComponents[2]), static_cast<float>(sourceComponents[3]) };
 }
 
 }

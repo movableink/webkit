@@ -26,14 +26,20 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "XPathPredicate.h"
 
 union YYSTYPE;
 
+namespace WTF {
+
+class String;
+
+} // namespace WTF
+
 namespace WebCore {
 
 class XPathNSResolver;
+template<typename> class ExceptionOr;
 
 namespace XPath {
 

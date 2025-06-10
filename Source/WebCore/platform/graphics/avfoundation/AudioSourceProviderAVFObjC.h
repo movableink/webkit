@@ -76,7 +76,7 @@ private:
     void createMixIfNeeded();
 
     // AudioSourceProvider
-    void provideInput(AudioBus*, size_t framesToProcess) override;
+    void provideInput(AudioBus&, size_t framesToProcess) override;
     void setClient(WeakPtr<AudioSourceProviderClient>&&) override;
     bool isHandlingAVPlayer() const final { return true; }
 

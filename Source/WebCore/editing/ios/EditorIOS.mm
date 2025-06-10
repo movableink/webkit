@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #import "CSSComputedStyleDeclaration.h"
 #import "CSSPrimitiveValueMappings.h"
 #import "CachedImage.h"
+#import "ContainerNodeInlines.h"
 #import "DataTransfer.h"
 #import "DictationCommandIOS.h"
 #import "DocumentFragment.h"
@@ -116,7 +117,7 @@ void Editor::writeImageToPasteboard(Pasteboard& pasteboard, Element& imageElemen
     }
     pasteboardImage.suggestedName = imageSourceURL.lastPathComponent().toString();
     pasteboardImage.imageSize = image->size();
-    pasteboardImage.resourceMIMEType = pasteboard.resourceMIMEType(cachedImage->response().mimeType());
+    pasteboardImage.resourceMIMEType = pasteboard.resourceMIMEType(cachedImage->response().mimeType().createNSString().get());
     if (auto* buffer = cachedImage->resourceBuffer())
         pasteboardImage.resourceData = buffer->makeContiguous();
 
@@ -162,7 +163,7 @@ void Editor::platformPasteFont()
 
 void Editor::insertDictationPhrases(Vector<Vector<String>>&& dictationPhrases, id metadata)
 {
-    Ref document = protectedDocument();
+    Ref document = this->document();
     if (document->selection().isNone())
         return;
 
@@ -181,7 +182,7 @@ void Editor::setDictationPhrasesAsChildOfElement(const Vector<Vector<String>>& d
     // Some day we could make them Undoable, and let callers clear the Undo stack explicitly if they wish.
     clearUndoRedoOperations();
 
-    Ref document = protectedDocument();
+    Ref document = this->document();
     document->selection().clear();
 
     element.removeChildren();
@@ -217,7 +218,7 @@ void Editor::setDictationPhrasesAsChildOfElement(const Vector<Vector<String>>& d
         auto dictationPhraseLength = interpretations[0].length();
         if (interpretations.size() > 1) {
             auto alternatives = interpretations;
-            alternatives.remove(0);
+            alternatives.removeAt(0);
             addMarker(*textNode, previousDictationPhraseStart, dictationPhraseLength, DocumentMarkerType::DictationPhraseWithAlternatives, WTFMove(alternatives));
         }
         previousDictationPhraseStart += dictationPhraseLength;
@@ -232,10 +233,10 @@ void Editor::confirmMarkedText()
 {
     // FIXME: This is a hacky workaround for the keyboard calling this method too late -
     // after the selection and focus have already changed. See <rdar://problem/5975559>.
-    Ref document = protectedDocument();
+    Ref document = this->document();
     RefPtr focused = document->focusedElement();
     RefPtr composition = compositionNode();
-    if (composition && focused && !composition->isDescendantOrShadowDescendantOf(*focused)) {
+    if (composition && focused && !composition->isShadowIncludingDescendantOf(*focused)) {
         cancelComposition();
         document->setFocusedElement(focused.get());
     } else
@@ -258,7 +259,7 @@ void Editor::setTextAsChildOfElement(String&& text, Element& element)
 
     // As a side effect this function sets a caret selection after the inserted content.
     // What follows is more expensive if there is a selection, so clear it since it's going to change anyway.
-    Ref document = protectedDocument();
+    Ref document = this->document();
     document->selection().clear();
 
     element.stringReplaceAll(WTFMove(text));
@@ -275,7 +276,7 @@ void Editor::setTextAsChildOfElement(String&& text, Element& element)
 // have a stale selection.
 void Editor::ensureLastEditCommandHasCurrentSelectionIfOpenForMoreTyping()
 {
-    Ref document = protectedDocument();
+    Ref document = this->document();
     TypingCommand::ensureLastEditCommandHasCurrentSelectionIfOpenForMoreTyping(document, document->selection().selection());
 }
 

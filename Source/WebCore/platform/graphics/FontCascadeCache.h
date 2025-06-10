@@ -114,7 +114,7 @@ struct FontDescriptionKey {
         : m_size(description.computedSize())
         , m_fontSelectionRequest(description.fontSelectionRequest())
         , m_flags(makeFlagsKey(description))
-        , m_locale(description.specifiedLocale())
+        , m_locale(description.computedLocale())
     {
         auto featureSettings = description.featureSettings();
         auto variationSettings = description.variationSettings();

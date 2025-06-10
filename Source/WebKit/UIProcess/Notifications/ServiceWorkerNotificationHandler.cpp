@@ -37,7 +37,7 @@ namespace WebKit {
 
 ServiceWorkerNotificationHandler& ServiceWorkerNotificationHandler::singleton()
 {
-    static MainThreadNeverDestroyed<Ref<ServiceWorkerNotificationHandler>> handler = adoptRef(*new ServiceWorkerNotificationHandler);
+    static MainRunLoopNeverDestroyed<Ref<ServiceWorkerNotificationHandler>> handler = adoptRef(*new ServiceWorkerNotificationHandler);
     return handler.get();
 }
 
@@ -101,11 +101,7 @@ void ServiceWorkerNotificationHandler::getPermissionStateSync(WebCore::SecurityO
 
 std::optional<SharedPreferencesForWebProcess> ServiceWorkerNotificationHandler::sharedPreferencesForWebProcess(const IPC::Connection& connection) const
 {
-    if (auto webProcessProxy = WebProcessProxy::processForConnection(connection))
-        return webProcessProxy->sharedPreferencesForWebProcess();
-
-    ASSERT_NOT_REACHED();
-    return std::nullopt;
+    return WebProcessProxy::fromConnection(connection)->sharedPreferencesForWebProcess();
 }
 
 } // namespace WebKit

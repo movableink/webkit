@@ -93,7 +93,7 @@ bool Highlight::addToSetLike(AbstractRange& range)
     }
     // Move to last since SetLike is an ordered set.
     m_highlightRanges.append(WTFMove(m_highlightRanges[index]));
-    m_highlightRanges.remove(index);
+    m_highlightRanges.removeAt(index);
     return false;
 }
 

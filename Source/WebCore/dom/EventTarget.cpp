@@ -37,6 +37,7 @@
 #include "EventNames.h"
 #include "EventPath.h"
 #include "EventTargetConcrete.h"
+#include "EventTargetInlines.h"
 #include "HTMLBodyElement.h"
 #include "HTMLHtmlElement.h"
 #include "InspectorInstrumentation.h"
@@ -132,7 +133,7 @@ void EventTarget::addEventListenerForBindings(const AtomString& eventType, RefPt
         SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE addEventListener(eventType, listener.releaseNonNull(), capture);
     });
 
-    std::visit(visitor, variant);
+    WTF::visit(visitor, variant);
 }
 
 void EventTarget::removeEventListenerForBindings(const AtomString& eventType, RefPtr<EventListener>&& listener, EventListenerOptionsOrBoolean&& variant)
@@ -148,7 +149,7 @@ void EventTarget::removeEventListenerForBindings(const AtomString& eventType, Re
         SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE removeEventListener(eventType, *listener, capture);
     });
 
-    std::visit(visitor, variant);
+    WTF::visit(visitor, variant);
 }
 
 bool EventTarget::removeEventListener(const AtomString& eventType, EventListener& listener, const EventListenerOptions& options)
@@ -333,7 +334,7 @@ void EventTarget::innerInvokeEventListeners(Event& event, EventListenerVector li
     InspectorInstrumentation::willDispatchEvent(context, event);
 
     for (auto& registeredListener : listeners) {
-        if (UNLIKELY(registeredListener->wasRemoved()))
+        if (registeredListener->wasRemoved()) [[unlikely]]
             continue;
 
         if (phase == EventInvokePhase::Capturing && !registeredListener->useCapture())
@@ -356,7 +357,7 @@ void EventTarget::innerInvokeEventListeners(Event& event, EventListenerVector li
         JSC::EnsureStillAliveScope wrapperProtector(callback->wrapper());
         JSC::EnsureStillAliveScope jsFunctionProtector(callback->jsFunction());
 
-        if (UNLIKELY(event.isAutofillEvent())) {
+        if (event.isAutofillEvent()) [[unlikely]] {
             if (!worldForDOMObject(*callback->jsFunction()).allowAutofill())
                 continue; // webkitrequestautofill only fires in a world with autofill capability.
         }
@@ -412,6 +413,17 @@ void EventTarget::removeAllEventListeners()
     }
 
     threadData->setIsInRemoveAllEventListeners(false);
+}
+
+bool EventTarget::hasAnyEventListeners(Vector<AtomString> eventTypes) const
+{
+    if (auto* data = eventTargetData()) {
+        for (const auto& eventType : eventTypes) {
+            if (data->eventListenerMap.contains(eventType))
+                return true;
+        }
+    }
+    return false;
 }
 
 } // namespace WebCore

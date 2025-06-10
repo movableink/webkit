@@ -58,6 +58,10 @@ class Conflict(Command):
             if repo.lower() == repo_name.lower():
                 shas.append(sha)
 
+        if not shas:
+            print(f'No source changes for {repo_name} found in {radar_obj}', file=sys.stderr)
+            return None
+
         integration_branches = []
         for prefix in ('ci', 'conflict'):
             integration_branches.append("{}/{}/{}_{}".format(cls.INTEGRATION_BRANCH_PREFIX, prefix, shas[0][:Commit.HASH_LABEL_SIZE], shas[-1][:Commit.HASH_LABEL_SIZE]))

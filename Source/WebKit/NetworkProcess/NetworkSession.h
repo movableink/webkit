@@ -119,12 +119,13 @@ public:
     virtual HashSet<WebCore::SecurityOriginData> originsWithCredentials() { return { }; }
     virtual void removeCredentialsForOrigins(const Vector<WebCore::SecurityOriginData>&) { }
     virtual void clearCredentials(WallTime) { }
-    virtual void loadImageForDecoding(WebCore::ResourceRequest&&, WebPageProxyIdentifier, size_t, CompletionHandler<void(std::variant<WebCore::ResourceError, Ref<WebCore::FragmentedSharedBuffer>>&&)>&&) { ASSERT_NOT_REACHED(); }
+    virtual void loadImageForDecoding(WebCore::ResourceRequest&&, WebPageProxyIdentifier, size_t, CompletionHandler<void(Expected<Ref<WebCore::FragmentedSharedBuffer>, WebCore::ResourceError>&&)>&&) { ASSERT_NOT_REACHED(); }
 
     PAL::SessionID sessionID() const { return m_sessionID; }
     NetworkProcess& networkProcess() { return m_networkProcess; }
     Ref<NetworkProcess> protectedNetworkProcess();
     WebCore::NetworkStorageSession* networkStorageSession() const;
+    CheckedPtr<WebCore::NetworkStorageSession> checkedNetworkStorageSession() const;
 
     void registerNetworkDataTask(NetworkDataTask&);
     void unregisterNetworkDataTask(NetworkDataTask&);
@@ -187,7 +188,6 @@ public:
 
     NetworkCache::Cache* cache() { return m_cache.get(); }
 
-    PrefetchCache& prefetchCache() { return m_prefetchCache; }
     CheckedRef<PrefetchCache> checkedPrefetchCache();
     void clearPrefetchCache() { m_prefetchCache.clear(); }
 
@@ -242,7 +242,6 @@ public:
     void setPrivateClickMeasurementDebugMode(bool);
     bool privateClickMeasurementDebugModeEnabled() const { return m_privateClickMeasurementDebugModeEnabled; }
 
-    void setBlobRegistryTopOriginPartitioningEnabled(bool);
     void setShouldSendPrivateTokenIPCForTesting(bool);
     bool shouldSendPrivateTokenIPCForTesting() const { return m_shouldSendPrivateTokenIPCForTesting; }
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
@@ -279,7 +278,7 @@ public:
 
 #if HAVE(NW_PROXY_CONFIG)
     virtual void clearProxyConfigData() { }
-    virtual void setProxyConfigData(const Vector<std::pair<Vector<uint8_t>, WTF::UUID>>&) { };
+    virtual void setProxyConfigData(const Vector<std::pair<Vector<uint8_t>, std::optional<WTF::UUID>>>&) { };
 #endif
 
     void setInspectionForServiceWorkersAllowed(bool);
@@ -299,8 +298,13 @@ public:
     Ref<WebCore::ResourceMonitorThrottlerHolder> protectedResourceMonitorThrottler();
 
     void clearResourceMonitorThrottlerData(CompletionHandler<void()>&&);
-    void resetResourceMonitorThrottlerForTesting();
 #endif
+
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    String webContentRestrictionsConfigurationFile() const { return m_webContentRestrictionsConfigurationFile; }
+#endif
+
+    std::optional<WTF::UUID> dataStoreIdentifier() const { return m_dataStoreIdentifier; }
 
 protected:
     NetworkSession(NetworkProcess&, const NetworkSessionCreationParameters&);
@@ -394,7 +398,7 @@ protected:
         double currentMovingAverage { 0 };
     } m_recentHTTPSConnectionTiming;
 
-    Ref<NetworkStorageManager> m_storageManager;
+    const Ref<NetworkStorageManager> m_storageManager;
     String m_cacheStorageDirectory;
 
 #if PLATFORM(COCOA)
@@ -416,6 +420,10 @@ protected:
     RefPtr<WebCore::ResourceMonitorThrottlerHolder> m_resourceMonitorThrottler;
     String m_resourceMonitorThrottlerDirectory;
 #endif
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    String m_webContentRestrictionsConfigurationFile;
+#endif
+    Markable<WTF::UUID> m_dataStoreIdentifier;
 };
 
 } // namespace WebKit

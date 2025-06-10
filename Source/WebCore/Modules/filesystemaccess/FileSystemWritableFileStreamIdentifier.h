@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum class FileSystemWritableFileStreamIdentifierType { };
+struct FileSystemWritableFileStreamIdentifierType;
 using FileSystemWritableFileStreamIdentifier = AtomicObjectIdentifier<FileSystemWritableFileStreamIdentifierType>;
 
 } // namespace WebCore

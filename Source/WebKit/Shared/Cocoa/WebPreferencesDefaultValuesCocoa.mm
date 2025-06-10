@@ -84,29 +84,10 @@ bool defaultRemoveBackgroundEnabled()
 
 #endif // ENABLE(IMAGE_ANALYSIS)
 
-#if HAVE(SC_CONTENT_SHARING_PICKER)
-bool defaultUseSCContentSharingPicker()
-{
-    static bool enabled = false;
-    static std::once_flag flag;
-    std::call_once(flag, [] {
-        enabled = os_feature_enabled(Bilby, Newsroom);
-    });
-    return enabled;
-}
-#endif
-
 } // namespace WebKit
 
 #if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WebPreferencesDefaultValuesCocoaAdditions.mm>)
 #import <WebKitAdditions/WebPreferencesDefaultValuesCocoaAdditions.mm>
-#else
-namespace WebKit {
-bool defaultFixedContainerEdgeSamplingEnabled()
-{
-    return false;
-}
-}
 #endif
 
 #endif // PLATFORM(COCOA)

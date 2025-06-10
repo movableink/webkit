@@ -176,6 +176,9 @@ Ref<WebsiteDataStoreConfiguration> WebsiteDataStoreConfiguration::copy() const
 #if ENABLE(DECLARATIVE_WEB_PUSH)
     copy->m_isDeclarativeWebPushEnabled = this->m_isDeclarativeWebPushEnabled;
 #endif
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    copy->m_webContentRestrictionsConfigurationFile = this->m_webContentRestrictionsConfigurationFile;
+#endif
 
     return copy;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,7 +48,7 @@ OBJC_CLASS AVSampleBufferVideoRenderer;
 OBJC_PROTOCOL(WebSampleBufferVideoRendering);
 
 typedef struct OpaqueCMTimebase* CMTimebaseRef;
-typedef struct __CVBuffer *CVPixelBufferRef;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVPixelBufferRef;
 typedef struct __CVBuffer *CVOpenGLTextureRef;
 typedef struct OpaqueFigVideoTarget *FigVideoTargetRef;
 
@@ -164,10 +164,13 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     void setVideoTarget(const PlatformVideoTarget&) final;
+    void maybeUpdateDisplayLayer();
 #endif
 
 #if PLATFORM(IOS_FAMILY)
     void sceneIdentifierDidChange() final;
+    void applicationWillResignActive() final;
+    void applicationDidBecomeActive() final;
 #endif
 
 #if !RELEASE_LOG_DISABLED
@@ -338,12 +341,6 @@ private:
 
     void isInFullscreenOrPictureInPictureChanged(bool) final;
 
-    void setDecompressionSessionPreferences(bool preferDecompressionSession, bool canFallbackToDecompressionSession) final
-    {
-        m_preferDecompressionSession = preferDecompressionSession;
-        m_canFallbackToDecompressionSession = canFallbackToDecompressionSession;
-    }
-
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     bool supportsLinearMediaPlayer() const final { return true; }
 #endif
@@ -413,7 +410,7 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     RefPtr<MediaPlaybackTarget> m_playbackTarget;
     bool m_shouldPlayToTarget { false };
 #endif
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
     std::unique_ptr<VideoLayerManagerObjC> m_videoLayerManager;
     const Ref<EffectiveRateChangedListener> m_effectiveRateChangedListener;
@@ -425,15 +422,15 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     ProcessIdentity m_resourceOwner;
     bool m_shouldMaintainAspectRatio { true };
     bool m_needsPlaceholderImage { false };
-    bool m_preferDecompressionSession { false };
-    bool m_canFallbackToDecompressionSession { false };
     LoadOptions m_loadOptions;
 #if HAVE(SPATIAL_TRACKING_LABEL)
     String m_defaultSpatialTrackingLabel;
     String m_spatialTrackingLabel;
 #endif
+    AcceleratedVideoMode m_acceleratedVideoMode { AcceleratedVideoMode::Layer };
 #if ENABLE(LINEAR_MEDIA_PLAYER)
-    bool m_usingLinearMediaPlayer { false };
+    bool m_needNewFrameToProgressStaging { false };
+    bool m_updateDisplayLayerPending { false };
     RetainPtr<FigVideoTargetRef> m_videoTarget;
 #endif
 };

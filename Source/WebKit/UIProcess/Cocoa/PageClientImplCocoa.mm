@@ -79,7 +79,12 @@ void PageClientImplCocoa::underPageBackgroundColorWillChange()
 
 void PageClientImplCocoa::underPageBackgroundColorDidChange()
 {
-    [m_webView didChangeValueForKey:@"underPageBackgroundColor"];
+    RetainPtr webView = this->webView();
+
+    [webView didChangeValueForKey:@"underPageBackgroundColor"];
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    [webView _updateTopContentInsetFillCaptureColor];
+#endif
 }
 
 void PageClientImplCocoa::sampledPageTopColorWillChange()
@@ -124,7 +129,7 @@ bool PageClientImplCocoa::scrollingUpdatesDisabledForTesting()
 
 void PageClientImplCocoa::didInsertAttachment(API::Attachment& attachment, const String& source)
 {
-    [m_webView _didInsertAttachment:attachment withSource:source];
+    [m_webView _didInsertAttachment:attachment withSource:source.createNSString().get()];
 }
 
 void PageClientImplCocoa::didRemoveAttachment(API::Attachment& attachment)
@@ -139,17 +144,17 @@ void PageClientImplCocoa::didInvalidateDataForAttachment(API::Attachment& attach
 
 NSFileWrapper *PageClientImplCocoa::allocFileWrapperInstance() const
 {
-    Class cls = [m_webView configuration]._attachmentFileWrapperClass ?: [NSFileWrapper class];
-    return [cls alloc];
+    RetainPtr cls = [m_webView configuration]._attachmentFileWrapperClass ?: [NSFileWrapper class];
+    return [cls.get() alloc];
 }
 
 NSSet *PageClientImplCocoa::serializableFileWrapperClasses() const
 {
-    Class defaultFileWrapperClass = NSFileWrapper.class;
-    Class configuredFileWrapperClass = [m_webView configuration]._attachmentFileWrapperClass;
-    if (configuredFileWrapperClass && configuredFileWrapperClass != defaultFileWrapperClass)
-        return [NSSet setWithObjects:configuredFileWrapperClass, defaultFileWrapperClass, nil];
-    return [NSSet setWithObjects:defaultFileWrapperClass, nil];
+    RetainPtr<Class> defaultFileWrapperClass = NSFileWrapper.class;
+    RetainPtr<Class> configuredFileWrapperClass = [m_webView configuration]._attachmentFileWrapperClass;
+    if (configuredFileWrapperClass && configuredFileWrapperClass.get() != defaultFileWrapperClass.get())
+        return [NSSet setWithObjects:configuredFileWrapperClass.get(), defaultFileWrapperClass.get(), nil];
+    return [NSSet setWithObjects:defaultFileWrapperClass.get(), nil];
 }
 
 #endif
@@ -271,7 +276,7 @@ void PageClientImplCocoa::systemAudioCaptureChanged()
 
 WindowKind PageClientImplCocoa::windowKind()
 {
-    auto window = [m_webView window];
+    RetainPtr window = [m_webView window];
     if (!window)
         return WindowKind::Unparented;
     if ([window isKindOfClass:NSClassFromString(@"_SCNSnapshotWindow")])
@@ -282,12 +287,12 @@ WindowKind PageClientImplCocoa::windowKind()
 #if ENABLE(WRITING_TOOLS)
 void PageClientImplCocoa::proofreadingSessionShowDetailsForSuggestionWithIDRelativeToRect(const WebCore::WritingTools::TextSuggestion::ID& replacementID, WebCore::IntRect selectionBoundsInRootView)
 {
-    [m_webView _proofreadingSessionShowDetailsForSuggestionWithUUID:replacementID relativeToRect:selectionBoundsInRootView];
+    [m_webView _proofreadingSessionShowDetailsForSuggestionWithUUID:replacementID.createNSUUID().get() relativeToRect:selectionBoundsInRootView];
 }
 
 void PageClientImplCocoa::proofreadingSessionUpdateStateForSuggestionWithID(WebCore::WritingTools::TextSuggestion::State state, const WebCore::WritingTools::TextSuggestion::ID& replacementID)
 {
-    [m_webView _proofreadingSessionUpdateState:state forSuggestionWithUUID:replacementID];
+    [m_webView _proofreadingSessionUpdateState:state forSuggestionWithUUID:replacementID.createNSUUID().get()];
 }
 
 static NSString *writingToolsActiveKey = @"writingToolsActive";
@@ -314,12 +319,12 @@ bool PageClientImplCocoa::writingToolsTextReplacementsFinished()
 
 void PageClientImplCocoa::addTextAnimationForAnimationID(const WTF::UUID& uuid, const WebCore::TextAnimationData& data)
 {
-    [m_webView _addTextAnimationForAnimationID:uuid withData:data];
+    [m_webView _addTextAnimationForAnimationID:uuid.createNSUUID().get() withData:data];
 }
 
 void PageClientImplCocoa::removeTextAnimationForAnimationID(const WTF::UUID& uuid)
 {
-    [m_webView _removeTextAnimationForAnimationID:uuid];
+    [m_webView _removeTextAnimationForAnimationID:uuid.createNSUUID().get()];
 }
 
 #endif
@@ -335,17 +340,16 @@ void PageClientImplCocoa::updateScreenTimeWebpageControllerURL(WKWebView *webVie
     if (!PAL::isScreenTimeFrameworkAvailable())
         return;
 
-    if (![webView _screenTimeWebpageController])
-        [webView _installScreenTimeWebpageController];
-
-    RetainPtr screenTimeWebpageController = [webView _screenTimeWebpageController];
-
     RefPtr pageProxy = [webView _page].get();
     if (pageProxy && !pageProxy->preferences().screenTimeEnabled()) {
         [webView _uninstallScreenTimeWebpageController];
         return;
     }
 
+    if ([webView window])
+        [webView _installScreenTimeWebpageControllerIfNeeded];
+
+    RetainPtr screenTimeWebpageController = [webView _screenTimeWebpageController];
     [screenTimeWebpageController setURL:[webView _mainFrameURL]];
 }
 
@@ -372,14 +376,14 @@ void PageClientImplCocoa::setURLIsPlayingVideoForScreenTime(bool value)
 void PageClientImplCocoa::viewIsBecomingVisible()
 {
 #if ENABLE(SCREEN_TIME)
-    [m_webView _updateScreenTimeShieldVisibilityForWindow];
+    [m_webView _updateScreenTimeBasedOnWindowVisibility];
 #endif
 }
 
 void PageClientImplCocoa::viewIsBecomingInvisible()
 {
 #if ENABLE(SCREEN_TIME)
-    [m_webView _updateScreenTimeShieldVisibilityForWindow];
+    [m_webView _updateScreenTimeBasedOnWindowVisibility];
 #endif
 }
 
@@ -436,7 +440,8 @@ void PageClientImplCocoa::setFullScreenClientForTesting(std::unique_ptr<WebFullS
 
 void PageClientImplCocoa::didCommitLayerTree(const RemoteLayerTreeTransaction& transaction)
 {
-    [webView() _updateFixedContainerEdges:transaction.fixedContainerEdges()];
+    if (auto& edges = transaction.fixedContainerEdges())
+        [webView() _updateFixedContainerEdges:*edges];
     [webView() _updateScrollGeometryWithContentOffset:transaction.scrollPosition() contentSize:transaction.contentsSize()];
 }
 

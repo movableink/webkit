@@ -75,7 +75,13 @@ class HooksUnittest(testing.PathTestCase):
             database = Database()
             app.register_blueprint(HookReceiver(database=database, debug=True))
 
-            response = client.post('/hooks', json=dict(ref='refs/heads/main'), headers={'X-GitHub-Event': 'push'})
+            response = client.post(
+                '/hooks',
+                json=dict(
+                    ref='refs/heads/main',
+                    repository=dict(clone_url='https://github.com/WebKit/WebKit.git'),
+                ), headers={'X-GitHub-Event': 'push'},
+            )
             self.assertEqual(response.status_code, 202)
 
             processor = HookProcessor(
@@ -88,7 +94,7 @@ class HooksUnittest(testing.PathTestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json(), [])
 
-        self.assertEqual(captured.stderr.getvalue(), '')
+        self.assertEqual(captured.stderr.getvalue(), "Failed to map 'github.com/WebKit/WebKit.git' to a remote name\n")
 
     @mock_app
     def test_process_branch(self, app=None, client=None):
@@ -96,7 +102,13 @@ class HooksUnittest(testing.PathTestCase):
             database = Database()
             app.register_blueprint(HookReceiver(database=database, debug=True))
 
-            response = client.post('/hooks', json=dict(ref='refs/heads/branch-a'), headers={'X-GitHub-Event': 'push'})
+            response = client.post(
+                '/hooks',
+                json=dict(
+                    ref='refs/heads/branch-a',
+                    repository=dict(clone_url='https://github.com/WebKit/WebKit.git'),
+                ), headers={'X-GitHub-Event': 'push'},
+            )
             self.assertEqual(response.status_code, 202)
 
             processor = HookProcessor(
@@ -109,16 +121,18 @@ class HooksUnittest(testing.PathTestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json(), [])
 
-        self.assertEqual(captured.stderr.getvalue(), "Failed to update 'branch-a' from 'origin'\n")
+        self.assertEqual(captured.stderr.getvalue(), "Failed to map 'github.com/WebKit/WebKit.git' to a remote name\nFailed to update 'branch-a' from 'origin'\n")
 
     @mock_app
     def test_hmac(self, app=None, client=None):
         app.register_blueprint(HookReceiver(debug=True, secret='secret'))
 
         response = client.post(
-            '/hooks', json=dict(ref='refs/heads/main'),
-            headers={
-                'X-Hub-Signature-256': 'sha256=36a089f93b92e972b714e8c0f008873a206c690a8aee946a787eeb0f23e131b2',
+            '/hooks', json=dict(
+                ref='refs/heads/main',
+                repository=dict(clone_url='https://github.com/WebKit/WebKit.git'),
+            ), headers={
+                'X-Hub-Signature-256': 'sha256=6ec3d7636493f6ca147811f4b85ebdf18de31f48f448804ae4e01ec143b431f3',
                 'X-GitHub-Event': 'push',
             },
         )
@@ -147,7 +161,10 @@ class HooksUnittest(testing.PathTestCase):
 
             response = client.post(
                 '/hooks', headers={'X-GitHub-Event': 'pull_request'},
-                json=dict(action='synchronize', number=58),
+                json=dict(
+                    action='synchronize', number=58,
+                    repository=dict(clone_url='https://github.com/WebKit/WebKit.git'),
+                ),
             )
             self.assertEqual(response.status_code, 202)
 
@@ -166,7 +183,7 @@ class HooksUnittest(testing.PathTestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json(), [])
 
-        self.assertEqual('', captured.stderr.getvalue())
+        self.assertEqual("Failed to map 'github.com/WebKit/WebKit.git' to a remote name\n", captured.stderr.getvalue())
         self.assertEqual(
             'action: synchronize\nnumber: 58\n',
             captured.stdout.getvalue(),

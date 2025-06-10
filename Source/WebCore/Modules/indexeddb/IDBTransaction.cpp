@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,6 +53,8 @@
 #include "SerializedScriptValue.h"
 #include "TransactionOperation.h"
 #include "WebCoreOpaqueRootInlines.h"
+#include "WorkerOrWorkletGlobalScope.h"
+#include "WorkerOrWorkletScriptController.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -628,7 +630,7 @@ void IDBTransaction::dispatchEvent(Event& event)
 
     Ref protectedThis { *this };
 
-    EventDispatcher::dispatchEvent({ this, m_database.ptr() }, event);
+    EventDispatcher::dispatchEvent(std::initializer_list<EventTarget*>({ this, m_database.ptr() }), event);
 
     if (!event.isTrusted())
         return;
@@ -1547,6 +1549,15 @@ void IDBTransaction::autoCommit()
         return;
     ASSERT(!m_currentlyCompletingRequest);
 
+    RefPtr context = scriptExecutionContext();
+    RefPtr scope = context ? dynamicDowncast<WorkerOrWorkletGlobalScope>(*context) : nullptr;
+    CheckedPtr scriptController = scope ? scope->script() : nullptr;
+    if (scriptController && scriptController->isTerminatingExecution() && scriptController->isExecutionForbidden()) {
+        // In this case, transaction should be aborted when context is destroyed.
+        RELEASE_LOG(Storage, "IDBTransaction::autoCommit: Disabled as script execution is terminated");
+        return;
+    }
+
     commitInternal();
 }
 
@@ -1554,11 +1565,6 @@ uint64_t IDBTransaction::generateOperationID()
 {
     static std::atomic<uint64_t> currentOperationID(1);
     return currentOperationID += 1;
-}
-
-Ref<IDBDatabase> IDBTransaction::protectedDatabase() const
-{
-    return m_database;
 }
 
 void IDBTransaction::generateIndexKeyForRecord(const IDBResourceIdentifier& requestIdentifier, const IDBIndexInfo& indexInfo, const std::optional<IDBKeyPath>& keyPath, const IDBKeyData& key, const IDBValue& value, std::optional<int64_t> recordID)

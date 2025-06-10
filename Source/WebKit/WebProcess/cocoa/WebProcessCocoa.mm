@@ -59,6 +59,7 @@
 #import <JavaScriptCore/ConfigFile.h>
 #import <JavaScriptCore/Options.h>
 #import <WebCore/AVAssetMIMETypeCache.h>
+#import <algorithm>
 #import <pal/spi/cf/VideoToolboxSPI.h>
 #import <pal/spi/cg/ImageIOSPI.h>
 
@@ -219,7 +220,7 @@ void WebProcess::bindAccessibilityFrameWithData(WebCore::FrameIdentifier frameID
     if (!m_accessibilityRemoteFrameTokenCache)
         m_accessibilityRemoteFrameTokenCache = adoptNS([[NSMutableDictionary alloc] init]);
 
-    auto frameInt = frameID.object().toUInt64();
+    auto frameInt = frameID.toUInt64();
     [m_accessibilityRemoteFrameTokenCache setObject:toNSData(data).get() forKey:@(frameInt)];
 }
 
@@ -236,19 +237,34 @@ id WebProcess::accessibilityFocusedUIElement()
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     if (!isMainRunLoop()) {
+        RefPtr<AXIsolatedTree> fallbackTree = nullptr;
         // Avoid hitting the main thread by getting the focused object from the focused isolated tree.
-        auto tree = findAXTree([] (AXTreePtr tree) -> bool {
-            OptionSet<ActivityState> state;
+        auto tree = findAXTree([&fallbackTree] (AXTreePtr tree) -> bool {
+            bool foundValidTree = false;
             switchOn(tree,
-                [&state] (RefPtr<AXIsolatedTree>& typedTree) {
-                    if (typedTree)
-                        state = typedTree->lockedPageActivityState();
+                [&] (RefPtr<AXIsolatedTree>& typedTree) {
+                    if (typedTree) {
+                        OptionSet<ActivityState> state = typedTree->lockedPageActivityState();
+                        if (state.containsAll({ ActivityState::IsVisible, ActivityState::IsFocused, ActivityState::WindowIsActive }))
+                            foundValidTree = true;
+                        else if (state.containsAll({ ActivityState::IsVisible, ActivityState::WindowIsActive })) {
+                            // When initially loading a page, or when VoiceOver switches from another app back to web
+                            // content, it's possible for the is-focused state to not be synced to the accessibility
+                            // thread in time for the first accessibilityFocusedUIElement request. If this tree is at
+                            // least visible and active, let's assume it will gain official focused status soon and
+                            // use it as a fallback if we don't find some other focused tree.
+                            fallbackTree = typedTree;
+                        }
+                    }
                 }
                 , [] (auto&) { }
             );
-            return state.containsAll({ ActivityState::IsVisible, ActivityState::IsFocused, ActivityState::WindowIsActive });
+            return foundValidTree;
         });
         auto* isolatedTree = std::get_if<RefPtr<AXIsolatedTree>>(&tree);
+        if (!isolatedTree && fallbackTree)
+            isolatedTree = &fallbackTree;
+
         if (!isolatedTree) {
             // There is no isolated tree that has focus. This may be because none has been created yet, or because the one previously focused is being destroyed.
             // In any case, get the focus from the main thread.
@@ -256,7 +272,7 @@ id WebProcess::accessibilityFocusedUIElement()
         }
 
         RefPtr object = (*isolatedTree)->focusedNode();
-        id objectWrapper = object ? object->wrapper() : nil;
+        RetainPtr objectWrapper = object ? object->wrapper() : nil;
         if (objectWrapper) {
             ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             id associatedParent = [objectWrapper accessibilityAttributeValue:@"_AXAssociatedPluginParent"];
@@ -264,7 +280,7 @@ id WebProcess::accessibilityFocusedUIElement()
             if (associatedParent)
                 objectWrapper = associatedParent;
         }
-        return objectWrapper;
+        return objectWrapper.autorelease();
     }
 #endif
 
@@ -342,7 +358,7 @@ static void setVideoDecoderBehaviors(OptionSet<VideoDecoderBehavior> videoDecode
     flags |= kVTRestrictions_RegisterLimitedSystemDecodersWithoutValidation;
 #endif
 
-    PAL::softLinkVideoToolboxVTRestrictVideoDecoders(flags, allowedCodecTypeList.data(), allowedCodecTypeList.size());
+    PAL::softLinkVideoToolboxVTRestrictVideoDecoders(flags, allowedCodecTypeList.span().data(), allowedCodecTypeList.size());
 }
 
 void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& parameters)
@@ -363,7 +379,7 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     unsetenv("BSServiceDomains");
 #endif
 
-    applyProcessCreationParameters(parameters.auxiliaryProcessParameters);
+    applyProcessCreationParameters(WTFMove(parameters.auxiliaryProcessParameters));
 
     setQOS(parameters.latencyQOS, parameters.throughputQOS);
 
@@ -492,15 +508,18 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     // Update process name while holding the Launch Services sandbox extension
     updateProcessName(IsInProcessInitialization::Yes);
 
+#if !ENABLE(LAUNCHSERVICES_SANDBOX_EXTENSION_BLOCKING)
     // Disable relaunch on login. This is also done from -[NSApplication init] by dispatching -[NSApplication disableRelaunchOnLogin] on a non-main thread.
     // This will be in a race with the closing of the Launch Services connection, so call it synchronously here.
     // The cost of calling this should be small, and it is not expected to have any impact on performance.
     _LSSetApplicationInformationItem(kLSDefaultSessionID, _LSGetCurrentApplicationASN(), _kLSPersistenceSuppressRelaunchAtLoginKey, kCFBooleanTrue, nullptr);
 #endif
 
-#if PLATFORM(MAC)
     // App nap must be manually enabled when not running the NSApplication run loop.
     __CFRunLoopSetOptionsReason(__CFRunLoopOptionsEnableAppNap, CFSTR("Finished checkin as application - enable app nap"));
+
+    // Initialize the shared application so method calls using `NSApp` are not no-ops.
+    [NSApplication sharedApplication];
 #endif
 
 #if !ENABLE(CFPREFS_DIRECT_MODE)
@@ -524,14 +543,6 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
 
 #if PLATFORM(MAC)
     scrollerStylePreferenceChanged(parameters.useOverlayScrollbars);
-#endif
-
-#if PLATFORM(IOS) || PLATFORM(VISION)
-    SandboxExtension::consumePermanently(parameters.compilerServiceExtensionHandles);
-#endif
-
-#if PLATFORM(IOS_FAMILY)
-    SandboxExtension::consumePermanently(parameters.dynamicIOKitExtensionHandles);
 #endif
 
 #if PLATFORM(VISION)
@@ -605,18 +616,12 @@ void WebProcess::platformSetWebsiteDataStoreParameters(WebProcessDataStoreParame
 #endif
     SandboxExtension::consumePermanently(parameters.mediaKeyStorageDirectoryExtensionHandle);
     SandboxExtension::consumePermanently(parameters.javaScriptConfigurationDirectoryExtensionHandle);
-#if ENABLE(ARKIT_INLINE_PREVIEW)
+#if ENABLE(ARKIT_INLINE_PREVIEW) && !PLATFORM(IOS_FAMILY)
     SandboxExtension::consumePermanently(parameters.modelElementCacheDirectoryExtensionHandle);
 #endif
 #endif
 #if PLATFORM(IOS_FAMILY)
-    // FIXME: Does the web process still need access to the cookie storage directory? Probably not.
-    if (auto& handle = parameters.cookieStorageDirectoryExtensionHandle)
-        SandboxExtension::consumePermanently(*handle);
-    if (auto& handle = parameters.containerCachesDirectoryExtensionHandle)
-        SandboxExtension::consumePermanently(*handle);
-    if (auto& handle = parameters.containerTemporaryDirectoryExtensionHandle)
-        SandboxExtension::consumePermanently(*handle);
+    grantAccessToContainerTempDirectory(parameters.containerTemporaryDirectoryExtensionHandle);
 #endif
 
     if (!parameters.javaScriptConfigurationDirectory.isEmpty()) {
@@ -656,19 +661,19 @@ void WebProcess::updateProcessName(IsInProcessInitialization isInProcessInitiali
     RetainPtr<NSString> applicationName;
     switch (m_processType) {
     case ProcessType::Inspector:
-        applicationName = [NSString stringWithFormat:WEB_UI_NSSTRING(@"%@ Web Inspector", "Visible name of Web Inspector's web process. The argument is the application name."), (NSString *)m_uiProcessName];
+        applicationName = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"%@ Web Inspector", "Visible name of Web Inspector's web process. The argument is the application name."), m_uiProcessName.createNSString().get()]).get();
         break;
     case ProcessType::ServiceWorker:
-        applicationName = [NSString stringWithFormat:WEB_UI_NSSTRING(@"%@ Service Worker (%@)", "Visible name of Service Worker process. The argument is the application name."), (NSString *)m_uiProcessName, (NSString *)m_registrableDomain.string()];
+        applicationName = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"%@ Service Worker (%@)", "Visible name of Service Worker process. The argument is the application name."), m_uiProcessName.createNSString().get(), m_registrableDomain.string().createNSString().get()]).get();
         break;
     case ProcessType::PrewarmedWebContent:
-        applicationName = [NSString stringWithFormat:WEB_UI_NSSTRING(@"%@ Web Content (Prewarmed)", "Visible name of the web process. The argument is the application name."), (NSString *)m_uiProcessName];
+        applicationName = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"%@ Web Content (Prewarmed)", "Visible name of the web process. The argument is the application name."), m_uiProcessName.createNSString().get()]).get();
         break;
     case ProcessType::CachedWebContent:
-        applicationName = [NSString stringWithFormat:WEB_UI_NSSTRING(@"%@ Web Content (Cached)", "Visible name of the web process. The argument is the application name."), (NSString *)m_uiProcessName];
+        applicationName = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"%@ Web Content (Cached)", "Visible name of the web process. The argument is the application name."), m_uiProcessName.createNSString().get()]).get();
         break;
     case ProcessType::WebContent:
-        applicationName = [NSString stringWithFormat:WEB_UI_NSSTRING(@"%@ Web Content", "Visible name of the web process. The argument is the application name."), (NSString *)m_uiProcessName];
+        applicationName = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"%@ Web Content", "Visible name of the web process. The argument is the application name."), m_uiProcessName.createNSString().get()]).get();
         break;
     }
 
@@ -821,6 +826,16 @@ static void prewarmLogs()
 }
 #endif // PLATFORM(IOS_FAMILY)
 
+static bool shouldIgnoreLogMessage(const char* logSubsystem)
+{
+    auto subsystem = unsafeSpan8(logSubsystem);
+    if (equal(subsystem, "com.apple.xpc"_s))
+        return true;
+    if (equal(subsystem, "com.apple.CoreAnalytics"_s))
+        return true;
+    return false;
+}
+
 void WebProcess::registerLogHook()
 {
     static os_log_hook_t prevHook = nullptr;
@@ -847,6 +862,12 @@ void WebProcess::registerLogHook()
             return;
 #endif
 
+        if (Thread::currentThreadIsRealtime())
+            return;
+
+        if (shouldIgnoreLogMessage(msg->subsystem))
+            return;
+
         auto logChannel = unsafeSpan8IncludingNullTerminator(msg->subsystem);
         auto logCategory = unsafeSpan8IncludingNullTerminator(msg->category);
 
@@ -868,13 +889,14 @@ void WebProcess::setupLogStream()
     if (os_trace_get_mode() != OS_TRACE_MODE_OFF)
         return;
 
+    LogStreamIdentifier logStreamIdentifier { LogStreamIdentifier::generate() };
+
+#if ENABLE(STREAMING_IPC_IN_LOG_FORWARDING)
     static constexpr auto connectionBufferSizeLog2 = 21;
     auto connectionPair = IPC::StreamClientConnection::create(connectionBufferSizeLog2, 1_s);
     if (!connectionPair)
         CRASH();
     auto [streamConnection, serverHandle] = WTFMove(*connectionPair);
-
-    LogStreamIdentifier logStreamIdentifier { LogStreamIdentifier::generate() };
 
     RefPtr logStreamConnection = WTFMove(streamConnection);
     if (!logStreamConnection)
@@ -892,6 +914,18 @@ void WebProcess::setupLogStream()
 
         WebProcess::singleton().registerLogHook();
     });
+#else
+    RefPtr connection = parentProcessConnection();
+    connection->sendWithAsyncReply(Messages::WebProcessProxy::SetupLogStream(getpid(), logStreamIdentifier), [connection, logStreamIdentifier] () {
+        if (connection) {
+#if PLATFORM(IOS_FAMILY)
+            prewarmLogs();
+#endif
+            logClient() = makeUnique<LogClient>(*connection, logStreamIdentifier);
+            WebProcess::singleton().registerLogHook();
+        }
+    });
+#endif
 }
 
 void WebProcess::sendLogOnStream(std::span<const uint8_t> logChannel, std::span<const uint8_t> logCategory, std::span<const uint8_t> logString, os_log_type_t type)
@@ -993,8 +1027,8 @@ static NSURL *origin(WebPage& page)
     auto rootFrameOriginString = page.rootFrameOriginString();
     // +[NSURL URLWithString:] returns nil when its argument is malformed. It's unclear when we would have a malformed URL here,
     // but it happens in practice according to <rdar://problem/14173389>. Leaving an assertion in to catch a reproducible case.
-    ASSERT([NSURL URLWithString:rootFrameOriginString]);
-    return [NSURL URLWithString:rootFrameOriginString];
+    ASSERT([NSURL URLWithString:rootFrameOriginString.createNSString().get()]);
+    return [NSURL URLWithString:rootFrameOriginString.createNSString().get()];
 }
 
 static Vector<String> activePagesOrigins(const HashMap<PageIdentifier, RefPtr<WebPage>>& pageMap)
@@ -1004,11 +1038,11 @@ static Vector<String> activePagesOrigins(const HashMap<PageIdentifier, RefPtr<We
         if (page->usesEphemeralSession())
             continue;
 
-        NSURL *originAsURL = origin(*page);
+        RetainPtr originAsURL = origin(*page);
         if (!originAsURL)
             continue;
 
-        origins.append(WTF::userVisibleString(originAsURL));
+        origins.append(WTF::userVisibleString(originAsURL.get()));
     }
     return origins;
 }
@@ -1340,19 +1374,19 @@ void WebProcess::dispatchSimulatedNotificationsForPreferenceChange(const String&
     // of the system, we must re-post the notification in the Web Content process after updating the default.
     
     if (key == userAccentColorPreferenceKey()) {
-        auto notificationCenter = [NSNotificationCenter defaultCenter];
+        RetainPtr notificationCenter = [NSNotificationCenter defaultCenter];
         [notificationCenter postNotificationName:@"kCUINotificationAquaColorVariantChanged" object:nil];
         [notificationCenter postNotificationName:@"NSSystemColorsWillChangeNotification" object:nil];
         [notificationCenter postNotificationName:NSSystemColorsDidChangeNotification object:nil];
     } else if (key == userHighlightColorPreferenceKey()) {
-        auto notificationCenter = [NSNotificationCenter defaultCenter];
+        RetainPtr notificationCenter = [NSNotificationCenter defaultCenter];
         [notificationCenter postNotificationName:@"NSSystemColorsWillChangeNotification" object:nil];
         [notificationCenter postNotificationName:NSSystemColorsDidChangeNotification object:nil];
     }
 #endif
     if (key == captionProfilePreferenceKey()) {
-        auto notificationCenter = CFNotificationCenterGetLocalCenter();
-        CFNotificationCenterPostNotification(notificationCenter, kMAXCaptionAppearanceSettingsChangedNotification, nullptr, nullptr, true);
+        RetainPtr notificationCenter = CFNotificationCenterGetLocalCenter();
+        CFNotificationCenterPostNotification(notificationCenter.get(), kMAXCaptionAppearanceSettingsChangedNotification, nullptr, nullptr, true);
     }
 }
 
@@ -1435,7 +1469,7 @@ void WebProcess::updatePageScreenProperties()
         return;
     }
 
-    bool allPagesAreOnHDRScreens = allOf(m_pageMap.values(), [] (auto& page) {
+    bool allPagesAreOnHDRScreens = std::ranges::all_of(m_pageMap.values(), [](auto& page) {
         return page && screenSupportsHighDynamicRange(page->localMainFrameView());
     });
     setShouldOverrideScreenSupportsHighDynamicRange(true, allPagesAreOnHDRScreens);
@@ -1541,7 +1575,7 @@ void WebProcess::postNotification(const String& message, std::optional<uint64_t>
 
 void WebProcess::postObserverNotification(const String& message)
 {
-    [[NSNotificationCenter defaultCenter] postNotificationName:message object:nil];
+    [[NSNotificationCenter defaultCenter] postNotificationName:message.createNSString().get() object:nil];
 }
 
 void WebProcess::setNotifyState(const String& name, uint64_t state)

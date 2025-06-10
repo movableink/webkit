@@ -77,8 +77,6 @@ public:
     void getChildren(Vector<AccessibilityUIElement>&);
     void getChildrenWithRange(Vector<AccessibilityUIElement>&, unsigned location, unsigned length);
 
-    bool hasDocumentRoleAncestor() const;
-    bool hasWebApplicationAncestor() const;
     bool isInDescriptionListDetail() const;
     bool isInDescriptionListTerm() const;
     bool isInCell() const;
@@ -140,6 +138,8 @@ public:
     JSRetainPtr<JSStringRef> liveRegionRelevant() const;
     JSRetainPtr<JSStringRef> liveRegionStatus() const;
     JSRetainPtr<JSStringRef> orientation() const;
+    double pageX();
+    double pageY();
     double x();
     double y();
     double width();
@@ -313,6 +313,8 @@ public:
     bool isTextMarkerValid(AccessibilityTextMarker*);
     bool isTextMarkerNull(AccessibilityTextMarker*);
     AccessibilityTextMarker textMarkerForIndex(int);
+    JSRetainPtr<JSStringRef> textMarkerDebugDescription(AccessibilityTextMarker*);
+    JSRetainPtr<JSStringRef> textMarkerRangeDebugDescription(AccessibilityTextMarkerRange*);
 
     void scrollToMakeVisible();
     void scrollToMakeVisibleWithSubFocus(int x, int y, int width, int height);

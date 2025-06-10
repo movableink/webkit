@@ -9,6 +9,7 @@
 #define SkImage_Raster_DEFINED
 
 #include "include/core/SkBitmap.h"
+#include "include/core/SkCPURecorder.h"
 #include "include/core/SkImage.h"
 #include "include/core/SkPixelRef.h"
 #include "include/core/SkRefCnt.h"
@@ -27,6 +28,7 @@ class GrRecordingContext;
 class SkColorSpace;
 class SkData;
 class SkPixmap;
+class SkRecorder;
 class SkSurface;
 enum SkColorType : int;
 struct SkIRect;
@@ -42,7 +44,13 @@ public:
     ~SkImage_Raster() override;
 
     // From SkImage.h
-    bool isValid(GrRecordingContext* context) const override { return true; }
+    bool isValid(GrRecordingContext*) const override { return true; }
+    bool isValid(SkRecorder* recorder) const override {
+        if (!skcpu::AsRecorder(recorder)) {
+            return false;
+        }
+        return true;
+    }
 
     // From SkImage_Base.h
     bool onReadPixels(GrDirectContext*, const SkImageInfo&, void*, size_t, int srcX, int srcY,
@@ -56,7 +64,7 @@ public:
                                 const SkIRect&,
                                 RequiredProperties) const override;
 
-    sk_sp<SkSurface> onMakeSurface(skgpu::graphite::Recorder*, const SkImageInfo&) const override;
+    sk_sp<SkSurface> onMakeSurface(SkRecorder*, const SkImageInfo&) const final;
 
     SkPixelRef* getPixelRef() const { return fBitmap.pixelRef(); }
 

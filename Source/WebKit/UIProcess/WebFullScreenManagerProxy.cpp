@@ -30,7 +30,6 @@
 
 #include "APIFullscreenClient.h"
 #include "APIPageConfiguration.h"
-#include "CoroutineUtilities.h"
 #include "MessageSenderInlines.h"
 #include "RemotePageFullscreenManagerProxy.h"
 #include "WebAutomationSession.h"
@@ -44,6 +43,8 @@
 #include <WebCore/MIMETypeRegistry.h>
 #include <WebCore/ScreenOrientationType.h>
 #include <wtf/CallbackAggregator.h>
+#include <wtf/CoroutineUtilities.h>
+#include <wtf/FileHandle.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
@@ -229,6 +230,9 @@ Awaitable<bool> WebFullScreenManagerProxy::enterFullScreen(IPC::Connection& conn
         enterFullScreenForOwnerElementsInOtherProcesses(frameID, WTFMove(completionHandler));
     } };
 
+    if (RefPtr page = m_page.get(); page && page->protectedPreferences()->siteIsolationEnabled())
+        co_await page->nextPresentationUpdate();
+
     co_return true;
 }
 
@@ -298,11 +302,11 @@ void WebFullScreenManagerProxy::prepareQuickLookImageURL(CompletionHandler<void(
     sharedQuickLookFileQueue().dispatch([buffer = m_imageBuffer, mimeType = crossThreadCopy(m_imageMIMEType), completionHandler = WTFMove(completionHandler)]() mutable {
         auto suffix = makeString('.', WebCore::MIMETypeRegistry::preferredExtensionForMIMEType(mimeType));
         auto [filePath, fileHandle] = FileSystem::openTemporaryFile("QuickLook"_s, suffix);
-        ASSERT(FileSystem::isHandleValid(fileHandle));
+        ASSERT(fileHandle);
 
-        size_t byteCount = FileSystem::writeToFile(fileHandle, buffer->span());
+        auto byteCount = fileHandle.write(buffer->span());
         ASSERT_UNUSED(byteCount, byteCount == buffer->size());
-        FileSystem::closeFile(fileHandle);
+        fileHandle = { };
 
         RunLoop::protectedMain()->dispatch([filePath, completionHandler = WTFMove(completionHandler)]() mutable {
             completionHandler(URL::fileURLWithFileSystemPath(filePath));

@@ -31,6 +31,7 @@
 #include "ApplePayPaymentHandler.h"
 #include "Document.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "JSDOMPromise.h"
 #include "JSDOMPromiseDeferred.h"
@@ -49,6 +50,7 @@
 #include "PaymentRequestUtilities.h"
 #include "PaymentValidationErrors.h"
 #include "ScriptController.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <JavaScriptCore/JSONObject.h>
 #include <JavaScriptCore/ThrowScope.h>
 #include <wtf/ASCIICType.h>

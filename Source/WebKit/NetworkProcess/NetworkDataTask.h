@@ -36,6 +36,7 @@
 #include <WebCore/StoredCredentialsPolicy.h>
 #include <pal/SessionID.h>
 #include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/text/WTFString.h>
@@ -50,12 +51,14 @@ class SharedBuffer;
 
 namespace WebKit {
 
-class NetworkLoadParameters;
 class NetworkSession;
 class PendingDownload;
+
 enum class AuthenticationChallengeDisposition : uint8_t;
 enum class NegotiatedLegacyTLS : bool;
 enum class PrivateRelayed : bool;
+
+struct NetworkLoadParameters;
 
 using RedirectCompletionHandler = CompletionHandler<void(WebCore::ResourceRequest&&)>;
 using ChallengeCompletionHandler = CompletionHandler<void(AuthenticationChallengeDisposition, const WebCore::Credential&)>;
@@ -148,6 +151,7 @@ public:
 
     const NetworkSession* networkSession() const;
     NetworkSession* networkSession();
+    CheckedPtr<NetworkSession> checkedNetworkSession();
 
     virtual void setTimingAllowFailedFlag() { }
 

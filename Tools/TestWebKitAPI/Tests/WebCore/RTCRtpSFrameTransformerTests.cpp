@@ -27,6 +27,7 @@
 
 #if ENABLE(WEB_RTC)
 
+#include <WebCore/ExceptionOr.h>
 #include <WebCore/RTCRtpSFrameTransformer.h>
 #include <WebCore/SFrameUtils.h>
 #include <wtf/Vector.h>
@@ -199,11 +200,11 @@ TEST(RTCRtpSFrameTransformer, EncryptDecrypt)
     auto decryptor = createVideoTransformer(false);
     auto frame = Vector<uint8_t>::from(135, 89, 51, 166, 248, 129, 157, 111, 190, 134, 220);
 
-    auto encryptedResult = encryptor->transform({ frame.data(), frame.size() });
+    auto encryptedResult = encryptor->transform(frame.span());
     EXPECT_TRUE(encryptedResult.has_value());
 
     auto encrypted = WTFMove(encryptedResult.value());
-    auto decryptedResult = decryptor->transform({ encrypted.data(), encrypted.size() });
+    auto decryptedResult = decryptor->transform(encrypted.span());
     EXPECT_TRUE(decryptedResult.has_value());
 
     checkVectorsAreEqual(decryptedResult.value(), frame);
@@ -219,11 +220,11 @@ TEST(RTCRtpSFrameTransformer, EncryptDecryptKeyID0)
 
     auto frame = Vector<uint8_t>::from(135, 89, 51, 166, 248, 129, 157, 111, 190, 134, 220);
 
-    auto encryptedResult = encryptor->transform({ frame.data(), frame.size() });
+    auto encryptedResult = encryptor->transform(frame.span());
     EXPECT_TRUE(encryptedResult.has_value());
 
     auto encrypted = WTFMove(encryptedResult.value());
-    auto decryptedResult = decryptor->transform({ encrypted.data(), encrypted.size() });
+    auto decryptedResult = decryptor->transform(encrypted.span());
     EXPECT_TRUE(decryptedResult.has_value());
 
     checkVectorsAreEqual(decryptedResult.value(), frame);
@@ -241,11 +242,11 @@ TEST(RTCRtpSFrameTransformer, EncryptDecryptAudio)
 
     auto frame = Vector<uint8_t>::from(135, 89, 51, 166, 248, 129, 157, 111, 190, 134, 220, 56);
 
-    auto encryptedResult = encryptor->transform({ frame.data(), frame.size() });
+    auto encryptedResult = encryptor->transform(frame.span());
     EXPECT_TRUE(encryptedResult.has_value());
 
     auto encrypted = WTFMove(encryptedResult.value());
-    auto decryptedResult = decryptor->transform({ encrypted.data(), encrypted.size() });
+    auto decryptedResult = decryptor->transform(encrypted.span());
     EXPECT_TRUE(decryptedResult.has_value());
 
     checkVectorsAreEqual(decryptedResult.value(), frame);

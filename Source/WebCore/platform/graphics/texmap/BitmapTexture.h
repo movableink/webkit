@@ -37,6 +37,10 @@
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
+#if USE(GBM)
+#include "MemoryMappedGPUBuffer.h"
+#endif
+
 typedef void *EGLImage;
 
 namespace WebCore {
@@ -51,6 +55,11 @@ public:
     enum class Flags : uint8_t {
         SupportsAlpha = 1 << 0,
         DepthBuffer = 1 << 1,
+#if USE(GBM)
+        BackedByDMABuf = 1 << 2,
+        ForceLinearBuffer = 1 << 3,
+#endif
+        UseNearestTextureFilter = 1 << 4
     };
 
     static Ref<BitmapTexture> create(const IntSize& size, OptionSet<Flags> flags = { })
@@ -90,11 +99,13 @@ public:
 
     ClipStack& clipStack() { return m_clipStack; }
 
-    void copyFromExternalTexture(GLuint textureID);
-    void copyFromExternalTexture(BitmapTexture& sourceTexture, const IntRect& sourceRect, const IntSize& destinationOffset);
     void copyFromExternalTexture(GLuint sourceTextureID, const IntRect& targetRect, const IntSize& sourceOffset);
 
     OptionSet<TextureMapperFlags> colorConvertFlags() const;
+
+#if USE(GBM)
+    MemoryMappedGPUBuffer* memoryMappedGPUBuffer() const { return m_memoryMappedGPUBuffer.get(); }
+#endif
 
 private:
     BitmapTexture(const IntSize&, OptionSet<Flags>);
@@ -104,6 +115,12 @@ private:
 
     void clearIfNeeded();
     void createFboIfNeeded();
+
+    void createTexture();
+    void allocateTexture();
+#if USE(GBM)
+    bool allocateTextureFromMemoryMappedGPUBuffer();
+#endif
 
     OptionSet<Flags> m_flags;
     IntSize m_size;
@@ -116,6 +133,10 @@ private:
     ClipStack m_clipStack;
     RefPtr<const FilterOperation> m_filterOperation;
     PixelFormat m_pixelFormat { PixelFormat::RGBA8 };
+
+#if USE(GBM)
+    std::unique_ptr<MemoryMappedGPUBuffer> m_memoryMappedGPUBuffer;
+#endif
 };
 
 } // namespace WebCore

@@ -34,7 +34,9 @@
 #include "InspectorInstrumentation.h"
 #include "InspectorPageAgent.h"
 #include "InspectorWebAgentBase.h"
+#include "NetworkResourcesData.h"
 #include "WebSocket.h"
+#include <JavaScriptCore/ContentSearchUtilities.h>
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <JavaScriptCore/RegularExpression.h>
@@ -138,7 +140,7 @@ public:
     void searchInRequest(Inspector::Protocol::ErrorString&, const Inspector::Protocol::Network::RequestId&, const String& query, bool caseSensitive, bool isRegex, RefPtr<JSON::ArrayOf<Inspector::Protocol::GenericTypes::SearchMatch>>&);
 
 protected:
-    InspectorNetworkAgent(WebAgentContext&);
+    InspectorNetworkAgent(WebAgentContext&, const NetworkResourcesData::Settings&);
 
     virtual Inspector::Protocol::Network::LoaderId loaderIdentifier(DocumentLoader*) = 0;
     virtual Inspector::Protocol::Network::FrameId frameIdentifier(DocumentLoader*) = 0;
@@ -246,7 +248,21 @@ private:
         bool isRegex { false };
         Inspector::Protocol::Network::NetworkStage networkStage { Inspector::Protocol::Network::NetworkStage::Response };
 
-        friend bool operator==(const Intercept&, const Intercept&) = default;
+        inline bool operator==(const Intercept& other) const
+        {
+            return url == other.url
+                && caseSensitive == other.caseSensitive
+                && isRegex == other.isRegex
+                && networkStage == other.networkStage;
+        }
+
+        bool matches(const String& url, Inspector::Protocol::Network::NetworkStage);
+
+    private:
+        std::optional<Inspector::ContentSearchUtilities::Searcher> m_urlSearcher;
+
+        // Avoid having to (re)match the searcher each time a URL is requested.
+        HashSet<String> m_knownMatchingURLs;
     };
     Vector<Intercept> m_intercepts;
     MemoryCompactRobinHoodHashMap<String, std::unique_ptr<PendingInterceptRequest>> m_pendingInterceptRequests;

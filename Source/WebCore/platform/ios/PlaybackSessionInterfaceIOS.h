@@ -70,7 +70,7 @@ public:
     void currentTimeChanged(double currentTime, double anchorTime) override = 0;
     void bufferedTimeChanged(double) override = 0;
     void rateChanged(OptionSet<PlaybackSessionModel::PlaybackState>, double playbackRate, double defaultPlaybackRate) override = 0;
-    void seekableRangesChanged(const TimeRanges&, double lastModifiedTime, double liveUpdateInterval) override = 0;
+    void seekableRangesChanged(const PlatformTimeRanges&, double lastModifiedTime, double liveUpdateInterval) override = 0;
     void canPlayFastReverseChanged(bool) override = 0;
     void audioMediaSelectionOptionsChanged(const Vector<MediaSelectionOption>& options, uint64_t selectedIndex) override = 0;
     void legibleMediaSelectionOptionsChanged(const Vector<MediaSelectionOption>& options, uint64_t selectedIndex) override = 0;
@@ -102,7 +102,7 @@ protected:
 #endif
 
     PlaybackSessionInterfaceIOS(PlaybackSessionModel&);
-    PlaybackSessionModel* m_playbackSessionModel { nullptr };
+    WeakPtr<PlaybackSessionModel> m_playbackSessionModel;
 
     // CheckedPtr interface
     uint32_t checkedPtrCount() const final;

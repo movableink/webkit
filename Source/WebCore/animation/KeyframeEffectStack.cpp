@@ -40,6 +40,7 @@
 #include "TranslateTransformOperation.h"
 #include "WebAnimation.h"
 #include "WebAnimationUtilities.h"
+#include <ranges>
 #include <wtf/PointerComparison.h>
 
 namespace WebCore {
@@ -130,17 +131,9 @@ void KeyframeEffectStack::ensureEffectsAreSorted()
     if (m_isSorted || m_effects.size() < 2)
         return;
 
-    std::stable_sort(m_effects.begin(), m_effects.end(), [](auto& lhs, auto& rhs) {
-        RELEASE_ASSERT(lhs.get());
-        RELEASE_ASSERT(rhs.get());
-        
-        auto* lhsAnimation = lhs->animation();
-        auto* rhsAnimation = rhs->animation();
-
-        RELEASE_ASSERT(lhsAnimation);
-        RELEASE_ASSERT(rhsAnimation);
-
-        return compareAnimationsByCompositeOrder(*lhsAnimation, *rhsAnimation);
+    std::ranges::stable_sort(m_effects, compareAnimationsByCompositeOrder, [](auto& weakEffect) -> WebAnimation& {
+        RELEASE_ASSERT(weakEffect->animation());
+        return *weakEffect->animation();
     });
 
     m_isSorted = true;
@@ -157,7 +150,7 @@ OptionSet<AnimationImpact> KeyframeEffectStack::applyKeyframeEffects(RenderStyle
 {
     OptionSet<AnimationImpact> impact;
 
-    auto& previousStyle = previousLastStyleChangeEventStyle ? *previousLastStyleChangeEventStyle : RenderStyle::defaultStyle();
+    auto& previousStyle = previousLastStyleChangeEventStyle ? *previousLastStyleChangeEventStyle : RenderStyle::defaultStyleSingleton();
 
     auto transformRelatedPropertyChanged = [&]() -> bool {
         return !arePointingToEqualData(targetStyle.translate(), previousStyle.translate())

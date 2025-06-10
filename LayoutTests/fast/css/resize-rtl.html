@@ -22,7 +22,7 @@
         document.getElementById("console").appendChild(document.createTextNode(message + "\n"));
     }
 
-    function beginResize(target)
+    async function beginResize(target)
     {
         var x = document.body.offsetLeft + target.offsetLeft;
         var y = document.body.offsetTop + target.offsetTop + target.offsetHeight;
@@ -30,21 +30,21 @@
         mouseX = x + 6;
         mouseY = y - 6;
 
-        eventSender.mouseMoveTo(mouseX, mouseY);
-        eventSender.mouseDown();
+        await eventSender.asyncMouseMoveTo(mouseX, mouseY);
+        await eventSender.asyncMouseDown();
     }
 
-    function endResize()
+    async function endResize()
     {
-        eventSender.mouseUp();
+        await eventSender.asyncMouseUp();
     }
 
-    function resize(deltaX, deltaY)
+    async function resize(deltaX, deltaY)
     {
         mouseX += deltaX;
         mouseY += deltaY;
 
-        eventSender.mouseMoveTo(mouseX, mouseY);
+        await eventSender.asyncMouseMoveTo(mouseX, mouseY);
     }
 
     function assertSize(target, width, height)
@@ -59,45 +59,49 @@
             log("FAIL: '" + target.id + "' resized to (" + actualWidth + ", " + actualHeight + ") instead of (" + width + ", " + height + ").");
     }
 
-    if (window.testRunner) {
-        testRunner.dumpAsText();
+    onload = async () => {
+        if (window.testRunner) {
+            testRunner.dumpAsText();
+            testRunner.waitUntilDone();
 
-        var target = document.getElementById("target");
+            var target = document.getElementById("target");
 
-        beginResize(target);
-        resize(0, 50);
-        endResize();
+            await beginResize(target);
+            await resize(0, 50);
+            await endResize();
 
-        assertSize(target, "50px", "100px");
+            assertSize(target, "50px", "100px");
 
-        beginResize(target);
-        resize(-5, 50);
-        endResize();
+            await beginResize(target);
+            await resize(-5, 50);
+            await endResize();
 
-        assertSize(target, "55px", "150px");
+            assertSize(target, "55px", "150px");
 
-        beginResize(target);
-        resize(5, -50);
-        endResize();
+            await beginResize(target);
+            await resize(5, -50);
+            await endResize();
 
-        assertSize(target, "50px", "100px");
+            assertSize(target, "50px", "100px");
 
-        beginResize(target);
-        resize(-5, 0);
-        resize(0, 10);
-        resize(0, 10);
-        resize(0, 10);
-        resize(0, 10);
-        resize(0, 10);
-        endResize();
+            await beginResize(target);
+            await resize(-5, 0);
+            await resize(0, 10);
+            await resize(0, 10);
+            await resize(0, 10);
+            await resize(0, 10);
+            await resize(0, 10);
+            await endResize();
 
-        assertSize(target, "55px", "150px");
+            assertSize(target, "55px", "150px");
 
-        beginResize(target);
-        resize(-5, -160);
-        resize(5, 10);
-        endResize();
+            await beginResize(target);
+            await resize(-5, -160);
+            await resize(5, 10);
+            await endResize();
 
-        assertSize(target, "55px", "15px");
+            assertSize(target, "55px", "15px");
+            testRunner.notifyDone();
+        }
     }
 </script>

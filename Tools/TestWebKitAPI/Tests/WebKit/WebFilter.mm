@@ -30,7 +30,7 @@
 #import <WebKit/WKProcessPoolPrivate.h>
 #import <WebKit/_WKProcessPoolConfiguration.h>
 
-#if PLATFORM(IOS_FAMILY) && WK_HAVE_C_SPI
+#if PLATFORM(IOS_FAMILY) && WK_HAVE_C_SPI && HAVE(WEBCONTENTANALYSIS_FRAMEWORK)
 
 #import <pal/spi/cocoa/WebFilterEvaluatorSPI.h>
 #import <wtf/SoftLinking.h>

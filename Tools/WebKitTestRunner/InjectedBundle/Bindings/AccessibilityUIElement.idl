@@ -127,6 +127,9 @@ interface AccessibilityUIElement {
     readonly attribute boolean isLastItemInSuggestion;
     readonly attribute boolean isRemoteFrame;
 
+    readonly attribute long pageX;
+    readonly attribute long pageY;
+    // Screen-relative x and y.
     readonly attribute long x;
     readonly attribute long y;
     readonly attribute long width;
@@ -214,6 +217,7 @@ interface AccessibilityUIElement {
     DOMString rangeForLine(long index);
     DOMString rangeForPosition(long x, long y);
     DOMString boundsForRange(unsigned long location, unsigned long length);
+    DOMString boundsForRangeWithPagePosition(unsigned long location, unsigned long length);
     DOMString stringForRange(unsigned long location, unsigned long length);
     DOMString attributedStringForRange(unsigned long location, unsigned long length);
     DOMString attributedStringForElement();
@@ -270,6 +274,7 @@ interface AccessibilityUIElement {
     DOMString stringForTextMarkerRange(AccessibilityTextMarkerRange range);
     DOMString rectsForTextMarkerRange(AccessibilityTextMarkerRange range, DOMString searchText);
     DOMString attributedStringForTextMarkerRange(AccessibilityTextMarkerRange range);
+    DOMString attributedStringForTextMarkerRangeWithDidSpellCheck(AccessibilityTextMarkerRange range);
     DOMString attributedStringForTextMarkerRangeWithOptions(AccessibilityTextMarkerRange range, boolean includeSpellCheck);
     long textMarkerRangeLength(AccessibilityTextMarkerRange range);
     boolean attributedStringForTextMarkerRangeContainsAttribute(DOMString attr, AccessibilityTextMarkerRange range);
@@ -292,6 +297,8 @@ interface AccessibilityUIElement {
     AccessibilityTextMarker previousSentenceStartTextMarkerForTextMarker(AccessibilityTextMarker textMarker);
     AccessibilityTextMarker nextSentenceEndTextMarkerForTextMarker(AccessibilityTextMarker textMarker);
     AccessibilityTextMarkerRange textMarkerRangeMatchesTextNearMarkers(DOMString text, AccessibilityTextMarker startMarker, AccessibilityTextMarker endMarker);
+    DOMString textMarkerDebugDescription(AccessibilityTextMarker marker);
+    DOMString textMarkerRangeDebugDescription(AccessibilityTextMarkerRange range);
 
     // Returns an ordered list of supported actions for an element.
     readonly attribute DOMString supportedActions;
@@ -319,8 +326,6 @@ interface AccessibilityUIElement {
     readonly attribute boolean isMarkAnnotation;
     readonly attribute boolean supportsExpanded;
 
-    readonly attribute boolean hasDocumentRoleAncestor;
-    readonly attribute boolean hasWebApplicationAncestor;
     readonly attribute boolean isInDescriptionListDetail;
     readonly attribute boolean isInDescriptionListTerm;
 

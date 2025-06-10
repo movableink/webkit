@@ -257,6 +257,7 @@ TEST(WebKit, SkipDecidePolicyForResponse)
     });
 
     WKWebViewConfiguration *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"SkipDecidePolicyForResponsePlugIn"];
+    configuration.preferences.fraudulentWebsiteWarningEnabled = NO;
     auto webView = adoptNS([[WKWebView alloc] initWithFrame:CGRectZero configuration:configuration]);
     auto delegate = adoptNS([TestNavigationDelegate new]);
     __block bool responseDelegateCalled { false };

@@ -29,7 +29,6 @@
 
 #include "DeviceOrientationOrMotionPermissionState.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
 #include "SecurityOriginData.h"
 #include <wtf/Function.h>
 #include <wtf/TZoneMalloc.h>

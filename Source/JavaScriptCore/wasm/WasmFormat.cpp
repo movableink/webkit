@@ -29,6 +29,7 @@
 
 #if ENABLE(WEBASSEMBLY)
 
+#include "HeapVerifier.h"
 #include "JSWebAssemblyArray.h"
 #include "JSWebAssemblyStruct.h"
 #include <wtf/CheckedArithmetic.h>
@@ -37,7 +38,7 @@
 
 namespace JSC { namespace Wasm {
 
-constexpr uintptr_t NullWasmCallee = 0;
+constexpr CalleeBits NullWasmCallee = CalleeBits::nullCallee();
 
 Segment::Ptr Segment::create(std::optional<I32InitExpr> offset, uint32_t sizeInBytes, Kind kind)
 {
@@ -77,8 +78,13 @@ void validateWasmValue(uint64_t wasmValue, Type expectedType)
             return;
         }
 
-        if (!isExternref(expectedType) && !isI31ref(expectedType))
-            ASSERT(value.isCell());
+        if (isExternref(expectedType)) {
+            if (value.isCell())
+                HeapVerifier::validateCell(value.asCell());
+        }
+
+        if (isI31ref(expectedType))
+            ASSERT(value.isInt32());
 
         if (isStructref(expectedType))
             ASSERT(jsDynamicCast<JSWebAssemblyStruct*>(value));
@@ -93,7 +99,7 @@ void validateWasmValue(uint64_t wasmValue, Type expectedType)
                 return;
             }
             auto objectPtr = jsCast<WebAssemblyGCObjectBase*>(value);
-            RefPtr<const RTT> objectRTT = objectPtr->rtt();
+            auto objectRTT = objectPtr->rtt();
             ASSERT(objectRTT->isSubRTT(*expectedRTT.get()));
         }
     }

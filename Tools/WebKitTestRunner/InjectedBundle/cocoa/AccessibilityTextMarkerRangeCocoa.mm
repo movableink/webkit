@@ -34,4 +34,3 @@ bool AccessibilityTextMarkerRange::isEqual(AccessibilityTextMarkerRange* other)
 }
 
 } // namespace WTR
-

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -90,10 +90,10 @@ void WebURLSchemeHandlerProxy::taskDidPerformRedirection(WebCore::ResourceLoader
         task->didPerformRedirection(WTFMove(redirectResponse), WTFMove(newRequest), WTFMove(completionHandler));
 }
 
-void WebURLSchemeHandlerProxy::taskDidReceiveResponse(WebCore::ResourceLoaderIdentifier taskIdentifier, const ResourceResponse& response)
+void WebURLSchemeHandlerProxy::taskDidReceiveResponse(WebCore::ResourceLoaderIdentifier taskIdentifier, ResourceResponse&& response)
 {
     if (RefPtr task = m_tasks.get(taskIdentifier))
-        task->didReceiveResponse(response);
+        task->didReceiveResponse(WTFMove(response));
 }
 
 void WebURLSchemeHandlerProxy::taskDidReceiveData(WebCore::ResourceLoaderIdentifier taskIdentifier, Ref<WebCore::SharedBuffer>&& data)

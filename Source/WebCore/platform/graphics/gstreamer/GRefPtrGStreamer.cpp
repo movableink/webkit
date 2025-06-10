@@ -528,6 +528,28 @@ void derefGPtr<GstDeviceMonitor>(GstDeviceMonitor* ptr)
 }
 
 template<>
+GRefPtr<GstDeviceProvider> adoptGRef(GstDeviceProvider* ptr)
+{
+    return GRefPtr<GstDeviceProvider>(ptr, GRefPtrAdopt);
+}
+
+template<>
+GstDeviceProvider* refGPtr<GstDeviceProvider>(GstDeviceProvider* ptr)
+{
+    if (ptr)
+        gst_object_ref(GST_OBJECT_CAST(ptr));
+
+    return ptr;
+}
+
+template<>
+void derefGPtr<GstDeviceProvider>(GstDeviceProvider* ptr)
+{
+    if (ptr)
+        gst_object_unref(ptr);
+}
+
+template<>
 GRefPtr<GstDevice> adoptGRef(GstDevice* ptr)
 {
     return GRefPtr<GstDevice>(ptr, GRefPtrAdopt);
@@ -743,6 +765,28 @@ void derefGPtr<GstEncodingProfile>(GstEncodingProfile* ptr)
 {
     if (ptr)
         gst_encoding_profile_unref(ptr);
+}
+
+template<>
+GRefPtr<GstEncodingContainerProfile> adoptGRef(GstEncodingContainerProfile* ptr)
+{
+    return GRefPtr<GstEncodingContainerProfile>(ptr, GRefPtrAdopt);
+}
+
+template<>
+GstEncodingContainerProfile* refGPtr<GstEncodingContainerProfile>(GstEncodingContainerProfile* ptr)
+{
+    if (ptr)
+        g_object_ref(ptr);
+
+    return ptr;
+}
+
+template<>
+void derefGPtr<GstEncodingContainerProfile>(GstEncodingContainerProfile* ptr)
+{
+    if (ptr)
+        g_object_unref(ptr);
 }
 
 #if USE(GSTREAMER_WEBRTC)

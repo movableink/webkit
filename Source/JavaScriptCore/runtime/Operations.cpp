@@ -94,7 +94,7 @@ JSString* jsTypeStringForValueWithConcurrency(VM& vm, JSGlobalObject* globalObje
         // as null when doing comparisons.
         if (object->structure()->masqueradesAsUndefined(globalObject))
             return vm.smallStrings.undefinedString();
-        if (LIKELY(concurrency == Concurrency::MainThread)) {
+        if (concurrency == Concurrency::MainThread) [[likely]] {
             if (object->isCallable())
                 return vm.smallStrings.functionString();
             return vm.smallStrings.objectString();

@@ -59,7 +59,7 @@ public:
     }
     explicit SecurityOriginData(ProcessQualified<OpaqueOriginIdentifier> opaqueOriginIdentifier)
         : m_data(opaqueOriginIdentifier) { }
-    explicit SecurityOriginData(std::variant<Tuple, ProcessQualified<OpaqueOriginIdentifier>>&& data)
+    explicit SecurityOriginData(Variant<Tuple, ProcessQualified<OpaqueOriginIdentifier>>&& data)
         : m_data(WTFMove(data)) { }
     SecurityOriginData(WTF::HashTableDeletedValueType)
         : m_data { Tuple { WTF::HashTableDeletedValue, { }, { } } } { }
@@ -125,6 +125,7 @@ public:
     // Serialize the security origin to a string that could be used as part of
     // file names. This format should be used in storage APIs only.
     WEBCORE_EXPORT String databaseIdentifier() const;
+    WEBCORE_EXPORT String optionalDatabaseIdentifier() const;
     WEBCORE_EXPORT static std::optional<SecurityOriginData> fromDatabaseIdentifier(StringView);
 
     bool isNull() const
@@ -157,11 +158,11 @@ public:
     String debugString() const { return toString(); }
 #endif
 
-    static bool shouldTreatAsOpaqueOrigin(const URL&);
+    WEBCORE_EXPORT static bool shouldTreatAsOpaqueOrigin(const URL&);
     
-    const std::variant<Tuple, ProcessQualified<OpaqueOriginIdentifier>>& data() const { return m_data; }
+    const Variant<Tuple, ProcessQualified<OpaqueOriginIdentifier>>& data() const { return m_data; }
 private:
-    std::variant<Tuple, ProcessQualified<OpaqueOriginIdentifier>> m_data;
+    Variant<Tuple, ProcessQualified<OpaqueOriginIdentifier>> m_data;
 };
 
 WEBCORE_EXPORT bool operator==(const SecurityOriginData&, const SecurityOriginData&);

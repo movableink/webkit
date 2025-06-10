@@ -99,8 +99,8 @@ public:
     virtual void sizeToContentAutoSizeMaximumSizeDidChange() { }
     virtual void windowKindDidChange() { }
 
-    virtual void adjustTransientZoom(double, WebCore::FloatPoint) { }
-    virtual void commitTransientZoom(double, WebCore::FloatPoint) { }
+    virtual void adjustTransientZoom(double, WebCore::FloatPoint /* originInLayerForPageScale */, WebCore::FloatPoint /* originInVisibleRect */) { }
+    virtual void commitTransientZoom(double, WebCore::FloatPoint /* originInLayerForPageScale */) { }
 
     virtual void viewIsBecomingVisible() { }
     virtual void viewIsBecomingInvisible() { }

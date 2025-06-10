@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -56,6 +56,7 @@
 #import <WebCore/Color.h>
 #import <WebCore/ColorCocoa.h>
 #import <WebCore/ColorSerialization.h>
+#import <WebCore/ContainerNodeInlines.h>
 #import <WebCore/Cursor.h>
 #import <WebCore/Document.h>
 #import <WebCore/EventNames.h>
@@ -81,6 +82,7 @@
 #import <WebCore/ScrollAnimator.h>
 #import <WebCore/SharedBuffer.h>
 #import <WebCore/VoidCallback.h>
+#import <wtf/CheckedArithmetic.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/cf/VectorCF.h>
@@ -107,7 +109,6 @@ PluginInfo PDFPluginBase::pluginInfo()
     info.desc = pdfDocumentTypeDescription();
     info.file = "internal-pdf-viewer"_s;
     info.isApplicationPlugin = true;
-    info.clientLoadPolicy = PluginLoadClientPolicy::Undefined;
     info.bundleIdentifier = "com.apple.webkit.builtinpdfplugin"_s;
 
     MimeClassInfo pdfMimeClassInfo;
@@ -141,7 +142,7 @@ PDFPluginBase::PDFPluginBase(HTMLPlugInElement& element)
 PDFPluginBase::~PDFPluginBase()
 {
 #if ENABLE(PDF_HUD)
-    if (auto* page = m_frame ? m_frame->page() : nullptr)
+    if (RefPtr page = m_frame ? m_frame->page() : nullptr)
         page->removePDFHUD(*this);
 #endif
 
@@ -171,10 +172,10 @@ void PDFPluginBase::teardown()
 
     if (auto existingCompletionHandler = std::exchange(m_pendingOpenCompletionHandler, { })) {
         // FrameInfo can't be default-constructed; the receiving process will ASSERT if it is.
-        FrameInfoData frameInfo;
+        std::optional<FrameInfoData> frameInfo;
         if (m_frame)
             frameInfo = m_frame->info();
-        existingCompletionHandler({ }, WTFMove(frameInfo), { }, { });
+        existingCompletionHandler({ }, WTFMove(frameInfo), { });
     }
 #endif // ENABLE(PDF_HUD)
 
@@ -268,6 +269,30 @@ NSData *PDFPluginBase::originalData() const
     return (__bridge NSData *)m_data.get();
 }
 
+RefPtr<FragmentedSharedBuffer> PDFPluginBase::liveResourceData() const
+{
+    RetainPtr pdfData = liveData();
+
+    if (!pdfData)
+        return nullptr;
+
+    return SharedBuffer::create(pdfData.get());
+}
+
+NSData *PDFPluginBase::liveData() const
+{
+#if PLATFORM(MAC)
+    if (m_activeAnnotation)
+        m_activeAnnotation->commit();
+#endif
+    // Save data straight from the resource instead of PDFKit if the document is
+    // untouched by the user, so that PDFs which PDFKit can't display will still be downloadable.
+    if (m_pdfDocumentWasMutated)
+        return [m_pdfDocument dataRepresentation];
+
+    return originalData();
+}
+
 void PDFPluginBase::ensureDataBufferLength(uint64_t targetLength)
 {
     if (!m_data)
@@ -291,16 +316,18 @@ uint64_t PDFPluginBase::streamedBytes() const
 // it is difficult to prove that any previous stack frame did in fact secure
 // the data lock without having to pass around Locker instances across dataSpanForRange()
 // and its callers. Instead, this method opts out of thread safety analysis
-// and ensures the lock is held when reading m_streamedBytes, else we assert.
-uint64_t PDFPluginBase::streamedBytesForDebugLogging() const WTF_IGNORES_THREAD_SAFETY_ANALYSIS
+// and ensures the lock is held when reading m_streamedBytes, else we give up.
+std::optional<uint64_t> PDFPluginBase::streamedBytesForDebugLogging() const WTF_IGNORES_THREAD_SAFETY_ANALYSIS
 {
+    if (m_streamedDataLock.isHeld())
+        return m_streamedBytes;
+
     if (m_streamedDataLock.tryLock()) {
         Locker locker { AdoptLock, m_streamedDataLock };
         return m_streamedBytes;
     }
 
-    m_streamedDataLock.assertIsOwner();
-    return m_streamedBytes;
+    return std::nullopt;
 }
 
 #endif
@@ -343,7 +370,7 @@ void PDFPluginBase::dataSpanForRange(uint64_t sourcePosition, size_t count, Chec
             return true;
 
         uint64_t dataLength = CFDataGetLength(m_data.get());
-        if (sourcePosition + count > dataLength)
+        if (!isSumSmallerThanOrEqual(sourcePosition, static_cast<uint64_t>(count), dataLength))
             return false;
 
         if (checkValidRanges == CheckValidRanges::No)
@@ -557,7 +584,7 @@ void PDFPluginBase::startByteRangeRequest(NetscapePlugInStreamLoaderClient& stre
 
     auto resourceRequest = documentLoader->request();
     resourceRequest.setRequester(ResourceRequestRequester::Unspecified);
-    resourceRequest.setURL(m_view->mainResourceURL());
+    resourceRequest.setURL(URL { m_view->mainResourceURL() });
     resourceRequest.setHTTPHeaderField(HTTPHeaderName::Range, makeString("bytes="_s, position, '-', position + count - 1));
     resourceRequest.setCachePolicy(ResourceRequestCachePolicy::DoNotUseAnyCache);
 
@@ -614,8 +641,8 @@ void PDFPluginBase::addArchiveResource()
     // FIXME: It's a hack to force add a resource to DocumentLoader. PDF documents should just be fetched as CachedResources.
 
     // Add just enough data for context menu handling and web archives to work.
-    NSDictionary* headers = @{ @"Content-Disposition": (NSString *)m_suggestedFilename, @"Content-Type" : @"application/pdf" };
-    auto response = adoptNS([[NSHTTPURLResponse alloc] initWithURL:m_view->mainResourceURL() statusCode:200 HTTPVersion:(NSString*)kCFHTTPVersion1_1 headerFields:headers]);
+    RetainPtr headers = @{ @"Content-Disposition": m_suggestedFilename.createNSString().get(), @"Content-Type" : @"application/pdf" };
+    RetainPtr response = adoptNS([[NSHTTPURLResponse alloc] initWithURL:m_view->mainResourceURL().createNSURL().get() statusCode:200 HTTPVersion:(NSString*)kCFHTTPVersion1_1 headerFields:headers.get()]);
     ResourceResponse synthesizedResponse(response.get());
 
     RetainPtr data = originalData();
@@ -673,13 +700,17 @@ bool PDFPluginBase::shouldShowHUD() const
 
 void PDFPluginBase::updateHUDVisibility()
 {
-    if (!m_frame)
+    RefPtr frame = m_frame.get();
+    if (!frame)
+        return;
+    RefPtr page = frame->page();
+    if (!page)
         return;
 
     if (shouldShowHUD())
-        m_frame->page()->createPDFHUD(*this, frameForHUDInRootViewCoordinates());
+        page->createPDFHUD(*this, frame->frameID(), frameForHUDInRootViewCoordinates());
     else
-        m_frame->page()->removePDFHUD(*this);
+        page->removePDFHUD(*this);
 }
 #endif
 
@@ -757,6 +788,16 @@ ScrollableArea* PDFPluginBase::enclosingScrollableArea() const
 
     return enclosingScrollableLayer->scrollableArea();
 }
+
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+bool PDFPluginBase::vectorBasedControlsEnabled() const
+{
+    if (RefPtr page = this->page())
+        return page->settings().vectorBasedControlsOnMacEnabled();
+
+    return false;
+}
+#endif
 
 IntRect PDFPluginBase::scrollableAreaBoundingBox(bool*) const
 {
@@ -1012,7 +1053,7 @@ void PDFPluginBase::destroyScrollbar(ScrollbarOrientation orientation)
     if (!scrollbar)
         return;
 
-    willRemoveScrollbar(scrollbar.get(), orientation);
+    willRemoveScrollbar(*scrollbar, orientation);
     scrollbar->removeFromParent();
     scrollbar = nullptr;
 }
@@ -1133,7 +1174,7 @@ void PDFPluginBase::writeItemsToGeneralPasteboard(Vector<PasteboardItem>&& paste
                 .url = sanitizedURL,
                 .title = sanitizedURL.string(),
 #if PLATFORM(MAC)
-                .userVisibleForm = userVisibleString(sanitizedURL),
+                .userVisibleForm = WTF::userVisibleString(sanitizedURL.createNSURL().get()),
 #endif
             };
         }
@@ -1184,29 +1225,29 @@ void PDFPluginBase::save(CompletionHandler<void(const String&, const URL&, std::
         return;
     }
 
-    NSData *data = liveData();
+    RetainPtr data = liveData();
     URL url;
     if (m_frame)
         url = m_frame->url();
-    completionHandler(m_suggestedFilename, url, span(data));
+    completionHandler(m_suggestedFilename, url, span(data.get()));
 }
 
-void PDFPluginBase::openWithPreview(CompletionHandler<void(const String&, FrameInfoData&&, std::span<const uint8_t>, const String&)>&& completionHandler)
+void PDFPluginBase::openWithPreview(CompletionHandler<void(const String&, std::optional<FrameInfoData>&&, std::span<const uint8_t>)>&& completionHandler)
 {
-    FrameInfoData frameInfo;
+    std::optional<FrameInfoData> frameInfo;
     if (m_frame)
         frameInfo = m_frame->info();
 
     if (!m_documentFinishedLoading) {
         if (auto existingCompletionHandler = std::exchange(m_pendingOpenCompletionHandler, WTFMove(completionHandler))) {
             // FrameInfo can't be default-constructed; the receiving process will ASSERT if it is.
-            existingCompletionHandler({ }, WTFMove(frameInfo), { }, { });
+            existingCompletionHandler({ }, WTFMove(frameInfo), { });
         }
         return;
     }
 
-    NSData *data = liveData();
-    completionHandler(m_suggestedFilename, WTFMove(frameInfo), span(data), createVersion4UUIDString());
+    RetainPtr data = liveData();
+    completionHandler(m_suggestedFilename, WTFMove(frameInfo), span(data.get()));
 }
 
 #endif // ENABLE(PDF_HUD)
@@ -1227,7 +1268,7 @@ bool PDFPluginBase::supportsForms() const
 
 bool PDFPluginBase::showContextMenuAtPoint(const IntPoint& point)
 {
-    auto* frameView = m_frame ? m_frame->coreLocalFrame()->view() : nullptr;
+    RefPtr frameView = m_frame ? m_frame->coreLocalFrame()->view() : nullptr;
     if (!frameView)
         return false;
     IntPoint contentsPoint = frameView->contentsToRootView(point);
@@ -1343,7 +1384,7 @@ DocumentEditingContext PDFPluginBase::documentEditingContext(DocumentEditingCont
 #if !LOG_DISABLED
 
 #if HAVE(INCREMENTAL_PDF_APIS)
-static void verboseLog(PDFIncrementalLoader* incrementalLoader, uint64_t streamedBytes, bool documentFinishedLoading)
+static void verboseLog(PDFIncrementalLoader* incrementalLoader, std::optional<uint64_t>&& streamedBytes, bool documentFinishedLoading)
 {
     ASSERT(isMainRunLoop());
 
@@ -1354,7 +1395,12 @@ static void verboseLog(PDFIncrementalLoader* incrementalLoader, uint64_t streame
     if (incrementalLoader)
         incrementalLoader->logState(stream);
 
-    stream << "The main document loader has finished loading " << streamedBytes << " bytes, and is";
+    stream << "The main document loader has finished loading ";
+    if (streamedBytes)
+        stream << *streamedBytes;
+    else
+        stream << "(unknown)";
+    stream << " bytes, and is";
     if (!documentFinishedLoading)
         stream << " not";
     stream << " complete";
@@ -1366,18 +1412,22 @@ static void verboseLog(PDFIncrementalLoader* incrementalLoader, uint64_t streame
 void PDFPluginBase::incrementalLoaderLog(const String& message)
 {
 #if HAVE(INCREMENTAL_PDF_APIS)
-    ensureOnMainRunLoop([this, protectedThis = Ref { *this }, message = message.isolatedCopy(), byteCount = streamedBytesForDebugLogging()] {
-        incrementalLoaderLogWithBytes(message, byteCount);
+    ensureOnMainRunLoop([this, protectedThis = Ref { *this }, message = message.isolatedCopy(), byteCount = streamedBytesForDebugLogging()] mutable {
+        // If we failed to acquire the data lock, try again post main thread hop.
+        byteCount = byteCount.or_else([&protectedThis] {
+            return protectedThis->streamedBytesForDebugLogging();
+        });
+        incrementalLoaderLogWithBytes(message, WTFMove(byteCount));
     });
 #else
     UNUSED_PARAM(message);
 #endif
 }
 
-void PDFPluginBase::incrementalLoaderLogWithBytes(const String& message, uint64_t streamedBytes)
+void PDFPluginBase::incrementalLoaderLogWithBytes(const String& message, std::optional<uint64_t>&& streamedBytes)
 {
     LOG_WITH_STREAM(IncrementalPDF, stream << message);
-    verboseLog(m_incrementalLoader.get(), streamedBytes, m_documentFinishedLoading);
+    verboseLog(m_incrementalLoader.get(), WTFMove(streamedBytes), m_documentFinishedLoading);
     LOG_WITH_STREAM(IncrementalPDFVerbose, stream << message);
 }
 
@@ -1388,7 +1438,7 @@ void PDFPluginBase::registerPDFTest(RefPtr<WebCore::VoidCallback>&& callback)
     ASSERT(!m_pdfTestCallback);
 
     if (m_pdfDocument && callback)
-        callback->handleEvent();
+        callback->invoke();
     else
         m_pdfTestCallback = WTFMove(callback);
 }
@@ -1502,6 +1552,15 @@ Color PDFPluginBase::pluginBackgroundColor()
 {
     static NeverDestroyed color = roundAndClampToSRGBALossy([CocoaColor grayColor].CGColor);
     return color.get();
+}
+
+unsigned PDFPluginBase::countFindMatches(const String& target, WebCore::FindOptions options, unsigned maxMatchCount)
+{
+    if (!target.length())
+        return 0;
+
+    NSStringCompareOptions nsOptions = options.contains(FindOption::CaseInsensitive) ? NSCaseInsensitiveSearch : 0;
+    return [[m_pdfDocument findString:target.createNSString().get() withOptions:nsOptions] count];
 }
 
 } // namespace WebKit

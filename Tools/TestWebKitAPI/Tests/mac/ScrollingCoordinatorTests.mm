@@ -36,7 +36,7 @@
 
 @interface WKWebView (Internal)
 
-- (void)_setContentOffset:(CGPoint)contentOffset animated:(BOOL)animated;
+- (void)_setContentOffsetX:(NSNumber *)x y:(NSNumber *)y animated:(BOOL)animated;
 
 @end
 
@@ -131,11 +131,17 @@ TEST(ScrollingCoordinatorTests, SetContentOffset)
     [webView synchronouslyLoadTestPageNamed:@"simple-tall"];
     [webView waitForNextPresentationUpdate];
 
-    [webView _setContentOffset:CGPointMake(0, 200) animated:NO];
+    [webView _setContentOffsetX:@0 y:@200 animated:NO];
     [webView waitForNextPresentationUpdate];
 
     RetainPtr scrollY = [webView stringByEvaluatingJavaScript:@"window.scrollY"];
     EXPECT_WK_STREQ("200", scrollY.get());
+
+    [webView _setContentOffsetX:@0 y:nil animated:NO];
+    [webView waitForNextPresentationUpdate];
+
+    RetainPtr scrollY2 = [webView stringByEvaluatingJavaScript:@"window.scrollY"];
+    EXPECT_WK_STREQ("200", scrollY2.get());
 }
 
 TEST(ScrollingCoordinatorTests, SetContentOffsetHorizontalRTL)
@@ -146,7 +152,7 @@ TEST(ScrollingCoordinatorTests, SetContentOffsetHorizontalRTL)
     [webView synchronouslyLoadTestPageNamed:@"rtl-sideways-scrolling"];
     [webView waitForNextPresentationUpdate];
 
-    [webView _setContentOffset:CGPointMake(0, 0) animated:NO];
+    [webView _setContentOffsetX:@0 y:@0 animated:NO];
     [webView waitForNextPresentationUpdate];
 
     RetainPtr scrollX = [webView stringByEvaluatingJavaScript:@"window.scrollX"];

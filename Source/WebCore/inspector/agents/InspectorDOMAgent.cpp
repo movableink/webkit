@@ -39,13 +39,11 @@
 #include "AudioTrackConfiguration.h"
 #include "AudioTrackList.h"
 #include "CSSComputedStyleDeclaration.h"
-#include "CSSParser.h"
 #include "CSSPropertyNames.h"
 #include "CSSPropertySourceData.h"
 #include "CSSRule.h"
 #include "CSSRuleList.h"
-#include "CSSSelector.h"
-#include "CSSSelectorList.h"
+#include "CSSSelectorParser.h"
 #include "CSSStyleRule.h"
 #include "CSSStyleSheet.h"
 #include "CharacterData.h"
@@ -73,6 +71,7 @@
 #include "HTMLMediaElement.h"
 #include "HTMLNames.h"
 #include "HTMLScriptElement.h"
+#include "HTMLSlotElement.h"
 #include "HTMLStyleElement.h"
 #include "HTMLTemplateElement.h"
 #include "HTMLVideoElement.h"
@@ -646,6 +645,51 @@ Inspector::Protocol::ErrorStringOr<void> InspectorDOMAgent::requestChildNodes(In
     pushChildNodesToFrontend(nodeId, sanitizedDepth);
 
     return { };
+}
+
+Inspector::CommandResult<std::optional<Inspector::Protocol::DOM::NodeId>> InspectorDOMAgent::requestAssignedSlot(Inspector::Protocol::DOM::NodeId nodeId)
+{
+    Inspector::Protocol::ErrorString errorString;
+
+    RefPtr node = assertNode(errorString, nodeId);
+    if (!node)
+        return makeUnexpected(errorString);
+
+    RefPtr slotElement = node->assignedSlot();
+    if (!slotElement)
+        return { };
+
+    auto slotElementId = pushNodePathToFrontend(errorString, slotElement.get());
+    if (!slotElementId)
+        return makeUnexpected(errorString);
+
+    return { slotElementId };
+}
+
+Inspector::CommandResult<Ref<JSON::ArrayOf<Inspector::Protocol::DOM::NodeId>>> InspectorDOMAgent::requestAssignedNodes(Inspector::Protocol::DOM::NodeId nodeId)
+{
+    Inspector::Protocol::ErrorString errorString;
+
+    RefPtr node = assertNode(errorString, nodeId);
+    if (!node)
+        return makeUnexpected(errorString);
+
+    RefPtr slotElement = dynamicDowncast<HTMLSlotElement>(node);
+    if (!slotElement)
+        return makeUnexpected("Node for given nodeId is not a slot element"_s);
+
+    auto assignedNodeIds = JSON::ArrayOf<Inspector::Protocol::DOM::NodeId>::create();
+    if (const auto* weakAssignedNodes = slotElement->assignedNodes()) {
+        for (const auto& weakAssignedNode : *weakAssignedNodes) {
+            if (RefPtr assignedNode = weakAssignedNode.get()) {
+                auto assignedNodeId = pushNodePathToFrontend(errorString, assignedNode.get());
+                if (!assignedNodeId)
+                    return makeUnexpected(errorString);
+                assignedNodeIds->addItem(assignedNodeId);
+            }
+        }
+    }
+    return assignedNodeIds;
 }
 
 Inspector::Protocol::ErrorStringOr<std::optional<Inspector::Protocol::DOM::NodeId>> InspectorDOMAgent::querySelector(Inspector::Protocol::DOM::NodeId nodeId, const String& selector)
@@ -1476,8 +1520,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorDOMAgent::highlightSelector(co
     if (!document)
         return makeUnexpected("Missing document of frame for given frameId"_s);
 
-    CSSParser parser(*document);
-    auto selectorList = parser.parseSelectorList(selectorString);
+    auto selectorList = CSSSelectorParser::parseSelectorList(selectorString, CSSParserContext(*document));
     if (!selectorList)
         return { };
 
@@ -1931,7 +1974,7 @@ Ref<Inspector::Protocol::DOM::Node> InspectorDOMAgent::buildObjectForNode(Node* 
     case Node::PROCESSING_INSTRUCTION_NODE:
         nodeName = node->nodeName();
         localName = node->localName();
-        FALLTHROUGH;
+        [[fallthrough]];
     case Node::TEXT_NODE:
     case Node::COMMENT_NODE:
     case Node::CDATA_SECTION_NODE:
@@ -2119,7 +2162,7 @@ Ref<Inspector::Protocol::DOM::EventListener> InspectorDOMAgent::buildObjectForEv
                 // If the handler is not actually a function, see if it implements the EventListener interface and use that.
                 auto handleEventValue = handlerObject->get(globalObject, JSC::Identifier::fromString(vm, "handleEvent"_s));
 
-                if (UNLIKELY(scope.exception()))
+                if (scope.exception()) [[unlikely]]
                     scope.clearException();
 
                 if (handleEventValue)
@@ -3125,6 +3168,28 @@ Inspector::Protocol::ErrorStringOr<void> InspectorDOMAgent::setAllowEditingUserA
     return { };
 }
 
+static Inspector::Protocol::DOM::VideoProjectionMetadataKind videoProjectionMetadataKind(VideoProjectionMetadataKind kind)
+{
+    switch (kind) {
+    case VideoProjectionMetadataKind::Unknown:
+        return Inspector::Protocol::DOM::VideoProjectionMetadataKind::Unknown;
+    case VideoProjectionMetadataKind::Equirectangular:
+        return Inspector::Protocol::DOM::VideoProjectionMetadataKind::Equirectangular;
+    case VideoProjectionMetadataKind::HalfEquirectangular:
+        return Inspector::Protocol::DOM::VideoProjectionMetadataKind::HalfEquirectangular;
+    case VideoProjectionMetadataKind::EquiAngularCubemap:
+        return Inspector::Protocol::DOM::VideoProjectionMetadataKind::EquiAngularCubemap;
+    case VideoProjectionMetadataKind::Parametric:
+        return Inspector::Protocol::DOM::VideoProjectionMetadataKind::Parametric;
+    case VideoProjectionMetadataKind::Pyramid:
+        return Inspector::Protocol::DOM::VideoProjectionMetadataKind::Pyramid;
+    case VideoProjectionMetadataKind::AppleImmersiveVideo:
+        return Inspector::Protocol::DOM::VideoProjectionMetadataKind::AppleImmersiveVideo;
+    }
+    ASSERT_NOT_REACHED();
+    return Inspector::Protocol::DOM::VideoProjectionMetadataKind::Unknown;
+}
+
 Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::DOM::MediaStats>> InspectorDOMAgent::getMediaStats(Inspector::Protocol::DOM::NodeId nodeId)
 {
 #if ENABLE(VIDEO)
@@ -3188,6 +3253,22 @@ Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::DOM::MediaStats>> In
             .setHeight(configuration.height())
             .setWidth(configuration.width())
             .release();
+        if (auto metadata = configuration.spatialVideoMetadata()) {
+            auto metadataJSON = Inspector::Protocol::DOM::SpatialVideoMetadata::create()
+                .setWidth(metadata->size.width())
+                .setHeight(metadata->size.height())
+                .setHorizontalFOVDegrees(metadata->horizontalFOVDegrees)
+                .setBaseline(metadata->baseline)
+                .setDisparityAdjustment(metadata->disparityAdjustment)
+                .release();
+            videoJSON->setSpatialVideoMetadata(WTFMove(metadataJSON));
+        }
+        if (auto metadata = configuration.videoProjectionMetadata()) {
+            auto metadataJSON = Inspector::Protocol::DOM::VideoProjectionMetadata::create()
+                .setKind(videoProjectionMetadataKind(metadata->kind))
+                .release();
+            videoJSON->setVideoProjectionMetadata(WTFMove(metadataJSON));
+        }
         stats->setVideo(WTFMove(videoJSON));
     }
 

@@ -34,6 +34,7 @@
 #include <wtf/glib/GUniquePtr.h>
 #include <wtf/glib/RunLoopSourcePriority.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
@@ -58,6 +59,14 @@ static unsigned long maximumNumberOfOutputChannels()
     static int count = 0;
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
+        auto maxFromEnvironment = StringView::fromLatin1(g_getenv("WEBKIT_GST_MAX_NUMBER_OF_AUDIO_OUTPUT_CHANNELS"));
+        if (!maxFromEnvironment.isEmpty()) {
+            if (auto value = WTF::parseInteger<int>(maxFromEnvironment)) {
+                count = *value;
+                return;
+            }
+        }
+
         auto monitor = adoptGRef(gst_device_monitor_new());
         auto caps = adoptGRef(gst_caps_new_empty_simple("audio/x-raw"));
         gst_device_monitor_add_filter(monitor.get(), "Audio/Sink", caps.get());
@@ -150,8 +159,8 @@ AudioDestinationGStreamer::AudioDestinationGStreamer(const CreationOptions& opti
         }
     }
 
-    GstElement* audioConvert = makeGStreamerElement("audioconvert", nullptr);
-    GstElement* audioResample = makeGStreamerElement("audioresample", nullptr);
+    GstElement* audioConvert = makeGStreamerElement("audioconvert"_s);
+    GstElement* audioResample = makeGStreamerElement("audioresample"_s);
 
     auto queue = gst_element_factory_make("queue", nullptr);
     g_object_set(queue, "max-size-buffers", 2, "max-size-bytes", 0, "max-size-time", 0, nullptr);
@@ -167,7 +176,7 @@ AudioDestinationGStreamer::AudioDestinationGStreamer(const CreationOptions& opti
         // 1) Some platform sinks don't support non-interleaved audio without special caps (rialtowebaudiosink).
         // 2) Interaudio sink/src doesn't fully support non-interleaved audio (webkit audio sink)
         // 3) audiomixer doesn't support non-interleaved audio in output pipeline (webkit audio sink)
-        GstElement* capsFilter = makeGStreamerElement("capsfilter", nullptr);
+        GstElement* capsFilter = makeGStreamerElement("capsfilter"_s);
         GRefPtr<GstCaps> caps = adoptGRef(gst_caps_new_simple("audio/x-raw", "layout", G_TYPE_STRING, "interleaved", nullptr));
         g_object_set(capsFilter, "caps", caps.get(), nullptr);
         gst_bin_add(GST_BIN_CAST(m_pipeline.get()), capsFilter);
@@ -182,7 +191,7 @@ AudioDestinationGStreamer::AudioDestinationGStreamer(const CreationOptions& opti
 AudioDestinationGStreamer::~AudioDestinationGStreamer()
 {
     GST_DEBUG_OBJECT(m_pipeline.get(), "Disposing");
-    if (LIKELY(m_src))
+    if (m_src) [[likely]]
         g_object_set(m_src.get(), "destination", nullptr, nullptr);
     unregisterPipeline(m_pipeline);
     disconnectSimpleBusMessageCallback(m_pipeline.get());

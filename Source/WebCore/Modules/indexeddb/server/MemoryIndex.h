@@ -31,6 +31,7 @@
 #include <wtf/CheckedPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/WeakHashSet.h>
 
 namespace WebCore {
 
@@ -79,8 +80,7 @@ public:
 
     void objectStoreCleared();
 
-    MemoryIndexCursor* maybeOpenCursor(const IDBCursorInfo&);
-
+    MemoryIndexCursor* maybeOpenCursor(const IDBCursorInfo&, MemoryBackingStoreTransaction&);
     IndexValueStore* valueStore() { return m_records.get(); }
 
     MemoryObjectStore* objectStore();
@@ -90,6 +90,7 @@ public:
     void cursorDidBecomeDirty(MemoryIndexCursor&);
 
     void notifyCursorsOfValueChange(const IDBKeyData& indexKey, const IDBKeyData& primaryKey);
+    void transactionFinished(MemoryBackingStoreTransaction&);
 
     void writeTransactionStarted(MemoryBackingStoreTransaction&);
     void writeTransactionFinished(MemoryBackingStoreTransaction&);
@@ -108,12 +109,12 @@ private:
     IDBIndexInfo m_info;
     WeakPtr<MemoryObjectStore> m_objectStore;
 
-    CheckedPtr<MemoryBackingStoreTransaction> m_writeTransaction;
+    WeakPtr<MemoryBackingStoreTransaction> m_writeTransaction;
     HashMap<IDBKeyData, Vector<IDBKeyData>, IDBKeyDataHash, IDBKeyDataHashTraits> m_transactionModifiedRecords;
     std::unique_ptr<IndexValueStore> m_records;
 
-    HashMap<IDBResourceIdentifier, std::unique_ptr<MemoryIndexCursor>> m_cursors;
-    HashSet<MemoryIndexCursor*> m_cleanCursors;
+    HashMap<IDBResourceIdentifier, RefPtr<MemoryIndexCursor>> m_cursors;
+    WeakHashSet<MemoryIndexCursor> m_cleanCursors;
 };
 
 } // namespace IDBServer

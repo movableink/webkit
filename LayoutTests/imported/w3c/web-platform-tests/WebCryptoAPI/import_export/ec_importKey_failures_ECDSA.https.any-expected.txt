@@ -619,4 +619,10 @@ PASS Invalid 'use' field: importKey(jwk(private), {name: ECDSA, namedCurve: P-52
 PASS Invalid 'crv' field: importKey(jwk(private), {name: ECDSA, namedCurve: P-256}, true, [sign])
 PASS Invalid 'crv' field: importKey(jwk(private), {name: ECDSA, namedCurve: P-384}, true, [sign])
 PASS Invalid 'crv' field: importKey(jwk(private), {name: ECDSA, namedCurve: P-521}, true, [sign])
+PASS Invalid 'alg' field 'ecdsa': importKey(jwk(private), {name: ECDSA, namedCurve: P-256}, true, [sign])
+PASS Invalid 'alg' field 'ECDSA': importKey(jwk(private), {name: ECDSA, namedCurve: P-256}, true, [sign])
+PASS Invalid 'alg' field 'ecdsa': importKey(jwk(private), {name: ECDSA, namedCurve: P-384}, true, [sign])
+PASS Invalid 'alg' field 'ECDSA': importKey(jwk(private), {name: ECDSA, namedCurve: P-384}, true, [sign])
+PASS Invalid 'alg' field 'ecdsa': importKey(jwk(private), {name: ECDSA, namedCurve: P-521}, true, [sign])
+PASS Invalid 'alg' field 'ECDSA': importKey(jwk(private), {name: ECDSA, namedCurve: P-521}, true, [sign])
 

@@ -47,6 +47,32 @@ enum class PositionAreaAxis : uint8_t {
     Block  = 0b111,
 };
 
+WTF::TextStream& operator<<(WTF::TextStream&, PositionAreaAxis);
+
+// Get the opposite axis of a given axis.
+static inline PositionAreaAxis oppositePositionAreaAxis(PositionAreaAxis axis)
+{
+    switch (axis) {
+    case PositionAreaAxis::Horizontal:
+        return PositionAreaAxis::Vertical;
+    case PositionAreaAxis::Vertical:
+        return PositionAreaAxis::Horizontal;
+
+    case PositionAreaAxis::X:
+        return PositionAreaAxis::Y;
+    case PositionAreaAxis::Y:
+        return PositionAreaAxis::X;
+
+    case PositionAreaAxis::Block:
+        return PositionAreaAxis::Inline;
+    case PositionAreaAxis::Inline:
+        return PositionAreaAxis::Block;
+    }
+
+    ASSERT_NOT_REACHED();
+    return PositionAreaAxis::Horizontal;
+}
+
 static inline bool isPositionAreaAxisLogical(const PositionAreaAxis positionAxis)
 {
     static const uint8_t axisBit = 0b100;
@@ -88,6 +114,8 @@ enum class PositionAreaTrack : uint8_t {
     SpanAll   = 0b111, // All tracks along the axis.
 };
 
+WTF::TextStream& operator<<(WTF::TextStream&, PositionAreaTrack);
+
 static inline PositionAreaTrack flipPositionAreaTrack(PositionAreaTrack track)
 {
     // We need to cast values out of the enum type restrictions in order to do math.
@@ -114,6 +142,8 @@ enum class PositionAreaSelf : bool {
     // Use the writing mode of the element itself.
     Yes
 };
+
+WTF::TextStream& operator<<(WTF::TextStream&, PositionAreaSelf);
 
 // A span in the position-area. position-area requires two spans of opposite
 // axis to determine the containing block area.
@@ -155,7 +185,7 @@ private:
     uint8_t m_self : 1;
 };
 
-WTF::TextStream& operator<<(WTF::TextStream&, const PositionAreaSpan&);
+WTF::TextStream& operator<<(WTF::TextStream&, PositionAreaSpan);
 
 // A position-area is formed by two spans of opposite axes, that uniquely determine
 // the area of the containing block.
@@ -180,6 +210,6 @@ private:
     PositionAreaSpan m_inlineOrYAxis;
 };
 
-WTF::TextStream& operator<<(WTF::TextStream&, const PositionArea&);
+WTF::TextStream& operator<<(WTF::TextStream&, PositionArea);
 
 } // namespace WebCore

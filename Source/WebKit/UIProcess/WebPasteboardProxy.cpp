@@ -83,7 +83,7 @@ RefPtr<WebProcessProxy> WebPasteboardProxy::webProcessProxyForConnection(IPC::Co
 
 #if !PLATFORM(COCOA)
 
-#if !PLATFORM(GTK)
+#if !PLATFORM(GTK) && !PLATFORM(WPE)
 void WebPasteboardProxy::typesSafeForDOMToReadAndWrite(IPC::Connection&, const String&, const String&, std::optional<WebPageProxyIdentifier>, CompletionHandler<void(Vector<String>&&)>&& completionHandler)
 {
     completionHandler({ });
@@ -120,7 +120,7 @@ void WebPasteboardProxy::readBufferFromPasteboard(IPC::Connection&, std::optiona
 }
 #endif
 
-#if !USE(LIBWPE)
+#if !USE(LIBWPE) || PLATFORM(WPE)
 
 void WebPasteboardProxy::readStringFromPasteboard(IPC::Connection&, size_t, const String&, const String&, std::optional<WebPageProxyIdentifier>, CompletionHandler<void(String&&)>&& completionHandler)
 {

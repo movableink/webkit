@@ -69,13 +69,13 @@ if (USE_GBM)
 endif ()
 
 list(APPEND WebKit_SERIALIZATION_IN_FILES
+    Shared/glib/AvailableInputDevices.serialization.in
     Shared/glib/DMABufRendererBufferFormat.serialization.in
     Shared/glib/InputMethodState.serialization.in
     Shared/glib/RendererBufferTransportMode.serialization.in
+    Shared/glib/SelectionData.serialization.in
     Shared/glib/SystemSettings.serialization.in
     Shared/glib/UserMessage.serialization.in
-
-    Shared/gtk/ArgumentCodersGtk.serialization.in
 
     Shared/soup/WebCoreArgumentCodersSoup.serialization.in
 )
@@ -598,6 +598,7 @@ GI_INTROSPECT(WebKit${WEBKITGTK_API_INFIX} ${WEBKITGTK_API_VERSION} webkit${WEBK
 GI_DOCGEN(WebKit${WEBKITGTK_API_INFIX} gtk/gtk${GTK_API_VERSION}-webkitgtk.toml.in
     CONTENT_TEMPLATES
         gtk/gtk${GTK_API_VERSION}-urlmap.js
+        glib/contributing.md
         glib/environment-variables.md
         glib/profiling.md
         glib/remote-inspector.md

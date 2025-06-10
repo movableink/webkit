@@ -28,9 +28,7 @@
 #include "ActiveDOMObject.h"
 #include "CSSFontFace.h"
 #include "CSSPropertyNames.h"
-#include "ExceptionOr.h"
 #include "IDLTypes.h"
-#include <variant>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakPtr.h>
 
@@ -42,6 +40,7 @@ class ArrayBufferView;
 namespace WebCore {
 
 template<typename IDLType> class DOMPromiseProxyWithResolveCallback;
+template<typename> class ExceptionOr;
 
 class FontFace final : public RefCounted<FontFace>, public ActiveDOMObject, public CSSFontFaceClient {
 public:
@@ -61,7 +60,7 @@ public:
     using RefCounted::ref;
     using RefCounted::deref;
     
-    using Source = std::variant<String, RefPtr<JSC::ArrayBuffer>, RefPtr<JSC::ArrayBufferView>>;
+    using Source = Variant<String, RefPtr<JSC::ArrayBuffer>, RefPtr<JSC::ArrayBufferView>>;
     static Ref<FontFace> create(ScriptExecutionContext&, const String& family, Source&&, const Descriptors&);
     static Ref<FontFace> create(ScriptExecutionContext*, CSSFontFace&);
     virtual ~FontFace();

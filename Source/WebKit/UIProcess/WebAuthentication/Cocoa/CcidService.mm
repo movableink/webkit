@@ -188,8 +188,8 @@ void CcidService::updateSlots(NSArray *slots)
         [self removeObserver];
         return;
     case TKSmartCardSlotStateValidCard: {
-        auto* smartCard = [object makeSmartCard];
-        callOnMainRunLoop([service = m_service, smartCard = retainPtr(smartCard)] () mutable {
+        RetainPtr smartCard = [object makeSmartCard];
+        callOnMainRunLoop([service = m_service, smartCard = WTFMove(smartCard)] () mutable {
             if (!service)
                 return;
             service->onValidCard(WTFMove(smartCard));

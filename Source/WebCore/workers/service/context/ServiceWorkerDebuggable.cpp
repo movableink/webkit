@@ -55,7 +55,7 @@ void ServiceWorkerDebuggable::connect(FrontendChannel& channel, bool isAutomatic
 {
     if (RefPtr serviceWorkerThreadProxy = m_serviceWorkerThreadProxy.get()) {
 #if ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
-        serviceWorkerThreadProxy->inspectorProxy().connectToWorker(channel, *this, isAutomaticInspection, immediatelyPause);
+        serviceWorkerThreadProxy->inspectorProxy().connectToWorker(channel, isAutomaticInspection, immediatelyPause);
 #else
         UNUSED_PARAM(isAutomaticInspection);
         UNUSED_PARAM(immediatelyPause);

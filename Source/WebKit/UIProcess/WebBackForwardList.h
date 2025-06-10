@@ -64,8 +64,11 @@ public:
     WebBackForwardListItem* currentItem() const;
     RefPtr<WebBackForwardListItem> protectedCurrentItem() const;
     WebBackForwardListItem* backItem() const;
+    RefPtr<WebBackForwardListItem> protectedBackItem() const;
     WebBackForwardListItem* forwardItem() const;
+    RefPtr<WebBackForwardListItem> protectedForwardItem() const;
     WebBackForwardListItem* itemAtIndex(int) const;
+    RefPtr<WebBackForwardListItem> protectedItemAtIndex(int) const;
 
     RefPtr<WebBackForwardListItem> goBackItemSkippingItemsWithoutUserGesture() const;
     RefPtr<WebBackForwardListItem> goForwardItemSkippingItemsWithoutUserGesture() const;
@@ -107,3 +110,7 @@ private:
 };
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebBackForwardList)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::BackForwardList; }
+SPECIALIZE_TYPE_TRAITS_END()

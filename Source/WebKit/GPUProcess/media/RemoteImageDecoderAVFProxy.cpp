@@ -36,6 +36,7 @@
 #include <CoreGraphics/CGImage.h>
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/ImageDecoderAVFObjC.h>
+#include <WebCore/NativeImage.h>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
 

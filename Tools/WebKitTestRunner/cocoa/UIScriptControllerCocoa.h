@@ -98,6 +98,7 @@ private:
     void cookiesForDomain(JSStringRef, JSValueRef callback) final;
 
     JSObjectRef fixedContainerEdgeColors() const final;
+    void cancelFixedColorExtensionFadeAnimations() const final;
 };
 
 } // namespace WTR

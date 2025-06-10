@@ -255,7 +255,7 @@ TEST(TLSVersion, Preconnect)
     }, HTTPServer::Protocol::HttpsWithLegacyTLS);
 
     auto webView = adoptNS([WKWebView new]);
-    [webView loadHTMLString:makeString("<head><link rel='preconnect' href='https://127.0.0.1:"_s, server.port(), "/'></link></head>"_s) baseURL:nil];
+    [webView loadHTMLString:makeString("<head><link rel='preconnect' href='https://127.0.0.1:"_s, server.port(), "/'></link></head>"_s).createNSString().get() baseURL:nil];
 
     auto delegate = adoptNS([TestNavigationDelegate new]);
     [webView setNavigationDelegate:delegate.get()];

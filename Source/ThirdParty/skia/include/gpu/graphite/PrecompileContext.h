@@ -34,6 +34,23 @@ public:
      */
     void purgePipelinesNotUsedInMs(std::chrono::milliseconds msNotUsed);
 
+    enum class StatOptions {
+        // Emit histograms (using the SK_HISTOGRAM* macros) for Skia's Precompiled Pipeline
+        // usage:
+        //    Skia.Graphite.Precompile.NormalPreemptedByPrecompile
+        //    Skia.Graphite.Precompile.UnpreemptedPrecompilePipelines
+        //    Skia.Graphite.Precompile.UnusedPrecompiledPipelines
+        kPrecompile,
+        // Emit histograms (using the SK_HISTOGRAM* macros) for Skia's Pipeline cache usage:
+        //    Skia.Graphite.PipelineCache.PipelineUsesInEpoch
+        kPipelineCache,
+    };
+
+    /**
+     * Emit histograms histograms related to Skia's Pipelines (c.f. the StatOptions enum).
+     */
+    void reportPipelineStats(StatOptions option = StatOptions::kPrecompile);
+
     /**
      * Precompile one specific Pipeline that has been previously serialized. Serialized pipeline
      * keys can be acquired via the ContextOptions::PipelineCallback.
@@ -42,6 +59,14 @@ public:
      * @return                        true if a Pipeline was created from the key; false otherwise
      */
     bool precompile(sk_sp<SkData> serializedPipelineKey);
+
+    /**
+     * Get a human-readable version of a serialized pipeline key.
+     *
+     * @param serializedPipelineKey   serialized Pipeline key.
+     * @return                        A human-readable version of the provided key; "" on failure.
+     */
+    std::string getPipelineLabel(sk_sp<SkData> serializedPipelineKey);
 
     // Provides access to functions that aren't part of the public API.
     PrecompileContextPriv priv();

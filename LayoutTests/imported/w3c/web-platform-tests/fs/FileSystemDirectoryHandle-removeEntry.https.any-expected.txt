@@ -10,5 +10,5 @@ PASS removeEntry() with ".." name should fail
 PASS removeEntry() with a path separator should fail.
 FAIL removeEntry() while the file has an open writable fails assert_unreached: Should have rejected: undefined Reached unreachable code
 FAIL removeEntry() of a directory while a containing file has an open writable fails promise_rejects_dom: function "function() { throw e }" threw object "UnknownError: The operation failed for an unknown transient reason (e.g. out of memory)." that is not a DOMException NoModificationAllowedError: property "code" is equal to 0, expected 7
-FAIL createWritable after removeEntry succeeds but doesnt recreate the file assert_unreached: Should have rejected: undefined Reached unreachable code
+PASS createWritable after removeEntry succeeds but doesnt recreate the file
 

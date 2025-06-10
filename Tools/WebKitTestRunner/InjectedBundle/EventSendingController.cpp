@@ -41,8 +41,6 @@
 
 namespace WTR {
 
-static const float ZoomMultiplierRatio = 1.2f;
-
 struct MenuItemPrivateData {
     MenuItemPrivateData(WKBundlePageRef page, WKContextMenuItemRef item) :
         m_page(page),
@@ -475,45 +473,33 @@ JSValueRef EventSendingController::contextClick(JSContextRef context)
 
 void EventSendingController::textZoomIn()
 {
-    auto& injectedBundle = InjectedBundle::singleton();
-    double zoomFactor = WKBundlePageGetTextZoomFactor(injectedBundle.page()->page()) * ZoomMultiplierRatio;
-
     auto body = adoptWK(WKMutableDictionaryCreate());
     setValue(body, "SubMessage", "SetTextZoom");
-    setValue(body, "ZoomFactor", zoomFactor);
+    setValue(body, "ZoomIn", true);
     postSynchronousPageMessage("EventSender", body);
 }
 
 void EventSendingController::textZoomOut()
 {
-    auto& injectedBundle = InjectedBundle::singleton();
-    double zoomFactor = WKBundlePageGetTextZoomFactor(injectedBundle.page()->page()) / ZoomMultiplierRatio;
-
     auto body = adoptWK(WKMutableDictionaryCreate());
     setValue(body, "SubMessage", "SetTextZoom");
-    setValue(body, "ZoomFactor", zoomFactor);
+    setValue(body, "ZoomIn", false);
     postSynchronousPageMessage("EventSender", body);
 }
 
 void EventSendingController::zoomPageIn()
 {
-    auto& injectedBundle = InjectedBundle::singleton();
-    double zoomFactor = WKBundlePageGetPageZoomFactor(injectedBundle.page()->page()) * ZoomMultiplierRatio;
-
     auto body = adoptWK(WKMutableDictionaryCreate());
     setValue(body, "SubMessage", "SetPageZoom");
-    setValue(body, "ZoomFactor", zoomFactor);
+    setValue(body, "ZoomIn", true);
     postSynchronousPageMessage("EventSender", body);
 }
 
 void EventSendingController::zoomPageOut()
 {
-    auto& injectedBundle = InjectedBundle::singleton();
-    double zoomFactor = WKBundlePageGetPageZoomFactor(injectedBundle.page()->page()) / ZoomMultiplierRatio;
-
     auto body = adoptWK(WKMutableDictionaryCreate());
     setValue(body, "SubMessage", "SetPageZoom");
-    setValue(body, "ZoomFactor", zoomFactor);
+    setValue(body, "ZoomIn", false);
     postSynchronousPageMessage("EventSender", body);
 }
 

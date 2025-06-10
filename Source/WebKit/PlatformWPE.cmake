@@ -114,8 +114,10 @@ if (USE_GBM)
 endif ()
 
 list(APPEND WebKit_SERIALIZATION_IN_FILES
+    Shared/glib/AvailableInputDevices.serialization.in
     Shared/glib/InputMethodState.serialization.in
     Shared/glib/RendererBufferTransportMode.serialization.in
+    Shared/glib/SelectionData.serialization.in
     Shared/glib/SystemSettings.serialization.in
     Shared/glib/UserMessage.serialization.in
 
@@ -402,6 +404,7 @@ list(APPEND WebKit_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/UIProcess/Launcher/glib"
     "${WEBKIT_DIR}/UIProcess/Launcher/libwpe"
     "${WEBKIT_DIR}/UIProcess/Notifications/glib/"
+    "${WEBKIT_DIR}/UIProcess/Gamepad/wpe"
     "${WEBKIT_DIR}/UIProcess/geoclue"
     "${WEBKIT_DIR}/UIProcess/glib"
     "${WEBKIT_DIR}/UIProcess/gstreamer"
@@ -437,6 +440,10 @@ list(APPEND WebKit_LIBRARIES
     ${GLIB_GMODULE_LIBRARIES}
     ${LIBSOUP_LIBRARIES}
 )
+
+if (ANDROID)
+    list(APPEND WebKit_PRIVATE_LIBRARIES intl)
+endif ()
 
 if (USE_ATK)
     list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
@@ -760,6 +767,7 @@ GI_INTROSPECT(WPEWebKit ${WPE_API_VERSION} wpe/webkit.h
 )
 GI_DOCGEN(WPEWebKit wpe/wpewebkit.toml.in
     CONTENT_TEMPLATES
+        glib/contributing.md
         glib/environment-variables.md
         glib/profiling.md
         glib/remote-inspector.md
@@ -768,12 +776,14 @@ GI_DOCGEN(WPEWebKit wpe/wpewebkit.toml.in
 if (ENABLE_2022_GLIB_API)
     set(WPE_WEB_PROCESS_EXTENSION_API_NAME "WPEWebProcessExtension")
     set(WPE_WEB_PROCESS_EXTENSION_PACKAGE_NAME "wpe-web-process-extension")
+    set(WPE_WEB_PROCESS_EXTENSION_HEADER_NAME "webkit-web-process-extension.h")
 else ()
     set(WPE_WEB_PROCESS_EXTENSION_API_NAME "WPEWebExtension")
     set(WPE_WEB_PROCESS_EXTENSION_PACKAGE_NAME "wpe-web-extension")
+    set(WPE_WEB_PROCESS_EXTENSION_HEADER_NAME "webkit-web-extension.h")
 endif ()
 
-GI_INTROSPECT(${WPE_WEB_PROCESS_EXTENSION_API_NAME} ${WPE_API_VERSION} wpe/${WPE_WEB_PROCESS_EXTENSION_PACKAGE_NAME}.h
+GI_INTROSPECT(${WPE_WEB_PROCESS_EXTENSION_API_NAME} ${WPE_API_VERSION} wpe/${WPE_WEB_PROCESS_EXTENSION_HEADER_NAME}
     TARGET WebKit
     PACKAGE ${WPE_WEB_PROCESS_EXTENSION_PACKAGE_NAME}
     IDENTIFIER_PREFIX WebKit

@@ -45,7 +45,7 @@ constexpr auto freshlyCreatedTimeout = 5_s;
 
 static HashMap<WebExtensionControllerIdentifier, WeakPtr<WebExtensionController>>& webExtensionControllers()
 {
-    static MainThreadNeverDestroyed<HashMap<WebExtensionControllerIdentifier, WeakPtr<WebExtensionController>>> controllers;
+    static MainRunLoopNeverDestroyed<HashMap<WebExtensionControllerIdentifier, WeakPtr<WebExtensionController>>> controllers;
     return controllers;
 }
 
@@ -82,13 +82,15 @@ WebExtensionController::~WebExtensionController()
     unloadAll();
 }
 
-WebExtensionControllerParameters WebExtensionController::parameters() const
+WebExtensionControllerParameters WebExtensionController::parameters(const API::PageConfiguration& pageConfiguration) const
 {
     return {
         .identifier = identifier(),
         .testingMode = inTestingMode(),
-        .contextParameters = WTF::map(extensionContexts(), [](auto& context) {
-            return context->parameters();
+        .contextParameters = WTF::map(extensionContexts(), [&](auto& context) {
+            bool isForThisExtension = context->isURLForThisExtension(pageConfiguration.requiredWebExtensionBaseURL());
+            auto includePrivilegedIdentifier = isForThisExtension ? WebExtensionContext::IncludePrivilegedIdentifier::Yes : WebExtensionContext::IncludePrivilegedIdentifier::No;
+            return context->parameters(includePrivilegedIdentifier);
         })
     };
 }

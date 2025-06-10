@@ -27,7 +27,6 @@
 
 #include "BackgroundFetchRecordIdentifier.h"
 #include "ExceptionData.h"
-#include "ExceptionOr.h"
 #include "NavigationPreloadState.h"
 #include "NotificationData.h"
 #include "PushPermissionState.h"
@@ -70,6 +69,7 @@ struct ServiceWorkerData;
 struct ServiceWorkerRegistrationData;
 struct ServiceWorkerRoute;
 struct WorkerFetchResult;
+template<typename> class ExceptionOr;
 
 class SWClientConnection : public RefCounted<SWClientConnection> {
 public:

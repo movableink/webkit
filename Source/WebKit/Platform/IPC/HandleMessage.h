@@ -26,12 +26,12 @@
 #pragma once
 
 #include "ArgumentCoders.h"
-#include "CoroutineUtilities.h"
 #include "Logging.h"
 #include "MessageArgumentDescriptions.h"
 #include "MessageNames.h"
 #include "StreamServerConnection.h"
 #include <wtf/CompletionHandler.h>
+#include <wtf/CoroutineUtilities.h>
 #include <wtf/ProcessID.h>
 #include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/StdLibExtras.h>
@@ -172,10 +172,34 @@ void callMemberFunction(T* object, MF U::* function, Connection& connection, Arg
         }, std::forward<ArgsTuple>(tuple));
 }
 
+template<typename T, typename U, typename MF, typename ArgsTuple>
+void callMemberFunctionCoroutine(T* object, MF U::* function, ArgsTuple&& tuple)
+{
+    [&] -> Task {
+        Ref protectedObject { *object };
+        co_await std::apply([&](auto&&... args) {
+            // Use of object without protection is safe here since std::apply() runs synchronously.
+            SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE return (object->*function)(std::forward<decltype(args)>(args)...);
+        }, std::forward<ArgsTuple>(tuple));
+    }();
+}
+
+template<typename T, typename U, typename MF, typename ArgsTuple>
+void callMemberFunctionCoroutine(T* object, MF U::* function, Connection& connection, ArgsTuple&& tuple)
+{
+    [&] -> Task {
+        Ref protectedObject { *object };
+        co_await std::apply([&](auto&&... args) {
+            // Use of object without protection is safe here since std::apply() runs synchronously.
+            SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE return (object->*function)(connection, std::forward<decltype(args)>(args)...);
+        }, std::forward<ArgsTuple>(tuple));
+    }();
+}
+
 template<typename T, typename U, typename MF, typename ArgsTuple, typename CH>
 void callMemberFunctionCoroutine(T* object, MF U::* function, ArgsTuple&& tuple, CompletionHandler<CH>&& completionHandler)
 {
-    [&] (auto completionHandler) -> WebKit::Task {
+    [&] (auto completionHandler) -> Task {
         Ref protectedObject { *object };
         // Use of object without protection is safe here since std::apply() runs synchronously and object is protected for the lifetime of the Task.
         completionHandler(co_await std::apply([&](auto&&... args) {
@@ -187,7 +211,7 @@ void callMemberFunctionCoroutine(T* object, MF U::* function, ArgsTuple&& tuple,
 template<typename T, typename U, typename MF, typename ArgsTuple, typename CH>
 void callMemberFunctionCoroutine(T* object, MF U::* function, Connection& connection, ArgsTuple&& tuple, CompletionHandler<CH>&& completionHandler)
 {
-    [&] (auto completionHandler) -> WebKit::Task {
+    [&] (auto completionHandler) -> Task {
         Ref protectedObject { *object };
         // Use of object without protection is safe here since std::apply() runs synchronously and object is protected for the lifetime of the Task.
         completionHandler(co_await std::apply([&](auto&&... args) {
@@ -199,7 +223,7 @@ void callMemberFunctionCoroutine(T* object, MF U::* function, Connection& connec
 template<typename T, typename U, typename MF, typename ArgsTuple, typename CH>
 void callMemberFunctionCoroutineVoid(T* object, MF U::* function, ArgsTuple&& tuple, CompletionHandler<CH>&& completionHandler)
 {
-    [&] (auto completionHandler) -> WebKit::Task {
+    [&] (auto completionHandler) -> Task {
         Ref protectedObject { *object };
         // Use of object without protection is safe here since std::apply() runs synchronously and object is protected for the lifetime of the Task.
         co_await std::apply([&](auto&&... args) {
@@ -212,7 +236,7 @@ void callMemberFunctionCoroutineVoid(T* object, MF U::* function, ArgsTuple&& tu
 template<typename T, typename U, typename MF, typename ArgsTuple, typename CH>
 void callMemberFunctionCoroutineVoid(T* object, MF U::* function, Connection& connection, ArgsTuple&& tuple, CompletionHandler<CH>&& completionHandler)
 {
-    [&] (auto completionHandler) -> WebKit::Task {
+    [&] (auto completionHandler) -> Task {
         Ref protectedObject { *object };
         // Use of object without protection is safe here since std::apply() runs synchronously and object is protected for the lifetime of the Task.
         co_await std::apply([&](auto&&... args) {
@@ -267,6 +291,7 @@ struct MethodSignatureValidation<R(MethodArgumentTypes...)>
     : MethodSignatureValidationImpl<std::tuple<>, std::tuple<MethodArgumentTypes...>> {
     using ReturnType = R;
     static constexpr bool returnsVoid = std::is_same_v<R, void>;
+    static constexpr bool returnsAwaitableVoid = std::is_same_v<R, Awaitable<void>>;
 };
 
 template<typename R, typename... MethodArgumentTypes>
@@ -274,14 +299,15 @@ struct MethodSignatureValidation<R(MethodArgumentTypes...) const>
     : MethodSignatureValidation<R(MethodArgumentTypes...)> {
     using ReturnType = R;
     static constexpr bool returnsVoid = std::is_same_v<R, void>;
+    static constexpr bool returnsAwaitableVoid = std::is_same_v<R, Awaitable<void>>;
 };
 
 template<typename> struct AwaitableReturnTuple;
-template<> struct AwaitableReturnTuple<WebKit::Awaitable<void>> {
+template<> struct AwaitableReturnTuple<Awaitable<void>> {
     using Type = std::tuple<>;
     static constexpr bool hasParameters = false;
 };
-template<typename... T> struct AwaitableReturnTuple<WebKit::Awaitable<T...>> {
+template<typename... T> struct AwaitableReturnTuple<Awaitable<T...>> {
     using Type = std::tuple<T...>;
     static constexpr bool hasParameters = true;
 };
@@ -295,14 +321,21 @@ void handleMessage(C& connection, Decoder& decoder, T* object, MF U::* function)
     static_assert(std::is_same_v<typename ValidationType::MessageArguments, typename MessageType::Arguments>);
 
     auto arguments = decoder.decode<typename MessageType::Arguments>();
-    if (UNLIKELY(!arguments))
+    if (!arguments) [[unlikely]]
         return;
 
     logMessage(connection, MessageType::name(), object, *arguments);
-    if constexpr (ValidationType::expectsConnectionArgument)
-        callMemberFunction(object, function, connection, WTFMove(*arguments));
-    else
-        callMemberFunction(object, function, WTFMove(*arguments));
+    if constexpr (ValidationType::returnsAwaitableVoid) {
+        if constexpr (ValidationType::expectsConnectionArgument)
+            callMemberFunctionCoroutine(object, function, connection, WTFMove(*arguments));
+        else
+            callMemberFunctionCoroutine(object, function, WTFMove(*arguments));
+    } else {
+        if constexpr (ValidationType::expectsConnectionArgument)
+            callMemberFunction(object, function, connection, WTFMove(*arguments));
+        else
+            callMemberFunction(object, function, WTFMove(*arguments));
+    }
 }
 
 template<typename MessageType, typename T, typename U, typename MF>
@@ -312,7 +345,7 @@ void handleMessageWithoutUsingIPCConnection(Decoder& decoder, T* object, MF U::*
     static_assert(std::is_same_v<typename ValidationType::MessageArguments, typename MessageType::Arguments>);
 
     auto arguments = decoder.decode<typename MessageType::Arguments>();
-    if (UNLIKELY(!arguments))
+    if (!arguments) [[unlikely]]
         return;
 
     callMemberFunction(object, function, WTFMove(*arguments));
@@ -325,7 +358,7 @@ bool handleMessageSynchronous(Connection& connection, Decoder& decoder, UniqueRe
     static_assert(std::is_same_v<typename ValidationType::MessageArguments, typename MessageType::Arguments>);
 
     auto arguments = decoder.decode<typename MessageType::Arguments>();
-    if (UNLIKELY(!arguments))
+    if (!arguments) [[unlikely]]
         return true; // Message handler found, but decode failed.
 
     static_assert(std::is_same_v<typename ValidationType::CompletionHandlerArguments, typename MessageType::ReplyArguments>);
@@ -353,7 +386,7 @@ void handleMessageSynchronous(StreamServerConnection& connection, Decoder& decod
     static_assert(std::is_same_v<typename ValidationType::MessageArguments, typename MessageType::Arguments>);
 
     auto arguments = decoder.decode<typename MessageType::Arguments>();
-    if (UNLIKELY(!arguments))
+    if (!arguments) [[unlikely]]
         return;
 
     static_assert(std::is_same_v<typename ValidationType::CompletionHandlerArguments, typename MessageType::ReplyArguments>);
@@ -374,10 +407,10 @@ void handleMessageAsync(C& connection, Decoder& decoder, T* object, MF U::* func
     static_assert(std::is_same_v<typename ValidationType::MessageArguments, typename MessageType::Arguments>);
 
     auto arguments = decoder.decode<typename MessageType::Arguments>();
-    if (UNLIKELY(!arguments))
+    if (!arguments) [[unlikely]]
         return;
     auto replyID = decoder.decode<IPC::AsyncReplyID>();
-    if (UNLIKELY(!replyID))
+    if (!replyID) [[unlikely]]
         return;
 
     if constexpr (ValidationType::returnsVoid)
@@ -419,7 +452,7 @@ void handleMessageAsyncWithoutUsingIPCConnection(Decoder& decoder, Function<void
     static_assert(std::is_same_v<typename ValidationType::MessageArguments, typename MessageType::Arguments>);
 
     auto arguments = decoder.decode<typename MessageType::Arguments>();
-    if (UNLIKELY(!arguments))
+    if (!arguments) [[unlikely]]
         return;
 
     static_assert(std::is_same_v<typename ValidationType::CompletionHandlerArguments, typename MessageType::ReplyArguments>);
@@ -442,7 +475,7 @@ void handleMessageAsyncWithReplyID(Connection& connection, Decoder& decoder, T* 
     static_assert(std::is_same_v<typename ValidationType::MessageArguments, std::tuple<IPC::AsyncReplyID>>);
 
     auto replyID = decoder.decode<Connection::AsyncReplyID>();
-    if (UNLIKELY(!replyID))
+    if (!replyID) [[unlikely]]
         return;
 
     logMessage(connection, MessageType::name(), object, std::tuple<>());

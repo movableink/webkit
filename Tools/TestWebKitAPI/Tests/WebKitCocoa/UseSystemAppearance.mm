@@ -31,6 +31,7 @@
 #import "Test.h"
 #import "TestWKWebView.h"
 #import <WebKit/WKUserContentControllerPrivate.h>
+#import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/WebScriptWorld.h>
 #import <WebKit/WebViewPrivate.h>
 #import <WebKit/_WKUserStyleSheet.h>

@@ -229,7 +229,6 @@ PASS mask-origin
 PASS mask-repeat
 PASS mask-size
 PASS mask-type
-PASS masonry-auto-flow
 PASS math-style
 PASS max-block-size
 PASS max-height
@@ -296,6 +295,7 @@ PASS ruby-position
 PASS rx
 PASS ry
 PASS scale
+PASS scroll-behavior
 PASS scroll-margin-block-end
 PASS scroll-margin-block-start
 PASS scroll-margin-bottom

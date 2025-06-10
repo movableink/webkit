@@ -45,6 +45,7 @@
 #import "WebExtensionTabIdentifier.h"
 #import "WebExtensionUtilities.h"
 #import "WebExtensionWindowIdentifier.h"
+#import "WebPageProxy.h"
 #import <WebCore/ImageBufferUtilitiesCG.h>
 #import <wtf/CallbackAggregator.h>
 
@@ -102,7 +103,7 @@ void WebExtensionContext::tabsCreate(std::optional<WebPageProxyIdentifier> webPa
     }
 
     if (parameters.url)
-        configuration.url = parameters.url.value();
+        configuration.url = parameters.url.value().createNSURL().get();
 
     [delegate webExtensionController:extensionController->wrapper() openNewTabUsingConfiguration:configuration forExtensionContext:wrapper() completionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)](id<WKWebExtensionTab> newTab, NSError *error) mutable {
         if (error) {
@@ -433,16 +434,17 @@ void WebExtensionContext::tabsCaptureVisibleTab(WebPageProxyIdentifier webPagePr
             }
 
 #if USE(APPKIT)
-            auto cgImage = [image CGImageForProposedRect:nil context:nil hints:nil];
+            RetainPtr<CGImage> cgImage = [image CGImageForProposedRect:nil context:nil hints:nil];
 #else
-            auto cgImage = image.CGImage;
+            RetainPtr<CGImage> cgImage = image.CGImage;
 #endif
             if (!cgImage) {
                 completionHandler({ });
                 return;
             }
 
-            completionHandler(URL { WebCore::dataURL(cgImage, toMIMEType(imageFormat), imageQuality) });
+            // FIXME: This is a static analysis false positive.
+            SUPPRESS_UNRETAINED_ARG completionHandler(URL { WebCore::dataURL(cgImage.get(), toMIMEType(imageFormat), imageQuality) });
         });
     });
 }
@@ -468,6 +470,12 @@ void WebExtensionContext::tabsSendMessage(WebExtensionTabIdentifier tabIdentifie
         return;
     }
 
+    auto *webView = tab->webView();
+    if (!webView) {
+        completionHandler({ });
+        return;
+    }
+
     auto targetContentWorldType = isURLForAnyExtension(tab->url()) ? WebExtensionContentWorldType::Main : WebExtensionContentWorldType::ContentScript;
 
     auto processes = tab->processes(WebExtensionEventListenerType::RuntimeOnMessage, targetContentWorldType);
@@ -476,12 +484,19 @@ void WebExtensionContext::tabsSendMessage(WebExtensionTabIdentifier tabIdentifie
         return;
     }
 
-    ASSERT(processes.size() == 1);
-    auto process = processes.takeAny();
+    auto targetParametersCopy = targetParameters;
+    targetParametersCopy.pageProxyIdentifier = webView._protectedPage->identifier();
 
-    process->sendWithAsyncReply(Messages::WebExtensionContextProxy::DispatchRuntimeMessageEvent(targetContentWorldType, messageJSON, targetParameters, senderParameters), [protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)](String&& replyJSON) mutable {
-        completionHandler(WTFMove(replyJSON));
-    }, identifier());
+    Ref callbackAggregator = EagerCallbackAggregator<void(Expected<String, WebExtensionError>)>::create(WTFMove(completionHandler), { });
+
+    for (Ref process : processes) {
+        process->sendWithAsyncReply(Messages::WebExtensionContextProxy::DispatchRuntimeMessageEvent(targetContentWorldType, messageJSON, targetParametersCopy, senderParameters), [callbackAggregator](String&& replyJSON) {
+            if (replyJSON.isNull())
+                return;
+
+            callbackAggregator.get()(WTFMove(replyJSON));
+        }, identifier());
+    }
 }
 
 void WebExtensionContext::tabsConnect(WebExtensionTabIdentifier tabIdentifier, WebExtensionPortChannelIdentifier channelIdentifier, String name, const WebExtensionMessageTargetParameters& targetParameters, const WebExtensionMessageSenderParameters& senderParameters, CompletionHandler<void(Expected<void, WebExtensionError>&&)>&& completionHandler)
@@ -506,21 +521,26 @@ void WebExtensionContext::tabsConnect(WebExtensionTabIdentifier tabIdentifier, W
         return;
     }
 
-    ASSERT(processes.size() == 1);
-    RefPtr process = processes.takeAny();
+    size_t handledCount = 0;
+    size_t totalExpected = processes.size();
 
-    process->sendWithAsyncReply(Messages::WebExtensionContextProxy::DispatchRuntimeConnectEvent(targetContentWorldType, channelIdentifier, name, targetParameters, senderParameters), [=, this, protectedThis = Ref { *this }](HashCountedSet<WebPageProxyIdentifier>&& addedPortCounts) mutable {
-        // Flip target and source worlds since we're adding the opposite side of the port connection, sending from target back to source.
-        addPorts(targetContentWorldType, sourceContentWorldType, channelIdentifier, WTFMove(addedPortCounts));
+    for (Ref process : processes) {
+        process->sendWithAsyncReply(Messages::WebExtensionContextProxy::DispatchRuntimeConnectEvent(targetContentWorldType, channelIdentifier, name, targetParameters, senderParameters), [=, this, protectedThis = Ref { *this }, &handledCount](HashCountedSet<WebPageProxyIdentifier>&& addedPortCounts) mutable {
+            // Flip target and source worlds since we're adding the opposite side of the port connection, sending from target back to source.
+            addPorts(targetContentWorldType, sourceContentWorldType, channelIdentifier, WTFMove(addedPortCounts));
 
-        fireQueuedPortMessageEventsIfNeeded(targetContentWorldType, channelIdentifier);
-        fireQueuedPortMessageEventsIfNeeded(sourceContentWorldType, channelIdentifier);
+            fireQueuedPortMessageEventsIfNeeded(targetContentWorldType, channelIdentifier);
+            fireQueuedPortMessageEventsIfNeeded(sourceContentWorldType, channelIdentifier);
 
-        firePortDisconnectEventIfNeeded(sourceContentWorldType, targetContentWorldType, channelIdentifier);
+            firePortDisconnectEventIfNeeded(sourceContentWorldType, targetContentWorldType, channelIdentifier);
 
-        clearQueuedPortMessages(targetContentWorldType, channelIdentifier);
-        clearQueuedPortMessages(sourceContentWorldType, channelIdentifier);
-    }, identifier());
+            if (++handledCount < totalExpected)
+                return;
+
+            clearQueuedPortMessages(targetContentWorldType, channelIdentifier);
+            clearQueuedPortMessages(sourceContentWorldType, channelIdentifier);
+        }, identifier());
+    }
 
     completionHandler({ });
 }
@@ -600,10 +620,10 @@ void WebExtensionContext::tabsExecuteScript(WebPageProxyIdentifier webPageProxyI
         if (parameters.code)
             scriptData = SourcePair { parameters.code.value(), URL { } };
         else {
-            NSString *filePath = parameters.files.value().first();
-            scriptData = sourcePairForResource(filePath, *this);
+            RetainPtr filePath = parameters.files.value().first().createNSString();
+            scriptData = sourcePairForResource(filePath.get(), *this);
             if (!scriptData) {
-                completionHandler(toWebExtensionError(apiName, nullString(), @"Invalid resource: %@", filePath));
+                completionHandler(toWebExtensionError(apiName, nullString(), @"Invalid resource: %@", filePath.get()));
                 return;
             }
         }

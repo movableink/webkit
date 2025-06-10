@@ -811,6 +811,28 @@ WI.DOMNode = class DOMNode extends WI.Object
         target.DOMAgent.requestChildNodes(this.id, depth, mycallback.bind(this));
     }
 
+    async requestAssignedSlot()
+    {
+        let target = WI.assumingMainTarget();
+        let {slotElementId} = await target.DOMAgent.requestAssignedSlot(this.id);
+        return WI.domManager.nodeForId(slotElementId);
+    }
+
+    async requestAssignedNodes()
+    {
+        let target = WI.assumingMainTarget();
+        let {assignedNodeIds} = await target.DOMAgent.requestAssignedNodes(this.id);
+
+        let assignedNodes = [];
+        for (let assignedNodeId of assignedNodeIds) {
+            let assignedNode = WI.domManager.nodeForId(assignedNodeId);
+            console.assert(assignedNode, this, assignedNodeId);
+            if (assignedNode)
+                assignedNodes.push(assignedNode);
+        }
+        return assignedNodes;
+    }
+
     getOuterHTML(callback)
     {
         console.assert(!this._destroyed, this);
@@ -1084,10 +1106,10 @@ WI.DOMNode = class DOMNode extends WI.Object
         if (event.target === this || !event.target.isAncestor(this))
             return;
 
-        let domEvent = Object.shallowCopy(event.data.domEvent);
-        domEvent.originator = event.target;
-
-        this._addDOMEvent(domEvent);
+        this._addDOMEvent({
+            ...event.data.domEvent,
+            originator: event.target,
+        });
     }
 
     _addDOMEvent(domEvent)
@@ -1374,6 +1396,8 @@ WI.DOMNode.LayoutFlag = {
     Rendered: "rendered",
     Event: "event",
     Scrollable: "scrollable",
+    SlotAssigned: "slot-assigned",
+    SlotFilled: "slot-filled",
 
     // These are mutually exclusive.
     Flex: "flex",

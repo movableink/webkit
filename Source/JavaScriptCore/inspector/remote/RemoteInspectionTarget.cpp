@@ -57,7 +57,7 @@ bool RemoteInspectionTarget::allowsInspectionByPolicy() const
         static bool allowInternalSecurityPolicies = os_variant_allows_internal_security_policies("com.apple.WebInspector");
         if (allowInternalSecurityPolicies && !RemoteInspector::singleton().isSimulatingCustomerInstall())
             return true;
-        FALLTHROUGH;
+        [[fallthrough]];
 #endif
     case Inspectable::NoIgnoringInternalPolicies:
         return false;
@@ -104,15 +104,16 @@ void RemoteInspectionTarget::pauseWaitingForAutomaticInspection()
     ASSERT(allowsInspectionByPolicy());
     ASSERT(automaticInspectionAllowed());
 
-    while (RemoteInspector::singleton().waitingForAutomaticInspection(targetIdentifier())) {
+    m_isPausedWaitingForAutomaticInspection = true;
+    while (m_isPausedWaitingForAutomaticInspection) {
         if (RunLoop::cycle(JSGlobalObjectDebugger::runLoopMode()) == RunLoop::CycleResult::Stop)
             break;
     }
 }
 
-void RemoteInspectionTarget::unpauseForInitializedInspector()
+void RemoteInspectionTarget::unpauseForResolvedAutomaticInspection()
 {
-    RemoteInspector::singleton().setupCompleted(targetIdentifier());
+    m_isPausedWaitingForAutomaticInspection = false;
 }
 
 void RemoteInspectionTarget::setPresentingApplicationPID(std::optional<ProcessID>&& pid)

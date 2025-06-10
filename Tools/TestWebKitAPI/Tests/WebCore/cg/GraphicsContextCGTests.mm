@@ -33,6 +33,7 @@
 #import <WebCore/DestinationColorSpace.h>
 #import <WebCore/GraphicsContextCG.h>
 #import <WebCore/IOSurface.h>
+#import <WebCore/NativeImage.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 
 @interface TestDrawingLayer : CALayer

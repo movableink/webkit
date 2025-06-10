@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2008 Torch Mobile, Inc.
  *
  * This library is free software; you can redistribute it and/or
@@ -28,7 +28,6 @@
 #include "GlyphMetricsMap.h"
 #include "GlyphPage.h"
 #include "RenderingResourceIdentifier.h"
-#include <variant>
 #include <wtf/BitVector.h>
 #include <wtf/Hasher.h>
 #include <wtf/WeakPtr.h>
@@ -175,6 +174,10 @@ public:
     void setAvgCharWidth(float avgCharWidth) { m_avgCharWidth = avgCharWidth; }
 
     FloatRect boundsForGlyph(Glyph) const;
+#if USE(CORE_TEXT)
+    static constexpr size_t inlineGlyphRunCapacity = 128;
+    Vector<FloatRect, inlineGlyphRunCapacity> boundsForGlyphs(std::span<const Glyph>) const;
+#endif
 
     // Should the result of this function include the results of synthetic bold?
     enum class SyntheticBoldInclusion {
@@ -285,6 +288,9 @@ private:
     DerivedFonts& ensureDerivedFontData() const;
 
     FloatRect platformBoundsForGlyph(Glyph) const;
+#if USE(CORE_TEXT)
+    Vector<FloatRect, inlineGlyphRunCapacity> platformBoundsForGlyphs(const Vector<Glyph, inlineGlyphRunCapacity>&) const;
+#endif
     float platformWidthForGlyph(Glyph) const;
     Path platformPathForGlyph(Glyph) const;
 
@@ -363,7 +369,7 @@ private:
     struct SomeEmojiGlyphs {
         BitVector colorGlyphs;
     };
-    using EmojiType = std::variant<NoEmojiGlyphs, AllEmojiGlyphs, SomeEmojiGlyphs>;
+    using EmojiType = Variant<NoEmojiGlyphs, AllEmojiGlyphs, SomeEmojiGlyphs>;
     EmojiType m_emojiType { NoEmojiGlyphs { } };
 
 #if PLATFORM(COCOA)
@@ -433,6 +439,58 @@ ALWAYS_INLINE FloatRect Font::boundsForGlyph(Glyph glyph) const
     return bounds;
 }
 
+#if USE(CORE_TEXT)
+ALWAYS_INLINE Vector<FloatRect, Font::inlineGlyphRunCapacity> Font::boundsForGlyphs(std::span<const Glyph> glyphs) const
+{
+    const auto glyphCount = glyphs.size();
+    if (!glyphCount) [[unlikely]]
+        return { };
+
+    if (glyphCount == 1) [[unlikely]]
+        return { boundsForGlyph(glyphs[0]) };
+
+    Vector<Glyph, inlineGlyphRunCapacity> glyphsNeedingMeasurement;
+    Vector<size_t, inlineGlyphRunCapacity> positionsNeedingMeasurement;
+
+    Vector<FloatRect, inlineGlyphRunCapacity> glyphBounds(glyphCount, FloatRect());
+    for (size_t glyphIndex = 0; glyphIndex < glyphCount; ++glyphIndex) {
+        const auto& glyph = glyphs[glyphIndex];
+        if (isZeroWidthSpaceGlyph(glyph))
+            continue;
+
+        if (m_glyphToBoundsMap) {
+            auto bounds = m_glyphToBoundsMap->metricsForGlyph(glyph);
+            if (bounds.width() != cGlyphSizeUnknown) {
+                glyphBounds[glyphIndex] = bounds;
+                continue;
+            }
+        }
+
+        glyphsNeedingMeasurement.append(glyph);
+        positionsNeedingMeasurement.append(glyphIndex);
+    }
+
+    if (glyphsNeedingMeasurement.isEmpty())
+        return glyphBounds;
+
+    if (!m_glyphToBoundsMap)
+        m_glyphToBoundsMap = makeUnique<GlyphMetricsMap<FloatRect>>();
+
+    auto measuredBounds = platformBoundsForGlyphs(glyphsNeedingMeasurement);
+
+    size_t index = 0;
+    for (auto& bounds : measuredBounds) {
+        const auto measuredGlyph = glyphsNeedingMeasurement[index];
+        const auto measuredGlyphPosition = positionsNeedingMeasurement[index];
+
+        m_glyphToBoundsMap->setMetricsForGlyph(measuredGlyph, bounds);
+        glyphBounds[measuredGlyphPosition] = bounds;
+        ++index;
+    }
+    return glyphBounds;
+}
+#endif
+
 ALWAYS_INLINE float Font::widthForGlyph(Glyph glyph, SyntheticBoldInclusion SyntheticBoldInclusion) const
 {
     // The optimization of returning 0 for the zero-width-space glyph is incorrect for the LastResort font,
@@ -459,6 +517,7 @@ ALWAYS_INLINE float Font::widthForGlyph(Glyph glyph, SyntheticBoldInclusion Synt
 
 #if !LOG_DISABLED
 WEBCORE_EXPORT TextStream& operator<<(TextStream&, const Font&);
+TextStream& operator<<(TextStream&, const GlyphBuffer&);
 #endif
 
 } // namespace WebCore

@@ -27,7 +27,7 @@
 
 #include "SVGAttributeAnimator.h"
 #include "SVGPropertyOwner.h"
-#include <wtf/RefCounted.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
@@ -37,7 +37,7 @@ namespace WebCore {
 class SVGElement;
 class WeakPtrImplWithEventTargetData;
 
-class SVGAnimatedProperty : public RefCounted<SVGAnimatedProperty>, public SVGPropertyOwner {
+class SVGAnimatedProperty : public ThreadSafeRefCounted<SVGAnimatedProperty>, public SVGPropertyOwner {
 public:
     virtual ~SVGAnimatedProperty() = default;
     

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -56,6 +56,7 @@
 #import <WebCore/Editor.h>
 #import <WebCore/EventHandler.h>
 #import <WebCore/EventNames.h>
+#import <WebCore/FixedContainerEdges.h>
 #import <WebCore/FocusController.h>
 #import <WebCore/FrameLoader.h>
 #import <WebCore/FrameView.h>
@@ -69,6 +70,7 @@
 #import <WebCore/HitTestResult.h>
 #import <WebCore/ImageOverlay.h>
 #import <WebCore/ImageUtilities.h>
+#import <WebCore/LegacyWebArchive.h>
 #import <WebCore/LocalFrameView.h>
 #import <WebCore/MIMETypeRegistry.h>
 #import <WebCore/MutableStyleProperties.h>
@@ -94,6 +96,7 @@
 #import <wtf/cf/VectorCF.h>
 #import <wtf/cocoa/SpanCocoa.h>
 #import <wtf/spi/darwin/SandboxSPI.h>
+#import <wtf/text/StringToIntegerConversion.h>
 
 #if ENABLE(GPU_PROCESS) && PLATFORM(COCOA)
 #include "LibWebRTCCodecs.h"
@@ -168,7 +171,7 @@ void WebPage::setHasLaunchedWebContentProcess()
         auto auditToken = WebProcess::singleton().auditTokenForSelf();
 #if USE(EXTENSIONKIT)
         if (WKProcessExtension.sharedInstance)
-            [WKProcessExtension.sharedInstance lockdownSandbox:@"1.0"];
+            [WKProcessExtension.sharedInstance lockdownSandbox:@"2.0"];
 #endif
         sandbox_enable_state_flag("local:WebContentProcessLaunched", *auditToken);
         hasSetLaunchVariable = true;
@@ -310,11 +313,21 @@ DictionaryPopupInfo WebPage::dictionaryPopupInfoForRange(LocalFrame& frame, cons
         return dictionaryPopupInfo;
     }
 
-    dictionaryPopupInfo.textIndicator = textIndicator->data();
+    dictionaryPopupInfo.textIndicator = textIndicator;
 #if PLATFORM(MAC)
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
     dictionaryPopupInfo.platformData.attributedString = WebCore::AttributedString::fromNSAttributedString(scaledAttributedString);
+#else
+    dictionaryPopupInfo.text = [scaledAttributedString string];
+#endif
+
 #elif PLATFORM(MACCATALYST)
-    dictionaryPopupInfo.platformData.attributedString = WebCore::AttributedString::fromNSAttributedString(adoptNS([[NSMutableAttributedString alloc] initWithString:plainText(range)]));
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
+    dictionaryPopupInfo.platformData.attributedString = WebCore::AttributedString::fromNSAttributedString(adoptNS([[NSMutableAttributedString alloc] initWithString:plainText(range).createNSString().get()]));
+#else
+    dictionaryPopupInfo.text = plainText(range);
+#endif
+
 #endif
 
     editor->setIsGettingDictionaryPopupInfo(false);
@@ -637,14 +650,14 @@ void WebPage::getPlatformEditorStateCommon(const LocalFrame& frame, EditorState&
     auto& postLayoutData = *result.postLayoutData;
 
     if (result.isContentEditable) {
-        if (auto editingStyle = EditingStyle::styleAtSelectionStart(selection)) {
-            if (editingStyle->hasStyle(CSSPropertyFontWeight, "bold"_s))
+        if (auto editingStyle = EditingStyle::styleAtSelectionStart(selection, false, EditingStyle::PropertiesToInclude::PostLayoutProperties)) {
+            if (editingStyle->fontWeightIsBold())
                 postLayoutData.typingAttributes.add(TypingAttribute::Bold);
 
-            if (editingStyle->hasStyle(CSSPropertyFontStyle, "italic"_s) || editingStyle->hasStyle(CSSPropertyFontStyle, "oblique"_s))
+            if (editingStyle->fontStyleIsItalic())
                 postLayoutData.typingAttributes.add(TypingAttribute::Italics);
 
-            if (editingStyle->hasStyle(CSSPropertyWebkitTextDecorationsInEffect, "underline"_s))
+            if (editingStyle->webkitTextDecorationsInEffectIsUnderline())
                 postLayoutData.typingAttributes.add(TypingAttribute::Underline);
 
             if (RefPtr styleProperties = editingStyle->style()) {
@@ -887,26 +900,30 @@ std::pair<URL, DidFilterLinkDecoration> WebPage::applyLinkDecorationFilteringWit
         if (!loader)
             return false;
         auto effectivePolicies = trigger == LinkDecorationFilteringTrigger::Navigation ? loader->navigationalAdvancedPrivacyProtections() : loader->advancedPrivacyProtections();
-        return effectivePolicies.contains(AdvancedPrivacyProtections::LinkDecorationFiltering) || m_page->settings().filterLinkDecorationByDefaultEnabled();
+        return effectivePolicies.contains(AdvancedPrivacyProtections::LinkDecorationFiltering);
     };
 
-    bool shouldApplyLinkDecorationFiltering = [&] {
+    bool hasOptedInToLinkDecorationFiltering = [&] {
         if (isLinkDecorationFilteringEnabled(RefPtr { mainFrame->loader().activeDocumentLoader() }.get()))
             return true;
 
         return isLinkDecorationFilteringEnabled(RefPtr { mainFrame->loader().policyDocumentLoader() }.get());
     }();
 
-    if (!shouldApplyLinkDecorationFiltering)
+    if (!hasOptedInToLinkDecorationFiltering && !m_page->settings().filterLinkDecorationByDefaultEnabled())
         return { url, DidFilterLinkDecoration::No };
 
     if (!url.hasQuery())
         return { url, DidFilterLinkDecoration::No };
 
     auto sanitizedURL = url;
-    auto removedParameters = WTF::removeQueryParameters(sanitizedURL, [&](auto& parameter) {
-        auto it = m_internals->linkDecorationFilteringData.find(parameter);
+    auto removedParameters = WTF::removeQueryParameters(sanitizedURL, [&](auto& key, auto& value) {
+        auto it = m_internals->linkDecorationFilteringData.find(key);
         if (it == m_internals->linkDecorationFilteringData.end())
+            return false;
+
+        constexpr auto base = 10;
+        if (value.length() == 3 && !hasOptedInToLinkDecorationFiltering && WTF::parseInteger<uint8_t>(value, base, WTF::ParseIntegerWhitespacePolicy::Disallow))
             return false;
 
         const auto& conditionals = it->value;
@@ -950,8 +967,8 @@ URL WebPage::allowedQueryParametersForAdvancedPrivacyProtections(const URL& url)
     if (!allowedParameters.contains("#"_s))
         sanitizedURL.removeFragmentIdentifier();
 
-    WTF::removeQueryParameters(sanitizedURL, [&](auto& parameter) {
-        return !allowedParameters.contains(parameter);
+    WTF::removeQueryParameters(sanitizedURL, [&](auto& key, auto&) {
+        return !allowedParameters.contains(key);
     });
 
     return sanitizedURL;
@@ -1023,12 +1040,12 @@ void WebPage::proofreadingSessionUpdateStateForSuggestionWithID(WebCore::Writing
     send(Messages::WebPageProxy::ProofreadingSessionUpdateStateForSuggestionWithID(state, replacementID));
 }
 
-void WebPage::addTextAnimationForAnimationID(const WTF::UUID& uuid, const WebCore::TextAnimationData& styleData, const WebCore::TextIndicatorData& indicatorData, CompletionHandler<void(WebCore::TextAnimationRunMode)>&& completionHandler)
+void WebPage::addTextAnimationForAnimationID(const WTF::UUID& uuid, const WebCore::TextAnimationData& styleData, const RefPtr<WebCore::TextIndicator> textIndicator, CompletionHandler<void(WebCore::TextAnimationRunMode)>&& completionHandler)
 {
     if (completionHandler)
-        sendWithAsyncReply(Messages::WebPageProxy::AddTextAnimationForAnimationIDWithCompletionHandler(uuid, styleData, indicatorData), WTFMove(completionHandler));
+        sendWithAsyncReply(Messages::WebPageProxy::AddTextAnimationForAnimationIDWithCompletionHandler(uuid, styleData, textIndicator), WTFMove(completionHandler));
     else
-        send(Messages::WebPageProxy::AddTextAnimationForAnimationID(uuid, styleData, indicatorData));
+        send(Messages::WebPageProxy::AddTextAnimationForAnimationID(uuid, styleData, textIndicator));
 }
 
 void WebPage::removeTextAnimationForAnimationID(const WTF::UUID& uuid)
@@ -1066,7 +1083,7 @@ void WebPage::clearAnimationsForActiveWritingToolsSession()
     m_textAnimationController->clearAnimationsForActiveWritingToolsSession();
 }
 
-void WebPage::createTextIndicatorForTextAnimationID(const WTF::UUID& uuid, CompletionHandler<void(std::optional<WebCore::TextIndicatorData>&&)>&& completionHandler)
+void WebPage::createTextIndicatorForTextAnimationID(const WTF::UUID& uuid, CompletionHandler<void(RefPtr<WebCore::TextIndicator>&&)>&& completionHandler)
 {
     m_textAnimationController->createTextIndicatorForTextAnimationID(uuid, WTFMove(completionHandler));
 }
@@ -1088,10 +1105,10 @@ void WebPage::updateTextVisibilityForActiveWritingToolsSession(const WebCore::Ch
     completionHandler();
 }
 
-void WebPage::textPreviewDataForActiveWritingToolsSession(const WebCore::CharacterRange& rangeRelativeToSessionRange, CompletionHandler<void(std::optional<WebCore::TextIndicatorData>&&)>&& completionHandler)
+void WebPage::textPreviewDataForActiveWritingToolsSession(const WebCore::CharacterRange& rangeRelativeToSessionRange, CompletionHandler<void(RefPtr<WebCore::TextIndicator>&&)>&& completionHandler)
 {
-    auto data = corePage()->textPreviewDataForActiveWritingToolsSession(rangeRelativeToSessionRange);
-    completionHandler(WTFMove(data));
+    RefPtr textIndicator = corePage()->textPreviewDataForActiveWritingToolsSession(rangeRelativeToSessionRange);
+    completionHandler(WTFMove(textIndicator));
 }
 
 void WebPage::decorateTextReplacementsForActiveWritingToolsSession(const WebCore::CharacterRange& rangeRelativeToSessionRange, CompletionHandler<void(void)>&& completionHandler)
@@ -1197,14 +1214,14 @@ void WebPage::createTextIndicatorForElementWithID(const String& elementID, Compl
     completionHandler(textIndicator->data());
 }
 
-void WebPage::createIconDataFromImageData(Ref<WebCore::SharedBuffer>&& buffer, const Vector<unsigned>& lengths, CompletionHandler<void(RefPtr<WebCore::SharedBuffer>&&)>&& completionHandler)
+void WebPage::createBitmapsFromImageData(Ref<WebCore::SharedBuffer>&& buffer, const Vector<unsigned>& lengths, CompletionHandler<void(Vector<Ref<WebCore::ShareableBitmap>>&&)>&& completionHandler)
 {
-    return completionHandler(WebCore::createIconDataFromImageData(buffer->span(), lengths.span()));
+    WebCore::createBitmapsFromImageData(buffer->span(), lengths.span(), WTFMove(completionHandler));
 }
 
 void WebPage::decodeImageData(Ref<WebCore::SharedBuffer>&& buffer, std::optional<WebCore::FloatSize> preferredSize, CompletionHandler<void(RefPtr<WebCore::ShareableBitmap>&&)>&& completionHandler)
 {
-    completionHandler(decodeImageWithSize(buffer->span(), preferredSize));
+    decodeImageWithSize(buffer->span(), preferredSize, WTFMove(completionHandler));
 }
 
 #if HAVE(PDFKIT)
@@ -1319,6 +1336,11 @@ void WebPage::drawPagesToPDFFromPDFDocument(CGContextRef context, PDFDocument *p
 
 #else
 
+void WebPage::drawPDFDocument(CGContextRef, PDFDocument *, const PrintInfo&, const WebCore::IntRect&)
+{
+    notImplemented();
+}
+
 void WebPage::computePagesForPrintingPDFDocument(WebCore::FrameIdentifier, const PrintInfo&, Vector<IntRect>&)
 {
     notImplemented();
@@ -1330,6 +1352,59 @@ void WebPage::drawPagesToPDFFromPDFDocument(CGContextRef, PDFDocument *, const P
 }
 
 #endif
+
+BoxSideSet WebPage::sidesRequiringFixedContainerEdges() const
+{
+    if (!m_page->settings().contentInsetBackgroundFillEnabled())
+        return { };
+
+#if PLATFORM(IOS_FAMILY)
+    auto obscuredInsets = m_page->obscuredInsets();
+#else
+    auto obscuredInsets = m_page->obscuredContentInsets();
+#endif
+
+    auto sides = m_page->fixedContainerEdges().fixedEdges();
+
+    if (obscuredInsets.top() > 0)
+        sides.add(BoxSideFlag::Top);
+
+    if (obscuredInsets.left() > 0)
+        sides.add(BoxSideFlag::Left);
+
+    if (obscuredInsets.right() > 0)
+        sides.add(BoxSideFlag::Right);
+
+    if (obscuredInsets.bottom() > 0)
+        sides.add(BoxSideFlag::Bottom);
+
+    return sides;
+}
+
+void WebPage::getWebArchives(CompletionHandler<void(HashMap<WebCore::FrameIdentifier, Ref<WebCore::LegacyWebArchive>>&&)>&& completionHandler)
+{
+    if (!m_page)
+        return completionHandler({ });
+
+    HashMap<WebCore::FrameIdentifier, Ref<LegacyWebArchive>> result;
+    for (RefPtr<Frame> frame = m_mainFrame->coreFrame(); frame; frame = frame->tree().traverseNext()) {
+        RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
+        if (!localFrame)
+            continue;
+
+        RefPtr document = localFrame->document();
+        if (!document)
+            continue;
+
+        WebCore::LegacyWebArchive::ArchiveOptions options {
+            LegacyWebArchive::ShouldSaveScriptsFromMemoryCache::Yes,
+            LegacyWebArchive::ShouldArchiveSubframes::No
+        };
+        if (RefPtr archive = WebCore::LegacyWebArchive::create(*document, WTFMove(options)))
+            result.add(localFrame->frameID(), archive.releaseNonNull());
+    }
+    completionHandler(WTFMove(result));
+}
 
 } // namespace WebKit
 

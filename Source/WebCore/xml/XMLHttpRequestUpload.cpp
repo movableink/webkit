@@ -28,6 +28,7 @@
 
 #include "ContextDestructionObserverInlines.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "WebCoreOpaqueRoot.h"
 #include "XMLHttpRequestProgressEvent.h"
 #include <wtf/Assertions.h>

@@ -20,7 +20,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "FloatRect.h"
 #include "SVGLengthValue.h"
 #include "SVGUnitTypes.h"
@@ -31,6 +30,8 @@ class SVGElement;
 class WeakPtrImplWithEventTargetData;
 
 struct Length;
+
+template<typename> class ExceptionOr;
 
 class SVGLengthContext {
 public:

@@ -29,4 +29,5 @@
 
 print("Exception: Test262: This test fails.");
 
-exit(1);
+# JSC exits with code 3 for uncaught exceptions.
+exit(3);

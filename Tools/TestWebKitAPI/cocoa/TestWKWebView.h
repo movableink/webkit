@@ -108,6 +108,7 @@ class Color;
 
 @property (nonatomic, readonly) CGImageRef snapshotAfterScreenUpdates;
 @property (nonatomic, readonly) NSUInteger gpuToWebProcessConnectionCount;
+@property (nonatomic, readonly) NSUInteger modelProcessModelPlayerCount;
 @property (nonatomic, readonly) NSString *contentsAsString;
 @property (nonatomic, readonly) NSData *contentsAsWebArchive;
 @property (nonatomic, readonly) NSArray<NSString *> *tagsInBody;

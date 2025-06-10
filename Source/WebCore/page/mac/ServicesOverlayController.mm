@@ -28,6 +28,7 @@
 
 #if (ENABLE(SERVICE_CONTROLS) || ENABLE(TELEPHONE_NUMBER_DETECTION)) && PLATFORM(MAC)
 
+#import "BoundaryPointInlines.h"
 #import "Chrome.h"
 #import "ChromeClient.h"
 #import "Document.h"

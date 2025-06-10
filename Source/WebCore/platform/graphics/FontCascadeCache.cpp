@@ -67,7 +67,7 @@ bool operator==(const FontFamilyName& a, const FontFamilyName& b)
 
 FontCascadeCache& FontCascadeCache::forCurrentThread()
 {
-    return FontCache::forCurrentThread().fontCascadeCache();
+    return FontCache::forCurrentThread()->fontCascadeCache();
 }
 
 void FontCascadeCache::invalidate()
@@ -118,8 +118,14 @@ Ref<FontCascadeFonts> FontCascadeCache::retrieveOrAddCachedFonts(const FontCasca
     newEntry = makeUnique<FontCascadeCacheEntry>(FontCascadeCacheEntry { WTFMove(key), FontCascadeFonts::create() });
     Ref<FontCascadeFonts> fonts = newEntry->fonts.get();
 
+
+#if !PLATFORM(IOS_FAMILY)
+    static constexpr unsigned unreferencedPruneInterval = 1000;
+    static constexpr int maximumEntries = 5000;
+#else
     static constexpr unsigned unreferencedPruneInterval = 50;
     static constexpr int maximumEntries = 400;
+#endif
     static unsigned pruneCounter;
     // Referenced FontCascadeFonts would exist anyway so pruning them saves little memory.
     if (!(++pruneCounter % unreferencedPruneInterval))

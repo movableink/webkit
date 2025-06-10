@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Holger Hans Peter Freyther
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,24 +37,25 @@
 #include <wtf/WeakPtr.h>
 
 #if PLATFORM(IOS_FAMILY)
-
-OBJC_CLASS WAKScrollView;
-OBJC_CLASS WAKView;
-
 #ifndef NSScrollView
 #define NSScrollView WAKScrollView
 #endif
-
 #ifndef NSView
 #define NSView WAKView
 #endif
-
 #endif // PLATFORM(IOS_FAMILY)
 
-#if PLATFORM(COCOA) && defined __OBJC__
-@class NSScrollView;
+#if PLATFORM(COCOA)
+OBJC_CLASS NSScrollView;
+OBJC_CLASS NSView;
+
+#ifdef __OBJC__
 @protocol WebCoreFrameScrollView;
+#define PlatformScrollView NSScrollView<WebCoreFrameScrollView>
+#else
+#define PlatformScrollView NSScrollView
 #endif
+#endif // PLATFORM(COCOA)
 
 namespace WebCore {
 
@@ -447,12 +448,12 @@ protected:
 
     virtual void didFinishProhibitingScrollingWhenChangingContentSize() = 0;
 
-#if PLATFORM(COCOA) && defined __OBJC__
+#if PLATFORM(COCOA)
 public:
     WEBCORE_EXPORT NSView* documentView() const;
 
 private:
-    NSScrollView<WebCoreFrameScrollView>* scrollView() const;
+    PlatformScrollView* scrollView() const;
 #endif
 
 private:

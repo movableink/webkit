@@ -38,7 +38,6 @@ class Document;
 class LegacyRenderSVGResourceClipper;
 class LegacyRenderSVGResourceContainer;
 class QualifiedName;
-class ReferenceFilterOperation;
 class ReferencePathOperation;
 class RenderElement;
 class RenderSVGResourceFilter;
@@ -50,6 +49,11 @@ class SVGMarkerElement;
 class SVGMaskElement;
 class StyleImage;
 class TreeScope;
+
+namespace Style {
+class ReferenceFilterOperation;
+struct URL;
+}
 
 class ReferencedSVGResources {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ReferencedSVGResources);
@@ -65,16 +69,16 @@ public:
 
     // Legacy: Clipping needs a renderer, filters use an element.
     static LegacyRenderSVGResourceClipper* referencedClipperRenderer(TreeScope&, const ReferencePathOperation&);
-    static RefPtr<SVGFilterElement> referencedFilterElement(TreeScope&, const ReferenceFilterOperation&);
+    static RefPtr<SVGFilterElement> referencedFilterElement(TreeScope&, const Style::ReferenceFilterOperation&);
 
     static LegacyRenderSVGResourceContainer* referencedRenderResource(TreeScope&, const AtomString& fragment);
 
     // LBSE: All element based.
     static RefPtr<SVGClipPathElement> referencedClipPathElement(TreeScope&, const ReferencePathOperation&);
-    static RefPtr<SVGMarkerElement> referencedMarkerElement(TreeScope&, const String&);
+    static RefPtr<SVGMarkerElement> referencedMarkerElement(TreeScope&, const Style::URL&);
     static RefPtr<SVGMaskElement> referencedMaskElement(TreeScope&, const StyleImage&);
     static RefPtr<SVGMaskElement> referencedMaskElement(TreeScope&, const AtomString&);
-    static RefPtr<SVGElement> referencedPaintServerElement(TreeScope&, const String&);
+    static RefPtr<SVGElement> referencedPaintServerElement(TreeScope&, const Style::URL&);
 
 private:
     static RefPtr<SVGElement> elementForResourceID(TreeScope&, const AtomString& resourceID, const SVGQualifiedName& tagName);

@@ -31,6 +31,7 @@
 #include "NotificationPermission.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include "ServiceWorkerRegistrationData.h"
+#include "Settings.h"
 #include "WorkerClient.h"
 #include "WorkerOrWorkletThread.h"
 #include "WorkerRunLoop.h"
@@ -82,7 +83,7 @@ public:
     ReferrerPolicy referrerPolicy;
     WorkerType workerType;
     FetchRequestCredentials credentials;
-    Settings::Values settingsValues;
+    SettingsValues settingsValues;
     WorkerThreadMode workerThreadMode { WorkerThreadMode::CreateNewThread };
     PAL::SessionID sessionID;
     std::optional<ServiceWorkerData> serviceWorkerData;

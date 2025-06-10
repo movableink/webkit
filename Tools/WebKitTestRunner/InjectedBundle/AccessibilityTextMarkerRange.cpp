@@ -31,7 +31,7 @@
 #include "JSAccessibilityTextMarkerRange.h"
 
 namespace WTR {
-    
+
 Ref<AccessibilityTextMarkerRange> AccessibilityTextMarkerRange::create(PlatformTextMarkerRange markerRange)
 {
     return adoptRef(*new AccessibilityTextMarkerRange(markerRange));

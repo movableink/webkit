@@ -49,6 +49,10 @@
 #include "WKSharedSimulationConnectionHelper.h"
 #endif
 
+#if USE(EXTENSIONKIT)
+#import "WKProcessExtension.h"
+#endif
+
 #import <pal/cocoa/AVFoundationSoftLink.h>
 
 namespace WebKit {
@@ -69,7 +73,7 @@ RetainPtr<NSDictionary> GPUProcess::additionalStateForDiagnosticReport() const
 
             auto stateInfo = adoptNS([[NSMutableDictionary alloc] initWithCapacity:backendMap.size()]);
             // FIXME: Log some additional diagnostic state on RemoteRenderingBackend.
-            [webProcessConnectionInfo setObject:stateInfo.get() forKey:webProcessIdentifier.loggingString()];
+            [webProcessConnectionInfo setObject:stateInfo.get() forKey:webProcessIdentifier.loggingString().createNSString().get()];
         }
 
         if ([webProcessConnectionInfo count])
@@ -91,9 +95,10 @@ void GPUProcess::ensureAVCaptureServerConnection()
 {
     RELEASE_LOG(WebRTC, "GPUProcess::ensureAVCaptureServerConnection: Entering.");
 #if HAVE(AVCAPTUREDEVICE) && HAVE(AVSAMPLEBUFFERVIDEOOUTPUT)
-    if ([PAL::getAVCaptureDeviceClass() respondsToSelector:@selector(ensureServerConnection)]) {
+    RetainPtr deviceClass = PAL::getAVCaptureDeviceClass();
+    if ([deviceClass respondsToSelector:@selector(ensureServerConnection)]) {
         RELEASE_LOG(WebRTC, "GPUProcess::ensureAVCaptureServerConnection: Calling [AVCaptureDevice ensureServerConnection]");
-        [PAL::getAVCaptureDeviceClass() ensureServerConnection];
+        [deviceClass ensureServerConnection];
     }
 #endif
 }
@@ -139,7 +144,12 @@ void GPUProcess::platformInitializeGPUProcess(GPUProcessCreationParameters& para
     }
 
 #if USE(SANDBOX_EXTENSIONS_FOR_CACHE_AND_TEMP_DIRECTORY_ACCESS) && USE(EXTENSIONKIT)
-    MTLSetShaderCachePath(parameters.containerCachesDirectory);
+    MTLSetShaderCachePath(parameters.containerCachesDirectory.createNSString().get());
+#endif
+
+#if USE(EXTENSIONKIT)
+    if (WKProcessExtension.sharedInstance)
+        [WKProcessExtension.sharedInstance lockdownSandbox:@"2.0"];
 #endif
 }
 
@@ -165,10 +175,50 @@ void GPUProcess::requestSharedSimulationConnection(CoreIPCAuditToken&& modelProc
         }
 
         RELEASE_LOG(ModelElement, "GPUProcess: Shared simulation join request succeeded");
-        completionHandler(IPC::SharedFileHandle::create([sharedSimulationConnection fileDescriptor]));
+        completionHandler(IPC::SharedFileHandle::create(FileSystem::FileHandle::adopt([sharedSimulationConnection fileDescriptor])));
+    });
+}
+
+#if HAVE(TASK_IDENTITY_TOKEN)
+void GPUProcess::createMemoryAttributionIDForTask(WebCore::ProcessIdentity processIdentity, CompletionHandler<void(const std::optional<String>&)>&& completionHandler)
+{
+    Ref<WKSharedSimulationConnectionHelper> sharedSimulationConnectionHelper = adoptRef(*new WKSharedSimulationConnectionHelper);
+    sharedSimulationConnectionHelper->createMemoryAttributionIDForTask(processIdentity.taskIdToken(), [sharedSimulationConnectionHelper, completionHandler = WTFMove(completionHandler)] (RetainPtr<NSString> attributionTaskID, RetainPtr<id> appService) mutable {
+        if (!attributionTaskID) {
+            RELEASE_LOG_ERROR(ModelElement, "GPUProcess: Memory attribution ID request failed");
+            completionHandler(std::nullopt);
+            return;
+        }
+
+        RELEASE_LOG(ModelElement, "GPUProcess: Memory attribution ID request succeeded");
+        completionHandler(String(attributionTaskID.get()));
+    });
+}
+
+void GPUProcess::unregisterMemoryAttributionID(const String& attributionID, CompletionHandler<void()>&& completionHandler)
+{
+    Ref<WKSharedSimulationConnectionHelper> sharedSimulationConnectionHelper = adoptRef(*new WKSharedSimulationConnectionHelper);
+    sharedSimulationConnectionHelper->unregisterMemoryAttributionID(attributionID.createNSString().get(), [sharedSimulationConnectionHelper, completionHandler = WTFMove(completionHandler)] (RetainPtr<id> appService) mutable {
+        if (appService)
+            RELEASE_LOG(ModelElement, "GPUProcess: Memory attribution ID unregistration succeeded");
+        else
+            RELEASE_LOG(ModelElement, "GPUProcess: Memory attribution ID unregistration failed");
+        completionHandler();
     });
 }
 #endif
+#endif
+
+void GPUProcess::postWillTakeSnapshotNotification(CompletionHandler<void()>&& completionHandler)
+{
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+
+    [NSNotificationCenter.defaultCenter postNotificationName:@"CoreMediaPleaseHideTheDRMFallbackForAWhile" object:nil];
+
+    [CATransaction commit];
+    completionHandler();
+}
 
 } // namespace WebKit
 

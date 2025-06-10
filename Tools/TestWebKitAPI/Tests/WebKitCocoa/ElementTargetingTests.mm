@@ -430,6 +430,31 @@ TEST(ElementTargeting, RequestElementsFromSelectors)
     EXPECT_FALSE(didAdjustVisibility);
 }
 
+TEST(ElementTargeting, AdjustVisibilityFromSelectorsAfterDelay)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 600, 480)]);
+    RetainPtr preferences = adoptNS([WKWebpagePreferences new]);
+    [preferences _setVisibilityAdjustmentSelectors:[NSSet setWithObject:@".popup"]];
+
+    RetainPtr delegate = adoptNS([TestUIDelegate new]);
+    __block bool didAdjustVisibility = false;
+    [delegate setWebViewDidAdjustVisibilityWithSelectors:^(WKWebView *, NSArray<NSString *> *) {
+        didAdjustVisibility = true;
+    }];
+    [webView setUIDelegate:delegate.get()];
+    [webView synchronouslyLoadTestPageNamed:@"simple" preferences:preferences.get()];
+
+    static constexpr auto* scriptSource = "setTimeout(() => {"
+        "  let popup = document.createElement('div');"
+        "  popup.classList.add('popup');"
+        "  popup.style = 'width: 600px; height: 480px; position: fixed; background: tomato; top: 0; left: 0;';"
+        "  document.body.appendChild(popup);"
+        "}, 100);";
+    [webView objectByEvaluatingJavaScript:@(scriptSource)];
+
+    Util::run(&didAdjustVisibility);
+}
+
 TEST(ElementTargeting, SnapshotElementWithVisibilityAdjustment)
 {
     auto webViewFrame = CGRectMake(0, 0, 800, 600);

@@ -1157,6 +1157,26 @@ static JSValueRef setSelectedTextMarkerRangeCallback(JSContextRef context, JSObj
     return JSValueMakeBoolean(context, false);
 }
 
+static JSValueRef textMarkerDebugDescriptionCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    AccessibilityTextMarker* marker = nullptr;
+    if (argumentCount == 1)
+        marker = toTextMarker(JSValueToObject(context, arguments[0], exception));
+
+    auto description = toAXElement(thisObject)->textMarkerDebugDescription(marker);
+    return JSValueMakeString(context, description.get());
+}
+
+static JSValueRef textMarkerRangeDebugDescriptionCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    AccessibilityTextMarkerRange* markerRange = nullptr;
+    if (argumentCount == 1)
+        markerRange = toTextMarkerRange(JSValueToObject(context, arguments[0], exception));
+
+    auto description = toAXElement(thisObject)->textMarkerRangeDebugDescription(markerRange);
+    return JSValueMakeString(context, description.get());
+}
+
 // Static Value Getters
 
 static JSValueRef getARIADropEffectsCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
@@ -1284,6 +1304,16 @@ static JSValueRef rowCountCallback(JSContextRef context, JSObjectRef thisObject,
 static JSValueRef columnCountCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
 {
     return JSValueMakeNumber(context, toAXElement(thisObject)->columnCount());
+}
+
+static JSValueRef getPageXCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
+{
+    return JSValueMakeNumber(context, toAXElement(thisObject)->pageX());
+}
+
+static JSValueRef getPageYCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
+{
+    return JSValueMakeNumber(context, toAXElement(thisObject)->pageY());
 }
 
 static JSValueRef getXCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
@@ -1496,16 +1526,6 @@ static JSValueRef getURLCallback(JSContextRef context, JSObjectRef thisObject, J
 {
     auto url = toAXElement(thisObject)->url();
     return JSValueMakeString(context, url.get());
-}
-
-static JSValueRef hasDocumentRoleAncestorCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef, JSValueRef*)
-{
-    return JSValueMakeBoolean(context, toAXElement(thisObject)->hasDocumentRoleAncestor());
-}
-
-static JSValueRef hasWebApplicationAncestorCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef, JSValueRef*)
-{
-    return JSValueMakeBoolean(context, toAXElement(thisObject)->hasWebApplicationAncestor());
 }
 
 static JSValueRef isInDescriptionListDetailCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef, JSValueRef*)
@@ -1928,7 +1948,21 @@ AccessibilityTextMarkerRange AccessibilityUIElement::textMarkerRangeMatchesTextN
 }
 #endif
 
-#endif
+#endif // !SUPPORTS_AX_TEXTMARKERS
+
+#if PLATFORM(IOS_FAMILY) || !SUPPORTS_AX_TEXTMARKERS
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::textMarkerDebugDescription(AccessibilityTextMarker*)
+{
+    return nullptr;
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::textMarkerRangeDebugDescription(AccessibilityTextMarkerRange*)
+{
+    return nullptr;
+}
+
+#endif // PLATFORM(IOS_FAMILY) || !SUPPORTS_AX_TEXTMARKERS
 
 // Destruction
 
@@ -1961,6 +1995,8 @@ JSClassRef AccessibilityUIElement::getJSClass()
         { "helpText", getHelpTextCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "customContent", getCustomContentCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "stringValue", getStringValueCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "pageX", getPageXCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "pageY", getPageYCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "x", getXCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "y", getYCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "width", getWidthCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2014,8 +2050,6 @@ JSClassRef AccessibilityUIElement::getJSClass()
         { "verticalScrollbar", verticalScrollbarCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "startTextMarker", startTextMarkerCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "endTextMarker", endTextMarkerCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "hasDocumentRoleAncestor", hasDocumentRoleAncestorCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "hasWebApplicationAncestor", hasWebApplicationAncestorCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "isInDescriptionListDetail", isInDescriptionListDetailCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "isInDescriptionListTerm", isInDescriptionListTermCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "isInCell", isInCellCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2150,6 +2184,8 @@ JSClassRef AccessibilityUIElement::getJSClass()
         { "sentenceTextMarkerRangeForTextMarker", sentenceTextMarkerRangeForTextMarkerCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "previousSentenceStartTextMarkerForTextMarker", previousSentenceStartTextMarkerForTextMarkerCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "nextSentenceEndTextMarkerForTextMarker", nextSentenceEndTextMarkerForTextMarkerCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "textMarkerDebugDescription", textMarkerDebugDescriptionCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "textMarkerRangeDebugDescription", textMarkerRangeDebugDescriptionCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setSelectedChild", setSelectedChildCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setSelectedChildAtIndex", setSelectedChildAtIndexCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "removeSelectionAtIndex", removeSelectionAtIndexCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },

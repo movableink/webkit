@@ -32,6 +32,7 @@
 #import "WebViewInternal.h"
 #import "WebWindowAnimation.h"
 #import <WebCore/CGWindowUtilities.h>
+#import <WebCore/ContainerNodeInlines.h>
 #import <WebCore/Document.h>
 #import <WebCore/DocumentFullscreen.h>
 #import <WebCore/DocumentInlines.h>
@@ -43,7 +44,7 @@
 #import <WebCore/LocalFrameView.h>
 #import <WebCore/RenderLayer.h>
 #import <WebCore/RenderLayerBacking.h>
-#import <WebCore/RenderObject.h>
+#import <WebCore/RenderObjectInlines.h>
 #import <WebCore/RenderView.h>
 #import <WebCore/WebCoreFullScreenWindow.h>
 #import <wtf/RetainPtr.h>
@@ -207,9 +208,7 @@ static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
     webViewFrame.origin.y = NSMaxY([[[NSScreen screens] objectAtIndex:0] frame]) - NSMaxY(webViewFrame);
     
     CGWindowID windowID = [[_webView window] windowNumber];
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     RetainPtr webViewContents = WebCore::cgWindowListCreateImage(NSRectToCGRect(webViewFrame), kCGWindowListOptionIncludingWindow, windowID, kCGWindowImageShouldBeOpaque);
-ALLOW_DEPRECATED_DECLARATIONS_END
 
     // Screen updates to be re-enabled in beganEnterFullScreenWithInitialFrame:finalFrame:
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
@@ -499,9 +498,7 @@ static NSRect windowFrameFromApparentFrames(NSRect screenFrame, NSRect initialFr
     
     // setClipRectForWindow takes window coordinates, so convert from screen coordinates here:
     NSRect finalBounds = _finalFrame;
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    finalBounds.origin = [[self window] convertScreenToBase:finalBounds.origin];
-ALLOW_DEPRECATED_DECLARATIONS_END
+    finalBounds.origin = [[self window] convertPointFromScreen:finalBounds.origin];
     setClipRectForWindow(self.window, finalBounds);
     
     [[self window] makeKeyAndOrderFront:self];
@@ -570,9 +567,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     
     // setClipRectForWindow takes window coordinates, so convert from screen coordinates here:
     NSRect finalBounds = _finalFrame;
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    finalBounds.origin = [[self window] convertScreenToBase:finalBounds.origin];
-ALLOW_DEPRECATED_DECLARATIONS_END
+    finalBounds.origin = [[self window] convertPointFromScreen:finalBounds.origin];
     setClipRectForWindow(self.window, finalBounds);
     
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN

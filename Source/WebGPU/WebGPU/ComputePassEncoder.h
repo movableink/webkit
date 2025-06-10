@@ -73,7 +73,7 @@ public:
     void popDebugGroup();
     void pushDebugGroup(String&& groupLabel);
 
-    void setBindGroup(uint32_t groupIndex, const BindGroup&, std::span<const uint32_t> dynamicOffsets);
+    void setBindGroup(uint32_t groupIndex, const BindGroup*, std::optional<Vector<uint32_t>>&& dynamicOffsets);
     void setPipeline(const ComputePipeline&);
     void setLabel(String&&);
 
@@ -108,6 +108,7 @@ private:
     HashMap<uint32_t, Vector<uint32_t>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroupDynamicOffsets;
     HashMap<uint32_t, Vector<const BindableResources*>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroupResources;
     HashMap<uint32_t, RefPtr<const BindGroup>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroups;
+    std::array<uint32_t, 32> m_maxDynamicOffsetAtIndex;
     NSString *m_lastErrorString { nil };
     bool m_passEnded { false };
 } SWIFT_SHARED_REFERENCE(refComputePassEncoder, derefComputePassEncoder);

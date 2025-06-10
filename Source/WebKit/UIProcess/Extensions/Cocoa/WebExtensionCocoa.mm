@@ -74,7 +74,7 @@ WebExtension::WebExtension(NSBundle *appExtensionBundle, NSURL *resourceURL, Ref
 
     if (m_resourceBaseURL.isValid()) {
         BOOL isDirectory;
-        if (![NSFileManager.defaultManager fileExistsAtPath:m_resourceBaseURL.fileSystemPath() isDirectory:&isDirectory]) {
+        if (![NSFileManager.defaultManager fileExistsAtPath:m_resourceBaseURL.fileSystemPath().createNSString().get() isDirectory:&isDirectory]) {
             outError = createError(Error::Unknown);
             return;
         }
@@ -135,7 +135,7 @@ NSDictionary *WebExtension::manifestDictionary()
     if (!manifestObject)
         return nil;
 
-    return parseJSON(manifestObject->toJSONString());
+    return parseJSON(manifestObject->toJSONString().createNSString().get());
 }
 
 SecStaticCodeRef WebExtension::bundleStaticCode() const
@@ -161,12 +161,12 @@ SecStaticCodeRef WebExtension::bundleStaticCode() const
 
 NSData *WebExtension::bundleHash() const
 {
-    auto staticCode = bundleStaticCode();
+    RetainPtr staticCode = bundleStaticCode();
     if (!staticCode)
         return nil;
 
     CFDictionaryRef codeSigningDictionary = nil;
-    OSStatus error = SecCodeCopySigningInformation(staticCode, kSecCSDefaultFlags, &codeSigningDictionary);
+    OSStatus error = SecCodeCopySigningInformation(staticCode.get(), kSecCSDefaultFlags, &codeSigningDictionary);
     if (error != noErr || !codeSigningDictionary) {
         if (codeSigningDictionary)
             CFRelease(codeSigningDictionary);
@@ -188,7 +188,7 @@ bool WebExtension::validateResourceData(NSURL *resourceURL, NSData *resourceData
     if (!m_shouldValidateResourceData)
         return true;
 
-    auto staticCode = bundleStaticCode();
+    RetainPtr staticCode = bundleStaticCode();
     if (!staticCode)
         return false;
 
@@ -198,7 +198,7 @@ bool WebExtension::validateResourceData(NSURL *resourceURL, NSData *resourceData
     ASSERT([resourceURLString hasPrefix:bundleSupportFilesURLString]);
 
     NSString *relativePathToResource = [resourceURLString substringFromIndex:bundleSupportFilesURLString.length].stringByRemovingPercentEncoding;
-    OSStatus result = SecCodeValidateFileResource(staticCode, bridge_cast(relativePathToResource), bridge_cast(resourceData), kSecCSDefaultFlags);
+    OSStatus result = SecCodeValidateFileResource(staticCode.get(), bridge_cast(relativePathToResource), bridge_cast(resourceData), kSecCSDefaultFlags);
 
     if (outError && result != noErr)
         *outError = [NSError errorWithDomain:NSOSStatusErrorDomain code:result userInfo:nil];
@@ -219,7 +219,7 @@ RefPtr<API::Data> WebExtension::resourceDataForPath(const String& originalPath, 
     if (path.startsWith('/'))
         path = path.substring(1);
 
-    auto *cocoaPath = static_cast<NSString *>(path);
+    auto *cocoaPath = path.createNSString().get();
 
     if ([cocoaPath hasPrefix:@"data:"]) {
         if (auto base64Range = [cocoaPath rangeOfString:@";base64,"]; base64Range.location != NSNotFound) {
@@ -256,10 +256,10 @@ RefPtr<API::Data> WebExtension::resourceDataForPath(const String& originalPath, 
             });
     }
 
-    auto *resourceURL = static_cast<NSURL *>(resourceFileURLForPath(path));
+    auto *resourceURL = resourceFileURLForPath(path).createNSURL().get();
     if (!resourceURL) {
         if (suppressErrors == SuppressNotFoundErrors::No)
-            outError = createError(Error::ResourceNotFound, WEB_UI_FORMAT_CFSTRING("Unable to find \"%@\" in the extension’s resources. It is an invalid path.", "WKWebExtensionErrorResourceNotFound description with invalid file path", (__bridge CFStringRef)cocoaPath));
+            outError = createError(Error::ResourceNotFound, WEB_UI_FORMAT_CFSTRING("Unable to find \"%@\" in the extension’s resources. It is an invalid path.", "WKWebExtensionErrorResourceNotFound description with invalid file path", bridge_cast(cocoaPath)));
         return nullptr;
     }
 
@@ -267,14 +267,14 @@ RefPtr<API::Data> WebExtension::resourceDataForPath(const String& originalPath, 
     NSData *resultData = [NSData dataWithContentsOfURL:resourceURL options:NSDataReadingMappedIfSafe error:&fileReadError];
     if (!resultData) {
         if (suppressErrors == SuppressNotFoundErrors::No)
-            outError = createError(Error::ResourceNotFound, WEB_UI_FORMAT_CFSTRING("Unable to find \"%@\" in the extension’s resources.", "WKWebExtensionErrorResourceNotFound description with file name", (__bridge CFStringRef)cocoaPath), API::Error::create(fileReadError));
+            outError = createError(Error::ResourceNotFound, WEB_UI_FORMAT_CFSTRING("Unable to find \"%@\" in the extension’s resources.", "WKWebExtensionErrorResourceNotFound description with file name", bridge_cast(cocoaPath)), API::Error::create(fileReadError));
         return nullptr;
     }
 
 #if PLATFORM(MAC)
     NSError *validationError;
     if (!validateResourceData(resourceURL, resultData, &validationError)) {
-        outError = createError(Error::InvalidResourceCodeSignature, WEB_UI_FORMAT_CFSTRING("Unable to validate \"%@\" with the extension’s code signature. It likely has been modified since the extension was built.", "WKWebExtensionErrorInvalidResourceCodeSignature description with file name", (__bridge CFStringRef)cocoaPath), API::Error::create(validationError));
+        outError = createError(Error::InvalidResourceCodeSignature, WEB_UI_FORMAT_CFSTRING("Unable to validate \"%@\" with the extension’s code signature. It likely has been modified since the extension was built.", "WKWebExtensionErrorInvalidResourceCodeSignature description with file name", bridge_cast(cocoaPath)), API::Error::create(validationError));
         return nullptr;
     }
 #endif
@@ -392,10 +392,11 @@ RefPtr<WebCore::Icon> WebExtension::bestIcon(RefPtr<JSON::Object> icons, WebCore
         if (iconPath.isEmpty())
             continue;
 
-        [uniquePaths addObject:iconPath];
+        RetainPtr nsIconPath = iconPath.createNSString();
+        [uniquePaths addObject:nsIconPath.get()];
 
 #if PLATFORM(IOS_FAMILY)
-        scalePaths[@(scale)] = iconPath;
+        scalePaths[@(scale)] = nsIconPath.get();
 #endif
     }
 

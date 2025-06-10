@@ -296,8 +296,11 @@ RefPtr<CSSValue> valueForPositionArea(CSSValueID dim1, CSSValueID dim2)
     return CSSValuePair::create(CSSPrimitiveValue::create(dim1), CSSPrimitiveValue::create(dim2));
 }
 
-RefPtr<CSSValue> consumePositionArea(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumePositionArea(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
+    // <'position-area'> = none | <position-area>
+    // https://drafts.csswg.org/css-anchor-position-1/#propdef-position-area
+
     auto maybeDim1 = consumeIdentRaw(range);
     if (!maybeDim1)
         return nullptr;
@@ -314,39 +317,6 @@ RefPtr<CSSValue> consumePositionArea(CSSParserTokenRange& range, const CSSParser
     auto dim2 = *maybeDim2;
 
     return valueForPositionArea(dim1, dim2);
-}
-
-RefPtr<CSSValue> consumePositionVisibility(CSSParserTokenRange& range, const CSSParserContext&)
-{
-    if (range.peek().id() == CSSValueAlways) {
-        range.consumeIncludingWhitespace();
-        return CSSPrimitiveValue::create(CSSValueAlways);
-    }
-
-    // Sort the keywords such that the order in the resulting list matches the order in the spec.
-    // e.g "anchors-visible anchors-valid" is parsed to ["anchors-valid", "anchors-visible"]
-
-    OptionSet<PositionVisibility> specifiedValues;
-    while (!range.atEnd()) {
-        auto ident = consumeIdentRaw<CSSValueAnchorsValid, CSSValueAnchorsVisible, CSSValueNoOverflow>(range);
-        if (!ident)
-            return nullptr;
-
-        auto specifiedValue = fromCSSValueID<PositionVisibility>(*ident);
-        if (specifiedValues.contains(specifiedValue))
-            return nullptr;
-
-        specifiedValues.add(specifiedValue);
-    }
-
-    if (specifiedValues.isEmpty())
-        return nullptr;
-
-    CSSValueListBuilder builder;
-    for (auto value : specifiedValues)
-        builder.append(CSSPrimitiveValue::create(toCSSValueID(value)));
-
-    return CSSValueList::createSpaceSeparated(WTFMove(builder));
 }
 
 } // namespace CSSPropertyParserHelpers

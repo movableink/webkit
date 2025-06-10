@@ -88,7 +88,7 @@ void WebProcessActivityState::takeMutedCaptureAssertion()
     Ref isMutedCaptureAssertion = ProcessAssertion::create(protectedProcess(), "WebKit Muted Media Capture"_s, ProcessAssertionType::Background);
     m_isMutedCaptureAssertion = isMutedCaptureAssertion.copyRef();
 
-    auto page = std::visit([](auto&& weakPageRef) -> std::variant<WeakPtr<WebPageProxy>, WeakPtr<RemotePageProxy>> {
+    auto page = WTF::visit([](auto&& weakPageRef) -> Variant<WeakPtr<WebPageProxy>, WeakPtr<RemotePageProxy>> {
         return weakPageRef.get();
     }, m_page);
 
@@ -99,7 +99,7 @@ void WebProcessActivityState::takeMutedCaptureAssertion()
                 page->processActivityState().m_isMutedCaptureAssertion = nullptr;
             }
         };
-        std::visit(invalidateCaptureAssertion, weakPage);
+        WTF::visit(invalidateCaptureAssertion, weakPage);
     });
 }
 
@@ -184,7 +184,7 @@ bool WebProcessActivityState::hasValidOpeningAppLinkActivity() const
 
 void WebProcessActivityState::updateWebProcessSuspensionDelay()
 {
-    Seconds timeout = std::visit(WTF::makeVisitor([&](const WeakRef<WebPageProxy>& page) {
+    Seconds timeout = WTF::visit(WTF::makeVisitor([&](const WeakRef<WebPageProxy>& page) {
         return webProcessSuspensionDelay(Ref { page.get() }.ptr());
     }, [&] (const WeakRef<RemotePageProxy>& page) {
         return webProcessSuspensionDelay(page->protectedPage().get());
@@ -236,7 +236,7 @@ void WebProcessActivityState::viewDidLeaveWindow()
 
 WebProcessProxy& WebProcessActivityState::process() const
 {
-    return std::visit([](auto& page) -> WebProcessProxy& {
+    return WTF::visit([](auto& page) -> WebProcessProxy& {
         using T = std::decay_t<decltype(page)>;
         if constexpr (std::is_same_v<T, WeakRef<WebPageProxy>>)
             return page->legacyMainFrameProcess();

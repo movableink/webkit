@@ -51,9 +51,17 @@
 #if USE(CAIRO)
 #include "ImageBufferUtilitiesCairo.h"
 #endif
+
 #if USE(SKIA)
+#include "GLContext.h"
 #include "ImageBufferSkiaAcceleratedBackend.h"
 #include "ImageBufferUtilitiesSkia.h"
+#include "PlatformDisplay.h"
+
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
+#include <skia/gpu/ganesh/GrBackendSurface.h>
+#include <skia/gpu/ganesh/SkSurfaceGanesh.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #endif
 
 #if HAVE(IOSURFACE)
@@ -362,21 +370,39 @@ RefPtr<ImageBuffer> ImageBuffer::sinkIntoImageBufferForCrossThreadTransfer(RefPt
 {
     if (!buffer || buffer->renderingMode() != RenderingMode::Accelerated)
         return buffer;
-    if (buffer->hasOneRef()) {
-        buffer->finishAcceleratedRenderingAndCreateFence();
+    if (buffer->hasOneRef())
         return buffer;
-    }
-    auto bufferCopy = copyImageBuffer(const_cast<ImageBuffer&>(*buffer), PreserveResolution::Yes, RenderingMode::Accelerated);
-    bufferCopy->finishAcceleratedRenderingAndCreateFence();
-    return bufferCopy;
+    return copyImageBuffer(const_cast<ImageBuffer&>(*buffer), PreserveResolution::Yes, RenderingMode::Accelerated);
 }
 
-RefPtr<ImageBuffer> ImageBuffer::sinkIntoImageBufferAfterCrossThreadTransfer(RefPtr<ImageBuffer> buffer)
+RefPtr<ImageBuffer> ImageBuffer::sinkIntoImageBufferAfterCrossThreadTransfer(RefPtr<ImageBuffer> buffer, std::unique_ptr<GLFence>&& fence)
 {
     if (!buffer || buffer->renderingMode() != RenderingMode::Accelerated)
         return buffer;
-    buffer->waitForAcceleratedRenderingFenceCompletion();
-    return buffer->copyAcceleratedImageBufferBorrowingBackendRenderTarget();
+
+    auto* glContext = PlatformDisplay::sharedDisplay().skiaGLContext();
+    if (!glContext || !glContext->makeContextCurrent())
+        return nullptr;
+
+    if (fence)
+        fence->serverWait();
+
+    auto* grContext = PlatformDisplay::sharedDisplay().skiaGrContext();
+    RELEASE_ASSERT(grContext);
+
+    auto* currentSurface = buffer->surface();
+    RELEASE_ASSERT(currentSurface);
+
+    auto backendRenderTarget = SkSurfaces::GetBackendRenderTarget(currentSurface, SkSurfaces::BackendHandleAccess::kFlushRead);
+
+    const auto& imageInfo = currentSurface->imageInfo();
+    auto surface = SkSurfaces::WrapBackendRenderTarget(grContext, backendRenderTarget, kTopLeft_GrSurfaceOrigin, imageInfo.colorType(), imageInfo.refColorSpace(), &currentSurface->props());
+    if (!surface || !surface->getCanvas())
+        return nullptr;
+
+    auto bufferBackendParameters = ImageBuffer::backendParameters(buffer->parameters());
+    auto backend = ImageBufferSkiaAcceleratedBackend::create(bufferBackendParameters, { }, WTFMove(surface));
+    return ImageBuffer::create<ImageBuffer>(buffer->parameters(), buffer->backendInfo(), { }, WTFMove(backend));
 }
 #endif
 
@@ -435,6 +461,13 @@ IOSurface* ImageBuffer::surface()
 }
 #endif
 
+#if USE(SKIA)
+SkSurface* ImageBuffer::surface() const
+{
+    return m_backend ? m_backend->surface() : nullptr;
+}
+#endif
+
 #if USE(CAIRO)
 RefPtr<cairo_surface_t> ImageBuffer::createCairoSurface()
 {
@@ -452,39 +485,6 @@ RefPtr<cairo_surface_t> ImageBuffer::createCairoSurface()
     });
 
     return surface;
-}
-#endif
-
-#if USE(SKIA)
-bool ImageBuffer::finishAcceleratedRenderingAndCreateFence()
-{
-    if (auto* backend = ensureBackend())
-        return backend->finishAcceleratedRenderingAndCreateFence();
-    return false;
-}
-
-void ImageBuffer::waitForAcceleratedRenderingFenceCompletion()
-{
-    if (auto* backend = ensureBackend())
-        backend->waitForAcceleratedRenderingFenceCompletion();
-}
-
-const GrDirectContext* ImageBuffer::skiaGrContext() const
-{
-    auto* backend = ensureBackend();
-    if (!backend)
-        return nullptr;
-    return backend->skiaGrContext();
-}
-
-RefPtr<ImageBuffer> ImageBuffer::copyAcceleratedImageBufferBorrowingBackendRenderTarget() const
-{
-    ASSERT(renderingMode() == RenderingMode::Accelerated);
-
-    auto* backend = ensureBackend();
-    if (!backend)
-        return nullptr;
-    return backend->copyAcceleratedImageBufferBorrowingBackendRenderTarget(*this);
 }
 #endif
 
@@ -561,7 +561,7 @@ RefPtr<PixelBuffer> ImageBuffer::getPixelBuffer(const PixelBufferFormat& destina
     return destination;
 }
 
-void ImageBuffer::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& sourceRect, const IntPoint& destinationPoint, AlphaPremultiplication destinationFormat)
+void ImageBuffer::putPixelBuffer(const PixelBufferSourceView& pixelBuffer, const IntRect& sourceRect, const IntPoint& destinationPoint, AlphaPremultiplication destinationFormat)
 {
     ASSERT(resolutionScale() == 1);
     auto* backend = ensureBackend();

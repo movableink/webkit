@@ -34,6 +34,7 @@
 
 #import "APIData.h"
 #import "APIError.h"
+#import "APIFrameHandle.h"
 #import "APIFrameInfo.h"
 #import "WKNSData.h"
 #import "WKNSError.h"
@@ -62,19 +63,27 @@ WebExtensionURLSchemeHandler::WebExtensionURLSchemeHandler(WebExtensionControlle
 void WebExtensionURLSchemeHandler::platformStartTask(WebPageProxy& page, WebURLSchemeTask& task)
 {
     auto *operation = [NSBlockOperation blockOperationWithBlock:makeBlockPtr([this, protectedThis = Ref { *this }, task = Ref { task }, page = Ref { page }]() {
-        // If a frame is loading, the frame request URL will be an empty string, since the request is actually the frame URL being loaded.
-        // In this case, consider the firstPartyForCookies() to be the document including the frame. This fails for nested frames, since
-        // it is always the main frame URL, not the immediate parent frame.
-        // FIXME: <rdar://problem/59193765> Remove this workaround when there is a way to know the proper parent frame.
-        URL frameDocumentURL = task->frameInfo().request().url().isEmpty() ? task->request().firstPartyForCookies() : task->frameInfo().request().url();
+        URL frameDocumentURL = task->frameInfo().request().url();
         URL requestURL = task->request().url();
 
-        if (!m_webExtensionController) {
+        if (task->frameInfo().request().url().isEmpty() || task->frameInfo().request().url().isAboutBlank()) {
+            frameDocumentURL = task->request().firstPartyForCookies();
+
+            if (!task->frameInfo().isMainFrame()) {
+                if (RefPtr parentFrameHandle = task->frameInfo().parentFrameHandle()) {
+                    if (RefPtr parent = WebFrameProxy::webFrame(parentFrameHandle->frameID()))
+                        frameDocumentURL = parent->url();
+                }
+            }
+        }
+
+        RefPtr webExtensionController = m_webExtensionController.get();
+        if (!webExtensionController) {
             task->didComplete([NSError errorWithDomain:NSURLErrorDomain code:noPermissionErrorCode userInfo:nil]);
             return;
         }
 
-        RefPtr extensionContext = m_webExtensionController->extensionContext(requestURL);
+        RefPtr extensionContext = webExtensionController->extensionContext(requestURL);
         if (!extensionContext) {
             // We need to return the same error here, as we do below for URLs that don't match web_accessible_resources.
             // Otherwise, a page tracking extension injected content and watching extension UUIDs across page loads can fingerprint
@@ -83,6 +92,8 @@ void WebExtensionURLSchemeHandler::platformStartTask(WebPageProxy& page, WebURLS
             return;
         }
 
+        Ref extension = extensionContext->extension();
+
 #if ENABLE(INSPECTOR_EXTENSIONS)
         // Chrome does not require devtools extensions to explicitly list resources as web_accessible_resources.
         if (!frameDocumentURL.protocolIs("inspector-resource"_s) && !protocolHostAndPortAreEqual(frameDocumentURL, requestURL))
@@ -90,7 +101,7 @@ void WebExtensionURLSchemeHandler::platformStartTask(WebPageProxy& page, WebURLS
         if (!protocolHostAndPortAreEqual(frameDocumentURL, requestURL))
 #endif
         {
-            if (!extensionContext->extension().isWebAccessibleResource(requestURL, frameDocumentURL)) {
+            if (!extension->isWebAccessibleResource(requestURL, frameDocumentURL)) {
                 task->didComplete([NSError errorWithDomain:NSURLErrorDomain code:noPermissionErrorCode userInfo:nil]);
                 return;
             }
@@ -107,7 +118,7 @@ void WebExtensionURLSchemeHandler::platformStartTask(WebPageProxy& page, WebURLS
         }
 
         RefPtr<API::Error> error;
-        RefPtr resourceData = extensionContext->extension().resourceDataForPath(requestURL.path().toString(), error);
+        RefPtr resourceData = extension->resourceDataForPath(requestURL.path().toString(), error);
         if (!resourceData || error) {
             extensionContext->recordErrorIfNeeded(wrapper(error));
             task->didComplete([NSError errorWithDomain:NSURLErrorDomain code:NSURLErrorFileDoesNotExist userInfo:nil]);
@@ -119,14 +130,14 @@ void WebExtensionURLSchemeHandler::platformStartTask(WebPageProxy& page, WebURLS
                 extensionContext->addExtensionTabPage(page, *tab);
         }
 
-        auto mimeType = extensionContext->extension().resourceMIMETypeForPath(requestURL.path().toString());
+        auto mimeType = extension->resourceMIMETypeForPath(requestURL.path().toString());
         resourceData = extensionContext->localizedResourceData(resourceData, mimeType);
 
-        auto *urlResponse = [[NSHTTPURLResponse alloc] initWithURL:requestURL statusCode:200 HTTPVersion:nil headerFields:@{
+        auto *urlResponse = [[NSHTTPURLResponse alloc] initWithURL:requestURL.createNSURL().get() statusCode:200 HTTPVersion:nil headerFields:@{
             @"Access-Control-Allow-Origin": @"*",
-            @"Content-Security-Policy": extensionContext->extension().contentSecurityPolicy(),
+            @"Content-Security-Policy": extension->contentSecurityPolicy().createNSString().get(),
             @"Content-Length": @(resourceData->size()).stringValue,
-            @"Content-Type": mimeType
+            @"Content-Type": mimeType.createNSString().get()
         }];
 
         task->didReceiveResponse(urlResponse);

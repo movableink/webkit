@@ -45,7 +45,7 @@ public:
     ImageBufferAllocator& allocator() const { return *m_allocator; }
 
     FilterImage* effectResult(FilterEffect&) const;
-    void setEffectResult(FilterEffect&, const FilterImageVector& inputs, Ref<FilterImage>&& result);
+    void setEffectResult(FilterEffect&, std::span<const Ref<FilterImage>> inputs, Ref<FilterImage>&& result);
     void clearEffectResult(FilterEffect&);
 
 private:

@@ -26,19 +26,23 @@
 import Foundation
 internal import WebKit_Internal
 
+// SPI for the cross-import overlay.
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 @MainActor
 @_spi(CrossImportOverlay)
 public final class WebPageWebView: WKWebView {
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public weak var delegate: (any Delegate)? = nil
 
-#if os(iOS)
+    #if os(iOS)
     override func findInteraction(_ interaction: UIFindInteraction, didBegin session: UIFindSession) {
         super.findInteraction(interaction, didBegin: session)
         delegate?.findInteraction(interaction, didBegin: session)
     }
 
     override func findInteraction(_ interaction: UIFindInteraction, didEnd session: UIFindSession) {
-        super.findInteraction(interaction, didBegin: session)
+        super.findInteraction(interaction, didEnd: session)
         delegate?.findInteraction(interaction, didEnd: session)
     }
 
@@ -49,7 +53,7 @@ public final class WebPageWebView: WKWebView {
 
         return super.supportsTextReplacement() && delegate.supportsTextReplacement()
     }
-#endif
+    #endif
 
     func geometryDidChange(_ geometry: WKScrollGeometryAdapter) {
         delegate?.geometryDidChange(geometry)
@@ -57,15 +61,17 @@ public final class WebPageWebView: WKWebView {
 }
 
 extension WebPageWebView {
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     @MainActor
     public protocol Delegate: AnyObject {
-#if os(iOS)
+        #if os(iOS)
         func findInteraction(_ interaction: UIFindInteraction, didBegin session: UIFindSession)
 
         func findInteraction(_ interaction: UIFindInteraction, didEnd session: UIFindSession)
 
         func supportsTextReplacement() -> Bool
-#endif
+        #endif
 
         func geometryDidChange(_ geometry: WKScrollGeometryAdapter)
     }
@@ -74,68 +80,108 @@ extension WebPageWebView {
 extension WebPageWebView {
     // MARK: Platform-agnostic scrolling capabilities
 
-#if canImport(UIKit)
+    #if canImport(UIKit)
+
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public var alwaysBounceVertical: Bool {
         get { scrollView.alwaysBounceVertical }
         set { scrollView.alwaysBounceVertical = newValue }
     }
 
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public var alwaysBounceHorizontal: Bool {
         get { scrollView.alwaysBounceHorizontal }
         set { scrollView.alwaysBounceHorizontal = newValue }
     }
 
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public var bouncesVertically: Bool {
         get { scrollView.bouncesVertically }
         set { scrollView.bouncesVertically = newValue }
     }
 
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public var bouncesHorizontally: Bool {
         get { scrollView.bouncesHorizontally }
         set { scrollView.bouncesHorizontally = newValue }
     }
 
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public var allowsMagnification: Bool {
         get { self._allowsMagnification }
         set { self._allowsMagnification = newValue }
     }
 
-    public func setContentOffset(_ offset: CGPoint, animated: Bool) {
-        scrollView.setContentOffset(offset, animated: animated)
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
+    public func setContentOffset(x: Double?, y: Double?, animated: Bool) {
+        let currentOffset = scrollView.contentOffset
+        let newOffset = CGPoint(x: x ?? currentOffset.x, y: y ?? currentOffset.y)
+
+        scrollView.setContentOffset(newOffset, animated: animated)
     }
 
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public func scrollTo(edge: NSDirectionalRectEdge, animated: Bool) {
         self._scroll(to: _WKRectEdge(edge), animated: animated)
     }
-#else
+
+    #else
+
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public var alwaysBounceVertical: Bool {
         get { self._alwaysBounceVertical }
         set { self._alwaysBounceVertical = newValue }
     }
 
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public var alwaysBounceHorizontal: Bool {
         get { self._alwaysBounceHorizontal }
         set { self._alwaysBounceHorizontal = newValue }
     }
 
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public var bouncesVertically: Bool {
         get { self._rubberBandingEnabled.contains(.top) && self._rubberBandingEnabled.contains(.bottom) }
         set { self._rubberBandingEnabled.formUnion([.top, .bottom]) }
     }
 
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public var bouncesHorizontally: Bool {
         get { self._rubberBandingEnabled.contains(.left) && self._rubberBandingEnabled.contains(.right) }
         set { self._rubberBandingEnabled.formUnion([.left, .right]) }
     }
 
-    public func setContentOffset(_ offset: CGPoint, animated: Bool) {
-        self._setContentOffset(offset, animated: animated)
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
+    public func setContentOffset(x: Double?, y: Double?, animated: Bool) {
+        self._setContentOffset(x: x.map(NSNumber.init(value:)), y: y.map(NSNumber.init(value:)), animated: animated)
     }
 
+    // SPI for the cross-import overlay.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public func scrollTo(edge: NSDirectionalRectEdge, animated: Bool) {
         self._scroll(to: _WKRectEdge(edge), animated: animated)
     }
-#endif
+
+    #endif
+}
+
+extension WebPageWebView {
+    // swift-format-ignore: NoLeadingUnderscores
+    override var _nameForVisualIdentificationOverlay: String {
+        "WebView (SwiftUI)"
+    }
 }
 
 #endif

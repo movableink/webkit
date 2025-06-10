@@ -60,7 +60,6 @@ class AXObjectCache;
 class Element;
 class FloatPoint;
 class FloatSize;
-class FragmentedSharedBuffer;
 class GraphicsContext;
 class HTMLPlugInElement;
 class ShareableBitmap;
@@ -153,8 +152,6 @@ private:
     WebCore::IntSize contentsSize() const override;
     unsigned firstPageHeight() const override;
 
-    RefPtr<WebCore::FragmentedSharedBuffer> liveResourceData() const override;
-
     bool wantsWheelEvents() const override { return true; }
     bool handleMouseEvent(const WebMouseEvent&) override;
     bool handleWheelEvent(const WebWheelEvent&) override;
@@ -169,7 +166,6 @@ private:
     bool existingSelectionContainsPoint(const WebCore::FloatPoint&) const override;
     WebCore::FloatRect rectForSelectionInRootView(PDFSelection *) const override;
 
-    unsigned countFindMatches(const String& target, WebCore::FindOptions, unsigned maxMatchCount) override;
     bool findString(const String& target, WebCore::FindOptions, unsigned maxMatchCount) override;
     bool drawsFindOverlay() const final { return true; }
 
@@ -192,8 +188,6 @@ private:
 
     void createPasswordEntryForm();
     void teardownPasswordEntryForm() override;
-
-    NSData *liveData() const override;
 
     RetainPtr<CALayer> m_containerLayer;
     RetainPtr<CALayer> m_contentLayer;

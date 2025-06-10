@@ -26,6 +26,7 @@
 #include <WebCore/IntRect.h>
 #include <WebCore/PageOverlay.h>
 #include <WebCore/RemoteUserInputEventData.h>
+#include <WebCore/ResourceResponse.h>
 #include <WebCore/ShareableBitmap.h>
 #include <WebCore/SharedMemory.h>
 #include <wtf/Forward.h>
@@ -99,9 +100,11 @@ struct WebHitTestResultData {
     RefPtr<WebCore::SharedMemory> imageSharedMemory;
     RefPtr<WebCore::ShareableBitmap> imageBitmap;
     String sourceImageMIMEType;
-    String linkLocalDataMIMEType;
-    bool hasLocalDataForLinkURL;
     bool hasEntireImage;
+    bool allowsFollowingLink;
+    bool allowsFollowingImageURL;
+
+    std::optional<WebCore::ResourceResponse> linkLocalResourceResponse;
 
 #if PLATFORM(MAC)
     WebHitTestResultPlatformData platformData;
@@ -118,7 +121,7 @@ struct WebHitTestResultData {
     WebHitTestResultData& operator=(const WebHitTestResultData&) = default;
     WebHitTestResultData(const WebCore::HitTestResult&, const String& toolTipText);
     WebHitTestResultData(const WebCore::HitTestResult&, bool includeImage);
-    WebHitTestResultData(const String& absoluteImageURL, const String& absolutePDFURL, const String& absoluteLinkURL, const String& absoluteMediaURL, const String& linkLabel, const String& linkTitle, const String& linkSuggestedFilename, const String& imageSuggestedFilename, bool isContentEditable, const WebCore::IntRect& elementBoundingBox, const WebKit::WebHitTestResultData::IsScrollbar&, bool isSelected, bool isTextNode, bool isOverTextInsideFormControlElement, bool isDownloadableMedia, bool mediaIsInFullscreen, bool isActivePDFAnnotation, const WebKit::WebHitTestResultData::ElementType&, std::optional<FrameInfoData>&&, std::optional<WebCore::RemoteUserInputEventData>, const String& lookupText, const String& toolTipText, const String& imageText, std::optional<WebCore::SharedMemory::Handle>&& imageHandle, const RefPtr<WebCore::ShareableBitmap>& imageBitmap, const String& sourceImageMIMEType, const String& linkLocalDataMIMEType, bool hasLocalDataForLinkURL, bool hasEntireImage,
+    WebHitTestResultData(const String& absoluteImageURL, const String& absolutePDFURL, const String& absoluteLinkURL, const String& absoluteMediaURL, const String& linkLabel, const String& linkTitle, const String& linkSuggestedFilename, const String& imageSuggestedFilename, bool isContentEditable, const WebCore::IntRect& elementBoundingBox, const WebKit::WebHitTestResultData::IsScrollbar&, bool isSelected, bool isTextNode, bool isOverTextInsideFormControlElement, bool isDownloadableMedia, bool mediaIsInFullscreen, bool isActivePDFAnnotation, const WebKit::WebHitTestResultData::ElementType&, std::optional<FrameInfoData>&&, std::optional<WebCore::RemoteUserInputEventData>, const String& lookupText, const String& toolTipText, const String& imageText, std::optional<WebCore::SharedMemory::Handle>&& imageHandle, const RefPtr<WebCore::ShareableBitmap>& imageBitmap, const String& sourceImageMIMEType, bool hasEntireImage, bool allowsFollowingLink, bool allowsFollowingImageURL, std::optional<WebCore::ResourceResponse>&&,
 #if PLATFORM(MAC)
         const WebHitTestResultPlatformData&,
 #endif
@@ -130,7 +133,8 @@ struct WebHitTestResultData {
     static std::optional<FrameInfoData> frameInfoDataFromHitTestResult(const WebCore::HitTestResult&);
 
     std::optional<WebCore::SharedMemory::Handle> getImageSharedMemoryHandle() const;
-
+private:
+    WebHitTestResultData(const WebCore::HitTestResult&, const String& toolTipText, bool includeImage);
 };
 
 } // namespace WebKit

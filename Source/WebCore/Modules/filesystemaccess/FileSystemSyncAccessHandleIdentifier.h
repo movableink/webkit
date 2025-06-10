@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum class FileSystemSyncAccessHandleIdentifierType { };
+struct FileSystemSyncAccessHandleIdentifierType;
 using FileSystemSyncAccessHandleIdentifier = AtomicObjectIdentifier<FileSystemSyncAccessHandleIdentifierType>;
 
 } // namespace WebCore

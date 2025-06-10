@@ -233,7 +233,7 @@ public:
 
     void loadPageAndBecomeReady(const String& pageName)
     {
-        [_webView synchronouslyLoadTestPageNamed:pageName];
+        [_webView synchronouslyLoadTestPageNamed:pageName.createNSString().get()];
 
         bool canplaythrough = false;
         [webView() performAfterReceivingMessage:@"canplaythrough event" action:[&] {
@@ -245,7 +245,7 @@ public:
 
     void runScriptWithUserGesture(const String& script)
     {
-        [_webView objectByEvaluatingJavaScriptWithUserGesture:script];
+        [_webView objectByEvaluatingJavaScriptWithUserGesture:script.createNSString().get()];
     }
 
     void play()
@@ -268,7 +268,7 @@ public:
     {
         for (auto event : events) {
             auto eventMessage = makeString(event, " event"_s);
-            [webView() performAfterReceivingMessage:eventMessage action:[this, eventMessage = WTFMove(eventMessage)] {
+            [webView() performAfterReceivingMessage:eventMessage.createNSString().get() action:[this, eventMessage = WTFMove(eventMessage)] {
                 _eventListenersCalled.add(eventMessage);
             }];
         }
@@ -307,8 +307,9 @@ public:
     {
         for (auto handler : handlers) {
             auto handlerMessage = makeString(handler, suffix);
-            [_messageHandlers addObject:handlerMessage];
-            [webView() performAfterReceivingMessage:handlerMessage action:[this, handlerMessage = WTFMove(handlerMessage)] {
+            RetainPtr nsHandlerMessage = handlerMessage.createNSString();
+            [_messageHandlers addObject:nsHandlerMessage.get()];
+            [webView() performAfterReceivingMessage:nsHandlerMessage.get() action:[this, handlerMessage = WTFMove(handlerMessage)] {
                 _sessionMessagesPosted.add(handlerMessage);
             }];
         }

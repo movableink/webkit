@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,9 +27,13 @@
 #include "ScrollTimeline.h"
 
 #include "AnimationTimelinesController.h"
+#include "ContainerNodeInlines.h"
 #include "DocumentInlines.h"
 #include "Element.h"
+#include "KeyframeEffect.h"
+#include "RenderElementInlines.h"
 #include "RenderLayerScrollableArea.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "WebAnimation.h"
 
@@ -121,7 +125,7 @@ Element* ScrollTimeline::source() const
         if (CheckedPtr subjectRenderer = source->renderer()) {
             if (CheckedPtr nearestScrollableContainer = subjectRenderer->enclosingScrollableContainer()) {
                 if (RefPtr nearestSource = nearestScrollableContainer->element()) {
-                    auto document = nearestSource->protectedDocument();
+                    Ref document = nearestSource->document();
                     RefPtr documentElement = document->documentElement();
                     if (nearestSource != documentElement)
                         return nearestSource.get();
@@ -186,17 +190,16 @@ AnimationTimelinesController* ScrollTimeline::controller() const
     return nullptr;
 }
 
-std::optional<ScrollTimeline::ResolvedScrollDirection> ScrollTimeline::resolvedScrollDirection() const
+ScrollTimeline::ResolvedScrollDirection ScrollTimeline::resolvedScrollDirection() const
 {
-    RefPtr source = this->source();
-    if (!source)
-        return { };
+    auto writingMode = [&] -> WritingMode {
+        if (RefPtr source = this->source()) {
+            if (CheckedPtr renderer = source->renderer())
+                return renderer->style().writingMode();
+        }
 
-    CheckedPtr renderer = source->renderer();
-    if (!renderer)
-        return { };
-
-    auto writingMode = renderer->style().writingMode();
+        return { RenderStyle::initialWritingMode(), RenderStyle::initialDirection(), RenderStyle::initialTextOrientation() };
+    }();
 
     auto isVertical = [&] {
         switch (m_axis) {
@@ -229,7 +232,7 @@ std::optional<ScrollTimeline::ResolvedScrollDirection> ScrollTimeline::resolvedS
 
     auto isReversed = (isVertical && !writingMode.isAnyTopToBottom()) || (!isVertical && !writingMode.isAnyLeftToRight());
 
-    return { { isVertical, isReversed } };
+    return { isVertical, isReversed };
 }
 
 void ScrollTimeline::cacheCurrentTime()
@@ -244,11 +247,8 @@ void ScrollTimeline::cacheCurrentTime()
         if (!sourceScrollableArea)
             return { };
         auto scrollDirection = resolvedScrollDirection();
-        if (!scrollDirection)
-            return { };
-
-        float scrollOffset = scrollDirection->isVertical ? sourceScrollableArea->scrollOffset().y() : sourceScrollableArea->scrollOffset().x();
-        float maxScrollOffset = scrollDirection->isVertical ? sourceScrollableArea->maximumScrollOffset().y() : sourceScrollableArea->maximumScrollOffset().x();
+        float scrollOffset = scrollDirection.isVertical ? sourceScrollableArea->scrollOffset().y() : sourceScrollableArea->scrollOffset().x();
+        float maxScrollOffset = scrollDirection.isVertical ? sourceScrollableArea->maximumScrollOffset().y() : sourceScrollableArea->maximumScrollOffset().x();
         // Chrome appears to clip the current time of a scroll timeline in the [0-100] range.
         // We match this behavior for compatibility reasons, see https://github.com/w3c/csswg-drafts/issues/11033.
         if (maxScrollOffset > 0)
@@ -269,6 +269,35 @@ AnimationTimeline::ShouldUpdateAnimationsAndSendEvents ScrollTimeline::documentW
     if (source && source->element.isConnected())
         return AnimationTimeline::ShouldUpdateAnimationsAndSendEvents::Yes;
     return AnimationTimeline::ShouldUpdateAnimationsAndSendEvents::No;
+}
+
+void ScrollTimeline::updateCurrentTimeIfStale()
+{
+    // https://drafts.csswg.org/scroll-animations-1/#event-loop
+    // We must update timelines that became stale in the process of updating the page rendering.
+    // This function will be called during Page::updateRendering() after animations have been
+    // updated, requestAnimationFrame callbacks have been serviced, styles have been updated
+    // and resize observers have been run.
+    // See https://github.com/w3c/csswg-drafts/issues/12120 about clarifying this.
+    auto source = m_source.styleable();
+    if (!source || m_animations.isEmpty())
+        return;
+
+    auto previousMaxScrollOffset = m_cachedCurrentTimeData.maxScrollOffset;
+    cacheCurrentTime();
+    if (previousMaxScrollOffset == m_cachedCurrentTimeData.maxScrollOffset)
+        return;
+
+    bool needsStyleUpdate = false;
+    for (auto& animation : m_animations) {
+        if (RefPtr effect = dynamicDowncast<KeyframeEffect>(animation->effect())) {
+            effect->invalidate();
+            needsStyleUpdate = true;
+        }
+    }
+
+    if (needsStyleUpdate)
+        source->element.protectedDocument()->updateStyleIfNeeded();
 }
 
 void ScrollTimeline::setTimelineScopeElement(const Element& element)
@@ -342,10 +371,7 @@ std::optional<WebAnimationTime> ScrollTimeline::currentTime()
         return { };
 
     auto scrollDirection = resolvedScrollDirection();
-    if (!scrollDirection)
-        return { };
-
-    auto distance = scrollDirection->isReversed ? data.rangeEnd - data.scrollOffset : data.scrollOffset - data.rangeStart;
+    auto distance = scrollDirection.isReversed ? data.rangeEnd - data.scrollOffset : data.scrollOffset - data.rangeStart;
     auto progress = distance / range;
     return WebAnimationTime::fromPercentage(progress * 100);
 }
@@ -365,9 +391,9 @@ void ScrollTimeline::animationTimingDidChange(WebAnimation& animation)
 TextStream& operator<<(TextStream& ts, Scroller scroller)
 {
     switch (scroller) {
-    case Scroller::Nearest: ts << "nearest"; break;
-    case Scroller::Root: ts << "root"; break;
-    case Scroller::Self: ts << "self"; break;
+    case Scroller::Nearest: ts << "nearest"_s; break;
+    case Scroller::Root: ts << "root"_s; break;
+    case Scroller::Self: ts << "self"_s; break;
     }
     return ts;
 }

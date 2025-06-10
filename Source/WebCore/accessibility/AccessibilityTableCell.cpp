@@ -72,9 +72,10 @@ bool AccessibilityTableCell::computeIsIgnored() const
         return true;
 
     // Ignore anonymous table cells as long as they're not in a table (ie. when display:table is used).
-    WeakPtr parentTable = this->parentTable();
-    bool inTable = parentTable && parentTable->element() && (parentTable->element()->hasTagName(tableTag) || hasTableRole(*parentTable->element()));
-    if (!element() && !inTable)
+    RefPtr parentTable = this->parentTable();
+    RefPtr parentElement = parentTable ? parentTable->element() : nullptr;
+    bool inTable = parentElement && (parentElement->elementName() == ElementName::HTML_table || hasTableRole(*parentElement));
+    if (!inTable && !element())
         return true;
 
     return !isExposedTableCell() && AccessibilityRenderObject::computeIsIgnored();
@@ -147,21 +148,7 @@ AccessibilityRole AccessibilityTableCell::determineAccessibilityRole()
     auto* parentTable = this->parentTable();
     if (!parentTable || !parentTable->isExposable())
         return defaultRole;
-
-    auto cellRole = parentTable->hasGridRole() ? AccessibilityRole::GridCell : AccessibilityRole::Cell;
-    // It's important that we temporarily set our m_role because:
-    // 1. isColumnHeader() and isRowHeader() call rowIndexRange() and columnIndexRange(), in turn calling
-    //    ensureIndexesUpToDate()
-    // 2. This causes our parentTable() to addChildren(), which causes the rows to addChildren(), then causing cells
-    //    (like `this`) to addChildren(). But it's possible we don't have an m_role yet, meaning `this` cell will be
-    //    erroneously ignored (because it is AccessibilityRole::Unknown until we return from this function to set it).
-    // 3. This causes the AX tree to be wrong.
-    SetForScope temporaryRole(m_role, m_role == AccessibilityRole::Unknown ? cellRole : m_role);
-
-    if (isColumnHeader())
-        return AccessibilityRole::ColumnHeader;
-
-    return isRowHeader() ? AccessibilityRole::RowHeader : cellRole;
+    return parentTable->hasGridRole() ? AccessibilityRole::GridCell : AccessibilityRole::Cell;
 }
     
 bool AccessibilityTableCell::isTableHeaderCell() const
@@ -170,14 +157,15 @@ bool AccessibilityTableCell::isTableHeaderCell() const
     if (!node)
         return false;
 
-    if (node->hasTagName(thTag))
+    auto elementName = WebCore::elementName(*node);
+    if (elementName == ElementName::HTML_th)
         return true;
 
-    if (node->hasTagName(tdTag)) {
+    if (elementName == ElementName::HTML_td) {
         auto* current = node->parentNode();
         // i < 2 is used here because in a properly structured table, the thead should be 2 levels away from the td.
         for (int i = 0; i < 2 && current; i++) {
-            if (current->hasTagName(theadTag))
+            if (WebCore::elementName(*current) == ElementName::HTML_thead)
                 return true;
             current = current->parentNode();
         }
@@ -187,6 +175,8 @@ bool AccessibilityTableCell::isTableHeaderCell() const
 
 bool AccessibilityTableCell::isColumnHeader() const
 {
+    if (role() == AccessibilityRole::ColumnHeader)
+        return true;
     const AtomString& scope = getAttribute(scopeAttr);
     if (scope == "col"_s || scope == "colgroup"_s)
         return true;
@@ -199,11 +189,12 @@ bool AccessibilityTableCell::isColumnHeader() const
     // It is an attempt to resolve the type of th element without support in the specification.
     // Checking tableTag and tbodyTag allows to check the case of direct row placement in the table and lets stop the loop at the table level.
     for (RefPtr ancestor = node()->parentNode(); ancestor; ancestor = ancestor->parentNode()) {
-        if (ancestor->hasTagName(theadTag))
+        auto elementName = WebCore::elementName(*ancestor);
+        if (elementName == ElementName::HTML_thead)
             return true;
-        if (ancestor->hasTagName(tfootTag))
+        if (elementName == ElementName::HTML_tfoot)
             return false;
-        if (ancestor->hasTagName(tableTag) || ancestor->hasTagName(tbodyTag)) {
+        if (elementName == ElementName::HTML_table || elementName == ElementName::HTML_tbody) {
             // If we're in the first row, we're a column header.
             if (!rowIndexRange().first)
                 return true;
@@ -215,6 +206,8 @@ bool AccessibilityTableCell::isColumnHeader() const
 
 bool AccessibilityTableCell::isRowHeader() const
 {
+    if (role() == AccessibilityRole::RowHeader)
+        return true;
     const AtomString& scope = getAttribute(scopeAttr);
     if (scope == "row"_s || scope == "rowgroup"_s)
         return true;
@@ -227,28 +220,18 @@ bool AccessibilityTableCell::isRowHeader() const
     // It is an attempt to resolve the type of th element without support in the specification.
     // Checking tableTag allows to check the case of direct row placement in the table and lets stop the loop at the table level.
     for (RefPtr ancestor = node()->parentNode(); ancestor; ancestor = ancestor->parentNode()) {
-        if (ancestor->hasTagName(tfootTag) || ancestor->hasTagName(tbodyTag) || ancestor->hasTagName(tableTag)) {
+        auto elementName = WebCore::elementName(*ancestor);
+        if (elementName == ElementName::HTML_tfoot || elementName == ElementName::HTML_tbody || elementName == ElementName::HTML_table) {
             // If we're in the first column, we're a row header.
             if (!columnIndexRange().first)
                 return true;
             return false;
         }
 
-        if (ancestor->hasTagName(theadTag))
+        if (elementName == ElementName::HTML_thead)
             return false;
     }
     return false;
-}
-    
-std::optional<AXID> AccessibilityTableCell::rowGroupAncestorID() const
-{
-    auto* rowGroup = Accessibility::findAncestor<AccessibilityObject>(*this, false, [] (const auto& ancestor) {
-        return ancestor.hasTagName(theadTag) || ancestor.hasTagName(tbodyTag) || ancestor.hasTagName(tfootTag);
-    });
-    if (!rowGroup)
-        return std::nullopt;
-
-    return rowGroup->objectID();
 }
     
 String AccessibilityTableCell::expandedTextValue() const
@@ -342,8 +325,7 @@ AccessibilityObject* AccessibilityTableCell::titleUIElement() const
 
     // Table cells that are th cannot have title ui elements, since by definition
     // they are title ui elements
-    Node* node = m_renderer->node();
-    if (node && node->hasTagName(thTag))
+    if (WebCore::elementName(node()) == ElementName::HTML_th)
         return nullptr;
     
     RenderTableCell& renderCell = downcast<RenderTableCell>(*m_renderer);
@@ -363,13 +345,14 @@ AccessibilityObject* AccessibilityTableCell::titleUIElement() const
     if (!headerCell || headerCell == &renderCell)
         return nullptr;
 
-    if (!headerCell->element() || !headerCell->element()->hasTagName(thTag))
+    auto* element = headerCell->element();
+    if (!element || element->elementName() != ElementName::HTML_th)
         return nullptr;
 
     return axObjectCache()->getOrCreate(*headerCell);
 }
     
-int AccessibilityTableCell::axColumnIndex() const
+std::optional<unsigned> AccessibilityTableCell::axColumnIndex() const
 {
     if (int value = getIntegralAttribute(aria_colindexAttr); value >= 1)
         return value;
@@ -380,10 +363,10 @@ int AccessibilityTableCell::axColumnIndex() const
     if (m_axColIndexFromRow != -1 && parentRow())
         return m_axColIndexFromRow;
 
-    return -1;
+    return { };
 }
     
-int AccessibilityTableCell::axRowIndex() const
+std::optional<unsigned> AccessibilityTableCell::axRowIndex() const
 {
     // ARIA 1.1: Authors should place aria-rowindex on each row. Authors may also place
     // aria-rowindex on all of the children or owned elements of each row.
@@ -393,7 +376,7 @@ int AccessibilityTableCell::axRowIndex() const
     if (RefPtr parentRow = this->parentRow())
         return parentRow->axRowIndex();
 
-    return -1;
+    return { };
 }
 
 unsigned AccessibilityTableCell::rowSpan() const

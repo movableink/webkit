@@ -91,8 +91,10 @@ public:
             --(m_thisObject->m_pendingActivityInstanceCount);
         }
 
+        T& object() { return m_thisObject.get(); }
+
     private:
-        Ref<T> m_thisObject;
+        const Ref<T> m_thisObject;
     };
 
     template<class T> Ref<PendingActivity<T>> makePendingActivity(T& thisObject)
@@ -160,7 +162,7 @@ private:
     uint64_t m_pendingActivityInstanceCount { 0 };
 #if ASSERT_ENABLED
     bool m_suspendIfNeededWasCalled { false };
-    Ref<Thread> m_creationThread { Thread::currentSingleton() };
+    const Ref<Thread> m_creationThread { Thread::currentSingleton() };
 #endif
 
     friend class ActiveDOMObjectEventDispatchTask;

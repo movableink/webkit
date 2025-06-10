@@ -64,7 +64,7 @@ private:
     Lock m_lock;
     Markable<FileSystemHandleIdentifier> m_identifier WTF_GUARDED_BY_LOCK(m_lock);
     bool m_isDirectory;
-    Ref<FileSystemStorageConnection> m_connection;
+    const Ref<FileSystemStorageConnection> m_connection;
 };
 
 } // namespace WebCore

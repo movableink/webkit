@@ -32,12 +32,14 @@ namespace WebCore {
 class CSSParserTokenRange;
 class CSSValue;
 
-struct CSSParserContext;
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
 // For @view-transition descriptor
-RefPtr<CSSValue> consumeViewTransitionTypes(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeViewTransitionTypes(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

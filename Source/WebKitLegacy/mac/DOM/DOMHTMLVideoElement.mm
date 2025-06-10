@@ -39,7 +39,7 @@
 #import <wtf/GetPtr.h>
 #import <wtf/URL.h>
 
-#define IMPL static_cast<WebCore::HTMLVideoElement*>(reinterpret_cast<WebCore::Node*>(_internal))
+#define IMPL RefPtr { static_cast<WebCore::HTMLVideoElement*>(reinterpret_cast<WebCore::Node*>(_internal)) }
 
 @implementation DOMHTMLVideoElement
 
@@ -82,7 +82,7 @@
 - (NSString *)poster
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getURLAttribute(WebCore::HTMLNames::posterAttr).string();
+    return IMPL->getURLAttribute(WebCore::HTMLNames::posterAttr).string().createNSString().autorelease();
 }
 
 - (void)setPoster:(NSString *)newPoster

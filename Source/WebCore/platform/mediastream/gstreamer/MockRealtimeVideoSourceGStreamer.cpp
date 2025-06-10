@@ -27,6 +27,7 @@
 #include "MockRealtimeVideoSourceGStreamer.h"
 
 #include "GStreamerCaptureDeviceManager.h"
+#include "IntSize.h"
 #include "MockRealtimeMediaSourceCenter.h"
 #include "PixelBuffer.h"
 #include "VideoFrameGStreamer.h"
@@ -85,9 +86,6 @@ MockRealtimeVideoSourceGStreamer::~MockRealtimeVideoSourceGStreamer()
 
 void MockRealtimeVideoSourceGStreamer::startProducingData()
 {
-    if (deviceType() == CaptureDevice::DeviceType::Camera)
-        m_capturer->setSize(size());
-
     m_capturer->setFrameRate(frameRate());
     m_capturer->start();
     MockRealtimeVideoSource::startProducingData();

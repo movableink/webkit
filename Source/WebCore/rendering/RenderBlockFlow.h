@@ -241,7 +241,7 @@ public:
     void performBlockStepSizing(RenderBox& child, LayoutUnit blockStepSizeForChild) const;
 
     void layoutBlockChild(RenderBox& child, MarginInfo&, LayoutUnit& previousFloatLogicalBottom, LayoutUnit& maxFloatLogicalBottom);
-    void adjustPositionedBlock(RenderBox& child, const MarginInfo&);
+    void adjustOutOfFlowBlock(RenderBox& child, const MarginInfo&);
     void adjustFloatingBlock(const MarginInfo&);
 
     void trimBlockEndChildrenMargins();
@@ -278,9 +278,9 @@ public:
     virtual bool requiresColumns(int) const;
 
     bool containsFloats() const override { return m_floatingObjects && !m_floatingObjects->set().isEmpty(); }
-    bool containsFloat(RenderBox&) const;
+    bool containsFloat(const RenderBox&) const;
     bool subtreeContainsFloats() const;
-    bool subtreeContainsFloat(RenderBox&) const;
+    bool subtreeContainsFloat(const RenderBox&) const;
 
     void deleteLines() override;
     void computeOverflow(LayoutUnit oldClientAfterEdge, bool recomputeFloats = false) override;
@@ -295,7 +295,7 @@ public:
 
     const FloatingObjectSet* floatingObjectSet() const { return m_floatingObjects ? &m_floatingObjects->set() : nullptr; }
 
-    FloatingObject& insertFloatingObjectForIFC(RenderBox&);
+    FloatingObject& insertFloatingBox(RenderBox&);
 
     LayoutUnit logicalTopForFloat(const FloatingObject& floatingObject) const { return isHorizontalWritingMode() ? floatingObject.y() : floatingObject.x(); }
     LayoutUnit logicalBottomForFloat(const FloatingObject& floatingObject) const { return isHorizontalWritingMode() ? floatingObject.maxY() : floatingObject.maxX(); }
@@ -460,8 +460,6 @@ protected:
 
     virtual void computeColumnCountAndWidth();
 
-    virtual void cachePriorCharactersIfNeeded(const CachedLineBreakIteratorFactory&) { }
-
 protected:
     // Called to lay out the legend for a fieldset or the ruby text of a ruby run. Also used by multi-column layout to handle
     // the flow thread child.
@@ -480,18 +478,16 @@ private:
     void paintFloats(PaintInfo&, const LayoutPoint&, bool preservePhase = false) override;
 
     void repaintOverhangingFloats(bool paintAllDescendants) final;
-    void clipOutFloatingObjects(RenderBlock&, const PaintInfo*, const LayoutPoint&, const LayoutSize&) override;
+    void clipOutFloatingBoxes(RenderBlock&, const PaintInfo*, const LayoutPoint&, const LayoutSize&) override;
 
-    FloatingObject* insertFloatingObject(RenderBox&);
-    void removeFloatingObject(RenderBox&);
-    void removeFloatingObjectsBelow(FloatingObject*, int logicalOffset);
+    void insertFloatingBoxAndMarkForLayout(RenderBox&);
+    void removeFloatingBox(RenderBox&);
     void computeLogicalLocationForFloat(FloatingObject&, LayoutUnit& logicalTopOffset);
 
     // Called from lineWidth, to position the floats added in the last line.
     // Returns true if and only if it has positioned any floats.
     bool positionNewFloats();
     void clearFloats(UsedClear);
-    FloatingObjects* floatingObjects() { return m_floatingObjects.get(); }
 
     LayoutUnit logicalRightFloatOffsetForLine(LayoutUnit logicalTop, LayoutUnit fixedOffset, LayoutUnit logicalHeight) const override;
     LayoutUnit logicalLeftFloatOffsetForLine(LayoutUnit logicalTop, LayoutUnit fixedOffset, LayoutUnit logicalHeight) const override;
@@ -537,6 +533,8 @@ private:
     void adjustTextBoxTrimAfterLayout();
     std::pair<float, float> inlineContentTopAndBottomIncludingInkOverflow() const;
 
+    void dirtyForLayoutFromPercentageHeightDescendants();
+
 #if ENABLE(TEXT_AUTOSIZING)
     int m_widthForTextAutosizing;
     unsigned m_lineCountForTextAutosizing : 2;
@@ -573,15 +571,11 @@ protected:
     std::unique_ptr<RenderBlockFlowRareData> m_rareBlockFlowData;
 
 private:
-    std::variant<
+    Variant<
         std::monostate,
         std::unique_ptr<LayoutIntegration::LineLayout>,
         std::unique_ptr<LegacyLineLayout>
     > m_lineLayout;
-
-    friend class LineBreaker;
-    friend class LineWidth; // Needs to know FloatingObject
-    friend class LegacyLineLayout;
 };
 
 inline bool RenderBlockFlow::hasSvgTextLayout() const

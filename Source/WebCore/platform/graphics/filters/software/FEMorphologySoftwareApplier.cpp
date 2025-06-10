@@ -98,7 +98,7 @@ void FEMorphologySoftwareApplier::applyPlatformGeneric(const PaintingData& paint
                 extrema.append(columnExtremum(srcPixelBuffer, x + radiusX, yRadiusStart, yRadiusEnd, width, paintingData.type));
 
             if (x > radiusX)
-                extrema.remove(0);
+                extrema.removeAt(0);
 
             unsigned& destPixel = reinterpretCastSpanStartTo<unsigned>(dstPixelBuffer->bytes().subspan(pixelArrayIndex(x, y, width)));
             destPixel = makePixelValueFromColorComponents(kernelExtremum(extrema, paintingData.type)).value;
@@ -145,7 +145,7 @@ void FEMorphologySoftwareApplier::applyPlatform(const PaintingData& paintingData
     applyPlatformGeneric(paintingData, 0, paintingData.height);
 }
 
-bool FEMorphologySoftwareApplier::apply(const Filter& filter, const FilterImageVector& inputs, FilterImage& result) const
+bool FEMorphologySoftwareApplier::apply(const Filter& filter, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
     Ref input = inputs[0];
 

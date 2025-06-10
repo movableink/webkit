@@ -73,7 +73,7 @@ WKTypeID WKContextGetTypeID()
 WKContextRef WKContextCreate()
 {
     auto configuration = API::ProcessPoolConfiguration::create();
-    return WebKit::toAPI(&WebKit::WebProcessPool::create(configuration).leakRef());
+    return WebKit::toAPILeakingRef(WebKit::WebProcessPool::create(configuration));
 }
 
 WKContextRef WKContextCreateWithInjectedBundlePath(WKStringRef pathRef)
@@ -81,7 +81,7 @@ WKContextRef WKContextCreateWithInjectedBundlePath(WKStringRef pathRef)
     auto configuration = API::ProcessPoolConfiguration::create();
     configuration->setInjectedBundlePath(WebKit::toWTFString(pathRef));
 
-    return WebKit::toAPI(&WebKit::WebProcessPool::create(configuration).leakRef());
+    return WebKit::toAPILeakingRef(WebKit::WebProcessPool::create(configuration));
 }
 
 WKContextRef WKContextCreateWithConfiguration(WKContextConfigurationRef configuration)
@@ -89,7 +89,7 @@ WKContextRef WKContextCreateWithConfiguration(WKContextConfigurationRef configur
     RefPtr<API::ProcessPoolConfiguration> apiConfiguration = WebKit::toImpl(configuration);
     if (!apiConfiguration)
         apiConfiguration = API::ProcessPoolConfiguration::create();
-    return WebKit::toAPI(&WebKit::WebProcessPool::create(*apiConfiguration).leakRef());
+    return WebKit::toAPILeakingRef(WebKit::WebProcessPool::create(*apiConfiguration));
 }
 
 void WKContextSetClient(WKContextRef contextRef, const WKContextClientBase* wkClient)
@@ -160,12 +160,12 @@ void WKContextSetHistoryClient(WKContextRef contextRef, const WKContextHistoryCl
         }
     };
 
-    WebKit::WebProcessPool& processPool = *WebKit::toImpl(contextRef);
-    processPool.setHistoryClient(makeUnique<HistoryClient>(wkClient));
+    Ref processPool = *WebKit::toImpl(contextRef);
+    processPool->setHistoryClient(makeUnique<HistoryClient>(wkClient));
 
-    bool addsVisitedLinks = processPool.historyClient().addsVisitedLinks();
+    bool addsVisitedLinks = processPool->historyClient().addsVisitedLinks();
 
-    for (Ref process : processPool.processes()) {
+    for (Ref process : processPool->processes()) {
         for (Ref page : process->pages())
             page->setAddsVisitedLinks(addsVisitedLinks);
     }
@@ -562,7 +562,7 @@ void WKContextSetPrimaryWebsiteDataStore(WKContextRef, WKWebsiteDataStoreRef)
 
 WKArrayRef WKContextCopyLocalhostAliases(WKContextRef)
 {
-    return WebKit::toAPI(&API::Array::createStringArray(copyToVector(WebKit::LegacyGlobalSettings::singleton().hostnamesToRegisterAsLocal())).leakRef());
+    return WebKit::toAPILeakingRef(API::Array::createStringArray(copyToVector(WebKit::LegacyGlobalSettings::singleton().hostnamesToRegisterAsLocal())));
 }
 
 void WKContextSetLocalhostAliases(WKContextRef, WKArrayRef localhostAliases)

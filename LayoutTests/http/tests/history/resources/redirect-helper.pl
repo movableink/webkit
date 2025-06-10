@@ -11,8 +11,10 @@ $STATUS_TEXTS = {
   '307' => 'Moved Temporarily'
 };
 
+$fragment = (($ENV{'HTTP_COOKIE'} || '') =~ /secondNavigation=true/) ? '#3' : '#2';
+
 print "Status: $REDIRECT_CODE $STATUS_TEXTS{$REDIRECT_CODE}\r\n";
-print "Location: redirect-target.html#2\r\n";
+print "Location: redirect-target.html$fragment\r\n";
 print "Content-type: text/html\r\n";
 print "\r\n";
 

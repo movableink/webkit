@@ -43,7 +43,7 @@
 // FIXME(https://webkit.org/b/228175): Expose the functions tested here in WebKit internals object, then replace this test with one written in JavaScript.
 // FIXME: When doing the above, don't forget to remove the many WEBCORE_EXPORT that were added so we could compile and link this test.
 
-#define EXPECT_BOTH(a, b, forward, reversed) do { EXPECT_STREQ(string(documentOrder(a, b)), forward); EXPECT_STREQ(string(documentOrder(b, a)), reversed); } while (0)
+#define EXPECT_BOTH(a, b, forward, reversed) do { EXPECT_STREQ(string(a <=> b), forward); EXPECT_STREQ(string(b <=> a), reversed); } while (0)
 #define EXPECT_EQUIVALENT(a, b) EXPECT_BOTH(a, b, "equivalent", "equivalent")
 #define EXPECT_LESS(a, b) EXPECT_BOTH(a, b, "less", "greater")
 #define EXPECT_UNORDERED(a, b) EXPECT_BOTH(a, b, "unordered", "unordered")
@@ -71,7 +71,7 @@ static constexpr ASCIILiteral string(std::partial_ordering ordering)
         return "less"_s;
     if (is_gt(ordering))
         return "greater"_s;
-    if (WebCore::is_eq(ordering))
+    if (is_eq(ordering))
         return "equivalent"_s;
     return "unordered"_s;
 }
@@ -145,10 +145,10 @@ static CString allPositionTypeFailures(const Position& a, Node* nodeB, unsigned 
 {
     Vector<String> failures;
     for (auto& b : allPositionTypes(nodeB, offsetB)) {
-        auto result = string(documentOrder(a, b));
+        auto result = string(a <=> b);
         if (strcmp(result, string(expectedResult)))
             failures.append(makeString("order(b"_s, typeStringSuffix(b), ")="_s, result, "<expected:"_s, string(expectedResult), '>'));
-        result = string(documentOrder(b, a));
+        result = string(b <=> a);
         if (strcmp(result, string(-expectedResult)))
             failures.append(makeString("order(b"_s, typeStringSuffix(b), ")="_s, result, "<expected:"_s, string(-expectedResult), '>'));
     }
@@ -160,10 +160,10 @@ static CString allPositionTypeFailures(Node* nodeA, unsigned offsetA, Node* node
     Vector<String> failures;
     for (auto& a : allPositionTypes(nodeA, offsetA)) {
         for (auto& b : allPositionTypes(nodeB, offsetB)) {
-            auto result = string(documentOrder(a, b));
+            auto result = string(a <=> b);
             if (strcmp(result, string(expectedResult)))
                 failures.append(makeString("order(a"_s, typeStringSuffix(a), ",b"_s, typeStringSuffix(b), ")="_s, result, "<expected:"_s, string(expectedResult), '>'));
-            result = string(documentOrder(b, a));
+            result = string(b <=> a);
             if (strcmp(result, string(-expectedResult)))
                 failures.append(makeString("order(b"_s, typeStringSuffix(b), ",a"_s, typeStringSuffix(a), ")="_s, result, "<expected:"_s, string(-expectedResult), '>'));
         }

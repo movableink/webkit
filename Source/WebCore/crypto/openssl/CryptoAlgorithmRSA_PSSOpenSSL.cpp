@@ -30,6 +30,7 @@
 
 #include "CryptoAlgorithmRsaPssParams.h"
 #include "CryptoKeyRSA.h"
+#include "ExceptionOr.h"
 #include "OpenSSLUtilities.h"
 
 namespace WebCore {

@@ -43,6 +43,7 @@
 #include "Logging.h"
 #include "Range.h"
 #include "RenderBlockFlow.h"
+#include "RenderObjectInlines.h"
 #include "SimpleRange.h"
 #include "Text.h"
 #include "TextIterator.h"
@@ -566,8 +567,8 @@ Position VisiblePosition::canonicalPosition(const Position& passedPosition)
     // blocks or enter new ones), we search forward and backward until we find one.
     Position next = canonicalizeCandidate(nextCandidate(position));
     Position prev = canonicalizeCandidate(previousCandidate(position));
-    auto nextNode = next.protectedDeprecatedNode();
-    auto prevNode = prev.protectedDeprecatedNode();
+    RefPtr nextNode = next.deprecatedNode();
+    RefPtr prevNode = prev.deprecatedNode();
 
     // The new position must be in the same editable element. Enforce that first.
     // Unless the descent is from a non-editable html element to an editable body.
@@ -784,15 +785,15 @@ TextStream& operator<<(TextStream& stream, Affinity affinity)
     return stream;
 }
 
-TextStream& operator<<(TextStream& stream, const VisiblePosition& visiblePosition)
+TextStream& operator<<(TextStream& ts, const VisiblePosition& visiblePosition)
 {
-    TextStream::GroupScope scope(stream);
-    stream << "VisiblePosition " << &visiblePosition;
+    TextStream::GroupScope scope(ts);
+    ts << "VisiblePosition "_s << &visiblePosition;
 
-    stream.dumpProperty("position", visiblePosition.deepEquivalent());
-    stream.dumpProperty("affinity", visiblePosition.affinity());
+    ts.dumpProperty("position"_s, visiblePosition.deepEquivalent());
+    ts.dumpProperty("affinity"_s, visiblePosition.affinity());
 
-    return stream;
+    return ts;
 }
 
 std::optional<SimpleRange> makeSimpleRange(const VisiblePositionRange& range)
@@ -807,7 +808,7 @@ VisiblePositionRange makeVisiblePositionRange(const std::optional<SimpleRange>& 
     return { makeContainerOffsetPosition(range->start), makeContainerOffsetPosition(range->end) };
 }
 
-std::partial_ordering documentOrder(const VisiblePosition& a, const VisiblePosition& b)
+std::partial_ordering operator<=>(const VisiblePosition& a, const VisiblePosition& b)
 {
     // FIXME: Should two positions with different affinity be considered equivalent or not?
     return treeOrder<ComposedTree>(a.deepEquivalent(), b.deepEquivalent());

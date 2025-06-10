@@ -71,7 +71,7 @@ NetworkRTCProvider::NetworkRTCProvider(NetworkConnectionToWebProcess& connection
 #endif
 {
 #if PLATFORM(COCOA)
-    if (auto* session = downcast<NetworkSessionCocoa>(connection.networkSession()))
+    if (CheckedPtr session = downcast<NetworkSessionCocoa>(connection.networkSession()))
         m_applicationBundleIdentifier = session->sourceApplicationBundleIdentifier().utf8();
 #endif
 #if !RELEASE_LOG_DISABLED
@@ -235,13 +235,19 @@ void NetworkRTCProvider::stopResolver(LibWebRTCResolverIdentifier identifier)
 }
 
 #if PLATFORM(COCOA)
+bool NetworkRTCProvider::webRTCInterfaceMonitoringViaNWEnabled() const
+{
+    RefPtr connection = m_connection.get();
+    return connection && connection->webRTCInterfaceMonitoringViaNWEnabled();
+}
+
 const String& NetworkRTCProvider::attributedBundleIdentifierFromPageIdentifier(WebPageProxyIdentifier pageIdentifier)
 {
     return m_attributedBundleIdentifiers.ensure(pageIdentifier, [protectedThis = Ref { *this }, pageIdentifier]() -> String {
         String value;
         callOnMainRunLoopAndWait([protectedThis, &value, pageIdentifier] {
             RefPtr connection = protectedThis->m_connection.get();
-            if (auto* session = connection ? connection->networkSession() : nullptr)
+            if (CheckedPtr session = connection ? connection->networkSession() : nullptr)
                 value = session->attributedBundleIdentifierFromPageIdentifier(pageIdentifier).isolatedCopy();
         });
         return value;
@@ -284,22 +290,19 @@ void NetworkRTCProvider::getInterfaceName(URL&& url, WebPageProxyIdentifier page
         return;
     }
 
-    NetworkRTCTCPSocketCocoa::getInterfaceName(*this, url, attributedBundleIdentifierFromPageIdentifier(pageIdentifier), isFirstParty, isRelayDisabled, domain, WTFMove(completionHandler));
+    NetworkRTCTCPSocketCocoa::getInterfaceName(*this, url, attributedBundleIdentifierFromPageIdentifier(pageIdentifier), isFirstParty, isRelayDisabled, domain)->whenSettled(m_rtcNetworkThreadQueue, [completionHandler = WTFMove(completionHandler)](auto&& result) mutable {
+        completionHandler(result ? WTFMove(result.value()) : String { });
+    });
 }
 
 void NetworkRTCProvider::callOnRTCNetworkThread(Function<void()>&& callback)
 {
-    protectedRTCNetworkThreadQueue()->dispatch(WTFMove(callback));
+    m_rtcNetworkThreadQueue->dispatch(WTFMove(callback));
 }
 
 void NetworkRTCProvider::assertIsRTCNetworkThread()
 {
-    ASSERT(protectedRTCNetworkThreadQueue()->isCurrent());
-}
-
-Ref<WorkQueue> NetworkRTCProvider::protectedRTCNetworkThreadQueue()
-{
-    return m_rtcNetworkThreadQueue;
+    assertIsCurrent(m_rtcNetworkThreadQueue);
 }
 
 #else // PLATFORM(COCOA)
@@ -338,8 +341,7 @@ void NetworkRTCProvider::createClientTCPSocket(LibWebRTCSocketIdentifier identif
         if (!m_connection)
             return;
 
-        auto* session = m_connection->networkSession();
-        if (!session) {
+        if (!m_connection->networkSession()) {
             signalSocketIsClosed(identifier);
             return;
         }

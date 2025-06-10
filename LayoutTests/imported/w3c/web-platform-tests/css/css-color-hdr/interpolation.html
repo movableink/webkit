@@ -25,11 +25,11 @@ test_interpolation({
 
 test_interpolation({
   property: "dynamic-range-limit",
-  from: "constrained-high",
+  from: "constrained",
   to: "standard",
 }, [
-  {at: 0.0, expect: "constrained-high"},
-  {at: 0.5, expect: "dynamic-range-limit-mix(standard 50%, constrained-high 50%)"},
+  {at: 0.0, expect: "constrained"},
+  {at: 0.5, expect: "dynamic-range-limit-mix(standard 50%, constrained 50%)"},
   {at: 1.0, expect: "standard"},
 ]);
 
@@ -55,11 +55,11 @@ test_interpolation({
 
 test_interpolation({
   property: "dynamic-range-limit",
-  from: "dynamic-range-limit-mix(constrained-high 90%, standard 10%)",
+  from: "dynamic-range-limit-mix(constrained 90%, standard 10%)",
   to: "dynamic-range-limit-mix(no-limit 10%, standard 90%)",
 }, [
-  {at: 0.0, expect: "dynamic-range-limit-mix(standard 10%, constrained-high 90%)"},
-  {at: 0.5, expect: "dynamic-range-limit-mix(standard 50%, constrained-high 45%, no-limit 5%)"},
+  {at: 0.0, expect: "dynamic-range-limit-mix(standard 10%, constrained 90%)"},
+  {at: 0.5, expect: "dynamic-range-limit-mix(standard 50%, constrained 45%, no-limit 5%)"},
   {at: 1.0, expect: "dynamic-range-limit-mix(standard 90%, no-limit 10%)"},
 ]);
 </script>

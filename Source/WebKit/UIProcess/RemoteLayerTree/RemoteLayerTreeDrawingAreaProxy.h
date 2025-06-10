@@ -41,7 +41,6 @@ namespace WebKit {
 class RemoteLayerTreeTransaction;
 class RemotePageDrawingAreaProxy;
 class RemoteScrollingCoordinatorProxy;
-class RemoteScrollingCoordinatorProxy;
 class RemoteScrollingCoordinatorTransaction;
 
 class RemoteLayerTreeDrawingAreaProxy : public DrawingAreaProxy, public RefCounted<RemoteLayerTreeDrawingAreaProxy> {

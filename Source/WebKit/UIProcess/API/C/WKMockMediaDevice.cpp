@@ -36,11 +36,11 @@
 
 using namespace WebKit;
 
-void WKAddMockMediaDevice(WKContextRef context, WKStringRef persistentId, WKStringRef label, WKStringRef type, WKDictionaryRef properties)
+void WKAddMockMediaDevice(WKContextRef context, WKStringRef persistentId, WKStringRef label, WKStringRef type, WKDictionaryRef properties, bool isDefault)
 {
 #if ENABLE(MEDIA_STREAM)
     String typeString = WebKit::toImpl(type)->string();
-    std::variant<WebCore::MockMicrophoneProperties, WebCore::MockSpeakerProperties, WebCore::MockCameraProperties, WebCore::MockDisplayProperties> deviceProperties;
+    Variant<WebCore::MockMicrophoneProperties, WebCore::MockSpeakerProperties, WebCore::MockCameraProperties, WebCore::MockDisplayProperties> deviceProperties;
     if (typeString == "camera"_s) {
         WebCore::MockCameraProperties cameraProperties;
         if (properties) {
@@ -72,7 +72,6 @@ void WKAddMockMediaDevice(WKContextRef context, WKStringRef persistentId, WKStri
         }
     }
 
-    bool isDefault = false;
     toImpl(context)->addMockMediaDevice({ WebKit::toImpl(persistentId)->string(), WebKit::toImpl(label)->string(), flags, isDefault, WTFMove(deviceProperties) });
 #endif
 }

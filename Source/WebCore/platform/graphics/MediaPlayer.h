@@ -72,7 +72,7 @@ template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::MediaPlayerF
 }
 
 #if USE(AVFOUNDATION)
-typedef struct __CVBuffer* CVPixelBufferRef;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer* CVPixelBufferRef;
 #endif
 
 namespace WTF {
@@ -94,6 +94,7 @@ class DestinationColorSpace;
 class GraphicsContextGL;
 class GraphicsContext;
 class InbandTextTrackPrivate;
+class MessageClientForTesting;
 class LegacyCDM;
 class LegacyCDMSession;
 class LegacyCDMSessionClient;
@@ -185,6 +186,7 @@ struct MediaPlayerLoadOptions {
     ContentType contentType { };
     bool requiresRemotePlayback { false };
     bool supportsLimitedMatroska { false };
+    VideoMediaSampleRendererPreferences videoMediaSampleRendererPreferences { };
 };
 
 class MediaPlayerClient : public CanMakeWeakPtr<MediaPlayerClient> {
@@ -296,6 +298,7 @@ public:
     virtual void mediaPlayerDidRemoveAudioTrack(AudioTrackPrivate&) { }
     virtual void mediaPlayerDidRemoveTextTrack(InbandTextTrackPrivate&) { }
     virtual void mediaPlayerDidRemoveVideoTrack(VideoTrackPrivate&) { }
+    virtual void mediaPlayerDidReportGPUMemoryFootprint(size_t) { }
 
     virtual void mediaPlayerReloadAndResumePlaybackIfNeeded() { }
 
@@ -344,8 +347,6 @@ public:
 #if PLATFORM(COCOA)
     virtual void mediaPlayerOnNewVideoFrameMetadata(VideoFrameMetadata&&, RetainPtr<CVPixelBufferRef>&&) { }
 #endif
-
-    virtual bool mediaPlayerPrefersSandboxedParsing() const { return false; }
 
     virtual bool mediaPlayerShouldDisableHDR() const { return false; }
 
@@ -691,6 +692,8 @@ public:
 
     size_t extraMemoryCost() const;
 
+    void reportGPUMemoryFootprint(uint64_t) const;
+
     unsigned long long fileSize() const;
 
     std::optional<VideoPlaybackQualityMetrics> videoPlaybackQualityMetrics();
@@ -729,7 +732,6 @@ public:
 
 #if USE(AVFOUNDATION)
     AVPlayer *objCAVFoundationAVPlayer() const;
-    void setDecompressionSessionPreferences(bool, bool);
 #endif
     
 #if USE(QT_MULTIMEDIA)
@@ -776,12 +778,11 @@ public:
     std::optional<VideoFrameMetadata> videoFrameMetadata();
     void startVideoFrameMetadataGathering();
     void stopVideoFrameMetadataGathering();
+    bool isGatheringVideoFrameMetadata() const { return m_isGatheringVideoFrameMetadata; }
 
     void playerContentBoxRectChanged(const LayoutRect&);
 
     String lastErrorMessage() const;
-
-    bool prefersSandboxedParsing() const { return client().mediaPlayerPrefersSandboxedParsing(); }
 
     void renderVideoWillBeDestroyed();
 
@@ -824,6 +825,9 @@ public:
     const String& sceneIdentifier() const { return m_sceneIdentifier; }
 #endif
 
+    void setMessageClientForTesting(WeakPtr<MessageClientForTesting>);
+    MessageClientForTesting* messageClientForTesting() const;
+
 private:
     MediaPlayer(MediaPlayerClient&);
     MediaPlayer(MediaPlayerClient&, MediaPlayerEnums::MediaEngineIdentifier);
@@ -859,7 +863,7 @@ private:
     bool m_shouldPrepareToRender { false };
     bool m_initializingMediaEngine { false };
     DynamicRangeMode m_preferredDynamicRangeMode;
-    PlatformDynamicRangeLimit m_platformDynamicRangeLimit { PlatformDynamicRangeLimit::constrainedHigh() };
+    PlatformDynamicRangeLimit m_platformDynamicRangeLimit { PlatformDynamicRangeLimit::initialValueForVideos() };
     PitchCorrectionAlgorithm m_pitchCorrectionAlgorithm { PitchCorrectionAlgorithm::BestAllAround };
     RefPtr<PlatformMediaResourceLoader> m_mediaResourceLoader;
 
@@ -872,7 +876,7 @@ private:
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA) && ENABLE(ENCRYPTED_MEDIA)
     bool m_shouldContinueAfterKeyNeeded { false };
 #endif
-    bool m_isGatheringVideoFrameMetadata { false };
+    std::atomic<bool> m_isGatheringVideoFrameMetadata { false };
 
 #if HAVE(SPATIAL_TRACKING_LABEL)
     String m_defaultSpatialTrackingLabel;
@@ -887,14 +891,12 @@ private:
 
     String m_lastErrorMessage;
     ProcessIdentity m_processIdentity;
-#if USE(AVFOUNDATION)
-    bool m_preferDecompressionSession { false };
-    bool m_canFallbackToDecompressionSession { false };
-#endif
 
 #if PLATFORM(IOS_FAMILY)
     String m_sceneIdentifier;
 #endif
+
+    WeakPtr<MessageClientForTesting> m_internalMessageClient;
 };
 
 class MediaPlayerFactory : public CanMakeWeakPtr<MediaPlayerFactory> {

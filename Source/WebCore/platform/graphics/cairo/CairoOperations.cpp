@@ -50,6 +50,7 @@
 #include "ShadowBlur.h"
 #include <algorithm>
 #include <cairo.h>
+#include <numbers>
 
 namespace WebCore {
 namespace Cairo {
@@ -614,8 +615,10 @@ void setLineDash(GraphicsContextCairo& platformContext, const DashArray& dashes,
 {
     if (std::all_of(dashes.begin(), dashes.end(), [](auto& dash) { return !dash; }))
         cairo_set_dash(platformContext.cr(), 0, 0, 0);
-    else
-        cairo_set_dash(platformContext.cr(), dashes.data(), dashes.size(), dashOffset);
+    else {
+        auto dashesSpan = dashes.span();
+        cairo_set_dash(platformContext.cr(), dashesSpan.data(), dashesSpan.size(), dashOffset);
+    }
 }
 
 void setLineJoin(GraphicsContextCairo& platformContext, LineJoin lineJoin)
@@ -1152,7 +1155,7 @@ void drawEllipse(GraphicsContextCairo& platformContext, const FloatRect& rect, c
     float xRadius = .5 * rect.width();
     cairo_translate(cr, rect.x() + xRadius, rect.y() + yRadius);
     cairo_scale(cr, xRadius, yRadius);
-    cairo_arc(cr, 0., 0., 1., 0., 2 * piFloat);
+    cairo_arc(cr, 0., 0., 1., 0., 2 * std::numbers::pi_v<float>);
     cairo_restore(cr);
 
     if (fillColor.isVisible()) {

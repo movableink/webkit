@@ -257,6 +257,68 @@ TEST(WKWebExtensionAPITabs, Create)
     [manager run];
 }
 
+TEST(WKWebExtensionAPITabs, CreateTabsOverflowIndex)
+{
+    auto *backgroundScript = Util::constructScript(@[
+        @"var allWindows = await browser.windows.getAll({ populate: true })",
+        @"var initialTabsCount = allWindows[0].tabs.length",
+        @"var largeIndex = 13000000000000000000000000000000000",
+        @"var newTab = await browser.tabs.create({ index: largeIndex })",
+
+        @"var updatedWindows = await browser.windows.getAll({ populate: true })",
+        @"var updatedTabs = updatedWindows[0].tabs",
+        @"browser.test.assertEq(updatedTabs.length, initialTabsCount + 1, 'One new tab should have been added')",
+        @"browser.test.assertEq(newTab.index, initialTabsCount, 'The new tab should be posted at the end')",
+
+        @"browser.test.notifyPass()"
+    ]);
+
+    auto manager = Util::loadExtension(tabsManifest, @{ @"background.js": backgroundScript });
+
+    auto *window = manager.get().defaultWindow;
+    auto originalOpenNewTab = manager.get().internalDelegate.openNewTab;
+
+    manager.get().internalDelegate.openNewTab = ^(WKWebExtensionTabConfiguration *configuration, WKWebExtensionContext *context, void (^completionHandler)(id<WKWebExtensionTab>, NSError *)) {
+        EXPECT_NS_EQUAL(configuration.window, window);
+        EXPECT_EQ(configuration.index, NSUIntegerMax);
+
+        originalOpenNewTab(configuration, context, completionHandler);
+    };
+
+    [manager run];
+}
+
+TEST(WKWebExtensionAPITabs, CreateTabsZeroIndex)
+{
+    auto *backgroundScript = Util::constructScript(@[
+        @"var allWindows = await browser.windows.getAll({ populate: true })",
+        @"var initialTabsCount = allWindows[0].tabs.length",
+
+        @"var newTab = await browser.tabs.create({ index: 0 })",
+
+        @"var updatedWindows = await browser.windows.getAll({ populate: true })",
+        @"var updatedTabs = updatedWindows[0].tabs",
+        @"browser.test.assertEq(updatedTabs.length, initialTabsCount + 1, 'One new tab should have been added')",
+        @"browser.test.assertEq(newTab.index, initialTabsCount - 1, 'The new tab should be posted at the start')",
+
+        @"browser.test.notifyPass()"
+    ]);
+
+    auto manager = Util::loadExtension(tabsManifest, @{ @"background.js": backgroundScript });
+
+    auto *window = manager.get().defaultWindow;
+    auto originalOpenNewTab = manager.get().internalDelegate.openNewTab;
+
+    manager.get().internalDelegate.openNewTab = ^(WKWebExtensionTabConfiguration *configuration, WKWebExtensionContext *context, void (^completionHandler)(id<WKWebExtensionTab>, NSError *)) {
+        EXPECT_NS_EQUAL(configuration.window, window);
+        EXPECT_EQ(configuration.index, (NSUInteger)0);
+
+        originalOpenNewTab(configuration, context, completionHandler);
+    };
+
+    [manager run];
+}
+
 TEST(WKWebExtensionAPITabs, CreateWithSpecifiedOptions)
 {
     auto *backgroundScript = Util::constructScript(@[
@@ -1512,7 +1574,12 @@ TEST(WKWebExtensionAPITabs, HighlightedAlsoActivatesTab)
     Util::loadAndRunExtension(tabsManifest, @{ @"background.js": backgroundScript });
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPITabs, DISABLED_SendMessage)
+#else
 TEST(WKWebExtensionAPITabs, SendMessage)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
@@ -1562,7 +1629,12 @@ TEST(WKWebExtensionAPITabs, SendMessage)
     [manager run];
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPITabs, DISABLED_SendMessageWithAsyncReply)
+#else
 TEST(WKWebExtensionAPITabs, SendMessageWithAsyncReply)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
@@ -1614,7 +1686,12 @@ TEST(WKWebExtensionAPITabs, SendMessageWithAsyncReply)
     [manager run];
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPITabs, DISABLED_SendMessageWithPromiseReply)
+#else
 TEST(WKWebExtensionAPITabs, SendMessageWithPromiseReply)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
@@ -1664,7 +1741,12 @@ TEST(WKWebExtensionAPITabs, SendMessageWithPromiseReply)
     [manager run];
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPITabs, DISABLED_SendMessageWithAsyncPromiseReply)
+#else
 TEST(WKWebExtensionAPITabs, SendMessageWithAsyncPromiseReply)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
@@ -1716,7 +1798,12 @@ TEST(WKWebExtensionAPITabs, SendMessageWithAsyncPromiseReply)
     [manager run];
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPITabs, DISABLED_SendMessageWithoutReply)
+#else
 TEST(WKWebExtensionAPITabs, SendMessageWithoutReply)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
@@ -2001,7 +2088,120 @@ TEST(WKWebExtensionAPITabs, SendMessageFromBackgroundToSpecificDocument)
     [manager run];
 }
 
+TEST(WKWebExtensionAPITabs, SendMessageBackAndForwardNavigation)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, "<iframe src='/frame'></iframe>"_s } },
+        { "/frame"_s, { { { "Content-Type"_s, "text/html"_s } }, "<p>Frame Content</p>"_s } }
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    auto *backgroundScript = Util::constructScript(@[
+        @"const expectedHostnames = ['localhost', '127.0.0.1', 'localhost', '127.0.0.1']",
+        @"let step = 0",
+
+        @"browser.test.onMessage.addListener(async (message) => {",
+        @"  browser.test.assertEq(message, 'Go', 'Message content should match')",
+
+        @"  const [tab] = await browser.tabs.query({ active: true, currentWindow: true })",
+        @"  const frames = await browser.webNavigation.getAllFrames({ tabId: tab.id })",
+
+        @"  const responses = await Promise.all(frames.map(async (frame) => {",
+        @"    return await browser.tabs.sendMessage(tab.id, 'Ping', { frameId: frame.frameId })",
+        @"  }))",
+
+        @"  browser.test.assertEq(responses.length, 2, 'Should receive 2 responses')",
+
+        @"  const mainFrameHost = new URL(responses[0]).hostname",
+        @"  const subframeHost = new URL(responses[1]).hostname",
+
+        @"  browser.test.assertEq(mainFrameHost, expectedHostnames[step], 'Main frame host should be')",
+        @"  browser.test.assertEq(subframeHost, expectedHostnames[step], 'Subframe host should be')",
+
+        @"  ++step",
+
+        @"  browser.test.sendMessage('Messages Sent')",
+        @"})",
+
+        @"browser.test.sendMessage('Ready')"
+    ]);
+
+    auto *contentScript = Util::constructScript(@[
+        @"browser.runtime.onMessage.addListener((message) => {",
+        @"  browser.test.assertEq(message, 'Ping', 'Message content should match')",
+        @"  return Promise.resolve(window?.location?.href)",
+        @"})"
+    ]);
+
+    auto *resources = @{
+        @"background.js": backgroundScript,
+        @"content.js": contentScript,
+    };
+
+    auto *manifest = @{
+        @"manifest_version": @3,
+
+        @"name": @"Tabs Test",
+        @"description": @"Tabs Test",
+        @"version": @"1",
+
+        @"background": @{
+            @"scripts": @[ @"background.js" ],
+            @"type": @"module",
+            @"persistent": @NO,
+        },
+
+        @"content_scripts": @[ @{
+            @"js": @[ @"content.js" ],
+            @"matches": @[ @"*://*/*" ],
+            @"all_frames": @YES,
+        } ],
+
+        @"permissions": @[ @"webNavigation", @"tabs" ]
+    };
+
+    auto manager = Util::loadExtension(manifest, resources);
+
+    auto *localhostRequest = server.requestWithLocalhost();
+    auto *altHostRequest = server.request();
+
+    [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:localhostRequest.URL];
+    [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:altHostRequest.URL];
+
+    [manager runUntilTestMessage:@"Ready"];
+
+    auto *webView = manager.get().defaultTab.webView;
+
+    // Load localhost page.
+    [webView synchronouslyLoadRequest:localhostRequest];
+
+    [manager sendTestMessage:@"Go"];
+    [manager runUntilTestMessage:@"Messages Sent"];
+
+    // Load 127.0.0.1 page.
+    [webView synchronouslyLoadRequest:altHostRequest];
+
+    [manager sendTestMessage:@"Go"];
+    [manager runUntilTestMessage:@"Messages Sent"];
+
+    // Go back to localhost.
+    [webView synchronouslyGoBack];
+
+    [manager sendTestMessage:@"Go"];
+    [manager runUntilTestMessage:@"Messages Sent"];
+
+    // Go forward to 127.0.0.1.
+    [webView synchronouslyGoForward];
+
+    [manager sendTestMessage:@"Go"];
+    [manager runUntilTestMessage:@"Messages Sent"];
+}
+
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPITabs, DISABLED_Connect)
+#else
 TEST(WKWebExtensionAPITabs, Connect)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
@@ -2268,7 +2468,12 @@ TEST(WKWebExtensionAPITabs, ConnectToSubframe)
     [manager run];
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPITabs, DISABLED_PortDisconnect)
+#else
 TEST(WKWebExtensionAPITabs, PortDisconnect)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
@@ -2322,7 +2527,12 @@ TEST(WKWebExtensionAPITabs, PortDisconnect)
     [manager run];
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPITabs, DISABLED_ConnectWithMultipleListeners)
+#else
 TEST(WKWebExtensionAPITabs, ConnectWithMultipleListeners)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
@@ -2390,7 +2600,12 @@ TEST(WKWebExtensionAPITabs, ConnectWithMultipleListeners)
     [manager run];
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPITabs, DISABLED_PortDisconnectWithMultipleListeners)
+#else
 TEST(WKWebExtensionAPITabs, PortDisconnectWithMultipleListeners)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },

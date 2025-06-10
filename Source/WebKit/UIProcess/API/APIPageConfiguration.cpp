@@ -51,11 +51,9 @@ namespace API {
 using namespace WebKit;
 
 PageConfiguration::Data::Data()
-    : openedSite(aboutBlankURL()) { }
-
-Ref<WebKit::BrowsingContextGroup> PageConfiguration::Data::createBrowsingContextGroup()
+    : openerInfo(Box<std::optional<OpenerInfo>>::create(std::nullopt))
+    , openedSite(aboutBlankURL())
 {
-    return BrowsingContextGroup::create();
 }
 
 Ref<WebKit::WebProcessPool> PageConfiguration::Data::createWebProcessPool()
@@ -104,16 +102,6 @@ void PageConfiguration::copyDataFrom(const PageConfiguration& other)
     m_data = other.m_data;
 }
 
-BrowsingContextGroup& PageConfiguration::browsingContextGroup() const
-{
-    return m_data.browsingContextGroup.get();
-}
-
-void PageConfiguration::setBrowsingContextGroup(RefPtr<BrowsingContextGroup>&& group)
-{
-    m_data.browsingContextGroup = WTFMove(group);
-}
-
 const std::optional<WebCore::WindowFeatures>& PageConfiguration::windowFeatures() const
 {
     return m_data.windowFeatures;
@@ -146,12 +134,17 @@ void PageConfiguration::setOpenedMainFrameName(const WTF::String& name)
 
 auto PageConfiguration::openerInfo() const -> const std::optional<OpenerInfo>&
 {
-    return m_data.openerInfo;
+    return *m_data.openerInfo;
 }
 
 void PageConfiguration::setOpenerInfo(std::optional<OpenerInfo>&& info)
 {
-    m_data.openerInfo = WTFMove(info);
+    m_data.openerInfo = Box<std::optional<OpenerInfo>>::create(WTFMove(info));
+}
+
+void PageConfiguration::consumeOpenerInfo()
+{
+    *m_data.openerInfo = std::nullopt;
 }
 
 bool PageConfiguration::OpenerInfo::operator==(const OpenerInfo&) const = default;
@@ -377,7 +370,7 @@ void PageConfiguration::setDelaysWebProcessLaunchUntilFirstLoad(bool delaysWebPr
 
 bool PageConfiguration::delaysWebProcessLaunchUntilFirstLoad() const
 {
-    if (preferences().siteIsolationEnabled())
+    if (protectedPreferences()->siteIsolationEnabled())
         return true;
     if (RefPtr processPool = m_data.processPool.getIfExists(); processPool && isInspectorProcessPool(*processPool)) {
         // Never delay process launch for inspector pages as inspector pages do not know how to transition from a terminated process.
@@ -428,7 +421,7 @@ bool PageConfiguration::applePayEnabled() const
     if (auto applePayEnabledOverride = m_data.applePayEnabledOverride)
         return *applePayEnabledOverride;
 
-    return preferences().applePayEnabled();
+    return protectedPreferences()->applePayEnabled();
 }
 
 void PageConfiguration::setApplePayEnabled(bool enabled)

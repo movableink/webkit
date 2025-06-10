@@ -27,7 +27,6 @@
 
 #include "FontTaggedSettings.h"
 #include <optional>
-#include <variant>
 #include <vector>
 #include <wtf/Hasher.h>
 #include <wtf/Markable.h>

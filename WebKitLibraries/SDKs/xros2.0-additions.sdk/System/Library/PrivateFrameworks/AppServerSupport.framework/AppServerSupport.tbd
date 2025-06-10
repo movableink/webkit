@@ -2,7 +2,7 @@
 tbd-version: 4
 targets: [arm64-xros, arm64e-xros]
 install-name: /System/Library/PrivateFrameworks/AppServerSupport.framework/AppServerSupport
-current-version: 2866.0.13
+current-version: 2894.120.17
 exports:
 -       targets: [arm64-xros, arm64e-xros]
         objc-classes: [OSLaunchdJob]

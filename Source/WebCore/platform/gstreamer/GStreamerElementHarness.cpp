@@ -23,6 +23,7 @@
 #if USE(GSTREAMER)
 
 #include "GStreamerCommon.h"
+#include "GUniquePtrGStreamer.h"
 
 #include <wtf/FileSystem.h>
 #include <wtf/PrintStream.h>
@@ -615,17 +616,17 @@ void MermaidBuilder::dumpElement(GStreamerElementHarness& harness, GstElement* e
     m_stringBuilder.append("subgraph "_s, elementId, " [<center>"_s, unsafeSpan(G_OBJECT_TYPE_NAME(element)), "\\n<small>"_s, unsafeSpan(GST_ELEMENT_NAME(element)), "]\n"_s);
 
     if (GST_IS_BIN(element)) {
-        for (auto element : GstIteratorAdaptor<GstElement>(GUniquePtr<GstIterator>(gst_bin_iterate_recurse(GST_BIN_CAST(element)))))
+        for (auto element : GstIteratorAdaptor<GstElement>(gst_bin_iterate_recurse(GST_BIN_CAST(element))))
             dumpElement(harness, element);
     }
 
     GRefPtr<GstPad> firstSinkPad, firstSrcPad;
-    for (auto pad : GstIteratorAdaptor<GstPad>(GUniquePtr<GstIterator>(gst_element_iterate_sink_pads(element)))) {
+    for (auto pad : GstIteratorAdaptor<GstPad>(gst_element_iterate_sink_pads(element))) {
         if (!firstSinkPad)
             firstSinkPad = pad;
         dumpPad(harness, pad);
     }
-    for (auto pad : GstIteratorAdaptor<GstPad>(GUniquePtr<GstIterator>(gst_element_iterate_src_pads(element)))) {
+    for (auto pad : GstIteratorAdaptor<GstPad>(gst_element_iterate_src_pads(element))) {
         if (!firstSrcPad)
             firstSrcPad = pad;
         dumpPad(harness, pad);

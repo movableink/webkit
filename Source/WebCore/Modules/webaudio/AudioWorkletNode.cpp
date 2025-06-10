@@ -197,7 +197,7 @@ void AudioWorkletNode::process(size_t framesToProcess)
 
     auto zeroOutput = [&] {
         for (unsigned i = 0; i < numberOfOutputs(); ++i)
-            output(i)->bus()->zero();
+            output(i)->bus().zero();
     };
 
     if (!m_processLock.tryLock()) {
@@ -213,9 +213,9 @@ void AudioWorkletNode::process(size_t framesToProcess)
 
     // If the input is not connected, pass nullptr to the processor.
     for (unsigned i = 0; i < numberOfInputs(); ++i)
-        m_inputs[i] = input(i)->isConnected() ? input(i)->bus() : nullptr;
+        m_inputs[i] = input(i)->isConnected() ? &input(i)->bus() : nullptr;
     for (unsigned i = 0; i < numberOfOutputs(); ++i)
-        m_outputs[i] = *output(i)->bus();
+        m_outputs[i] = output(i)->bus();
 
     if (noiseInjectionPolicies().contains(NoiseInjectionPolicy::Minimal)) {
         for (unsigned inputIndex = 0; inputIndex < numberOfInputs(); ++inputIndex) {

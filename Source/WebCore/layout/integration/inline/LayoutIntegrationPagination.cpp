@@ -31,8 +31,6 @@
 #include "InlineIteratorLineBox.h"
 #include "PlacedFloats.h"
 #include "RenderBlockFlow.h"
-#include "RenderStyleInlines.h"
-#include "RenderTableCell.h"
 
 namespace WebCore {
 namespace LayoutIntegration {
@@ -184,4 +182,3 @@ void adjustLinePositionsForPagination(InlineContent& inlineContent, const Vector
 
 }
 }
-

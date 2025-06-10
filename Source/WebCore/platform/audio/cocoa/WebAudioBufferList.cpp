@@ -27,6 +27,7 @@
 #include "WebAudioBufferList.h"
 
 #include "CAAudioStreamDescription.h"
+#include "Logging.h"
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/IndexedRange.h>
 #include <wtf/StdLibExtras.h>

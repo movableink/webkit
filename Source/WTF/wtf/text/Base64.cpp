@@ -455,7 +455,8 @@ static std::tuple<FromBase64ShouldThrowError, size_t, size_t> fromBase64Impl(std
         return { FromBase64ShouldThrowError::No, 0, 0 };
 
     size_t outputLength = output.size();
-    auto result = simdutf::base64_to_binary_safe(std::bit_cast<const UTFType*>(span.data()), span.size(), std::bit_cast<char*>(output.data()), outputLength, options);
+    constexpr bool decodeUpToBadChar = true;
+    auto result = simdutf::base64_to_binary_safe(std::bit_cast<const UTFType*>(span.data()), span.size(), std::bit_cast<char*>(output.data()), outputLength, options, simdutf::last_chunk_handling_options::loose, decodeUpToBadChar);
     switch (result.error) {
     case simdutf::error_code::INVALID_BASE64_CHARACTER:
         return { FromBase64ShouldThrowError::Yes, result.count, outputLength };

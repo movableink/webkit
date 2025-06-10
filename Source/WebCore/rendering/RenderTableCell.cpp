@@ -38,14 +38,17 @@
 #include "PaintInfo.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderTableCellInlines.h"
 #include "RenderTableCol.h"
 #include "RenderTableInlines.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "Settings.h"
+#include "StyleBoxShadow.h"
 #include "StyleProperties.h"
 #include "TransformState.h"
+#include <ranges>
 #include <wtf/StackStats.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -100,6 +103,11 @@ RenderTableCell::RenderTableCell(Document& document, RenderStyle&& style)
 }
 
 RenderTableCell::~RenderTableCell() = default;
+
+ASCIILiteral RenderTableCell::renderName() const
+{
+    return (isAnonymous() || isPseudoElement()) ? "RenderTableCell (anonymous)"_s : "RenderTableCell"_s;
+}
 
 void RenderTableCell::willBeRemovedFromTree()
 {
@@ -847,10 +855,10 @@ CollapsedBorderValue RenderTableCell::computeCollapsedBeforeBorder(IncludeBorder
     RenderTable* table = this->table();
     if (!table)
         return result;
-    RenderTableCell* prevCell = table->cellAbove(this);
-    if (prevCell) {
+    RenderTableCell* previousCell = table->cellAbove(this);
+    if (previousCell) {
         // (2) A before cell's after border.
-        result = chooseBorder(CollapsedBorderValue(prevCell->style().borderAfter(), includeColor ? prevCell->style().visitedDependentColorWithColorFilter(afterColorProperty) : Color(), BorderPrecedence::Cell), result);
+        result = chooseBorder(CollapsedBorderValue(previousCell->style().borderAfter(), includeColor ? previousCell->style().visitedDependentColorWithColorFilter(afterColorProperty) : Color(), BorderPrecedence::Cell), result);
         if (!result.exists())
             return result;
     }
@@ -861,15 +869,15 @@ CollapsedBorderValue RenderTableCell::computeCollapsedBeforeBorder(IncludeBorder
         return result;
     
     // (4) The previous row's after border.
-    if (prevCell) {
-        RenderObject* prevRow = 0;
-        if (prevCell->section() == section())
-            prevRow = parent()->previousSibling();
+    if (previousCell) {
+        RenderTableRow* previousRow = nullptr;
+        if (previousCell->section() == section())
+            previousRow = dynamicDowncast<RenderTableRow>(parent()->previousSibling());
         else
-            prevRow = prevCell->section()->lastRow();
+            previousRow = previousCell->section()->lastRow();
     
-        if (prevRow) {
-            result = chooseBorder(CollapsedBorderValue(prevRow->style().borderAfter(), includeColor ? prevRow->style().visitedDependentColorWithColorFilter(afterColorProperty) : Color(), BorderPrecedence::Row), result);
+        if (previousRow) {
+            result = chooseBorder(CollapsedBorderValue(previousRow->style().borderAfter(), includeColor ? previousRow->style().visitedDependentColorWithColorFilter(afterColorProperty) : Color(), BorderPrecedence::Row), result);
             if (!result.exists())
                 return result;
         }
@@ -1256,7 +1264,7 @@ void RenderTableCell::collectBorderValues(RenderTable::CollapsedBorderValues& bo
 
 void RenderTableCell::sortBorderValues(RenderTable::CollapsedBorderValues& borderValues)
 {
-    std::sort(borderValues.begin(), borderValues.end(), compareBorders);
+    std::ranges::sort(borderValues, compareBorders);
 }
 
 void RenderTableCell::paintCollapsedBorders(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -1438,12 +1446,12 @@ void RenderTableCell::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoin
     adjustBorderBoxRectForPainting(paintRect);
 
     BackgroundPainter backgroundPainter { *this, paintInfo };
-    backgroundPainter.paintBoxShadow(paintRect, style(), ShadowStyle::Normal);
-    
+    backgroundPainter.paintBoxShadow(paintRect, style(), Style::ShadowStyle::Normal);
+
     // Paint our cell background.
     paintBackgroundsBehindCell(paintInfo, paintOffset, this, paintOffset);
 
-    backgroundPainter.paintBoxShadow(paintRect, style(), ShadowStyle::Inset);
+    backgroundPainter.paintBoxShadow(paintRect, style(), Style::ShadowStyle::Inset);
 
     if (!style().hasBorder() || table->collapseBorders())
         return;
@@ -1490,18 +1498,6 @@ void RenderTableCell::scrollbarsChanged(bool horizontalScrollbarChanged, bool ve
         setIntrinsicPaddingAfter(newAfterPadding);
     } else
         setIntrinsicPaddingAfter(intrinsicPaddingAfter() - scrollbarHeight);
-}
-
-RenderPtr<RenderTableCell> RenderTableCell::createTableCellWithStyle(Document& document, const RenderStyle& style)
-{
-    auto cell = createRenderer<RenderTableCell>(document, RenderStyle::createAnonymousStyleWithDisplay(style, DisplayType::TableCell));
-    cell->initializeStyle();
-    return cell;
-}
-
-RenderPtr<RenderTableCell> RenderTableCell::createAnonymousWithParentRenderer(const RenderTableRow& parent)
-{
-    return RenderTableCell::createTableCellWithStyle(parent.document(), parent.style());
 }
 
 bool RenderTableCell::hasLineIfEmpty() const

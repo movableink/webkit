@@ -60,7 +60,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 
 - (NSURLRequest *)request
 {
-    return _frameInfo->request().nsURLRequest(WebCore::HTTPBodyUpdatePolicy::DoNotUpdateHTTPBody);
+    return _frameInfo->request().nsURLRequest(WebCore::HTTPBodyUpdatePolicy::DoNotUpdateHTTPBody) ?: [NSURLRequest requestWithURL:adoptNS([[NSURL alloc] initWithString:@""]).get()];
 }
 
 - (WKSecurityOrigin *)securityOrigin
@@ -72,7 +72,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 
 - (WKWebView *)webView
 {
-    auto page = _frameInfo->page();
+    RefPtr page = _frameInfo->page();
     return page ? page->cocoaView().autorelease() : nil;
 }
 
@@ -104,7 +104,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 
 - (NSUUID *)_documentIdentifier
 {
-    return _frameInfo->documentID()->object();
+    return _frameInfo->documentID()->object().createNSUUID().autorelease();
 }
 
 - (pid_t)_processIdentifier
@@ -129,7 +129,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 
 - (NSString *)_title
 {
-    return _frameInfo->title();
+    return _frameInfo->title().createNSString().autorelease();
 }
 
 - (BOOL)_isScrollable

@@ -1,5 +1,24 @@
 set -e
 
+# Removes the `--entitlements path` argument pair from $OTHER_CODE_SIGN_FLAGS to avoid signing the
+# extension with entitlements meant for the embedding app.
+function filtered_other_code_sign_flags()
+{
+    while [[ $# -gt 0 ]]
+    do
+        case $1 in
+        --entitlements)
+            shift
+            shift
+            ;;
+        *)
+            echo "$1"
+            shift
+            ;;
+        esac
+    done
+}
+
 DESTINATION_PATH=${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Extensions/${INPUT_FILE_NAME}
 
 mkdir -p "${DESTINATION_PATH}"
@@ -23,5 +42,5 @@ if [[ -n "${EXTENSION_POINT_ID}" ]]; then
 fi
 
 if [ -n "${CODE_SIGN_IDENTITY}" ]; then
-    xcrun codesign --force --preserve-metadata=entitlements --sign "${CODE_SIGN_IDENTITY}" ${OTHER_CODE_SIGN_FLAGS} "${DESTINATION_PATH}"
+    xcrun codesign --force --preserve-metadata=entitlements --sign "${CODE_SIGN_IDENTITY}" $(filtered_other_code_sign_flags ${OTHER_CODE_SIGN_FLAGS}) "${DESTINATION_PATH}"
 fi

@@ -43,9 +43,10 @@ OBJC_CLASS NSImage;
 QT_BEGIN_NAMESPACE
 class QImage;
 QT_END_NAMESPACE
-#elif PLATFORM(WIN)
-typedef struct HBITMAP__* HBITMAP;
 #elif USE(CAIRO)
+#if PLATFORM(WIN)
+typedef struct HBITMAP__* HBITMAP;
+#endif
 #include "RefPtrCairo.h"
 #elif USE(SKIA)
 #include <skia/core/SkImage.h>
@@ -66,7 +67,7 @@ typedef RetainPtr<CGImageRef> DragImageRef;
 typedef RetainPtr<NSImage> DragImageRef;
 #elif PLATFORM(QT)
 typedef QImage DragImageRef;
-#elif PLATFORM(WIN)
+#elif USE(CAIRO) && PLATFORM(WIN)
 typedef HBITMAP DragImageRef;
 #elif USE(CAIRO)
 typedef RefPtr<cairo_surface_t> DragImageRef;
@@ -114,16 +115,16 @@ public:
     WEBCORE_EXPORT DragImage(DragImage&&);
     WEBCORE_EXPORT ~DragImage();
 
-    DragImage(std::optional<TextIndicatorData>&& indicatorData, std::optional<Path>&& visiblePath)
-        : m_indicatorData(WTFMove(indicatorData))
+    DragImage(RefPtr<TextIndicator> textIndicator, std::optional<Path>&& visiblePath)
+        : m_textIndicator(WTFMove(textIndicator))
         , m_visiblePath(WTFMove(visiblePath))
     { }
 
     WEBCORE_EXPORT DragImage& operator=(DragImage&&);
 
-    void setIndicatorData(const TextIndicatorData& data) { m_indicatorData = data; }
-    bool hasIndicatorData() const { return !!m_indicatorData; }
-    const std::optional<TextIndicatorData>& indicatorData() const { return m_indicatorData; }
+    void setTextIndicator(const RefPtr<TextIndicator> textIndicator) { m_textIndicator = textIndicator; }
+    bool hasTextIndicator() const { return !!m_textIndicator; }
+    const RefPtr<TextIndicator> textIndicator() const { return m_textIndicator; }
 
     void setVisiblePath(const Path& path) { m_visiblePath = path; }
     bool hasVisiblePath() const { return !!m_visiblePath; }
@@ -139,7 +140,7 @@ public:
 
 private:
     DragImageRef m_dragImageRef;
-    std::optional<TextIndicatorData> m_indicatorData;
+    RefPtr<TextIndicator> m_textIndicator;
     std::optional<Path> m_visiblePath;
 };
 

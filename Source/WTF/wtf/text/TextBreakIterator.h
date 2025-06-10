@@ -23,8 +23,9 @@
 
 #include <mutex>
 #include <optional>
-#include <variant>
+#include <ranges>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/Variant.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/icu/TextBreakIteratorICU.h>
 
@@ -61,7 +62,7 @@ public:
     struct CharacterMode {
         friend bool operator==(CharacterMode, CharacterMode) = default;
     };
-    using Mode = std::variant<LineMode, CaretMode, DeleteMode, CharacterMode>;
+    using Mode = Variant<LineMode, CaretMode, DeleteMode, CharacterMode>;
 
     enum class ContentAnalysis : bool {
         Linguistic,
@@ -99,7 +100,7 @@ private:
     friend class CachedTextBreakIterator;
     friend class TextBreakIteratorCache;
 
-    using Backing = std::variant<TextBreakIteratorICU, TextBreakIteratorPlatform>;
+    using Backing = Variant<TextBreakIteratorICU, TextBreakIteratorPlatform>;
 
     static Backing mapModeToBackingIterator(StringView, std::span<const UChar> priorContext, Mode, ContentAnalysis, const AtomString& locale);
 
@@ -153,13 +154,13 @@ private:
     TextBreakIterator take(StringView string, std::span<const UChar> priorContext, TextBreakIterator::Mode mode, TextBreakIterator::ContentAnalysis contentAnalysis, const AtomString& locale)
     {
         ASSERT(isMainThread());
-        auto iter = std::find_if(m_unused.begin(), m_unused.end(), [&](TextBreakIterator& candidate) {
+        auto iter = std::ranges::find_if(m_unused, [&](TextBreakIterator& candidate) {
             return candidate.mode() == mode && candidate.contentAnalysis() == contentAnalysis && candidate.locale() == locale;
         });
         if (iter == m_unused.end())
             return TextBreakIterator(string, priorContext, mode, contentAnalysis, locale);
         auto result = WTFMove(*iter);
-        m_unused.remove(iter - m_unused.begin());
+        m_unused.removeAt(iter - m_unused.begin());
         result.setText(string, priorContext);
         return result;
     }
@@ -169,7 +170,7 @@ private:
         ASSERT(isMainThread());
         m_unused.append(WTFMove(iterator));
         if (m_unused.size() > capacity)
-            m_unused.remove(0);
+            m_unused.removeAt(0);
     }
 
     TextBreakIteratorCache() = default;

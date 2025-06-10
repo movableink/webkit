@@ -65,7 +65,7 @@ static bool canUseFastRenderer(std::span<const UniChar> buffer)
 
     unsigned length = [self length];
     Vector<UniChar, 2048> buffer(length);
-    [self getCharacters:buffer.data()];
+    [self getCharacters:buffer.mutableSpan().data()];
 
     if (canUseFastRenderer(buffer)) {
         FontCascade webCoreFont(FontPlatformData((__bridge CTFontRef)font, [font pointSize]));
@@ -105,7 +105,7 @@ static bool canUseFastRenderer(std::span<const UniChar> buffer)
 {
     unsigned length = [self length];
     Vector<UniChar, 2048> buffer(length);
-    [self getCharacters:buffer.data()];
+    [self getCharacters:buffer.mutableSpan().data()];
 
     if (canUseFastRenderer(buffer)) {
         FontCascade webCoreFont(FontPlatformData((__bridge CTFontRef)font, [font pointSize]));

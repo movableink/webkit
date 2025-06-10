@@ -125,6 +125,8 @@ RefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::textMarkerRangeForR
 RefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::selectedTextMarkerRange() { return nullptr; }
 void AccessibilityUIElement::resetSelectedTextMarkerRange() { }
 RefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::textInputMarkedTextMarkerRange() const { return nullptr; }
+JSRetainPtr<JSStringRef> AccessibilityUIElement::textMarkerDebugDescription(AccessibilityTextMarker*) { return nullptr; }
+JSRetainPtr<JSStringRef> AccessibilityUIElement::textMarkerRangeDebugDescription(AccessibilityTextMarkerRange*) { return nullptr; }
 void AccessibilityUIElement::setBoolAttributeValue(JSStringRef, bool) { }
 void AccessibilityUIElement::setValue(JSStringRef) { }
 JSValueRef AccessibilityUIElement::searchTextWithCriteria(JSContextRef, JSValueRef, JSStringRef, JSStringRef) { return nullptr; }
@@ -148,8 +150,6 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::customContent() const { return 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::brailleLabel() const { return nullptr; }
 JSRetainPtr<JSStringRef> AccessibilityUIElement::brailleRoleDescription() const { return nullptr; }
 
-bool AccessibilityUIElement::hasDocumentRoleAncestor() const { return false; }
-bool AccessibilityUIElement::hasWebApplicationAncestor() const { return false; }
 bool AccessibilityUIElement::isInDescriptionListDetail() const { return false; }
 bool AccessibilityUIElement::isInDescriptionListTerm() const { return false; }
 bool AccessibilityUIElement::isInCell() const { return false; }

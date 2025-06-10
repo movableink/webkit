@@ -25,7 +25,6 @@
 
 #include "CSSFontFaceSrcValue.h"
 #include "CSSFontSelector.h"
-#include "CSSParser.h"
 #include "CSSParserIdioms.h"
 #include "CSSPropertyNames.h"
 #include "CSSStyleSheet.h"
@@ -80,22 +79,15 @@ Ref<StyleRuleFontFace> SVGFontFaceElement::protectedFontFaceRule() const
 
 void SVGFontFaceElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    CSSPropertyID propertyId = cssPropertyIdForSVGAttributeName(name, document().settings());
+    auto propertyId = cssPropertyIdForSVGAttributeName(name, document().settings());
     if (propertyId > 0) {
-        // FIXME: Parse using the @font-face descriptor grammars, not the property grammars.
         Ref fontFaceRule = m_fontFaceRule;
         Ref properties = fontFaceRule->mutableProperties();
-        bool valueChanged = properties->setProperty(propertyId, newValue);
 
-        if (valueChanged) {
-            // The above parser is designed for the font-face properties, not descriptors, and the properties accept the global keywords, but descriptors don't.
-            // Rather than invasively modifying the parser for the properties to have a special mode, we can simply detect the error condition after-the-fact and
-            // avoid it explicitly.
-            if (auto parsedValue = properties->propertyAsValueID(propertyId)) {
-                if (isCSSWideKeyword(*parsedValue))
-                    properties->removeProperty(propertyId);
-            }
-        }
+        auto context = CSSParserContext(properties->cssParserMode());
+        context.enclosingRuleType = fontFaceRule->type();
+
+        properties->setProperty(propertyId, newValue, context);
 
         rebuildFontFace();
         return;

@@ -22,7 +22,6 @@
 
 #include "LegacyInlineBox.h"
 #include "RenderOverflow.h"
-#include "ShadowData.h"
 
 namespace WebCore {
 

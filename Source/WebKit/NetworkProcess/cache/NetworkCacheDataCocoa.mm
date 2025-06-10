@@ -30,7 +30,9 @@
 #import <dispatch/dispatch.h>
 #import <sys/mman.h>
 #import <sys/stat.h>
+#import <wtf/FileHandle.h>
 #import <wtf/cocoa/SpanCocoa.h>
+#import <wtf/cocoa/VectorCocoa.h>
 
 namespace WebKit {
 namespace NetworkCache {
@@ -43,6 +45,11 @@ Data::Data(std::span<const uint8_t> data)
 Data::Data(OSObjectPtr<dispatch_data_t>&& dispatchData, Backing backing)
     : m_dispatchData(WTFMove(dispatchData))
     , m_isMap(backing == Backing::Map && dispatch_data_get_size(m_dispatchData.get()))
+{
+}
+
+Data::Data(Vector<uint8_t>&& data)
+    : Data(makeDispatchData(WTFMove(data)).get(), Backing::Buffer)
 {
 }
 
@@ -95,12 +102,12 @@ Data concatenate(const Data& a, const Data& b)
     return { adoptOSObject(dispatch_data_create_concat(a.dispatchData(), b.dispatchData())) };
 }
 
-Data Data::adoptMap(FileSystem::MappedFileData&& mappedFile, FileSystem::PlatformFileHandle fd)
+Data Data::adoptMap(FileSystem::MappedFileData&& mappedFile, FileSystem::FileHandle&& outputHandle)
 {
     auto span = mappedFile.leakHandle();
     ASSERT(span.data());
     ASSERT(span.data() != MAP_FAILED);
-    FileSystem::closeFile(fd);
+    outputHandle = { };
     auto bodyMap = adoptOSObject(dispatch_data_create(span.data(), span.size(), dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), [span] {
         munmap(span.data(), span.size());
     }));

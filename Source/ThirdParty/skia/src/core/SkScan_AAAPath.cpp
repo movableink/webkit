@@ -20,7 +20,6 @@
 #include "src/core/SkAlphaRuns.h"
 #include "src/core/SkAnalyticEdge.h"
 #include "src/core/SkBlitter.h"
-#include "src/core/SkEdge.h"
 #include "src/core/SkEdgeBuilder.h"
 #include "src/core/SkMask.h"
 #include "src/core/SkScan.h"
@@ -946,25 +945,20 @@ static void blit_trapezoid_row(AdditiveBlitter* blitter,
     }
 }
 
-static bool operator<(const SkAnalyticEdge& a, const SkAnalyticEdge& b) {
-    int valuea = a.fUpperY;
-    int valueb = b.fUpperY;
-
-    if (valuea == valueb) {
-        valuea = a.fX;
-        valueb = b.fX;
+static bool compare_edges(const SkAnalyticEdge* a, const SkAnalyticEdge* b) {
+    if (a->fUpperY != b->fUpperY) {
+        return a->fUpperY < b->fUpperY;
     }
 
-    if (valuea == valueb) {
-        valuea = a.fDX;
-        valueb = b.fDX;
+    if (a->fX != b->fX) {
+        return a->fX < b->fX;
     }
 
-    return valuea < valueb;
+    return a->fDX < b->fDX;
 }
 
 static SkAnalyticEdge* sort_edges(SkAnalyticEdge* list[], int count, SkAnalyticEdge** last) {
-    SkTQSort(list, list + count);
+    SkTQSort(list, list + count, compare_edges);
 
     // now make the edges linked in sorted order
     for (int i = 1; i < count; ++i) {
@@ -995,18 +989,18 @@ static void validate_sort(const SkAnalyticEdge* edge) {
 // relatively large compared to fQDDx/QCDDx and fQDDy/fCDDy
 static bool is_smooth_enough(SkAnalyticEdge* thisEdge, SkAnalyticEdge* nextEdge, int stop_y) {
     if (thisEdge->fCurveCount < 0) {
-        const SkCubicEdge& cEdge   = static_cast<SkAnalyticCubicEdge*>(thisEdge)->fCEdge;
-        int                ddshift = cEdge.fCurveShift;
-        return SkAbs32(cEdge.fCDx) >> 1 >= SkAbs32(cEdge.fCDDx) >> ddshift &&
-               SkAbs32(cEdge.fCDy) >> 1 >= SkAbs32(cEdge.fCDDy) >> ddshift &&
+        const auto cEdge = static_cast<SkAnalyticCubicEdge*>(thisEdge);
+        int      ddshift = cEdge->fCurveShift;
+        return SkAbs32(cEdge->fCDx) >> 1 >= SkAbs32(cEdge->fCDDx) >> ddshift &&
+               SkAbs32(cEdge->fCDy) >> 1 >= SkAbs32(cEdge->fCDDy) >> ddshift &&
                // current Dy is (fCDy - (fCDDy >> ddshift)) >> dshift
-               (cEdge.fCDy - (cEdge.fCDDy >> ddshift)) >> cEdge.fCubicDShift >= SK_Fixed1;
+               (cEdge->fCDy - (cEdge->fCDDy >> ddshift)) >> cEdge->fCubicDShift >= SK_Fixed1;
     } else if (thisEdge->fCurveCount > 0) {
-        const SkQuadraticEdge& qEdge = static_cast<SkAnalyticQuadraticEdge*>(thisEdge)->fQEdge;
-        return SkAbs32(qEdge.fQDx) >> 1 >= SkAbs32(qEdge.fQDDx) &&
-               SkAbs32(qEdge.fQDy) >> 1 >= SkAbs32(qEdge.fQDDy) &&
+        const auto qEdge = static_cast<SkAnalyticQuadraticEdge*>(thisEdge);
+        return SkAbs32(qEdge->fQDx) >> 1 >= SkAbs32(qEdge->fQDDx) &&
+               SkAbs32(qEdge->fQDy) >> 1 >= SkAbs32(qEdge->fQDDy) &&
                // current Dy is (fQDy - fQDDy) >> shift
-               (qEdge.fQDy - qEdge.fQDDy) >> qEdge.fCurveShift >= SK_Fixed1;
+               (qEdge->fQDy - qEdge->fQDDy) >> qEdge->fCurveShift >= SK_Fixed1;
     }
     // DDx should be small and Dy should be large
     return SkAbs32(Sk32_sat_sub(nextEdge->fDX, thisEdge->fDX)) <= SK_Fixed1 &&
@@ -1496,7 +1490,7 @@ static void aaa_walk_edges(SkAnalyticEdge*  prevHead,
             SkASSERT(currE->fLowerY >= nextY);
             SkASSERT(currE->fY == y);
 
-            w += currE->fWinding;
+            w += static_cast<int>(currE->fWinding);
             bool prev_in_interval = in_interval;
             in_interval           = !(w & windingMask) == isInverse;
 

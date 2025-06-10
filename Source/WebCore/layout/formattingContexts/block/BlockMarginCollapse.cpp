@@ -47,7 +47,7 @@ static bool hasBorder(const BorderValue& borderValue)
     return !!borderValue.width();
 }
 
-static bool hasPadding(const Length& paddingValue)
+static bool hasPadding(const Style::PaddingEdge& paddingValue)
 {
     // FIXME: Check if percent value needs to be resolved.
     return !paddingValue.isZero();

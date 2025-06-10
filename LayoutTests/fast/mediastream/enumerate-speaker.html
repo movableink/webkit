@@ -35,6 +35,22 @@
         if (!window.internals)
             return;
 
+        let firstSpeaker;
+        let secondSpeaker;
+        for (let device of devices) {
+            if (device.kind === "audiooutput") {
+                if (!firstSpeaker)
+                    firstSpeaker = device;
+                else if (!secondSpeaker)
+                    secondSpeaker = device;
+                else
+                    break;
+            }
+        }
+        assert_equals(firstSpeaker.deviceId, "default", "default speaker deviceId");
+        assert_equals(firstSpeaker.groupId, secondSpeaker.groupId, "default speaker groupId");
+        assert_true(firstSpeaker.label.startsWith("Default - "), "default speaker label");
+
         const mic1 = deviceFromLabel(devices, "Mock audio device 1");
         const mic2 = deviceFromLabel(devices, "Mock audio device 2");
         const speaker1 = deviceFromLabel(devices, "Mock speaker device 1");

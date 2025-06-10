@@ -17,6 +17,7 @@
 #include "include/core/SkSpan.h"  // IWYU pragma: keep
 #include "include/core/SkStream.h"
 #include "include/core/SkString.h"
+#include "include/core/SkTypeface.h"
 #include "include/core/SkTypes.h"
 #include "include/docs/SkPDFDocument.h"
 #include "include/private/base/SkMutex.h"
@@ -148,6 +149,7 @@ public:
 
     std::unique_ptr<SkPDFArray> getAnnotations();
 
+    // Every reference returned by this method must be passed to `emit` exactly once.
     SkPDFIndirectReference reserveRef() { return SkPDFIndirectReference{fNextObjectNumber++}; }
 
     // Returns a tag to prepend to a PostScript name of a subset font. Includes the '+'.
@@ -172,12 +174,12 @@ public:
     skia_private::THashMap<SkPDFIccProfileKey,
                            SkPDFIndirectReference,
                            SkPDFIccProfileKey::Hash> fICCProfileMap;
-    skia_private::THashMap<uint32_t, std::unique_ptr<SkAdvancedTypefaceMetrics>> fTypefaceMetrics;
-    skia_private::THashMap<uint32_t, std::vector<SkString>> fType1GlyphNames;
-    skia_private::THashMap<uint32_t, std::vector<SkUnichar>> fToUnicodeMap;
-    skia_private::THashMap<uint32_t, skia_private::THashMap<SkGlyphID, SkString>> fToUnicodeMapEx;
-    skia_private::THashMap<uint32_t, SkPDFIndirectReference> fFontDescriptors;
-    skia_private::THashMap<uint32_t, SkPDFIndirectReference> fType3FontDescriptors;
+    skia_private::THashMap<SkTypefaceID, std::unique_ptr<SkAdvancedTypefaceMetrics>> fTypefaceMetrics;
+    skia_private::THashMap<SkTypefaceID, std::vector<SkString>> fType1GlyphNames;
+    skia_private::THashMap<SkTypefaceID, std::vector<SkUnichar>> fToUnicodeMap;
+    skia_private::THashMap<SkTypefaceID, skia_private::THashMap<SkGlyphID, SkString>> fToUnicodeMapEx;
+    skia_private::THashMap<SkTypefaceID, SkPDFIndirectReference> fFontDescriptors;
+    skia_private::THashMap<SkTypefaceID, SkPDFIndirectReference> fType3FontDescriptors;
     skia_private::THashTable<sk_sp<SkPDFStrike>, const SkDescriptor&, SkPDFStrike::Traits> fStrikes;
     skia_private::THashMap<SkPDFStrokeGraphicState,
                            SkPDFIndirectReference,

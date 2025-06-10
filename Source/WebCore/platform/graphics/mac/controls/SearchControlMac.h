@@ -36,6 +36,7 @@ class SearchControlMac : public ControlMac {
     WTF_MAKE_TZONE_ALLOCATED(SearchControlMac);
 public:
     SearchControlMac(ControlPart&, ControlFactoryMac&, NSSearchFieldCell *);
+    ~SearchControlMac();
 
 protected:
     void updateCellStates(const FloatRect&, const ControlStyle&) override;

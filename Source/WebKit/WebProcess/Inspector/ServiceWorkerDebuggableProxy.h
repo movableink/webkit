@@ -53,6 +53,14 @@ public:
     void connect(Inspector::FrontendChannel&, bool isAutomaticConnection = false, bool immediatelyPause = false) final;
     void disconnect(Inspector::FrontendChannel&) final;
     void dispatchMessageFromRemote(String&& message) final;
+#if ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
+    bool automaticInspectionAllowed() const final { return true; }
+    bool automaticInspectionAllowedInSameProcess() const final { return true; }
+    void pauseWaitingForAutomaticInspection() final;
+    void unpauseForResolvedAutomaticInspection() final;
+
+    bool isPausedWaitingForAutomaticInspection() const { return m_isPausedWaitingForAutomaticInspection; }
+#endif
 
 private:
     ServiceWorkerDebuggableProxy(const String& url, WebCore::ServiceWorkerIdentifier, WebProcessProxy&);
@@ -63,5 +71,7 @@ private:
 };
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_CONTROLLABLE_TARGET(WebKit::ServiceWorkerDebuggableProxy, ServiceWorker);
 
 #endif // ENABLE(REMOTE_INSPECTOR)

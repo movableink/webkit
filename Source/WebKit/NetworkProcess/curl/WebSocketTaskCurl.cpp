@@ -129,7 +129,7 @@ void WebSocketTask::didOpen(WebCore::CurlStreamID)
     CString cookieHeader;
 
     if (m_request.allowCookies()) {
-        if (auto* storageSession = networkSession() ? networkSession()->networkStorageSession() : nullptr) {
+        if (CheckedPtr storageSession = networkSession() ? networkSession()->networkStorageSession() : nullptr) {
             auto includeSecureCookies = m_request.url().protocolIs("wss"_s) ? WebCore::IncludeSecureCookies::Yes : WebCore::IncludeSecureCookies::No;
             auto cookieHeaderField = storageSession->cookieRequestHeaderFieldValue(m_request.firstPartyForCookies(), WebCore::SameSiteInfo::create(m_request), m_request.url(), std::nullopt, std::nullopt, includeSecureCookies, WebCore::ApplyTrackingPrevention::Yes, WebCore::ShouldRelaxThirdPartyCookieBlocking::No).first;
             if (!cookieHeaderField.isEmpty())
@@ -311,7 +311,7 @@ Expected<bool, String> WebSocketTask::validateOpeningHandshake()
 
     auto serverSetCookie = m_handshake->serverSetCookie();
     if (!serverSetCookie.isEmpty()) {
-        if (auto* storageSession = networkSession() ? networkSession()->networkStorageSession() : nullptr)
+        if (CheckedPtr storageSession = networkSession() ? networkSession()->networkStorageSession() : nullptr)
             storageSession->setCookiesFromHTTPResponse(m_request.firstPartyForCookies(), m_request.url(), serverSetCookie);
     }
 

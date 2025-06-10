@@ -227,9 +227,19 @@ def test_pen_pointer_properties(driver, pages):
 @pytest.mark.xfail_safari
 def test_touch_pointer_properties(driver, pages):
     pages.load("pointerActionsPage.html")
-    pointerArea = driver.find_element(By.CSS_SELECTOR, "#pointerArea")
-    center = _get_inview_center(pointerArea.rect, _get_viewport_rect(driver))
+
     touch_input = PointerInput(interaction.POINTER_TOUCH, "touch")
+
+    # Make sure the pointer starts in a known location
+    reset_actions = ActionBuilder(driver, mouse=touch_input)
+    reset_actions.pointer_action.move_to_location(x=0, y=0)
+    reset_actions.perform()
+    # Clear the events state
+    driver.execute_script("allEvents.events = [];")
+
+    pointerArea = driver.find_element(By.CSS_SELECTOR, "#pointerArea")
+
+    center = _get_inview_center(pointerArea.rect, _get_viewport_rect(driver))
     touch_chain = ActionBuilder(driver, mouse=touch_input)
     touch_chain.pointer_action.move_to(pointerArea).pointer_down(
         width=23, height=31, pressure=0.78, tilt_x=21, tilt_y=-8, twist=355

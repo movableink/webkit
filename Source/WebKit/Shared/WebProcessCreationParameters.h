@@ -59,6 +59,7 @@
 #endif
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
+#include "AvailableInputDevices.h"
 #include "RendererBufferTransportMode.h"
 #include <WebCore/SystemSettings.h>
 #include <wtf/MemoryPressureHandler.h>
@@ -187,10 +188,6 @@ struct WebProcessCreationParameters {
 #endif
 
     std::optional<WebProcessDataStoreParameters> websiteDataStoreParameters;
-    
-#if PLATFORM(IOS) || PLATFORM(VISION)
-    Vector<SandboxExtension::Handle> compilerServiceExtensionHandles;
-#endif
 
     std::optional<SandboxExtension::Handle> mobileGestaltExtensionHandle;
     std::optional<SandboxExtension::Handle> launchServicesExtensionHandle;
@@ -200,10 +197,6 @@ struct WebProcessCreationParameters {
 #endif
     bool enableDecodingHEIC { false };
     bool enableDecodingAVIF { false };
-#endif
-
-#if PLATFORM(IOS_FAMILY)
-    Vector<SandboxExtension::Handle> dynamicIOKitExtensionHandles;
 #endif
 
 #if PLATFORM(VISION)
@@ -232,6 +225,9 @@ struct WebProcessCreationParameters {
 #if PLATFORM(GTK) || PLATFORM(WPE)
     OptionSet<RendererBufferTransportMode> rendererBufferTransportMode;
     WebCore::SystemSettings::State systemSettings;
+    std::optional<MemoryPressureHandler::Configuration> memoryPressureHandlerConfiguration;
+    bool disableFontHintingForTesting { false };
+    OptionSet<AvailableInputDevices> availableInputDevices;
 #endif
 
 #if PLATFORM(GTK)
@@ -250,11 +246,6 @@ struct WebProcessCreationParameters {
     AccessibilityPreferences accessibilityPreferences;
 #if PLATFORM(IOS_FAMILY)
     bool applicationAccessibilityEnabled { false };
-#endif
-
-#if PLATFORM(GTK) || PLATFORM(WPE)
-    std::optional<MemoryPressureHandler::Configuration> memoryPressureHandlerConfiguration;
-    bool disableFontHintingForTesting { false };
 #endif
 
 #if USE(GLIB)

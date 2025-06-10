@@ -27,10 +27,9 @@
 
 #include "ServiceWorkerIdentifier.h"
 #include "SharedWorkerIdentifier.h"
-#include <variant>
 
 namespace WebCore {
 
-using FetchingWorkerIdentifier = std::variant<std::monostate, SharedWorkerIdentifier, ServiceWorkerIdentifier>;
+using FetchingWorkerIdentifier = Variant<std::monostate, SharedWorkerIdentifier, ServiceWorkerIdentifier>;
 
 } // namespace WebCore

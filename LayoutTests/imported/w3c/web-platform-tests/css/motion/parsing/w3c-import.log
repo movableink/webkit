@@ -25,6 +25,8 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/parsing/offset-path-computed.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/parsing/offset-path-parsing-invalid.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/parsing/offset-path-parsing-valid.html
+/LayoutTests/imported/w3c/web-platform-tests/css/motion/parsing/offset-path-shape-computed.html
+/LayoutTests/imported/w3c/web-platform-tests/css/motion/parsing/offset-path-shape-parsing.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/parsing/offset-position-computed.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/parsing/offset-position-parsing-invalid.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/parsing/offset-position-parsing-valid.html

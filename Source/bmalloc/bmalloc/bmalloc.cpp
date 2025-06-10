@@ -46,7 +46,7 @@ static const bmalloc_type primitiveGigacageType = BMALLOC_TYPE_INITIALIZER(1, 1,
 } // anonymous namespace
 
 pas_primitive_heap_ref gigacageHeaps[static_cast<size_t>(Gigacage::NumberOfKinds)] = {
-    BMALLOC_AUXILIARY_HEAP_REF_INITIALIZER(&primitiveGigacageType),
+    BMALLOC_AUXILIARY_HEAP_REF_INITIALIZER(&primitiveGigacageType, pas_bmalloc_heap_ref_kind_non_compact),
 };
 #endif
 

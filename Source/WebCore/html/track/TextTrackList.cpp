@@ -29,6 +29,7 @@
 
 #include "TextTrackList.h"
 
+#include "EventTargetInterfaces.h"
 #include "InbandTextTrack.h"
 #include "InbandTextTrackPrivate.h"
 #include "LoadableTextTrack.h"
@@ -230,7 +231,7 @@ void TextTrackList::remove(TrackBase& track, bool scheduleEvent)
         track.clearTrackList();
 
     Ref<TrackBase> trackRef = *(*tracks)[index];
-    tracks->remove(index);
+    tracks->removeAt(index);
 
     if (scheduleEvent)
         scheduleRemoveTrackEvent(WTFMove(trackRef));

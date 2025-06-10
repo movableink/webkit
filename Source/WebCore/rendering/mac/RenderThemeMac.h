@@ -45,7 +45,7 @@ public:
     void inflateRectForControlRenderer(const RenderObject&, FloatRect&) final;
     void adjustRepaintRect(const RenderBox&, FloatRect&) final;
 
-    bool isControlStyled(const RenderStyle&, const RenderStyle& userAgentStyle) const final;
+    bool isControlStyled(const RenderStyle&) const final;
 
     bool supportsSelectionForegroundColors(OptionSet<StyleColorOptions>) const final;
 
@@ -73,8 +73,15 @@ public:
     IntSize sliderTickSize() const final;
     int sliderTickOffsetFromTrackCenter() const final;
 
-    LengthBox popupInternalPaddingBox(const RenderStyle&) const final;
+    Style::PaddingBox popupInternalPaddingBox(const RenderStyle&) const final;
     PopupMenuStyle::Size popupMenuSize(const RenderStyle&, IntRect&) const final;
+
+    std::optional<FontCascadeDescription> controlFont(StyleAppearance, const FontCascade&, float zoomFactor) const final;
+    Style::PaddingBox controlPadding(StyleAppearance, const Style::PaddingBox&, float zoomFactor) const final;
+    LengthSize controlSize(StyleAppearance, const FontCascade&, const LengthSize&, float zoomFactor) const final;
+    LengthSize minimumControlSize(StyleAppearance, const FontCascade&, const LengthSize&, float zoomFactor) const final;
+    LengthBox controlBorder(StyleAppearance, const FontCascade&, const LengthBox& zoomedBox, float zoomFactor) const final;
+    bool controlRequiresPreWhiteSpace(StyleAppearance) const final;
 
     bool popsMenuByArrowKeys() const final { return true; }
 
@@ -89,7 +96,7 @@ public:
     // Controls color values returned from platformFocusRingColor(). systemColor() will be used when false.
     bool usesTestModeFocusRingColor() const;
 
-    WEBCORE_EXPORT static RetainPtr<NSImage> iconForAttachment(const String& fileName, const String& attachmentType, const String& title);
+    WEBCORE_EXPORT static IconAndSize iconForAttachment(const String& fileName, const String& attachmentType, const String& title);
 
 private:
     RenderThemeMac();
@@ -140,7 +147,7 @@ private:
 
     Color systemColor(CSSValueID, OptionSet<StyleColorOptions>) const final;
 
-    bool searchFieldShouldAppearAsTextField(const RenderStyle&) const final;
+    bool searchFieldShouldAppearAsTextField(const RenderStyle&, const Settings&) const final;
 
     std::span<const IntSize, 4> menuListSizes() const;
     std::span<const IntSize, 4> searchFieldSizes() const;

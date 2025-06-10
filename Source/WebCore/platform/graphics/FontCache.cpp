@@ -134,7 +134,7 @@ struct FontCache::FontDataCaches {
 #endif
 };
 
-FontCache& FontCache::forCurrentThread()
+CheckedRef<FontCache> FontCache::forCurrentThread()
 {
     return threadGlobalData().fontCache();
 }
@@ -213,8 +213,8 @@ FontPlatformData* FontCache::cachedFontPlatformData(const FontDescription& fontD
 #endif
 
     static std::once_flag onceFlag;
-    std::call_once(onceFlag, [&]() {
-        platformInit();
+    std::call_once(onceFlag, [checkedThis = CheckedPtr { this }]() {
+        checkedThis->platformInit();
     });
 
     FontPlatformDataCacheKey key { fontDescription, { familyName }, fontCreationContext };
@@ -334,7 +334,7 @@ void FontCache::purgeInactiveFontData(unsigned purgeCount)
         return std::nullopt;
     });
 
-    LOG(Fonts, " removing %lu keys", keysToRemove.size());
+    LOG(Fonts, " removing %zu keys", keysToRemove.size());
 
     for (auto& key : keysToRemove)
         m_fontDataCaches->platformData.remove(key);
@@ -423,11 +423,11 @@ static void dispatchToAllFontCaches(F function)
 {
     ASSERT(isMainThread());
 
-    function(FontCache::forCurrentThread());
+    function(FontCache::forCurrentThread().get());
 
     for (auto& thread : WorkerOrWorkletThread::workerOrWorkletThreads()) {
         thread.runLoop().postTask([function](ScriptExecutionContext&) {
-            if (auto fontCache = FontCache::forCurrentThreadIfExists())
+            if (CheckedPtr fontCache = FontCache::forCurrentThreadIfExists())
                 function(*fontCache);
         });
     }

@@ -316,7 +316,7 @@ Expected<RetainPtr<CMSampleBufferRef>, CString> toCMSampleBuffer(const MediaSamp
     }
 
     CMSampleBufferRef rawSampleBuffer = nullptr;
-    if (PAL::CMSampleBufferCreateReady(kCFAllocatorDefault, completeBlockBuffers.get(), format.get(), packetSizes.size(), packetTimings.size(), packetTimings.data(), packetSizes.size(), packetSizes.data(), &rawSampleBuffer))
+    if (PAL::CMSampleBufferCreateReady(kCFAllocatorDefault, completeBlockBuffers.get(), format.get(), packetSizes.size(), packetTimings.size(), packetTimings.span().data(), packetSizes.size(), packetSizes.span().data(), &rawSampleBuffer))
         return makeUnexpected("CMSampleBufferCreateReady failed: OOM");
 
     if (samples.isVideo() && samples.size()) {
@@ -538,7 +538,7 @@ Vector<AudioStreamPacketDescription> getPacketDescriptions(CMSampleBufferRef sam
         return { };
     }
     Vector<AudioStreamPacketDescription> descriptions(numDescriptions);
-    if (PAL::CMSampleBufferGetAudioStreamPacketDescriptions(sampleBuffer, packetDescriptionsSize, descriptions.data(), nullptr) != noErr) {
+    if (PAL::CMSampleBufferGetAudioStreamPacketDescriptions(sampleBuffer, packetDescriptionsSize, descriptions.mutableSpan().data(), nullptr) != noErr) {
         RELEASE_LOG_FAULT(Media, "Unable to get packet description list");
         return { };
     }

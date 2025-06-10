@@ -31,14 +31,15 @@
 
 namespace TestWebKitAPI {
 
-TEST(NSResponderTests, ValidRequestorForReturnTypes)
+TEST(NSResponderTests, ValidRequestorForSendAndReturnTypes)
 {
     auto webView = adoptNS([[TestWKWebView alloc] init]);
     [webView _setEditable:YES];
     [webView synchronouslyLoadTestPageNamed:@"simple"];
-    [webView stringByEvaluatingJavaScript:@"getSelection().setPosition(document.body)"];
+    [webView selectAll:nil];
     [webView waitForNextPresentationUpdate];
 
+    EXPECT_EQ(webView.get(), [webView validRequestorForSendType:NSPasteboardTypeRTF returnType:nil]);
     EXPECT_EQ(webView.get(), [webView validRequestorForSendType:nil returnType:(__bridge NSString *)kUTTypePNG]);
     EXPECT_NULL([webView validRequestorForSendType:nil returnType:(__bridge NSString *)kUTTypeAppleScript]);
 }

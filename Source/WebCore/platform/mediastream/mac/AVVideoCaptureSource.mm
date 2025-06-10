@@ -45,6 +45,7 @@
 #import <AVFoundation/AVCapturePhotoOutput.h>
 #import <AVFoundation/AVCaptureSession.h>
 #import <AVFoundation/AVError.h>
+#import <algorithm>
 #import <objc/runtime.h>
 #import <pal/avfoundation/MediaTimeAVFoundation.h>
 #import <pal/spi/cocoa/AVFoundationSPI.h>
@@ -220,11 +221,15 @@ void AVVideoCaptureSource::setUseAVCaptureDeviceRotationCoordinatorAPI(bool valu
 
 CaptureSourceOrError AVVideoCaptureSource::create(const CaptureDevice& device, MediaDeviceHashSalts&& hashSalts, const MediaConstraints* constraints, std::optional<PageIdentifier> pageIdentifier)
 {
-    auto *avDevice = [PAL::getAVCaptureDeviceClass() deviceWithUniqueID:device.persistentId()];
+    auto *avDevice = [PAL::getAVCaptureDeviceClass() deviceWithUniqueID:device.persistentId().createNSString().get()];
     if (!avDevice)
         return CaptureSourceOrError({ "No AVVideoCaptureSource device"_s , MediaAccessDenialReason::PermissionDenied });
 
     Ref<RealtimeMediaSource> source = adoptRef(*new AVVideoCaptureSource(avDevice, device, WTFMove(hashSalts), pageIdentifier));
+
+    if (!source->capabilities().width().max() || !source->capabilities().height().max() || !source->capabilities().frameRate().max())
+        return CaptureSourceOrError({ "AVVideoCaptureSource device has invalid width, height or frameRate capabilities"_s , MediaAccessDenialReason::PermissionDenied });
+
     if (constraints) {
         if (auto result = source->applyConstraints(*constraints))
             return CaptureSourceOrError(CaptureSourceError { result->invalidConstraint });
@@ -445,7 +450,7 @@ void AVVideoCaptureSource::configurationChanged()
 
 static bool isZoomSupported(const Vector<VideoPreset>& presets)
 {
-    return anyOf(presets, [](auto& preset) {
+    return std::ranges::any_of(presets, [](auto& preset) {
         return preset.isZoomSupported();
     });
 }
@@ -1064,7 +1069,7 @@ bool AVVideoCaptureSource::setupSession()
     WARNING_LOG_IF(loggerPtr() && mediaEnvironment.isEmpty(), "Media environment is empty");
     // FIXME (119325252): Remove staging code for -[AVCaptureSession initWithMediaEnvironment:]
     if (!mediaEnvironment.isEmpty() && [PAL::getAVCaptureSessionClass() instancesRespondToSelector:@selector(initWithMediaEnvironment:)])
-        m_session = adoptNS([PAL::allocAVCaptureSessionInstance() initWithMediaEnvironment:mediaEnvironment]);
+        m_session = adoptNS([PAL::allocAVCaptureSessionInstance() initWithMediaEnvironment:mediaEnvironment.createNSString().get()]);
 #endif
 
 #if ENABLE(APP_PRIVACY_REPORT)
@@ -1256,7 +1261,7 @@ void AVVideoCaptureSource::captureOutputDidOutputSampleBufferFromConnection(AVCa
         return;
 
     auto videoFrame = VideoFrameCV::create(sampleBuffer, [captureConnection isVideoMirrored], m_videoFrameRotation);
-    m_buffer = &videoFrame.get();
+    m_buffer = videoFrame.get();
     setIntrinsicSize(expandedIntSize(videoFrame->presentationSize()));
     VideoFrameTimeMetadata metadata;
     metadata.captureTime = MonotonicTime::now().secondsSinceEpoch();

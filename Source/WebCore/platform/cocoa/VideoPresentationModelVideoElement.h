@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,7 @@
 
 #include "EventListener.h"
 #include "FloatRect.h"
-#include "HTMLMediaElementEnums.h"
+#include "HTMLMediaElement.h"
 #include "MediaPlayerEnums.h"
 #include "MediaPlayerIdentifier.h"
 #include "PlatformLayer.h"
@@ -48,8 +48,17 @@ class HTMLVideoElement;
 class TextTrack;
 class PlaybackSessionModelMediaElement;
 
-class VideoPresentationModelVideoElement final : public VideoPresentationModel {
+enum class AudioSessionCategory : uint8_t;
+enum class AudioSessionMode : uint8_t;
+enum class RouteSharingPolicy : uint8_t;
+
+class VideoPresentationModelVideoElement final
+    : public VideoPresentationModel
+    , public HTMLMediaElementClient {
 public:
+    void ref() const final { VideoPresentationModel::ref(); }
+    void deref() const final { VideoPresentationModel::deref(); }
+
     static Ref<VideoPresentationModelVideoElement> create()
     {
         return adoptRef(*new VideoPresentationModelVideoElement());
@@ -124,8 +133,12 @@ private:
 #if ENABLE(FULLSCREEN_API)
     void documentFullscreenChanged();
 #endif
+    void videoInteractedWith();
 
-    Ref<VideoListener> m_videoListener;
+    // HTMLMediaElementClient
+    void audioSessionCategoryChanged(AudioSessionCategory, AudioSessionMode, RouteSharingPolicy) final;
+
+    const Ref<VideoListener> m_videoListener;
     RefPtr<HTMLVideoElement> m_videoElement;
     RetainPtr<PlatformLayer> m_videoFullscreenLayer;
     bool m_isListening { false };

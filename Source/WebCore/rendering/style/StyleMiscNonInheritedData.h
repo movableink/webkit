@@ -26,10 +26,12 @@
 #pragma once
 
 #include "LengthPoint.h"
+#include "StyleBoxShadow.h"
 #include "StyleContentAlignmentData.h"
 #include "StyleSelfAlignmentData.h"
 #include <memory>
 #include <wtf/DataRef.h>
+#include <wtf/FixedVector.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/WTFString.h>
@@ -43,7 +45,6 @@ namespace WebCore {
 class AnimationList;
 class ContentData;
 class FillLayer;
-class ShadowData;
 class StyleDeprecatedFlexibleBoxData;
 class StyleFilterData;
 class StyleFlexibleBoxData;
@@ -86,7 +87,7 @@ public:
     RefPtr<AnimationList> animations;
     RefPtr<AnimationList> transitions;
     std::unique_ptr<ContentData> content;
-    std::unique_ptr<ShadowData> boxShadow; // For box-shadow decorations.
+    FixedVector<Style::BoxShadow> boxShadow;
     String altText;
     double aspectRatioWidth;
     double aspectRatioHeight;

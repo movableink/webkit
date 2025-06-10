@@ -30,6 +30,7 @@
 #include <WebCore/FileSystemHandleIdentifier.h>
 #include <WebCore/FileSystemSyncAccessHandleIdentifier.h>
 #include <WebCore/FileSystemWritableFileStreamIdentifier.h>
+#include <wtf/FileHandle.h>
 #include <wtf/Identified.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
@@ -94,8 +95,13 @@ private:
         WebCore::FileSystemSyncAccessHandleIdentifier identifier;
         uint64_t capacity { 0 };
     };
+    struct FileHandleWithPath {
+        FileSystem::FileHandle handle;
+        String path;
+    };
+
     std::optional<SyncAccessHandleInfo> m_activeSyncAccessHandle;
-    HashMap<WebCore::FileSystemWritableFileStreamIdentifier, WebCore::FileHandle> m_activeWritableFiles;
+    HashMap<WebCore::FileSystemWritableFileStreamIdentifier, FileHandleWithPath> m_activeWritableFiles;
 };
 
 } // namespace WebKit

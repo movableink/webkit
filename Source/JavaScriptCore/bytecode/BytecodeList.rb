@@ -1133,7 +1133,7 @@ op :throw_static_error,
 op :debug,
     args: {
         debugHookType: DebugHookType,
-        hasBreakpoint: bool,
+        data: VirtualRegister,
     }
 
 op :end,
@@ -1263,7 +1263,7 @@ op :spread,
         argument: VirtualRegister,
     }
 
-op :new_regexp,
+op :new_reg_exp,
     args: {
         dst: VirtualRegister,
         regexp: VirtualRegister,

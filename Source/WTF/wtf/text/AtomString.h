@@ -66,12 +66,12 @@ public:
     String releaseString() { return WTFMove(m_string); }
 
     // FIXME: What guarantees this isn't a SymbolImpl rather than an AtomStringImpl?
-    AtomStringImpl* impl() const { SUPPRESS_MEMORY_UNSAFE_CAST return static_cast<AtomStringImpl*>(m_string.impl()); }
+    AtomStringImpl* impl() const LIFETIME_BOUND { SUPPRESS_MEMORY_UNSAFE_CAST return static_cast<AtomStringImpl*>(m_string.impl()); }
     RefPtr<AtomStringImpl> releaseImpl() { return static_pointer_cast<AtomStringImpl>(m_string.releaseImpl()); }
 
     bool is8Bit() const { return m_string.is8Bit(); }
-    std::span<const LChar> span8() const { return m_string.span8(); }
-    std::span<const UChar> span16() const { return m_string.span16(); }
+    std::span<const LChar> span8() const LIFETIME_BOUND { return m_string.span8(); }
+    std::span<const UChar> span16() const LIFETIME_BOUND { return m_string.span16(); }
     unsigned length() const { return m_string.length(); }
 
     UChar operator[](unsigned int i) const { return m_string[i]; }
@@ -119,7 +119,7 @@ public:
 
 #if USE(FOUNDATION) && defined(__OBJC__)
     AtomString(NSString *);
-    operator NSString *() const { return m_string; }
+    RetainPtr<NSString> createNSString() const { return m_string.createNSString(); }
 #endif
 
 #if PLATFORM(QT)
@@ -159,8 +159,6 @@ inline bool operator==(const AtomString& a, const AtomString& b) { return a.impl
 inline bool operator==(const AtomString& a, ASCIILiteral b) { return WTF::equal(a.impl(), b); }
 inline bool operator==(const AtomString& a, const Vector<UChar>& b) { return a.impl() && equal(a.impl(), b.span()); }
 inline bool operator==(const AtomString& a, const String& b) { return equal(a.impl(), b.impl()); }
-inline bool operator==(const String& a, const AtomString& b) { return equal(a.impl(), b.impl()); }
-inline bool operator==(const Vector<UChar>& a, const AtomString& b) { return b == a; }
 
 bool equalIgnoringASCIICase(const AtomString&, const AtomString&);
 bool equalIgnoringASCIICase(const AtomString&, const String&);
@@ -331,7 +329,7 @@ inline bool equalIgnoringASCIICase(const AtomString& a, ASCIILiteral b)
     return equalIgnoringASCIICase(a.string(), b);
 }
 
-inline int codePointCompare(const AtomString& a, const AtomString& b)
+inline std::strong_ordering codePointCompare(const AtomString& a, const AtomString& b)
 {
     return codePointCompare(a.string(), b.string());
 }

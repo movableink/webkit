@@ -67,7 +67,7 @@ public:
         Ref<CSSValue> protectedValue() const { return const_cast<CSSValue&>(*m_value); }
 
         // FIXME: Remove this.
-        CSSProperty toCSSProperty() const { return CSSProperty(id(), protectedValue(), isImportant() ? IsImportant::Yes : IsImportant::No, m_metadata.m_isSetFromShorthand, m_metadata.m_indexInShorthandsVector, isImplicit()); }
+        CSSProperty toCSSProperty() const { return CSSProperty(id(), protectedValue(), isImportant() ? IsImportant::Yes : IsImportant::No, m_metadata.m_isSetFromShorthand, m_metadata.m_indexInShorthandsVector, isImplicit() ? IsImplicit::Yes : IsImplicit::No); }
 
     private:
         const StylePropertyMetadata& m_metadata;
@@ -98,9 +98,9 @@ public:
 
     inline unsigned propertyCount() const;
     inline bool isEmpty() const;
-    inline PropertyReference propertyAt(unsigned) const;
+    inline PropertyReference propertyAt(unsigned) const LIFETIME_BOUND;
 
-    Iterator<StyleProperties> begin() const { return { *this }; }
+    Iterator<StyleProperties> begin() const LIFETIME_BOUND { return { *this }; }
     static constexpr std::nullptr_t end() { return nullptr; }
     inline unsigned size() const;
 

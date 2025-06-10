@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,6 +43,7 @@
 #include <WebCore/MediaPlayer.h>
 #include <WebCore/MediaPlayerIdentifier.h>
 #include <WebCore/MediaPromiseTypes.h>
+#include <WebCore/MessageClientForTesting.h>
 #include <WebCore/PlatformDynamicRangeLimit.h>
 #include <WebCore/PlatformMediaResourceLoader.h>
 #include <optional>
@@ -111,6 +112,7 @@ class RemoteVideoTrackProxy;
 class RemoteMediaPlayerProxy final
     : public RefCounted<RemoteMediaPlayerProxy>
     , public WebCore::MediaPlayerClient
+    , private WebCore::MessageClientForTesting
     , private IPC::MessageReceiver {
     WTF_MAKE_TZONE_ALLOCATED(RemoteMediaPlayerProxy);
 public:
@@ -147,7 +149,7 @@ public:
 
     void getConfiguration(RemoteMediaPlayerConfiguration&);
 
-    void prepareForPlayback(bool privateMode, WebCore::MediaPlayerEnums::Preload, bool preservesPitch, WebCore::MediaPlayerEnums::PitchCorrectionAlgorithm, bool prepareToPlay, bool prepareForRendering, WebCore::IntSize presentationSize, float videoContentScale, WebCore::DynamicRangeMode, WebCore::PlatformDynamicRangeLimit);
+    void prepareForPlayback(bool privateMode, WebCore::MediaPlayerEnums::Preload, bool preservesPitch, WebCore::MediaPlayerEnums::PitchCorrectionAlgorithm, bool prepareToPlay, bool prepareForRendering, WebCore::IntSize presentationSize, float videoContentScale, bool isFullscreen, WebCore::DynamicRangeMode, WebCore::PlatformDynamicRangeLimit);
     void prepareForRendering();
 
     void load(URL&&, std::optional<SandboxExtension::Handle>&&, const WebCore::MediaPlayerLoadOptions&, CompletionHandler<void(RemoteMediaPlayerConfiguration&&)>&&);
@@ -340,7 +342,6 @@ private:
     const std::optional<Vector<WebCore::FourCC>>& allowedMediaAudioCodecIDs() const final { return m_configuration.allowedMediaAudioCodecIDs; };
     const std::optional<Vector<WebCore::FourCC>>& allowedMediaCaptionFormatTypes() const final { return m_configuration.allowedMediaCaptionFormatTypes; };
 
-    bool mediaPlayerPrefersSandboxedParsing() const final { return m_configuration.prefersSandboxedParsing; }
     bool mediaPlayerShouldDisableHDR() const final { return m_configuration.shouldDisableHDR; }
 
     WebCore::PlatformVideoTarget mediaPlayerVideoTarget() const final;
@@ -395,6 +396,9 @@ private:
     using SoundStageSize = WebCore::MediaPlayer::SoundStageSize;
     void setSoundStageSize(SoundStageSize);
         SoundStageSize mediaPlayerSoundStageSize() const final { return m_soundStageSize; }
+
+    void setHasMessageClientForTesting(bool);
+    void sendInternalMessage(const WebCore::MessageForTesting&) final;
 
 #if !RELEASE_LOG_DISABLED
     const Logger& mediaPlayerLogger() final { return m_logger; }
@@ -467,7 +471,7 @@ private:
     bool m_shouldCheckHardwareSupport { false };
     SoundStageSize m_soundStageSize { SoundStageSize::Auto };
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
 #endif
 };
 

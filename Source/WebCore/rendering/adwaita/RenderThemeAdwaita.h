@@ -40,7 +40,7 @@ public:
     bool canCreateControlPartForBorderOnly(const RenderObject&) const final;
     bool canCreateControlPartForDecorations(const RenderObject&) const final;
 
-    bool isControlStyled(const RenderStyle&, const RenderStyle& userAgentStyle) const final;
+    bool isControlStyled(const RenderStyle&) const final;
 
     void setAccentColor(const Color&);
 
@@ -82,7 +82,7 @@ private:
     bool popsMenuBySpaceOrReturn() const final { return true; }
     void adjustMenuListStyle(RenderStyle&, const Element*) const override;
     void adjustMenuListButtonStyle(RenderStyle&, const Element*) const override;
-    LengthBox popupInternalPaddingBox(const RenderStyle&) const final;
+    Style::PaddingBox popupInternalPaddingBox(const RenderStyle&) const final;
 
     Seconds animationRepeatIntervalForProgressBar(const RenderProgress&) const final;
     IntRect progressBarRectForBounds(const RenderProgress&, const IntRect&) const final;
@@ -94,6 +94,10 @@ private:
     IntSize sliderTickSize() const final;
     int sliderTickOffsetFromTrackCenter() const final;
     void adjustListButtonStyle(RenderStyle&, const Element*) const final;
+
+    LengthSize controlSize(StyleAppearance, const FontCascade&, const LengthSize&, float) const final;
+    LengthSize minimumControlSize(StyleAppearance, const FontCascade&, const LengthSize&, float) const final;
+    LengthBox controlBorder(StyleAppearance, const FontCascade&, const LengthBox&, float) const final;
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
     std::optional<Seconds> caretBlinkInterval() const override;

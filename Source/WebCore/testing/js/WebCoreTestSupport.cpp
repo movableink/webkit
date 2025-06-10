@@ -29,7 +29,9 @@
 
 #include "DeprecatedGlobalSettings.h"
 #include "DocumentFragment.h"
+#include "DocumentInlines.h"
 #include "FrameDestructionObserverInlines.h"
+#include "FrameInlines.h"
 #include "InternalSettings.h"
 #include "Internals.h"
 #include "JSDocument.h"
@@ -267,7 +269,7 @@ void populateJITOperations()
         JSC::JITOperationList::populatePointersInEmbedder(&startOfJITOperationsInWebCoreTestSupport, &endOfJITOperationsInWebCoreTestSupport);
     });
 #if ENABLE(JIT_OPERATION_DISASSEMBLY)
-    if (UNLIKELY(JSC::Options::needDisassemblySupport()))
+    if (JSC::Options::needDisassemblySupport()) [[unlikely]]
         populateDisassemblyLabels();
 #endif
 }

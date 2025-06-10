@@ -26,7 +26,7 @@ import sys
 from .command import Command
 
 from webkitbugspy import Tracker
-from webkitcorepy import run, string_utils
+from webkitcorepy import run, string_utils, arguments
 from webkitscmpy import local
 
 
@@ -57,6 +57,11 @@ class Commit(Command):
             '--amend',
             dest='amend', action='store_true', default=False,
             help='Replace the tip of the current branch by creating a new commit',
+        )
+        parser.add_argument(
+            '--update', '--no-update',
+            dest='update', action=arguments.NoAction, default=None,
+            help='Update the commit message with the most recent changes.'
         )
 
     @classmethod
@@ -99,6 +104,9 @@ class Commit(Command):
         if issue:
             env['COMMIT_MESSAGE_TITLE'] = issue.title
             env['COMMIT_MESSAGE_BUG'] = '\n'.join(cls.bug_urls(issue))
+        if args.update is not None:
+            env['WKSCMPY_UPDATE_CHANGELOG'] = str(bool(args.update))
+
         return run(
             [repository.executable(), 'commit', '--date=now'] + additional_args + args.args,
             cwd=repository.root_path,

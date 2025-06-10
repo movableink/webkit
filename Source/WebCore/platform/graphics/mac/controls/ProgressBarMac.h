@@ -39,6 +39,7 @@ class ProgressBarMac final : public ControlMac {
     WTF_MAKE_TZONE_ALLOCATED(ProgressBarMac);
 public:
     ProgressBarMac(ProgressBarPart&, ControlFactoryMac&);
+    ~ProgressBarMac();
 
 private:
     const ProgressBarPart& owningProgressBarPart() const { return downcast<ProgressBarPart>(m_owningPart); }

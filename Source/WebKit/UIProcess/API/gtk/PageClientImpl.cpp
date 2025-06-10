@@ -183,15 +183,15 @@ void PageClientImpl::setCursor(const WebCore::Cursor& cursor)
     // so don't re-set the cursor if it's already set to the target value.
 #if USE(GTK4)
     GdkCursor* currentCursor = gtk_widget_get_cursor(m_viewWidget);
-    GdkCursor* newCursor = cursor.platformCursor().get();
-    if (currentCursor != newCursor)
-        gtk_widget_set_cursor(m_viewWidget, newCursor);
+    GRefPtr<GdkCursor> newCursor = cursor.platformCursor();
+    if (currentCursor != newCursor.get())
+        gtk_widget_set_cursor(m_viewWidget, newCursor.get());
 #else
     GdkWindow* window = gtk_widget_get_window(m_viewWidget);
     GdkCursor* currentCursor = gdk_window_get_cursor(window);
-    GdkCursor* newCursor = cursor.platformCursor().get();
-    if (currentCursor != newCursor)
-        gdk_window_set_cursor(window, newCursor);
+    GRefPtr<GdkCursor> newCursor = cursor.platformCursor();
+    if (currentCursor != newCursor.get())
+        gdk_window_set_cursor(window, newCursor.get());
 #endif
 }
 
@@ -323,9 +323,9 @@ RefPtr<WebDataListSuggestionsDropdown> PageClientImpl::createDataListSuggestions
     return WebDataListSuggestionsDropdownGtk::create(m_viewWidget, page);
 }
 
-Ref<ValidationBubble> PageClientImpl::createValidationBubble(const String& message, const ValidationBubble::Settings& settings)
+Ref<ValidationBubble> PageClientImpl::createValidationBubble(String&& message, const ValidationBubble::Settings& settings)
 {
-    return ValidationBubble::create(m_viewWidget, message, settings, [](GtkWidget* webView, bool shouldNotifyFocusEvents) {
+    return ValidationBubble::create(m_viewWidget, WTFMove(message), settings, [](GtkWidget* webView, bool shouldNotifyFocusEvents) {
         webkitWebViewBaseSetShouldNotifyFocusEvents(WEBKIT_WEB_VIEW_BASE(webView), shouldNotifyFocusEvents);
     });
 }
@@ -455,7 +455,7 @@ void PageClientImpl::beganExitFullScreen(const IntRect& /* initialFrame */, cons
 #endif // ENABLE(FULLSCREEN_API)
 
 #if ENABLE(TOUCH_EVENTS)
-void PageClientImpl::doneWithTouchEvent(const NativeWebTouchEvent& event, bool wasEventHandled)
+void PageClientImpl::doneWithTouchEvent(const WebTouchEvent& event, bool wasEventHandled)
 {
     if (wasEventHandled)
         webkitWebViewBasePageGrabbedTouch(WEBKIT_WEB_VIEW_BASE(m_viewWidget));

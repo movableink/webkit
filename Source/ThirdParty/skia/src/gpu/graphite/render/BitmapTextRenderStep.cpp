@@ -28,7 +28,7 @@
 #include "src/gpu/graphite/TextureProxy.h"
 #include "src/gpu/graphite/geom/Geometry.h"
 #include "src/gpu/graphite/geom/SubRunData.h"
-#include "src/gpu/graphite/geom/Transform_graphite.h"
+#include "src/gpu/graphite/geom/Transform.h"
 #include "src/gpu/graphite/render/CommonDepthStencilSettings.h"
 #include "src/gpu/graphite/text/TextAtlasManager.h"
 #include "src/sksl/SkSLString.h"
@@ -58,14 +58,14 @@ RenderStep::RenderStepID variant_id(skgpu::MaskFormat variant) {
 
 BitmapTextRenderStep::BitmapTextRenderStep(skgpu::MaskFormat variant)
         : RenderStep(variant_id(variant),
-                     Flags(variant),
+                     Flags(variant) | Flags::kAppendInstances,
                      /*uniforms=*/{{"subRunDeviceMatrix", SkSLType::kFloat4x4},
                                    {"deviceToLocal"     , SkSLType::kFloat4x4},
                                    {"atlasSizeInv"      , SkSLType::kFloat2}},
                      PrimitiveType::kTriangleStrip,
                      kDirectDepthGEqualPass,
-                     /*vertexAttrs=*/ {},
-                     /*instanceAttrs=*/
+                     /*staticAttrs=*/ {},
+                     /*appendAttrs=*/
                      {{"size", VertexAttribType::kUShort2, SkSLType::kUShort2},
                       {"uvPos", VertexAttribType::kUShort2, SkSLType::kUShort2},
                       {"xyPos", VertexAttribType::kFloat2, SkSLType::kFloat2},
@@ -151,6 +151,8 @@ const char* BitmapTextRenderStep::fragmentCoverageSkSL() const {
                                                                          "text_atlas_3), "
                                                     "int(maskFormat));";
 }
+
+bool BitmapTextRenderStep::usesUniformsInFragmentSkSL() const { return false; }
 
 void BitmapTextRenderStep::writeVertices(DrawWriter* dw,
                                          const DrawParams& params,

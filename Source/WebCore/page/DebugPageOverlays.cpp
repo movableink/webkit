@@ -44,6 +44,7 @@
 #include "RemoteFrame.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "ScrollingCoordinator.h"
 #include "Settings.h"
@@ -120,7 +121,7 @@ bool MouseWheelRegionOverlay::updateRegion()
 #else
     auto region = makeUnique<Region>();
     
-    for (RefPtr frame = &page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
         if (!localFrame)
             continue;
@@ -691,11 +692,11 @@ void SiteIsolationOverlay::drawRect(PageOverlay&, GraphicsContext& context, cons
     FontCascade font(WTFMove(fontDescription));
     font.update(nullptr);
 
-    for (RefPtr frame = &page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         if (!frame->virtualView())
             continue;
         auto frameView = frame->virtualView();
-        auto debugStr = makeString(is<RemoteFrame>(frame) ? "remote("_s : "local("_s, frame->frameID().toString(), ')');
+        auto debugStr = makeString(is<RemoteFrame>(frame) ? "remote("_s : "local("_s, frame->frameID().toUInt64(), ')');
         TextRun textRun = TextRun(debugStr);
         context.setFillColor(Color::black);
 

@@ -56,21 +56,22 @@ public:
     void fail(JSContextRef, NSString *message);
     void succeed(JSContextRef, NSString *message);
 
-    void assertTrue(JSContextRef, bool testValue, NSString *message);
-    void assertFalse(JSContextRef, bool testValue, NSString *message);
+    void assertTrue(JSContextRef, bool testValue, NSString *message, NSString **outExceptionString);
+    void assertFalse(JSContextRef, bool testValue, NSString *message, NSString **outExceptionString);
 
-    void assertDeepEq(JSContextRef, JSValue *actualValue, JSValue *expectedValue, NSString *message);
-    void assertEq(JSContextRef, JSValue *actualValue, JSValue *expectedValue, NSString *message);
+    void assertDeepEq(JSContextRef, JSValue *actualValue, JSValue *expectedValue, NSString *message, NSString **outExceptionString);
+    void assertEq(JSContextRef, JSValue *actualValue, JSValue *expectedValue, NSString *message, NSString **outExceptionString);
 
     JSValue *assertRejects(JSContextRef, JSValue *promise, JSValue *expectedError, NSString *message);
     JSValue *assertResolves(JSContextRef, JSValue *promise, NSString *message);
 
-    void assertThrows(JSContextRef, JSValue *function, JSValue *expectedError, NSString *message);
+    void assertThrows(JSContextRef, JSValue *function, JSValue *expectedError, NSString *message, NSString **outExceptionString);
     JSValue *assertSafe(JSContextRef, JSValue *function, NSString *message);
 
     JSValue *assertSafeResolve(JSContextRef, JSValue *function, NSString *message);
 
     JSValue *addTest(JSContextRef, JSValue *testFunction);
+    JSValue *runTests(JSContextRef, NSArray *testFunctions);
 
 private:
     RefPtr<WebExtensionAPIEvent> m_onMessage;
@@ -87,14 +88,12 @@ private:
     Deque<Test> m_testQueue;
     bool m_runningTest { false };
     bool m_hitAssertion { false };
+    String m_assertionMessage;
 
-    void assertEquals(JSContextRef, bool result, NSString *expectedString, NSString *actualString, NSString *message);
+    JSValue *addTest(JSContextRef, JSValue *testFunction, String callingAPIName);
+    void assertEquals(JSContextRef, bool result, NSString *expectedString, NSString *actualString, NSString *message, NSString **outExceptionString);
     void startNextTest();
-    void recordAssertionIfNeeded(bool result)
-    {
-        if (m_runningTest && !m_hitAssertion && !result)
-            m_hitAssertion = true;
-    }
+    void recordAssertionIfNeeded(bool result, const String& message, std::pair<String, unsigned> location, NSString **outExceptionString);
 #endif
 };
 

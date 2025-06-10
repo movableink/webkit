@@ -43,6 +43,7 @@
 #include "HTMLDivElement.h"
 #include "HTMLStyleElement.h"
 #include "Logging.h"
+#include "NodeInlines.h"
 #include "NodeTraversal.h"
 #include "Page.h"
 #include "ScriptDisallowedScope.h"
@@ -243,6 +244,11 @@ ScriptExecutionContext* TextTrackCue::scriptExecutionContext() const
 Document* TextTrackCue::document() const
 {
     return downcast<Document>(scriptExecutionContext());
+}
+
+RefPtr<Document> TextTrackCue::protectedDocument() const
+{
+    return document();
 }
 
 void TextTrackCue::willChange()

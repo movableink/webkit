@@ -122,10 +122,13 @@ IDBError IndexValueStore::addRecord(const IDBKeyData& indexKey, const IDBKeyData
 void IndexValueStore::removeRecord(const IDBKeyData& indexKey, const IDBKeyData& valueKey)
 {
     auto iterator = m_records.find(indexKey);
+    if (iterator == m_records.end())
+        return;
+
     if (!iterator->value)
         return;
 
-    if (iterator->value->removeKey(valueKey)) {
+    if (iterator->value->removeKey(valueKey) && !iterator->value->getCount()) {
         m_records.remove(iterator);
         m_orderedKeys.erase(indexKey);
     }
@@ -195,7 +198,7 @@ IDBKeyDataSet::iterator IndexValueStore::lowestIteratorInRange(const IDBKeyRange
     }
 
     if (!range.upperKey.isNull()) {
-        if (lowestInRange->compare(range.upperKey) > 0)
+        if (*lowestInRange > range.upperKey)
             return m_orderedKeys.end();
         if (range.upperOpen && *lowestInRange == range.upperKey)
             return m_orderedKeys.end();
@@ -219,7 +222,7 @@ IDBKeyDataSet::reverse_iterator IndexValueStore::highestReverseIteratorInRange(c
     }
 
     if (!range.lowerKey.isNull()) {
-        if (highestInRange->compare(range.lowerKey) < 0)
+        if (*highestInRange < range.lowerKey)
             return m_orderedKeys.rend();
         if (range.lowerOpen && *highestInRange == range.lowerKey)
             return m_orderedKeys.rend();

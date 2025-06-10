@@ -74,7 +74,7 @@ pas_basic_heap_page_caches_get_shared_page_directories(
     case pas_small_segregated_page_config_variant:
         return &caches->small_shared_page_directories;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

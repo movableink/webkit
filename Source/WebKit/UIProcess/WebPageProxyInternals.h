@@ -100,17 +100,17 @@
 namespace WebKit {
 
 #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
-class WebPageProxyFrameLoadStateObserver final : public FrameLoadStateObserver {
+class WebPageProxyFrameLoadStateObserver final : public RefCounted<WebPageProxyFrameLoadStateObserver>, public FrameLoadStateObserver {
     WTF_MAKE_NONCOPYABLE(WebPageProxyFrameLoadStateObserver);
     WTF_MAKE_TZONE_ALLOCATED(WebPageProxyFrameLoadStateObserver);
 public:
     static constexpr size_t maxVisitedDomainsSize = 6;
 
-    explicit WebPageProxyFrameLoadStateObserver(const WebPageProxy&);
+    static Ref<WebPageProxyFrameLoadStateObserver> create();
     virtual ~WebPageProxyFrameLoadStateObserver();
 
-    void ref() const final;
-    void deref() const final;
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     void didReceiveProvisionalURL(const URL& url) override
     {
@@ -134,6 +134,8 @@ public:
     }
 
 private:
+    WebPageProxyFrameLoadStateObserver();
+
     void didVisitDomain(WebCore::RegistrableDomain&& domain)
     {
         if (domain.isEmpty())
@@ -145,7 +147,6 @@ private:
             m_visitedDomains.removeLast();
     }
 
-    WeakRef<WebPageProxy> m_page;
     Vector<URL> m_provisionalURLs;
     ListHashSet<WebCore::RegistrableDomain> m_visitedDomains;
 };
@@ -304,7 +305,6 @@ public:
     GeolocationPermissionRequestManagerProxy geolocationPermissionRequestManager;
     HiddenPageThrottlingAutoIncreasesCounter::Token hiddenPageDOMTimerThrottlingAutoIncreasesCount;
     Deque<NativeWebKeyboardEvent> keyEventQueue;
-    LayerHostingMode layerHostingMode { LayerHostingMode::InProcess };
     WebCore::RectEdges<bool> mainFramePinnedState { true, true, true, true };
     WebCore::LayoutPoint maxStableLayoutViewportOrigin;
     WebCore::FloatSize maximumUnobscuredSize;
@@ -335,6 +335,10 @@ public:
     WebCore::ScrollPinningBehavior scrollPinningBehavior { WebCore::ScrollPinningBehavior::DoNotPin };
     WebCore::IntSize sizeToContentAutoSizeMaximumSize;
     WebCore::Color themeColor;
+    WebCore::FloatBoxExtent obscuredContentInsets;
+#if PLATFORM(MAC)
+    std::optional<WebCore::FloatBoxExtent> pendingObscuredContentInsets;
+#endif
 #if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
     std::optional<WebCore::SpatialBackdropSource> spatialBackdropSource;
 #endif
@@ -367,6 +371,10 @@ public:
 
 #if ENABLE(CONTEXT_MENUS)
     ContextMenuContextData activeContextMenuContextData;
+#endif
+
+#if ENABLE(GAMEPAD)
+    PAL::HysteresisActivity recentGamepadAccessHysteresis;
 #endif
 
 #if HAVE(DISPLAY_LINK)
@@ -416,7 +424,7 @@ public:
 #endif
 
 #if ENABLE(WRITING_TOOLS)
-    HashMap<WTF::UUID, WebCore::TextIndicatorData> textIndicatorDataForAnimationID;
+    HashMap<WTF::UUID, RefPtr<WebCore::TextIndicator>> textIndicatorDataForAnimationID;
     HashMap<WTF::UUID, CompletionHandler<void(WebCore::TextAnimationRunMode)>> completionHandlerForAnimationID;
     HashMap<WTF::UUID, CompletionHandler<void(std::optional<WebCore::TextIndicatorData>)>> completionHandlerForDestinationTextIndicatorForSourceID;
     HashMap<WTF::UUID, WTF::UUID> sourceAnimationIDtoDestinationAnimationID;
@@ -444,7 +452,7 @@ public:
 #endif
 
 #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
-    std::unique_ptr<WebPageProxyFrameLoadStateObserver> frameLoadStateObserver;
+    RefPtr<WebPageProxyFrameLoadStateObserver> frameLoadStateObserver;
     HashMap<WebCore::RegistrableDomain, OptionSet<WebCore::WindowProxyProperty>> windowOpenerAccessedProperties;
 #endif
     PageLoadTimingFrameLoadStateObserver pageLoadTimingFrameLoadStateObserver;
@@ -531,14 +539,14 @@ public:
     void setShouldPlayToPlaybackTarget(WebCore::PlaybackTargetClientContextIdentifier, bool) final;
     void playbackTargetPickerWasDismissed(WebCore::PlaybackTargetClientContextIdentifier) final;
     bool alwaysOnLoggingAllowed() const final { return protectedPage()->isAlwaysOnLoggingAllowed(); }
-    RetainPtr<PlatformView> platformView() const final;
+    RetainPtr<CocoaView> platformView() const final;
 #endif
 
     Ref<PageLoadState> protectedPageLoadState() { return pageLoadState; }
     Ref<WebNotificationManagerMessageHandler> protectedNotificationManagerMessageHandler() { return notificationManagerMessageHandler; }
     Ref<PageLoadTimingFrameLoadStateObserver> protectedPageLoadTimingFrameLoadStateObserver() { return pageLoadTimingFrameLoadStateObserver; }
 #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
-    RefPtr<WebPageProxyFrameLoadStateObserver> protectedFrameLoadStateObserver() { return frameLoadStateObserver.get(); }
+    RefPtr<WebPageProxyFrameLoadStateObserver> protectedFrameLoadStateObserver() { return frameLoadStateObserver; }
 #endif
     Ref<GeolocationPermissionRequestManagerProxy> protectedGeolocationPermissionRequestManager() { return geolocationPermissionRequestManager; }
 };

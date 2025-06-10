@@ -116,7 +116,7 @@ void MachineThreads::tryCopyOtherThreadStack(const ThreadSuspendLocker& locker, 
     // This is a workaround for <rdar://problem/27607384>. libdispatch recycles work
     // queue threads without running pthread exit destructors. This can cause us to scan a
     // thread during work queue initialization, when the stack pointer is null.
-    if (UNLIKELY(!MachineContext::stackPointer(registers))) {
+    if (!MachineContext::stackPointer(registers)) [[unlikely]] {
         *size = 0;
         return;
     }

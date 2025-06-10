@@ -31,10 +31,10 @@
 #include "MessageReceiver.h"
 #include "PlaybackSessionContextIdentifier.h"
 #include <WebCore/AudioSession.h>
+#include <WebCore/CocoaView.h>
 #include <WebCore/MediaPlayerIdentifier.h>
 #include <WebCore/PlatformLayer.h>
 #include <WebCore/PlatformVideoPresentationInterface.h>
-#include <WebCore/PlatformView.h>
 #include <WebCore/ShareableBitmap.h>
 #include <WebCore/SpatialVideoMetadata.h>
 #include <WebCore/VideoPresentationModel.h>
@@ -78,6 +78,7 @@ private:
     VideoPresentationModelContext(VideoPresentationManagerProxy&, PlaybackSessionModelContext&, PlaybackSessionContextIdentifier);
 
     void setVideoDimensions(const WebCore::FloatSize&);
+    void audioSessionCategoryChanged(WebCore::AudioSessionCategory, WebCore::AudioSessionMode, WebCore::RouteSharingPolicy);
 
     // VideoPresentationModel
     void addClient(WebCore::VideoPresentationModelClient&) override;
@@ -113,6 +114,10 @@ private:
     void didExitFullscreen() final;
     void didCleanupFullscreen() final;
     void fullscreenMayReturnToInline() final;
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    void didEnterExternalPlayback() final;
+    void didExitExternalPlayback() final;
+#endif
     void setRequiresTextTrackRepresentation(bool) final;
     void setTextTrackRepresentationBounds(const WebCore::IntRect&) final;
 
@@ -187,7 +192,7 @@ public:
     PlatformLayerContainer createLayerWithID(PlaybackSessionContextIdentifier, WebKit::LayerHostingContextID videoLayerID, const WebCore::FloatSize& initialSize, const WebCore::FloatSize& nativeSize, float hostingScaleFactor);
 
     void willRemoveLayerForID(PlaybackSessionContextIdentifier);
-    std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess() const;
+    std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess(IPC::Connection&) const;
 
     void swapFullscreenModes(PlaybackSessionContextIdentifier, PlaybackSessionContextIdentifier);
 
@@ -222,6 +227,8 @@ private:
     void setHasVideo(PlaybackSessionContextIdentifier, bool);
     void setDocumentVisibility(PlaybackSessionContextIdentifier, bool);
     void setIsChildOfElementFullscreen(PlaybackSessionContextIdentifier, bool);
+    void audioSessionCategoryChanged(PlaybackSessionContextIdentifier, WebCore::AudioSessionCategory, WebCore::AudioSessionMode, WebCore::RouteSharingPolicy);
+    void hasBeenInteractedWith(PlaybackSessionContextIdentifier);
     void setVideoDimensions(PlaybackSessionContextIdentifier, const WebCore::FloatSize&);
     void enterFullscreen(PlaybackSessionContextIdentifier);
     void exitFullscreen(PlaybackSessionContextIdentifier, WebCore::FloatRect finalRect, CompletionHandler<void(bool)>&&);
@@ -255,6 +262,10 @@ private:
     void setVideoFullscreenFrame(PlaybackSessionContextIdentifier, WebCore::FloatRect);
     void fullscreenModeChanged(PlaybackSessionContextIdentifier, WebCore::HTMLMediaElementEnums::VideoFullscreenMode);
     void fullscreenMayReturnToInline(PlaybackSessionContextIdentifier);
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    void didEnterExternalPlayback(PlaybackSessionContextIdentifier);
+    void didExitExternalPlayback(PlaybackSessionContextIdentifier);
+#endif
 
     void requestCloseAllMediaPresentations(PlaybackSessionContextIdentifier, bool finishedWithMedia, CompletionHandler<void()>&&);
     void callCloseCompletionHandlers();
@@ -279,6 +290,7 @@ private:
     HashMap<PlaybackSessionContextIdentifier, int> m_clientCounts;
     Vector<CompletionHandler<void()>> m_closeCompletionHandlers;
     WeakHashSet<VideoInPictureInPictureDidChangeObserver> m_pipChangeObservers;
+    Markable<PlaybackSessionContextIdentifier> m_lastInteractedWithVideo;
 };
 
 } // namespace WebKit

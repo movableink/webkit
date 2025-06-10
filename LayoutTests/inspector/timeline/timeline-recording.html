@@ -81,7 +81,7 @@ function test()
 
             InspectorTest.log("Export Data:");
             let filterValue = new Set(["startTime", "endTime", "time", "displayName"]);
-            let filterArray = new Set(["records", "markers", "sampleStackTraces", "sampleDurations"]);
+            let filterArray = new Set(["records", "markers", "samples"]);
             InspectorTest.json(exportData, (key, value) => {
                 if (filterValue.has(key))
                     return "<filtered>";

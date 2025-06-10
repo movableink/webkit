@@ -29,31 +29,21 @@
 
 #import "PlatformDynamicRangeLimit.h"
 
-#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
-#import <pal/spi/cocoa/QuartzCoreSPI.h>
-#endif // HAVE(SUPPORT_HDR_DISPLAY_APIS)
-
 namespace WebCore {
 
-#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
-inline CADynamicRange platformDynamicRangeLimitString(PlatformDynamicRangeLimit platformDynamicRangeLimit)
+using LayerDynamicRangeLimitSetter = void(*)(CALayer *);
+
+WEBCORE_EXPORT LayerDynamicRangeLimitSetter layerDynamicRangeLimitSetter(PlatformDynamicRangeLimit);
+
+inline void setLayerDynamicRangeLimit(CALayer* layer, PlatformDynamicRangeLimit platformDynamicRangeLimit)
 {
-    // FIXME: Unstage, see follow-up to rdar://145750574
-    static CADynamicRange const WebKitCADynamicRangeStandard = (id) CFSTR ("standard");
-    static CADynamicRange const WebKitCADynamicRangeConstrainedHigh = (id) CFSTR ("constrainedHigh");
-    static CADynamicRange const WebKitCADynamicRangeHigh = (id) CFSTR ("high");
-
-    constexpr auto betweenStandardAndConstrainedHigh = (PlatformDynamicRangeLimit::standard().value() + PlatformDynamicRangeLimit::constrainedHigh().value()) / 2;
-    if (platformDynamicRangeLimit.value() < betweenStandardAndConstrainedHigh)
-        return WebKitCADynamicRangeStandard;
-
-    constexpr auto betweenConstrainedHighAndHigh = (PlatformDynamicRangeLimit::constrainedHigh().value() + PlatformDynamicRangeLimit::noLimit().value()) / 2;
-    if (platformDynamicRangeLimit.value() < betweenConstrainedHighAndHigh)
-        return WebKitCADynamicRangeConstrainedHigh;
-
-    return WebKitCADynamicRangeHigh;
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
+    layerDynamicRangeLimitSetter(platformDynamicRangeLimit)(layer);
+#else
+    UNUSED_PARAM(layer);
+    UNUSED_PARAM(platformDynamicRangeLimit);
+#endif
 }
-#endif // HAVE(SUPPORT_HDR_DISPLAY_APIS) else
 
 } // namespace WebCore
 

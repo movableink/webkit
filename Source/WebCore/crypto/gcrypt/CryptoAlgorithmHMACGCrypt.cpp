@@ -30,6 +30,7 @@
 #include "CryptoAlgorithmHMAC.h"
 
 #include "CryptoKeyHMAC.h"
+#include "ExceptionOr.h"
 #include <pal/crypto/gcrypt/Handle.h>
 #include <wtf/CryptographicUtilities.h>
 

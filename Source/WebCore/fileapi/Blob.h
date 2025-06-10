@@ -31,6 +31,7 @@
 
 #pragma once
 
+#include "ActiveDOMObject.h"
 #include "BlobPropertyBag.h"
 #include "BlobURL.h"
 #include "FileReaderLoader.h"
@@ -39,7 +40,6 @@
 #include "SecurityOriginData.h"
 #include "URLKeepingBlobAlive.h"
 #include "URLRegistry.h"
-#include <variant>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
 
@@ -63,7 +63,7 @@ struct IDLArrayBuffer;
 template<typename> class DOMPromiseDeferred;
 template<typename> class ExceptionOr;
 
-using BlobPartVariant = std::variant<RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>, RefPtr<Blob>, String>;
+using BlobPartVariant = Variant<RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>, RefPtr<Blob>, String>;
 
 class Blob : public ScriptWrappable, public URLRegistrable, public RefCounted<Blob>, public ActiveDOMObject {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(Blob, WEBCORE_EXPORT);

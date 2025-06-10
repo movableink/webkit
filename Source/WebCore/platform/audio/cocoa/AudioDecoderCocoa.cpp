@@ -272,7 +272,7 @@ String InternalAudioDecoderCocoa::initialize(const String& codecName, const Audi
         bool succeeded = false;
         if (config.description.size()) {
             UInt32 size = sizeof(asbd);
-            succeeded = PAL::AudioFormatGetProperty(kAudioFormatProperty_FormatInfo, config.description.size(), config.description.data(), &size, &asbd) == noErr;
+            succeeded = PAL::AudioFormatGetProperty(kAudioFormatProperty_FormatInfo, config.description.size(), config.description.span().data(), &size, &asbd) == noErr;
             if (codec == kAudioFormatOpus) {
                 if (auto cookie = parseOpusPrivateData(config.description, { }))
                     preSkip = cookie->preSkip;

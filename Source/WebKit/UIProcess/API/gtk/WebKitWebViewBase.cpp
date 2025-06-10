@@ -68,6 +68,7 @@
 #include <WebCore/GUniquePtrGtk.h>
 #include <WebCore/GtkUtilities.h>
 #include <WebCore/GtkVersioning.h>
+#include <WebCore/NativeImage.h>
 #include <WebCore/NotImplemented.h>
 #include <WebCore/PlatformKeyboardEvent.h>
 #include <WebCore/PlatformMouseEvent.h>
@@ -294,7 +295,7 @@ struct _WebKitWebViewBasePrivate {
 #if !USE(GTK4)
     WebKitWebViewChildrenMap children;
 #endif
-    std::unique_ptr<PageClientImpl> pageClient;
+    const std::unique_ptr<PageClientImpl> pageClient;
     RefPtr<WebPageProxy> pageProxy;
     IntSize viewSize { };
 #if USE(GTK4)
@@ -1325,7 +1326,7 @@ static void webkitWebViewBaseHandleMouseEvent(WebKitWebViewBase* webViewBase, Gd
 
         clickCount = priv->clickCounter.currentClickCountForGdkButtonEvent(event);
     }
-        FALLTHROUGH;
+        [[fallthrough]];
     case GDK_BUTTON_RELEASE:
         gtk_widget_grab_focus(GTK_WIDGET(webViewBase));
         break;
@@ -1670,7 +1671,7 @@ static gboolean webkitWebViewBaseCrossingNotifyEvent(GtkWidget* widget, GdkEvent
     // Do not send mouse move events to the WebProcess for crossing events during testing.
     // WTR never generates crossing events and they can confuse tests.
     // https://bugs.webkit.org/show_bug.cgi?id=185072.
-    if (UNLIKELY(priv->pageProxy->configuration().processPool().configuration().fullySynchronousModeIsAllowedForTesting()))
+    if (priv->pageProxy->configuration().processPool().configuration().fullySynchronousModeIsAllowedForTesting()) [[unlikely]]
         return GDK_EVENT_PROPAGATE;
 #endif
 
@@ -1721,7 +1722,7 @@ static void webkitWebViewBaseEnter(WebKitWebViewBase* webViewBase, double x, dou
     // Do not send mouse move events to the WebProcess for crossing events during testing.
     // WTR never generates crossing events and they can confuse tests.
     // https://bugs.webkit.org/show_bug.cgi?id=185072.
-    if (UNLIKELY(priv->pageProxy->configuration().processPool().configuration().fullySynchronousModeIsAllowedForTesting()))
+    if (priv->pageProxy->configuration().processPool().configuration().fullySynchronousModeIsAllowedForTesting()) [[unlikely]]
         return;
 #endif
 
@@ -1761,7 +1762,7 @@ static void webkitWebViewBaseLeave(WebKitWebViewBase* webViewBase, GdkCrossingMo
     // Do not send mouse move events to the WebProcess for crossing events during testing.
     // WTR never generates crossing events and they can confuse tests.
     // https://bugs.webkit.org/show_bug.cgi?id=185072.
-    if (UNLIKELY(priv->pageProxy->configuration().processPool().configuration().fullySynchronousModeIsAllowedForTesting()))
+    if (priv->pageProxy->configuration().processPool().configuration().fullySynchronousModeIsAllowedForTesting()) [[unlikely]]
         return;
 #endif
 
@@ -1890,7 +1891,7 @@ static gboolean webkitWebViewBaseTouchEvent(GtkWidget* widget, GdkEventTouch* ev
         break;
     }
     case GDK_TOUCH_CANCEL:
-        FALLTHROUGH;
+        [[fallthrough]];
     case GDK_TOUCH_END:
         ASSERT(priv->touchEvents.contains(sequence));
         priv->touchEvents.remove(sequence);
@@ -1904,7 +1905,7 @@ static gboolean webkitWebViewBaseTouchEvent(GtkWidget* widget, GdkEventTouch* ev
 
     Vector<WebPlatformTouchPoint> touchPoints;
     webkitWebViewBaseGetTouchPointsForEvent(webViewBase, touchEvent, touchPoints);
-    priv->pageProxy->handleTouchEvent(NativeWebTouchEvent(reinterpret_cast<GdkEvent*>(event), WTFMove(touchPoints)));
+    priv->pageProxy->handleTouchEvent(nullptr, NativeWebTouchEvent(reinterpret_cast<GdkEvent*>(event), WTFMove(touchPoints)));
 
 #if USE(GTK4)
     return GDK_EVENT_PROPAGATE;
@@ -2154,6 +2155,7 @@ static void webkitWebViewBaseTouchLongPress(WebKitWebViewBase* webViewBase, gdou
 
 static void webkitWebViewBaseTouchPress(WebKitWebViewBase* webViewBase, int nPress, double x, double y, GtkGesture*)
 {
+    gtk_widget_grab_focus(GTK_WIDGET(webViewBase));
     webViewBase->priv->isLongPressed = false;
 }
 
@@ -2309,7 +2311,7 @@ static void webkitWebViewBaseConstructed(GObject* object)
     gtk_widget_set_can_focus(viewWidget, TRUE);
 
     WebKitWebViewBasePrivate* priv = WEBKIT_WEB_VIEW_BASE(object)->priv;
-    priv->pageClient = makeUniqueWithoutRefCountedCheck<PageClientImpl>(viewWidget);
+    lazyInitialize(priv->pageClient, makeUniqueWithoutRefCountedCheck<PageClientImpl>(viewWidget));
     gtk_widget_set_parent(priv->keyBindingTranslator.widget(), viewWidget);
 
 #if ENABLE(DRAG_SUPPORT)

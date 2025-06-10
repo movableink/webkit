@@ -30,7 +30,7 @@
 #include "Document.h"
 #include "Event.h"
 #include "EventLoop.h"
-#include "ScriptExecutionContext.h"
+#include "ScriptExecutionContextInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -141,10 +141,10 @@ bool ActiveDOMObject::isAllowedToRunScript() const
 
 void ActiveDOMObject::queueTaskInEventLoop(TaskSource source, Function<void ()>&& function)
 {
-    RefPtr<ScriptExecutionContext> context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     if (!context)
         return;
-    context->eventLoop().queueTask(source, WTFMove(function));
+    context->checkedEventLoop()->queueTask(source, WTFMove(function));
 }
 
 class ActiveDOMObjectEventDispatchTask : public EventLoopTask {
@@ -173,7 +173,7 @@ public:
     }
 
 private:
-    Ref<ActiveDOMObject> m_object;
+    const Ref<ActiveDOMObject> m_object;
     Function<void()> m_dispatchEvent;
 };
 

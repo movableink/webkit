@@ -619,4 +619,10 @@ PASS Invalid 'use' field: importKey(jwk(private), {name: ECDH, namedCurve: P-521
 PASS Invalid 'crv' field: importKey(jwk(private), {name: ECDH, namedCurve: P-256}, true, [deriveKey, deriveBits])
 PASS Invalid 'crv' field: importKey(jwk(private), {name: ECDH, namedCurve: P-384}, true, [deriveKey, deriveBits])
 PASS Invalid 'crv' field: importKey(jwk(private), {name: ECDH, namedCurve: P-521}, true, [deriveKey, deriveBits])
+PASS Invalid 'alg' field 'ecdh': importKey(jwk(private), {name: ECDH, namedCurve: P-256}, true, [deriveKey, deriveBits])
+PASS Invalid 'alg' field 'ECDH': importKey(jwk(private), {name: ECDH, namedCurve: P-256}, true, [deriveKey, deriveBits])
+PASS Invalid 'alg' field 'ecdh': importKey(jwk(private), {name: ECDH, namedCurve: P-384}, true, [deriveKey, deriveBits])
+PASS Invalid 'alg' field 'ECDH': importKey(jwk(private), {name: ECDH, namedCurve: P-384}, true, [deriveKey, deriveBits])
+PASS Invalid 'alg' field 'ecdh': importKey(jwk(private), {name: ECDH, namedCurve: P-521}, true, [deriveKey, deriveBits])
+PASS Invalid 'alg' field 'ECDH': importKey(jwk(private), {name: ECDH, namedCurve: P-521}, true, [deriveKey, deriveBits])
 

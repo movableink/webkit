@@ -92,7 +92,7 @@ void MediaKeySystemAccess::createMediaKeys(Document& document, Ref<DeferredPromi
         auto allowPersistentState = persistentStateAllowed ? CDMInstance::AllowPersistentState::Yes : CDMInstance::AllowPersistentState::No;
 
         instance->initializeWithConfiguration(*access.m_configuration, allowDistinctiveIdentifiers, allowPersistentState, [weakDocument = WTFMove(weakDocument), sessionTypes = access.m_configuration->sessionTypes, implementation = access.m_implementation.copyRef(), useDistinctiveIdentifier, persistentStateAllowed, instance = instance.releaseNonNull(), promise = WTFMove(promise)] (auto successValue) mutable {
-            if (successValue == CDMInstance::Failed || !weakDocument) {
+            if (successValue == CDMInstanceSuccessValue::Failed || !weakDocument) {
                 promise->reject(ExceptionCode::NotAllowedError);
                 return;
             }

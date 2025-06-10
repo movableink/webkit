@@ -51,7 +51,7 @@
             "std::span",
             "std::array",
             "std::tuple",
-            "std::variant",
+            "Variant",
             "std::unique_ptr",
             "UniqueRef",
             "Vector",
@@ -64,7 +64,8 @@
             "KeyValuePair",
             "Markable",
             "RetainPtr",
-            "HashCountedSet"
+            "HashCountedSet",
+            "FixedVector",
         ];
         if (window.testRunner && !testRunner.haveSecureCodingRequest) {
             containerTypes.push("IPC::CoreIPCRetainPtr");

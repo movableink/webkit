@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(ALTERNATE_WEBM_PLAYER)
+#if ENABLE(COCOA_WEBM_PLAYER)
 
 #include "MediaPlayerPrivate.h"
 #include "PlatformLayer.h"
@@ -48,7 +48,7 @@ OBJC_CLASS AVSampleBufferRenderSynchronizer;
 OBJC_CLASS AVSampleBufferVideoRenderer;
 OBJC_PROTOCOL(WebSampleBufferVideoRendering);
 
-typedef struct __CVBuffer *CVPixelBufferRef;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVPixelBufferRef;
 
 namespace WTF {
 class WorkQueue;
@@ -92,7 +92,8 @@ private:
     void setPreload(MediaPlayer::Preload) final;
     void doPreload();
     void load(const URL&, const LoadOptions&) final;
-    bool createResourceClient();
+    bool needsResourceClient() const;
+    bool createResourceClientIfNeeded();
 
     RefPtr<VideoMediaSampleRenderer> protectedVideoRenderer() const;
 
@@ -211,7 +212,6 @@ private:
     void notifyClientWhenReadyForMoreSamples(TrackID);
 
     void setMinimumUpcomingPresentationTime(TrackID, const MediaTime&);
-    void clearMinimumUpcomingPresentationTime(TrackID);
 
     bool isReadyForMoreSamples(TrackID);
     void didBecomeReadyForMoreSamples(TrackID);
@@ -228,9 +228,7 @@ private:
     void didUpdateFormatDescriptionForTrackId(Ref<TrackInfo>&&, TrackID);
 
     void flush();
-#if PLATFORM(IOS_FAMILY)
     void flushIfNeeded();
-#endif
     void flushTrack(TrackID);
     void flushVideo();
     void flushAudio(AVSampleBufferAudioRenderer*);
@@ -289,6 +287,8 @@ private:
 
 #if PLATFORM(IOS_FAMILY)
     void sceneIdentifierDidChange() final;
+    void applicationWillResignActive() final;
+    void applicationDidBecomeActive() final;
 #endif
 
     void isInFullscreenOrPictureInPictureChanged(bool) final;
@@ -304,6 +304,7 @@ private:
         StagedLayer
     };
     AcceleratedVideoMode acceleratedVideoMode() const;
+    void setLayerRequiresFlush();
 
     const Logger& logger() const final { return m_logger.get(); }
     Ref<const Logger> protectedLogger() const { return logger(); }
@@ -329,6 +330,7 @@ private:
     RefPtr<NativeImage> m_lastImage;
     std::unique_ptr<PixelBufferConformerCV> m_rgbConformer;
     RefPtr<WebMResourceClient> m_resourceClient;
+    bool m_needsResourceClient { true };
 
     Vector<RefPtr<VideoTrackPrivateWebM>> m_videoTracks;
     Vector<RefPtr<AudioTrackPrivateWebM>> m_audioTracks;
@@ -352,7 +354,7 @@ private:
     RefPtr<MediaPlaybackTarget> m_playbackTarget;
     bool m_shouldPlayToTarget { false };
 #endif
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
     std::unique_ptr<VideoLayerManagerObjC> m_videoLayerManager;
     bool m_isGatheringVideoFrameMetadata { false };
@@ -374,6 +376,7 @@ private:
     uint32_t m_pendingAppends { 0 };
 #if PLATFORM(IOS_FAMILY)
     bool m_displayLayerWasInterrupted { false };
+    bool m_applicationIsActive { true };
 #endif
     bool m_hasAudio { false };
     bool m_hasVideo { false };
@@ -419,4 +422,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(ALTERNATE_WEBM_PLAYER)
+#endif // ENABLE(COCOA_WEBM_PLAYER)

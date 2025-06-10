@@ -1,3 +1,7 @@
+if (ENABLE_MALLOC_HEAP_BREAKDOWN AND NOT APPLE)
+    include(MallocHeapBreakdown.cmake)
+endif ()
+
 set(WTF_PUBLIC_HEADERS
     AbstractRefCounted.h
     AbstractRefCountedAndCanMakeWeakPtr.h
@@ -5,7 +9,6 @@ set(WTF_PUBLIC_HEADERS
     ASCIICType.h
     AccessibleAddress.h
     AggregateLogger.h
-    Algorithms.h
     AlignedStorage.h
     AnsiColors.h
     ApproximateTime.h
@@ -37,7 +40,6 @@ set(WTF_PUBLIC_HEADERS
     CallbackAggregator.h
     CancellableTask.h
     CheckedArithmetic.h
-    CheckedBoolean.h
     CheckedPtr.h
     CheckedRef.h
     ClockType.h
@@ -59,6 +61,7 @@ set(WTF_PUBLIC_HEADERS
     Condition.h
     ContinuousApproximateTime.h
     ContinuousTime.h
+    CoroutineUtilities.h
     CountingLock.h
     CrossThreadCopier.h
     CrossThreadQueue.h
@@ -88,6 +91,8 @@ set(WTF_PUBLIC_HEADERS
     FastFloat.h
     FastMalloc.h
     FastTLS.h
+    FileHandle.h
+    FileLockMode.h
     FilePrintStream.h
     FileSystem.h
     FixedBitVector.h
@@ -141,6 +146,7 @@ set(WTF_PUBLIC_HEADERS
     JSValueMalloc.h
     KeyValuePair.h
     LEBDecoder.h
+    LLVMProfilingUtils.h
     Language.h
     LazyRef.h
     LazyUniqueRef.h
@@ -171,6 +177,7 @@ set(WTF_PUBLIC_HEADERS
     MallocCommon.h
     MallocPtr.h
     MallocSpan.h
+    MappedFileData.h
     Markable.h
     MathExtras.h
     MediaTime.h
@@ -187,6 +194,7 @@ set(WTF_PUBLIC_HEADERS
     NeverDestroyed.h
     NoLock.h
     NoTailCalls.h
+    NoVirtualDestructorBase.h
     Noncopyable.h
     Nonmovable.h
     NotFound.h
@@ -198,6 +206,7 @@ set(WTF_PUBLIC_HEADERS
     ObjectIdentifier.h
     Observer.h
     OptionSet.h
+    OptionalOrReference.h
     OptionSetHash.h
     OrderMaker.h
     OverflowPolicy.h
@@ -303,6 +312,7 @@ set(WTF_PUBLIC_HEADERS
     StackShotProfiler.h
     StackStats.h
     StackTrace.h
+    StatisticsManager.h
     StdFilesystem.h
     StdIntExtras.h
     StdLibExtras.h
@@ -317,6 +327,7 @@ set(WTF_PUBLIC_HEADERS
     StringExtras.h
     StringHashDumpContext.h
     StringPrintStream.h
+    StructDump.h
     SuspendableWorkQueue.h
     SynchronizedFixedQueue.h
     SystemFree.h
@@ -360,7 +371,10 @@ set(WTF_PUBLIC_HEADERS
     UniqueRef.h
     UniqueRefVector.h
     VMTags.h
+    ValidatedReinterpretCast.h
     ValueCheck.h
+    ValueOrReference.h
+    Variant.h
     VariantExtras.h
     VariantList.h
     VariantListOperations.h
@@ -371,6 +385,7 @@ set(WTF_PUBLIC_HEADERS
     WTFProcess.h
     WTFSemaphore.h
     WallTime.h
+    WasmSIMD128.h
     WeakHashCountedSet.h
     WeakHashMap.h
     WeakHashSet.h
@@ -528,6 +543,7 @@ set(WTF_SOURCES
     FastBitVector.cpp
     FastFloat.cpp
     FastMalloc.cpp
+    FileHandle.cpp
     FilePrintStream.cpp
     FileSystem.cpp
     FunctionDispatcher.cpp
@@ -587,6 +603,7 @@ set(WTF_SOURCES
     StackPointer.cpp
     StackStats.cpp
     StackTrace.cpp
+    StatisticsManager.cpp
     StringPrintStream.cpp
     SuspendableWorkQueue.cpp
     ThreadGroup.cpp
@@ -692,6 +709,7 @@ elseif (APPLE)
 
         darwin/OSLogPrintStream.h
         darwin/WeakLinking.h
+        darwin/XPCExtras.h
 
         spi/cf/CFBundleSPI.h
         spi/cf/CFStringSPI.h
@@ -772,6 +790,7 @@ WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 if (PORT STREQUAL GTK OR PORT STREQUAL WPE)
     WEBKIT_ADD_TARGET_CXX_FLAGS(WTF
         -Wunsafe-buffer-usage
+        -Wunsafe-buffer-usage-in-libc-call
         -fsafe-buffer-usage-suggestions
     )
 endif ()

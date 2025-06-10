@@ -98,7 +98,7 @@ Worker::Worker(ScriptExecutionContext& context, JSC::RuntimeFlags runtimeFlags, 
     ASSERT_UNUSED(addResult, addResult.isNewEntry);
 }
 
-ExceptionOr<Ref<Worker>> Worker::create(ScriptExecutionContext& context, JSC::RuntimeFlags runtimeFlags, std::variant<RefPtr<TrustedScriptURL>, String>&& url, WorkerOptions&& options)
+ExceptionOr<Ref<Worker>> Worker::create(ScriptExecutionContext& context, JSC::RuntimeFlags runtimeFlags, Variant<RefPtr<TrustedScriptURL>, String>&& url, WorkerOptions&& options)
 {
     auto compliantScriptURLString = trustedTypeCompliantString(context, WTFMove(url), "Worker constructor"_s);
     if (compliantScriptURLString.hasException())
@@ -108,9 +108,18 @@ ExceptionOr<Ref<Worker>> Worker::create(ScriptExecutionContext& context, JSC::Ru
 
     worker->suspendIfNeeded();
 
-    auto scriptURL = worker->resolveURL(compliantScriptURLString.releaseReturnValue());
-    if (scriptURL.hasException())
-        return scriptURL.releaseException();
+    auto scriptURLOrException = worker->resolveURL(compliantScriptURLString.releaseReturnValue());
+    if (scriptURLOrException.hasException())
+        return scriptURLOrException.releaseException();
+
+    auto scriptURL = scriptURLOrException.releaseReturnValue();
+    if (auto exception = validateURL(context, scriptURL)) {
+        if (!context.settingsValues().workerAsynchronousURLErrorHandlingEnabled)
+            return Exception { ExceptionCode::SecurityError };
+        worker->queueTaskToDispatchEvent(worker.get(), TaskSource::DOMManipulation, Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::Yes));
+        return worker;
+    }
+
 
     bool shouldBypassMainWorldContentSecurityPolicy = context.shouldBypassMainWorldContentSecurityPolicy();
     worker->m_shouldBypassMainWorldContentSecurityPolicy = shouldBypassMainWorldContentSecurityPolicy;
@@ -121,7 +130,7 @@ ExceptionOr<Ref<Worker>> Worker::create(ScriptExecutionContext& context, JSC::Ru
     worker->m_scriptLoader = WorkerScriptLoader::create();
     auto contentSecurityPolicyEnforcement = shouldBypassMainWorldContentSecurityPolicy ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceWorkerSrcDirective;
 
-    ResourceRequest request { scriptURL.releaseReturnValue() };
+    ResourceRequest request { WTFMove(scriptURL) };
     request.setInitiatorIdentifier(worker->m_identifier);
 
     auto source = options.type == WorkerType::Module ? WorkerScriptLoader::Source::ModuleScript : WorkerScriptLoader::Source::ClassicWorkerScript;
@@ -193,7 +202,7 @@ void Worker::didReceiveResponse(ScriptExecutionContextIdentifier mainContextIden
     if (!responseURL.protocolIsBlob() && !responseURL.protocolIsFile() && !SecurityOrigin::create(responseURL)->isOpaque())
         m_contentSecurityPolicyResponseHeaders = ContentSecurityPolicyResponseHeaders(response);
 
-    if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+    if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
         ScriptExecutionContext::ensureOnContextThread(mainContextIdentifier, [identifier] (auto& mainContext) {
             InspectorInstrumentation::didReceiveScriptResponse(mainContext, *identifier);
         });
@@ -233,7 +242,7 @@ void Worker::notifyFinished(std::optional<ScriptExecutionContextIdentifier> main
     };
     m_contextProxy.startWorkerGlobalScope(m_scriptLoader->responseURL(), *sessionID, m_options.name, WTFMove(initializationData), m_scriptLoader->script(), contentSecurityPolicyResponseHeaders, m_shouldBypassMainWorldContentSecurityPolicy, m_scriptLoader->crossOriginEmbedderPolicy(), m_workerCreationTime, referrerPolicy, m_options.type, m_options.credentials, m_runtimeFlags);
 
-    if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+    if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
         ScriptExecutionContext::ensureOnContextThread(*mainContextIdentifier, [identifier = m_scriptLoader->identifier(), script = m_scriptLoader->script().isolatedCopy()] (auto& mainContext) {
             InspectorInstrumentation::scriptImported(mainContext, identifier, script.toString());
         });

@@ -107,7 +107,7 @@ protected:
     void setSize(const WebCore::IntSize&);
 
     std::unique_ptr<API::ViewClient> m_client;
-    std::unique_ptr<WebKit::PageClientImpl> m_pageClient;
+    const std::unique_ptr<WebKit::PageClientImpl> m_pageClient;
     RefPtr<WebKit::WebPageProxy> m_pageProxy;
     WebCore::IntSize m_size;
     OptionSet<WebCore::ActivityState> m_viewStateFlags;
@@ -119,3 +119,7 @@ protected:
 };
 
 } // namespace WKWPE
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WKWPE::View)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::View; }
+SPECIALIZE_TYPE_TRAITS_END()

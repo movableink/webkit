@@ -48,22 +48,12 @@ static const char* redInRGB = "rgb(255, 0, 0)";
 static const char* userScriptTestProperty = "window._userScriptInstalled";
 
 namespace {
-    class WebKit2UserContentTest : public ::testing::Test {
-    public:
-        RetainPtr<WKProcessGroup> processGroup;
-
-        WebKit2UserContentTest() = default;
-        
-        virtual void SetUp()
-        {
-            processGroup = adoptNS([[WKProcessGroup alloc] init]);
-        }
-        
-        virtual void TearDown()
-        {
-            processGroup = nullptr;
-        }
-    };
+class WebKit2UserContentTest : public ::testing::Test {
+public:
+    WebKit2UserContentTest() = default;
+    virtual void SetUp() { }
+    virtual void TearDown() { }
+};
 } // namespace
 
 static void expectScriptValueIsString(WKTypeRef value, const char* expectedValue)

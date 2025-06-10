@@ -77,6 +77,7 @@ public:
     void setMaxBatchSize(unsigned);
 
     void open(Connection::Client&, SerialFunctionDispatcher& = RunLoop::currentSingleton());
+    // Ensures that all sent messages are receiveable by the receiver.
     Error flushSentMessages();
     void invalidate();
 
@@ -94,6 +95,9 @@ public:
     Error waitForAndDispatchImmediately(ObjectIdentifierGeneric<U, V, W> destinationID, OptionSet<WaitForOption> = { });
     template<typename>
     Error waitForAsyncReplyAndDispatchImmediately(AsyncReplyID);
+
+    // Ensures batched messages are processed sometime in the future. FIXME: Currently distinct from flushSentMessages().
+    void flushBatch() { wakeUpServer(WakeUpServer::No); }
 
     void addWorkQueueMessageReceiver(ReceiverName, WorkQueue&, WorkQueueMessageReceiverBase&, uint64_t destinationID = 0);
     void removeWorkQueueMessageReceiver(ReceiverName, uint64_t destinationID = 0);
@@ -142,7 +146,7 @@ private:
     std::optional<DedicatedConnectionClient> m_dedicatedConnectionClient;
     uint64_t m_currentDestinationID { 0 };
     StreamClientConnectionBuffer m_buffer;
-    unsigned m_maxBatchSize { 20 }; // Number of messages marked as StreamBatched to accumulate before notifying the server.
+    unsigned m_maxBatchSize { 100 }; // Number of messages marked as StreamBatched to accumulate before notifying the server.
     unsigned m_batchSize { 0 };
     const Seconds m_defaultTimeoutDuration;
 
@@ -213,7 +217,8 @@ std::optional<StreamClientConnection::AsyncReplyID> StreamClientConnection::send
 
     sendProcessOutOfStreamMessage(WTFMove(*span));
     auto encoder = makeUniqueRef<Encoder>(T::name(), destinationID.toUInt64());
-    encoder.get() << message.arguments() << replyID;
+    message.encode(encoder.get());
+    encoder.get() << replyID;
     if (connection->sendMessage(WTFMove(encoder), IPC::SendOption::DispatchMessageEvenWhenWaitingForSyncReply, { }) == Error::NoError)
         return replyID;
 
@@ -223,7 +228,7 @@ std::optional<StreamClientConnection::AsyncReplyID> StreamClientConnection::send
         // is called on the connection run loop.
         // This does not make sense. However, this needs a change that is done later.
         RunLoop::protectedMain()->dispatch([completionHandler = WTFMove(replyHandlerToCancel)]() mutable {
-            completionHandler(nullptr);
+            completionHandler(nullptr, nullptr);
         });
     }
     return std::nullopt;
@@ -233,7 +238,8 @@ template<typename T, typename... AdditionalData>
 bool StreamClientConnection::trySendStream(std::span<uint8_t> span, T& message, AdditionalData&&... args)
 {
     StreamConnectionEncoder messageEncoder { T::name(), span };
-    if (((messageEncoder << message.arguments()) << ... << std::forward<decltype(args)>(args))) {
+    message.encode(messageEncoder);
+    if ((messageEncoder << ... << std::forward<decltype(args)>(args))) {
         auto wakeUpResult = m_buffer.release(messageEncoder.size());
         if constexpr (T::isStreamBatched)
             wakeUpServerBatched(wakeUpResult);
@@ -300,7 +306,9 @@ std::optional<StreamClientConnection::SendSyncResult<T>> StreamClientConnection:
 
     auto decoderResult = [&]() -> std::optional<Connection::DecoderOrError> {
         StreamConnectionEncoder messageEncoder { T::name(), span };
-        if (!(messageEncoder << syncRequestID << message.arguments()))
+        messageEncoder << syncRequestID;
+        message.encode(messageEncoder);
+        if (!messageEncoder)
             return std::nullopt;
 
         auto wakeUpResult = m_buffer.release(messageEncoder.size());

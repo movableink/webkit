@@ -10,13 +10,13 @@
 
 #include "include/core/SkBlendMode.h"
 #include "include/core/SkColor.h"
-#include "include/core/SkColorPriv.h"
 #include "include/core/SkRefCnt.h"
 #include "include/core/SkSamplingOptions.h"
 #include "include/core/SkTileMode.h"
 #include "include/core/SkTypes.h"
 #include "include/gpu/GpuTypes.h"
-#include "include/private/SkColorData.h"
+#include "src/core/SkColorData.h"
+#include "src/core/SkColorPriv.h"
 #include "src/gpu/Blend.h"
 #include "src/gpu/SkBackingFit.h"
 #include "src/gpu/ganesh/GrColor.h"
@@ -38,12 +38,12 @@ class SkBlender;
 class SkIDChangeListener;
 class SkMatrix;
 class SkPaint;
-class SkSurfaceProps;
 enum class GrColorType;
 enum GrSurfaceOrigin : int;
 struct SkIRect;
 
 namespace skgpu { class UniqueKey; }
+namespace skgpu::ganesh { class SurfaceDrawContext; }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Color type conversions
@@ -89,32 +89,26 @@ static constexpr GrSamplerState::WrapMode SkTileModeToWrapMode(SkTileMode tileMo
 
 /** Converts an SkPaint to a GrPaint for a given GrRecordingContext. The matrix is required in order
     to convert the SkShader (if any) on the SkPaint. The primitive itself has no color. */
-bool SkPaintToGrPaint(GrRecordingContext*,
-                      const GrColorInfo& dstColorInfo,
+bool SkPaintToGrPaint(skgpu::ganesh::SurfaceDrawContext*,
                       const SkPaint& skPaint,
                       const SkMatrix& ctm,
-                      const SkSurfaceProps& surfaceProps,
                       GrPaint* grPaint);
 
 /** Replaces the SkShader (if any) on skPaint with the passed in GrFragmentProcessor, if not null.
     If null then it is assumed that the geometry processor is implementing a shader replacement.
     The processor should expect an unpremul input color and produce a premultiplied output color. */
-bool SkPaintToGrPaintReplaceShader(GrRecordingContext*,
-                                   const GrColorInfo& dstColorInfo,
+bool SkPaintToGrPaintReplaceShader(skgpu::ganesh::SurfaceDrawContext*,
                                    const SkPaint& skPaint,
                                    const SkMatrix& ctm,
                                    std::unique_ptr<GrFragmentProcessor> shaderFP,
-                                   const SkSurfaceProps& surfaceProps,
                                    GrPaint* grPaint);
 
 /** Blends the SkPaint's shader (or color if no shader) with the color which specified via a
     GrOp's GrPrimitiveProcesssor. */
-bool SkPaintToGrPaintWithBlend(GrRecordingContext* context,
-                               const GrColorInfo& dstColorInfo,
+bool SkPaintToGrPaintWithBlend(skgpu::ganesh::SurfaceDrawContext* context,
                                const SkPaint& skPaint,
                                const SkMatrix& ctm,
                                SkBlender* primColorBlender,
-                               const SkSurfaceProps& surfaceProps,
                                GrPaint* grPaint);
 
 ////////////////////////////////////////////////////////////////////////////////

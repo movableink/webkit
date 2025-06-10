@@ -27,6 +27,7 @@
 
 #include "Test.h"
 #include <WebCore/DocumentFragment.h>
+#include <WebCore/ExceptionOr.h>
 #include <WebCore/HTMLBodyElement.h>
 #include <WebCore/HTMLDivElement.h>
 #include <WebCore/HTMLDocument.h>

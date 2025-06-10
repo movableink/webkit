@@ -137,7 +137,7 @@ bool RemoteLayerTreeHost::cssUnprefixedBackdropFilterEnabled() const
 #if PLATFORM(MAC)
 bool RemoteLayerTreeHost::updateBannerLayers(const RemoteLayerTreeTransaction& transaction)
 {
-    auto scrolledContentsLayer = layerForID(transaction.scrolledContentsLayerID());
+    RetainPtr scrolledContentsLayer = layerForID(transaction.scrolledContentsLayerID());
     if (!scrolledContentsLayer)
         return false;
 
@@ -156,8 +156,8 @@ bool RemoteLayerTreeHost::updateBannerLayers(const RemoteLayerTreeTransaction& t
     if (!page)
         return false;
 
-    bool headerBannerLayerChanged = updateBannerLayer(page->headerBannerLayer(), scrolledContentsLayer);
-    bool footerBannerLayerChanged = updateBannerLayer(page->footerBannerLayer(), scrolledContentsLayer);
+    bool headerBannerLayerChanged = updateBannerLayer(page->headerBannerLayer(), scrolledContentsLayer.get());
+    bool footerBannerLayerChanged = updateBannerLayer(page->footerBannerLayer(), scrolledContentsLayer.get());
     return headerBannerLayerChanged || footerBannerLayerChanged;
 }
 #endif
@@ -298,7 +298,9 @@ void RemoteLayerTreeHost::layerWillBeRemoved(WebCore::ProcessIdentifier processI
     }
 
     if (auto node = m_nodes.take(layerID)) {
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
         animationsWereRemovedFromNode(*node);
+#endif
         if (auto hostingIdentifier = node->remoteContextHostingIdentifier())
             m_hostingLayers.remove(*hostingIdentifier);
         if (auto hostedIdentifier = node->remoteContextHostedIdentifier()) {
@@ -338,7 +340,7 @@ void RemoteLayerTreeHost::animationDidStart(std::optional<WebCore::PlatformLayer
     if (!m_drawingArea)
         return;
 
-    CALayer *layer = layerForID(layerID);
+    RetainPtr layer = layerForID(layerID);
     if (!layer)
         return;
 
@@ -359,7 +361,7 @@ void RemoteLayerTreeHost::animationDidEnd(std::optional<WebCore::PlatformLayerId
     if (!m_drawingArea)
         return;
 
-    CALayer *layer = layerForID(layerID);
+    RetainPtr layer = layerForID(layerID);
     if (!layer)
         return;
 

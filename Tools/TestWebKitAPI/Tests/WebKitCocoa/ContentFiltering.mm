@@ -25,7 +25,7 @@
 
 #import "config.h"
 
-#if ENABLE(CONTENT_FILTERING)
+#if ENABLE(CONTENT_FILTERING) && HAVE(WEBCONTENTANALYSIS_FRAMEWORK)
 
 #import "DeprecatedGlobalValues.h"
 #import "ContentFiltering.h"
@@ -386,7 +386,7 @@ TEST(ContentFiltering, CookieAccessFromReplacementData)
 {
     isDone = false;
     [_remoteObjectProxy checkIfPlatformFrameworksAreLoaded:^(BOOL parentalControlsLoaded) {
-#if HAVE(PARENTAL_CONTROLS)
+#if HAVE(PARENTAL_CONTROLS) && HAVE(WEBCONTENTANALYSIS_FRAMEWORK)
         EXPECT_EQ(static_cast<bool>(parentalControlsShouldBeLoaded), static_cast<bool>(parentalControlsLoaded));
 #endif
         isDone = true;

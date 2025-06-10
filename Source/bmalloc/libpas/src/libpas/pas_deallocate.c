@@ -56,7 +56,7 @@ bool pas_try_deallocate_known_large(void* ptr,
             pas_deallocation_did_fail("Large heap did not find object", begin);
             break;
         }
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
     }
     
     pas_heap_lock_unlock();
@@ -171,7 +171,7 @@ bool pas_try_deallocate_slow_no_cache(void* ptr,
                 begin);
             return true;
         default:
-            PAS_ASSERT(!"Should not be reached");
+            PAS_ASSERT_NOT_REACHED();
             return false;
         }
     }
@@ -225,7 +225,7 @@ bool pas_try_deallocate_slow_no_cache(void* ptr,
         return pas_try_deallocate_slow(begin, config_ptr, deallocation_mode);
     } }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return false;
 }
 

@@ -31,11 +31,11 @@
 #include "FillLayer.h"
 #include "RenderStyleDifference.h"
 #include "RenderStyleInlines.h"
-#include "ShadowData.h"
 #include "StyleDeprecatedFlexibleBoxData.h"
 #include "StyleFilterData.h"
 #include "StyleFlexibleBoxData.h"
 #include "StyleMultiColData.h"
+#include "StylePrimitiveNumericTypes+Logging.h"
 #include "StyleTransformData.h"
 #include "StyleVisitedLinkColorData.h"
 #include <wtf/PointerComparison.h>
@@ -87,7 +87,7 @@ StyleMiscNonInheritedData::StyleMiscNonInheritedData(const StyleMiscNonInherited
     , animations(o.animations ? o.animations->copy() : o.animations)
     , transitions(o.transitions ? o.transitions->copy() : o.transitions)
     , content(o.content ? o.content->clone() : nullptr)
-    , boxShadow(o.boxShadow ? makeUnique<ShadowData>(*o.boxShadow) : nullptr)
+    , boxShadow(o.boxShadow)
     , altText(o.altText)
     , aspectRatioWidth(o.aspectRatioWidth)
     , aspectRatioHeight(o.aspectRatioHeight)
@@ -137,7 +137,7 @@ bool StyleMiscNonInheritedData::operator==(const StyleMiscNonInheritedData& o) c
         && arePointingToEqualData(animations, o.animations)
         && arePointingToEqualData(transitions, o.transitions)
         && contentDataEquivalent(o)
-        && arePointingToEqualData(boxShadow, o.boxShadow)
+        && boxShadow == o.boxShadow
         && altText == o.altText
         && aspectRatioWidth == o.aspectRatioWidth
         && aspectRatioHeight == o.aspectRatioHeight

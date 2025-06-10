@@ -461,8 +461,13 @@ void Connection::removeMessageReceiver(ReceiverName receiverName, uint64_t desti
     removeMessageReceiveQueue(ReceiverMatcher::createWithZeroAsAnyDestination(receiverName, destinationID));
 }
 
-void Connection::dispatchMessageReceiverMessage(MessageReceiver& messageReceiver, UniqueRef<Decoder>&& decoder)
+template<typename MessageReceiverType>
+void Connection::dispatchMessageReceiverMessage(MessageReceiverType& messageReceiver, UniqueRef<Decoder>&& decoder)
 {
+#if ASSERT_ENABLED
+    ++m_inDispatchMessageCount;
+#endif
+
     if (decoder->isSyncMessage()) {
         auto replyEncoder = makeUniqueRef<Encoder>(MessageName::SyncMessageReply, decoder->syncRequestID().toUInt64());
         messageReceiver.didReceiveSyncMessage(*this, *decoder, replyEncoder);
@@ -473,6 +478,11 @@ void Connection::dispatchMessageReceiverMessage(MessageReceiver& messageReceiver
             sendMessageImpl(makeUniqueRef<Encoder>(MessageName::CancelSyncMessageReply, decoder->syncRequestID().toUInt64()), { });
     } else
         messageReceiver.didReceiveMessage(*this, *decoder);
+
+#if ASSERT_ENABLED
+    --m_inDispatchMessageCount;
+#endif
+
 #if ENABLE(IPC_TESTING_API)
     if (m_ignoreInvalidMessageForTesting)
         return;
@@ -481,6 +491,9 @@ void Connection::dispatchMessageReceiverMessage(MessageReceiver& messageReceiver
     if (!decoder->isValid())
         dispatchDidReceiveInvalidMessage(decoder->messageName(), decoder->indexOfObjectFailingDecoding());
 }
+
+template void Connection::dispatchMessageReceiverMessage<MessageReceiver>(MessageReceiver&, UniqueRef<Decoder>&&);
+template void Connection::dispatchMessageReceiverMessage<WorkQueueMessageReceiverBase>(WorkQueueMessageReceiverBase&, UniqueRef<Decoder>&&);
 
 void Connection::setDidCloseOnConnectionWorkQueueCallback(DidCloseOnConnectionWorkQueueCallback callback)
 {
@@ -541,7 +554,7 @@ void Connection::invalidate()
 
     cancelAsyncReplyHandlers();
 
-    protectedConnectionQueue()->dispatch([protectedThis = Ref { *this }]() mutable {
+    m_connectionQueue->dispatch([protectedThis = Ref { *this }]() mutable {
         protectedThis->platformInvalidate();
     });
 }
@@ -602,7 +615,7 @@ Error Connection::sendMessageImpl(UniqueRef<Encoder>&& encoder, OptionSet<SendOp
     }
 #endif
 
-    if (isMainRunLoop() && m_inDispatchMessageMarkedToUseFullySynchronousModeForTesting && !encoder->isSyncMessage() && !(encoder->messageReceiverName() == ReceiverName::IPC) && !sendOptions.contains(SendOption::IgnoreFullySynchronousMode)) {
+    if (isMainRunLoop() && m_inDispatchMessageMarkedToUseFullySynchronousModeForTesting && !encoder->isSyncMessage() && !(encoder->messageReceiverName() == ReceiverName::IPC)) {
         auto [wrappedMessage, syncRequestID] = createSyncMessageEncoder(MessageName::WrappedAsyncMessageForTesting, encoder->destinationID());
         wrappedMessage->setFullySynchronousModeForTesting();
         wrappedMessage->wrapForTesting(WTFMove(encoder));
@@ -617,7 +630,7 @@ Error Connection::sendMessageImpl(UniqueRef<Encoder>&& encoder, OptionSet<SendOp
             ASSERT(encoder->isAllowedWhenWaitingForSyncReply());
         else if (sendOptions.contains(SendOption::DispatchMessageEvenWhenWaitingForUnboundedSyncReply))
             ASSERT(encoder->isAllowedWhenWaitingForUnboundedSyncReply());
-        else
+        else if (encoder->messageName() != IPC::MessageName::WebPageProxy_HandleMessage) // HandleMessage is sent with and without DispatchMessageEvenWhenWaitingForSyncReply.
             ASSERT(!encoder->isAllowedWhenWaitingForSyncReply() && !encoder->isAllowedWhenWaitingForUnboundedSyncReply());
 #if ENABLE(IPC_TESTING_API)
     }
@@ -672,9 +685,9 @@ Error Connection::sendMessageImpl(UniqueRef<Encoder>&& encoder, OptionSet<SendOp
         };
 
         if (qos)
-            protectedConnectionQueue()->dispatchWithQOS(WTFMove(sendOutgoingMessages), *qos);
+            m_connectionQueue->dispatchWithQOS(WTFMove(sendOutgoingMessages), *qos);
         else
-            protectedConnectionQueue()->dispatch(WTFMove(sendOutgoingMessages));
+            m_connectionQueue->dispatch(WTFMove(sendOutgoingMessages));
     }
 
     return Error::NoError;
@@ -708,7 +721,7 @@ Error Connection::sendMessageWithAsyncReply(UniqueRef<Encoder>&& encoder, AsyncR
         // FIXME: Current contract is that completionHandler is called on the connection run loop.
         // This does not make sense. However, this needs a change that is done later.
         RunLoop::protectedMain()->dispatch([completionHandler = WTFMove(replyHandlerToCancel)]() mutable {
-            completionHandler(nullptr);
+            completionHandler(nullptr, nullptr);
         });
     }
     return error;
@@ -726,7 +739,7 @@ Error Connection::sendMessageWithAsyncReplyWithDispatcher(UniqueRef<Encoder>&& e
         return Error::NoError;
 
     if (auto replyHandlerToCancel = takeAsyncReplyHandlerWithDispatcher(replyID))
-        replyHandlerToCancel(nullptr);
+        replyHandlerToCancel(nullptr, nullptr);
     return error;
 }
 
@@ -815,7 +828,7 @@ auto Connection::waitForMessage(MessageName messageName, uint64_t destinationID,
             return makeUnexpected(Error::WaitingOnAlreadyDispatchedMessage);
         }
 
-        if (UNLIKELY(m_inDispatchSyncMessageCount && !timeout.isInfinity())) {
+        if (m_inDispatchSyncMessageCount && !timeout.isInfinity()) [[unlikely]] {
             RELEASE_LOG_ERROR(IPC, "Connection::waitForMessage(%" PUBLIC_LOG_STRING "): Exiting immediately, since we're handling a sync message already", description(messageName).characters());
             m_waitingForMessage = nullptr;
             return makeUnexpected(Error::AttemptingToWaitInsideSyncMessageHandling);
@@ -1047,7 +1060,7 @@ void Connection::processIncomingMessage(UniqueRef<Decoder> message)
 
     if (message->messageReceiverName() == ReceiverName::AsyncReply) {
         if (auto replyHandlerWithDispatcher = takeAsyncReplyHandlerWithDispatcherWithLockHeld(AtomicObjectIdentifier<AsyncReplyIDType>(message->destinationID()))) {
-            replyHandlerWithDispatcher(message.moveToUniquePtr());
+            replyHandlerWithDispatcher(this, message.moveToUniquePtr());
             return;
         }
         // Fallback to default case, error handling will be performed in sendMessage().
@@ -1150,7 +1163,7 @@ void Connection::addMessageObserver(const MessageObserver& observer)
 
 void Connection::dispatchIncomingMessageForTesting(UniqueRef<Decoder>&& decoder)
 {
-    protectedConnectionQueue()->dispatch([protectedThis = Ref { *this }, decoder = WTFMove(decoder)]() mutable {
+    m_connectionQueue->dispatch([protectedThis = Ref { *this }, decoder = WTFMove(decoder)]() mutable {
         protectedThis->processIncomingMessage(WTFMove(decoder));
     });
 }
@@ -1294,7 +1307,7 @@ size_t Connection::pendingMessageCountForTesting() const
 
 void Connection::dispatchOnReceiveQueueForTesting(Function<void()>&& completionHandler)
 {
-    protectedConnectionQueue()->dispatch(WTFMove(completionHandler));
+    m_connectionQueue->dispatch(WTFMove(completionHandler));
 }
 
 void Connection::didFailToSendSyncMessage(Error)
@@ -1361,7 +1374,7 @@ void Connection::dispatchMessage(Decoder& decoder)
             ASSERT_NOT_REACHED();
             return;
         }
-        handler(&decoder);
+        handler(this, &decoder);
         return;
     }
 
@@ -1413,7 +1426,9 @@ void Connection::dispatchMessage(UniqueRef<Decoder> message)
         m_inDispatchMessageMarkedToUseFullySynchronousModeForTesting++;
     }
 
-    m_inDispatchMessageCount++;
+#if ASSERT_ENABLED
+    ++m_inDispatchMessageCount;
+#endif
 
     bool isDispatchingMessageWhileWaitingForSyncReply = (message->shouldDispatchMessageWhenWaitingForSyncReply() == ShouldDispatchWhenWaitingForSyncReply::Yes)
         || (message->shouldDispatchMessageWhenWaitingForSyncReply() == ShouldDispatchWhenWaitingForSyncReply::YesDuringUnboundedIPC && UnboundedSynchronousIPCScope::hasOngoingUnboundedSyncIPC());
@@ -1430,7 +1445,10 @@ void Connection::dispatchMessage(UniqueRef<Decoder> message)
         dispatchMessage(*message);
 
     m_didReceiveInvalidMessage |= !message->isValid();
-    m_inDispatchMessageCount--;
+
+#if ASSERT_ENABLED
+    --m_inDispatchMessageCount;
+#endif
 
     // FIXME: For synchronous messages, we should not decrement the counter until we send a response.
     // Otherwise, we would deadlock if processing the message results in a sync message back after we exit this function.
@@ -1588,16 +1606,16 @@ void Connection::cancelAsyncReplyHandlers()
 
     for (auto& handler : map.values()) {
         if (handler)
-            handler(nullptr);
+            handler(nullptr, nullptr);
     }
 
     for (auto& handlerWithDispatcher : mapDispatcher.values()) {
         if (handlerWithDispatcher)
-            handlerWithDispatcher(nullptr);
+            handlerWithDispatcher(nullptr, nullptr);
     }
 }
 
-CompletionHandler<void(Decoder*)> Connection::takeAsyncReplyHandler(AsyncReplyID replyID)
+CompletionHandler<void(Connection*, Decoder*)> Connection::takeAsyncReplyHandler(AsyncReplyID replyID)
 {
     Locker locker { m_incomingMessagesLock };
     if (!m_asyncReplyHandlers.isValidKey(replyID))
@@ -1611,13 +1629,13 @@ bool Connection::isAsyncReplyHandlerWithDispatcher(AsyncReplyID replyID)
     return m_asyncReplyHandlerWithDispatchers.isValidKey(replyID) && m_asyncReplyHandlerWithDispatchers.contains(replyID);
 }
 
-CompletionHandler<void(std::unique_ptr<Decoder>&&)> Connection::takeAsyncReplyHandlerWithDispatcher(AsyncReplyID replyID)
+CompletionHandler<void(Connection*, std::unique_ptr<Decoder>&&)> Connection::takeAsyncReplyHandlerWithDispatcher(AsyncReplyID replyID)
 {
     Locker locker { m_incomingMessagesLock };
     return takeAsyncReplyHandlerWithDispatcherWithLockHeld(replyID);
 }
 
-CompletionHandler<void(std::unique_ptr<Decoder>&&)> Connection::takeAsyncReplyHandlerWithDispatcherWithLockHeld(AsyncReplyID replyID)
+CompletionHandler<void(Connection*, std::unique_ptr<Decoder>&&)> Connection::takeAsyncReplyHandlerWithDispatcherWithLockHeld(AsyncReplyID replyID)
 {
     assertIsHeld(m_incomingMessagesLock);
     if (!m_asyncReplyHandlerWithDispatchers.isValidKey(replyID))

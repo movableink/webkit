@@ -72,6 +72,7 @@ public:
 
     void terminateForTesting();
     void webProcessConnectionCountForTesting(CompletionHandler<void(uint64_t)>&&);
+    void modelPlayerCountForTesting(CompletionHandler<void(uint64_t)>&&);
 
     void removeSession(PAL::SessionID);
 

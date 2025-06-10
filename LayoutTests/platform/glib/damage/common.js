@@ -24,8 +24,6 @@ function setupTestCase(options = {}) {
 
         if (!window.internals) {
             failTest("FAIL: this test case requires internals");
-        } else if (window.internals.getCurrentDamagePropagation() != "Region") {
-            failTest("FAIL: this test case requires proper damage propagation");
         } else {
             try {
                 window.internals.getFrameDamageHistory();
@@ -54,12 +52,6 @@ function assertEq(actual, expected, failureMessage) {
 
 function assertGt(actual, threshold, failureMessage) {
     return assert(actual > threshold, `${failureMessage}, ${actual} is not greater than ${threshold}`);
-}
-
-function assertValid(damage) {
-    if (!assert(damage, "damage is empty"))
-        return false;
-    return assert(damage.isValid, "damage is invalid");
 }
 
 function assertRectsEq(damageRects, expectedRects) {
@@ -148,6 +140,12 @@ function spawnNewElementWithClass(elementName, className, lambda = (el) => {}) {
     return newElement;
 }
 
+async function takeCanvasSnapshotAsBlobURL(canvas) {
+    return new Promise(resolve =>
+        canvas.toBlob(blob => resolve(URL.createObjectURL(blob)))
+    );
+}
+
 function contains(containerRect, allegedContainee) {
     return (
         containerRect[0] <= allegedContainee[0]
@@ -163,7 +161,6 @@ function _simplifyDamages(damages) {
 
 function _simplifyDamage(damage) {
     var obj = {
-        isValid: damage.isValid,
         bounds: _simplifyDamageRect(damage.bounds),
         rects: damage.rects.map(r => _simplifyDamageRect(r)),
     };

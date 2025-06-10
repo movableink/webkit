@@ -14,13 +14,9 @@
   <script>
     if (window.testRunner) {
       testRunner.waitUntilDone();
-      // window load event fires when the the page and its resources are loaded.
-      // However it does not wait till the sub-resources are loaded. And this is
-      // why we need to wait a little bit before we call notifyDone().
+      // window load event fires when the the page and its resources (including their subresources) are loaded.
       window.addEventListener("load", function() {
-        setTimeout(function () {
-          testRunner.notifyDone();
-        }, 200);
+        testRunner.notifyDone();
       });
     }
   </script>

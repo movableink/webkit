@@ -38,6 +38,7 @@
 
 #include "AudioSession.h"
 #include "DocumentInlines.h"
+#include "ExceptionCode.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaStream.h"
 #include "JSOverconstrainedError.h"
@@ -54,6 +55,8 @@
 #include "Settings.h"
 #include "UserMediaController.h"
 #include "WindowEventLoop.h"
+#include <JavaScriptCore/ConsoleTypes.h>
+#include <algorithm>
 #include <wtf/Scope.h>
 
 namespace WebCore {
@@ -141,7 +144,7 @@ void UserMediaRequest::start()
     }
 
     ASSERT(document.page());
-    if (RefPtr page = document.protectedPage())
+    if (RefPtr page = document.page())
         PlatformMediaSessionManager::singleton().prepareToSendUserMediaPermissionRequestForPage(*page);
     controller->requestUserMediaAccess(*this);
 }
@@ -151,7 +154,7 @@ static inline bool isMediaStreamCorrectlyStarted(const MediaStream& stream)
     if (stream.getTracks().isEmpty())
         return false;
 
-    return WTF::allOf(stream.getTracks(), [](auto& track) {
+    return std::ranges::all_of(stream.getTracks(), [](auto& track) {
         return !track->source().captureDidFail();
     });
 }
@@ -161,7 +164,7 @@ void UserMediaRequest::allow(CaptureDevice&& audioDevice, CaptureDevice&& videoD
     RELEASE_LOG(MediaStream, "UserMediaRequest::allow %s %s", audioDevice ? audioDevice.persistentId().utf8().data() : "", videoDevice ? videoDevice.persistentId().utf8().data() : "");
 
     Ref document = downcast<Document>(*scriptExecutionContext());
-    RefPtr localWindow = document->protectedWindow();
+    RefPtr localWindow = document->domWindow();
     RefPtr mediaDevices = localWindow ? NavigatorMediaDevices::mediaDevices(localWindow->protectedNavigator()) : nullptr;
     if (mediaDevices)
         mediaDevices->willStartMediaCapture(!!audioDevice, !!videoDevice);

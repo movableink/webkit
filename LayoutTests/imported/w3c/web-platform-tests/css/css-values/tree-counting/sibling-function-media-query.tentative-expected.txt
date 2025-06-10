@@ -1,0 +1,4 @@
+
+PASS sibling-index() and sibling-count() are not valid in @media queries
+PASS @media queries with sibling-index() and sibling-count() as general-enclosed
+

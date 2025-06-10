@@ -210,7 +210,7 @@ void RemoteLayerBackingStoreProperties::dump(TextStream& ts) const
 {
     auto dumpBuffer = [&](ASCIILiteral name, const std::optional<BufferAndBackendInfo>& bufferInfo) {
         ts.startGroup();
-        ts << name << " "_s;
+        ts << name << ' ';
         if (bufferInfo)
             ts << bufferInfo->resourceIdentifier << " backend generation "_s << bufferInfo->backendGeneration;
         else
@@ -345,8 +345,9 @@ bool RemoteLayerBackingStore::needsDisplay() const
         return false;
     }
 
-    if (m_layer->owner()->platformCALayerDelegatesDisplay(m_layer.ptr())) {
-        LOG_WITH_STREAM(RemoteLayerBuffers, stream << "RemoteLayerBackingStore " << m_layer->layerID() << " needsDisplay() - delegates display");
+    Ref layer = m_layer.get();
+    if (layer->owner()->platformCALayerDelegatesDisplay(layer.ptr())) {
+        LOG_WITH_STREAM(RemoteLayerBuffers, stream << "RemoteLayerBackingStore " << layer->layerID() << " needsDisplay() - delegates display");
         return true;
     }
 
@@ -363,17 +364,18 @@ bool RemoteLayerBackingStore::needsDisplay() const
         return hasEmptyDirtyRegion() ? BackingStoreNeedsDisplayReason::None : BackingStoreNeedsDisplayReason::HasDirtyRegion;
     }();
 
-    LOG_WITH_STREAM(RemoteLayerBuffers, stream << "RemoteLayerBackingStore " << m_layer->layerID() << " size " << size() << " needsDisplay() - needs display reason: " << needsDisplayReason);
+    LOG_WITH_STREAM(RemoteLayerBuffers, stream << "RemoteLayerBackingStore " << layer->layerID() << " size " << size() << " needsDisplay() - needs display reason: " << needsDisplayReason);
     return needsDisplayReason != BackingStoreNeedsDisplayReason::None;
 }
 
 bool RemoteLayerBackingStore::performDelegatedLayerDisplay()
 {
-    auto& layerOwner = *m_layer->owner();
-    if (layerOwner.platformCALayerDelegatesDisplay(m_layer.ptr())) {
+    Ref layer = m_layer.get();
+    auto& layerOwner = *layer->owner();
+    if (layerOwner.platformCALayerDelegatesDisplay(layer.ptr())) {
         // This can call back to setContents(), setting m_contentsBufferHandle.
-        layerOwner.platformCALayerLayerDisplay(m_layer.ptr());
-        layerOwner.platformCALayerLayerDidDisplay(m_layer.ptr());
+        layerOwner.platformCALayerLayerDisplay(layer.ptr());
+        layerOwner.platformCALayerLayerDidDisplay(layer.ptr());
         return true;
     }
     
@@ -382,7 +384,8 @@ bool RemoteLayerBackingStore::performDelegatedLayerDisplay()
 
 void RemoteLayerBackingStore::dirtyRepaintCounterIfNecessary()
 {
-    if (m_layer->owner()->platformCALayerShowRepaintCounter(m_layer.ptr())) {
+    Ref layer = m_layer.get();
+    if (layer->owner()->platformCALayerShowRepaintCounter(layer.ptr())) {
         IntRect indicatorRect(0, 0, 52, 27);
         m_dirtyRegion.unite(indicatorRect);
     }
@@ -390,8 +393,9 @@ void RemoteLayerBackingStore::dirtyRepaintCounterIfNecessary()
 
 void RemoteLayerBackingStore::paintContents()
 {
-    LOG_WITH_STREAM(RemoteLayerBuffers, stream << "RemoteLayerBackingStore " << m_layer->layerID() << " paintContents() - has dirty region " << !hasEmptyDirtyRegion());
-    if (m_layer->owner()->platformCALayerDelegatesDisplay(m_layer.ptr()))
+    Ref layer = m_layer.get();
+    LOG_WITH_STREAM(RemoteLayerBuffers, stream << "RemoteLayerBackingStore " << layer->layerID() << " paintContents() - has dirty region " << !hasEmptyDirtyRegion());
+    if (layer->owner()->platformCALayerDelegatesDisplay(layer.ptr()))
         return;
 
     if (hasEmptyDirtyRegion()) {
@@ -672,11 +676,11 @@ TextStream& operator<<(TextStream& ts, const RemoteLayerBackingStoreProperties& 
 TextStream& operator<<(TextStream& ts, BackingStoreNeedsDisplayReason reason)
 {
     switch (reason) {
-    case BackingStoreNeedsDisplayReason::None: ts << "none"; break;
-    case BackingStoreNeedsDisplayReason::NoFrontBuffer: ts << "no front buffer"; break;
-    case BackingStoreNeedsDisplayReason::FrontBufferIsVolatile: ts << "volatile front buffer"; break;
-    case BackingStoreNeedsDisplayReason::FrontBufferHasNoSharingHandle: ts << "no front buffer sharing handle"; break;
-    case BackingStoreNeedsDisplayReason::HasDirtyRegion: ts << "has dirty region"; break;
+    case BackingStoreNeedsDisplayReason::None: ts << "none"_s; break;
+    case BackingStoreNeedsDisplayReason::NoFrontBuffer: ts << "no front buffer"_s; break;
+    case BackingStoreNeedsDisplayReason::FrontBufferIsVolatile: ts << "volatile front buffer"_s; break;
+    case BackingStoreNeedsDisplayReason::FrontBufferHasNoSharingHandle: ts << "no front buffer sharing handle"_s; break;
+    case BackingStoreNeedsDisplayReason::HasDirtyRegion: ts << "has dirty region"_s; break;
     }
 
     return ts;

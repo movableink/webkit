@@ -56,9 +56,12 @@
 - (void)_setSelectedColorForColorPicker:(NSColor *)color;
 
 @property (nonatomic, readonly) BOOL _secureEventInputEnabledForTesting;
+@property (nonatomic, readonly) NSRect _windowRelativeBoundsForCustomSwipeViewsForTesting;
 
 - (void)_createFlagsChangedEventMonitorForTesting;
 - (BOOL)_hasFlagsChangedEventMonitorForTesting;
+
+@property (nonatomic, readonly) NSView *_contentInsetFillViewForTesting;
 
 @end
 

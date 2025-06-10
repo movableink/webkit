@@ -16,6 +16,7 @@ None
 List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/crashtests/caption-repaint-crash.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/crashtests/caption-with-multicol-table-cell.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-tables/crashtests/cell-contents-with-negative-outer-size.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/crashtests/col_span_dynamic_crash.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/crashtests/dialog-table-crash.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/crashtests/dynamic-recompute-baseline.html

@@ -47,6 +47,7 @@
 #include <WebCore/WebCoreBundleWin.h>
 #include <WebCore/WindowMessageBroadcaster.h>
 #include <WebKit/WKPage.h>
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/text/MakeString.h>
 
@@ -104,20 +105,19 @@ void WebInspectorUIProxy::showSavePanelForSingleFile(HWND parentWindow, Vector<W
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
 
     if (GetSaveFileName(&ofn)) {
-        auto fd = FileSystem::openFile(filePath.data(), FileSystem::FileOpenMode::ReadWrite);
-        if (!FileSystem::isHandleValid(fd))
+        auto fileHandle = FileSystem::openFile(filePath.data(), FileSystem::FileOpenMode::ReadWrite);
+        if (!fileHandle)
             return;
 
         auto content = saveDatas[0].content.utf8();
         auto contentSize = content.length();
-        auto bytesWritten = FileSystem::writeToFile(fd, byteCast<uint8_t>(content.span()));
-        if (bytesWritten == -1 || static_cast<size_t>(bytesWritten) != contentSize) {
+        auto bytesWritten = fileHandle.write(byteCast<uint8_t>(content.span()));
+        if (bytesWritten != contentSize) {
             auto message = systemErrorMessage(GetLastError());
             if (message.isEmpty())
-                message = makeString("Error: writeToFile returns "_s, bytesWritten, ", contentLength = "_s, content.length());
+                message = makeString("Error: writeToFile returns "_s, bytesWritten ? static_cast<int64_t>(*bytesWritten) : -1, ", contentLength = "_s, content.length());
             MessageBox(parentWindow, message.wideCharacters().data(), L"Export HAR", MB_OK | MB_ICONEXCLAMATION);
         }
-        FileSystem::closeFile(fd);
     } else {
         auto errorCode = CommDlgExtendedError();
         if (errorCode) {
@@ -298,7 +298,7 @@ RefPtr<WebPageProxy> WebInspectorUIProxy::platformCreateFrontendPage()
     };
 
     RECT r = { 0, 0, static_cast<LONG>(initialWindowWidth), static_cast<LONG>(initialWindowHeight) };
-    auto page = protectedInspectedPage();
+    RefPtr page = inspectedPage();
     m_inspectedViewWindow = reinterpret_cast<HWND>(page->viewWidget());
     m_inspectedViewParentWindow = ::GetParent(m_inspectedViewWindow);
     auto view = WebView::create(r, pageConfiguration, m_inspectedViewParentWindow);

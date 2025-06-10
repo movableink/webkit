@@ -30,6 +30,7 @@
 #import <pal/spi/cocoa/NetworkSPI.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/SHA1.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/Base64.h>
 #import <wtf/text/StringToIntegerConversion.h>
@@ -70,10 +71,10 @@ void Connection::receiveHTTPRequest(CompletionHandler<void(Vector<char>&&)>&& co
 {
     receiveBytes([connection = *this, completionHandler = WTFMove(completionHandler), buffer = WTFMove(buffer)](Vector<uint8_t>&& bytes) mutable {
         buffer.appendVector(WTFMove(bytes));
-        if (auto* doubleNewline = strnstr(buffer.data(), "\r\n\r\n", buffer.size())) {
-            if (auto* contentLengthBegin = strnstr(buffer.data(), "Content-Length", buffer.size())) {
-                size_t contentLength = parseIntegerAllowingTrailingJunk<int>(buffer.span().subspan(contentLengthBegin - buffer.data() + strlen("Content-Length: "))).value_or(0);
-                size_t headerLength = doubleNewline - buffer.data() + strlen("\r\n\r\n");
+        if (size_t doubleNewlineIndex = find(buffer.span(), "\r\n\r\n"_span); doubleNewlineIndex != notFound) {
+            if (size_t contentLengthBeginIndex = find(buffer.span(), "Content-Length"_span); contentLengthBeginIndex != notFound) {
+                size_t contentLength = parseIntegerAllowingTrailingJunk<int>(buffer.span().subspan(contentLengthBeginIndex + strlen("Content-Length: "))).value_or(0);
+                size_t headerLength = doubleNewlineIndex + strlen("\r\n\r\n");
                 if (buffer.size() - headerLength < contentLength)
                     return connection.receiveHTTPRequest(WTFMove(completionHandler), WTFMove(buffer));
             }
@@ -165,16 +166,17 @@ void Connection::webSocketHandshake(CompletionHandler<void()>&& connectionHandle
     receiveHTTPRequest([connection = Connection(*this), connectionHandler = WTFMove(connectionHandler)] (Vector<char>&& request) mutable {
 
         auto webSocketAcceptValue = [] (const Vector<char>& request) {
-            constexpr auto* keyHeaderField = "Sec-WebSocket-Key: ";
-            const char* keyBegin = strnstr(request.data(), keyHeaderField, request.size()) + strlen(keyHeaderField);
-            ASSERT(keyBegin);
-            const char* keyEnd = strnstr(keyBegin, "\r\n", request.size() + (keyBegin - request.data()));
-            ASSERT(keyEnd);
+            constexpr auto keyHeaderField = "Sec-WebSocket-Key: "_s;
+            size_t keyBegin = find(request.span(), keyHeaderField.span());
+            ASSERT(keyBegin != notFound);
+            auto keySpan = request.subspan(keyBegin + keyHeaderField.length());
+            size_t keyEnd = find(keySpan, "\r\n"_span);
+            ASSERT(keyEnd != notFound);
 
-            const auto webSocketKeyGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"_span;
+            constexpr auto webSocketKeyGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"_s;
             SHA1 sha1;
-            sha1.addBytes(byteCast<uint8_t>(std::span { keyBegin, keyEnd }));
-            sha1.addBytes(webSocketKeyGUID);
+            sha1.addBytes(byteCast<uint8_t>(keySpan.first(keyEnd)));
+            sha1.addBytes(webSocketKeyGUID.span());
             SHA1::Digest hash;
             sha1.computeHash(hash);
             return base64EncodeToString(hash);

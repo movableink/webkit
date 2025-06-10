@@ -37,6 +37,18 @@
 
 #if HAVE(OS_LAUNCHD_JOB) && (PLATFORM(MAC) || PLATFORM(IOS))
 
+#if USE(APPLE_INTERNAL_SDK)
+// AppServerSupport cannot be safely imported within modules, so avoid putting
+// this SPI declaration in headers.
+#import <AppServerSupport/OSLaunchdJob.h>
+#else
+#import <Foundation/NSError.h>
+@interface OSLaunchdJob : NSObject
+- (instancetype)initWithPlist:(xpc_object_t)plist;
+- (BOOL)submit:(NSError **)errorOut;
+@end
+#endif
+
 using WebKit::WebPushD::PushMessageForTesting;
 
 __attribute__((__noreturn__))
@@ -260,7 +272,7 @@ int WebPushToolMain(int, char **)
             else if ([argument isEqualToString:@"injectPushMessage"]) {
                 auto pushMessage = pushMessageFromArguments(enumerator);
                 if (!pushMessage)
-                    printUsageAndTerminate([NSString stringWithFormat:@"Invalid push arguments specified"]);
+                    printUsageAndTerminate(adoptNS([[NSString alloc] initWithFormat:@"Invalid push arguments specified"]).get());
                 verb = makeUnique<InjectPushMessageVerb>(WTFMove(*pushMessage));
             } else if ([argument isEqualToString:@"getPushPermissionState"]) {
                 String scope { [enumerator nextObject] };
@@ -269,7 +281,7 @@ int WebPushToolMain(int, char **)
                 String scope { [enumerator nextObject] };
                 verb = makeUnique<RequestPushPermissionVerb>(scope);
             } else
-                printUsageAndTerminate([NSString stringWithFormat:@"Invalid option provided: %@", argument]);
+                printUsageAndTerminate(adoptNS([[NSString alloc] initWithFormat:@"Invalid option provided: %@", argument]).get());
 
             argument = [enumerator nextObject];
         }

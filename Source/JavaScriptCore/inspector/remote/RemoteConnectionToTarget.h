@@ -105,7 +105,13 @@ private:
 #endif
 
     ThreadSafeWeakPtr<RemoteControllableTarget> m_target WTF_GUARDED_BY_LOCK(m_targetMutex);
-    bool m_connected { false };
+
+    enum class ConnectionState {
+        Pending,
+        Connected,
+        Closed,
+    };
+    std::atomic<ConnectionState> m_connectionState { ConnectionState::Pending };
 
 #if PLATFORM(COCOA)
     RetainPtr<NSString> m_connectionIdentifier;

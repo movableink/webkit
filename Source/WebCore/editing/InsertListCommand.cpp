@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2014-2015 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -64,7 +64,7 @@ HTMLElement* InsertListCommand::fixOrphanedListChild(Node& node)
     if (parentNode && !parentNode->hasRichlyEditableStyle())
         return nullptr;
 
-    auto listElement = HTMLUListElement::create(document());
+    Ref listElement = HTMLUListElement::create(document());
     insertNodeBefore(listElement.copyRef(), node);
     if (!listElement->hasEditableStyle())
         return nullptr;
@@ -192,7 +192,11 @@ void InsertListCommand::doApply()
                     if (startOfCurrentParagraph == startOfSelection)
                         startOfSelection = endingSelection().visibleStart();
 
+                    // Move to the start of the next paragraph. If this does not move forward, then return early to avoid an infinite loop.
+                    VisiblePosition oldStartOfCurrentParagraph = startOfCurrentParagraph;
                     startOfCurrentParagraph = startOfNextParagraph(endingSelection().visibleStart());
+                    if (!oldStartOfCurrentParagraph.isOrphan() && startOfCurrentParagraph <= oldStartOfCurrentParagraph)
+                        return;
                 }
                 setEndingSelection(endOfSelection);
                 doApplyForSingleParagraph(forceCreateList, listTag, currentSelection);
@@ -220,7 +224,7 @@ void InsertListCommand::doApplyForSingleParagraph(bool forceCreateList, const HT
     // FIXME: This will produce unexpected results for a selection that starts just before a
     // table and ends inside the first cell, selectionForParagraphIteration should probably
     // be renamed and deployed inside setEndingSelection().
-    auto selectionNode = endingSelection().start().protectedDeprecatedNode();
+    RefPtr selectionNode = endingSelection().start().deprecatedNode();
     RefPtr listChildNode = enclosingListChild(selectionNode.get());
     bool switchListType = false;
     if (listChildNode) {
@@ -434,7 +438,7 @@ RefPtr<HTMLElement> InsertListCommand::listifyParagraph(const VisiblePosition& o
     }
 
     // Inserting list element and list item list may change start of pargraph to move. We calculate start of paragraph again.
-    protectedDocument()->updateLayoutIgnorePendingStylesheets();
+    document().updateLayoutIgnorePendingStylesheets();
     start = startOfParagraph(startOfParagraph(start, CanSkipOverEditingBoundary));
     end = endOfParagraph(endOfParagraph(start, CanSkipOverEditingBoundary));
     moveParagraph(start, end, positionBeforeNode(placeholder.ptr()), true);

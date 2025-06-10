@@ -20,14 +20,14 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from unittest.mock import patch
+
 
 class Terminal(object):
     index = 0
 
     @classmethod
     def input(cls, *args):
-        from mock import patch
-
         cls.index = 0
 
         def function(output):

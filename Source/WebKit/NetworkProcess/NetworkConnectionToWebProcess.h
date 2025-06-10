@@ -108,7 +108,6 @@ class NetworkOriginAccessPatterns;
 class NetworkSchemeRegistry;
 class NetworkProcess;
 class NetworkResourceLoader;
-class NetworkResourceLoadParameters;
 class NetworkSession;
 class NetworkSocketChannel;
 class NetworkTransportSession;
@@ -120,9 +119,12 @@ class WebSharedWorkerServerToContextConnection;
 
 struct CoreIPCAuditToken;
 struct NetworkProcessConnectionParameters;
+struct NetworkResourceLoadParameters;
 struct WebTransportSessionIdentifierType;
+struct MessageBatchIdentifierType;
 
 using WebTransportSessionIdentifier = ObjectIdentifier<WebTransportSessionIdentifierType>;
+using MessageBatchIdentifier = ObjectIdentifier<MessageBatchIdentifierType>;
 
 enum class PrivateRelayed : bool;
 
@@ -258,6 +260,9 @@ public:
 #if ENABLE(WEB_RTC)
     NetworkMDNSRegister& mdnsRegister() { return m_mdnsRegister; }
     Ref<NetworkMDNSRegister> protectedMDNSRegister() { return m_mdnsRegister; }
+#if PLATFORM(COCOA)
+    bool webRTCInterfaceMonitoringViaNWEnabled() const { return m_sharedPreferencesForWebProcess.webRTCInterfaceMonitoringViaNWEnabled; }
+#endif
 #endif
 
     WebSWServerToContextConnection* swContextConnection() { return m_swContextConnection.get(); }
@@ -356,9 +361,9 @@ private:
     void entangleLocalPortInThisProcessToRemote(const WebCore::MessagePortIdentifier& local, const WebCore::MessagePortIdentifier& remote);
     void messagePortDisentangled(const WebCore::MessagePortIdentifier&);
     void messagePortClosed(const WebCore::MessagePortIdentifier&);
-    void takeAllMessagesForPort(const WebCore::MessagePortIdentifier&, CompletionHandler<void(Vector<WebCore::MessageWithMessagePorts>&&, uint64_t)>&&);
+    void takeAllMessagesForPort(const WebCore::MessagePortIdentifier&, CompletionHandler<void(Vector<WebCore::MessageWithMessagePorts>&&, std::optional<MessageBatchIdentifier>)>&&);
     void postMessageToRemote(WebCore::MessageWithMessagePorts&&, const WebCore::MessagePortIdentifier&);
-    void didDeliverMessagePortMessages(uint64_t messageBatchIdentifier);
+    void didDeliverMessagePortMessages(MessageBatchIdentifier);
 
     void setCORSDisablingPatterns(WebCore::PageIdentifier, Vector<String>&&);
 
@@ -402,7 +407,7 @@ private:
     void removeOriginAccessAllowListEntry(const String& sourceOrigin, const String& destinationProtocol, const String& destinationHost, bool allowDestinationSubdomains);
     void resetOriginAccessAllowLists();
 
-    uint64_t nextMessageBatchIdentifier(CompletionHandler<void()>&&);
+    MessageBatchIdentifier nextMessageBatchIdentifier(CompletionHandler<void()>&&);
 
     void domCookiesForHost(const URL& host, CompletionHandler<void(const Vector<WebCore::Cookie>&)>&&);
 
@@ -458,7 +463,7 @@ private:
 
     void hasUploadStateChanged(bool);
 
-    void loadImageForDecoding(WebCore::ResourceRequest&&, WebPageProxyIdentifier, size_t, CompletionHandler<void(std::variant<WebCore::ResourceError, Ref<WebCore::FragmentedSharedBuffer>>&&)>&&);
+    void loadImageForDecoding(WebCore::ResourceRequest&&, WebPageProxyIdentifier, size_t, CompletionHandler<void(Expected<Ref<WebCore::FragmentedSharedBuffer>, WebCore::ResourceError>&&)>&&);
 
     void setResourceLoadSchedulingMode(WebCore::PageIdentifier, WebCore::LoadSchedulingMode);
     void prioritizeResourceLoads(const Vector<WebCore::ResourceLoaderIdentifier>&);
@@ -527,7 +532,7 @@ private:
     const WebCore::ProcessIdentifier m_webProcessIdentifier;
 
     HashSet<WebCore::MessagePortIdentifier> m_processEntangledPorts;
-    HashMap<uint64_t, CompletionHandler<void()>> m_messageBatchDeliveryCompletionHandlers;
+    HashMap<MessageBatchIdentifier, CompletionHandler<void()>> m_messageBatchDeliveryCompletionHandlers;
     Ref<NetworkSchemeRegistry> m_schemeRegistry;
     UniqueRef<NetworkOriginAccessPatterns> m_originAccessPatterns;
         

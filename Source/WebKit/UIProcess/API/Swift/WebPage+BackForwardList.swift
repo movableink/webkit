@@ -39,6 +39,7 @@ extension WebPage {
         ///
         /// Two items with equal titles, urls, and initial urls may not necessarily be equal to one another.
         public struct Item: Equatable, Identifiable, Sendable {
+            /// An opaque type representing the identifier for an item.
             public struct ID: Hashable, Sendable {
                 private let value = UUID()
             }
@@ -63,7 +64,7 @@ extension WebPage {
             /// The url of the page this item represents, after having resolved all redirects.
             public let url: URL
 
-            /// The source URL that originally asked to load the resource
+            /// The source URL that originally asked to load the resource.
             public let initialURL: URL
 
             @MainActor

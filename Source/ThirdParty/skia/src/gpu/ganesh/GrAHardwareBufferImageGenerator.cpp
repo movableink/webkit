@@ -28,11 +28,12 @@
 #include "src/gpu/ganesh/GrResourceProviderPriv.h"
 #include "src/gpu/ganesh/GrTexture.h"
 #include "src/gpu/ganesh/GrTextureProxy.h"
+#include "src/gpu/ganesh/SkGaneshRecorder.h"
 #include "src/gpu/ganesh/SkGr.h"
 
 #include <android/hardware_buffer.h>
 
-std::unique_ptr<SkImageGenerator> GrAHardwareBufferImageGenerator::Make(
+std::unique_ptr<GrAHardwareBufferImageGenerator> GrAHardwareBufferImageGenerator::Make(
         AHardwareBuffer* graphicBuffer, SkAlphaType alphaType, sk_sp<SkColorSpace> colorSpace,
         GrSurfaceOrigin surfaceOrigin) {
     AHardwareBuffer_Desc bufferDesc;
@@ -44,7 +45,7 @@ std::unique_ptr<SkImageGenerator> GrAHardwareBufferImageGenerator::Make(
                                          alphaType, std::move(colorSpace));
 
     bool createProtectedImage = 0 != (bufferDesc.usage & AHARDWAREBUFFER_USAGE_PROTECTED_CONTENT);
-    return std::unique_ptr<SkImageGenerator>(new GrAHardwareBufferImageGenerator(
+    return std::unique_ptr<GrAHardwareBufferImageGenerator>(new GrAHardwareBufferImageGenerator(
             info, graphicBuffer, alphaType, createProtectedImage,
             bufferDesc.format, surfaceOrigin));
 }
@@ -211,6 +212,16 @@ bool GrAHardwareBufferImageGenerator::onIsValid(GrRecordingContext* context) con
     }
     return GrBackendApi::kOpenGL == context->backend() ||
            GrBackendApi::kVulkan == context->backend();
+}
+
+bool GrAHardwareBufferImageGenerator::onIsValid(SkRecorder* recorder) const {
+    if (!recorder) {
+        return false;
+    }
+    if (recorder->type() != SkRecorder::Type::kGanesh) {
+        return false;
+    }
+    return this->onIsValid(static_cast<SkGaneshRecorder*>(recorder)->recordingContext());
 }
 
 #endif //SK_BUILD_FOR_ANDROID_FRAMEWORK

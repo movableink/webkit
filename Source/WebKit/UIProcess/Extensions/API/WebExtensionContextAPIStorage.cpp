@@ -41,7 +41,7 @@
 
 namespace WebKit {
 
-bool WebExtensionContext::isStorageMessageAllowed()
+bool WebExtensionContext::isStorageMessageAllowed(IPC::Decoder& message)
 {
     return isLoaded() && (hasPermission(WebExtensionPermission::storage()) || hasPermission(WebExtensionPermission::unlimitedStorage()));
 }

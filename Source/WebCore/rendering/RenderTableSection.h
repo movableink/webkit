@@ -143,9 +143,6 @@ public:
     // FIXME: We may want to introduce a structure holding the in-flux layout information.
     LayoutUnit distributeExtraLogicalHeightToRows(LayoutUnit extraLogicalHeight);
 
-    static RenderPtr<RenderTableSection> createAnonymousWithParentRenderer(const RenderTable&);
-    RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override;
-    
     void paint(PaintInfo&, const LayoutPoint&) override;
 
     void willInsertTableRow(RenderTableRow& child, RenderObject* beforeChild);
@@ -165,7 +162,7 @@ private:
         DoNotIncludeAllIntersectingCells
     };
 
-    ASCIILiteral renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableSection (anonymous)"_s : "RenderTableSection"_s; }
+    ASCIILiteral renderName() const override;
 
     bool canHaveChildren() const override { return true; }
 
@@ -296,11 +293,6 @@ inline CellSpan RenderTableSection::fullTableRowSpan() const
 {
     ASSERT(!m_needsCellRecalc);
     return CellSpan(0, m_grid.size());
-}
-
-inline RenderPtr<RenderBox> RenderTableSection::createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const
-{
-    return RenderTableSection::createTableSectionWithStyle(renderer.document(), renderer.style());
 }
 
 } // namespace WebCore

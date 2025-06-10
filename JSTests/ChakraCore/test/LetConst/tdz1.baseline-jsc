@@ -17,8 +17,8 @@ ReferenceError: Cannot access uninitialized variable.
 ReferenceError: Cannot access uninitialized variable.
 ReferenceError: Cannot access uninitialized variable.
 ReferenceError: Cannot access uninitialized variable.
-ReferenceError: Left side of assignment is not a reference.
-ReferenceError: Left side of assignment is not a reference.
+ReferenceError: Cannot access uninitialized variable.
+ReferenceError: Cannot access uninitialized variable.
 false
 ReferenceError: Cannot access uninitialized variable.
 false

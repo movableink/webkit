@@ -34,8 +34,32 @@
 #include "StructuredSerializeOptions.h"
 #include <JavaScriptCore/Exception.h>
 #include <JavaScriptCore/JSCJSValueInlines.h>
+#include <wtf/text/Base64.h>
 
 namespace WebCore {
+
+ExceptionOr<String> WindowOrWorkerGlobalScope::btoa(const String& stringToEncode)
+{
+    if (stringToEncode.isNull())
+        return String();
+
+    if (!stringToEncode.containsOnlyLatin1())
+        return Exception { ExceptionCode::InvalidCharacterError };
+
+    return base64EncodeToString(byteCast<uint8_t>(stringToEncode.latin1().span()));
+}
+
+ExceptionOr<String> WindowOrWorkerGlobalScope::atob(const String& encodedString)
+{
+    if (encodedString.isNull())
+        return String();
+
+    auto decodedData = base64DecodeToString(encodedString, { Base64DecodeOption::ValidatePadding, Base64DecodeOption::IgnoreWhitespace });
+    if (decodedData.isNull())
+        return Exception { ExceptionCode::InvalidCharacterError };
+
+    return decodedData;
+}
 
 void WindowOrWorkerGlobalScope::reportError(JSDOMGlobalObject& globalObject, JSC::JSValue error)
 {

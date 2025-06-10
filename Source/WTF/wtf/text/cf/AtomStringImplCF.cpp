@@ -47,7 +47,7 @@ RefPtr<AtomStringImpl> AtomStringImpl::add(CFStringRef string)
         return add(unsafeMakeSpan(reinterpret_cast<const UChar*>(ptr), length));
 
     Vector<UniChar, 1024> ucharBuffer(length);
-    CFStringGetCharacters(string, CFRangeMake(0, length), ucharBuffer.data());
+    CFStringGetCharacters(string, CFRangeMake(0, length), ucharBuffer.mutableSpan().data());
     return add(spanReinterpretCast<const UChar>(ucharBuffer.span()));
 }
 

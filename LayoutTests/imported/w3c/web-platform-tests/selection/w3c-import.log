@@ -16,6 +16,7 @@ None
 List of files:
 /LayoutTests/imported/w3c/web-platform-tests/selection/Document-open.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/META.yml
+/LayoutTests/imported/w3c/web-platform-tests/selection/Selection-direction-on-clicks.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/addRange-00.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/addRange-04.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/addRange-08.html
@@ -34,6 +35,8 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/selection/addRange.htm
 /LayoutTests/imported/w3c/web-platform-tests/selection/addRange.js
 /LayoutTests/imported/w3c/web-platform-tests/selection/addRange.tentative.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/anchor-removal.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/caret-position-should-be-correct-while-moveup-movedown.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/collapse-00.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/collapse-15.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/collapse-30.html
@@ -48,7 +51,11 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/selection/extend-20.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/extend-40.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/extend-exception.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/extend-selection-backward-on-input.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/extend.js
+/LayoutTests/imported/w3c/web-platform-tests/selection/fire-selectionchange-event-on-document-if-textcontrol-element-is-in-shadow-tree.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/fire-selectionchange-event-on-pressing-backspace.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/fire-selectionchange-event-on-textcontrol-element-on-pressing-backspace.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/getRangeAt.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/getSelection.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/idlharness.window.js
@@ -58,20 +65,27 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/selection/modify-line-flex-row.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/modify-line-grid-basic.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/modify.tentative.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/move-by-word-with-symbol.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/move-paragraph-cross-editing-boundary.tentative.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/move-paragraphboundary-cross-editing-boundary.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/move-selection-range-into-different-root.tentative.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/onselectionchange-on-distinct-text-controls.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/onselectionchange-on-document.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/removeAllRanges.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/removeRange.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/script-and-style-elements.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/select-end-of-line-image.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/selectAllChildren.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/selection-content-visibility-hidden.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/selection-nested-video.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/selection-range-after-editinghost-removed.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/selection-range-after-textcontrol-removed.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/selection-range-in-shadow-after-the-shadow-removed.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/selection-select-all-move-input-crash.html
-/LayoutTests/imported/w3c/web-platform-tests/selection/selection-shadow-dom-crash-print-expected-mismatch.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/selection-shadow-dom-crash-print.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/setBaseAndExtent.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/stringifier.tentative.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/stringifier_editable_element.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/test-iframe.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/toString-ff-bug-001.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/type.html

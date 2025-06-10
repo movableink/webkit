@@ -87,8 +87,6 @@ domjit/JSNodeDOMJIT.cpp
 editing/TypingCommand.cpp
 html/InputType.cpp
 html/NavigatorUserActivation.cpp
-html/canvas/WebGL2RenderingContext.cpp
-html/canvas/WebGLRenderingContextBase.cpp
 html/track/TextTrackCueGeneric.cpp
 inspector/CommandLineAPIModule.cpp
 inspector/agents/InspectorCSSAgent.cpp
@@ -103,7 +101,6 @@ loader/cache/CachedResourceHandle.h
 mathml/MathMLRowElement.cpp
 page/NavigatorLoginStatus.cpp
 page/mac/EventHandlerMac.mm
-page/scrolling/AsyncScrollingCoordinator.cpp
 platform/ThreadGlobalData.cpp
 platform/ThreadGlobalData.h
 platform/graphics/GraphicsLayer.cpp
@@ -129,7 +126,6 @@ rendering/svg/SVGTextQuery.cpp
 svg/SVGFELightElement.cpp
 svg/SVGPathSegListSource.cpp
 svg/SVGTRefElement.cpp
-svg/SVGTextPositioningElement.cpp
 svg/animation/SVGSMILElement.cpp
 svg/properties/SVGAnimatedDecoratedProperty.h
 svg/properties/SVGAnimatedPrimitiveProperty.h

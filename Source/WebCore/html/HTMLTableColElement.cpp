@@ -30,6 +30,7 @@
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLTableElement.h"
+#include "RenderObjectInlines.h"
 #include "RenderTableCol.h"
 #include "Text.h"
 #include <wtf/TZoneMallocInlines.h>

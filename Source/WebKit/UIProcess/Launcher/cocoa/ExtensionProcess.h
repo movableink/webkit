@@ -44,9 +44,9 @@ OBJC_PROTOCOL(UIInteraction);
 namespace WebKit {
 
 #if USE(LEGACY_EXTENSIONKIT_SPI)
-using ExtensionProcessVariant = std::variant<RetainPtr<BEWebContentProcess>, RetainPtr<BENetworkingProcess>, RetainPtr<BERenderingProcess>, RetainPtr<_SEExtensionProcess>>;
+using ExtensionProcessVariant = Variant<RetainPtr<BEWebContentProcess>, RetainPtr<BENetworkingProcess>, RetainPtr<BERenderingProcess>, RetainPtr<_SEExtensionProcess>>;
 #else
-using ExtensionProcessVariant = std::variant<RetainPtr<BEWebContentProcess>, RetainPtr<BENetworkingProcess>, RetainPtr<BERenderingProcess>>;
+using ExtensionProcessVariant = Variant<RetainPtr<BEWebContentProcess>, RetainPtr<BENetworkingProcess>, RetainPtr<BERenderingProcess>>;
 #endif
 
 class ExtensionProcess {

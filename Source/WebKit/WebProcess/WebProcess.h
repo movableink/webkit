@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -74,6 +74,7 @@ OBJC_CLASS NSMutableDictionary;
 #endif
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
+#include "AvailableInputDevices.h"
 #include "RendererBufferTransportMode.h"
 #endif
 
@@ -101,6 +102,7 @@ enum class UserInterfaceIdiom : uint8_t;
 
 namespace WebCore {
 class CPUMonitor;
+class Frame;
 class PageGroup;
 class SecurityOriginData;
 class Site;
@@ -199,13 +201,17 @@ public:
     template <typename T>
     void addSupplement()
     {
-        m_supplements.add(T::supplementName(), makeUniqueWithoutRefCountedCheck<T>(*this));
+        m_supplements.add(T::supplementName(), makeUnique<T>(*this));
     }
 
     template <typename T>
     void addSupplementWithoutRefCountedCheck()
     {
-        m_supplements.add(T::supplementName(), makeUniqueWithoutRefCountedCheck<T>(*this));
+        // WebProcessSupplement objects forward their ref-counting to the WebProcess. The WebProcess
+        // stores this in a HashMap. It is currently safe because we only ever add to the HashMap, never remove.
+        // However, the current design is fragile and the need to const_cast here is annoying so it would be good
+        // to find a better pattern.
+        m_supplements.add(T::supplementName(), const_cast<std::unique_ptr<WebProcessSupplement>&&>(makeUniqueWithoutRefCountedCheck<T, WebProcessSupplement>(*this)));
     }
 
     // ref() & deref() do nothing since WebProcess is a singleton object.
@@ -226,11 +232,6 @@ public:
 
     WebCore::ThirdPartyCookieBlockingMode thirdPartyCookieBlockingMode() const { return m_thirdPartyCookieBlockingMode; }
 
-#if HAVE(HOSTED_CORE_ANIMATION)
-    const WTF::MachSendRight& compositingRenderServerPort() const { return m_compositingRenderServerPort; }
-    void setCompositingRenderServerPort(WTF::MachSendRight&& port) { m_compositingRenderServerPort = WTFMove(port); }
-#endif
-
     bool fullKeyboardAccessEnabled() const { return m_fullKeyboardAccessEnabled; }
 
 #if HAVE(MOUSE_DEVICE_OBSERVATION)
@@ -249,16 +250,13 @@ public:
     void addWebFrame(WebCore::FrameIdentifier, WebFrame*);
     void removeWebFrame(WebCore::FrameIdentifier, WebPage*);
 
-    WebPageGroupProxy* webPageGroup(const WebPageGroupData&);
+    WebPageGroupProxy* webPageGroup(WebPageGroupData&&);
 
     std::optional<WebCore::UserGestureTokenIdentifier> userGestureTokenIdentifier(std::optional<WebCore::PageIdentifier>, RefPtr<WebCore::UserGestureToken>);
     void userGestureTokenDestroyed(WebCore::PageIdentifier, WebCore::UserGestureToken&);
     
     OptionSet<TextCheckerState> textCheckerState() const { return m_textCheckerState; }
     void setTextCheckerState(OptionSet<TextCheckerState>);
-
-    bool shouldSuppressHDR() const { return m_shouldSuppressHDR; }
-    void setShouldSuppressHDR(bool);
 
     EventDispatcher& eventDispatcher() { return m_eventDispatcher; }
     Ref<EventDispatcher> protectedEventDispatcher() { return m_eventDispatcher; }
@@ -273,6 +271,7 @@ public:
     WebLoaderStrategy& webLoaderStrategy();
     Ref<WebLoaderStrategy> protectedWebLoaderStrategy();
     WebFileSystemStorageConnection& fileSystemStorageConnection();
+    Ref<WebFileSystemStorageConnection> protectedFileSystemStorageConnection();
 
     RefPtr<WebTransportSession> webTransportSession(WebTransportSessionIdentifier);
     void addWebTransportSession(WebTransportSessionIdentifier, WebTransportSession&);
@@ -472,8 +471,7 @@ public:
     void deleteWebsiteDataForOrigin(OptionSet<WebsiteDataType>, const WebCore::ClientOrigin&, CompletionHandler<void()>&&);
     void reloadExecutionContextsForOrigin(const WebCore::ClientOrigin&, std::optional<WebCore::FrameIdentifier> triggeringFrame, CompletionHandler<void()>&&);
 
-    void setAppBadge(std::optional<WebPageProxyIdentifier>, const WebCore::SecurityOriginData&, std::optional<uint64_t>);
-    void setClientBadge(WebPageProxyIdentifier, const WebCore::SecurityOriginData&, std::optional<uint64_t>);
+    void setAppBadge(WebCore::Frame*, const WebCore::SecurityOriginData&, std::optional<uint64_t> badge);
 
     void deferNonVisibleProcessEarlyMemoryCleanupTimer();
 
@@ -484,7 +482,10 @@ public:
 #if PLATFORM(GTK) || PLATFORM(WPE)
     const OptionSet<RendererBufferTransportMode>& rendererBufferTransportMode() const { return m_rendererBufferTransportMode; }
     void initializePlatformDisplayIfNeeded() const;
-#endif
+    const OptionSet<AvailableInputDevices>& availableInputDevices() const { return m_availableInputDevices; }
+    std::optional<AvailableInputDevices> primaryPointingDevice() const;
+    void setAvailableInputDevices(OptionSet<AvailableInputDevices>);
+#endif // PLATFORM(WPE)
 
     String mediaKeysStorageDirectory() const { return m_mediaKeysStorageDirectory; }
     FileSystem::Salt mediaKeysStorageSalt() const { return m_mediaKeysStorageSalt; }
@@ -746,10 +747,6 @@ private:
     bool m_hasSetCacheModel { false };
     CacheModel m_cacheModel { CacheModel::DocumentViewer };
 
-#if HAVE(HOSTED_CORE_ANIMATION)
-    WTF::MachSendRight m_compositingRenderServerPort;
-#endif
-
     bool m_fullKeyboardAccessEnabled { false };
 
 #if HAVE(MOUSE_DEVICE_OBSERVATION)
@@ -766,8 +763,6 @@ private:
     WebProcessSupplementMap m_supplements;
 
     OptionSet<TextCheckerState> m_textCheckerState;
-
-    bool m_shouldSuppressHDR { false };
 
     String m_uiProcessBundleIdentifier;
     RefPtr<NetworkProcessConnection> m_networkProcessConnection;
@@ -788,17 +783,17 @@ private:
 #endif
 
 #if ENABLE(MODEL_PROCESS)
-    Ref<ModelProcessModelPlayerManager> m_modelProcessModelPlayerManager;
+    const Ref<ModelProcessModelPlayerManager> m_modelProcessModelPlayerManager;
     RefPtr<ModelProcessConnection> m_modelProcessConnection;
 #endif
 
     const Ref<WebCacheStorageProvider> m_cacheStorageProvider;
-    Ref<WebBadgeClient> m_badgeClient;
+    const Ref<WebBadgeClient> m_badgeClient;
 #if ENABLE(GPU_PROCESS) && ENABLE(VIDEO)
-    Ref<RemoteMediaPlayerManager> m_remoteMediaPlayerManager;
+    const Ref<RemoteMediaPlayerManager> m_remoteMediaPlayerManager;
 #endif
 #if ENABLE(GPU_PROCESS) && HAVE(AVASSETREADER)
-    Ref<RemoteImageDecoderAVFManager> m_remoteImageDecoderAVFManager;
+    const Ref<RemoteImageDecoderAVFManager> m_remoteImageDecoderAVFManager;
 #endif
     const Ref<WebBroadcastChannelRegistry> m_broadcastChannelRegistry;
     const Ref<WebCookieJar> m_cookieJar;
@@ -850,6 +845,7 @@ private:
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
     OptionSet<RendererBufferTransportMode> m_rendererBufferTransportMode;
+    OptionSet<AvailableInputDevices> m_availableInputDevices;
 #endif
 
     bool m_hasSuspendedPageProxy { false };
@@ -897,7 +893,7 @@ private:
 #endif
 
 #if ENABLE(MEDIA_STREAM)
-    std::unique_ptr<SpeechRecognitionRealtimeMediaSourceManager> m_speechRecognitionRealtimeMediaSourceManager;
+    const std::unique_ptr<SpeechRecognitionRealtimeMediaSourceManager> m_speechRecognitionRealtimeMediaSourceManager;
 #endif
 #if ENABLE(ROUTING_ARBITRATION)
     std::unique_ptr<AudioSessionRoutingArbitrator> m_routingArbitrator;

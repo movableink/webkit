@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All Rights Reserved.
- * Copyright (C) 2012, 2013 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,10 +26,10 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "HitTestSource.h"
 #include <memory>
 #include <wtf/Forward.h>
+#include <wtf/NoVirtualDestructorBase.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomString.h>
@@ -63,8 +63,9 @@ class ShadowRoot;
 class TreeScopeOrderedMap;
 class WeakPtrImplWithEventTargetData;
 struct SVGResourcesMap;
+template<typename> class ExceptionOr;
 
-class TreeScope {
+class TreeScope : public NoVirtualDestructorBase {
     friend class Document;
 
 public:
@@ -131,8 +132,8 @@ public:
     RefPtr<Element> findAnchor(StringView name);
     bool isMatchingAnchor(HTMLAnchorElement&, StringView name);
 
-    inline ContainerNode& rootNode() const; // Defined in ContainerNode.h
-    Ref<ContainerNode> protectedRootNode() const;
+    inline ContainerNode& rootNode() const; // Defined in TreeScopeInlines.h
+    inline Ref<ContainerNode> protectedRootNode() const; // Defined in TreeScopeInlines.h
 
     inline IdTargetObserverRegistry& idTargetObserverRegistry();
     IdTargetObserverRegistry* idTargetObserverRegistryIfExists() { return m_idTargetObserverRegistry.get(); }
@@ -176,7 +177,7 @@ private:
     SVGResourcesMap& svgResourcesMap() const;
     bool isElementWithPendingSVGResources(SVGElement&) const;
 
-    CheckedRef<ContainerNode> m_rootNode;
+    const CheckedRef<ContainerNode> m_rootNode;
     std::reference_wrapper<Document> m_documentScope;
     TreeScope* m_parentTreeScope;
 

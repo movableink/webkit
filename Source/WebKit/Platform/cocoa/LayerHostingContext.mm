@@ -38,39 +38,15 @@
 #import <BrowserEngineKit/BELayerHierarchy.h>
 #import <BrowserEngineKit/BELayerHierarchyHandle.h>
 #import <BrowserEngineKit/BELayerHierarchyHostingTransactionCoordinator.h>
-
-SOFT_LINK_FRAMEWORK_OPTIONAL(BrowserEngineKit);
-SOFT_LINK_CLASS_OPTIONAL(BrowserEngineKit, BELayerHierarchy);
-SOFT_LINK_CLASS_OPTIONAL(BrowserEngineKit, BELayerHierarchyHandle);
-SOFT_LINK_CLASS_OPTIONAL(BrowserEngineKit, BELayerHierarchyHostingTransactionCoordinator);
 #endif
 
 namespace WebKit {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(LayerHostingContext);
 
-std::unique_ptr<LayerHostingContext> LayerHostingContext::createForPort(const MachSendRight& serverPort)
+std::unique_ptr<LayerHostingContext> LayerHostingContext::create(const LayerHostingContextOptions& options)
 {
     auto layerHostingContext = makeUnique<LayerHostingContext>();
-
-    NSDictionary *options = @{
-        kCAContextPortNumber : @(serverPort.sendRight()),
-#if PLATFORM(MAC)
-        kCAContextCIFilterBehavior : @"ignore",
-#endif
-    };
-
-    layerHostingContext->m_layerHostingMode = LayerHostingMode::InProcess;
-    layerHostingContext->m_context = [CAContext remoteContextWithOptions:options];
-    layerHostingContext->m_cachedContextID = layerHostingContext->contextID();
-    return layerHostingContext;
-}
-
-#if HAVE(OUT_OF_PROCESS_LAYER_HOSTING)
-std::unique_ptr<LayerHostingContext> LayerHostingContext::createForExternalHostingProcess(const LayerHostingContextOptions& options)
-{
-    auto layerHostingContext = makeUnique<LayerHostingContext>();
-    layerHostingContext->m_layerHostingMode = LayerHostingMode::OutOfProcess;
 
 #if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
     // Use a very large display ID to ensure that the context is never put on-screen
@@ -84,7 +60,7 @@ std::unique_ptr<LayerHostingContext> LayerHostingContext::createForExternalHosti
     };
 #if USE(EXTENSIONKIT)
     if (options.useHostable) {
-        layerHostingContext->m_hostable = [getBELayerHierarchyClass() layerHierarchyWithOptions:contextOptions error:nil];
+        layerHostingContext->m_hostable = [BELayerHierarchy layerHierarchyWithOptions:contextOptions error:nil];
         return layerHostingContext;
     }
 #endif
@@ -103,20 +79,9 @@ std::unique_ptr<LayerHostingContext> LayerHostingContext::createForExternalHosti
     return layerHostingContext;
 }
 
-#if PLATFORM(MAC)
-std::unique_ptr<LayerHostingContext> LayerHostingContext::createForExternalPluginHostingProcess()
-{
-    auto layerHostingContext = makeUnique<LayerHostingContext>();
-    layerHostingContext->m_layerHostingMode = LayerHostingMode::OutOfProcess;
-    layerHostingContext->m_context = [CAContext contextWithCGSConnection:CGSMainConnectionID() options:@{ kCAContextCIFilterBehavior : @"ignore" }];
-    return layerHostingContext;
-}
-#endif
-
 std::unique_ptr<LayerHostingContext> LayerHostingContext::createTransportLayerForRemoteHosting(LayerHostingContextID contextID)
 {
     auto layerHostingContext = makeUnique<LayerHostingContext>();
-    layerHostingContext->m_layerHostingMode = LayerHostingMode::OutOfProcess;
     layerHostingContext->m_cachedContextID = contextID;
     return layerHostingContext;
 }
@@ -125,8 +90,6 @@ RetainPtr<CALayer> LayerHostingContext::createPlatformLayerForHostingContext(Lay
 {
     return [CALayer _web_renderLayerWithContextID:contextID shouldPreserveFlip:NO];
 }
-
-#endif // HAVE(OUT_OF_PROCESS_LAYER_HOSTING)
 
 LayerHostingContext::LayerHostingContext()
 {
@@ -159,6 +122,11 @@ CALayer *LayerHostingContext::rootLayer() const
     return [m_context layer];
 }
 
+RetainPtr<CALayer> LayerHostingContext::protectedRootLayer() const
+{
+    return rootLayer();
+}
+
 LayerHostingContextID LayerHostingContext::contextID() const
 {
 #if USE(EXTENSIONKIT)
@@ -183,18 +151,6 @@ CGColorSpaceRef LayerHostingContext::colorSpace() const
     return [m_context colorSpace];
 }
 
-#if PLATFORM(MAC)
-void LayerHostingContext::setColorMatchUntaggedContent(bool colorMatchUntaggedContent)
-{
-    [m_context setColorMatchUntaggedContent:colorMatchUntaggedContent];
-}
-
-bool LayerHostingContext::colorMatchUntaggedContent() const
-{
-    return [m_context colorMatchUntaggedContent];
-}
-#endif
-
 void LayerHostingContext::setFencePort(mach_port_t fencePort)
 {
 #if USE(EXTENSIONKIT)
@@ -206,11 +162,6 @@ void LayerHostingContext::setFencePort(mach_port_t fencePort)
 MachSendRight LayerHostingContext::createFencePort()
 {
     return MachSendRight::adopt([m_context createFencePort]);
-}
-
-void LayerHostingContext::updateCachedContextID(LayerHostingContextID contextID)
-{
-    m_cachedContextID = contextID;
 }
 
 LayerHostingContextID LayerHostingContext::cachedContextID()
@@ -231,7 +182,7 @@ RetainPtr<BELayerHierarchyHostingTransactionCoordinator> LayerHostingContext::cr
     auto xpcRepresentation = adoptOSObject(xpc_dictionary_create(nullptr, nullptr, 0));
     xpc_dictionary_set_mach_send(xpcRepresentation.get(), machPortKey, sendRight);
     NSError* error = nil;
-    auto coordinator = [getBELayerHierarchyHostingTransactionCoordinatorClass() coordinatorWithXPCRepresentation:xpcRepresentation.get() error:&error];
+    auto coordinator = [BELayerHierarchyHostingTransactionCoordinator coordinatorWithXPCRepresentation:xpcRepresentation.get() error:&error];
     if (error)
         NSLog(@"Could not create update coordinator, error = %@", error);
     return coordinator;
@@ -243,7 +194,7 @@ RetainPtr<BELayerHierarchyHandle> LayerHostingContext::createHostingHandle(uint6
     xpc_dictionary_set_uint64(xpcRepresentation.get(), processIDKey, pid);
     xpc_dictionary_set_uint64(xpcRepresentation.get(), contextIDKey, contextID);
     NSError* error = nil;
-    auto handle = [getBELayerHierarchyHandleClass() handleWithXPCRepresentation:xpcRepresentation.get() error:&error];
+    auto handle = [BELayerHierarchyHandle handleWithXPCRepresentation:xpcRepresentation.get() error:&error];
     if (error)
         NSLog(@"Could not create layer hierarchy handle, error = %@", error);
     return handle;

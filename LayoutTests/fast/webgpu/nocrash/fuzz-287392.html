@@ -1,6 +1,7 @@
 <style>
   :root { background: #102030e0; color: #99ddbbcc; font-size: 15px; }
 </style>
+<script src="../../../resources/js-test-pre.js"></script>
 <script id="shared">
 const log = console.log;
 
@@ -152,13 +153,12 @@ onload = async () => {
 
   ];
   let promises = [ window0() ];
-  log('promises created');
+  debug('promises created');
   let results = await Promise.allSettled(promises);
   for (let result of results) {
     if (result.status === 'rejected') { throw result.reason; }
   }
-  log('the end')
-  log(location);
+  debug('Pass')
   } catch (e) {
     log('error');
     log(e);
@@ -189,7 +189,6 @@ onload = async () => {
       
     }
   }
-  console.log('Pass')
     globalThis.testRunner?.notifyDone();
 };
 </script>

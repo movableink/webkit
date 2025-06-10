@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2022 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All Rights Reserved.
  * Copyright (C) 2009, 2011 Google Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,6 +34,7 @@
 #include "CacheStorageProvider.h"
 #include "CommonVM.h"
 #include "ContentSecurityPolicy.h"
+#include "CrossOriginMode.h"
 #include "Crypto.h"
 #include "CryptoKeyData.h"
 #include "DocumentInlines.h"
@@ -107,7 +108,7 @@ static WorkQueue& sharedFileSystemStorageQueue()
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WorkerGlobalScope);
 
 WorkerGlobalScope::WorkerGlobalScope(WorkerThreadType type, const WorkerParameters& params, Ref<SecurityOrigin>&& origin, WorkerThread& thread, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, std::unique_ptr<WorkerClient>&& workerClient)
-    : WorkerOrWorkletGlobalScope(type, params.sessionID, isMainThread() ? Ref { commonVM() } : JSC::VM::create(), params.referrerPolicy, &thread, params.noiseInjectionHashSalt, params.advancedPrivacyProtections, params.clientIdentifier)
+    : WorkerOrWorkletGlobalScope(type, params.sessionID, isMainThread() ? Ref { commonVM() } : JSC::VM::create(JSC::HeapType::Medium), params.referrerPolicy, &thread, params.noiseInjectionHashSalt, params.advancedPrivacyProtections, params.clientIdentifier)
     , m_url(params.scriptURL)
     , m_ownerURL(params.ownerURL)
     , m_inspectorIdentifier(params.inspectorIdentifier)
@@ -326,6 +327,11 @@ WorkerNavigator& WorkerGlobalScope::navigator()
     return *m_navigator;
 }
 
+Ref<WorkerNavigator> WorkerGlobalScope::protectedNavigator()
+{
+    return navigator();
+}
+
 void WorkerGlobalScope::setIsOnline(bool isOnline)
 {
     m_isOnline = isOnline;
@@ -369,7 +375,7 @@ void WorkerGlobalScope::clearInterval(int timeoutId)
     DOMTimer::removeById(*this, timeoutId);
 }
 
-ExceptionOr<void> WorkerGlobalScope::importScripts(const FixedVector<std::variant<RefPtr<TrustedScriptURL>, String>>& urls)
+ExceptionOr<void> WorkerGlobalScope::importScripts(const FixedVector<Variant<RefPtr<TrustedScriptURL>, String>>& urls)
 {
     ASSERT(contentSecurityPolicy());
 
@@ -468,7 +474,7 @@ void WorkerGlobalScope::addConsoleMessage(std::unique_ptr<Inspector::ConsoleMess
     }
 
     auto sessionID = this->sessionID();
-    if (UNLIKELY(settingsValues().logsPageMessagesToSystemConsoleEnabled && sessionID && !sessionID->isEphemeral()))
+    if (settingsValues().logsPageMessagesToSystemConsoleEnabled && sessionID && !sessionID->isEphemeral()) [[unlikely]]
         PageConsoleClient::logMessageToSystemConsole(*message);
 
 #if ENABLE(WEBDRIVER_BIDI)
@@ -499,23 +505,6 @@ void WorkerGlobalScope::addMessage(MessageSource source, MessageLevel level, con
     AutomationInstrumentation::addMessageToConsole(message);
 #endif
     InspectorInstrumentation::addMessageToConsole(*this, WTFMove(message));
-}
-
-std::optional<Vector<uint8_t>> WorkerGlobalScope::wrapCryptoKey(const Vector<uint8_t>& key)
-{
-    Ref protectedThis { *this };
-    auto* workerLoaderProxy = thread().workerLoaderProxy();
-    if (!workerLoaderProxy)
-        return std::nullopt;
-
-    BinarySemaphore semaphore;
-    std::optional<Vector<uint8_t>> wrappedKey;
-    workerLoaderProxy->postTaskToLoader([&semaphore, &key, &wrappedKey](auto& context) {
-        wrappedKey = context.wrapCryptoKey(key);
-        semaphore.signal();
-    });
-    semaphore.wait();
-    return wrappedKey;
 }
 
 std::optional<Vector<uint8_t>> WorkerGlobalScope::serializeAndWrapCryptoKey(CryptoKeyData&& keyData)
@@ -775,7 +764,7 @@ String WorkerGlobalScope::endpointURIForToken(const String& token) const
     return reportingScope().endpointURIForToken(token);
 }
 
-void WorkerGlobalScope::sendReportToEndpoints(const URL&, const Vector<String>& /*endpointURIs*/, const Vector<String>& /*endpointTokens*/, Ref<FormData>&&, ViolationReportType)
+void WorkerGlobalScope::sendReportToEndpoints(const URL&, std::span<const String> /*endpointURIs*/, std::span<const String> /*endpointTokens*/, Ref<FormData>&&, ViolationReportType)
 {
     notImplemented();
 }

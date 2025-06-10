@@ -31,6 +31,7 @@
 #include "CryptoAlgorithmEcdsaParams.h"
 #include "CryptoDigestAlgorithm.h"
 #include "CryptoKeyEC.h"
+#include "ExceptionOr.h"
 #include <wtf/StdLibExtras.h>
 
 #if HAVE(SWIFT_CPP_INTEROP)

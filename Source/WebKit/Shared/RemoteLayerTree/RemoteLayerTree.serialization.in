@@ -137,11 +137,12 @@ header: "RemoteLayerBackingStore.h"
     WebCore::Color m_themeColor;
     WebCore::Color m_pageExtendedBackgroundColor;
     WebCore::Color m_sampledPageTopColor;
-    WebCore::FixedContainerEdges m_fixedContainerEdges;
+    std::optional<WebCore::FixedContainerEdges> m_fixedContainerEdges;
 
 #if PLATFORM(MAC)
     Markable<WebCore::PlatformLayerIdentifier> m_pageScalingLayerID;
     Markable<WebCore::PlatformLayerIdentifier> m_scrolledContentsLayerID;
+    Markable<WebCore::PlatformLayerIdentifier> m_mainFrameClipLayerID;
 #endif
 
     double m_pageScaleFactor;
@@ -196,13 +197,13 @@ headers: "LayerProperties.h" "PlatformCALayerRemote.h"
     WebCore::PlatformCALayerLayerType type;
     std::optional<WebKit::RemoteLayerTreeTransaction::LayerCreationProperties::VideoElementData> videoElementData;
 #if ENABLE(MODEL_ELEMENT) && ENABLE(MODEL_PROCESS)
-    std::variant<WebKit::RemoteLayerTreeTransaction::LayerCreationProperties::NoAdditionalData, WebKit::RemoteLayerTreeTransaction::LayerCreationProperties::CustomData, Ref<WebCore::Model>, Ref<WebCore::ModelContext>, WebCore::LayerHostingContextIdentifier> additionalData;
+    Variant<WebKit::RemoteLayerTreeTransaction::LayerCreationProperties::NoAdditionalData, WebKit::RemoteLayerTreeTransaction::LayerCreationProperties::CustomData, Ref<WebCore::Model>, Ref<WebCore::ModelContext>, WebCore::LayerHostingContextIdentifier> additionalData;
 #endif
 #if ENABLE(MODEL_ELEMENT) && !ENABLE(MODEL_PROCESS)
-    std::variant<WebKit::RemoteLayerTreeTransaction::LayerCreationProperties::NoAdditionalData, WebKit::RemoteLayerTreeTransaction::LayerCreationProperties::CustomData, Ref<WebCore::Model>, WebCore::LayerHostingContextIdentifier> additionalData;
+    Variant<WebKit::RemoteLayerTreeTransaction::LayerCreationProperties::NoAdditionalData, WebKit::RemoteLayerTreeTransaction::LayerCreationProperties::CustomData, Ref<WebCore::Model>, WebCore::LayerHostingContextIdentifier> additionalData;
 #endif
 #if !ENABLE(MODEL_PROCESS) && !ENABLE(MODEL_ELEMENT)
-    std::variant<WebKit::RemoteLayerTreeTransaction::LayerCreationProperties::NoAdditionalData, WebKit::RemoteLayerTreeTransaction::LayerCreationProperties::CustomData, WebCore::LayerHostingContextIdentifier> additionalData;
+    Variant<WebKit::RemoteLayerTreeTransaction::LayerCreationProperties::NoAdditionalData, WebKit::RemoteLayerTreeTransaction::LayerCreationProperties::CustomData, WebCore::LayerHostingContextIdentifier> additionalData;
 #endif
 };
 

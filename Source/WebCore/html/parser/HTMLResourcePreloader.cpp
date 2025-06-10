@@ -86,11 +86,11 @@ void HTMLResourcePreloader::preload(PreloadRequestStream requests)
 
 void HTMLResourcePreloader::preload(std::unique_ptr<PreloadRequest> preload)
 {
-    Ref document = protectedDocument();
+    Ref document = m_document.get();
     ASSERT(document->frame());
     ASSERT(document->renderView());
 
-    auto queries = MQ::MediaQueryParser::parse(preload->media(), { document.get() });
+    auto queries = MQ::MediaQueryParser::parse(preload->media(), document->cssParserContext());
     if (!MQ::MediaQueryEvaluator { screenAtom(), document, document->renderStyle() }.evaluate(queries))
         return;
 

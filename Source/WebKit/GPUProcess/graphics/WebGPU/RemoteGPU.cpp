@@ -38,6 +38,7 @@
 #include "RemoteRenderingBackend.h"
 #include "StreamServerConnection.h"
 #include "WebGPUObjectHeap.h"
+#include <WebCore/GraphicsContext.h>
 #include <WebCore/NativeImage.h>
 #include <WebCore/RenderingResourceIdentifier.h>
 #include <WebCore/WebGPU.h>
@@ -197,6 +198,8 @@ void RemoteGPU::requestAdapter(const WebGPU::RequestAdapterOptions& options, Web
             limits->maxComputeWorkgroupsPerDimension(),
             limits->maxStorageBuffersInFragmentStage(),
             limits->maxStorageTexturesInFragmentStage(),
+            limits->maxStorageBuffersInVertexStage(),
+            limits->maxStorageTexturesInVertexStage(),
         }, adapter->isFallbackAdapter() } });
     });
 }

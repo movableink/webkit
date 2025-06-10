@@ -130,7 +130,7 @@ void ImageBufferCGBitmapBackend::getPixelBuffer(const IntRect& srcRect, PixelBuf
     ImageBufferBackend::getPixelBuffer(srcRect, m_data, destination);
 }
 
-void ImageBufferCGBitmapBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
+void ImageBufferCGBitmapBackend::putPixelBuffer(const PixelBufferSourceView& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
 {
     ImageBufferBackend::putPixelBuffer(pixelBuffer, srcRect, destPoint, destFormat, m_data);
 }

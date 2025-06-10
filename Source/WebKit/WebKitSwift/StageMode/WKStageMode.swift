@@ -21,12 +21,13 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-#if os(visionOS)
+#if ENABLE_MODEL_PROCESS
 
 import Combine
 import RealityKit
 import Spatial
 import Foundation
+@_spi(Observation) import RealityFoundation
 @_spi(RealityKit) import RealityKit
 import WebKitSwift
 import os
@@ -37,9 +38,9 @@ import simd
 @objc(WKStageModeInteractionDriver)
 final public class WKStageModeInteractionDriver: NSObject {
     private let kDragToRotationMultiplier: Float = 3.0
-    private let kPitchSettleAnimationDuration: Double = 0.2
+    private let kPitchSettleAnimationDuration: Double = 0.4
     private let kMaxDecelerationDuration: Double = 2.0
-    private let kDecelerationDampeningFactor: Float = 0.9
+    private let kDecelerationDampeningFactor: Float = 0.95
     private let kOrbitVelocityTerminationThreshold: Float = 0.0001
     
     private var stageModeOperation: WKStageModeOperation = .none
@@ -55,11 +56,12 @@ final public class WKStageModeInteractionDriver: NSObject {
     /// Because the turntable animation depends on the velocity of the pinch, we have to apply a separate animation for each animation tick.
     let turntableAnimationProxyEntity = Entity()
     
-    let modelEntity: WKSRKEntity
+    let modelEntity: WKRKEntity
     
     weak var delegate: WKStageModeInteractionAware?
     
     private var driverInitialized: Bool = false
+    private var allowAnimationObservation: Bool = false
     private var initialManipulationPose: Transform = .identity
     private var previousManipulationPose: Transform = .identity
     private var initialTargetPose: Transform = .identity
@@ -70,6 +72,8 @@ final public class WKStageModeInteractionDriver: NSObject {
     // Animation Controllers
     private var pitchSettleAnimationController: AnimationPlaybackController? = nil
     private var yawDecelerationAnimationController: AnimationPlaybackController? = nil
+    private var pitchAnimationCompletionSubscription: Cancellable? = nil
+    private var yawAnimationCompletionSubscription: Cancellable? = nil
     
     private var pitchAnimationIsPlaying: Bool {
         pitchSettleAnimationController?.isPlaying ?? false
@@ -87,11 +91,11 @@ final public class WKStageModeInteractionDriver: NSObject {
     
     @objc(stageModeInteractionInProgress)
     var stageModeInteractionInProgress: Bool {
-        self.driverInitialized && self.stageModeOperation != .none && (pitchAnimationIsPlaying || yawAnimationIsPlaying)
+        self.driverInitialized && self.stageModeOperation != .none
     }
     
     @objc(initWithModel:container:delegate:)
-    init(with model: WKSRKEntity, container: REEntityRef, delegate: WKStageModeInteractionAware?) {
+    init(with model: WKRKEntity, container: REEntityRef, delegate: WKStageModeInteractionAware?) {
         self.modelEntity = model
         self.interactionContainer = Entity()
         self.turntableInteractionContainer = Entity()
@@ -110,7 +114,7 @@ final public class WKStageModeInteractionDriver: NSObject {
     func setContainerTransformInPortal() {
         // Configure entity hierarchy after we have correctly positioned the model
         self.interactionContainer.setPosition(modelEntity.interactionPivotPoint, relativeTo: nil)
-        modelEntity.setParent(self.turntableInteractionContainer.__coreEntity.__as(REEntityRef.self), preservingWorldTransform: true)
+        modelEntity.setParentCore(self.turntableInteractionContainer.__coreEntity.__as(REEntityRef.self), preservingWorldTransform: true)
     }
     
     @objc(removeInteractionContainerFromSceneOrParent)
@@ -121,24 +125,16 @@ final public class WKStageModeInteractionDriver: NSObject {
     
     @objc(interactionDidBegin:)
     func interactionDidBegin(_ transform: simd_float4x4) {
+        pitchSettleAnimationController?.pause()
+        self.pitchSettleAnimationController = nil
+
+        yawDecelerationAnimationController?.pause()
+        self.yawDecelerationAnimationController = nil
+        
         driverInitialized = true
+        allowAnimationObservation = false
         
         self.currentOrbitVelocity = .zero
-        if pitchAnimationIsPlaying {
-            pitchSettleAnimationController?.pause()
-            self.pitchSettleAnimationController = nil
-        }
-
-        if yawAnimationIsPlaying {
-            yawDecelerationAnimationController?.pause()
-            self.yawDecelerationAnimationController = nil
-        }
-
-        let initialCenter = modelEntity.interactionPivotPoint
-        let initialTransform = modelEntity.transform
-        let transformMatrix = Transform(scale: initialTransform.scale, rotation: initialTransform.rotation, translation: initialTransform.translation)
-        self.interactionContainer.setPosition(initialCenter, relativeTo: nil)
-        self.modelEntity.interactionContainerDidRecenter(transformMatrix.matrix)
 
         let initialPoseTransform = Transform(matrix: transform)
         initialManipulationPose = initialPoseTransform
@@ -180,72 +176,98 @@ final public class WKStageModeInteractionDriver: NSObject {
     
     @objc(interactionDidEnd)
     func interactionDidEnd() {
-        driverInitialized = false
+        allowAnimationObservation = true
+        
         initialManipulationPose = .identity
         previousManipulationPose = .identity
         
         // Settle the pitch of the interaction container
-        pitchSettleAnimationController = self.interactionContainer.move(to: initialTargetPose, relativeTo: self.interactionContainer.parent, duration: kPitchSettleAnimationDuration, timingFunction: .easeOut)
+        pitchSettleAnimationController = self.interactionContainer.move(to: initialTargetPose, relativeTo: self.interactionContainer.parent, duration: kPitchSettleAnimationDuration, timingFunction: .cubicBezier(controlPoint1: .init(0.08, 0.6), controlPoint2: .init(0.4, 1.0)))
         subscribeToPitchChanges()
+        pitchAnimationCompletionSubscription = self.interactionContainer.scene?.subscribe(to: AnimationEvents.PlaybackCompleted.self, on: self.interactionContainer) { [weak self] _ in
+            guard let self else {
+                return
+            }
+            
+            self.driverInitialized = self.yawAnimationIsPlaying || self.pitchAnimationIsPlaying
+        }
         
         // The proxy does not actually perform the turntable animation; we instead use it to programmatically apply a deceleration curve to the yaw
         // based on the user's current orbit velocity
         yawDecelerationAnimationController = self.turntableAnimationProxyEntity.move(to: Transform(scale: .one, rotation: .init(ix: 0, iy: 0, iz: 0, r: 1), translation: .init(repeating: 1)), relativeTo: nil, duration: kMaxDecelerationDuration, timingFunction: .linear)
         subscribeToYawChanges()
+        yawAnimationCompletionSubscription = self.turntableAnimationProxyEntity.scene?.subscribe(to: AnimationEvents.PlaybackTerminated.self, on: self.turntableAnimationProxyEntity) { [weak self] _ in
+            guard let self else {
+                return
+            }
+            
+            self.driverInitialized = self.yawAnimationIsPlaying || self.pitchAnimationIsPlaying
+        }
     }
     
     @objc(operationDidUpdate:)
     func operationDidUpdate(_ operation: WKStageModeOperation) {
         self.stageModeOperation = operation
+        
+        if (operation != .none) {
+            let initialCenter = modelEntity.interactionPivotPoint
+            let initialTransform = modelEntity.transform
+            let transformMatrix = Transform(scale: initialTransform.scale, rotation: initialTransform.rotation, translation: initialTransform.translation)
+            self.interactionContainer.setPosition(initialCenter, relativeTo: nil)
+            self.modelEntity.interactionContainerDidRecenter(fromTransform: transformMatrix.matrix)
+        }
     }
     
     private func subscribeToPitchChanges() {
-        if pitchAnimationIsPlaying {
-            withObservationTracking {
-#if canImport(RealityFoundation, _version: 380)
-                _ = self.interactionContainer.proto_observableComponents[Transform.self]
+        withObservationTracking {
+#if canImport(RealityFoundation, _version: 395)
+            _ = self.interactionContainer.proto_observable.components[Transform.self]
 #endif
-            } onChange: {
-                Task { @MainActor in
-                    self.delegate?.stageModeInteractionDidUpdateModel()
-                    
-                    // Because the onChange only gets called once, we need to re-subscribe to the function while we are animating
+        } onChange: {
+            Task { @MainActor in
+                guard self.allowAnimationObservation else {
+                    return
+                }
+                
+                self.delegate?.stageModeInteractionDidUpdateModel()
+                
+                // Because the onChange only gets called once, we need to re-subscribe to the function while we are animating
+                if self.pitchAnimationIsPlaying {
                     self.subscribeToPitchChanges()
                 }
             }
-        } else {
-            self.driverInitialized = self.yawAnimationIsPlaying
         }
     }
     
     private func subscribeToYawChanges() {
-        if yawAnimationIsPlaying {
-            withObservationTracking {
-#if canImport(RealityFoundation, _version: 380)
-                // By default, we do not care about the proxy, but we use the update to set the deceleration of the turntable container
-                _ = turntableAnimationProxyEntity.proto_observableComponents[Transform.self]
+        withObservationTracking {
+#if canImport(RealityFoundation, _version: 395)
+            // By default, we do not care about the proxy, but we use the update to set the deceleration of the turntable container
+            _ = turntableAnimationProxyEntity.proto_observable.components[Transform.self]
 #endif
-            } onChange: {
-                Task { @MainActor in
-                    let deltaX = self.currentOrbitVelocity.x
-                    let turntableYawQuat = Rotation3D(angle: .init(radians: deltaX), axis: .y)
-                    self.turntableInteractionContainer.orientation *= turntableYawQuat.quaternion.quatf
-                    self.currentOrbitVelocity *= self.kDecelerationDampeningFactor
+        } onChange: {
+            Task { @MainActor in
+                guard self.allowAnimationObservation else {
+                    return
+                }
+                
+                let deltaX = self.currentOrbitVelocity.x
+                let turntableYawQuat = Rotation3D(angle: .init(radians: deltaX), axis: .y)
+                self.turntableInteractionContainer.orientation *= turntableYawQuat.quaternion.quatf
+                self.currentOrbitVelocity *= self.kDecelerationDampeningFactor
 
-                    self.delegate?.stageModeInteractionDidUpdateModel()
-                    
-                    // Because the onChange only gets called once, we need to re-subscribe to the function while we are animating
-                    // It is possible that the models stops moving even if the animation continues, so we should check for early stop
-                    if (abs(self.currentOrbitVelocity.x) > self.kOrbitVelocityTerminationThreshold) {
-                        self.subscribeToYawChanges()
-                    } else {
-                        self.yawDecelerationAnimationController?.stop()
-                        self.driverInitialized = self.pitchAnimationIsPlaying
-                    }
+                self.delegate?.stageModeInteractionDidUpdateModel()
+                
+                // Because the onChange only gets called once, we need to re-subscribe to the function while we are animating
+                // It is possible that the models stops moving even if the animation continues, so we should check for early stop
+                if (abs(self.currentOrbitVelocity.x) <= self.kOrbitVelocityTerminationThreshold) {
+                    self.yawDecelerationAnimationController?.stop()
+                }
+                
+                if self.yawAnimationIsPlaying {
+                    self.subscribeToYawChanges()
                 }
             }
-        } else {
-            self.driverInitialized = self.pitchAnimationIsPlaying
         }
     }
 }

@@ -88,7 +88,7 @@ void PlaybackSessionInterfaceIOS::invalidate()
 
 PlaybackSessionModel* PlaybackSessionInterfaceIOS::playbackSessionModel() const
 {
-    return m_playbackSessionModel;
+    return m_playbackSessionModel.get();
 }
 
 void PlaybackSessionInterfaceIOS::modelDestroyed()

@@ -41,6 +41,9 @@ class Factory(factory.BuildFactory):
         self.addStep(ValidateChange(branches=self.branches))
         self.addStep(PrintConfiguration())
         self.addStep(CleanGitRepo())
+        if platform.startswith('mac'):
+            self.addStep(PruneCoreSymbolicationdCacheIfTooLarge())
+        self.addStep(SetCredentialHelper())
         self.addStep(CheckOutSource())
         self.addStep(FetchBranches())
         # CheckOutSource step pulls the latest revision, since we use alwaysUseLatest=True. Without alwaysUseLatest Buildbot will
@@ -66,6 +69,7 @@ class StyleFactory(factory.BuildFactory):
         self.addStep(ValidateChange())
         self.addStep(PrintConfiguration())
         self.addStep(CleanGitRepo())
+        self.addStep(SetCredentialHelper())
         self.addStep(CheckOutSource())
         self.addStep(FetchBranches())
         self.addStep(UpdateWorkingDirectory())
@@ -82,6 +86,7 @@ class WatchListFactory(factory.BuildFactory):
         self.addStep(ValidateChange())
         self.addStep(PrintConfiguration())
         self.addStep(CleanGitRepo())
+        self.addStep(SetCredentialHelper())
         self.addStep(CheckOutSource())
         self.addStep(FetchBranches())
         self.addStep(UpdateWorkingDirectory())
@@ -101,6 +106,7 @@ class SaferCPPStaticAnalyzerFactory(factory.BuildFactory):
         self.addStep(ValidateChange())
         self.addStep(PrintConfiguration())
         self.addStep(CleanGitRepo())
+        self.addStep(SetCredentialHelper())
         self.addStep(CheckOutSource())
         self.addStep(FetchBranches())
         self.addStep(ShowIdentifier())
@@ -172,10 +178,10 @@ class TestFactory(Factory):
             self.addStep(InstallWpeDependencies())
         elif platform == 'win':
             self.addStep(InstallWinDependencies())
+        self.addStep(KillOldProcesses())
         self.getProduct()
         if self.willTriggerCrashLogSubmission:
             self.addStep(WaitForCrashCollection())
-        self.addStep(KillOldProcesses())
         if self.LayoutTestClass:
             self.addStep(RunWebKitTestsInStressMode(num_iterations=10, layout_test_class=self.LayoutTestClass))
             self.addStep(self.LayoutTestClass())
@@ -192,9 +198,9 @@ class StressTestFactory(TestFactory):
 
     def __init__(self, platform, configuration=None, architectures=None, triggered_by=None, additionalArguments=None, checkRelevance=False, **kwargs):
         Factory.__init__(self, platform=platform, configuration=configuration, architectures=architectures, buildOnly=False, triggered_by=triggered_by, additionalArguments=additionalArguments, checkRelevance=checkRelevance)
+        self.addStep(KillOldProcesses())
         self.getProduct()
         self.addStep(WaitForCrashCollection())
-        self.addStep(KillOldProcesses())
         self.addStep(RunWebKitTestsInStressMode())
         self.addStep(TriggerCrashLogSubmission())
         self.addStep(SetBuildSummary())
@@ -221,9 +227,9 @@ class JSCBuildAndTestsFactory(Factory):
 class JSCTestsFactory(Factory):
     def __init__(self, platform, configuration='release', architectures=None, remotes=None, additionalArguments=None, **kwargs):
         Factory.__init__(self, platform=platform, configuration=configuration, architectures=architectures, buildOnly=False, remotes=remotes, additionalArguments=additionalArguments, checkRelevance=True)
+        self.addStep(KillOldProcesses())
         self.addStep(DownloadBuiltProduct())
         self.addStep(ExtractBuiltProduct())
-        self.addStep(KillOldProcesses())
         self.addStep(RunJavaScriptCoreTests())
 
 
@@ -348,6 +354,7 @@ class CommitQueueFactory(factory.BuildFactory):
         self.addStep(ValidateCommitterAndReviewer())
         self.addStep(PrintConfiguration())
         self.addStep(CleanGitRepo())
+        self.addStep(SetCredentialHelper())
         self.addStep(CheckOutSource())
         self.addStep(FetchBranches())
         self.addStep(UpdateWorkingDirectory())
@@ -382,6 +389,7 @@ class MergeQueueFactoryBase(factory.BuildFactory):
         self.addStep(ValidateCommitterAndReviewer())
         self.addStep(PrintConfiguration())
         self.addStep(CleanGitRepo())
+        self.addStep(SetCredentialHelper())
         self.addStep(CheckOutSource())
         self.addStep(FetchBranches())
         self.addStep(MapBranchAlias())

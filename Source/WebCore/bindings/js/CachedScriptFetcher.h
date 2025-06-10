@@ -29,6 +29,7 @@
 #include "ReferrerPolicy.h"
 #include "RequestPriority.h"
 #include "ResourceLoadPriority.h"
+#include "ResourceLoaderOptions.h"
 #include <JavaScriptCore/ScriptFetcher.h>
 #include <wtf/text/WTFString.h>
 
@@ -39,7 +40,7 @@ class Document;
 
 class CachedScriptFetcher : public JSC::ScriptFetcher {
 public:
-    virtual CachedResourceHandle<CachedScript> requestModuleScript(Document&, const URL& sourceURL, String&& integrity) const;
+    virtual CachedResourceHandle<CachedScript> requestModuleScript(Document&, const URL& sourceURL, String&& integrity, std::optional<ServiceWorkersMode>) const;
 
     static Ref<CachedScriptFetcher> create(const AtomString& charset);
 
@@ -59,7 +60,7 @@ protected:
     {
     }
 
-    CachedResourceHandle<CachedScript> requestScriptWithCache(Document&, const URL& sourceURL, const String& crossOriginMode, String&& integrity, std::optional<ResourceLoadPriority>) const;
+    CachedResourceHandle<CachedScript> requestScriptWithCache(Document&, const URL& sourceURL, const String& crossOriginMode, String&& integrity, std::optional<ResourceLoadPriority>, std::optional<ServiceWorkersMode>) const;
 
 private:
     String m_nonce;

@@ -31,9 +31,6 @@ shouldNotBe("document.documentElement.style['-apple-color-filter']", "undefined"
 document.documentElement.setAttribute("style", "-apple-color-filter: contrast(1) !important");
 shouldBe("document.documentElement.style.getPropertyValue('-apple-color-filter')", "'contrast(1)'");
 shouldBe("document.documentElement.style.getPropertyPriority('-apple-color-filter')", "'important'");
-shouldBe("document.documentElement.style.getPropertyCSSValue('-apple-color-filter').length", "1");
-shouldBe("document.documentElement.style.getPropertyCSSValue('-apple-color-filter')[0].cssValueType", "3");
-shouldBe("document.documentElement.style.getPropertyCSSValue('-apple-color-filter')[0].cssText", "'contrast(1)'");
 shouldBe("document.documentElement.style.removeProperty('-apple-color-filter')", "'contrast(1)'");
 shouldBeEmptyString("document.documentElement.style.getPropertyValue('-apple-color-filter')");
 shouldBeUndefined("document.documentElement.style.setProperty('-apple-color-filter', 'contrast(1)', '')");
@@ -46,9 +43,6 @@ shouldNotBe("getComputedStyle(document.documentElement)['-apple-color-filter']",
 document.documentElement.setAttribute("style", "-apple-color-filter: contrast(1) !important");
 shouldBe("getComputedStyle(document.documentElement).getPropertyValue('-apple-color-filter')", "'contrast(1)'");
 shouldBeEmptyString("getComputedStyle(document.documentElement).getPropertyPriority('-apple-color-filter')");
-shouldBe("getComputedStyle(document.documentElement).getPropertyCSSValue('-apple-color-filter').length", "1");
-shouldBe("getComputedStyle(document.documentElement).getPropertyCSSValue('-apple-color-filter')[0].cssValueType", "3");
-shouldBe("getComputedStyle(document.documentElement).getPropertyCSSValue('-apple-color-filter')[0].cssText", "'contrast(1)'");
 shouldThrowErrorName("getComputedStyle(document.documentElement).removeProperty('-apple-color-filter')", "NoModificationAllowedError");
 shouldBe("getComputedStyle(document.documentElement).getPropertyValue('-apple-color-filter')", "'contrast(1)'");
 shouldThrowErrorName("getComputedStyle(document.documentElement).setProperty('-apple-color-filter', 'contrast(1)', '')", "NoModificationAllowedError");

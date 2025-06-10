@@ -49,9 +49,11 @@
 #import <wtf/HashMap.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/RunLoop.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/Threading.h>
 #import <wtf/Vector.h>
 #import <wtf/WeakObjCPtr.h>
+#import <wtf/cocoa/SpanCocoa.h>
 #import <wtf/text/MakeString.h>
 #import <wtf/text/StringHash.h>
 #import <wtf/text/StringToIntegerConversion.h>
@@ -155,7 +157,7 @@ TEST(URLSchemeHandler, Basic)
 
     RetainPtr<WKWebViewConfiguration> configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
 
-    RetainPtr<SchemeHandler> handler = adoptNS([[SchemeHandler alloc] initWithData:[NSData dataWithBytesNoCopy:(void*)mainBytes length:sizeof(mainBytes) freeWhenDone:NO] mimeType:@"text/html"]);
+    RetainPtr<SchemeHandler> handler = adoptNS([[SchemeHandler alloc] initWithData:toNSDataNoCopy(unsafeSpan8IncludingNullTerminator(mainBytes),  FreeWhenDone::No).get() mimeType:@"text/html"]);
     [configuration setURLSchemeHandler:handler.get() forURLScheme:@"testing"];
 
     RetainPtr<WKWebView> webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
@@ -190,7 +192,7 @@ TEST(URLSchemeHandler, BasicWithHTTPS)
     auto configuration = adoptNS([WKWebViewConfiguration new]);
     [configuration setWebsiteDataStore:dataStore.get()];
 
-    RetainPtr<SchemeHandler> handler = adoptNS([[SchemeHandler alloc] initWithData:[NSData dataWithBytesNoCopy:(void*)mainBytes length:sizeof(mainBytes) freeWhenDone:NO] mimeType:@"text/html"]);
+    RetainPtr<SchemeHandler> handler = adoptNS([[SchemeHandler alloc] initWithData:toNSDataNoCopy(unsafeSpan8IncludingNullTerminator(mainBytes),  FreeWhenDone::No).get() mimeType:@"text/html"]);
     [configuration setURLSchemeHandler:handler.get() forURLScheme:@"testing"];
 
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
@@ -216,7 +218,7 @@ TEST(URLSchemeHandler, BasicWithAsyncPolicyDelegate)
 
     RetainPtr<WKWebViewConfiguration> configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
 
-    RetainPtr<SchemeHandler> handler = adoptNS([[SchemeHandler alloc] initWithData:[NSData dataWithBytesNoCopy:(void*)mainBytes length:sizeof(mainBytes) freeWhenDone:NO] mimeType:@"text/html"]);
+    RetainPtr<SchemeHandler> handler = adoptNS([[SchemeHandler alloc] initWithData:toNSDataNoCopy(unsafeSpan8IncludingNullTerminator(mainBytes),  FreeWhenDone::No).get() mimeType:@"text/html"]);
     [configuration setURLSchemeHandler:handler.get() forURLScheme:@"testing"];
 
     RetainPtr<WKWebView> webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
@@ -243,7 +245,7 @@ TEST(URLSchemeHandler, NoMIMEType)
 
     RetainPtr<WKWebViewConfiguration> configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
 
-    RetainPtr<SchemeHandler> handler = adoptNS([[SchemeHandler alloc] initWithData:[NSData dataWithBytesNoCopy:(void*)mainBytes length:sizeof(mainBytes) freeWhenDone:NO] mimeType:nil]);
+    RetainPtr<SchemeHandler> handler = adoptNS([[SchemeHandler alloc] initWithData:toNSDataNoCopy(unsafeSpan8IncludingNullTerminator(mainBytes),  FreeWhenDone::No).get() mimeType:nil]);
     handler.get().shouldFinish = NO;
     [configuration setURLSchemeHandler:handler.get() forURLScheme:@"testing"];
 
@@ -470,7 +472,12 @@ static void checkCallSequence(Vector<Command>&& commands, ShouldRaiseException s
     TestWebKitAPI::Util::run(&done);
 }
 
+// FIXME rdar://148379405
+#if (PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 150000)) && !defined(NDEBUG)
+TEST(URLSchemeHandler, DISABLED_Exceptions)
+#else
 TEST(URLSchemeHandler, Exceptions)
+#endif
 {
     checkCallSequence({Command::Response, Command::Data, Command::Finish}, ShouldRaiseException::No);
     checkCallSequence({Command::Response, Command::Redirect}, ShouldRaiseException::Yes);
@@ -525,7 +532,7 @@ static bool receivedStop;
     RetainPtr<NSURLResponse> response = adoptNS([[NSURLResponse alloc] initWithURL:task.request.URL MIMEType:entry->value.mimeType.get() expectedContentLength:1 textEncodingName:nil]);
     [task didReceiveResponse:response.get()];
 
-    [task didReceiveData:[NSData dataWithBytesNoCopy:(void*)entry->value.data length:strlen(entry->value.data) freeWhenDone:NO]];
+    [task didReceiveData:toNSDataNoCopy(unsafeSpan8(entry->value.data), FreeWhenDone::No).get()];
     [task didFinish];
 
     if (entry->key == "syncxhr://host/test.dat"_s)
@@ -1200,7 +1207,7 @@ TEST(WebKit, OriginHeaderWithCORSDisablingPatternsInUnrelatedWebView)
                 auto html = "<head><link rel='modulepreload' href='https://webkit.org/module'></head>"_s;
                 connection.send(HTTPResponse(html).serialize());
             } else if (path == "/module"_s) {
-                EXPECT_TRUE(strnstr(requestBytes.data(), "Origin: https://example.com\r\n", requestBytes.size()));
+                EXPECT_TRUE(contains(requestBytes.span(), "Origin: https://example.com\r\n"_span));
                 done = true;
             }
         });
@@ -1585,8 +1592,8 @@ TEST(URLSchemeHandler, Frames)
     done = false;
     auto emptyWebView = adoptNS([WKWebView new]);
     [emptyWebView _frames:^(_WKFrameTreeNode *mainFrame) {
-        EXPECT_NOT_NULL(mainFrame.info._handle);
 #if PLATFORM(MAC)
+        EXPECT_NULL(mainFrame);
         EXPECT_EQ(mainFrame.info._handle.frameID, 0u);
 #endif
         [emptyWebView _evaluateJavaScript:@"window.location.href" inFrame:mainFrame.info inContentWorld:[WKContentWorld defaultClientWorld] completionHandler:^(id result, NSError *error) {

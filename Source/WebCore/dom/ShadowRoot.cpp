@@ -28,8 +28,10 @@
 #include "config.h"
 #include "ShadowRoot.h"
 
+#include "AXObjectCache.h"
 #include "CSSStyleSheet.h"
 #include "ChildListMutationScope.h"
+#include "ContainerNodeInlines.h"
 #include "CustomElementRegistry.h"
 #include "ElementInlines.h"
 #include "ElementTraversal.h"
@@ -69,7 +71,7 @@ static_assert(sizeof(WeakPtr<Element, WeakPtrImplWithEventTargetData>) == sizeof
 #endif
 
 ShadowRoot::ShadowRoot(Document& document, ShadowRootMode mode, SlotAssignmentMode assignmentMode, DelegatesFocus delegatesFocus, Clonable clonable, Serializable serializable, AvailableToElementInternals availableToElementInternals, RefPtr<CustomElementRegistry>&& registry, ScopedCustomElementRegistry scopedRegistry, const AtomString& referenceTarget)
-    : DocumentFragment(document, TypeFlag::IsShadowRoot)
+    : DocumentFragment(document, TypeFlag::IsShadowRootOrFormControlElement)
     , TreeScope(*this, document, WTFMove(registry))
     , m_delegatesFocus(delegatesFocus == DelegatesFocus::Yes)
     , m_isClonable(clonable == Clonable::Yes)
@@ -88,7 +90,7 @@ ShadowRoot::ShadowRoot(Document& document, ShadowRootMode mode, SlotAssignmentMo
 
 
 ShadowRoot::ShadowRoot(Document& document, std::unique_ptr<SlotAssignment>&& slotAssignment)
-    : DocumentFragment(document, TypeFlag::IsShadowRoot)
+    : DocumentFragment(document, TypeFlag::IsShadowRootOrFormControlElement)
     , TreeScope(*this, document, nullptr)
     , m_mode(ShadowRootMode::UserAgent)
     , m_styleScope(makeUnique<Style::Scope>(*this))
@@ -126,6 +128,12 @@ ShadowRoot::~ShadowRoot()
 Node::InsertedIntoAncestorResult ShadowRoot::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
     DocumentFragment::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    if (!hasScopedCustomElementRegistry() && usesNullCustomElementRegistry() && !parentOfInsertedTree.usesNullCustomElementRegistry()) {
+        if (RefPtr registry = CustomElementRegistry::registryForElement(*host())) {
+            clearUsesNullCustomElementRegistry();
+            setCustomElementRegistry(*registry);
+        }
+    }
     if (insertionType.connectedToDocument) {
         protectedDocument()->didInsertInDocumentShadowRoot(*this);
         if (m_hasScopedCustomElementRegistry) {
@@ -227,7 +235,7 @@ ExceptionOr<void> ShadowRoot::replaceChildrenWithMarkup(const String& markup, Op
     return replaceChildrenWithFragment(*this, fragment.releaseReturnValue());
 }
 
-ExceptionOr<void> ShadowRoot::setHTMLUnsafe(std::variant<RefPtr<TrustedHTML>, String>&& html)
+ExceptionOr<void> ShadowRoot::setHTMLUnsafe(Variant<RefPtr<TrustedHTML>, String>&& html)
 {
     auto stringValueHolder = trustedTypeCompliantString(*document().scriptExecutionContext(), WTFMove(html), "ShadowRoot setHTMLUnsafe"_s);
 
@@ -247,7 +255,7 @@ String ShadowRoot::innerHTML() const
     return serializeFragment(*this, SerializedNodes::SubtreesOfChildren, nullptr, ResolveURLs::NoExcludingURLsForPrivacy);
 }
 
-ExceptionOr<void> ShadowRoot::setInnerHTML(std::variant<RefPtr<TrustedHTML>, String>&& html)
+ExceptionOr<void> ShadowRoot::setInnerHTML(Variant<RefPtr<TrustedHTML>, String>&& html)
 {
     auto stringValueHolder = trustedTypeCompliantString(*document().scriptExecutionContext(), WTFMove(html), "ShadowRoot innerHTML"_s);
 
@@ -284,7 +292,7 @@ Ref<Node> ShadowRoot::cloneNodeInternal(Document& document, CloningOperation typ
             m_availableToElementInternals ? AvailableToElementInternals::Yes : AvailableToElementInternals::No,
             registry,
             m_hasScopedCustomElementRegistry ? ScopedCustomElementRegistry::Yes : ScopedCustomElementRegistry::No);
-    case CloningOperation::OnlySelf:
+    case CloningOperation::SelfOnly:
     case CloningOperation::Everything:
         break;
     }
@@ -472,7 +480,13 @@ void ShadowRoot::setReferenceTarget(const AtomString& referenceTarget)
     if (!document().settings().shadowRootReferenceTargetEnabled())
         return;
 
+    if (m_referenceTarget == referenceTarget)
+        return;
+
     m_referenceTarget = referenceTarget;
+
+    if (CheckedPtr cache = document().existingAXObjectCache())
+        cache->handleReferenceTargetChanged();
 }
 
 } // namespace WebCore

@@ -34,6 +34,7 @@
 #import <pal/spi/cf/CFNetworkSPI.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/cocoa/NSURLExtras.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 static bool didFinishTest;
 static bool didFailProvisionalLoad;
@@ -58,7 +59,7 @@ static NSURL *literalURL(const char* literal)
 {
     EXPECT_WK_STREQ(error.domain, @"WebKitErrorDomain");
     EXPECT_EQ(error.code, 101);
-    EXPECT_NULL(error.userInfo[@"NSErrorFailingURLKey"]);
+    EXPECT_NULL(error.userInfo[NSURLErrorFailingURLErrorKey]);
 
     didFailProvisionalLoad = true;
     didFinishTest = true;
@@ -112,13 +113,13 @@ TEST(WebKit, LoadInvalidURLRequestNonASCII)
     delegate.get().didFailProvisionalNavigation = ^(WKWebView *, WKNavigation *, NSError *error) {
         EXPECT_WK_STREQ(error.domain, @"WebKitErrorDomain");
         EXPECT_EQ(error.code, WebKitErrorCannotShowURL);
-        EXPECT_WK_STREQ([error.userInfo[@"NSErrorFailingURLKey"] absoluteString], "");
+        EXPECT_WK_STREQ([error.userInfo[NSURLErrorFailingURLErrorKey] absoluteString], "");
         done = true;
     };
     auto webView = adoptNS([WKWebView new]);
     [webView setNavigationDelegate:delegate.get()];
     const UInt8 bytes[10] = { 'h', 't', 't', 'p', ':', '/', '/', 0xE2, 0x80, 0x80 };
-    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:(NSURL *)adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, bytes, 10, kCFStringEncodingUTF8, nullptr, true)).get()];
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:bridge_cast(adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, bytes, 10, kCFStringEncodingUTF8, nullptr, true))).get()];
     [request _setProperty:request.URL forKey:@"_kCFHTTPCookiePolicyPropertySiteForCookies"];
     [webView loadRequest:request];
     Util::run(&done);

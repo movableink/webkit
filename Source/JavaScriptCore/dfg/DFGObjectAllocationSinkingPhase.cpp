@@ -837,7 +837,7 @@ private:
         m_combinedLiveness = CombinedLiveness(m_graph);
 
         CString graphBeforeSinking;
-        if (UNLIKELY(Options::verboseValidationFailure() && Options::validateGraphAtEachPhase())) {
+        if (Options::verboseValidationFailure() && Options::validateGraphAtEachPhase()) [[unlikely]] {
             StringPrintStream out;
             m_graph.dump(out);
             graphBeforeSinking = out.toCString();
@@ -862,8 +862,9 @@ private:
 
         promoteLocalHeap();
         removeICStatusFilters();
+        fixEdge();
 
-        if (UNLIKELY(Options::validateGraphAtEachPhase()))
+        if (Options::validateGraphAtEachPhase()) [[unlikely]]
             DFG::validate(m_graph, DumpGraph, graphBeforeSinking);
         return true;
     }
@@ -1140,7 +1141,7 @@ private:
             break;
         }
 
-        case NewRegexp: {
+        case NewRegExp: {
             target = &m_heap.newAllocation(node, Allocation::Kind::RegExpObject);
 
             writes.add(RegExpObjectRegExpPLoc, LazyNode(node->cellOperand()));
@@ -1322,6 +1323,7 @@ private:
                 m_heap.escape(node->child1().node());
             break;
 
+        // FIXME: Consider supporting GetEvalScope too.
         case GetScope:
             target = m_heap.onlyLocalAllocation(node->child1().node());
             if (target && target->isFunctionAllocation())
@@ -1902,7 +1904,7 @@ escapeChildren:
         case Allocation::Kind::RegExpObject: {
             FrozenValue* regExp = allocation.identifier()->cellOperand();
             return m_graph.addNode(
-                allocation.identifier()->prediction(), NewRegexp,
+                allocation.identifier()->prediction(), NewRegExp,
                 where->origin.withSemantic(
                     allocation.identifier()->origin.semantic),
                 OpInfo(regExp));
@@ -2006,7 +2008,7 @@ escapeChildren:
                     // We're materializing `identifier` at this point, and the unmaterialized
                     // version is inside `location`. We track which SSA variable this belongs
                     // to in case we also need a PutHint for the Phi.
-                    if (UNLIKELY(validationEnabled())) {
+                    if (validationEnabled()) [[unlikely]] {
                         RELEASE_ASSERT(m_sinkCandidates.contains(location.base()));
                         RELEASE_ASSERT(m_sinkCandidates.contains(identifier));
 
@@ -2234,21 +2236,28 @@ escapeChildren:
 
                         doLower = true;
 
+                        if (node->op() == PutByVal) {
+                            // We must insert the check before the PutHint inserted below. This is because that both PutHint and PutByVal
+                            // clobber the exit state. Since they have consistent exit state clobberization assumption, an ExitOK wouldn't be
+                            // inserted below which breaks the validation.
+                            Edge value = m_graph.varArgChild(node, 2);
+                            m_insertionSet.insertNode(nodeIndex + 1, SpecNone, Check, node->origin, Edge(value.node(), value.useKind()));
+                        }
+
                         dataLogLnIf(DFGObjectAllocationSinkingPhaseInternal::verbose, "Creating hint with value ", nodeValue, " before ", node);
                         m_insertionSet.insert(
                             nodeIndex + 1,
                             location.createHint(
                                 m_graph, node->origin.takeValidExit(nextCanExit), nodeValue));
-
-                        if (node->op() == PutByVal) {
-                            Edge value = m_graph.varArgChild(node, 2);
-                            m_insertionSet.insertNode(nodeIndex + 1, SpecNone, Check, node->origin, Edge(value.node(), value.useKind()));
-                        }
                     },
                     [&] (PromotedHeapLocation location) -> Node* {
                         return resolve(block, location);
                     });
 
+
+                // After inserting a PutHint, the next node cannot exit. If the current node does clobber the exit state, then we are fine since
+                // the exit state clobberization are consistent after the insertion. Otherwise, the assumption was broken and an ExitOK is required
+                // to ensure a valid exit state.
                 if (!nextCanExit && desiredNextExitOK) {
                     // We indicate that the exit state is fine now. We need to do this because we
                     // emitted hints that appear to invalidate the exit state.
@@ -2289,8 +2298,8 @@ escapeChildren:
                         node->convertToPhantomCreateActivation();
                         break;
 
-                    case NewRegexp:
-                        node->convertToPhantomNewRegexp();
+                    case NewRegExp:
+                        node->convertToPhantomNewRegExp();
                         break;
 
                     default:
@@ -2642,7 +2651,7 @@ escapeChildren:
             break;
         }
 
-        case NewRegexp: {
+        case NewRegExp: {
             Vector<PromotedHeapLocation> locations = m_locationsForAllocation.get(escapee);
             ASSERT(locations.size() == 2);
 
@@ -2816,6 +2825,61 @@ escapeChildren:
                     break;
                 }
             }
+        }
+    }
+
+    void fixEdge()
+    {
+        for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
+            for (unsigned indexInBlock = 0; indexInBlock < block->size(); ++indexInBlock) {
+                Node* node = block->at(indexInBlock);
+                switch (node->op()) {
+                case Upsilon: {
+                    // The added phis have NodeResultJS because their corresponding Upsilon edges, when coming from nodes in
+                    // NamedPropertyPLoc, always have use kinds associated with NodeResultJS. However, this assumption breaks
+                    // with the introduction of array allocation sinking, since nodes in ArrayIndexedPropertyPLoc may have
+                    // use kinds that produce double results.
+                    Edge& edge = node->child1();
+                    if (node->phi()->hasJSResult()) {
+                        Node* result = nullptr;
+                        if (edge->hasDoubleResult())
+                            result = m_insertionSet.insertNode(indexInBlock, SpecBytecodeDouble, ValueRep, node->origin, Edge(edge.node(), DoubleRepUse));
+                        else if (edge->hasInt52Result())
+                            result = m_insertionSet.insertNode(indexInBlock, SpecInt32Only | SpecAnyIntAsDouble, ValueRep, node->origin, Edge(edge.node(), Int52RepUse));
+
+                        if (result) {
+                            edge.setNode(result);
+                            edge.setUseKind(UntypedUse);
+                        }
+                    }
+                    break;
+                }
+
+                case MaterializeNewArrayWithConstantSize: {
+                    for (unsigned i = 0; i < node->numChildren(); ++i) {
+                        switch (node->indexingType()) {
+                        case ALL_DOUBLE_INDEXING_TYPES:
+                            m_graph.child(node, i).setUseKind(DoubleRepRealUse);
+                            break;
+                        case ALL_INT32_INDEXING_TYPES:
+                            m_graph.child(node, i).setUseKind(Int32Use);
+                            break;
+                        case ALL_CONTIGUOUS_INDEXING_TYPES:
+                            m_graph.child(node, i).setUseKind(UntypedUse);
+                            break;
+                        default:
+                            break;
+                        }
+                    }
+                    break;
+                }
+
+                default:
+                    break;
+                }
+            }
+
+            m_insertionSet.execute(block);
         }
     }
 

@@ -26,6 +26,7 @@
 #pragma once
 
 #include "HeapObserver.h"
+#include "HeapSnapshotBuilder.h"
 #include "InspectorAgentBase.h"
 #include "InspectorBackendDispatchers.h"
 #include "InspectorFrontendDispatchers.h"
@@ -42,7 +43,7 @@ namespace Inspector {
 
 class InjectedScriptManager;
 
-class JS_EXPORT_PRIVATE InspectorHeapAgent : public InspectorAgentBase, public HeapBackendDispatcherHandler, public JSC::HeapObserver {
+class JS_EXPORT_PRIVATE InspectorHeapAgent : public InspectorAgentBase, public HeapBackendDispatcherHandler, public JSC::HeapObserver, public JSC::HeapSnapshotBuilder::Client {
     WTF_MAKE_NONCOPYABLE(InspectorHeapAgent);
     WTF_MAKE_TZONE_ALLOCATED(InspectorHeapAgent);
 public:
@@ -66,6 +67,9 @@ public:
     // JSC::HeapObserver
     void willGarbageCollect() final;
     void didGarbageCollect(JSC::CollectionScope) final;
+
+    // JSC::HeapSnapshotBuilder::Client
+    bool heapSnapshotBuilderIgnoreNode(JSC::HeapSnapshotBuilder&, JSC::JSCell*) final;
 
 protected:
     void clearHeapSnapshots();

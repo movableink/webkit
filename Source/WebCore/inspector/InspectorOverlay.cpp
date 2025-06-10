@@ -40,6 +40,7 @@
 #include "DOMCSSNamespace.h"
 #include "DOMTokenList.h"
 #include "ElementInlines.h"
+#include "EventTargetInlines.h"
 #include "FloatLine.h"
 #include "FloatPoint.h"
 #include "FloatRoundedRect.h"
@@ -70,7 +71,7 @@
 #include "RenderFlexibleBox.h"
 #include "RenderGrid.h"
 #include "RenderInline.h"
-#include "RenderObject.h"
+#include "RenderObjectInlines.h"
 #include "Settings.h"
 #include "StyleGridData.h"
 #include "StyleResolver.h"
@@ -2023,7 +2024,7 @@ std::optional<InspectorOverlay::Highlight::FlexHighlightOverlay> InspectorOverla
     float previousLineCrossAxisTrailingEdge = correctedCrossAxisLeadingEdge(containerRect);
 
     Vector<RenderBox*> renderChildrenInFlexOrder;
-    Vector<RenderObject*> renderChildrenInDOMOrder;
+    Vector<RenderBox*> renderChildrenInDOMOrder;
     bool hasCustomOrder = false;
 
     auto childOrderIterator = renderFlex.orderIterator();
@@ -2035,7 +2036,7 @@ std::optional<InspectorOverlay::Highlight::FlexHighlightOverlay> InspectorOverla
 
     if (flexOverlay.config.showOrderNumbers) {
         for (auto* child = node->firstChild(); child; child = child->nextSibling()) {
-            if (auto* renderer = child->renderer()) {
+            if (auto* renderer = dynamicDowncast<RenderBox>(child->renderer())) {
                 if (!renderChildrenInFlexOrder.contains(renderer))
                     continue;
 

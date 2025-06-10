@@ -57,28 +57,28 @@ public:
     const CachedResourceRequestInitiatorTypes& cachedResourceRequestInitiatorTypes()
     {
         ASSERT(!m_destroyed);
-        if (UNLIKELY(!m_cachedResourceRequestInitiatorTypes))
+        if (!m_cachedResourceRequestInitiatorTypes) [[unlikely]]
             initializeCachedResourceRequestInitiatorTypes();
         return *m_cachedResourceRequestInitiatorTypes;
     }
     EventNames& eventNames()
     {
         ASSERT(!m_destroyed);
-        if (UNLIKELY(!m_eventNames))
+        if (!m_eventNames) [[unlikely]]
             initializeEventNames();
         return *m_eventNames;
     }
     QualifiedNameCache& qualifiedNameCache()
     {
         ASSERT(!m_destroyed);
-        if (UNLIKELY(!m_qualifiedNameCache))
+        if (!m_qualifiedNameCache) [[unlikely]]
             initializeQualifiedNameCache();
         return *m_qualifiedNameCache;
     }
     const MIMETypeRegistryThreadGlobalData& mimeTypeRegistryThreadGlobalData()
     {
         ASSERT(!m_destroyed);
-        if (UNLIKELY(!m_MIMETypeRegistryThreadGlobalData))
+        if (!m_MIMETypeRegistryThreadGlobalData) [[unlikely]]
             initializeMimeTypeRegistryThreadGlobalData();
         return *m_MIMETypeRegistryThreadGlobalData;
     }
@@ -98,7 +98,7 @@ public:
     FontCache& fontCache()
     {
         ASSERT(!m_destroyed);
-        if (UNLIKELY(!m_fontCache))
+        if (!m_fontCache) [[unlikely]]
             initializeFontCache();
         return *m_fontCache;
     }
@@ -146,14 +146,14 @@ inline PURE_FUNCTION ThreadGlobalData& threadGlobalData()
 #endif
 {
 #if HAVE(FAST_TLS)
-    if (auto* thread = Thread::currentMayBeNull(); LIKELY(thread)) {
-        if (auto* clientData = thread->m_clientData.get(); LIKELY(clientData))
+    if (auto* thread = Thread::currentMayBeNull(); thread) [[likely]] {
+        if (auto* clientData = thread->m_clientData.get(); clientData) [[likely]]
             return *static_cast<ThreadGlobalData*>(clientData);
     }
 #else
     auto& thread = Thread::currentSingleton();
     auto* clientData = thread.m_clientData.get();
-    if (LIKELY(clientData))
+    if (clientData) [[likely]]
         return *static_cast<ThreadGlobalData*>(clientData);
 #endif
     return threadGlobalDataSlow();

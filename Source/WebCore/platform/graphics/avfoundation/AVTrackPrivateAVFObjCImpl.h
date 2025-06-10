@@ -35,6 +35,7 @@
 #include "VideoTrackPrivate.h"
 #include <wtf/Observer.h>
 #include <wtf/Ref.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -58,15 +59,17 @@ template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::AVTrackPriva
 namespace WebCore {
 
 class MediaSelectionOptionAVFObjC;
+
 struct PlatformVideoTrackConfiguration;
 struct PlatformAudioTrackConfiguration;
+struct VideoProjectionMetadata;
 
-class AVTrackPrivateAVFObjCImpl final : public CanMakeWeakPtr<AVTrackPrivateAVFObjCImpl> {
+class AVTrackPrivateAVFObjCImpl final : public RefCountedAndCanMakeWeakPtr<AVTrackPrivateAVFObjCImpl> {
     WTF_MAKE_TZONE_ALLOCATED(AVTrackPrivateAVFObjCImpl);
 public:
-    explicit AVTrackPrivateAVFObjCImpl(AVPlayerItemTrack*);
-    explicit AVTrackPrivateAVFObjCImpl(AVAssetTrack*);
-    explicit AVTrackPrivateAVFObjCImpl(MediaSelectionOptionAVFObjC&);
+    static Ref<AVTrackPrivateAVFObjCImpl> create(AVPlayerItemTrack* track) { return adoptRef(*new AVTrackPrivateAVFObjCImpl(track)); }
+    static Ref<AVTrackPrivateAVFObjCImpl> create(AVAssetTrack* track) { return adoptRef(*new AVTrackPrivateAVFObjCImpl(track)); }
+    static Ref<AVTrackPrivateAVFObjCImpl> create(MediaSelectionOptionAVFObjC& option) { return adoptRef(*new AVTrackPrivateAVFObjCImpl(option)); }
     ~AVTrackPrivateAVFObjCImpl();
 
     AVPlayerItemTrack* playerItemTrack() const { return m_playerItemTrack.get(); }
@@ -100,7 +103,12 @@ public:
     void setAudioTrackConfigurationObserver(AudioTrackConfigurationObserver& observer) { m_audioTrackConfigurationObserver = observer; }
 
 private:
+    AVTrackPrivateAVFObjCImpl(AVPlayerItemTrack*);
+    AVTrackPrivateAVFObjCImpl(AVAssetTrack*);
+    AVTrackPrivateAVFObjCImpl(MediaSelectionOptionAVFObjC&);
+
     void initializeAssetTrack();
+    void initializationCompleted();
 
     String codec() const;
     uint32_t width() const;
@@ -109,7 +117,7 @@ private:
     double framerate() const;
     uint64_t bitrate() const;
     std::optional<SpatialVideoMetadata> spatialVideoMetadata() const;
-    bool isImmersiveVideo() const;
+    std::optional<VideoProjectionMetadata> videoProjectionMetadata() const;
     uint32_t sampleRate() const;
     uint32_t numberOfChannels() const;
 

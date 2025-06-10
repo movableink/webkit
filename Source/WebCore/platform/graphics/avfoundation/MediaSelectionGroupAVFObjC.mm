@@ -93,7 +93,7 @@ AVAssetTrack* MediaSelectionOptionAVFObjC::assetTrack() const
                 continue;
             if (!track.assetTrack)
                 continue;
-            if ([track.assetTrack mediaType] == [m_mediaSelectionOption mediaType] && [track.assetTrack isPlayable] == [m_mediaSelectionOption isPlayable])
+            if ([[track.assetTrack mediaType] isEqualToString:[m_mediaSelectionOption mediaType]] && [track.assetTrack isPlayable] == [m_mediaSelectionOption isPlayable])
                 return track.assetTrack;
         }
     }

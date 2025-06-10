@@ -191,15 +191,15 @@ static NSString* attributesOfElement(id accessibilityObject)
 static JSRetainPtr<JSStringRef> concatenateAttributeAndValue(NSString *attribute, NSString *value)
 {
     Vector<UniChar> buffer([attribute length]);
-    [attribute getCharacters:buffer.data()];
+    [attribute getCharacters:buffer.mutableSpan().data()];
     buffer.append(':');
     buffer.append(' ');
 
     Vector<UniChar> valueBuffer([value length]);
-    [value getCharacters:valueBuffer.data()];
+    [value getCharacters:valueBuffer.mutableSpan().data()];
     buffer.appendVector(valueBuffer);
 
-    return adopt(JSStringCreateWithCharacters(buffer.data(), buffer.size()));
+    return adopt(JSStringCreateWithCharacters(buffer.span().data(), buffer.size()));
 }
 
 static JSRetainPtr<JSStringRef> descriptionOfElements(Vector<AccessibilityUIElement>& elementVector)
@@ -778,6 +778,26 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::customContent() const
 #else
     return nullptr;
 #endif
+}
+
+double AccessibilityUIElement::pageX()
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    NSValue* positionValue = [m_element accessibilityAttributeValue:@"_AXPageRelativePosition"];
+    return static_cast<double>([positionValue pointValue].x);
+    END_AX_OBJC_EXCEPTIONS
+
+    return 0.0f;
+}
+
+double AccessibilityUIElement::pageY()
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    NSValue* positionValue = [m_element accessibilityAttributeValue:@"_AXPageRelativePosition"];
+    return static_cast<double>([positionValue pointValue].y);
+    END_AX_OBJC_EXCEPTIONS
+
+    return 0.0f;
 }
 
 double AccessibilityUIElement::x()
@@ -1638,16 +1658,6 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::popupValue() const
     return [@"false" createJSStringRef];
 }
 
-bool AccessibilityUIElement::hasDocumentRoleAncestor() const
-{
-    return boolAttributeValue(@"AXHasDocumentRoleAncestor");
-}
-
-bool AccessibilityUIElement::hasWebApplicationAncestor() const
-{
-    return boolAttributeValue(@"AXHasWebApplicationAncestor");
-}
-
 bool AccessibilityUIElement::isInDescriptionListDetail() const
 {
     return boolAttributeValue(@"AXIsInDescriptionListDetail");
@@ -2161,6 +2171,32 @@ AccessibilityTextMarker AccessibilityUIElement::nextSentenceEndTextMarkerForText
     return AccessibilityTextMarker(nextTextMarker);
     END_AX_OBJC_EXCEPTIONS
     
+    return nullptr;
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::textMarkerDebugDescription(AccessibilityTextMarker* marker)
+{
+    if (!marker)
+        return nullptr;
+
+    BEGIN_AX_OBJC_EXCEPTIONS
+    RetainPtr description = [m_element accessibilityAttributeValue:@"AXTextMarkerDebugDescription" forParameter:marker->platformTextMarker()];
+    return [description createJSStringRef];
+    END_AX_OBJC_EXCEPTIONS
+
+    return nullptr;
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::textMarkerRangeDebugDescription(AccessibilityTextMarkerRange* range)
+{
+    if (!range)
+        return nullptr;
+
+    BEGIN_AX_OBJC_EXCEPTIONS
+    RetainPtr description = [m_element accessibilityAttributeValue:@"AXTextMarkerRangeDebugDescription" forParameter:range->platformTextMarkerRange()];
+    return [description createJSStringRef];
+    END_AX_OBJC_EXCEPTIONS
+
     return nullptr;
 }
 

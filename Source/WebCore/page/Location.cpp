@@ -128,12 +128,12 @@ String Location::origin() const
 Ref<DOMStringList> Location::ancestorOrigins() const
 {
     auto origins = DOMStringList::create();
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return origins;
-    for (auto* ancestor = frame->tree().parent(); ancestor; ancestor = ancestor->tree().parent()) {
-        if (auto* localAncestor = dynamicDowncast<LocalFrame>(ancestor))
-            origins->append(localAncestor->document()->securityOrigin().toString());
+    for (RefPtr ancestor = frame->tree().parent(); ancestor; ancestor = ancestor->tree().parent()) {
+        if (RefPtr origin = ancestor->frameDocumentSecurityOrigin())
+            origins->append(origin->toString());
     }
     return origins;
 }
@@ -245,7 +245,7 @@ ExceptionOr<void> Location::replace(LocalDOMWindow& activeWindow, LocalDOMWindow
         return { };
     ASSERT(frame->window());
 
-    auto* firstFrame = firstWindow.frame();
+    RefPtr firstFrame = firstWindow.localFrame();
     if (!firstFrame || !firstFrame->document())
         return { };
 
@@ -295,7 +295,7 @@ ExceptionOr<void> Location::setLocation(LocalDOMWindow& incumbentWindow, LocalDO
     RefPtr frame = this->frame();
     ASSERT(frame);
 
-    RefPtr firstFrame = firstWindow.frame();
+    RefPtr firstFrame = firstWindow.localFrame();
     if (!firstFrame || !firstFrame->document())
         return { };
 

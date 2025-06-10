@@ -1,6 +1,9 @@
 
 
-PASS Video width and height attributes are used to infer aspect-ratio
+PASS Aspect ratio for video with contain:size
+PASS Aspect ratio for regular video
+PASS Aspect ratio for regular video with width:auto
+PASS Aspect ratio for regular video with aspect-ratio:auto
 PASS Computed style test: video with {"width":"10","height":"20"}
 PASS Computed style test: video with {"width":"0.5","height":"1.5"}
 PASS Computed style test: video with {"width":"0","height":"1"}

@@ -19,6 +19,7 @@
 #include "include/private/SkEncodedInfo.h"
 #include "include/private/base/SkAssert.h"
 #include "src/base/SkSafeMath.h"
+#include "src/encode/SkImageEncoderFns.h"
 #include "src/encode/SkImageEncoderPriv.h"
 #include "third_party/rust/cxx/v1/cxx.h"
 
@@ -46,11 +47,17 @@ rust_png::ColorType ToColorType(SkEncodedInfo::Color color) {
 rust_png::Compression ToCompression(SkPngRustEncoder::CompressionLevel level) {
     switch (level) {
         case SkPngRustEncoder::CompressionLevel::kLow:
-            return rust_png::Compression::Fast;
+            return rust_png::Compression::Fastest;
         case SkPngRustEncoder::CompressionLevel::kMedium:
-            return rust_png::Compression::Default;
+#ifdef SK_RUST_PNG_MAP_MEDIUM_COMPRESSION_LEVEL_TO_FDEFLATE_FAST
+            // TODO(https://crbug.com/406072770): Consider using `Fast` instead
+            // of `Balanced` compression here.  See the bug for details.
+            return rust_png::Compression::Fast;
+#else
+            return rust_png::Compression::Balanced;
+#endif
         case SkPngRustEncoder::CompressionLevel::kHigh:
-            return rust_png::Compression::Best;
+            return rust_png::Compression::High;
     }
     SkUNREACHABLE;
 }

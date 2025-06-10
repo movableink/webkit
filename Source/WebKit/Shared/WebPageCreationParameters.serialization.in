@@ -91,11 +91,9 @@ enum class WebCore::UserInterfaceLayoutDirection : bool;
 
     WebCore::ScrollPinningBehavior scrollPinningBehavior;
 
-    std::optional<uint32_t> scrollbarOverlayStyle;
+    std::optional<WebCore::ScrollbarOverlayStyle> scrollbarOverlayStyle;
 
     bool backgroundExtendsBeyondPage;
-
-    WebKit::LayerHostingMode layerHostingMode;
 
     bool hasResourceLoadClient;
 
@@ -145,9 +143,6 @@ enum class WebCore::UserInterfaceLayoutDirection : bool;
 #endif
 #if HAVE(STATIC_FONT_REGISTRY)
     Vector<WebKit::SandboxExtensionHandle> fontMachExtensionHandles;
-#endif
-#if HAVE(HOSTED_CORE_ANIMATION)
-    MachSendRight acceleratedCompositingPort;
 #endif
 #if HAVE(APP_ACCENT_COLORS)
     WebCore::Color accentColor;
@@ -276,6 +271,11 @@ enum class WebCore::UserInterfaceLayoutDirection : bool;
 #endif
 
     bool hasReceivedAXRequestInUIProcess;
+    bool shouldSendConsoleLogsToUIProcessForTesting;
+
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    bool defaultContentInsetBackgroundFillEnabled;
+#endif
 }
 
 [Nested] struct WebKit::RemotePageParameters {

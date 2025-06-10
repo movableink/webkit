@@ -5,13 +5,13 @@
  * found in the LICENSE file.
  */
 
-#include "include/gpu/graphite/dawn/DawnUtils.h"
-#include "src/gpu/graphite/dawn/DawnGraphiteUtilsPriv.h"
+#include "src/gpu/graphite/dawn/DawnGraphiteUtils.h"
 
 #include "include/gpu/ShaderErrorHandler.h"
 #include "include/gpu/graphite/Context.h"
 #include "include/gpu/graphite/dawn/DawnBackendContext.h"
 #include "src/gpu/graphite/ContextPriv.h"
+#include "src/gpu/graphite/TextureFormat.h"
 #include "src/gpu/graphite/dawn/DawnQueueManager.h"
 #include "src/gpu/graphite/dawn/DawnSharedContext.h"
 
@@ -39,62 +39,89 @@ std::unique_ptr<Context> MakeDawn(const DawnBackendContext& backendContext,
 }
 } // namespace ContextFactory
 
-bool DawnFormatIsDepthOrStencil(wgpu::TextureFormat format) {
+SkTextureCompressionType DawnFormatToCompressionType(wgpu::TextureFormat format) {
     switch (format) {
-        case wgpu::TextureFormat::Stencil8:             [[fallthrough]];
-        case wgpu::TextureFormat::Depth16Unorm:
-        case wgpu::TextureFormat::Depth32Float:
-        case wgpu::TextureFormat::Depth24PlusStencil8:
-        case wgpu::TextureFormat::Depth32FloatStencil8:
-            return true;
-        default:
-            return false;
+        case wgpu::TextureFormat::ETC2RGB8Unorm: return SkTextureCompressionType::kETC2_RGB8_UNORM;
+        case wgpu::TextureFormat::BC1RGBAUnorm:  return SkTextureCompressionType::kBC1_RGBA8_UNORM;
+        default:                                 return SkTextureCompressionType::kNone;
     }
-
-    SkUNREACHABLE;
 }
 
-bool DawnFormatIsDepth(wgpu::TextureFormat format) {
-    switch (format) {
-        case wgpu::TextureFormat::Depth16Unorm:         [[fallthrough]];
-        case wgpu::TextureFormat::Depth32Float:
-        case wgpu::TextureFormat::Depth24PlusStencil8:
-        case wgpu::TextureFormat::Depth32FloatStencil8:
-            return true;
-        default:
-            return false;
-    }
+#define DAWN_FORMAT_MAPPING(M) \
+        M(TextureFormat::kR8,             wgpu::TextureFormat::R8Unorm)                     \
+        /*TextureFormat::kR16             Native-only */                                    \
+        M(TextureFormat::kR16F,           wgpu::TextureFormat::R16Float)                    \
+        M(TextureFormat::kR32F,           wgpu::TextureFormat::R32Float)                    \
+        /*TextureFormat::kA8              unsupported */                                    \
+        M(TextureFormat::kRG8,            wgpu::TextureFormat::RG8Unorm)                    \
+        /*TextureFormat::kR16             Native-only */                                    \
+        M(TextureFormat::kRG16F,          wgpu::TextureFormat::RG16Float)                   \
+        M(TextureFormat::kRG32F,          wgpu::TextureFormat::RG32Float)                   \
+        /*TextureFormat::kRGB8            unsupported */                                    \
+        /*TextureFormat::kBGR8            unsupported */                                    \
+        /*TextureFormat::kB5_G6_R5,       unsupported */                                    \
+        /*TextureFormat::kR5_G6_B5        unsupported */                                    \
+        /*TextureFormat::kRGB16           unsupported */                                    \
+        /*TextureFormat::kRGB16F          unsupported */                                    \
+        /*TextureFormat::kRGB32F          unsupported */                                    \
+        /*TextureFormat::kRGB8_sRGB       unsupported */                                    \
+        /*TextureFormat::kBGR10_XR        unsupported */                                    \
+        M(TextureFormat::kRGBA8,          wgpu::TextureFormat::RGBA8Unorm)                  \
+        /*TextureFormat::kRGBA16          Native-only */                                    \
+        M(TextureFormat::kRGBA16F,        wgpu::TextureFormat::RGBA16Float)                 \
+        M(TextureFormat::kRGBA32F,        wgpu::TextureFormat::RGBA32Float)                 \
+        M(TextureFormat::kRGB10_A2,       wgpu::TextureFormat::RGB10A2Unorm)                \
+        M(TextureFormat::kRGBA8_sRGB,     wgpu::TextureFormat::RGBA8UnormSrgb)              \
+        M(TextureFormat::kBGRA8,          wgpu::TextureFormat::BGRA8Unorm)                  \
+        /*TextureFormat::kBGR10_A2        unsupported */                                    \
+        M(TextureFormat::kBGRA8_sRGB,     wgpu::TextureFormat::BGRA8UnormSrgb)              \
+        /*TextureFormat::kABGR4,          unsupported */                                    \
+        /*TextureFormat::kARGB4           unsupported */                                    \
+        /*TextureFormat::kBGRA10x6_XR     unsupported */                                    \
+        M(TextureFormat::kRGB8_ETC2,      wgpu::TextureFormat::ETC2RGB8Unorm)               \
+        M(TextureFormat::kRGB8_ETC2_sRGB, wgpu::TextureFormat::ETC2RGB8UnormSrgb)           \
+        /*TextureFormat::kRGB_BC1         unsupported */                                    \
+        M(TextureFormat::kRGBA8_BC1,      wgpu::TextureFormat::BC1RGBAUnorm)                \
+        M(TextureFormat::kRGBA8_BC1_sRGB, wgpu::TextureFormat::BC1RGBAUnormSrgb)            \
+        /*TextureFormat::kYUV8_P2_420     Native-only */                                    \
+        /*TextureFormat::kYUV8_P3_420     unsupported */                                    \
+        /*TextureFormat::kYUV10x6_P2_420  Native-only */                                    \
+        /*TextureFormat::kExternal        Native-only */                                    \
+        M(TextureFormat::kS8,             wgpu::TextureFormat::Stencil8)                    \
+        M(TextureFormat::kD16,            wgpu::TextureFormat::Depth16Unorm)                \
+        M(TextureFormat::kD32F,           wgpu::TextureFormat::Depth32Float)                \
+        M(TextureFormat::kD24_S8,         wgpu::TextureFormat::Depth24PlusStencil8)         \
+        M(TextureFormat::kD32F_S8,        wgpu::TextureFormat::Depth32FloatStencil8)        \
 
-    SkUNREACHABLE;
+#if !defined(__EMSCRIPTEN__)
+#define DAWN_FORMAT_MAPPING_NATIVE_ONLY(M) \
+        M(TextureFormat::kR16,            wgpu::TextureFormat::R16Unorm)                    \
+        M(TextureFormat::kRG16,           wgpu::TextureFormat::RG16Unorm)                   \
+        M(TextureFormat::kRGBA16,         wgpu::TextureFormat::RGBA16Unorm)                 \
+        M(TextureFormat::kYUV8_P2_420,    wgpu::TextureFormat::R8BG8Biplanar420Unorm)       \
+        M(TextureFormat::kYUV10x6_P2_420, wgpu::TextureFormat::R10X6BG10X6Biplanar420Unorm) \
+        M(TextureFormat::kExternal,       wgpu::TextureFormat::External)
+#else
+#define DAWN_FORMAT_MAPPING_NATIVE_ONLY(M)
+#endif
+
+TextureFormat DawnFormatToTextureFormat(wgpu::TextureFormat format) {
+#define M(TF, WGPU) case WGPU: return TF;
+    switch(format) {
+        DAWN_FORMAT_MAPPING(M)
+        DAWN_FORMAT_MAPPING_NATIVE_ONLY(M)
+        default: return TextureFormat::kUnsupported;
+    }
+#undef M
 }
-
-bool DawnFormatIsStencil(wgpu::TextureFormat format) {
-    switch (format) {
-        case wgpu::TextureFormat::Stencil8:             [[fallthrough]];
-        case wgpu::TextureFormat::Depth24PlusStencil8:
-        case wgpu::TextureFormat::Depth32FloatStencil8:
-            return true;
-        default:
-            return false;
+wgpu::TextureFormat TextureFormatToDawnFormat(TextureFormat format) {
+#define M(TF, WGPU) case TF: return WGPU;
+    switch(format) {
+        DAWN_FORMAT_MAPPING(M)
+        DAWN_FORMAT_MAPPING_NATIVE_ONLY(M)
+        default: return wgpu::TextureFormat::Undefined;
     }
-
-    SkUNREACHABLE;
-}
-
-wgpu::TextureFormat DawnDepthStencilFlagsToFormat(SkEnumBitMask<DepthStencilFlags> mask) {
-    // TODO: Decide if we want to change this to always return a combined depth and stencil format
-    // to allow more sharing of depth stencil allocations.
-    if (mask == DepthStencilFlags::kDepth) {
-        // If needed for workarounds or performance, Depth32Float is also available but requires 2x
-        // the amount of memory.
-        return wgpu::TextureFormat::Depth16Unorm;
-    } else if (mask == DepthStencilFlags::kStencil) {
-        return wgpu::TextureFormat::Stencil8;
-    } else if (mask == DepthStencilFlags::kDepthStencil) {
-        return wgpu::TextureFormat::Depth24PlusStencil8;
-    }
-    SkASSERT(false);
-    return wgpu::TextureFormat::Undefined;
+#undef M
 }
 
 static bool check_shader_module([[maybe_unused]] const DawnSharedContext* sharedContext,
@@ -184,10 +211,10 @@ bool DawnCompileWGSLShaderModule(const DawnSharedContext* sharedContext,
                                  const std::string& wgsl,
                                  wgpu::ShaderModule* module,
                                  ShaderErrorHandler* errorHandler) {
-#ifdef WGPU_BREAKING_CHANGE_DROP_DESCRIPTOR
-    wgpu::ShaderSourceWGSL wgslDesc;
-#else
+#if defined(__EMSCRIPTEN__)
     wgpu::ShaderModuleWGSLDescriptor wgslDesc;
+#else
+    wgpu::ShaderSourceWGSL wgslDesc;
 #endif
     wgslDesc.code = wgsl.c_str();
 

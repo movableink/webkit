@@ -36,8 +36,10 @@
 #include "Notification.h"
 
 #include "DedicatedWorkerGlobalScope.h"
+#include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "JSDOMPromiseDeferred.h"
 #include "LocalDOMWindow.h"
@@ -399,7 +401,7 @@ void Notification::requestPermission(Document& document, RefPtr<NotificationPerm
     auto resolvePromiseAndCallback = [document = Ref { document }, callback = WTFMove(callback), promise = WTFMove(promise)](Permission permission) mutable {
         document->eventLoop().queueTask(TaskSource::DOMManipulation, [callback = WTFMove(callback), promise = WTFMove(promise), permission]() mutable {
             if (callback)
-                callback->handleEvent(permission);
+                callback->invoke(permission);
             promise->resolve<IDLEnumeration<NotificationPermission>>(permission);
         });
     };

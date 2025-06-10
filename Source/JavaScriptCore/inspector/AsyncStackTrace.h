@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -69,7 +69,7 @@ private:
     void truncate(size_t maxDepth);
     void remove();
 
-    Ref<ScriptCallStack> m_callStack;
+    const Ref<ScriptCallStack> m_callStack;
     RefPtr<AsyncStackTrace> m_parent;
     unsigned m_childCount { 0 };
     State m_state { State::Pending };

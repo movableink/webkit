@@ -1117,7 +1117,6 @@ JSCClass* jsc_context_register_class(JSCContext* context, const char* name, JSCC
     g_return_val_if_fail(name, nullptr);
     g_return_val_if_fail(!parentClass || JSC_IS_CLASS(parentClass), nullptr);
 
-    auto jscClass = jscClassCreate(context, name, parentClass, vtable, destroyFunction);
-    wrapperMap(context).registerClass(jscClass.get());
-    return jscClass.get();
+    return wrapperMap(context).registerClass(
+        jscClassCreate(context, name, parentClass, vtable, destroyFunction));
 }

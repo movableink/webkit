@@ -30,6 +30,8 @@
 #include "CommandResult.h"
 #include "Logging.h"
 #include "SessionHost.h"
+#include <cmath>
+#include <ranges>
 #include <wtf/Compiler.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/RunLoop.h>
@@ -48,6 +50,7 @@
 #include <optional>
 #include <wtf/JSONValues.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/UUID.h>
 #include <wtf/glib/GTypedefs.h>
 #endif
 
@@ -59,7 +62,7 @@ static const double maxSafeInteger = 9007199254740991.0; // 2 ^ 53 - 1
 WebDriverService::WebDriverService()
     : m_server(*this)
 #if ENABLE(WEBDRIVER_BIDI)
-    , m_bidiServer(*this, *this)
+    , m_bidiServer(WebSocketServer::create(*this))
     , m_browserTerminatedObserver([this](const String& sessionID) { onBrowserTerminated(sessionID); })
 #endif
 {
@@ -187,7 +190,7 @@ int WebDriverService::run(int argc, char** argv)
 
     const char* hostStr = host && host->utf8().data() ? host->utf8().data() : "local";
 #if ENABLE(WEBDRIVER_BIDI)
-    if (!m_bidiServer.listen(host ? *host : nullString(), *bidiPort)) {
+    if (!m_bidiServer->listen(host ? *host : nullString(), *bidiPort)) {
         fprintf(stderr, "FATAL: Unable to listen for WebSocket BiDi server at host %s and port %d.\n", hostStr, *bidiPort);
         return EXIT_FAILURE;
     }
@@ -202,7 +205,7 @@ int WebDriverService::run(int argc, char** argv)
     RunLoop::run();
 
 #if ENABLE(WEBDRIVER_BIDI)
-    m_bidiServer.disconnect();
+    m_bidiServer->disconnect();
 #endif
     m_server.disconnect();
 
@@ -413,8 +416,8 @@ bool WebDriverService::acceptHandshake(HTTPRequestHandler::Request&& request)
     // https://w3c.github.io/webdriver-bidi/#transport
     auto& resourceName = request.path;
 
-    auto& resources = m_bidiServer.listener()->resources;
-    auto foundResource = std::find(resources.begin(), resources.end(), resourceName);
+    auto& resources = m_bidiServer->listener()->resources;
+    auto foundResource = std::ranges::find(resources, resourceName);
     if (foundResource == resources.end()) {
         RELEASE_LOG(WebDriverBiDi, "Resource name %s not found in listener's list of WebSocket resources. Rejecting handshake.", resourceName.utf8().data());
         return false;
@@ -426,7 +429,7 @@ bool WebDriverService::acceptHandshake(HTTPRequestHandler::Request&& request)
         return false;
     }
 
-    auto sessionID = m_bidiServer.getSessionID(resourceName);
+    auto sessionID = m_bidiServer->getSessionID(resourceName);
     if (sessionID.isNull()) {
         RELEASE_LOG(WebDriverBiDi, "No session ID found for resource name %s. Rejecting handshake.", resourceName.utf8().data());
         return false;
@@ -452,48 +455,53 @@ void WebDriverService::handleMessage(WebSocketMessageHandler::Message&& message,
     }
 
     auto connection = message.connection;
-    auto session = m_bidiServer.session(connection);
-    if (!session) {
-        if (!m_bidiServer.isStaticConnection(connection)) {
-            RELEASE_LOG(WebDriverBiDi, "Unknown connection. Ignoring message.");
-            completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidSessionID, connection));
-            return;
-        }
+    if (m_bidiServer->sessionID(connection) != m_session->id()) {
+        // FIXME Remove once we support checking static vs non-static methods https://bugs.webkit.org/show_bug.cgi?id=281721
+        completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidSessionID, connection));
+        return;
     }
-    // 6.6 If session is null and command is not a static command, then send an error response given connection, command id, and invalid session id, and return.
-    // FIXME support checking static vs non-static methods https://bugs.webkit.org/show_bug.cgi?id=281721
 
     auto parsedMessageValue = JSON::Value::parseJSON(String::fromUTF8(message.payload.data()));
     if (!parsedMessageValue) {
-        RELEASE_LOG(WebDriverBiDi, "WebDriver handle Message: Failed to parse incoming message");
+        RELEASE_LOG(WebDriverBiDi, "WebDriverService::handleMessage() Failed to parse incoming message");
         completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidArgument, message.connection));
         return;
     }
 
-    if (session && m_session && session->id() != m_session->id()) {
-        RELEASE_LOG(WebDriverBiDi, "Not an active session. Ignoring message.");
+    const auto& messageObject = parsedMessageValue->asObject();
+    if (!messageObject) {
+        RELEASE_LOG_ERROR(WebDriverBiDi, "WebDriver handle BiDi message: Expected object.");
+        completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidArgument, connection));
+        return;
+    }
+
+    std::optional<int> commandId = messageObject->getInteger("id"_s);
+    if (!commandId) {
+        RELEASE_LOG_ERROR(WebDriverBiDi, "Missing command ID.");
+        completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidArgument, connection, "Missing command id"_s));
         return;
     }
 
     BidiCommandHandler handler;
-    unsigned id = 0;
     RefPtr<JSON::Object> parameters;
-    if (!findBidiCommand(parsedMessageValue, &handler, id, parameters)) {
-        RELEASE_LOG(WebDriverBiDi, "Failed to find appropriate BiDi command");
-        std::optional<int> commandId;
-        if (auto parsedMessageObject = parsedMessageValue->asObject()) {
-            auto parsedCommandId = parsedMessageObject->getInteger("id"_s);
-            if (parsedCommandId && *parsedCommandId >= 0)
-                commandId = parsedCommandId;
-        }
-
-        auto errorCode = CommandResult::ErrorCode::UnknownCommand;
-        auto errorReply = WebSocketMessageHandler::Message::fail(errorCode, connection, { "Command not supported"_s }, commandId);
-        completionHandler(WTFMove(errorReply));
+    // FIXME Maybe replace manual method dispatch with generated dispatchers for static methods, like we do in WebDriverBidiProcessor-related classes in the UIProcess
+    // https://bugs.webkit.org/show_bug.cgi?id=281721
+    if (!findBidiCommand(messageObject, &handler, parameters)) {
+        RELEASE_LOG(WebDriverBiDi, "Failed to find appropriate BiDi command on WebDriver service. Relaying to the browser.");
+        auto sessionID = m_session->id();
+        m_session->relayBidiCommand(makeString(message.payload), *commandId, [completionHandler = WTFMove(completionHandler), sessionID, this](WebSocketMessageHandler::Message&& resultMessage) {
+            auto connection = m_bidiServer->connection(sessionID);
+            if (!connection) {
+                RELEASE_LOG(WebDriverBiDi, "Failed to find connection for session ID %s. Ignoring message.", sessionID.utf8().data());
+                return;
+            }
+            resultMessage.connection = *connection;
+            completionHandler(WTFMove(resultMessage));
+        });
         return;
     }
 
-    ((*this).*handler)(id, WTFMove(parameters), [completionHandler = WTFMove(completionHandler), message](WebSocketMessageHandler::Message&& resultMessage) {
+    ((*this).*handler)(*commandId, WTFMove(parameters), [completionHandler = WTFMove(completionHandler), message](WebSocketMessageHandler::Message&& resultMessage) {
         // 6.7.5 If method is "session.new", let session be the entry in the list of active sessions whose session ID is equal to the "sessionId" property of value, append connection to session’s session WebSocket connections, and remove connection from the WebSocket connections not associated with a session.
         // FIXME https://bugs.webkit.org/show_bug.cgi?id=281722
         resultMessage.connection = message.connection;
@@ -501,20 +509,9 @@ void WebDriverService::handleMessage(WebSocketMessageHandler::Message&& message,
     });
 }
 
-bool WebDriverService::findBidiCommand(RefPtr<JSON::Value>& parameters, BidiCommandHandler* handler, unsigned& id, RefPtr<JSON::Object>& parsedParams)
+bool WebDriverService::findBidiCommand(const RefPtr<JSON::Object>& parameters, BidiCommandHandler* handler, RefPtr<JSON::Object>& parsedParams)
 {
-    if (!parameters)
-        return false;
-
-    const auto& asObject = parameters->asObject();
-    if (!asObject)
-        return false;
-
-    std::optional<int> idOpt = asObject->getInteger("id"_s);
-    if (!idOpt)
-        return false;
-
-    const String& method = asObject->getString("method"_s);
+    const String& method = parameters->getString("method"_s);
     if (!method)
         return false;
 
@@ -526,8 +523,7 @@ bool WebDriverService::findBidiCommand(RefPtr<JSON::Value>& parameters, BidiComm
     if (candidate == std::end(s_bidiCommands))
         return false;
 
-    id = *idOpt;
-    parsedParams = asObject->getObject("params"_s);
+    parsedParams = parameters->getObject("params"_s);
     *handler = candidate->handler;
     return true;
 }
@@ -1041,7 +1037,7 @@ void WebDriverService::newSession(RefPtr<JSON::Object>&& parameters, Function<vo
         auto session = std::exchange(m_session, nullptr);
         session->close([this, session, matchedCapabilitiesList, completionHandler = WTFMove(completionHandler)](CommandResult&& result) mutable {
 #if ENABLE(WEBDRIVER_BIDI)
-            m_bidiServer.disconnectSession(session->id());
+            m_bidiServer->disconnectSession(session->id());
 #endif
             // Ignore unknown errors when closing the session if the session has abeen actually closed.
             if ((!result.isError()) || (result.errorCode() == CommandResult::ErrorCode::UnknownError && !session->isConnected())) {
@@ -1153,11 +1149,11 @@ void WebDriverService::createSession(Vector<Capabilities>&& capabilitiesList, Re
 #if ENABLE(WEBDRIVER_BIDI)
             // Extension steps defined by BiDi spec: https://w3c.github.io/webdriver-bidi/#establishing
             if (!m_session->hasBiDiEnabled() && capabilities.webSocketURL && *capabilities.webSocketURL) {
-                auto listener = m_bidiServer.startListening(m_session->id());
+                auto listener = m_bidiServer->startListening(m_session->id());
                 // We need to update the listener host to a visible one so remote clients can connect to it.
                 listener->host = m_server.visibleHost();
 
-                auto webSocketURL = m_bidiServer.getWebSocketURL(listener, m_session->id());
+                auto webSocketURL = m_bidiServer->getWebSocketURL(listener, m_session->id());
                 capabilitiesObject->setString("webSocketUrl"_s, webSocketURL);
                 m_session->setHasBiDiEnabled(true);
             } else {
@@ -1194,7 +1190,7 @@ void WebDriverService::deleteSession(RefPtr<JSON::Object>&& parameters, Function
     session->close([this, session, completionHandler = WTFMove(completionHandler)](CommandResult&& result) mutable {
         UNUSED_VARIABLE(this); // Conditionally used in ENABLE(WEBDRIVER_BIDI) block.
 #if ENABLE(WEBDRIVER_BIDI)
-        m_bidiServer.disconnectSession(session->id());
+        m_bidiServer->disconnectSession(session->id());
 #endif
         // Ignore unknown errors when closing the session if the session has abeen actually closed.
         if (result.isError() && result.errorCode() == CommandResult::ErrorCode::UnknownError && !session->isConnected())
@@ -2193,7 +2189,7 @@ static bool processPauseAction(JSON::Object& actionItem, Action& action, std::op
 
     auto duration = unsignedValue(*durationValue);
     if (!duration) {
-        errorMessage = String("The parameter 'duration' is invalid in pause action"_s);
+        errorMessage = String("The 'duration' parameter for the pause action is invalid"_s);
         return false;
     }
 
@@ -2205,7 +2201,7 @@ static std::optional<Action> processNullAction(const String& id, JSON::Object& a
 {
     auto subtype = actionItem.getString("type"_s);
     if (subtype != "pause"_s) {
-        errorMessage = String("The parameter 'type' in null action is invalid or missing"_s);
+        errorMessage = String("The 'type' parameter for the null action is invalid or missing"_s);
         return std::nullopt;
     }
 
@@ -2227,7 +2223,7 @@ static std::optional<Action> processKeyAction(const String& id, JSON::Object& ac
     else if (subtype == "keyDown"_s)
         actionSubtype = Action::Subtype::KeyDown;
     else {
-        errorMessage = String("The parameter 'type' of key action is invalid"_s);
+        errorMessage = String("The 'type' parameter for the key action is invalid"_s);
         return std::nullopt;
     }
 
@@ -2242,12 +2238,12 @@ static std::optional<Action> processKeyAction(const String& id, JSON::Object& ac
     case Action::Subtype::KeyDown: {
         auto keyValue = actionItem.getValue("value"_s);
         if (!keyValue) {
-            errorMessage = String("The paramater 'value' is missing for key up/down action"_s);
+            errorMessage = String("The 'value' parameter for the key up/down action is missing "_s);
             return std::nullopt;
         }
         auto key = keyValue->asString();
         if (key.isEmpty()) {
-            errorMessage = String("The paramater 'value' is invalid for key up/down action"_s);
+            errorMessage = String("The 'value' parameter for the key up/down action is invalid"_s);
             return std::nullopt;
         }
         // FIXME: check single unicode code point.
@@ -2281,12 +2277,14 @@ static MouseButton actionMouseButton(unsigned button)
     return MouseButton::None;
 }
 
-static bool processPointerMoveAction(JSON::Object& actionItem, Action& action, std::optional<String>& errorMessage)
+enum class CoordinateType { Fractional, Integral };
+
+static bool processPointerMoveAction(JSON::Object& actionItem, Action& action, std::optional<String>& errorMessage, CoordinateType coordinateType = CoordinateType::Fractional)
 {
     if (auto durationValue = actionItem.getValue("duration"_s)) {
         auto duration = unsignedValue(*durationValue);
         if (!duration) {
-            errorMessage = String("The parameter 'duration' is invalid in action"_s);
+            errorMessage = String("The 'duration' parameter for the action is invalid"_s);
             return false;
         }
         action.duration = duration.value();
@@ -2296,7 +2294,7 @@ static bool processPointerMoveAction(JSON::Object& actionItem, Action& action, s
         if (auto originObject = originValue->asObject()) {
             auto elementID = originObject->getString(Session::webElementIdentifier());
             if (!elementID) {
-                errorMessage = String("The parameter 'origin' is not a valid web element object in action"_s);
+                errorMessage = String("The 'origin' parameter for the action is not a valid web element object"_s);
                 return false;
             }
             action.origin = PointerOrigin { PointerOrigin::Type::Element, elementID };
@@ -2307,7 +2305,7 @@ static bool processPointerMoveAction(JSON::Object& actionItem, Action& action, s
             else if (origin == "pointer"_s)
                 action.origin = PointerOrigin { PointerOrigin::Type::Pointer, std::nullopt };
             else {
-                errorMessage = String("The parameter 'origin' is invalid in action"_s);
+                errorMessage = String("The 'origin' parameter for the action is invalid"_s);
                 return false;
             }
         }
@@ -2316,20 +2314,26 @@ static bool processPointerMoveAction(JSON::Object& actionItem, Action& action, s
 
     if (auto xValue = actionItem.getValue("x"_s)) {
         auto x = valueAsNumberInRange(*xValue, INT_MIN);
-        if (!x) {
-            errorMessage = String("The paramater 'x' is invalid for action"_s);
+        if (!x || (coordinateType == CoordinateType::Integral && x.value() != std::floor(x.value()))) {
+            errorMessage = String("The 'x' parameter for the action is invalid"_s);
             return false;
         }
         action.x = x.value();
+    } else {
+        errorMessage = String("The 'x' parameter for the action is missing"_s);
+        return false;
     }
 
     if (auto yValue = actionItem.getValue("y"_s)) {
         auto y = valueAsNumberInRange(*yValue, INT_MIN);
-        if (!y) {
-            errorMessage = String("The paramater 'y' is invalid for action"_s);
+        if (!y || (coordinateType == CoordinateType::Integral && y.value() != std::floor(y.value()))) {
+            errorMessage = String("The 'y' parameter for the action is invalid"_s);
             return false;
         }
         action.y = y.value();
+    } else {
+        errorMessage = String("The 'y' parameter for the action is missing"_s);
+        return false;
     }
 
     return true;
@@ -2350,7 +2354,7 @@ static std::optional<Action> processPointerAction(const String& id, PointerParam
     else if (subtype == "pointerCancel"_s)
         actionSubtype = Action::Subtype::PointerCancel;
     else {
-        errorMessage = String("The parameter 'type' of pointer action is invalid"_s);
+        errorMessage = String("The 'type' parameter for the pointer action is invalid"_s);
         return std::nullopt;
     }
 
@@ -2366,12 +2370,12 @@ static std::optional<Action> processPointerAction(const String& id, PointerParam
     case Action::Subtype::PointerDown: {
         auto buttonValue = actionItem.getValue("button"_s);
         if (!buttonValue) {
-            errorMessage = String("The paramater 'button' is missing for pointer up/down action"_s);
+            errorMessage = String("The 'button' parameter for the pointer up/down action is missing"_s);
             return std::nullopt;
         }
         auto button = unsignedValue(*buttonValue);
         if (!button) {
-            errorMessage = String("The paramater 'button' is invalid for pointer up/down action"_s);
+            errorMessage = String("The 'button' parameter for the pointer up/down action is invalid"_s);
             return std::nullopt;
         }
         action.button = actionMouseButton(button.value());
@@ -2401,7 +2405,7 @@ static std::optional<Action> processWheelAction(const String& id, JSON::Object& 
     else if (subtype == "scroll"_s)
         actionSubtype = Action::Subtype::Scroll;
     else {
-        errorMessage = String("The parameter 'type' of wheel action is invalid"_s);
+        errorMessage = String("The 'type' parameter for the wheel action is invalid"_s);
         return std::nullopt;
     }
 
@@ -2413,25 +2417,31 @@ static std::optional<Action> processWheelAction(const String& id, JSON::Object& 
             return std::nullopt;
         break;
     case Action::Subtype::Scroll:
-        if (!processPointerMoveAction(actionItem, action, errorMessage))
+        if (!processPointerMoveAction(actionItem, action, errorMessage, CoordinateType::Integral))
             return std::nullopt;
 
         if (auto deltaXValue = actionItem.getValue("deltaX"_s)) {
             auto deltaX = valueAsNumberInRange(*deltaXValue, INT_MIN);
-            if (!deltaX) {
-                errorMessage = String("The paramater 'deltaX' is invalid for action"_s);
+            if (!deltaX || deltaX.value() != std::floor(deltaX.value())) {
+                errorMessage = String("The 'deltaX' parameter for the action is invalid"_s);
                 return std::nullopt;
             }
             action.deltaX = deltaX.value();
+        } else {
+            errorMessage = String("The 'deltaX' parameter for the action is missing"_s);
+            return std::nullopt;
         }
 
         if (auto deltaYValue = actionItem.getValue("deltaY"_s)) {
             auto deltaY = valueAsNumberInRange(*deltaYValue, INT_MIN);
-            if (!deltaY) {
-                errorMessage = String("The paramater 'deltaY' is invalid for action"_s);
+            if (!deltaY || deltaY.value() != std::floor(deltaY.value())) {
+                errorMessage = String("The 'deltaY' parameter for the action is invalid"_s);
                 return std::nullopt;
             }
             action.deltaY = deltaY.value();
+        } else {
+            errorMessage = String("The 'deltaY' parameter for the action is missing"_s);
+            return std::nullopt;
         }
         break;
     case Action::Subtype::KeyUp:
@@ -2471,7 +2481,7 @@ static std::optional<PointerParameters> processPointerParameters(JSON::Object& a
     else if (pointerType == "touch"_s)
         parameters.pointerType = PointerType::Touch;
     else {
-        errorMessage = String("The parameter 'pointerType' in action sequence pointer parameters is invalid"_s);
+        errorMessage = String("The 'pointerType' parameter in the pointer parameters of the action sequence is invalid"_s);
         return std::nullopt;
     }
 
@@ -2497,13 +2507,13 @@ static std::optional<Vector<Action>> processInputActionSequence(Session& session
     else if (type == "none"_s)
         inputSourceType = InputSource::Type::None;
     else {
-        errorMessage = String("The parameter 'type' is invalid or missing in action sequence"_s);
+        errorMessage = String("The 'type' parameter in the action sequence is invalid or missing"_s);
         return std::nullopt;
     }
 
     auto id = actionSequence->getString("id"_s);
     if (!id) {
-        errorMessage = String("The parameter 'id' is invalid or missing in action sequence"_s);
+        errorMessage = String("The 'id' parameter in the action sequence is invalid or missing"_s);
         return std::nullopt;
     }
 
@@ -2530,7 +2540,7 @@ static std::optional<Vector<Action>> processInputActionSequence(Session& session
 
     auto actionItems = actionSequence->getArray("actions"_s);
     if (!actionItems) {
-        errorMessage = String("The parameter 'actions' is invalid or not present in action sequence"_s);
+        errorMessage = String("The 'actions' parameter in the action sequence is invalid or not present"_s);
         return std::nullopt;
     }
 
@@ -2539,7 +2549,7 @@ static std::optional<Vector<Action>> processInputActionSequence(Session& session
     for (unsigned i = 0; i < actionItemsLength; ++i) {
         auto actionItem = actionItems->get(i)->asObject();
         if (!actionItem) {
-            errorMessage = String("An action in action sequence is not an object"_s);
+            errorMessage = String("An action in the action sequence is not an object"_s);
             return std::nullopt;
         }
 
@@ -2570,7 +2580,7 @@ void WebDriverService::performActions(RefPtr<JSON::Object>&& parameters, Functio
 
     auto actionsArray = parameters->getArray("actions"_s);
     if (!actionsArray) {
-        completionHandler(CommandResult::fail(CommandResult::ErrorCode::InvalidArgument, String("The paramater 'actions' is invalid or not present"_s)));
+        completionHandler(CommandResult::fail(CommandResult::ErrorCode::InvalidArgument, String("The 'actions' parameter is invalid or not present"_s)));
         return;
     }
 
@@ -2727,9 +2737,9 @@ void WebDriverService::bidiSessionStatus(unsigned id, RefPtr<JSON::Object>&&, Fu
 void WebDriverService::bidiSessionSubscribe(unsigned id, RefPtr<JSON::Object>&&parameters, Function<void(WebSocketMessageHandler::Message&&)>&& completionHandler)
 {
     // https://w3c.github.io/webdriver-bidi/#command-session-subscribe
-    auto eventNames = parameters->getArray("events"_s);
+    auto eventNamesJSON = parameters->getArray("events"_s);
 
-    if (!eventNames) {
+    if (!eventNamesJSON) {
         completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidArgument, std::nullopt, "Missing 'events' parameter"_s, id));
         return;
     }
@@ -2738,49 +2748,96 @@ void WebDriverService::bidiSessionSubscribe(unsigned id, RefPtr<JSON::Object>&&p
     // https://bugs.webkit.org/show_bug.cgi?id=282436
     // FIXME: Support by-context subscriptions.
     // https://bugs.webkit.org/show_bug.cgi?id=282981
-    for (auto& eventName : *eventNames) {
-        auto event = eventName->asString();
-        m_session->enableGlobalEvent(event);
+    Vector<String> eventNames;
+    for (auto& eventNameJS : *eventNamesJSON) {
+        auto eventName = eventNameJS->asString();
+        if (!eventName) {
+            completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidArgument, std::nullopt, "Invalid event name"_s, id));
+            return;
+        }
+        eventNames.append(eventName);
     }
+    m_session->subscribeForEvents(eventNames, { }, { }, [id, completionHandler = WTFMove(completionHandler)](CommandResult&& subscriptionResult) mutable {
+        if (subscriptionResult.isError()) {
+            auto errorMessage = subscriptionResult.errorMessage() ? subscriptionResult.errorMessage() : "Failed to subscribe"_s;
+            completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidArgument, std::nullopt, errorMessage, id));
+            return;
+        }
+        auto result = JSON::Object::create();
+        result->setString("subscription"_s, subscriptionResult.result()->asString());
 
-    completionHandler(WebSocketMessageHandler::Message::reply("success"_s, id, JSON::Value::null()));
+        completionHandler(WebSocketMessageHandler::Message::reply("success"_s, id, WTFMove(result)));
+    });
 }
 
 void WebDriverService::bidiSessionUnsubscribe(unsigned id, RefPtr<JSON::Object>&&parameters, Function<void(WebSocketMessageHandler::Message&&)>&& completionHandler)
 {
     // https://w3c.github.io/webdriver-bidi/#command-session-unsubscribe
-    auto eventNames = parameters->getArray("events"_s);
+    auto subscriptions = parameters->getArray("subscriptions"_s);
+    if (!subscriptions) {
+        auto events = parameters->getArray("events"_s);
+        if (!events) {
+            completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidArgument, std::nullopt, "Missing either 'events' or 'subscriptions' parameter"_s, id));
+            return;
+        }
 
-    if (!eventNames) {
-        completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidArgument, std::nullopt, "Missing 'events' parameter"_s, id));
+        Vector<String> eventNames;
+        for (auto& event : *events) {
+            auto eventName = event->asString();
+            if (!eventName) {
+                completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidArgument, std::nullopt, "Invalid event name"_s, id));
+                return;
+            }
+
+            eventNames.append(eventName);
+        }
+
+        m_session->unsubscribeByEventName(eventNames, [id, completionHandler = WTFMove(completionHandler)](CommandResult&& result) mutable {
+            if (result.isError()) {
+                auto errorMessage = result.errorMessage() ? result.errorMessage() : "Failed to unsubscribe"_s;
+                completionHandler(WebSocketMessageHandler::Message::fail(result.errorCode(), std::nullopt, errorMessage, id));
+                return;
+            }
+            completionHandler(WebSocketMessageHandler::Message::reply("success"_s, id, JSON::Value::null()));
+        });
         return;
     }
 
-    // FIXME: Support by-context unsubscriptions.
-    // https://bugs.webkit.org/show_bug.cgi?id=282981
-    for (auto& eventName : *eventNames) {
-        auto event = eventName->asString();
-        m_session->disableGlobalEvent(event);
+    Vector<String> subscriptionsIDs;
+    for (auto& subscription : *subscriptions) {
+        auto subscriptionID = subscription->asString();
+        if (!subscriptionID) {
+            completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidArgument, std::nullopt, "Invalid subscription ID"_s, id));
+            return;
+        }
+        subscriptionsIDs.append(subscriptionID);
     }
 
-    completionHandler(WebSocketMessageHandler::Message::reply("success"_s, id, JSON::Value::null()));
+    m_session->unsubscribeByIDs(WTFMove(subscriptionsIDs), [id, completionHandler = WTFMove(completionHandler)](CommandResult&& result) mutable {
+        if (result.isError()) {
+            auto errorMessage = result.errorMessage() ? result.errorMessage() : "Failed to unsubscribe"_s;
+            completionHandler(WebSocketMessageHandler::Message::fail(result.errorCode(), std::nullopt, errorMessage, id));
+            return;
+        }
+        completionHandler(WebSocketMessageHandler::Message::reply("success"_s, id, JSON::Value::null()));
+    });
 }
 
 void WebDriverService::clientDisconnected(const WebSocketMessageHandler::Connection& connection)
 {
     // https://w3c.github.io/webdriver-bidi/#handle-a-connection-closing
-    if (m_bidiServer.session(connection))
-        m_bidiServer.removeConnection(connection);
-    else if (m_bidiServer.isStaticConnection(connection))
-        m_bidiServer.removeStaticConnection(connection);
+    if (m_bidiServer->sessionID(connection) == m_session->id())
+        m_bidiServer->removeConnection(connection);
+    else if (m_bidiServer->isStaticConnection(connection))
+        m_bidiServer->removeStaticConnection(connection);
     // Note from spec: This does not end any session.
 }
 
 void WebDriverService::onBrowserTerminated(const String& sessionID)
 {
     if (m_session && m_session->id() == sessionID) {
-        auto connection = m_bidiServer.connection(sessionID);
-        m_bidiServer.disconnectSession(sessionID);
+        auto connection = m_bidiServer->connection(sessionID);
+        m_bidiServer->disconnectSession(sessionID);
         if (connection)
             clientDisconnected(*connection);
     }

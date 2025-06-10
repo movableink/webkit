@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -124,8 +124,8 @@ void PingLoad::didFinish(const ResourceError& error, const ResourceResponse& res
 void PingLoad::loadRequest(NetworkProcess& networkProcess, ResourceRequest&& request)
 {
     PING_RELEASE_LOG("startNetworkLoad");
-    if (auto* networkSession = networkProcess.networkSession(m_sessionID)) {
-        auto loadParameters = m_parameters;
+    if (CheckedPtr networkSession = networkProcess.networkSession(m_sessionID)) {
+        auto loadParameters = m_parameters.networkLoadParameters();
         loadParameters.request = WTFMove(request);
         Ref task = NetworkDataTask::create(*networkSession, *this, WTFMove(loadParameters));
         m_task = task.copyRef();
@@ -200,25 +200,25 @@ void PingLoad::didSendData(uint64_t totalBytesSent, uint64_t totalBytesExpectedT
 void PingLoad::wasBlocked()
 {
     PING_RELEASE_LOG("wasBlocked");
-    didFinish(blockedError(ResourceRequest { currentURL() }));
+    didFinish(blockedError(ResourceRequest { URL { currentURL() } }));
 }
 
 void PingLoad::cannotShowURL()
 {
     PING_RELEASE_LOG("cannotShowURL");
-    didFinish(cannotShowURLError(ResourceRequest { currentURL() }));
+    didFinish(cannotShowURLError(ResourceRequest { URL { currentURL() } }));
 }
 
 void PingLoad::wasBlockedByRestrictions()
 {
     PING_RELEASE_LOG("wasBlockedByRestrictions");
-    didFinish(wasBlockedByRestrictionsError(ResourceRequest { currentURL() }));
+    didFinish(wasBlockedByRestrictionsError(ResourceRequest { URL { currentURL() } }));
 }
 
 void PingLoad::wasBlockedByDisabledFTP()
 {
     PING_RELEASE_LOG("wasBlockedByDisabledFTP");
-    didFinish(ftpDisabledError(ResourceRequest(currentURL())));
+    didFinish(ftpDisabledError(ResourceRequest(URL { currentURL() })));
 }
 
 void PingLoad::timeoutTimerFired()

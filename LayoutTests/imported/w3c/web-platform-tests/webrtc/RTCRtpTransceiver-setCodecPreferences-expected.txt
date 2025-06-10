@@ -1,7 +1,6 @@
 
-PASS setCodecPreferences() on audio transceiver with codecs returned from RTCRtpSender.getCapabilities('audio') should succeed
+PASS setCodecPreferences() on audio transceiver with codecs returned from RTCRtpReceiver.getCapabilities('audio') should succeed
 PASS setCodecPreferences() on video transceiver with codecs returned from RTCRtpReceiver.getCapabilities('video') should succeed
-PASS setCodecPreferences() with both sender receiver codecs combined should succeed
 PASS setCodecPreferences([]) should succeed
 PASS setCodecPreferences() with reordered codecs should succeed
 PASS setCodecPreferences() with only VP8 should succeed
@@ -18,4 +17,10 @@ PASS setCodecPreferences() with modified codec parameters should throw InvalidMo
 PASS setCodecPreferences() with modified codecs returned from getCapabilities() should throw InvalidModificationError
 PASS setCodecPreferences() modifies the order of audio codecs in createOffer
 PASS setCodecPreferences() modifies the order of video codecs in createOffer
+FAIL setCodecPreferences() can remove rtx assert_equals: expected (undefined) undefined but got (object) object "[object Object]"
+PASS setCodecPreferences() can remove red
+PASS setCodecPreferences() can remove ulpfec
+PASS setCodecPreferences() filters on receiver and prefers receiver order
+FAIL setCodecPreferences should accept audio codecs regardless of mimeType case promise_test: Unhandled rejection with value: object "InvalidModificationError: RTCRtpCodecCapability bad mimeType"
+FAIL setCodecPreferences should accept video codecs regardless of mimeType case promise_test: Unhandled rejection with value: object "InvalidModificationError: RTCRtpCodecCapability bad mimeType"
 

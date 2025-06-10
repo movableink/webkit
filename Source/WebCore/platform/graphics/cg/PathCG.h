@@ -44,10 +44,10 @@ class PathStream;
 class PathCG final : public PathImpl {
     WTF_MAKE_TZONE_ALLOCATED(PathCG);
 public:
-    static Ref<PathCG> create();
-    static Ref<PathCG> create(const PathSegment&);
-    static Ref<PathCG> create(const PathStream&);
+    static Ref<PathCG> create(std::span<const PathSegment> = { });
     static Ref<PathCG> create(RetainPtr<CGMutablePathRef>&&);
+
+    static PlatformPathPtr emptyPlatformPath();
 
     PlatformPathPtr platformPath() const;
 
@@ -79,12 +79,9 @@ public:
     FloatRect strokeBoundingRect(NOESCAPE const Function<void(GraphicsContext&)>& strokeStyleApplier) const;
 
 private:
-    PathCG();
     PathCG(RetainPtr<CGMutablePathRef>&&);
 
     PlatformPathPtr ensureMutablePlatformPath();
-
-    bool isEmpty() const final;
 
     FloatPoint currentPoint() const final;
 

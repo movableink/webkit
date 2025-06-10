@@ -28,11 +28,17 @@
 #if PLATFORM(IOS_FAMILY)
 
 #import <UIKit/UIKit.h>
-#import <wtf/RetainPtr.h>
+#import <wtf/Forward.h>
+
+namespace WebCore {
+class FloatQuad;
+enum class BoxSide : uint8_t;
+}
 
 @interface UIScrollView (WebKitInternal)
 @property (readonly, nonatomic) BOOL _wk_isInterruptingDeceleration;
 @property (readonly, nonatomic) BOOL _wk_isScrolledBeyondExtents;
+@property (readonly, nonatomic) BOOL _wk_isScrolledBeyondTopExtent;
 @property (readonly, nonatomic) BOOL _wk_canScrollHorizontallyWithoutBouncing;
 @property (readonly, nonatomic) BOOL _wk_canScrollVerticallyWithoutBouncing;
 @property (readonly, nonatomic) CGFloat _wk_contentWidthIncludingInsets;
@@ -53,9 +59,12 @@
 @end
 
 @interface UIView (WebKitInternal)
+- (void)_wk_collectDescendantsIncludingSelf:(Vector<RetainPtr<UIView>>&)descendants matching:(NS_NOESCAPE BOOL(^)(UIView *))block;
 - (BOOL)_wk_isAncestorOf:(UIView *)view;
+- (WebCore::FloatQuad)_wk_convertQuad:(const WebCore::FloatQuad&)quad toCoordinateSpace:(id<UICoordinateSpace>)destination;
 @property (nonatomic, readonly) UIScrollView *_wk_parentScrollView;
 @property (nonatomic, readonly) UIViewController *_wk_viewControllerForFullScreenPresentation;
+@property (nonatomic, readonly) UIView *_wk_previousSibling;
 @end
 
 @interface UIViewController (WebKitInternal)
@@ -74,6 +83,7 @@ namespace WebKit {
 
 RetainPtr<UIAlertController> createUIAlertController(NSString *title, NSString *message);
 UIScrollView *scrollViewForTouches(NSSet<UITouch *> *);
+UIRectEdge uiRectEdgeForSide(WebCore::BoxSide);
 
 } // namespace WebKit
 

@@ -42,16 +42,16 @@ public:
 
     String text() const { return scriptContent(); }
     WEBCORE_EXPORT void setText(String&&);
-    ExceptionOr<void> setText(std::variant<RefPtr<TrustedScript>, String>&&);
+    ExceptionOr<void> setText(Variant<RefPtr<TrustedScript>, String>&&);
 
     using Node::setTextContent;
-    ExceptionOr<void> setTextContent(std::optional<std::variant<RefPtr<TrustedScript>, String>>&&);
+    ExceptionOr<void> setTextContent(std::optional<Variant<RefPtr<TrustedScript>, String>>&&);
 
     using HTMLElement::setInnerText;
-    ExceptionOr<void> setInnerText(std::variant<RefPtr<TrustedScript>, String>&&);
+    ExceptionOr<void> setInnerText(Variant<RefPtr<TrustedScript>, String>&&);
 
     String src() const;
-    ExceptionOr<void> setSrc(std::variant<RefPtr<TrustedScriptURL>, String>&&);
+    ExceptionOr<void> setSrc(Variant<RefPtr<TrustedScriptURL>, String>&&);
 
     WEBCORE_EXPORT void setAsync(bool);
     WEBCORE_EXPORT bool async() const;

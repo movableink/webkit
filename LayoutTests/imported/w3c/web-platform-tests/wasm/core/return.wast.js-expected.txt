@@ -1,0 +1,118 @@
+
+PASS #1 Reinitialize the default imports
+PASS #2 Test that WebAssembly compilation fails
+PASS #3 Test that WebAssembly compilation fails
+PASS #4 Test that WebAssembly compilation fails
+PASS #5 Test that WebAssembly compilation fails
+PASS #6 Test that WebAssembly compilation fails
+PASS #7 Test that WebAssembly compilation fails
+PASS #8 Test that WebAssembly compilation fails
+PASS #9 Test that WebAssembly compilation fails
+PASS #10 Test that WebAssembly compilation fails
+PASS #11 Test that WebAssembly compilation fails
+PASS #12 Test that WebAssembly compilation fails
+PASS #13 Test that WebAssembly compilation fails
+PASS #14 Test that WebAssembly compilation fails
+PASS #15 Test that WebAssembly compilation fails
+PASS #16 Test that WebAssembly compilation fails
+PASS #17 Test that WebAssembly compilation fails
+PASS #18 Test that WebAssembly compilation fails
+PASS #19 Test that WebAssembly compilation fails
+PASS #20 Test that WebAssembly compilation fails
+PASS #21 Test that WebAssembly compilation fails
+PASS #22 Reinitialize the default imports
+PASS #23 Test that WebAssembly instantiation succeeds
+PASS #24 Test that a WebAssembly code returns a specific result
+PASS #25 Test that a WebAssembly code returns a specific result
+PASS #26 Test that a WebAssembly code returns a specific result
+PASS #27 Test that a WebAssembly code returns a specific result
+PASS #28 Test that a WebAssembly code returns a specific result
+PASS #29 Test that WebAssembly instantiation succeeds
+PASS #30 Run a WebAssembly test without special assertions
+PASS #31 Test that WebAssembly instantiation succeeds
+PASS #32 Run a WebAssembly test without special assertions
+PASS #33 Test that WebAssembly instantiation succeeds
+PASS #34 Run a WebAssembly test without special assertions
+PASS #35 Test that a WebAssembly code returns a specific result
+PASS #36 Test that WebAssembly instantiation succeeds
+PASS #37 Run a WebAssembly test without special assertions
+PASS #38 Test that a WebAssembly code returns a specific result
+PASS #39 Test that a WebAssembly code returns a specific result
+PASS #40 Test that a WebAssembly code returns a specific result
+PASS #41 Test that a WebAssembly code returns a specific result
+PASS #42 Test that a WebAssembly code returns a specific result
+PASS #43 Test that a WebAssembly code returns a specific result
+PASS #44 Test that a WebAssembly code returns a specific result
+PASS #45 Test that a WebAssembly code returns a specific result
+PASS #46 Test that a WebAssembly code returns a specific result
+PASS #47 Test that a WebAssembly code returns a specific result
+PASS #48 Test that a WebAssembly code returns a specific result
+PASS #49 Test that a WebAssembly code returns a specific result
+PASS #50 Test that a WebAssembly code returns a specific result
+PASS #51 Test that a WebAssembly code returns a specific result
+PASS #52 Test that a WebAssembly code returns a specific result
+PASS #53 Test that WebAssembly instantiation succeeds
+PASS #54 Run a WebAssembly test without special assertions
+PASS #55 Test that a WebAssembly code returns a specific result
+PASS #56 Test that a WebAssembly code returns a specific result
+PASS #57 Test that WebAssembly instantiation succeeds
+PASS #58 Run a WebAssembly test without special assertions
+PASS #59 Test that a WebAssembly code returns a specific result
+PASS #60 Test that a WebAssembly code returns a specific result
+PASS #61 Test that a WebAssembly code returns a specific result
+PASS #62 Test that a WebAssembly code returns a specific result
+PASS #63 Test that a WebAssembly code returns a specific result
+PASS #64 Test that a WebAssembly code returns a specific result
+PASS #65 Test that a WebAssembly code returns a specific result
+PASS #66 Test that a WebAssembly code returns a specific result
+PASS #67 Test that a WebAssembly code returns a specific result
+PASS #68 Test that a WebAssembly code returns a specific result
+PASS #69 Test that a WebAssembly code returns a specific result
+PASS #70 Test that a WebAssembly code returns a specific result
+PASS #71 Test that a WebAssembly code returns a specific result
+PASS #72 Test that a WebAssembly code returns a specific result
+PASS #73 Test that a WebAssembly code returns a specific result
+PASS #74 Test that a WebAssembly code returns a specific result
+PASS #75 Test that a WebAssembly code returns a specific result
+PASS #76 Test that a WebAssembly code returns a specific result
+PASS #77 Test that a WebAssembly code returns a specific result
+PASS #78 Test that a WebAssembly code returns a specific result
+PASS #79 Test that WebAssembly instantiation succeeds
+PASS #80 Run a WebAssembly test without special assertions
+PASS #81 Test that WebAssembly instantiation succeeds
+PASS #82 Run a WebAssembly test without special assertions
+PASS #83 Test that a WebAssembly code returns a specific result
+PASS #84 Test that a WebAssembly code returns a specific result
+PASS #85 Test that a WebAssembly code returns a specific result
+PASS #86 Test that a WebAssembly code returns a specific result
+PASS #87 Test that WebAssembly instantiation succeeds
+PASS #88 Run a WebAssembly test without special assertions
+PASS #89 Test that a WebAssembly code returns a specific result
+PASS #90 Test that WebAssembly instantiation succeeds
+PASS #91 Run a WebAssembly test without special assertions
+PASS #92 Test that a WebAssembly code returns a specific result
+PASS #93 Test that a WebAssembly code returns a specific result
+PASS #94 Test that a WebAssembly code returns a specific result
+PASS #95 Test that a WebAssembly code returns a specific result
+PASS #96 Test that a WebAssembly code returns a specific result
+PASS #97 Test that WebAssembly compilation fails
+PASS #98 Test that WebAssembly compilation fails
+PASS #99 Test that WebAssembly compilation fails
+PASS #100 Test that WebAssembly compilation fails
+PASS #101 Test that WebAssembly compilation fails
+PASS #102 Test that WebAssembly compilation fails
+PASS #103 Test that WebAssembly compilation fails
+PASS #104 Test that WebAssembly compilation fails
+PASS #105 Test that WebAssembly compilation fails
+PASS #106 Test that WebAssembly compilation fails
+PASS #107 Test that WebAssembly compilation fails
+PASS #108 Test that WebAssembly compilation fails
+PASS #109 Test that WebAssembly compilation fails
+PASS #110 Test that WebAssembly compilation fails
+PASS #111 Test that WebAssembly compilation fails
+PASS #112 Test that WebAssembly compilation fails
+PASS #113 Test that WebAssembly compilation fails
+PASS #114 Test that WebAssembly compilation fails
+PASS #115 Test that WebAssembly compilation fails
+PASS #116 Test that WebAssembly compilation fails
+

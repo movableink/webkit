@@ -27,6 +27,7 @@
 
 #include <array>
 #include <cassert>
+#include <ranges>
 #include <string>
 
 static const size_t headerSize = 12;
@@ -834,7 +835,7 @@ private:
     void appendGSUBTable()
     {
         std::vector<Feature> features {{{"liga"}, 3}, {{"clig"}, 4}, {{"dlig"}, 5}, {{"hlig"}, 6}, {{"calt"}, 7}, {{"subs"}, 8}, {{"sups"}, 9}, {{"smcp"}, 10}, {{"c2sc"}, 11}, {{"pcap"}, 12}, {{"c2pc"}, 13}, {{"unic"}, 14}, {{"titl"}, 15}, {{"lnum"}, 16}, {{"onum"}, 17}, {{"pnum"}, 18}, {{"tnum"}, 19}, {{"frac"}, 20}, {{"afrc"}, 21}, {{"ordn"}, 22}, {{"zero"}, 23}, {{"hist"}, 24}, {{"jp78"}, 25}, {{"jp83"}, 26}, {{"jp90"}, 27}, {{"jp04"}, 28}, {{"smpl"}, 29}, {{"trad"}, 30}, {{"fwid"}, 31}, {{"pwid"}, 32}, {{"ruby"}, 33}};
-        std::sort(features.begin(), features.end());
+        std::ranges::sort(features);
         auto tableLocation = result.size();
         auto headerSize = 10;
 
@@ -1137,7 +1138,7 @@ private:
             for (FeatureSelector& selector : type.selectors)
                 nameRecords.push_back({ static_cast<uint16_t>(m_baseStringIndex + selector.stringIndex), selector.name });
         }
-        std::sort(nameRecords.begin(), nameRecords.end());
+        std::ranges::sort(nameRecords);
 
         for (auto& nameRecord : nameRecords)
             appendNameSubtable(nameRecord);

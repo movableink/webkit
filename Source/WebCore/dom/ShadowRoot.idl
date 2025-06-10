@@ -34,7 +34,7 @@
     readonly attribute boolean delegatesFocus;
     [ImplementedAs=slotAssignmentMode] readonly attribute SlotAssignmentMode slotAssignment;
     [ImplementedAs=isClonable] readonly attribute boolean clonable;
-    [EnabledBySetting=DeclarativeShadowRootsSerializerAPIsEnabled] readonly attribute boolean serializable;
+    readonly attribute boolean serializable;
     readonly attribute Element host;
     [EnabledBySetting=ScopedCustomElementRegistryEnabled, ImplementedAs=registryForBindings] readonly attribute CustomElementRegistry? customElementRegistry;
     [EnabledBySetting=ShadowRootReferenceTargetEnabled] attribute [AtomString] DOMString referenceTarget;

@@ -26,9 +26,12 @@
 #pragma once
 
 #include "Connection.h"
+#include "LLVMProfiling.h"
 #include "MessageReceiverMap.h"
 #include "MessageSender.h"
 #include "SandboxExtension.h"
+#include <JavaScriptCore/LLVMProfiling.h>
+#include <WebCore/LLVMProfiling.h>
 #include <WebCore/ProcessIdentifier.h>
 #include <WebCore/UserActivity.h>
 #include <wtf/AbstractRefCounted.h>
@@ -152,19 +155,20 @@ protected:
 #endif
 
 #if ENABLE(CFPREFS_DIRECT_MODE)
-    static id decodePreferenceValue(const std::optional<String>& encodedValue);
+    static RetainPtr<id> decodePreferenceValue(const std::optional<String>& encodedValue);
     static void setPreferenceValue(const String& domain, const String& key, id value);
     virtual void handlePreferenceChange(const String& domain, const String& key, id value);
     virtual void dispatchSimulatedNotificationsForPreferenceChange(const String& key) { }
     virtual void accessibilitySettingsDidChange() { }
 #endif
 
-    void applyProcessCreationParameters(const AuxiliaryProcessCreationParameters&);
+    void applyProcessCreationParameters(AuxiliaryProcessCreationParameters&&);
 
 #if PLATFORM(MAC)
     static void openDirectoryCacheInvalidated(SandboxExtension::Handle&&);
 #endif
 
+    void grantAccessToContainerTempDirectory(const SandboxExtension::Handle&);
     void populateMobileGestaltCache(std::optional<SandboxExtension::Handle>&& mobileGestaltExtensionHandle);
 
 #if HAVE(AUDIO_COMPONENT_SERVER_REGISTRATIONS)

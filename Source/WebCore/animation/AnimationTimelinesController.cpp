@@ -43,7 +43,7 @@
 #include "ViewTimeline.h"
 #include "WebAnimation.h"
 #include "WebAnimationTypes.h"
-#include <JavaScriptCore/VM.h>
+#include <ranges>
 #include <wtf/HashSet.h>
 #include <wtf/Ref.h>
 #include <wtf/text/TextStream.h>
@@ -83,10 +83,15 @@ void AnimationTimelinesController::removeTimeline(AnimationTimeline& timeline)
 
 void AnimationTimelinesController::detachFromDocument()
 {
-    m_currentTimeClearingTaskCancellationGroup.cancel();
+    m_pendingAnimationsProcessingTaskCancellationGroup.cancel();
 
     while (RefPtr timeline = m_timelines.takeAny())
         timeline->detachFromDocument();
+}
+
+void AnimationTimelinesController::addPendingAnimation(WebAnimation& animation)
+{
+    m_pendingAnimations.add(animation);
 }
 
 void AnimationTimelinesController::updateAnimationsAndSendEvents(ReducedResolutionSeconds timestamp)
@@ -119,6 +124,7 @@ void AnimationTimelinesController::updateAnimationsAndSendEvents(ReducedResoluti
     m_frameRateAligner.beginUpdate(timestamp, previousTimelineFrameRate);
 
     // 1. Update the current time of all timelines associated with document passing now as the timestamp.
+    ASSERT(m_updatedScrollTimelines.isEmpty());
     Vector<Ref<AnimationTimeline>> timelinesToUpdate;
     Vector<Ref<WebAnimation>> animationsToRemove;
     Vector<Ref<CSSTransition>> completedTransitions;
@@ -128,6 +134,10 @@ void AnimationTimelinesController::updateAnimationsAndSendEvents(ReducedResoluti
             continue;
 
         timelinesToUpdate.append(timeline.copyRef());
+
+        // https://drafts.csswg.org/scroll-animations-1/#event-loop
+        if (RefPtr scrollTimeline = dynamicDowncast<ScrollTimeline>(timeline))
+            m_updatedScrollTimelines.append(*scrollTimeline);
 
         for (auto& animation : copyToVector(timeline->relevantAnimations())) {
             if (animation->isSkippedContentAnimation())
@@ -198,22 +208,21 @@ void AnimationTimelinesController::updateAnimationsAndSendEvents(ReducedResoluti
     // 3. Perform a microtask checkpoint.
     protectedDocument()->eventLoop().performMicrotaskCheckpoint();
 
-    // 4. Let events to dispatch be a copy of doc's pending animation event queue.
-    // 5. Clear doc's pending animation event queue.
-    AnimationEvents events;
-    for (auto& timeline : timelinesToUpdate) {
-        if (RefPtr documentTimeline = dynamicDowncast<DocumentTimeline>(timeline))
-            events.appendVector(documentTimeline->prepareForPendingAnimationEventsDispatch());
+    if (RefPtr documentTimeline = m_document->existingTimeline()) {
+        // FIXME: pending animation events should be owned by this controller rather
+        // than the document timeline.
+
+        // 4. Let events to dispatch be a copy of doc's pending animation event queue.
+        // 5. Clear doc's pending animation event queue.
+        auto events = documentTimeline->prepareForPendingAnimationEventsDispatch();
+
+        // 6. Perform a stable sort of the animation events in events to dispatch as follows.
+        std::ranges::stable_sort(events, compareAnimationEventsByCompositeOrder);
+
+        // 7. Dispatch each of the events in events to dispatch at their corresponding target using the order established in the previous step.
+        for (auto& event : events)
+            event->target()->dispatchEvent(event);
     }
-
-    // 6. Perform a stable sort of the animation events in events to dispatch as follows.
-    std::stable_sort(events.begin(), events.end(), [] (const Ref<AnimationEventBase>& lhs, const Ref<AnimationEventBase>& rhs) {
-        return compareAnimationEventsByCompositeOrder(lhs.get(), rhs.get());
-    });
-
-    // 7. Dispatch each of the events in events to dispatch at their corresponding target using the order established in the previous step.
-    for (auto& event : events)
-        event->target()->dispatchEvent(event);
 
     // This will cancel any scheduled invalidation if we end up removing all animations.
     for (auto& animation : animationsToRemove) {
@@ -237,6 +246,14 @@ void AnimationTimelinesController::updateAnimationsAndSendEvents(ReducedResoluti
         if (RefPtr documentTimeline = dynamicDowncast<DocumentTimeline>(timeline))
             documentTimeline->documentDidUpdateAnimationsAndSendEvents();
     }
+}
+
+void AnimationTimelinesController::updateStaleScrollTimelines()
+{
+    // https://drafts.csswg.org/scroll-animations-1/#event-loop
+    auto scrollTimelines = std::exchange(m_updatedScrollTimelines, { });
+    for (auto scrollTimeline : scrollTimelines)
+        scrollTimeline->updateCurrentTimeIfStale();
 }
 
 std::optional<Seconds> AnimationTimelinesController::timeUntilNextTickForAnimationsWithFrameRate(FramesPerSecond frameRate) const
@@ -291,35 +308,41 @@ std::optional<Seconds> AnimationTimelinesController::currentTime()
 
 void AnimationTimelinesController::cacheCurrentTime(ReducedResolutionSeconds newCurrentTime)
 {
-    m_cachedCurrentTime = newCurrentTime;
-    // We want to be sure to keep this time cached until we've both finished running JS and finished updating
-    // animations, so we schedule the invalidation task and register a whenIdle callback on the VM, which will
-    // fire syncronously if no JS is running.
-    m_waitingOnVMIdle = true;
-    if (!m_currentTimeClearingTaskCancellationGroup.hasPendingTask()) {
-        CancellableTask task(m_currentTimeClearingTaskCancellationGroup, std::bind(&AnimationTimelinesController::maybeClearCachedCurrentTime, this));
-        m_document->eventLoop().queueTask(TaskSource::InternalAsyncTask, WTFMove(task));
+    if (m_cachedCurrentTime == newCurrentTime)
+        return;
+
+    // We can get in a situation where the event loop will not run a task that had been enqueued.
+    // If that is the case, we must clear the task group and run the callback prior to adding a
+    // new task.
+    if (m_pendingAnimationsProcessingTaskCancellationGroup.hasPendingTask() && m_cachedCurrentTime) {
+        m_pendingAnimationsProcessingTaskCancellationGroup.cancel();
+        processPendingAnimations();
     }
 
-    // AnimationTimelinesController is owned by Document.
-    m_document->vm().whenIdle([this, weakDocument = WeakPtr<Document, WeakPtrImplWithEventTargetData> { m_document }]() {
-        RefPtr document = weakDocument.get();
-        if (!document)
-            return;
+    m_cachedCurrentTime = newCurrentTime;
 
-        m_waitingOnVMIdle = false;
-        maybeClearCachedCurrentTime();
-    });
+    // As we've advanced to a new current time, we want all animations created during this run
+    // loop to have this newly-cached current time as their start time. To that end, we schedule
+    // a task to set that current time on all animations created until then as their pending
+    // start time.
+    if (!m_pendingAnimationsProcessingTaskCancellationGroup.hasPendingTask()) {
+        CancellableTask task(m_pendingAnimationsProcessingTaskCancellationGroup, std::bind(&AnimationTimelinesController::processPendingAnimations, this));
+        m_document->eventLoop().queueTask(TaskSource::InternalAsyncTask, WTFMove(task));
+    }
 }
 
-void AnimationTimelinesController::maybeClearCachedCurrentTime()
+void AnimationTimelinesController::processPendingAnimations()
 {
-    // We want to make sure we only clear the cached current time if we're not currently running
-    // JS or waiting on all current animation updating code to have completed. This is so that
-    // we're guaranteed to have a consistent current time reported for all work happening in a given
-    // JS frame or throughout updating animations in WebCore.
-    if (!m_isSuspended && !m_waitingOnVMIdle && !m_currentTimeClearingTaskCancellationGroup.hasPendingTask())
-        m_cachedCurrentTime = std::nullopt;
+    if (m_isSuspended || !m_cachedCurrentTime)
+        return;
+
+    ASSERT(!m_pendingAnimationsProcessingTaskCancellationGroup.hasPendingTask());
+
+    auto pendingAnimations = std::exchange(m_pendingAnimations, { });
+    for (Ref pendingAnimation : pendingAnimations) {
+        if (pendingAnimation->timeline() && pendingAnimation->timeline()->isMonotonic())
+            pendingAnimation->setPendingStartTime(*m_cachedCurrentTime);
+    }
 }
 
 bool AnimationTimelinesController::isPendingTimelineAttachment(const WebAnimation& animation) const

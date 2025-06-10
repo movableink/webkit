@@ -64,6 +64,8 @@ public:
     }
 
     Object* at(size_t i) const { return m_elements[i].get(); }
+    RefPtr<Object> protectedAt(size_t i) const { return m_elements[i]; }
+
     size_t size() const { return m_elements.size(); }
 
     const Vector<RefPtr<Object>>& elements() const { return m_elements; }

@@ -83,24 +83,24 @@ static void runTest()
     NSString *existingDatabaseName = @"IndexedDBTest";
     NSString *createdDatabaseName = @"IndexedDBOther";
     NSString *unusedDatabaseName = @"IndexedDBUnused";
-    NSString *existingDatbaseHash = WebCore::SQLiteFileSystem::computeHashForFileName(String { existingDatabaseName });
-    NSString *createdDatabaseHash = WebCore::SQLiteFileSystem::computeHashForFileName(String { createdDatabaseName });
-    NSString *unusedDatabaseHash = WebCore::SQLiteFileSystem::computeHashForFileName(String { createdDatabaseName });
+    RetainPtr existingDatbaseHash = WebCore::SQLiteFileSystem::computeHashForFileName(String { existingDatabaseName }).createNSString();
+    RetainPtr createdDatabaseHash = WebCore::SQLiteFileSystem::computeHashForFileName(String { createdDatabaseName }).createNSString();
+    RetainPtr unusedDatabaseHash = WebCore::SQLiteFileSystem::computeHashForFileName(String { createdDatabaseName }).createNSString();
     NSURL *idbRootURL = [websiteDataStoreConfiguration.get() _indexedDBDatabaseDirectory];
     NSURL *oldVersionDirectoryURL = [idbRootURL URLByAppendingPathComponent:@"v0"];
     NSURL *newVersionDirectoryURL = [idbRootURL URLByAppendingPathComponent:@"v1"];
     NSURL *oldVersionOriginDirectoryURL = [oldVersionDirectoryURL URLByAppendingPathComponent: @"file__0"];
     NSURL *newVersionOriginDirectoryURL = [newVersionDirectoryURL URLByAppendingPathComponent: @"file__0"];
     NSURL *oldVersionUnusedDatabaseDirectoryURL = [oldVersionOriginDirectoryURL URLByAppendingPathComponent:unusedDatabaseName];
-    NSURL *newVersionUnusedDatabaseDirectoryURL = [newVersionOriginDirectoryURL URLByAppendingPathComponent:unusedDatabaseHash];
+    NSURL *newVersionUnusedDatabaseDirectoryURL = [newVersionOriginDirectoryURL URLByAppendingPathComponent:unusedDatabaseHash.get()];
     EXPECT_FALSE([[NSFileManager defaultManager] fileExistsAtPath:oldVersionUnusedDatabaseDirectoryURL.path]);
     EXPECT_TRUE([[NSFileManager defaultManager] fileExistsAtPath:newVersionUnusedDatabaseDirectoryURL.path]);
     
     // For database that is opened after upgrade, its file should only be in v1.
     NSURL *oldVersionExistingDatabaseDirectoryURL = [oldVersionOriginDirectoryURL URLByAppendingPathComponent: existingDatabaseName];
-    NSURL *newVersionExistingDatabaseDirectoryURL = [newVersionOriginDirectoryURL URLByAppendingPathComponent: existingDatbaseHash];
+    NSURL *newVersionExistingDatabaseDirectoryURL = [newVersionOriginDirectoryURL URLByAppendingPathComponent: existingDatbaseHash.get()];
     NSURL *oldVersionCreatedDatabaseDirectoryURL = [oldVersionOriginDirectoryURL URLByAppendingPathComponent: createdDatabaseName];
-    NSURL *newVersionCreatedDatabaseDirectoryURL = [newVersionOriginDirectoryURL URLByAppendingPathComponent: createdDatabaseHash];
+    NSURL *newVersionCreatedDatabaseDirectoryURL = [newVersionOriginDirectoryURL URLByAppendingPathComponent: createdDatabaseHash.get()];
     EXPECT_FALSE([defaultFileManager fileExistsAtPath:oldVersionExistingDatabaseDirectoryURL.path]);
     EXPECT_TRUE([defaultFileManager fileExistsAtPath:newVersionExistingDatabaseDirectoryURL.path]);
     EXPECT_FALSE([defaultFileManager fileExistsAtPath:oldVersionCreatedDatabaseDirectoryURL.path]);
@@ -168,7 +168,7 @@ static void createDirectories(StringView testName)
         return;
 
     [defaultFileManager removeItemAtURL:existingDatabaseDirectoryURL.get() error:nil];
-    RetainPtr v1ExistingDatabaseDirectoryURL = [NSURL fileURLWithPath:[NSString pathWithComponents:@[idbRootURL.get().path, newVersion.get(), fileOrigin.get(), existingDatabaseHash]]];
+    RetainPtr v1ExistingDatabaseDirectoryURL = [NSURL fileURLWithPath:[NSString pathWithComponents:@[idbRootURL.get().path, newVersion.get(), fileOrigin.get(), existingDatabaseHash.createNSString().get()]]];
     [defaultFileManager createDirectoryAtURL:v1ExistingDatabaseDirectoryURL.get() withIntermediateDirectories:YES attributes:nil error:&error];
     EXPECT_NULL(error);
     [defaultFileManager copyItemAtURL:resourceDatabaseFileURL.get() toURL:[v1ExistingDatabaseDirectoryURL URLByAppendingPathComponent:@"IndexedDB.sqlite3"] error:&error];
@@ -181,7 +181,7 @@ static void createDirectories(StringView testName)
     EXPECT_NULL(error);
     [defaultFileManager copyItemAtURL:resourceDatabaseFileURL.get() toURL:[appleDatabaseDirectoryURL URLByAppendingPathComponent:@"IndexedDB.sqlite3"] error:&error];
     EXPECT_NULL(error);
-    RetainPtr v1WebKitOriginDatabaseDirectoryURL = [NSURL fileURLWithPath:[NSString pathWithComponents:@[idbRootURL.get().path, newVersion.get(), @"https_webkit.org_0", existingDatabaseHash]]];
+    RetainPtr v1WebKitOriginDatabaseDirectoryURL = [NSURL fileURLWithPath:[NSString pathWithComponents:@[idbRootURL.get().path, newVersion.get(), @"https_webkit.org_0", existingDatabaseHash.createNSString().get()]]];
     [defaultFileManager createDirectoryAtURL:v1WebKitOriginDatabaseDirectoryURL.get() withIntermediateDirectories:YES attributes:nil error:&error];
     EXPECT_NULL(error);
     [defaultFileManager copyItemAtURL:resourceDatabaseFileURL.get() toURL:[v1WebKitOriginDatabaseDirectoryURL URLByAppendingPathComponent:@"IndexedDB.sqlite3"] error:&error];
@@ -189,8 +189,8 @@ static void createDirectories(StringView testName)
     if (testName == "API"_s)
         return;
 
-    EXPECT_WK_STREQ("collision", testName.toString());
-    RetainPtr v1CreatedDatabaseDirectoryURL = [NSURL fileURLWithPath:[NSString pathWithComponents:@[idbRootURL.get().path, newVersion.get(), fileOrigin.get(), createdDatabaseHash]]];
+    EXPECT_WK_STREQ("collision", testName.utf8().data());
+    RetainPtr v1CreatedDatabaseDirectoryURL = [NSURL fileURLWithPath:[NSString pathWithComponents:@[idbRootURL.get().path, newVersion.get(), fileOrigin.get(), createdDatabaseHash.createNSString().get()]]];
     [defaultFileManager createDirectoryAtURL:v1CreatedDatabaseDirectoryURL.get() withIntermediateDirectories:YES attributes:nil error:&error];
     EXPECT_NULL(error);
     [defaultFileManager copyItemAtURL:resourceDatabaseFileURL.get() toURL:[v1CreatedDatabaseDirectoryURL URLByAppendingPathComponent:@"IndexedDB.sqlite3"] error:&error];

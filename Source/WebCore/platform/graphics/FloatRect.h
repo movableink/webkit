@@ -194,7 +194,8 @@ public:
     WEBCORE_EXPORT void unite(const FloatRect&);
     void uniteEvenIfEmpty(const FloatRect&);
     void uniteIfNonZero(const FloatRect&);
-    WEBCORE_EXPORT void extend(const FloatPoint&);
+    WEBCORE_EXPORT void extend(FloatPoint);
+    void extend(FloatPoint minPoint, FloatPoint maxPoint);
 
     // Note, this doesn't match what IntRect::contains(IntPoint&) does; the int version
     // is really checking for containment of 1x1 rect, but that doesn't make sense with floats.

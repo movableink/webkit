@@ -30,7 +30,7 @@ struct WebKit::FrameInfoData {
     WebCore::ResourceRequest request;
     WebCore::SecurityOriginData securityOrigin;
     String frameName;
-    Markable<WebCore::FrameIdentifier> frameID;
+    WebCore::FrameIdentifier frameID;
     Markable<WebCore::FrameIdentifier> parentFrameID;
     Markable<WebCore::ScriptExecutionContextIdentifier> documentID;
     WebCore::CertificateInfo certificateInfo;

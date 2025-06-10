@@ -224,17 +224,7 @@ void CSSToStyleMap::mapFillXPosition(CSSPropertyID propertyID, FillLayer& layer,
         layer.setXPosition(FillLayer::initialFillXPosition(layer.type()));
         return;
     }
-
-    Length length;
-    if (value.isPair()) {
-        ASSERT_UNUSED(propertyID, propertyID == CSSPropertyBackgroundPositionX || propertyID == CSSPropertyWebkitMaskPositionX);
-        length = Style::BuilderConverter::convertLength(m_builderState, value.second());
-    } else
-        length = Style::BuilderConverter::convertPositionComponentX(m_builderState, value);
-
-    layer.setXPosition(length);
-    if (value.isPair())
-        layer.setBackgroundXOrigin(fromCSSValue<Edge>(value.first()));
+    layer.setXPosition(Style::BuilderConverter::convertPositionComponentX(m_builderState, value));
 }
 
 void CSSToStyleMap::mapFillYPosition(CSSPropertyID propertyID, FillLayer& layer, const CSSValue& value)
@@ -243,17 +233,7 @@ void CSSToStyleMap::mapFillYPosition(CSSPropertyID propertyID, FillLayer& layer,
         layer.setYPosition(FillLayer::initialFillYPosition(layer.type()));
         return;
     }
-
-    Length length;
-    if (value.isPair()) {
-        ASSERT_UNUSED(propertyID, propertyID == CSSPropertyBackgroundPositionY || propertyID == CSSPropertyWebkitMaskPositionY);
-        length = Style::BuilderConverter::convertLength(m_builderState, value.second());
-    } else
-        length = Style::BuilderConverter::convertPositionComponentY(m_builderState, value);
-
-    layer.setYPosition(length);
-    if (value.isPair())
-        layer.setBackgroundYOrigin(fromCSSValue<Edge>(value.first()));
+    layer.setYPosition(Style::BuilderConverter::convertPositionComponentY(m_builderState, value));
 }
 
 void CSSToStyleMap::mapFillMaskMode(CSSPropertyID propertyID, FillLayer& layer, const CSSValue& value)
@@ -599,10 +579,15 @@ void CSSToStyleMap::mapNinePieceImageSlice(const CSSBorderImageSliceValue& value
 {
     // Set up a length box to represent our image slices.
     auto& conversionData = m_builderState.cssToLengthConversionData();
-    auto side = [&](const CSSPrimitiveValue& value) -> Length {
-        if (value.isPercentage())
-            return { value.resolveAsPercentage(conversionData), LengthType::Percent };
-        return { value.resolveAsNumber<int>(conversionData), LengthType::Fixed };
+    auto side = [&](const CSSValue& value) -> Length {
+        RefPtr primitive = dynamicDowncast<CSSPrimitiveValue>(value);
+        if (!primitive) {
+            m_builderState.setCurrentPropertyInvalidAtComputedValueTime();
+            return { };
+        }
+        if (primitive->isPercentage())
+            return { primitive->resolveAsPercentage(conversionData), LengthType::Percent };
+        return { primitive->resolveAsNumber<int>(conversionData), LengthType::Fixed };
     };
     auto& slices = value.slices();
     image.setImageSlices({
@@ -633,7 +618,7 @@ void CSSToStyleMap::mapNinePieceImageWidth(const CSSBorderImageWidthValue& value
 
 LengthBox CSSToStyleMap::mapNinePieceImageQuad(const CSSValue& value)
 {
-    if (LIKELY(value.isQuad()))
+    if (value.isQuad()) [[likely]]
         return mapNinePieceImageQuad(value.quad());
 
     // Values coming from CSS Typed OM may not have been converted to a Quad yet.

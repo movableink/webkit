@@ -35,8 +35,8 @@ struct BoundaryPoint {
 
     BoundaryPoint(Ref<Node>&&, unsigned);
 
-    Document& document() const;
-    WEBCORE_EXPORT Ref<Document> protectedDocument() const;
+    inline Document& document() const; // Defined in BoundaryPointInlines.h
+    inline Ref<Document> protectedDocument() const; // Defined in BoundaryPointInlines.h
 };
 
 bool operator==(const BoundaryPoint&, const BoundaryPoint&);
@@ -57,11 +57,6 @@ inline BoundaryPoint::BoundaryPoint(Ref<Node>&& container, unsigned offset)
     : container(WTFMove(container))
     , offset(offset)
 {
-}
-
-inline Document& BoundaryPoint::document() const
-{
-    return container->document();
 }
 
 inline bool operator==(const BoundaryPoint& a, const BoundaryPoint& b)

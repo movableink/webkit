@@ -59,6 +59,21 @@ using namespace fido;
 using UVAvailability = AuthenticatorSupportedOptions::UserVerificationAvailability;
 
 namespace {
+
+static Vector<Vector<PublicKeyCredentialDescriptor>> batchesForCredentials(Vector<PublicKeyCredentialDescriptor> credentials, uint32_t maxBatchSize, std::optional<uint32_t> maxCredentialIDLength)
+{
+    Vector<Vector<PublicKeyCredentialDescriptor>> batches;
+    for (auto credential : credentials) {
+        if (maxCredentialIDLength && BufferSource { credential.id } .length() > *maxCredentialIDLength)
+            continue;
+        if (!batches.size() || batches.last().size() >= maxBatchSize)
+            batches.append({ });
+        batches.last().append(credential);
+    }
+
+    return batches;
+}
+
 WebAuthenticationStatus toStatus(const CtapDeviceResponseCode& error)
 {
     switch (error) {
@@ -101,8 +116,85 @@ void CtapAuthenticator::makeCredential()
 {
     CTAP_RELEASE_LOG("makeCredential");
     ASSERT(!m_isDowngraded);
+
+    auto& options = std::get<PublicKeyCredentialCreationOptions>(requestData().options);
+    if (options.excludeCredentials.size() > 1) {
+        uint32_t maxBatchSize = 1;
+        if (m_info.maxCredentialIDLength() && m_info.maxCredentialCountInList())
+            maxBatchSize = *m_info.maxCredentialCountInList();
+        m_batches = batchesForCredentials(options.excludeCredentials, maxBatchSize, m_info.maxCredentialIDLength());
+        ASSERT(m_batches.size());
+        if (!m_batches.size())
+            return continueMakeCredentialAfterCheckExcludedCredentials();
+        m_currentBatch = 0;
+        std::optional<PinParameters> pinParameters;
+        if (!m_pinAuth.isEmpty())
+            pinParameters = PinParameters { pin::kProtocolVersion, m_pinAuth };
+        Vector<uint8_t> cborCmd = encodeSilentGetAssertion(options.rp.id, requestData().hash, m_batches[m_currentBatch], pinParameters);
+        protectedDriver()->transact(WTFMove(cborCmd), [weakThis = WeakPtr { *this }](Vector<uint8_t>&& data) {
+            ASSERT(RunLoop::isMain());
+            if (!weakThis)
+                return;
+            weakThis->continueSilentlyCheckCredentials(WTFMove(data), [weakThis = WTFMove(weakThis)] (bool foundMatch) mutable {
+                if (!weakThis)
+                    return;
+                weakThis->continueMakeCredentialAfterCheckExcludedCredentials(foundMatch);
+            });
+        });
+    } else
+        continueMakeCredentialAfterCheckExcludedCredentials();
+}
+
+void CtapAuthenticator::continueSilentlyCheckCredentials(Vector<uint8_t>&& data, CompletionHandler<void(bool)>&& completionHandler)
+{
+    auto error = getResponseCode(data);
+    CTAP_RELEASE_LOG("continueSilentlyCheckCredentials: Got error code: %hhu from authenticator.", enumToUnderlyingType(error));
+
+    if (error == CtapDeviceResponseCode::kSuccess)
+        return completionHandler(true);
+    if (error == CtapDeviceResponseCode::kCtap2ErrNoCredentials) {
+        if (m_currentBatch + 1 >= m_batches.size())
+            return completionHandler(false);
+        m_currentBatch += 1;
+        if (m_currentBatch >= m_batches.size())
+            return continueMakeCredentialAfterCheckExcludedCredentials();
+    } if (isPinError(error)) {
+        if (!m_pinAuth.isEmpty()) {
+            if (RefPtr observer = this->observer())
+                observer->authenticatorStatusUpdated(toStatus(error));
+        }
+        if (tryRestartPin(error))
+            return;
+    }
+
+    Vector<uint8_t> cborCmd;
+    auto response = readCTAPGetAssertionResponse(data, AuthenticatorAttachment::CrossPlatform);
+    std::optional<PinParameters> pinParameters;
+    if (!m_pinAuth.isEmpty())
+        pinParameters = PinParameters { pin::kProtocolVersion, m_pinAuth };
+    WTF::switchOn(requestData().options, [&](const PublicKeyCredentialCreationOptions& options) {
+        cborCmd = encodeSilentGetAssertion(options.rp.id, requestData().hash, m_batches[m_currentBatch], pinParameters);
+    }, [&](const PublicKeyCredentialRequestOptions& options) {
+        cborCmd = encodeSilentGetAssertion(options.rpId, requestData().hash, m_batches[m_currentBatch], pinParameters);
+    });
+
+    protectedDriver()->transact(WTFMove(cborCmd), [weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)](Vector<uint8_t>&& data) mutable {
+        ASSERT(RunLoop::isMain());
+        if (!weakThis)
+            return completionHandler(false);
+        weakThis->continueSilentlyCheckCredentials(WTFMove(data), WTFMove(completionHandler));
+    });
+}
+
+void CtapAuthenticator::continueMakeCredentialAfterCheckExcludedCredentials(bool includeCurrentBatch)
+{
     Vector<uint8_t> cborCmd;
     auto& options = std::get<PublicKeyCredentialCreationOptions>(requestData().options);
+    Vector<PublicKeyCredentialDescriptor> overrideExcludeCredentials;
+    if (includeCurrentBatch) {
+        ASSERT(m_currentBatch < m_batches.size());
+        overrideExcludeCredentials = m_batches[m_currentBatch];
+    }
     auto internalUVAvailability = m_info.options().userVerificationAvailability();
     auto residentKeyAvailability = m_info.options().residentKeyAvailability();
     if (options.authenticatorSelection && options.authenticatorSelection->userVerification == UserVerificationRequirement::Required && !isUVSetup()) {
@@ -117,13 +209,14 @@ void CtapAuthenticator::makeCredential()
         }
         residentKeyAvailability = AuthenticatorSupportedOptions::ResidentKeyAvailability::kNotSupported;
     }
+
     // If UV is required, then either built-in uv or a pin will work.
     if (internalUVAvailability == UVAvailability::kSupportedAndConfigured && (!options.authenticatorSelection || options.authenticatorSelection->userVerification != UserVerificationRequirement::Discouraged) && m_pinAuth.isEmpty())
-        cborCmd = encodeMakeCredentialRequestAsCBOR(requestData().hash, options, internalUVAvailability, residentKeyAvailability, authenticatorSupportedExtensions);
+        cborCmd = encodeMakeCredentialRequestAsCBOR(requestData().hash, options, internalUVAvailability, residentKeyAvailability, authenticatorSupportedExtensions, std::nullopt, m_info.algorithms(), WTFMove(overrideExcludeCredentials));
     else if (m_info.options().clientPinAvailability() == AuthenticatorSupportedOptions::ClientPinAvailability::kSupportedAndPinSet)
-        cborCmd = encodeMakeCredentialRequestAsCBOR(requestData().hash, options, internalUVAvailability, residentKeyAvailability, authenticatorSupportedExtensions, PinParameters { pin::kProtocolVersion, m_pinAuth });
+        cborCmd = encodeMakeCredentialRequestAsCBOR(requestData().hash, options, internalUVAvailability, residentKeyAvailability, authenticatorSupportedExtensions, PinParameters { pin::kProtocolVersion, m_pinAuth }, m_info.algorithms(), WTFMove(overrideExcludeCredentials));
     else
-        cborCmd = encodeMakeCredentialRequestAsCBOR(requestData().hash, options, internalUVAvailability, residentKeyAvailability, authenticatorSupportedExtensions);
+        cborCmd = encodeMakeCredentialRequestAsCBOR(requestData().hash, options, internalUVAvailability, residentKeyAvailability, authenticatorSupportedExtensions, std::nullopt, m_info.algorithms(), WTFMove(overrideExcludeCredentials));
     CTAP_RELEASE_LOG("makeCredential: Sending %s", base64EncodeToString(cborCmd).utf8().data());
     if (m_info.maxMsgSize() && cborCmd.size() >= *m_info.maxMsgSize())
         CTAP_RELEASE_LOG("CtapAuthenticator::makeCredential cmdSize = %lu maxMsgSize = %u", cborCmd.size(), *m_info.maxMsgSize());
@@ -189,19 +282,52 @@ void CtapAuthenticator::continueMakeCredentialAfterResponseReceived(Vector<uint8
 
 void CtapAuthenticator::getAssertion()
 {
+    CTAP_RELEASE_LOG("getAssertion");
+
+    auto& options = std::get<PublicKeyCredentialRequestOptions>(requestData().options);
+    if (options.allowCredentials.size() > 1) {
+        uint32_t maxBatchSize = 1;
+        if (m_info.maxCredentialIDLength() && m_info.maxCredentialCountInList())
+            maxBatchSize = *m_info.maxCredentialCountInList();
+        m_batches = batchesForCredentials(options.allowCredentials, maxBatchSize, m_info.maxCredentialIDLength());
+        ASSERT(m_batches.size());
+        if (!m_batches.size())
+            return continueGetAssertionAfterCheckAllowCredentials();
+        m_currentBatch = 0;
+        Vector<uint8_t> cborCmd = encodeSilentGetAssertion(options.rpId, requestData().hash, m_batches[m_currentBatch], std::nullopt);
+        protectedDriver()->transact(WTFMove(cborCmd), [weakThis = WeakPtr { *this }](Vector<uint8_t>&& data) {
+            ASSERT(RunLoop::isMain());
+            if (!weakThis)
+                return;
+            weakThis->continueSilentlyCheckCredentials(WTFMove(data), [weakThis = WTFMove(weakThis)] (bool) mutable {
+                if (!weakThis)
+                    return;
+                weakThis->continueGetAssertionAfterCheckAllowCredentials();
+            });
+        });
+    } else
+        continueGetAssertionAfterCheckAllowCredentials();
+}
+
+void CtapAuthenticator::continueGetAssertionAfterCheckAllowCredentials()
+{
     ASSERT(!m_isDowngraded);
     Vector<uint8_t> cborCmd;
     auto& options = std::get<PublicKeyCredentialRequestOptions>(requestData().options);
+
     auto internalUVAvailability = m_info.options().userVerificationAvailability();
     Vector<String> authenticatorSupportedExtensions;
+    Vector<PublicKeyCredentialDescriptor> overrideAllowCredentials;
+    if (m_currentBatch < m_batches.size())
+        overrideAllowCredentials = m_batches[m_currentBatch];
     CTAP_RELEASE_LOG("getAssertion uv: %hhu internalUvAvailability %d", options.userVerification, internalUVAvailability);
     // If UV is required, then either built-in uv or a pin will work.
     if (internalUVAvailability == UVAvailability::kSupportedAndConfigured && options.userVerification != UserVerificationRequirement::Discouraged && m_pinAuth.isEmpty())
-        cborCmd = encodeGetAssertionRequestAsCBOR(requestData().hash, options, internalUVAvailability, authenticatorSupportedExtensions);
+        cborCmd = encodeGetAssertionRequestAsCBOR(requestData().hash, options, internalUVAvailability, authenticatorSupportedExtensions, std::nullopt, WTFMove(overrideAllowCredentials));
     else if (m_info.options().clientPinAvailability() == AuthenticatorSupportedOptions::ClientPinAvailability::kSupportedAndPinSet && options.userVerification != UserVerificationRequirement::Discouraged)
-        cborCmd = encodeGetAssertionRequestAsCBOR(requestData().hash, options, internalUVAvailability, authenticatorSupportedExtensions, PinParameters { pin::kProtocolVersion, m_pinAuth });
+        cborCmd = encodeGetAssertionRequestAsCBOR(requestData().hash, options, internalUVAvailability, authenticatorSupportedExtensions, PinParameters { pin::kProtocolVersion, m_pinAuth }, WTFMove(overrideAllowCredentials));
     else
-        cborCmd = encodeGetAssertionRequestAsCBOR(requestData().hash, options, internalUVAvailability, authenticatorSupportedExtensions);
+        cborCmd = encodeGetAssertionRequestAsCBOR(requestData().hash, options, internalUVAvailability, authenticatorSupportedExtensions, std::nullopt, WTFMove(overrideAllowCredentials));
     if (m_info.maxMsgSize() && cborCmd.size() >= *m_info.maxMsgSize())
         CTAP_RELEASE_LOG("getAssertion cmdSize = %lu maxMsgSize = %u", cborCmd.size(), *m_info.maxMsgSize());
     CTAP_RELEASE_LOG("getAssertion: Sending %s", base64EncodeToString(cborCmd).utf8().data());
@@ -328,6 +454,7 @@ void CtapAuthenticator::continueGetKeyAgreementAfterGetRetries(Vector<uint8_t>&&
     auto retries = pin::RetriesResponse::parse(data);
     if (!retries) {
         auto error = getResponseCode(data);
+        CTAP_RELEASE_LOG("continueGetKeyAgreementAfterGetRetries: Error code: %hhu", enumToUnderlyingType(error));
         receiveRespond(ExceptionData { ExceptionCode::UnknownError, makeString("Unknown internal error. Error code: "_s, static_cast<uint8_t>(error)) });
         return;
     }
@@ -431,10 +558,14 @@ bool CtapAuthenticator::tryRestartPin(const CtapDeviceResponseCode& error)
 {
     CTAP_RELEASE_LOG("tryRestartPin: Error code: %hhu", enumToUnderlyingType(error));
     switch (error) {
+    case CtapDeviceResponseCode::kCtap2ErrPinNotSet:
     case CtapDeviceResponseCode::kCtap2ErrPinAuthInvalid:
     case CtapDeviceResponseCode::kCtap2ErrPinInvalid:
     case CtapDeviceResponseCode::kCtap2ErrPinRequired:
-        getRetries();
+        if (m_info.options().clientPinAvailability() == AuthenticatorSupportedOptions::ClientPinAvailability::kSupportedButPinNotSet)
+            performAuthenticatorSelectionForSetupPin();
+        else
+            getRetries();
         return true;
     default:
         return false;

@@ -45,7 +45,7 @@ struct WorkerOptions;
 class SharedWorker final : public AbstractWorker, public ActiveDOMObject, public Identified<SharedWorkerObjectIdentifier> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SharedWorker);
 public:
-    static ExceptionOr<Ref<SharedWorker>> create(Document&, std::variant<RefPtr<TrustedScriptURL>, String>&&, std::optional<std::variant<String, WorkerOptions>>&&);
+    static ExceptionOr<Ref<SharedWorker>> create(Document&, Variant<RefPtr<TrustedScriptURL>, String>&&, std::optional<Variant<String, WorkerOptions>>&&);
     ~SharedWorker();
 
     void ref() const final { AbstractWorker::ref(); }

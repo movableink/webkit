@@ -45,6 +45,11 @@ WebContextMenuProxy::WebContextMenuProxy(WebPageProxy& page, ContextMenuContextD
 
 WebContextMenuProxy::~WebContextMenuProxy() = default;
 
+RefPtr<WebPageProxy> WebContextMenuProxy::protectedPage() const
+{
+    return page();
+}
+
 Vector<Ref<WebContextMenuItem>> WebContextMenuProxy::proposedItems() const
 {
     return WTF::map(m_context.menuItems(), [](auto& item) {

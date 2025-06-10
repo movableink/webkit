@@ -12,6 +12,7 @@
 #include "include/core/SkFourByteTag.h"
 #include "include/core/SkMatrix.h"
 #include "include/core/SkPaint.h"
+#include "include/core/SkPath.h"
 #include "include/core/SkRect.h"
 #include "include/core/SkRefCnt.h"
 #include "include/core/SkScalar.h"
@@ -30,6 +31,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 
 class SkArenaAlloc;
 class SkAutoDescriptor;
@@ -37,7 +39,6 @@ class SkDescriptor;
 class SkDrawable;
 class SkFont;
 class SkMaskFilter;
-class SkPath;
 class SkPathEffect;
 enum class SkFontHinting;
 struct SkFontMetrics;
@@ -214,7 +215,7 @@ public:
                          SkVector* scale, SkMatrix* remaining,
                          SkMatrix* remainingWithoutRotation = nullptr,
                          SkMatrix* remainingRotation = nullptr,
-                         SkMatrix* total = nullptr);
+                         SkMatrix* total = nullptr) const;
 
     SkAxisAlignment computeAxisAlignmentForHText() const;
 
@@ -287,10 +288,10 @@ public:
         kHinting_Mask   = kHintingBit1_Flag | kHintingBit2_Flag,
     };
 
-    SkScalerContext(sk_sp<SkTypeface>, const SkScalerContextEffects&, const SkDescriptor*);
+    SkScalerContext(SkTypeface&, const SkScalerContextEffects&, const SkDescriptor*);
     virtual ~SkScalerContext();
 
-    SkTypeface* getTypeface() const { return fTypeface.get(); }
+    SkTypeface* getTypeface() const { return &fTypeface; }
 
     SkMask::Format getMaskFormat() const {
         return fRec.fMaskFormat;
@@ -343,7 +344,7 @@ public:
     }
 
     static std::unique_ptr<SkScalerContext> MakeEmpty(
-            sk_sp<SkTypeface> typeface, const SkScalerContextEffects& effects,
+            SkTypeface& typeface, const SkScalerContextEffects& effects,
             const SkDescriptor* desc);
 
     static SkDescriptor* AutoDescriptorGivenRecAndEffects(
@@ -381,8 +382,12 @@ public:
         SkScalerContextEffects* effects);
 
 protected:
-    SkScalerContextRec fRec;
+    const SkScalerContextRec fRec;
 
+    struct GeneratedPath {
+        SkPath path;
+        bool modified;
+    };
     struct GlyphMetrics {
         SkVector       advance;
         SkRect         bounds;
@@ -390,7 +395,7 @@ protected:
         uint16_t       extraBits;
         bool           neverRequestPath;
         bool           computeFromPath;
-
+        std::optional<GeneratedPath> generatedPath;
         GlyphMetrics(SkMask::Format format)
             : advance{0, 0}
             , bounds{0, 0, 0, 0}
@@ -398,6 +403,7 @@ protected:
             , extraBits(0)
             , neverRequestPath(false)
             , computeFromPath(false)
+            , generatedPath{std::nullopt}
         {}
     };
 
@@ -422,6 +428,7 @@ protected:
     static void GenerateImageFromPath(
         SkMaskBuilder& dst, const SkPath& path, const SkMaskGamma::PreBlend& maskPreBlend,
         bool doBGR, bool verticalLCD, bool a8FromLCD, bool hairline);
+    void generateImageFromPath(const SkGlyph& glyph, void* imageBuffer);
 
     /** Sets the passed path to the glyph outline.
      *  If this cannot be done the path is set to empty;
@@ -443,9 +450,6 @@ protected:
     /** Retrieves font metrics. */
     virtual void generateFontMetrics(SkFontMetrics*) = 0;
 
-    void forceGenerateImageFromPath() { fGenerateImageFromPath = true; }
-    void forceOffGenerateImageFromPath() { fGenerateImageFromPath = false; }
-
 private:
     friend class PathText;  // For debug purposes
     friend class PathTextBench;  // For debug purposes
@@ -456,8 +460,10 @@ private:
                                             const SkScalerContextEffects&,
                                             const SkDescriptor&);
 
-    // never null
-    sk_sp<SkTypeface> fTypeface;
+    // In order for a SkScalerContext to be in use this typeface must exist.
+    // The SkScalerContext does not keep a reference to this typeface, so this reference may be
+    // a dangling reference when the SkScalerContext is destroyed.
+    SkTypeface& fTypeface;
 
     // optional objects, which may be null
     sk_sp<SkPathEffect> fPathEffect;
@@ -465,9 +471,9 @@ private:
 
     // if this is set, we draw the image from a path, rather than
     // calling generateImage.
-    bool fGenerateImageFromPath;
+    const bool fGenerateImageFromPath;
 
-    void internalGetPath(SkGlyph&, SkArenaAlloc*);
+    void internalGetPath(SkGlyph&, SkArenaAlloc*, std::optional<GeneratedPath>&&);
     SkGlyph internalMakeGlyph(SkPackedGlyphID, SkMask::Format, SkArenaAlloc*);
 
 protected:

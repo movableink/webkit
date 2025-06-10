@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -109,11 +109,11 @@ static String previousWordsFromPositionInSameBlock(unsigned numberOfWords, Visib
         previousPosition = potentialPreviousPosition;
     }
 
-    auto document = startPosition.deepEquivalent().document();
+    RefPtr document = startPosition.deepEquivalent().document();
     if (!document)
         return { };
 
-    auto range = Range::create(*document);
+    Ref range = Range::create(*document);
     RefPtr startNode = previousPosition.deepEquivalent().containerNode();
     range->setStart(startNode.releaseNonNull(), previousPosition.deepEquivalent().computeOffsetInContainerNode());
     RefPtr endNode = startPosition.deepEquivalent().containerNode();
@@ -132,11 +132,11 @@ static String nextWordsFromPositionInSameBlock(unsigned numberOfWords, VisiblePo
         nextPosition = potentialNextPosition;
     }
 
-    auto document = nextPosition.deepEquivalent().document();
+    RefPtr document = nextPosition.deepEquivalent().document();
     if (!document)
         return { };
 
-    auto range = Range::create(*document);
+    Ref range = Range::create(*document);
     RefPtr startNode = startPosition.deepEquivalent().containerNode();
     range->setStart(startNode.releaseNonNull(), startPosition.deepEquivalent().computeOffsetInContainerNode());
     RefPtr endNode = nextPosition.deepEquivalent().containerNode();

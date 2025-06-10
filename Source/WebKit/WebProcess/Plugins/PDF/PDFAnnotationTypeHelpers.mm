@@ -84,8 +84,8 @@ bool annotationCheckerInternal(PDFAnnotation *annotation, Type type, AnnotationT
 template <typename Type>
 bool annotationCheckerInternal(PDFAnnotation *annotation, std::initializer_list<Type>&& types, AnnotationToTypeConverter<Type> converter)
 {
-    auto checker = [annotation, converter = WTFMove(converter)](auto&& type) {
-        return annotationCheckerInternal(annotation, std::forward<decltype(type)>(type), WTFMove(converter));
+    auto checker = [annotation = RetainPtr { annotation }, converter = WTFMove(converter)](auto&& type) {
+        return annotationCheckerInternal(annotation.get(), std::forward<decltype(type)>(type), WTFMove(converter));
     };
     ASSERT(std::ranges::count_if(types, checker) <= 1);
     return std::ranges::any_of(WTFMove(types), WTFMove(checker));

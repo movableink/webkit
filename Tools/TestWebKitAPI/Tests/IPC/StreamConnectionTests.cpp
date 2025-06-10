@@ -55,7 +55,7 @@ struct MockStreamTestMessage1 {
     static constexpr bool isStreamEncodable = true;
     static constexpr bool isStreamBatched = false;
     static constexpr IPC::MessageName name()  { return IPC::MessageName::IPCStreamTester_EmptyMessage; }
-    std::tuple<> arguments() { return { }; }
+    template<typename Encoder> void encode(Encoder&) { }
 };
 
 struct MockStreamTestMessage2 {
@@ -66,7 +66,12 @@ struct MockStreamTestMessage2 {
         : semaphore(WTFMove(s))
     {
     }
-    std::tuple<IPC::Semaphore> arguments() { return { WTFMove(semaphore) }; }
+    template<typename Encoder>
+    void encode(Encoder& encoder)
+    {
+        encoder << WTFMove(semaphore);
+    }
+
     IPC::Semaphore semaphore;
 };
 
@@ -77,7 +82,13 @@ struct MockStreamTestMessageWithAsyncReply1 {
     static constexpr IPC::MessageName name()  { return IPC::MessageName::IPCStreamTester_AsyncPing; }
     // Just using IPCStreamTester_AsyncPingReply as something that is async message name.
     static constexpr IPC::MessageName asyncMessageReplyName() { return IPC::MessageName::IPCStreamTester_AsyncPingReply; }
-    std::tuple<uint64_t> arguments() { return { contents }; }
+
+    template<typename Encoder>
+    void encode(Encoder& encoder)
+    {
+        encoder << contents;
+    }
+
     using ReplyArguments = std::tuple<uint64_t>;
     MockStreamTestMessageWithAsyncReply1(uint64_t contents)
         : contents(contents)
@@ -99,9 +110,10 @@ public:
         : m_arguments(value)
     {
     }
-    auto&& arguments()
+    template<typename Encoder>
+    void encode(Encoder& encoder)
     {
-        return WTFMove(m_arguments);
+        encoder << m_arguments;
     }
 private:
     std::tuple<uint32_t> m_arguments;
@@ -121,9 +133,10 @@ public:
         : m_arguments(value)
     {
     }
-    auto&& arguments()
+    template<typename Encoder>
+    void encode(Encoder& encoder)
     {
-        return WTFMove(m_arguments);
+        encoder << m_arguments;
     }
 private:
     std::tuple<uint32_t> m_arguments;
@@ -143,9 +156,10 @@ public:
         : m_arguments(value)
     {
     }
-    auto&& arguments()
+    template<typename Encoder>
+    void encode(Encoder& encoder)
     {
-        return WTFMove(m_arguments);
+        encoder << m_arguments;
     }
 private:
     std::tuple<uint32_t> m_arguments;

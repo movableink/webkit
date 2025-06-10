@@ -108,7 +108,7 @@ public:
         CompletionHandler<UniqueRef<LocalFrameLoaderClient>(LocalFrame&, FrameLoader&)> clientCreator;
         SandboxFlags effectiveSandboxFlags;
     };
-    using MainFrameCreationParameters = std::variant<LocalMainFrameCreationParameters, CompletionHandler<UniqueRef<RemoteFrameClient>(RemoteFrame&)>>;
+    using MainFrameCreationParameters = Variant<LocalMainFrameCreationParameters, CompletionHandler<UniqueRef<RemoteFrameClient>(RemoteFrame&)>>;
 
     WEBCORE_EXPORT PageConfiguration(
         std::optional<PageIdentifier>,
@@ -140,7 +140,7 @@ public:
         UniqueRef<CryptoClient>&&,
         UniqueRef<ProcessSyncClient>&&
 #if HAVE(DIGITAL_CREDENTIALS_UI)
-        , UniqueRef<CredentialRequestCoordinatorClient>&&
+        , Ref<CredentialRequestCoordinatorClient>&&
 #endif
     );
     WEBCORE_EXPORT ~PageConfiguration();
@@ -242,7 +242,7 @@ public:
 #endif
 
 #if HAVE(DIGITAL_CREDENTIALS_UI)
-    UniqueRef<CredentialRequestCoordinatorClient> credentialRequestCoordinatorClient;
+    Ref<CredentialRequestCoordinatorClient> credentialRequestCoordinatorClient;
 #endif
 };
 

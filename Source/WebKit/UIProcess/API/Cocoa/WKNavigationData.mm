@@ -48,7 +48,7 @@
 
 - (NSString *)title
 {
-    return _data->title();
+    return _data->title().createNSString().autorelease();
 }
 
 - (NSURLRequest *)originalRequest

@@ -54,6 +54,8 @@ enum class ContentChangeType : uint8_t {
 
 class BorderEdge;
 class BorderShape;
+class GraphicsContext;
+class Image;
 class ImageBuffer;
 class RenderTextFragment;
 class StickyPositionViewportConstraints;
@@ -64,6 +66,9 @@ class InlineBoxIterator;
 };
 
 enum class BoxSideFlag : uint8_t;
+enum class DecodingMode : uint8_t;
+enum class InterpolationQuality : uint8_t;
+
 using BoxSideSet = OptionSet<BoxSideFlag>;
 using BorderEdges = RectEdges<BorderEdge>;
 
@@ -244,6 +249,8 @@ public:
 
     RenderBlock* containingBlockForAutoHeightDetection(Length logicalHeight) const;
 
+    void removeOutOfFlowBoxesIfNeededOnStyleChange(RenderBlock& delegateBlock, const RenderStyle& oldStyle, const RenderStyle& newStyle);
+
     struct ContinuationChainNode {
         WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
@@ -260,7 +267,8 @@ public:
     ContinuationChainNode* continuationChainNode() const;
 
 protected:
-    LayoutUnit resolveLengthPercentageUsingContainerLogicalWidth(const Length&) const;
+    LayoutUnit resolveLengthPercentageUsingContainerLogicalWidth(const auto&) const;
+
     virtual void absoluteQuadsIgnoringContinuation(const FloatRect&, Vector<FloatQuad>&, bool* /*wasFixed*/) const { ASSERT_NOT_REACHED(); }
     void collectAbsoluteQuadsForContinuation(Vector<FloatQuad>& quads, bool* wasFixed) const;
 

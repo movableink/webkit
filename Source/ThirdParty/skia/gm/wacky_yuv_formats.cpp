@@ -11,7 +11,6 @@
 #include "include/core/SkCanvas.h"
 #include "include/core/SkColor.h"
 #include "include/core/SkColorFilter.h"
-#include "include/core/SkColorPriv.h"
 #include "include/core/SkColorSpace.h"
 #include "include/core/SkFont.h"
 #include "include/core/SkFontStyle.h"
@@ -44,6 +43,7 @@
 #include "include/private/gpu/ganesh/GrTypesPriv.h"
 #include "include/utils/SkTextUtils.h"
 #include "src/base/SkHalf.h"
+#include "src/core/SkColorPriv.h"
 #include "src/core/SkConvertPixels.h"
 #include "src/core/SkYUVMath.h"
 #include "src/gpu/ganesh/GrCaps.h"
@@ -53,6 +53,10 @@
 #include "tools/ToolUtils.h"
 #include "tools/fonts/FontToolUtils.h"
 #include "tools/gpu/YUVUtils.h"
+
+#if defined(SK_GRAPHITE)
+#include "include/gpu/graphite/Recorder.h"
+#endif
 
 #include <math.h>
 #include <string.h>
@@ -936,10 +940,8 @@ protected:
     }
 
     void onDraw(SkCanvas* canvas) override {
-        auto direct = GrAsDirectContext(canvas->recordingContext());
-#if defined(SK_GRAPHITE)
-        auto recorder = canvas->recorder();
-#endif
+        auto recorder = canvas->baseRecorder();
+        SkASSERT(recorder);
 
         float cellWidth = kTileWidthHeight, cellHeight = kTileWidthHeight;
         if (fUseSubset) {
@@ -990,17 +992,8 @@ protected:
                         // Making a CS-specific version of a kIdentity_SkYUVColorSpace YUV image
                         // doesn't make a whole lot of sense. The colorSpace conversion will
                         // operate on the YUV components rather than the RGB components.
-                        sk_sp<SkImage> csImage;
-#if defined(SK_GRAPHITE)
-                        if (recorder) {
-                            csImage = fImages[opaque][cs][format]->makeColorSpace(
-                                    recorder, fTargetColorSpace, {});
-                        } else
-#endif
-                        {
-                            csImage = fImages[opaque][cs][format]->makeColorSpace(
-                                    direct, fTargetColorSpace);
-                        }
+                        sk_sp<SkImage> csImage = fImages[opaque][cs][format]->makeColorSpace(
+                                recorder, fTargetColorSpace, {});
                         canvas->drawImageRect(csImage, srcRect, dstRect, sampling,
                                               &paint, constraint);
                     } else {

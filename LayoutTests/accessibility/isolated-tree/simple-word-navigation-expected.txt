@@ -36,7 +36,7 @@ Pre word start to next word end: some text
 
 Current character is: t
 Left word is: text
-Right word is: text
+Right word is:
 Pre word start to next word end: text
 
 Current character is: I

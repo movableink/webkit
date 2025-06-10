@@ -329,7 +329,7 @@ FAIL content: attr( |bar ) assert_equals: content raw inline style declaration e
 PASS content: attr(foo-bar, "fallback")
 PASS content: attr(foo_bar, "fallback")
 FAIL content: attr(|bar, "fallback") assert_equals: content raw inline style declaration expected "attr(bar, \"fallback\")" but got ""
-PASS content: attr(foo, "")
+FAIL content: attr(foo, "") assert_equals: content raw inline style declaration expected "attr(foo, \"\")" but got "attr(foo)"
 FAIL content: attr( |foo ,  "" ) assert_equals: content raw inline style declaration expected "attr(foo)" but got ""
 PASS content: inherit
 PASS cursor: auto

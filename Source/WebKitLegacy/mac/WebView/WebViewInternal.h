@@ -35,6 +35,7 @@
 
 #ifdef __cplusplus
 
+#import "TextIndicatorWindow.h"
 #import <WebCore/AlternativeTextClient.h>
 #import <WebCore/DragActions.h>
 #import <WebCore/FindOptions.h>
@@ -45,7 +46,6 @@
 #import <WebCore/ResourceLoaderIdentifier.h>
 #import <WebCore/TextAlternativeWithRange.h>
 #import <WebCore/TextIndicator.h>
-#import <WebCore/TextIndicatorWindow.h>
 #import <WebCore/WebCoreKeyboardUIMode.h>
 #import <functional>
 #import <wtf/Forward.h>

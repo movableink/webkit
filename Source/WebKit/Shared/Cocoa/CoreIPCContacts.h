@@ -94,7 +94,7 @@ private:
 struct CoreIPCContactLabeledValue {
     String identifier;
     String label;
-    std::variant<CoreIPCDateComponents, CoreIPCCNPhoneNumber, CoreIPCCNPostalAddress, CoreIPCString> value;
+    Variant<CoreIPCDateComponents, CoreIPCCNPhoneNumber, CoreIPCCNPostalAddress, CoreIPCString> value;
 
     template <typename T> static bool allValuesAreOfType(const Vector<CoreIPCContactLabeledValue>& values) {
         for (auto& value : values) {

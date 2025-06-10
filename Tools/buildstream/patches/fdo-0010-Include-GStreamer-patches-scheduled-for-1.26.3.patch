@@ -1,0 +1,232 @@
+From c7047f283fe7e29f57330a212db6d94ad2659902 Mon Sep 17 00:00:00 2001
+From: Philippe Normand <philn@igalia.com>
+Date: Wed, 4 Jun 2025 17:32:08 +0200
+Subject: [PATCH] fdo: Include GStreamer patches scheduled for 1.26.3
+
+---
+ ...bin-Encoding-profile-ownership-fixes.patch |  60 +++++++++++
+ ...ke-profile-ownership-explicit-in-Str.patch |  36 +++++++
+ ...n-GstPad-and-GstStructure-leak-fixes.patch | 101 ++++++++++++++++++
+ 3 files changed, 197 insertions(+)
+ create mode 100644 patches/gstreamer/0001-encodebasebin-Encoding-profile-ownership-fixes.patch
+ create mode 100644 patches/gstreamer/0002-encodebasebin-Make-profile-ownership-explicit-in-Str.patch
+ create mode 100644 patches/gstreamer/0003-encodebasebin-GstPad-and-GstStructure-leak-fixes.patch
+
+diff --git a/patches/gstreamer/0001-encodebasebin-Encoding-profile-ownership-fixes.patch b/patches/gstreamer/0001-encodebasebin-Encoding-profile-ownership-fixes.patch
+new file mode 100644
+index 0000000..6db4467
+--- /dev/null
++++ b/patches/gstreamer/0001-encodebasebin-Encoding-profile-ownership-fixes.patch
+@@ -0,0 +1,60 @@
++From 3719b5b616f093ad547892999106f14b0210aea6 Mon Sep 17 00:00:00 2001
++From: Philippe Normand <philn@igalia.com>
++Date: Wed, 4 Jun 2025 12:40:54 +0200
++Subject: [PATCH 1/3] encodebasebin: Encoding profile ownership fixes
++
++The profile argument passed to gst_encode_base_bin_set_profile is now
++transfer-full. This issue was noticed after commit
++6beb709d43d2023e7e5dc8f1ee1323bc28c9d1d8 which fixed profile refcount handling
++in transcodebin.
++
++Driving-by, an encoding profile leak was also fixed in _set_profile, in case
++it's called for an already active element.
++
++Part-of: <https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/9167>
++---
++ .../gst-plugins-base/gst/encoding/gstencodebasebin.c       | 7 +++----
++ 1 file changed, 3 insertions(+), 4 deletions(-)
++
++diff --git a/subprojects/gst-plugins-base/gst/encoding/gstencodebasebin.c b/subprojects/gst-plugins-base/gst/encoding/gstencodebasebin.c
++index 22f482f4e1..db80cd7469 100644
++--- a/subprojects/gst-plugins-base/gst/encoding/gstencodebasebin.c
+++++ b/subprojects/gst-plugins-base/gst/encoding/gstencodebasebin.c
++@@ -482,7 +482,7 @@ gst_encode_base_bin_set_property (GObject * object, guint prop_id,
++   switch (prop_id) {
++     case PROP_PROFILE:
++       gst_encode_base_bin_set_profile (ebin,
++-          (GstEncodingProfile *) g_value_get_object (value));
+++          (GstEncodingProfile *) g_value_dup_object (value));
++       break;
++     case PROP_QUEUE_BUFFERS_MAX:
++       ebin->queue_buffers_max = g_value_get_uint (value);
++@@ -2610,8 +2610,7 @@ gst_encode_base_bin_tear_down_profile (GstEncodeBaseBin * ebin)
++   }
++ 
++   /* free/clear profile */
++-  gst_encoding_profile_unref (ebin->profile);
++-  ebin->profile = NULL;
+++  gst_clear_object (&ebin->profile);
++ }
++ 
++ static gboolean
++@@ -2627,7 +2626,6 @@ gst_encode_base_bin_setup_profile (GstEncodeBaseBin * ebin,
++       gst_encoding_profile_get_type_nick (profile));
++ 
++   ebin->profile = profile;
++-  gst_object_ref (ebin->profile);
++ 
++   /* Create elements */
++   res = create_elements_and_pads (ebin);
++@@ -2648,6 +2646,7 @@ gst_encode_base_bin_set_profile (GstEncodeBaseBin * ebin,
++ 
++   if (G_UNLIKELY (ebin->active)) {
++     GST_WARNING_OBJECT (ebin, "Element already active, can't change profile");
+++    gst_clear_object (&profile);
++     return FALSE;
++   }
++ 
++-- 
++2.49.0
++
+diff --git a/patches/gstreamer/0002-encodebasebin-Make-profile-ownership-explicit-in-Str.patch b/patches/gstreamer/0002-encodebasebin-Make-profile-ownership-explicit-in-Str.patch
+new file mode 100644
+index 0000000..08e0f67
+--- /dev/null
++++ b/patches/gstreamer/0002-encodebasebin-Make-profile-ownership-explicit-in-Str.patch
+@@ -0,0 +1,36 @@
++From 1d20fd15b05b9d5f710def98d8b94650ab8f02e2 Mon Sep 17 00:00:00 2001
++From: Philippe Normand <philn@igalia.com>
++Date: Wed, 4 Jun 2025 12:41:35 +0200
++Subject: [PATCH 2/3] encodebasebin: Make profile ownership explicit in
++ StreamGroup
++
++Part-of: <https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/9167>
++---
++ subprojects/gst-plugins-base/gst/encoding/gstencodebasebin.c | 4 +++-
++ 1 file changed, 3 insertions(+), 1 deletion(-)
++
++diff --git a/subprojects/gst-plugins-base/gst/encoding/gstencodebasebin.c b/subprojects/gst-plugins-base/gst/encoding/gstencodebasebin.c
++index db80cd7469..f7d45a6a18 100644
++--- a/subprojects/gst-plugins-base/gst/encoding/gstencodebasebin.c
+++++ b/subprojects/gst-plugins-base/gst/encoding/gstencodebasebin.c
++@@ -1539,7 +1539,7 @@ _create_stream_group (GstEncodeBaseBin * ebin, GstEncodingProfile * sprof,
++ 
++   sgroup = g_new0 (StreamGroup, 1);
++   sgroup->ebin = ebin;
++-  sgroup->profile = sprof;
+++  sgroup->profile = gst_object_ref (sprof);
++ 
++   /* NOTE for people reading this code:
++    *
++@@ -2564,6 +2564,8 @@ stream_group_free (GstEncodeBaseBin * ebin, StreamGroup * sgroup)
++   if (sgroup->outfilter)
++     gst_bin_remove ((GstBin *) ebin, sgroup->outfilter);
++ 
+++  gst_clear_object (&sgroup->profile);
+++
++   g_free (sgroup);
++ }
++ 
++-- 
++2.49.0
++
+diff --git a/patches/gstreamer/0003-encodebasebin-GstPad-and-GstStructure-leak-fixes.patch b/patches/gstreamer/0003-encodebasebin-GstPad-and-GstStructure-leak-fixes.patch
+new file mode 100644
+index 0000000..6054145
+--- /dev/null
++++ b/patches/gstreamer/0003-encodebasebin-GstPad-and-GstStructure-leak-fixes.patch
+@@ -0,0 +1,101 @@
++From 3b896cd4ea3362a22e767785809f1ec8d221ee7b Mon Sep 17 00:00:00 2001
++From: Philippe Normand <philn@igalia.com>
++Date: Wed, 4 Jun 2025 11:57:38 +0200
++Subject: [PATCH 3/3] encodebasebin: GstPad and GstStructure leak fixes
++
++Part-of: <https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/9167>
++---
++ .../gst/encoding/gstencodebasebin.c           | 28 +++++++++----------
++ 1 file changed, 14 insertions(+), 14 deletions(-)
++
++diff --git a/subprojects/gst-plugins-base/gst/encoding/gstencodebasebin.c b/subprojects/gst-plugins-base/gst/encoding/gstencodebasebin.c
++index f7d45a6a18..a42b9fff5f 100644
++--- a/subprojects/gst-plugins-base/gst/encoding/gstencodebasebin.c
+++++ b/subprojects/gst-plugins-base/gst/encoding/gstencodebasebin.c
++@@ -947,7 +947,7 @@ set_element_properties_from_encoding_profile (GstEncodingProfile * profile,
++   if (!factory) {
++     GST_INFO_OBJECT (profile, "No factory for underlying element, "
++         "not setting properties");
++-    return;
+++    goto done;
++   }
++ 
++   v = gst_structure_get_value (properties, "map");
++@@ -1522,7 +1522,7 @@ _create_stream_group (GstEncodeBaseBin * ebin, GstEncodingProfile * sprof,
++     const gchar * sinkpadname, GstCaps * sinkcaps, gboolean * encoder_not_found)
++ {
++   StreamGroup *sgroup = NULL;
++-  GstPad *sinkpad, *srcpad = NULL, *muxerpad = NULL;
+++  GstPad *sinkpad = NULL, *srcpad = NULL, *muxerpad = NULL;
++   /* Element we will link to the encoder */
++   GstElement *last = NULL;
++   GstElement *encoder = NULL;
++@@ -1751,7 +1751,8 @@ _create_stream_group (GstEncodeBaseBin * ebin, GstEncodingProfile * sprof,
++       gst_bin_add ((GstBin *) ebin, sgroup->smartencoder);
++       srcpad = gst_element_get_static_pad (sgroup->smartencoder, "src");
++       fast_pad_link (srcpad, sinkpad);
++-      gst_object_unref (srcpad);
+++      gst_clear_object (&srcpad);
+++      gst_clear_object (&sinkpad);
++       tosync = g_list_append (tosync, sgroup->smartencoder);
++       sinkpad = gst_element_get_static_pad (sgroup->smartencoder, "sink");
++     }
++@@ -1766,9 +1767,8 @@ _create_stream_group (GstEncodeBaseBin * ebin, GstEncodingProfile * sprof,
++   /* Go straight to splitter */
++   if (G_UNLIKELY (fast_pad_link (srcpad, sinkpad) != GST_PAD_LINK_OK))
++     goto passthrough_link_failure;
++-  gst_object_unref (sinkpad);
++-  gst_object_unref (srcpad);
++-  srcpad = NULL;
+++  gst_clear_object (&sinkpad);
+++  gst_clear_object (&srcpad);
++ 
++   /* Path 2 : Conversion / Encoding */
++ 
++@@ -1786,9 +1786,8 @@ _create_stream_group (GstEncodeBaseBin * ebin, GstEncodingProfile * sprof,
++     srcpad = gst_element_get_static_pad (sgroup->encoder, "src");
++     if (G_UNLIKELY (fast_pad_link (srcpad, sinkpad) != GST_PAD_LINK_OK))
++       goto encoder_link_failure;
++-    gst_object_unref (sinkpad);
++-    gst_object_unref (srcpad);
++-    srcpad = NULL;
+++    gst_clear_object (&sinkpad);
+++    gst_clear_object (&srcpad);
++   }
++ 
++ 
++@@ -1940,6 +1939,8 @@ _create_stream_group (GstEncodeBaseBin * ebin, GstEncodingProfile * sprof,
++   }
++ 
++   /* Link to stream splitter */
+++  gst_clear_object (&sinkpad);
+++  gst_clear_object (&srcpad);
++   sinkpad = gst_element_get_static_pad (last, "sink");
++   srcpad =
++       local_element_request_pad (sgroup->splitter, NULL, "encodingsrc", NULL);
++@@ -1947,9 +1948,8 @@ _create_stream_group (GstEncodeBaseBin * ebin, GstEncodingProfile * sprof,
++     goto no_splitter_srcpad;
++   if (G_UNLIKELY (fast_pad_link (srcpad, sinkpad) != GST_PAD_LINK_OK))
++     goto splitter_encoding_failure;
++-  gst_object_unref (sinkpad);
++-  gst_object_unref (srcpad);
++-  srcpad = NULL;
+++  gst_clear_object (&sinkpad);
+++  gst_clear_object (&srcpad);
++ 
++   /* End of Stream 2 setup */
++ 
++@@ -2054,8 +2054,8 @@ cleanup:
++     gst_caps_unref (format);
++   if (restriction)
++     gst_caps_unref (restriction);
++-  if (srcpad)
++-    gst_object_unref (srcpad);
+++  gst_clear_object (&sinkpad);
+++  gst_clear_object (&srcpad);
++   stream_group_free (ebin, sgroup);
++   g_list_free (tosync);
++   return NULL;
++-- 
++2.49.0
++
+-- 
+2.49.0
+

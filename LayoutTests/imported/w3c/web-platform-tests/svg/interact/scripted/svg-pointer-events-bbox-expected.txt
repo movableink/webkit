@@ -6,10 +6,10 @@ PASS circle1 contains point at (36, 60)
 PASS circle1 contains point at (42, 67)
 PASS circle1 does not contain point at (50, 50)
 PASS circle1 does not contain point at (50, 55)
-FAIL group1 contains point at (100, 100) assert_true: expected true got false
-FAIL group1 contains point at (137, 84) assert_true: expected true got false
-FAIL group1 contains point at (51, 156) assert_true: expected true got false
-FAIL group1 contains point at (70, 120) assert_true: expected true got false
+PASS group1 contains point at (100, 100)
+PASS group1 contains point at (137, 84)
+PASS group1 contains point at (51, 156)
+PASS group1 contains point at (70, 120)
 PASS circle2 contains point at (400, 150)
 PASS circle2 contains point at (432, 182)
 PASS circle2 contains point at (361, 122)

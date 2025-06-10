@@ -61,7 +61,7 @@ public:
     void append(const FragmentedSharedBuffer&);
 
 #if ENABLE(SHAREABLE_RESOURCE) && PLATFORM(COCOA)
-    using IPCData = std::variant<ShareableResourceHandle, RefPtr<FragmentedSharedBuffer>>;
+    using IPCData = Variant<ShareableResourceHandle, RefPtr<FragmentedSharedBuffer>>;
 #else
     using IPCData = RefPtr<FragmentedSharedBuffer>;
 #endif

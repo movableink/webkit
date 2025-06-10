@@ -3,13 +3,12 @@ function shouldBe(a, b) {
         throw new Error(`expected ${b} but got ${a}`);
 }
 
-const runs = 1e5;
 const regExpPrototype = RegExp.prototype;
 
 function test(propertyName) {
     let count = 0;
     let message = null;
-    for (let i = 0; i < runs; i++) {
+    for (let i = 0; i < testLoopCount; i++) {
         try {
             regExpPrototype[propertyName]();
         } catch (error) {
@@ -19,7 +18,7 @@ function test(propertyName) {
                 count++;
         }
     }
-    shouldBe(count, runs);
+    shouldBe(count, testLoopCount);
 }
 
 noInline(test);

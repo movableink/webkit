@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2011, 2012, 2015 Ericsson AB. All rights reserved.
- * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,9 +30,10 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "Logging.h"
 #include "MediaStreamTrackEvent.h"
 #include "Page.h"
@@ -123,13 +124,17 @@ RefPtr<MediaStream> MediaStream::clone()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
 
+    RefPtr document = this->document();
+    if (!document)
+        return nullptr;
+
     Vector<Ref<MediaStreamTrack>> clonedTracks;
     clonedTracks.reserveInitialCapacity(m_trackMap.size());
     for (auto& track : m_trackMap.values()) {
         if (auto clone = track->clone())
             clonedTracks.append(clone.releaseNonNull());
     }
-    return MediaStream::create(*document(), WTFMove(clonedTracks));
+    return MediaStream::create(*document, WTFMove(clonedTracks));
 }
 
 void MediaStream::addTrack(MediaStreamTrack& track)
@@ -204,7 +209,7 @@ void MediaStream::activeStatusChanged()
 
 void MediaStream::didAddTrack(MediaStreamTrackPrivate& trackPrivate)
 {
-    ScriptExecutionContext* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     if (!context)
         return;
 
@@ -277,7 +282,7 @@ void MediaStream::mediaCanStart(Document& document)
 
 void MediaStream::startProducingData()
 {
-    Document* document = this->document();
+    RefPtr document = this->document();
     if (!document || !document->page())
         return;
 

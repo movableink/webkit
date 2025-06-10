@@ -34,6 +34,7 @@
 #include "CSSCustomPropertyValue.h"
 #include "CSSTransition.h"
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "DocumentTimeline.h"
@@ -44,6 +45,7 @@
 #include "RenderChildIterator.h"
 #include "RenderDescendantIterator.h"
 #include "RenderElement.h"
+#include "RenderElementInlines.h"
 #include "RenderListItem.h"
 #include "RenderListMarker.h"
 #include "RenderStyleInlines.h"
@@ -87,7 +89,7 @@ const std::optional<const Styleable> Styleable::fromRenderer(const RenderElement
     case PseudoId::ViewTransitionNew:
     case PseudoId::ViewTransitionOld:
         if (auto* documentElement = renderer.document().documentElement())
-            return Styleable(*documentElement, Style::PseudoElementIdentifier { renderer.style().pseudoElementType(), renderer.style().pseudoElementNameArgument() });
+            return Styleable(*documentElement, renderer.style().pseudoElementIdentifier());
         break;
     case PseudoId::ViewTransition:
         if (auto* documentElement = renderer.document().documentElement())
@@ -132,8 +134,10 @@ RenderElement* Styleable::renderer() const
         }
         break;
     case PseudoId::ViewTransition:
-        if (element.renderer() && element.renderer()->isDocumentElementRenderer())
-            return element.renderer()->view().viewTransitionRoot().get();
+        if (element.renderer() && element.renderer()->isDocumentElementRenderer()) {
+            if (WeakPtr containingBlock = element.renderer()->view().viewTransitionContainingBlock())
+                return containingBlock->firstChildBox();
+        }
         break;
     case PseudoId::ViewTransitionGroup:
     case PseudoId::ViewTransitionImagePair:
@@ -223,14 +227,14 @@ bool Styleable::mayHaveNonZeroOpacity() const
     return false;
 }
 
-bool Styleable::isRunningAcceleratedTransformAnimation() const
+bool Styleable::isRunningAcceleratedAnimationOfProperty(CSSPropertyID property) const
 {
     auto* effectStack = keyframeEffectStack();
     if (!effectStack)
         return false;
 
     for (const auto& effect : effectStack->sortedEffects()) {
-        if (effect->isCurrentlyAffectingProperty(CSSPropertyTransform, KeyframeEffect::Accelerated::Yes))
+        if (effect->isCurrentlyAffectingProperty(property, KeyframeEffect::Accelerated::Yes))
             return true;
     }
 
@@ -315,6 +319,12 @@ OptionSet<AnimationImpact> Styleable::applyKeyframeEffects(RenderStyle& targetSt
 
 void Styleable::cancelStyleOriginatedAnimations() const
 {
+    // It is important we don't cancel style-originated animations when entering the page cache
+    // since any JS wrapper that is kept alive in the page cache could be associated with an animation
+    // that itself has not been kept alive (or rather canceled) when entering the page cache.
+    if (element.protectedDocument()->backForwardCacheState() != Document::NotInBackForwardCache)
+        return;
+
     cancelStyleOriginatedAnimations({ });
     if (CheckedPtr styleOriginatedTimelinesController = element.protectedDocument()->styleOriginatedTimelinesController())
         styleOriginatedTimelinesController->unregisterNamedTimelinesAssociatedWithElement(*this);
@@ -594,13 +604,8 @@ static void updateCSSTransitionsForStyleableAndProperty(const Styleable& styleab
             auto style = RenderStyle::clone(*lastStyleChangeEventStyle);
             if (auto* keyframeEffectStack = styleable.keyframeEffectStack()) {
                 for (const auto& effect : keyframeEffectStack->sortedEffects()) {
-                    if (!effectTargetsProperty(*effect))
-                        continue;
-                    auto* effectAnimation = effect->animation();
-                    auto* cssTransition = dynamicDowncast<CSSTransition>(effectAnimation);
-                    ASSERT(document.timeline().currentTime());
-                    bool shouldUseTimelineTimeAtCreation = cssTransition && (!effectAnimation->startTime() || effectAnimation->startTime() == document.timeline().currentTime());
-                    effectAnimation->resolve(style, { nullptr }, shouldUseTimelineTimeAtCreation ? cssTransition->timelineTimeAtCreation() : std::nullopt);
+                    if (effectTargetsProperty(*effect))
+                        Ref { *effect->animation() }->resolve(style, { nullptr });
                 }
             }
             return style;
@@ -992,13 +997,13 @@ void Styleable::setCapturedInViewTransition(AtomString captureName)
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, const Styleable& styleable)
 {
-    ts << styleable.element << ", " << styleable.pseudoElementIdentifier;
+    ts << styleable.element << ", "_s << styleable.pseudoElementIdentifier;
     return ts;
 }
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, const WeakStyleable& styleable)
 {
-    ts << styleable.element() << ", " << styleable.pseudoElementIdentifier();
+    ts << styleable.element() << ", "_s << styleable.pseudoElementIdentifier();
     return ts;
 }
 

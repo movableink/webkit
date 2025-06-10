@@ -38,7 +38,7 @@
 #include <WebCore/BackForwardCache.h>
 #include <WebCore/HistoryController.h>
 #include <WebCore/HistoryItem.h>
-#include <WebCore/LocalFrame.h>
+#include <WebCore/LocalFrameInlines.h>
 #include <WebCore/Page.h>
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>

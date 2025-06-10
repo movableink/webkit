@@ -73,8 +73,8 @@ TEST(IPAddressTests, CompareIPAddresses)
     EXPECT_TRUE(address3 < address4);
     EXPECT_TRUE(address4 > address3);
     EXPECT_TRUE(address1 == WebCore::IPAddress::fromString("17.100.100.255"_s));
-    EXPECT_EQ(address1.compare(address3), WebCore::IPAddress::ComparisonResult::CannotCompare);
-    EXPECT_EQ(address4.compare(address2), WebCore::IPAddress::ComparisonResult::CannotCompare);
+    EXPECT_EQ(address1 <=> address3, std::partial_ordering::unordered);
+    EXPECT_EQ(address4 <=> address2, std::partial_ordering::unordered);
 }
 
 #endif // OS(UNIX)

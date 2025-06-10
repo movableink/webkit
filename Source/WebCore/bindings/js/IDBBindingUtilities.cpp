@@ -65,6 +65,7 @@ using namespace JSC;
 static bool get(JSGlobalObject& lexicalGlobalObject, JSValue object, const String& keyPathElement, JSValue& result)
 {
     VM& vm = lexicalGlobalObject.vm();
+
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (object.isString() && keyPathElement == "length"_s) {
@@ -347,7 +348,7 @@ bool injectIDBKeyIntoScriptValue(JSGlobalObject& lexicalGlobalObject, const IDBK
 
     // Do not set if object already has the correct property value.
     JSValue existingKey;
-    if (get(lexicalGlobalObject, parent, keyPathElements.last(), existingKey) && !key->compare(createIDBKeyFromValue(lexicalGlobalObject, existingKey)))
+    if (get(lexicalGlobalObject, parent, keyPathElements.last(), existingKey) && key->isEqual(createIDBKeyFromValue(lexicalGlobalObject, existingKey)))
         return true;
     if (!set(lexicalGlobalObject.vm(), parent, keyPathElements.last(), toJS(lexicalGlobalObject, lexicalGlobalObject, key.get())))
         return false;
@@ -471,16 +472,22 @@ static IndexKey::Data createKeyPathArray(JSGlobalObject& lexicalGlobalObject, JS
         return keys;
     });
 
-    return std::visit(visitor, info.keyPath());
+    return WTF::visit(visitor, info.keyPath());
 }
 
-void generateIndexKeyForValue(JSGlobalObject& lexicalGlobalObject, const IDBIndexInfo& info, JSValue value, IndexKey& outKey, const std::optional<IDBKeyPath>& objectStoreKeyPath, const IDBKeyData& objectStoreKey)
+static void generateIndexKeyForValueWithoutLock(JSGlobalObject& lexicalGlobalObject, const IDBIndexInfo& info, JSValue value, IndexKey& outKey, const std::optional<IDBKeyPath>& objectStoreKeyPath, const IDBKeyData& objectStoreKey)
 {
     auto keyDatas = createKeyPathArray(lexicalGlobalObject, value, info, objectStoreKeyPath, objectStoreKey);
     if (std::holds_alternative<std::nullptr_t>(keyDatas))
         return;
 
     outKey = IndexKey(WTFMove(keyDatas));
+}
+
+void generateIndexKeyForValue(JSGlobalObject& lexicalGlobalObject, const IDBIndexInfo& info, JSValue value, IndexKey& outKey, const std::optional<IDBKeyPath>& objectStoreKeyPath, const IDBKeyData& objectStoreKey)
+{
+    JSLockHolder locker(lexicalGlobalObject.vm());
+    generateIndexKeyForValueWithoutLock(lexicalGlobalObject, info, value, outKey, objectStoreKeyPath, objectStoreKey);
 }
 
 IndexIDToIndexKeyMap generateIndexKeyMapForValueIsolatedCopy(JSC::JSGlobalObject& lexicalGlobalObject, const IDBObjectStoreInfo& storeInfo, const IDBKeyData& key, const IDBValue& value)
@@ -500,7 +507,7 @@ IndexIDToIndexKeyMap generateIndexKeyMapForValueIsolatedCopy(JSC::JSGlobalObject
 
     for (const auto& entry : indexMap) {
         IndexKey indexKey;
-        generateIndexKeyForValue(lexicalGlobalObject, entry.value, jsValue, indexKey, storeInfo.keyPath(), key);
+        generateIndexKeyForValueWithoutLock(lexicalGlobalObject, entry.value, jsValue, indexKey, storeInfo.keyPath(), key);
 
         if (indexKey.isNull())
             continue;

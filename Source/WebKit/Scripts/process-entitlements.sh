@@ -91,7 +91,6 @@ function mac_process_gpu_entitlements()
 
         if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 110000 ))
         then
-            plistbuddy Add :com.apple.developer.videotoolbox.client-sandboxed-decoder bool YES
             plistbuddy Add :com.apple.avfoundation.allow-system-wide-context bool YES
             plistbuddy add :com.apple.QuartzCore.webkit-limited-types bool YES
         fi
@@ -195,12 +194,11 @@ function webcontent_sandbox_entitlements()
     plistbuddy Add :com.apple.private.security.mutable-state-flags:4 string ParentProcessCanEnableQuickLookStateFlag
     plistbuddy Add :com.apple.private.security.mutable-state-flags:5 string BlockOpenDirectoryInWebContentSandbox
     plistbuddy Add :com.apple.private.security.mutable-state-flags:6 string BlockMobileAssetInWebContentSandbox
-    plistbuddy Add :com.apple.private.security.mutable-state-flags:7 string BlockMobileGestaltInWebContentSandbox
-    plistbuddy Add :com.apple.private.security.mutable-state-flags:8 string BlockWebInspectorInWebContentSandbox
-    plistbuddy Add :com.apple.private.security.mutable-state-flags:9 string BlockIconServicesInWebContentSandbox
-    plistbuddy Add :com.apple.private.security.mutable-state-flags:10 string BlockFontServiceInWebContentSandbox
-    plistbuddy Add :com.apple.private.security.mutable-state-flags:11 string UnifiedPDFEnabled
-    plistbuddy Add :com.apple.private.security.mutable-state-flags:12 string WebProcessDidNotInjectStoreBundle
+    plistbuddy Add :com.apple.private.security.mutable-state-flags:7 string BlockWebInspectorInWebContentSandbox
+    plistbuddy Add :com.apple.private.security.mutable-state-flags:8 string BlockIconServicesInWebContentSandbox
+    plistbuddy Add :com.apple.private.security.mutable-state-flags:9 string BlockFontServiceInWebContentSandbox
+    plistbuddy Add :com.apple.private.security.mutable-state-flags:10 string UnifiedPDFEnabled
+    plistbuddy Add :com.apple.private.security.mutable-state-flags:11 string WebProcessDidNotInjectStoreBundle
     plistbuddy Add :com.apple.private.security.enable-state-flags array
     plistbuddy Add :com.apple.private.security.enable-state-flags:0 string EnableExperimentalSandbox
     plistbuddy Add :com.apple.private.security.enable-state-flags:1 string BlockIOKitInWebContentSandbox
@@ -208,12 +206,11 @@ function webcontent_sandbox_entitlements()
     plistbuddy Add :com.apple.private.security.enable-state-flags:3 string ParentProcessCanEnableQuickLookStateFlag
     plistbuddy Add :com.apple.private.security.enable-state-flags:4 string BlockOpenDirectoryInWebContentSandbox
     plistbuddy Add :com.apple.private.security.enable-state-flags:5 string BlockMobileAssetInWebContentSandbox
-    plistbuddy Add :com.apple.private.security.enable-state-flags:6 string BlockMobileGestaltInWebContentSandbox
-    plistbuddy Add :com.apple.private.security.enable-state-flags:7 string BlockWebInspectorInWebContentSandbox
-    plistbuddy Add :com.apple.private.security.enable-state-flags:8 string BlockIconServicesInWebContentSandbox
-    plistbuddy Add :com.apple.private.security.enable-state-flags:9 string BlockFontServiceInWebContentSandbox
-    plistbuddy Add :com.apple.private.security.enable-state-flags:10 string UnifiedPDFEnabled
-    plistbuddy Add :com.apple.private.security.enable-state-flags:11 string WebProcessDidNotInjectStoreBundle
+    plistbuddy Add :com.apple.private.security.enable-state-flags:6 string BlockWebInspectorInWebContentSandbox
+    plistbuddy Add :com.apple.private.security.enable-state-flags:7 string BlockIconServicesInWebContentSandbox
+    plistbuddy Add :com.apple.private.security.enable-state-flags:8 string BlockFontServiceInWebContentSandbox
+    plistbuddy Add :com.apple.private.security.enable-state-flags:9 string UnifiedPDFEnabled
+    plistbuddy Add :com.apple.private.security.enable-state-flags:10 string WebProcessDidNotInjectStoreBundle
 }
 
 function extract_notification_names() {
@@ -300,6 +297,13 @@ function mac_process_webpushd_entitlements()
     plistbuddy Add :com.apple.private.aps-connection-initiate bool YES
     plistbuddy Add :com.apple.private.launchservices.entitledtoaccessothersessions bool YES
     plistbuddy Add :com.apple.usernotification.notificationschedulerproxy bool YES
+
+    if [[ "${WK_RELOCATABLE_WEBPUSHD}" == NO ]]; then
+        plistbuddy Add :com.apple.security.application-groups array
+        plistbuddy Add :com.apple.security.application-groups:0 string group.com.apple.webkit.webpushd
+        plistbuddy Add :com.apple.private.security.restricted-application-groups array
+        plistbuddy Add :com.apple.private.security.restricted-application-groups:0 string group.com.apple.webkit.webpushd
+    fi
 }
 
 # ========================================
@@ -338,6 +342,11 @@ function maccatalyst_process_webcontent_entitlements()
     then
         plistbuddy Add :com.apple.private.verified-jit bool YES
         plistbuddy Add :com.apple.security.cs.single-jit bool YES
+    fi
+
+    if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" > 150000 ))
+    then
+        plistbuddy Add :com.apple.private.disable-log-mach-ports bool YES
     fi
 }
 
@@ -444,6 +453,7 @@ function ios_family_process_webcontent_shared_entitlements()
     plistbuddy Add :com.apple.private.allow-explicit-graphics-priority bool YES
     plistbuddy Add :com.apple.private.coremedia.extensions.audiorecording.allow bool YES
     plistbuddy Add :com.apple.private.coremedia.pidinheritance.allow bool YES
+    plistbuddy Add :com.apple.private.disable-log-mach-ports bool YES
     plistbuddy Add :com.apple.private.memorystatus bool YES
     plistbuddy Add :com.apple.private.network.socket-delegate bool YES
     plistbuddy Add :com.apple.private.webinspector.allow-remote-inspection bool YES
@@ -554,9 +564,12 @@ fi
 if [[ "${WK_PLATFORM_NAME}" == xros ]]; then
     plistbuddy Add :com.apple.surfboard.application-service-client bool YES
     plistbuddy Add :com.apple.surfboard.shared-simulation-connection-request bool YES
+    plistbuddy Add :com.apple.surfboard.shared-simulation-memory-attribution bool YES
 fi
 
     plistbuddy Add :com.apple.developer.hardened-process bool YES
+
+    plistbuddy Add :com.apple.developer.kernel.extended-virtual-addressing bool YES
 }
 
 function ios_family_process_model_entitlements()

@@ -122,21 +122,21 @@ UserGestureIndicator::UserGestureIndicator(std::optional<IsProcessingUserGesture
         currentToken() = UserGestureToken::create(isProcessingUserGesture.value(), gestureType, document, authorizationToken, canRequestDOMPaste);
 
     if (isProcessingUserGesture && document && currentToken()->processingUserGesture()) {
-        bool oldHadUserInteraction = document->hasHadUserInteraction();
         document->updateLastHandledUserGestureTimestamp(currentToken()->startTime());
         if (processInteractionStyle == ProcessInteractionStyle::Immediate) {
-            RefPtr mainFrameDocument = document->protectedMainFrameDocument();
+            RefPtr mainFrameDocument = document->mainFrameDocument();
             if (mainFrameDocument)
                 ResourceLoadObserver::shared().logUserInteractionWithReducedTimeResolution(*mainFrameDocument);
             else
                 LOG_ONCE(SiteIsolation, "Unable to properly construct UserGestureIndicator::UserGestureIndicator() without access to the main frame document ");
         }
-        if (RefPtr page = document->protectedPage())
+        if (RefPtr page = document->page())
             page->setUserDidInteractWithPage(true);
-        if (RefPtr frame = document->frame(); frame && !oldHadUserInteraction) {
+        if (RefPtr frame = document->frame(); frame && !frame->hasHadUserInteraction()) {
             for (RefPtr<Frame> ancestor = WTFMove(frame); ancestor; ancestor = ancestor->tree().parent()) {
                 if (RefPtr localAncestor = dynamicDowncast<LocalFrame>(ancestor)) {
-                    if (RefPtr ancestorDocument = localAncestor->protectedDocument())
+                    localAncestor->setHasHadUserInteraction();
+                    if (RefPtr ancestorDocument = localAncestor->document())
                         ancestorDocument->updateLastHandledUserGestureTimestamp(currentToken()->startTime());
                 }
             }
@@ -151,7 +151,7 @@ UserGestureIndicator::UserGestureIndicator(std::optional<IsProcessingUserGesture
     }
 }
 
-UserGestureIndicator::UserGestureIndicator(RefPtr<UserGestureToken> token, UserGestureToken::GestureScope scope, UserGestureToken::IsPropagatedFromFetch isPropagatedFromFetch)
+UserGestureIndicator::UserGestureIndicator(RefPtr<UserGestureToken> token, UserGestureToken::GestureScope scope, UserGestureToken::ShouldPropagateToMicroTask shouldPropagateToMicroTask)
 {
     // Silently ignore UserGestureIndicators on non main threads.
     if (!isMainThread())
@@ -162,7 +162,7 @@ UserGestureIndicator::UserGestureIndicator(RefPtr<UserGestureToken> token, UserG
 
     if (token) {
         token->setScope(scope);
-        token->setIsPropagatedFromFetch(isPropagatedFromFetch);
+        token->setShouldPropagateToMicroTask(shouldPropagateToMicroTask);
         currentToken() = token;
     }
 }
@@ -175,7 +175,7 @@ UserGestureIndicator::~UserGestureIndicator()
     if (auto token = currentToken()) {
         token->resetDOMPasteAccess();
         token->resetScope();
-        token->resetIsPropagatedFromFetch();
+        token->resetShouldPropagateToMicroTask();
     }
 
     currentToken() = m_previousToken;

@@ -31,6 +31,6 @@
 G_BEGIN_DECLS
 
 #define WPE_TYPE_DISPLAY_MOCK (wpe_display_mock_get_type())
-WPE_API G_DECLARE_FINAL_TYPE(WPEDisplayMock, wpe_display_mock, WPE, DISPLAY_MOCK, WPEDisplay)
+G_DECLARE_FINAL_TYPE(WPEDisplayMock, wpe_display_mock, WPE, DISPLAY_MOCK, WPEDisplay)
 
 G_END_DECLS

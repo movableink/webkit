@@ -138,6 +138,11 @@ enum class TapHandlingResult : uint8_t;
 - (void)replace:(id)sender;
 - (void)_translate:(id)sender;
 
+- (IBAction)alignCenter:(id)sender;
+- (IBAction)alignJustified:(id)sender;
+- (IBAction)alignLeft:(id)sender;
+- (IBAction)alignRight:(id)sender;
+
 #if HAVE(UIFINDINTERACTION)
 - (void)find:(id)sender;
 - (void)findNext:(id)sender;
@@ -210,7 +215,7 @@ enum class TapHandlingResult : uint8_t;
 #endif
 
 @property (nonatomic, readonly) BOOL _isSimulatingCompatibilityPointerTouches;
-@property (nonatomic, readonly) WKVelocityTrackingScrollView *_scrollViewInternal;
+@property (nonatomic, readonly) WKBaseScrollView *_scrollViewInternal;
 @property (nonatomic, readonly) CGRect _contentRectForUserInteraction;
 
 @property (nonatomic, readonly) BOOL _haveSetUnobscuredSafeAreaInsets;
@@ -230,7 +235,12 @@ enum class TapHandlingResult : uint8_t;
 
 #if ENABLE(MODEL_PROCESS)
 - (void)_willInvalidateDraggedModelWithContainerView:(UIView *)containerView;
+- (void)_setWebViewTransform3DForModel:(CGFloat)newScale;
 #endif
+
+- (BOOL)_isInStableState:(UIScrollView *)scrollView;
+
+- (UIEdgeInsets)currentlyVisibleContentInsetsWithScale:(CGFloat)scaleFactor obscuredInsets:(UIEdgeInsets)obscuredInsets;
 
 @end
 

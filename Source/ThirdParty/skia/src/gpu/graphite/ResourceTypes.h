@@ -26,7 +26,21 @@ class Buffer;
 SK_MAKE_BITMASK_OPS(DepthStencilFlags)
 
 /**
- * This enum is used to specify the load operation to be used when a RenderPass begins execution
+ * The strategy that a renderpass and/or pipeline use to access the current dst pixel when blending.
+ */
+enum class DstReadStrategy : uint8_t {
+    kNoneRequired,
+    kTextureCopy,
+    kTextureSample,  // TODO(b/238756862): To be used once direct texture sampling is implemented
+    kReadFromInput,
+    kFramebufferFetch,
+
+    kLast = kFramebufferFetch
+};
+inline static constexpr int kDstReadStrategyCount = (int)(DstReadStrategy::kLast) + 1;
+
+/**
+ * This enum is used to specify the load operation to be used when a RenderPass begins execution.
  */
 enum class LoadOp : uint8_t {
     kLoad,
@@ -103,6 +117,9 @@ enum class AccessPattern : uint8_t {
 
     // The resource needs to be CPU visible, e.g. for read-back or as a copy/upload source.
     kHostVisible,
+
+    // Use to debug GPU only buffers.
+    kGpuOnlyCopySrc,
 };
 
 /**
@@ -179,8 +196,8 @@ struct SamplerDesc {
             : SamplerDesc(samplingOptions, {tileMode, tileMode}) {}
 
     constexpr SamplerDesc(const SkSamplingOptions& samplingOptions,
-                const std::pair<SkTileMode, SkTileMode> tileModes,
-                const ImmutableSamplerInfo info = {})
+                          const std::pair<SkTileMode, SkTileMode> tileModes,
+                          const ImmutableSamplerInfo info = {})
             : fDesc((static_cast<int>(tileModes.first)            << kTileModeXShift           ) |
                     (static_cast<int>(tileModes.second)           << kTileModeYShift           ) |
                     (static_cast<int>(samplingOptions.filter)     << kFilterModeShift          ) |
@@ -204,6 +221,13 @@ struct SamplerDesc {
     constexpr SamplerDesc() = default;
     constexpr SamplerDesc(const SamplerDesc&) = default;
 
+#if defined(GPU_TEST_UTILS)
+    constexpr SamplerDesc(uint32_t desc, uint32_t format, uint32_t extFormatMSB)
+            : fDesc(desc)
+            , fFormat(format)
+            , fExternalFormatMostSignificantBits(extFormatMSB) {}
+#endif
+
     bool operator==(const SamplerDesc& o) const {
         return o.fDesc == fDesc && o.fFormat == fFormat &&
                o.fExternalFormatMostSignificantBits == fExternalFormatMostSignificantBits;
@@ -211,8 +235,18 @@ struct SamplerDesc {
 
     bool operator!=(const SamplerDesc& o) const { return !(*this == o); }
 
-    SkTileMode tileModeX()          const { return static_cast<SkTileMode>((fDesc >> 0) & 0b11); }
-    SkTileMode tileModeY()          const { return static_cast<SkTileMode>((fDesc >> 2) & 0b11); }
+    SkTileMode tileModeX()          const {
+        return static_cast<SkTileMode>((fDesc >> kTileModeXShift) & 0b11);
+    }
+    SkTileMode tileModeY()          const {
+        return static_cast<SkTileMode>((fDesc >> kTileModeYShift) & 0b11);
+    }
+    SkFilterMode filterMode()       const {
+        return static_cast<SkFilterMode>((fDesc >> kFilterModeShift) & 0b01);
+    }
+    SkMipmapMode mipmap()           const {
+        return static_cast<SkMipmapMode>((fDesc >> kMipmapModeShift) & 0b11);
+    }
     uint32_t   desc()               const { return fDesc;                                        }
     uint32_t   format()             const { return fFormat;                                      }
     uint32_t   externalFormatMSBs() const { return fExternalFormatMostSignificantBits;           }
@@ -223,8 +257,8 @@ struct SamplerDesc {
     // nearest-neighbor sampling in HW.
     SkSamplingOptions samplingOptions() const {
         // TODO: Add support for anisotropic filtering
-        SkFilterMode filter = static_cast<SkFilterMode>((fDesc >> 4) & 0b01);
-        SkMipmapMode mipmap = static_cast<SkMipmapMode>((fDesc >> 5) & 0b11);
+        SkFilterMode filter = static_cast<SkFilterMode>((fDesc >> kFilterModeShift) & 0b01);
+        SkMipmapMode mipmap = static_cast<SkMipmapMode>((fDesc >> kMipmapModeShift) & 0b11);
         return SkSamplingOptions(filter, mipmap);
     }
 

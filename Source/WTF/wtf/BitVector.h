@@ -372,8 +372,8 @@ public:
     };
 
     // Use this to iterate over set bits.
-    iterator begin() const { return iterator(*this, findBit(0, true)); }
-    iterator end() const { return iterator(*this, size()); }
+    iterator begin() const LIFETIME_BOUND { return iterator(*this, findBit(0, true)); }
+    iterator end() const LIFETIME_BOUND { return iterator(*this, size()); }
 
     static unsigned outOfLineMemoryUse(size_t bitCount)
     {
@@ -470,10 +470,10 @@ private:
         size_t numBits() const { return m_numBits; }
         size_t numWords() const { return (m_numBits + bitsInPointer() - 1) / bitsInPointer(); }
 
-        std::span<const uint8_t> byteSpan() const { return unsafeMakeSpan(reinterpret_cast<const uint8_t*>(bits()), byteCount(numBits())); }
-        std::span<uint8_t> byteSpan() { return unsafeMakeSpan(reinterpret_cast<uint8_t*>(bits()), byteCount(numBits())); }
-        std::span<const uintptr_t> wordsSpan() const { return unsafeMakeSpan(bits(), numWords()); }
-        std::span<uintptr_t> wordsSpan() { return unsafeMakeSpan(bits(), numWords()); }
+        std::span<const uint8_t> byteSpan() const LIFETIME_BOUND { return unsafeMakeSpan(reinterpret_cast<const uint8_t*>(bits()), byteCount(numBits())); }
+        std::span<uint8_t> byteSpan() LIFETIME_BOUND { return unsafeMakeSpan(reinterpret_cast<uint8_t*>(bits()), byteCount(numBits())); }
+        std::span<const uintptr_t> wordsSpan() const LIFETIME_BOUND { return unsafeMakeSpan(bits(), numWords()); }
+        std::span<uintptr_t> wordsSpan() LIFETIME_BOUND { return unsafeMakeSpan(bits(), numWords()); }
 
         static WTF_EXPORT_PRIVATE OutOfLineBits* create(size_t numBits);
         
@@ -511,22 +511,22 @@ private:
     bool equalsSlowCaseSimple(const BitVector& other) const;
     WTF_EXPORT_PRIVATE uintptr_t hashSlowCase() const;
     
-    uintptr_t* bits()
+    uintptr_t* bits() LIFETIME_BOUND
     {
         if (isInline())
             return &m_bitsOrPointer;
         return outOfLineBits()->wordsSpan().data();
     }
     
-    const uintptr_t* bits() const
+    const uintptr_t* bits() const LIFETIME_BOUND
     {
         if (isInline())
             return &m_bitsOrPointer;
         return outOfLineBits()->wordsSpan().data();
     }
 
-    std::span<uint8_t> byteSpan() { return unsafeMakeSpan(reinterpret_cast<uint8_t*>(bits()), byteCount(size())); }
-    std::span<const uint8_t> byteSpan() const { return unsafeMakeSpan(reinterpret_cast<const uint8_t*>(bits()), byteCount(size())); }
+    std::span<uint8_t> byteSpan() LIFETIME_BOUND { return unsafeMakeSpan(reinterpret_cast<uint8_t*>(bits()), byteCount(size())); }
+    std::span<const uint8_t> byteSpan() const LIFETIME_BOUND { return unsafeMakeSpan(reinterpret_cast<const uint8_t*>(bits()), byteCount(size())); }
 
     uintptr_t m_bitsOrPointer;
 };

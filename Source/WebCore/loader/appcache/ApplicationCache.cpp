@@ -31,6 +31,7 @@
 #include "ApplicationCacheStorage.h"
 #include "ResourceRequest.h"
 #include <algorithm>
+#include <ranges>
 #include <stdio.h>
 #include <wtf/text/CString.h>
 
@@ -144,7 +145,7 @@ void ApplicationCache::setFallbackURLs(const FallbackURLVector& fallbackURLs)
     ASSERT(m_fallbackURLs.isEmpty());
     m_fallbackURLs = fallbackURLs;
     // FIXME: What's the right behavior if we have 2 or more identical namespace URLs?
-    std::stable_sort(m_fallbackURLs.begin(), m_fallbackURLs.end(), fallbackURLLongerThan);
+    std::ranges::stable_sort(m_fallbackURLs, fallbackURLLongerThan);
 }
 
 bool ApplicationCache::urlMatchesFallbackNamespace(const URL& url, URL* fallbackURL)

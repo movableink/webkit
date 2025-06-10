@@ -119,7 +119,7 @@ public:
             return false;
         if (offset + n > m_vector.size())
             m_vector.grow(offset + n);
-        m_vector.remove(offset, n);
+        m_vector.removeAt(offset, n);
         m_vector.insertSpan(offset, unsafeMakeSpan(static_cast<const uint8_t*>(data), n));
         return true;
     }

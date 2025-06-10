@@ -21,13 +21,15 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import json
-import re
 import logging
+import re
 import unittest
+from unittest.mock import patch
 
-from mock import patch
+from webkitcorepy import OutputCapture
+from webkitcorepy import mocks as wkmocks
+
 from webkitbugspy import Tracker, User, bugzilla, mocks, radar
-from webkitcorepy import OutputCapture, mocks as wkmocks
 
 
 class TestBugzilla(unittest.TestCase):
@@ -173,7 +175,29 @@ class TestBugzilla(unittest.TestCase):
         )):
             tracker = bugzilla.Tracker(self.URL)
             tracker.issue(1).add_comment('Is this related to {}/show_bug.cgi?id=2?'.format(self.URL))
-            self.assertEqual(tracker.issue(1).references, [tracker.issue(2)])
+            self.assertEqual(tracker.issue(1).references, [])
+
+    def test_reference_order(self):
+        with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES, environment=wkmocks.Environment(
+            BUGS_EXAMPLE_COM_USERNAME='wwatcher@example.com',
+            BUGS_EXAMPLE_COM_PASSWORD='password',
+        )):
+            tracker = bugzilla.Tracker(self.URL)
+            tracker.issue(1).add_comment('{}/show_bug.cgi?id=2?'.format(self.URL))
+            tracker.issue(1).add_comment('{}/show_bug.cgi?id=3?'.format(self.URL))
+            self.assertEqual(tracker.issue(1).references, [tracker.issue(3), tracker.issue(2)])
+
+    def test_reference_multiline(self):
+        with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES, environment=wkmocks.Environment(
+            BUGS_EXAMPLE_COM_USERNAME='wwatcher@example.com',
+            BUGS_EXAMPLE_COM_PASSWORD='password',
+        )):
+            tracker = bugzilla.Tracker(self.URL)
+            tracker.issue(1).add_comment(f'{self.URL}/show_bug.cgi?id=2 is a bug.\n{self.URL}/show_bug.cgi?id=3 is another bug.')
+            self.assertEqual(tracker.issue(1).references, [tracker.issue(2), tracker.issue(3)])
+
+            tracker.issue(1).add_comment(f'{self.URL}/show_bug.cgi?id=4')
+            self.assertEqual(tracker.issue(1).references, [tracker.issue(4), tracker.issue(2), tracker.issue(3)])
 
     def test_me(self):
         with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES, environment=wkmocks.Environment(
@@ -283,6 +307,19 @@ class TestBugzilla(unittest.TestCase):
         )), OutputCapture() as captured:
             issue = bugzilla.Tracker(self.URL).issue(1)
             self.assertFalse(issue.set_state(state='Analyze'))
+            self.assertEqual(issue.state, None)
+        self.assertEqual(
+            captured.stderr.getvalue(),
+            'Bugzilla does not support state at this time\n',
+        )
+
+    def test_set_substate(self):
+        with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES, environment=wkmocks.Environment(
+                BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+                BUGS_EXAMPLE_COM_PASSWORD='password',
+        )), OutputCapture() as captured:
+            issue = bugzilla.Tracker(self.URL).issue(1)
+            self.assertFalse(issue.set_state(state='Analyze', substate='Fix'))
             self.assertEqual(issue.state, None)
         self.assertEqual(
             captured.stderr.getvalue(),
@@ -711,3 +748,15 @@ What component in 'WebKit' should the bug be associated with?:
             captured.stderr.getvalue(),
             'Bugzilla does not support source changes at this time\n',
         )
+
+    def test_related_links(self):
+        with mocks.Bugzilla(self.URL.split('://')[1], environment=wkmocks.Environment(
+                BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+                BUGS_EXAMPLE_COM_PASSWORD='password',
+        ), users=mocks.USERS, issues=mocks.ISSUES), mocks.Radar(users=mocks.USERS, issues=mocks.ISSUES, projects=mocks.PROJECTS,):
+
+            tracker = bugzilla.Tracker(self.URL)
+            self.assertEqual(tracker.issue(1).related_links, [])
+            self.assertTrue(tracker.issue(1).add_related_links([f'{self.URL}/show_bug.cgi?id=2', 'other.tracker.com/123']))
+            self.assertEqual(tracker.issue(1).related_links, [f'{self.URL}/show_bug.cgi?id=2', 'other.tracker.com/123'])
+            self.assertEqual(tracker.issue(1).references, [tracker.issue(2)])

@@ -60,13 +60,13 @@ enum class PrivateRelayed : bool;
 class WebResourceLoader : public RefCounted<WebResourceLoader>, public IPC::MessageSender {
 public:
     struct TrackingParameters {
-        Markable<WebPageProxyIdentifier> webPageProxyID { };
-        Markable<WebCore::PageIdentifier> pageID;
-        Markable<WebCore::FrameIdentifier> frameID;
-        Markable<WebCore::ResourceLoaderIdentifier> resourceID;
+        WebPageProxyIdentifier webPageProxyID;
+        WebCore::PageIdentifier pageID;
+        WebCore::FrameIdentifier frameID;
+        WebCore::ResourceLoaderIdentifier resourceID;
     };
 
-    static Ref<WebResourceLoader> create(Ref<WebCore::ResourceLoader>&&, const TrackingParameters&);
+    static Ref<WebResourceLoader> create(Ref<WebCore::ResourceLoader>&&, const std::optional<TrackingParameters>&);
 
     ~WebResourceLoader();
 
@@ -79,7 +79,7 @@ public:
     void detachFromCoreLoader();
 
 private:
-    WebResourceLoader(Ref<WebCore::ResourceLoader>&&, const TrackingParameters&);
+    WebResourceLoader(Ref<WebCore::ResourceLoader>&&, const std::optional<TrackingParameters>&);
 
     // IPC::MessageSender
     IPC::Connection* messageSenderConnection() const override;
@@ -88,11 +88,13 @@ private:
     void willSendRequest(WebCore::ResourceRequest&&, IPC::FormDataReference&& requestBody, WebCore::ResourceResponse&&, CompletionHandler<void(WebCore::ResourceRequest&&, bool)>&&);
     void didSendData(uint64_t bytesSent, uint64_t totalBytesToBeSent);
     void didReceiveResponse(WebCore::ResourceResponse&&, PrivateRelayed, bool needsContinueDidReceiveResponseMessage, std::optional<WebCore::NetworkLoadMetrics>&&);
-    void didReceiveData(IPC::SharedBufferReference&& data, uint64_t encodedDataLength, uint64_t bytesTransferredOverNetwork);
+    void didReceiveData(IPC::SharedBufferReference&& data, uint64_t bytesTransferredOverNetwork);
     void didFinishResourceLoad(WebCore::NetworkLoadMetrics&&);
     void didFailResourceLoad(const WebCore::ResourceError&);
     void didFailServiceWorkerLoad(const WebCore::ResourceError&);
     void serviceWorkerDidNotHandle();
+    void updateResultingClientIdentifier(WTF::UUID currentIdentifier, WTF::UUID newIdentifier);
+
     void didBlockAuthenticationChallenge();
     void setWorkerStart(MonotonicTime value) { m_workerStart = value; }
 
@@ -108,10 +110,10 @@ private:
     void contentFilterDidBlockLoad(const WebCore::ContentFilterUnblockHandler&, String&& unblockRequestDeniedScript, const WebCore::ResourceError&, const URL& blockedPageURL, WebCore::SubstituteData&&);
 #endif
 
-    void updateBytesTransferredOverNetwork(uint64_t bytesTransferredOverNetwork);
+    size_t calculateBytesTransferredOverNetworkDelta(size_t bytesTransferredOverNetwork);
 
     RefPtr<WebCore::ResourceLoader> m_coreLoader;
-    const TrackingParameters m_trackingParameters;
+    const std::optional<TrackingParameters> m_trackingParameters;
     WebResourceInterceptController m_interceptController;
     size_t m_numBytesReceived { 0 };
     size_t m_bytesTransferredOverNetwork { 0 };

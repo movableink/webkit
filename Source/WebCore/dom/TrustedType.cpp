@@ -117,7 +117,7 @@ ASCIILiteral trustedTypeToCallbackName(TrustedType trustedType)
 }
 
 // https://w3c.github.io/trusted-types/dist/spec/#process-value-with-a-default-policy-algorithm
-std::variant<std::monostate, Exception, Ref<TrustedHTML>, Ref<TrustedScript>, Ref<TrustedScriptURL>> processValueWithDefaultPolicy(ScriptExecutionContext& scriptExecutionContext, TrustedType expectedType, const String& input, const String& sink)
+Variant<std::monostate, Exception, Ref<TrustedHTML>, Ref<TrustedScript>, Ref<TrustedScriptURL>> processValueWithDefaultPolicy(ScriptExecutionContext& scriptExecutionContext, TrustedType expectedType, const String& input, const String& sink)
 {
     RefPtr<TrustedTypePolicy> protectedPolicy;
     if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext)) {
@@ -168,7 +168,7 @@ ExceptionOr<String> trustedTypeCompliantString(TrustedType expectedType, ScriptE
     if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext))
         requireTrustedTypes = document->requiresTrustedTypes();
     else {
-        CheckedPtr contentSecurityPolicy = scriptExecutionContext.checkedContentSecurityPolicy();
+        CheckedPtr contentSecurityPolicy = scriptExecutionContext.contentSecurityPolicy();
 
         requireTrustedTypes = contentSecurityPolicy && contentSecurityPolicy->requireTrustedTypesForSinkGroup("script"_s);
     }
@@ -181,14 +181,13 @@ ExceptionOr<String> trustedTypeCompliantString(TrustedType expectedType, ScriptE
         return WTFMove(std::get<Exception>(convertedInput));
 
     if (!std::holds_alternative<std::monostate>(convertedInput)) {
-        stringValue = std::visit(TrustedTypeVisitor { }, convertedInput);
+        stringValue = WTF::visit(TrustedTypeVisitor { }, convertedInput);
         if (stringValue.isNull())
             convertedInput = std::monostate();
     }
 
     if (std::holds_alternative<std::monostate>(convertedInput)) {
-        CheckedPtr contentSecurityPolicy = scriptExecutionContext.checkedContentSecurityPolicy();
-        auto allowMissingTrustedTypes = contentSecurityPolicy->allowMissingTrustedTypesForSinkGroup(trustedTypeToString(expectedType), sink, "script"_s, stringValue);
+        auto allowMissingTrustedTypes = scriptExecutionContext.checkedContentSecurityPolicy()->allowMissingTrustedTypesForSinkGroup(trustedTypeToString(expectedType), sink, "script"_s, stringValue);
 
         if (!allowMissingTrustedTypes)
             return Exception { ExceptionCode::TypeError, makeString("This assignment requires a "_s, trustedTypeToString(expectedType)) };
@@ -197,7 +196,7 @@ ExceptionOr<String> trustedTypeCompliantString(TrustedType expectedType, ScriptE
     return stringValue;
 }
 
-ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext& scriptExecutionContext, std::variant<RefPtr<TrustedHTML>, String>&& input, const String& sink)
+ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext& scriptExecutionContext, Variant<RefPtr<TrustedHTML>, String>&& input, const String& sink)
 {
     return WTF::switchOn(
         WTFMove(input),
@@ -210,7 +209,7 @@ ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext& scriptExe
     );
 }
 
-ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext& scriptExecutionContext, std::variant<RefPtr<TrustedScript>, String>&& input, const String& sink)
+ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext& scriptExecutionContext, Variant<RefPtr<TrustedScript>, String>&& input, const String& sink)
 {
     return WTF::switchOn(
         WTFMove(input),
@@ -223,7 +222,7 @@ ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext& scriptExe
     );
 }
 
-ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext& scriptExecutionContext, std::variant<RefPtr<TrustedScriptURL>, String>&& input, const String& sink)
+ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext& scriptExecutionContext, Variant<RefPtr<TrustedScriptURL>, String>&& input, const String& sink)
 {
     return WTF::switchOn(
         WTFMove(input),
@@ -278,7 +277,7 @@ ExceptionOr<String> requireTrustedTypesForPreNavigationCheckPasses(ScriptExecuti
     auto sink = "Location href"_s;
     auto expectedType = TrustedType::TrustedScript;
 
-    auto contentSecurityPolicy = scriptExecutionContext.contentSecurityPolicy();
+    CheckedPtr contentSecurityPolicy = scriptExecutionContext.contentSecurityPolicy();
 
     auto requireTrustedTypes = contentSecurityPolicy && contentSecurityPolicy->requireTrustedTypesForSinkGroup(sinkGroup);
 
@@ -302,7 +301,7 @@ ExceptionOr<String> requireTrustedTypesForPreNavigationCheckPasses(ScriptExecuti
         return String(urlString);
     }
 
-    auto stringifiedConvertedScriptSource = std::visit(TrustedTypeVisitor { }, convertedScriptSource);
+    auto stringifiedConvertedScriptSource = WTF::visit(TrustedTypeVisitor { }, convertedScriptSource);
 
     auto newURL = URL(makeString("javascript:"_s, stringifiedConvertedScriptSource));
     return String(newURL.isValid()

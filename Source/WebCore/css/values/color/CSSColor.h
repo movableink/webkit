@@ -31,7 +31,6 @@
 #include "CSSKeywordColor.h"
 #include "CSSResolvedColor.h"
 #include "CSSValueTypes.h"
-#include <variant>
 #include <wtf/Markable.h>
 
 namespace WebCore {
@@ -50,8 +49,8 @@ struct Color {
 private:
     struct EmptyToken { constexpr bool operator==(const EmptyToken&) const = default; };
 
-    // FIXME: Replace std::variant with a generic CompactPointerVariant type.
-    using ColorKind = std::variant<
+    // FIXME: Replace Variant with a generic CompactPointerVariant type.
+    using ColorKind = Variant<
         EmptyToken, // Special value used by Markable to represent empty state.
         ResolvedColor,
         KeywordColor,

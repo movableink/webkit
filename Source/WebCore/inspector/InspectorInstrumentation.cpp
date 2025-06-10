@@ -62,7 +62,7 @@
 #include "PageRuntimeAgent.h"
 #include "PageTimelineAgent.h"
 #include "PlatformStrategies.h"
-#include "RenderObject.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "ScriptController.h"
 #include "ScriptExecutionContext.h"
@@ -232,7 +232,7 @@ void InspectorInstrumentation::documentDetachedImpl(InstrumentingAgents& instrum
 
 void InspectorInstrumentation::frameWindowDiscardedImpl(InstrumentingAgents& instrumentingAgents, LocalDOMWindow* window)
 {
-    if (LIKELY(!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()))
+    if (!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()) [[likely]]
         return;
 
     if (!window)
@@ -264,6 +264,18 @@ void InspectorInstrumentation::willPopShadowRootImpl(InstrumentingAgents& instru
 {
     if (auto* domAgent = instrumentingAgents.persistentDOMAgent())
         domAgent->willPopShadowRoot(host, root);
+}
+
+void InspectorInstrumentation::didChangeAssignedSlotImpl(InstrumentingAgents& instrumentingAgents, Node& slotable)
+{
+    if (auto* cssAgent = instrumentingAgents.enabledCSSAgent())
+        cssAgent->didChangeAssignedSlot(slotable);
+}
+
+void InspectorInstrumentation::didChangeAssignedNodesImpl(InstrumentingAgents& instrumentingAgents, Element& slotElement)
+{
+    if (auto* cssAgent = instrumentingAgents.enabledCSSAgent())
+        cssAgent->didChangeAssignedNodes(slotElement);
 }
 
 void InspectorInstrumentation::didChangeCustomElementStateImpl(InstrumentingAgents& instrumentingAgents, Element& element)
@@ -628,7 +640,7 @@ void InspectorInstrumentation::didLoadResourceFromMemoryCacheImpl(InstrumentingA
 
 void InspectorInstrumentation::didReceiveResourceResponseImpl(InstrumentingAgents& instrumentingAgents, ResourceLoaderIdentifier identifier, DocumentLoader* loader, const ResourceResponse& response, ResourceLoader* resourceLoader)
 {
-    if (LIKELY(!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()))
+    if (!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()) [[likely]]
         return;
 
     if (auto* networkAgent = instrumentingAgents.enabledNetworkAgent())
@@ -657,7 +669,7 @@ void InspectorInstrumentation::didFinishLoadingImpl(InstrumentingAgents& instrum
 
 void InspectorInstrumentation::didFailLoadingImpl(InstrumentingAgents& instrumentingAgents, ResourceLoaderIdentifier identifier, DocumentLoader* loader, const ResourceError& error)
 {
-    if (LIKELY(!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()))
+    if (!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()) [[likely]]
         return;
 
     if (auto* networkAgent = instrumentingAgents.enabledNetworkAgent())
@@ -722,7 +734,7 @@ void InspectorInstrumentation::frameDetachedFromParentImpl(InstrumentingAgents& 
 
 void InspectorInstrumentation::didCommitLoadImpl(InstrumentingAgents& instrumentingAgents, LocalFrame& frame, DocumentLoader* loader)
 {
-    if (LIKELY(!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()))
+    if (!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()) [[likely]]
         return;
 
     if (!frame.page())
@@ -905,7 +917,7 @@ static bool isConsoleAssertMessage(MessageSource source, MessageType type)
 
 void InspectorInstrumentation::addMessageToConsoleImpl(InstrumentingAgents& instrumentingAgents, std::unique_ptr<ConsoleMessage> message)
 {
-    if (LIKELY(!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()))
+    if (!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()) [[likely]]
         return;
 
     MessageSource source = message->source();
@@ -923,7 +935,7 @@ void InspectorInstrumentation::addMessageToConsoleImpl(InstrumentingAgents& inst
 
 void InspectorInstrumentation::consoleCountImpl(InstrumentingAgents& instrumentingAgents, JSC::JSGlobalObject* state, const String& label)
 {
-    if (LIKELY(!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()))
+    if (!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()) [[likely]]
         return;
 
     if (auto* consoleAgent = instrumentingAgents.webConsoleAgent())
@@ -932,7 +944,7 @@ void InspectorInstrumentation::consoleCountImpl(InstrumentingAgents& instrumenti
 
 void InspectorInstrumentation::consoleCountResetImpl(InstrumentingAgents& instrumentingAgents, JSC::JSGlobalObject* state, const String& label)
 {
-    if (LIKELY(!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()))
+    if (!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()) [[likely]]
         return;
 
     if (auto* consoleAgent = instrumentingAgents.webConsoleAgent())
@@ -947,7 +959,7 @@ void InspectorInstrumentation::takeHeapSnapshotImpl(InstrumentingAgents& instrum
 
 void InspectorInstrumentation::startConsoleTimingImpl(InstrumentingAgents& instrumentingAgents, JSC::JSGlobalObject* exec, const String& label)
 {
-    if (LIKELY(!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()))
+    if (!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()) [[likely]]
         return;
 
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
@@ -958,7 +970,7 @@ void InspectorInstrumentation::startConsoleTimingImpl(InstrumentingAgents& instr
 
 void InspectorInstrumentation::logConsoleTimingImpl(InstrumentingAgents& instrumentingAgents, JSC::JSGlobalObject* exec, const String& label, Ref<Inspector::ScriptArguments>&& arguments)
 {
-    if (LIKELY(!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()))
+    if (!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()) [[likely]]
         return;
 
     if (auto* consoleAgent = instrumentingAgents.webConsoleAgent())
@@ -967,7 +979,7 @@ void InspectorInstrumentation::logConsoleTimingImpl(InstrumentingAgents& instrum
 
 void InspectorInstrumentation::stopConsoleTimingImpl(InstrumentingAgents& instrumentingAgents, JSC::JSGlobalObject* exec, const String& label)
 {
-    if (LIKELY(!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()))
+    if (!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()) [[likely]]
         return;
 
     if (auto* consoleAgent = instrumentingAgents.webConsoleAgent())

@@ -36,22 +36,26 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(NavigationPreloadManager);
 
 void NavigationPreloadManager::enable(Promise&& promise)
 {
-    m_registration.container().enableNavigationPreload(m_registration.identifier(), WTFMove(promise));
+    Ref registration = m_registration.get();
+    registration->protectedContainer()->enableNavigationPreload(registration->identifier(), WTFMove(promise));
 }
 
 void NavigationPreloadManager::disable(Promise&& promise)
 {
-    m_registration.container().disableNavigationPreload(m_registration.identifier(), WTFMove(promise));
+    Ref registration = m_registration.get();
+    registration->protectedContainer()->disableNavigationPreload(registration->identifier(), WTFMove(promise));
 }
 
 void NavigationPreloadManager::setHeaderValue(String&& value, Promise&& promise)
 {
-    m_registration.container().setNavigationPreloadHeaderValue(m_registration.identifier(), WTFMove(value), WTFMove(promise));
+    Ref registration = m_registration.get();
+    registration->protectedContainer()->setNavigationPreloadHeaderValue(registration->identifier(), WTFMove(value), WTFMove(promise));
 }
 
 void NavigationPreloadManager::getState(StatePromise&& promise)
 {
-    m_registration.container().getNavigationPreloadState(m_registration.identifier(), WTFMove(promise));
+    Ref registration = m_registration.get();
+    registration->protectedContainer()->getNavigationPreloadState(registration->identifier(), WTFMove(promise));
 }
 
 } // namespace WebCore

@@ -1,7 +1,5 @@
 "use strict";
 
-const runs = 1e5;
-
 function shouldBe(actual, expected) {
     if (actual !== expected)
         throw new Error(`Bad value: ${actual}!`);
@@ -31,7 +29,7 @@ function shouldThrow(func, errorMessage) {
         foo = 1;
     }
 
-    for (var i = 0; i < runs; i++) {
+    for (var i = 0; i < testLoopCount; i++) {
         shouldThrow(() => { new TestFinalObjectDontDelete(); }, "TypeError: Attempting to change configurable attribute of unconfigurable property.");
     }
 
@@ -47,7 +45,7 @@ function shouldThrow(func, errorMessage) {
         foo = 42;
     }
 
-    for (var i = 0; i < runs; i++) {
+    for (var i = 0; i < testLoopCount; i++) {
         var object = new TestFinalObjectReadOnly();
         shouldBe(object.foo, 42);
 
@@ -70,7 +68,7 @@ function shouldThrow(func, errorMessage) {
         foo = 42;
     }
 
-    for (var i = 0; i < runs; i++) {
+    for (var i = 0; i < testLoopCount; i++) {
         shouldThrow(() => { new TestFinalObjectNonExtendable(); }, "TypeError: Attempting to define property on object that is not extensible.");
     }
 })();
@@ -86,7 +84,7 @@ function shouldThrow(func, errorMessage) {
         dontEnum = 42;
     }
 
-    for (var i = 0; i < runs; i++) {
+    for (var i = 0; i < testLoopCount; i++) {
         var object = new TestNonReifiedStaticDontEnum();
         shouldBe(object.dontEnum, 42);
 
@@ -101,7 +99,7 @@ function shouldThrow(func, errorMessage) {
         dontDelete = "foo";
     }
 
-    for (var i = 0; i < runs; i++) {
+    for (var i = 0; i < testLoopCount; i++) {
         shouldThrow(() => { new TestNonReifiedStaticDontDelete(); }, "TypeError: Attempting to change configurable attribute of unconfigurable property.");
     }
 })();

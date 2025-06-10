@@ -30,6 +30,7 @@
 #include "Font.h"
 #include "FontCascadeDescription.h"
 #include "FontCreationContext.h"
+#include "FontCustomPlatformData.h"
 #include "FontDatabase.h"
 #include "FontFamilySpecificationCoreText.h"
 #include "FontInterrogation.h"
@@ -165,7 +166,7 @@ RefPtr<Font> FontCache::similarFont(const FontDescription& description, const St
 
 static void fontCacheRegisteredFontsChangedNotificationCallback(CFNotificationCenterRef, void* observer, CFStringRef, const void *, CFDictionaryRef)
 {
-    ASSERT_UNUSED(observer, isMainThread() && observer == &FontCache::forCurrentThread());
+    ASSERT_UNUSED(observer, isMainThread() && observer == FontCache::forCurrentThread().ptr());
 
     ensureOnMainThread([] {
         FontCache::invalidateAllFontCaches();
@@ -785,10 +786,10 @@ RefPtr<Font> FontCache::systemFallbackForCharacterCluster(const FontDescription&
 
     auto [syntheticBold, syntheticOblique] = computeNecessarySynthesis(substituteFont, description, { }, ShouldComputePhysicalTraits::No, isForPlatformFont == IsForPlatformFont::Yes).boldObliquePair();
 
-    const FontCustomPlatformData* customPlatformData = nullptr;
+    RefPtr<const FontCustomPlatformData> customPlatformData = nullptr;
     if (safeCFEqual(platformData.ctFont(), substituteFont))
         customPlatformData = platformData.customPlatformData();
-    FontPlatformData alternateFont(substituteFont, platformData.size(), syntheticBold, syntheticOblique, platformData.orientation(), platformData.widthVariant(), platformData.textRenderingMode(), customPlatformData);
+    FontPlatformData alternateFont(substituteFont, platformData.size(), syntheticBold, syntheticOblique, platformData.orientation(), platformData.widthVariant(), platformData.textRenderingMode(), customPlatformData.get());
 
     return fontForPlatformData(alternateFont);
 }
@@ -934,7 +935,7 @@ void FontCache::prewarm(PrewarmInformation&& prewarmInformation)
         return;
 
     if (!m_prewarmQueue)
-        m_prewarmQueue = WorkQueue::create("WebKit font prewarm queue"_s);
+        lazyInitialize(m_prewarmQueue, WorkQueue::create("WebKit font prewarm queue"_s));
 
     m_prewarmQueue->dispatch([&database = m_databaseDisallowingUserInstalledFonts, prewarmInformation = WTFMove(prewarmInformation).isolatedCopy()] {
         for (auto& family : prewarmInformation.seenFamilies)
@@ -974,7 +975,7 @@ void FontCache::prewarmGlobally()
 
     FontCache::PrewarmInformation prewarmInfo;
     prewarmInfo.seenFamilies = WTFMove(families);
-    FontCache::forCurrentThread().prewarm(WTFMove(prewarmInfo));
+    FontCache::forCurrentThread()->prewarm(WTFMove(prewarmInfo));
 #endif
 }
 

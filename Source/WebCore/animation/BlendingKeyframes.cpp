@@ -40,6 +40,7 @@
 #include "StyleResolver.h"
 #include "TransformOperations.h"
 #include "TranslateTransformOperation.h"
+#include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/ZippedRange.h>
 
 namespace WebCore {
@@ -70,6 +71,18 @@ bool BlendingKeyframes::operator==(const BlendingKeyframes& o) const
     }
 
     return true;
+}
+
+const String& BlendingKeyframes::acceleratedAnimationName() const
+{
+    if (m_acceleratedAnimationName.isEmpty()) {
+        m_acceleratedAnimationName = switchOn(m_identifier, [](const AtomString& name) {
+            return name.string();
+        }, [](uint64_t numericID) {
+            return makeString("keyframe-effect-"_s, numericID);
+        });
+    }
+    return m_acceleratedAnimationName;
 }
 
 void BlendingKeyframes::insert(BlendingKeyframe&& keyframe)
@@ -404,9 +417,14 @@ void BlendingKeyframes::updatedComputedOffsets(NOESCAPE const Function<double(co
     for (auto& keyframe : m_keyframes)
         keyframe.setComputedOffset(callback(keyframe.specifiedOffset()));
 
-    std::ranges::stable_sort(m_keyframes, [](auto& lhs, auto& rhs) {
-        return lhs.offset() < rhs.offset();
-    });
+    std::ranges::stable_sort(m_keyframes, { }, &BlendingKeyframe::offset);
+}
+
+uint64_t BlendingKeyframes::nextAnonymousIdentifier()
+{
+    // Start from a random number so acceleratedAnimationName() won't ever collide with an author specified one.
+    static auto numericIdentifier = cryptographicallyRandomNumber<uint64_t>();
+    return ++numericIdentifier;
 }
 
 BlendingKeyframe::BlendingKeyframe(Offset&& offset, std::unique_ptr<RenderStyle>&& style)

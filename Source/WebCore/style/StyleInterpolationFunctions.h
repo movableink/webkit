@@ -48,10 +48,13 @@
 #include "Logging.h"
 #include "Matrix3DTransformOperation.h"
 #include "MatrixTransformOperation.h"
+#include "PathOperation.h"
 #include "QuotesData.h"
 #include "RenderBox.h"
 #include "RenderStyleSetters.h"
+#include "RotateTransformOperation.h"
 #include "SVGRenderStyle.h"
+#include "ScaleTransformOperation.h"
 #include "ScopedName.h"
 #include "ScrollbarGutter.h"
 #include "Settings.h"
@@ -103,29 +106,6 @@ inline WebCore::Length blendFunc(const WebCore::Length& from, const WebCore::Len
     return blend(from, to, context, valueRange);
 }
 
-inline bool canInterpolateLengths(const WebCore::Length& from, const WebCore::Length& to, bool isLengthPercentage)
-{
-    if (from.type() == to.type())
-        return true;
-
-    // Some properties allow for <length-percentage> and <number> values. We must allow animating
-    // between a <length> and a <percentage>, but exclude animating between a <number> and either
-    // a <length> or <percentage>. We can use Length::isRelative() to determine whether we are
-    // dealing with a <number> as opposed to a <length> or <percentage>.
-    if (isLengthPercentage) {
-        return (from.isFixed() || from.isPercentOrCalculated() || from.isRelative())
-            && (to.isFixed() || to.isPercentOrCalculated() || to.isRelative())
-            && from.isRelative() == to.isRelative();
-    }
-
-    if (from.isCalculated())
-        return to.isFixed() || to.isPercentOrCalculated();
-    if (to.isCalculated())
-        return from.isFixed() || from.isPercentOrCalculated();
-
-    return false;
-}
-
 inline GapLength blendFunc(const GapLength& from, const GapLength& to, const Context& context)
 {
     if (from.isNormal() || to.isNormal())
@@ -173,17 +153,6 @@ inline bool lengthVariantRequiresInterpolationForAccumulativeIteration(const Len
 inline LengthPoint blendFunc(const LengthPoint& from, const LengthPoint& to, const Context& context)
 {
     return blend(from, to, context);
-}
-
-inline std::unique_ptr<ShadowData> blendFunc(const ShadowData* from, const ShadowData* to, const RenderStyle& fromStyle, const RenderStyle& toStyle, const Context& context)
-{
-    ASSERT(from);
-    ASSERT(to);
-    ASSERT(from->style() == to->style());
-
-    return makeUnique<ShadowData>(
-        Style::blend(from->asBoxShadow(), to->asBoxShadow(), fromStyle, toStyle, context)
-    );
 }
 
 inline TransformOperations blendFunc(const TransformOperations& from, const TransformOperations& to, const Context& context)
@@ -387,7 +356,7 @@ inline Visibility blendFunc(Visibility from, Visibility to, const Context& conte
     if (fromVal == toVal)
         return to;
     // The composite operation here is irrelevant.
-    double result = blendFunc(fromVal, toVal, { context.property, context.progress, false, CompositeOperation::Replace, IterationCompositeOperation::Replace, 0, context.client });
+    double result = blendFunc(fromVal, toVal, { context.property, context.progress, false, CompositeOperation::Replace, IterationCompositeOperation::Replace, 0, { }, { }, context.client });
     return result > 0. ? Visibility::Visible : (to != Visibility::Visible ? to : from);
 }
 
@@ -417,17 +386,13 @@ inline LengthBox blendFunc(const LengthBox& from, const LengthBox& to, const Con
     };
 }
 
-inline SVGLengthValue blendFunc(const SVGLengthValue& from, const SVGLengthValue& to, const Context& context)
-{
-    return SVGLengthValue::blend(from, to, narrowPrecisionToFloat(context.progress));
-}
-
-inline Vector<SVGLengthValue> blendFunc(const Vector<SVGLengthValue>& from, const Vector<SVGLengthValue>& to, const Context& context)
+inline FixedVector<WebCore::Length> blendFunc(const FixedVector<WebCore::Length>& from, const FixedVector<WebCore::Length>& to, const Context& context)
 {
     size_t fromLength = from.size();
     size_t toLength = to.size();
     if (!fromLength || !toLength)
         return context.progress < 0.5 ? from : to;
+
     size_t resultLength = fromLength;
     if (fromLength != toLength) {
         if (!remainder(std::max(fromLength, toLength), std::min(fromLength, toLength)))
@@ -435,10 +400,9 @@ inline Vector<SVGLengthValue> blendFunc(const Vector<SVGLengthValue>& from, cons
         else
             resultLength = fromLength * toLength;
     }
-    Vector<SVGLengthValue> result(resultLength);
-    for (size_t i = 0; i < resultLength; ++i)
-        result[i] = SVGLengthValue::blend(from[i % fromLength], to[i % toLength], narrowPrecisionToFloat(context.progress));
-    return result;
+    return FixedVector<WebCore::Length>::createWithSizeFromGenerator(resultLength, [&](auto i) {
+        return blendFunc(from[i % fromLength], to[i % toLength], context);
+    });
 }
 
 inline RefPtr<StyleImage> crossfadeBlend(StyleCachedImage& fromStyleImage, StyleCachedImage& toStyleImage, const Context& context)
@@ -600,7 +564,7 @@ inline bool canInterpolate(const GridTrackList& from, const GridTrackList& to)
     );
 
     for (i = 0; i < from.list.size(); i++) {
-        if (!std::visit(visitor, from.list[i]))
+        if (!WTF::visit(visitor, from.list[i]))
             return false;
     }
 
@@ -655,7 +619,7 @@ inline RepeatTrackList blendFunc(const RepeatTrackList& from, const RepeatTrackL
     );
 
     for (i = 0; i < from.size(); i++)
-        std::visit(visitor, from[i]);
+        WTF::visit(visitor, from[i]);
 
     return result;
 }
@@ -700,7 +664,7 @@ inline GridTrackList blendFunc(const GridTrackList& from, const GridTrackList& t
 
 
     for (i = 0; i < from.list.size(); i++)
-        std::visit(visitor, from.list[i]);
+        WTF::visit(visitor, from.list[i]);
 
     return result;
 }

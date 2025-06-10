@@ -35,8 +35,10 @@
 #include <WebCore/Color.h>
 #include <WebCore/LayerHostingContextIdentifier.h>
 #include <WebCore/ModelPlayer.h>
+#include <WebCore/ModelPlayerAnimationState.h>
 #include <WebCore/ModelPlayerIdentifier.h>
 #include <WebCore/StageModeOperations.h>
+#include <WebCore/TransformationMatrix.h>
 #include <WebKitAdditions/REPtr.h>
 #include <WebKitAdditions/REModelLoaderClient.h>
 #include <simd/simd.h>
@@ -48,7 +50,7 @@
 
 OBJC_CLASS WKModelProcessModelLayer;
 OBJC_CLASS WKModelProcessModelPlayerProxyObjCAdapter;
-OBJC_CLASS WKSRKEntity;
+OBJC_CLASS WKRKEntity;
 OBJC_CLASS WKStageModeInteractionDriver;
 
 namespace WebCore {
@@ -67,7 +69,7 @@ class ModelProcessModelPlayerProxy final
     , private IPC::MessageReceiver {
     WTF_MAKE_TZONE_ALLOCATED(ModelProcessModelPlayerProxy);
 public:
-    static Ref<ModelProcessModelPlayerProxy> create(ModelProcessModelPlayerManagerProxy&, WebCore::ModelPlayerIdentifier, Ref<IPC::Connection>&&);
+    static Ref<ModelProcessModelPlayerProxy> create(ModelProcessModelPlayerManagerProxy&, WebCore::ModelPlayerIdentifier, Ref<IPC::Connection>&&, const std::optional<String>&);
     ~ModelProcessModelPlayerProxy();
 
     void ref() const final { WebCore::ModelPlayer::ref(); }
@@ -75,13 +77,12 @@ public:
 
     std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess() const;
 
-    static bool transformSupported(const simd_float4x4& transform);
-
     void invalidate();
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
     template<typename T> void send(T&& message);
 
-    void updateTransform();
+    void unloadModelTimerFired();
+    void updateTransformAfterLayout();
     void updateOpacity();
     void startAnimating();
     void animationPlaybackStateDidUpdate();
@@ -89,6 +90,8 @@ public:
     // Messages
     void createLayer();
     void loadModel(Ref<WebCore::Model>&&, WebCore::LayoutSize);
+    void reloadModel(Ref<WebCore::Model>&&, WebCore::LayoutSize, std::optional<WebCore::TransformationMatrix> transformToRestore, std::optional<WebCore::ModelPlayerAnimationState> animationStateToRestore);
+    void modelVisibilityDidChange(bool isVisible);
 
     // WebCore::REModelLoaderClient overrides.
     void didFinishLoading(WebCore::REModelLoader&, Ref<WebCore::REModel>) final;
@@ -135,27 +138,37 @@ public:
     void beginStageModeTransform(const WebCore::TransformationMatrix&) final;
     void updateStageModeTransform(const WebCore::TransformationMatrix&) final;
     void endStageModeInteraction() final;
+    void resetModelTransformAfterDrag() final;
     void stageModeInteractionDidUpdateModel();
+    void animateModelToFitPortal(CompletionHandler<void(bool)>&&) final;
 
     USING_CAN_MAKE_WEAKPTR(WebCore::REModelLoaderClient);
 
-private:
-    ModelProcessModelPlayerProxy(ModelProcessModelPlayerManagerProxy&, WebCore::ModelPlayerIdentifier, Ref<IPC::Connection>&&);
+    void disableUnloadDelayForTesting() { m_unloadDelayDisabledForTesting = true; }
+    static uint64_t objectCountForTesting() { return gObjectCountForTesting; }
 
-    void computeTransform();
+private:
+    ModelProcessModelPlayerProxy(ModelProcessModelPlayerManagerProxy&, WebCore::ModelPlayerIdentifier, Ref<IPC::Connection>&&, const std::optional<String>&);
+
+    void computeTransform(bool);
+    void updateTransform();
     void applyEnvironmentMapDataAndRelease();
     void applyStageModeOperationToDriver();
     bool stageModeInteractionInProgress() const;
+    void updateTransformSRT();
+    void notifyModelPlayerOfEntityTransformChange();
+    void applyDefaultIBL();
+    void updateForCurrentStageMode();
 
     WebCore::ModelPlayerIdentifier m_id;
+    bool m_isVisible { true };
     Ref<IPC::Connection> m_webProcessConnection;
     WeakPtr<ModelProcessModelPlayerManagerProxy> m_manager;
 
     std::unique_ptr<LayerHostingContext> m_layerHostingContext;
     RetainPtr<WKModelProcessModelLayer> m_layer;
     RefPtr<WebCore::REModelLoader> m_loader;
-    RefPtr<WebCore::REModel> m_model;
-    RetainPtr<WKSRKEntity> m_modelRKEntity;
+    RetainPtr<WKRKEntity> m_modelRKEntity;
     REPtr<RESceneRef> m_scene;
     REPtr<REEntityRef> m_hostingEntity;
     REPtr<REEntityRef> m_containerEntity;
@@ -167,6 +180,7 @@ private:
     float m_yaw { 0 };
 
     RESRT m_transformSRT; // SRT=Scaling/Rotation/Translation. This is stricter than a WebCore::TransformationMatrix.
+    bool m_transformNeedsUpdateAfterNextLayout { false };
 
     bool m_autoplay { false };
     bool m_loop { false };
@@ -178,6 +192,15 @@ private:
     // For interactions
     RetainPtr<WKStageModeInteractionDriver> m_stageModeInteractionDriver;
     WebCore::StageModeOperation m_stageModeOperation { WebCore::StageModeOperation::None };
+
+    std::optional<String> m_attributionTaskID;
+    std::optional<WebCore::TransformationMatrix> m_entityTransformToRestore;
+    std::optional<WebCore::ModelPlayerAnimationState> m_animationStateToRestore;
+    RunLoop::Timer m_unloadModelTimer;
+
+    // For testing
+    bool m_unloadDelayDisabledForTesting { false };
+    static uint64_t gObjectCountForTesting;
 };
 
 } // namespace WebKit

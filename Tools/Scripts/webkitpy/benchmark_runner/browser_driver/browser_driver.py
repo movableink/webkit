@@ -72,7 +72,7 @@ class BrowserDriver:
         return get_driver_binary_path(self.browser_name)
 
     @property
-    def pgo_profile_output_directory(self):
+    def pgo_profile_output_directories(self):
         raise NotImplementedError()
 
     def prepare_pgo_profile_collection(self):

@@ -28,7 +28,6 @@
 #include "APIObject.h"
 #include "WKRetainPtr.h"
 #include <JavaScriptCore/JSRetainPtr.h>
-#include <WebCore/CryptoKey.h>
 #include <WebCore/SerializedScriptValue.h>
 #include <wtf/RefPtr.h>
 
@@ -44,13 +43,14 @@ typedef const void* WKTypeRef;
 
 namespace API {
 
-class SerializedScriptValue : public API::ObjectImpl<API::Object::Type::SerializedScriptValue> {
+class SerializedScriptValue : public RefCounted<SerializedScriptValue> {
 public:
+#if !PLATFORM(COCOA)
     static Ref<SerializedScriptValue> create(Ref<WebCore::SerializedScriptValue>&& serializedValue)
     {
         return adoptRef(*new SerializedScriptValue(WTFMove(serializedValue)));
     }
-    
+
     static RefPtr<SerializedScriptValue> create(JSContextRef context, JSValueRef value, JSValueRef* exception)
     {
         RefPtr<WebCore::SerializedScriptValue> serializedValue = WebCore::SerializedScriptValue::create(context, value, exception);
@@ -59,12 +59,10 @@ public:
         return adoptRef(*new SerializedScriptValue(serializedValue.releaseNonNull()));
     }
 
-#if !PLATFORM(COCOA)
     static Ref<SerializedScriptValue> createFromWireBytes(std::span<const uint8_t> buffer)
     {
         return adoptRef(*new SerializedScriptValue(WebCore::SerializedScriptValue::createFromWireBytes(Vector<uint8_t>(buffer))));
     }
-#endif
 
     JSValueRef deserialize(JSContextRef context, JSValueRef* exception)
     {
@@ -72,11 +70,9 @@ public:
     }
 
     static WKRetainPtr<WKTypeRef> deserializeWK(WebCore::SerializedScriptValue&);
-    static Vector<uint8_t> serializeCryptoKey(const WebCore::CryptoKey&);
+#endif
 
-#if PLATFORM(COCOA) && defined(__OBJC__)
-    static id deserialize(WebCore::SerializedScriptValue&);
-    static RefPtr<SerializedScriptValue> createFromNSObject(id);
+#if PLATFORM(COCOA)
     static JSRetainPtr<JSGlobalContextRef> deserializationContext();
 #endif
 
@@ -87,19 +83,21 @@ public:
     static RefPtr<SerializedScriptValue> createFromJSCValue(JSCValue*);
 #endif
 
+#if !PLATFORM(COCOA)
     std::span<const uint8_t> dataReference() const { return m_serializedScriptValue->wireBytes(); }
 
     WebCore::SerializedScriptValue& internalRepresentation() { return m_serializedScriptValue.get(); }
+#endif
 
 private:
+#if !PLATFORM(COCOA)
     explicit SerializedScriptValue(Ref<WebCore::SerializedScriptValue>&& serializedScriptValue)
         : m_serializedScriptValue(WTFMove(serializedScriptValue))
     {
     }
 
     const Ref<WebCore::SerializedScriptValue> m_serializedScriptValue;
+#endif
 };
     
 }
-
-SPECIALIZE_TYPE_TRAITS_API_OBJECT(SerializedScriptValue);

@@ -32,20 +32,17 @@
 #include <WebCore/GLContext.h>
 #include <WebCore/IntSize.h>
 #include <WebCore/TextureMapperDamageVisualizer.h>
-#include <WebCore/TextureMapperFPSCounter.h>
 #include <atomic>
+#include <optional>
 #include <wtf/Atomics.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/OptionSet.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 #if !HAVE(DISPLAY_LINK)
 #include "ThreadedDisplayRefreshMonitor.h"
-#endif
-
-#if ENABLE(DAMAGE_TRACKING)
-#include "FrameDamageForTesting.h"
 #endif
 
 namespace WebCore {
@@ -58,21 +55,11 @@ class AcceleratedSurface;
 class CoordinatedSceneState;
 class LayerTreeHost;
 
-class ThreadedCompositor : public ThreadSafeRefCounted<ThreadedCompositor>, public CanMakeThreadSafeCheckedPtr<ThreadedCompositor>
-#if ENABLE(DAMAGE_TRACKING)
-    , public FrameDamageForTesting
-#endif
-{
+class ThreadedCompositor : public ThreadSafeRefCounted<ThreadedCompositor>, public CanMakeThreadSafeCheckedPtr<ThreadedCompositor> {
     WTF_MAKE_TZONE_ALLOCATED(ThreadedCompositor);
     WTF_MAKE_NONCOPYABLE(ThreadedCompositor);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ThreadedCompositor);
 public:
-    enum class DamagePropagation : uint8_t {
-        None,
-        Region,
-        Unified,
-    };
-
 #if HAVE(DISPLAY_LINK)
     static Ref<ThreadedCompositor> create(LayerTreeHost&);
 #else
@@ -103,10 +90,15 @@ public:
 
     bool isActive() const;
 
+    std::optional<float> fps() const { return m_fpsCounter.fps.load(); };
+
 #if ENABLE(DAMAGE_TRACKING)
-    void setDamagePropagation(WebCore::Damage::Propagation);
-    WebCore::FrameDamageHistory* frameDamageHistory() const { return m_frameDamageHistory.get(); }
-    void resetFrameDamageHistory();
+    enum class DamagePropagationFlags : uint8_t {
+        Unified = 1 << 0,
+        UseForCompositing = 1 << 1
+    };
+    void setDamagePropagationFlags(std::optional<OptionSet<DamagePropagationFlags>>);
+    void enableFrameDamageNotificationForTesting();
 #endif
 
 private:
@@ -130,6 +122,9 @@ private:
 
     void updateSceneAttributes(const WebCore::IntSize&, float deviceScaleFactor);
 
+    void initializeFPSCounter();
+    void updateFPSCounter();
+
     CheckedPtr<LayerTreeHost> m_layerTreeHost;
     std::unique_ptr<AcceleratedSurface> m_surface;
     RefPtr<CoordinatedSceneState> m_sceneState;
@@ -151,11 +146,21 @@ private:
     } m_attributes;
 
     std::unique_ptr<WebCore::TextureMapper> m_textureMapper;
-    WebCore::TextureMapperFPSCounter m_fpsCounter;
+
+    struct {
+        bool exposesFPS { false };
+        Seconds calculationInterval { 1_s };
+        MonotonicTime lastCalculationTimestamp;
+        unsigned frameCountSinceLastCalculation { 0 };
+        std::atomic<std::optional<float>> fps;
+    } m_fpsCounter;
 
 #if ENABLE(DAMAGE_TRACKING)
-    WebCore::Damage::Propagation m_damagePropagation { WebCore::Damage::Propagation::None };
-    std::unique_ptr<WebCore::TextureMapperDamageVisualizer> m_damageVisualizer;
+    struct {
+        std::optional<OptionSet<DamagePropagationFlags>> flags;
+        std::unique_ptr<WebCore::TextureMapperDamageVisualizer> visualizer;
+        std::atomic<bool> shouldNotifyFrameDamageForTesting { false };
+    } m_damage;
 #endif
 
     std::atomic<uint32_t> m_compositionRequestID { 0 };
@@ -169,10 +174,7 @@ private:
         std::unique_ptr<RunLoop::Timer> updateTimer;
     } m_display;
 
-    Ref<ThreadedDisplayRefreshMonitor> m_displayRefreshMonitor;
-#endif
-#if ENABLE(DAMAGE_TRACKING)
-    std::unique_ptr<WebCore::FrameDamageHistory> m_frameDamageHistory;
+    const Ref<ThreadedDisplayRefreshMonitor> m_displayRefreshMonitor;
 #endif
 };
 

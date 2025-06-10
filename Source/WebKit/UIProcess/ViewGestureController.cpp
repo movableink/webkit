@@ -781,7 +781,7 @@ void ViewGestureController::applyMagnification()
         if (RefPtr page = m_webPageProxy.get())
             page->scalePage(m_magnification, roundedIntPoint(m_magnificationOrigin), [] { });
     } else if (auto* drawingArea = m_webPageProxy ? m_webPageProxy->drawingArea() : nullptr)
-        drawingArea->adjustTransientZoom(m_magnification, scaledMagnificationOrigin(m_magnificationOrigin, m_magnification));
+        drawingArea->adjustTransientZoom(m_magnification, scaledMagnificationOrigin(m_magnificationOrigin, m_magnification), m_magnificationOrigin);
 }
 
 void ViewGestureController::endMagnificationGesture()

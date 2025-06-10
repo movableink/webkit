@@ -209,7 +209,7 @@ bool PlatformRawAudioDataCocoa::isInterleaved() const
     return m_description.isInterleaved();
 }
 
-static std::variant<Vector<std::span<uint8_t>>, Vector<std::span<int16_t>>, Vector<std::span<int32_t>>, Vector<std::span<float>>> planesOfSamples(AudioSampleFormat format, const WebAudioBufferList& list, size_t samplesOffset)
+static Variant<Vector<std::span<uint8_t>>, Vector<std::span<int16_t>>, Vector<std::span<int32_t>>, Vector<std::span<float>>> planesOfSamples(AudioSampleFormat format, const WebAudioBufferList& list, size_t samplesOffset)
 {
     auto subspan = [samplesOffset](auto span) {
         RELEASE_ASSERT(samplesOffset <= span.size());

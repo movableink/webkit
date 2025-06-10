@@ -30,11 +30,12 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 class InspectorHistory final {
     WTF_MAKE_TZONE_ALLOCATED(InspectorHistory);

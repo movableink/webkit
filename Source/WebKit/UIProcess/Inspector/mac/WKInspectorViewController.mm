@@ -57,6 +57,9 @@
 
 static NSString * const WKInspectorResourceScheme = @"inspector-resource";
 
+static NSString * const safeAreaInsetsKVOKey = @"safeAreaInsets";
+static void* const safeAreaInsetsKVOContext = (void*)&safeAreaInsetsKVOContext;
+
 @interface WKInspectorViewController () <WKUIDelegate, WKNavigationDelegate, WKInspectorWKWebViewDelegate>
 @end
 
@@ -110,9 +113,20 @@ static NSString * const WKInspectorResourceScheme = @"inspector-resource";
         [_webView _setAutomaticallyAdjustsContentInsets:NO];
         [_webView _setUseSystemAppearance:YES];
         [_webView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+
+        [_webView _setObscuredContentInsets:_webView.get().safeAreaInsets immediate:NO];
+        [_webView addObserver:self forKeyPath:safeAreaInsetsKVOKey options:0 context:safeAreaInsetsKVOContext];
     }
 
     return _webView.get();
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey, id> *)change context:(void*)context
+{
+    if (context == safeAreaInsetsKVOContext)
+        [_webView _setObscuredContentInsets:_webView.get().safeAreaInsets immediate:NO];
+    else
+        [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
 }
 
 - (void)setDelegate:(id <WKInspectorViewControllerDelegate>)delegate
@@ -126,14 +140,15 @@ static NSString * const WKInspectorResourceScheme = @"inspector-resource";
     RetainPtr<WKInspectorResourceURLSchemeHandler> inspectorSchemeHandler = adoptNS([WKInspectorResourceURLSchemeHandler new]);
     RetainPtr<NSMutableSet<NSString *>> allowedURLSchemes = adoptNS([[NSMutableSet alloc] initWithObjects:WKInspectorResourceScheme, nil]);
     for (auto& pair : _configuration->_configuration->urlSchemeHandlers())
-        [allowedURLSchemes addObject:pair.second];
+        [allowedURLSchemes addObject:pair.second.createNSString().get()];
 
     [inspectorSchemeHandler setAllowedURLSchemesForCSP:allowedURLSchemes.get()];
     [configuration setURLSchemeHandler:inspectorSchemeHandler.get() forURLScheme:WKInspectorResourceScheme];
 
+    RefPtr inspectedPage = _inspectedPage.get();
 #if ENABLE(WK_WEB_EXTENSIONS) && ENABLE(INSPECTOR_EXTENSIONS)
-    if (RefPtr page = _inspectedPage.get()) {
-        if (RefPtr webExtensionController = page->webExtensionController())
+    if (inspectedPage) {
+        if (RefPtr webExtensionController = inspectedPage->webExtensionController())
             configuration.get().webExtensionController = webExtensionController->wrapper();
     }
 #endif
@@ -167,17 +182,17 @@ static NSString * const WKInspectorResourceScheme = @"inspector-resource";
     // If not specified or the inspection level is >1, use the default strategy.
     // This ensures that Inspector^2 cannot be affected by client (mis)configuration.
     auto* customProcessPool = configuration.get().processPool;
-    auto inspectorLevel = WebKit::inspectorLevelForPage(_inspectedPage.get());
+    auto inspectorLevel = WebKit::inspectorLevelForPage(inspectedPage.get());
     auto useDefaultProcessPool = inspectorLevel > 1 || !customProcessPool;
     if (customProcessPool && !useDefaultProcessPool)
-        WebKit::prepareProcessPoolForInspector(*customProcessPool->_processPool.get());
+        WebKit::prepareProcessPoolForInspector(Ref { *customProcessPool->_processPool.get() });
 
     if (useDefaultProcessPool)
-        [configuration setProcessPool:wrapper(WebKit::defaultInspectorProcessPool(inspectorLevel))];
+        [configuration setProcessPool:wrapper(Ref { WebKit::defaultInspectorProcessPool(inspectorLevel) }.get())];
 
     // Ensure that a page group identifier is set. This is for computing inspection levels.
     if (!configuration.get()._groupIdentifier)
-        [configuration _setGroupIdentifier:WebKit::defaultInspectorPageGroupIdentifierForPage(_inspectedPage.get())];
+        [configuration _setGroupIdentifier:WebKit::defaultInspectorPageGroupIdentifierForPage(inspectedPage.get()).createNSString().get()];
 
     // Prefer using a custom persistent data store if one exists.
     RetainPtr<WKWebsiteDataStore> targetDataStore;
@@ -200,7 +215,7 @@ static NSString * const WKInspectorResourceScheme = @"inspector-resource";
 
 + (NSURL *)URLForInspectorResource:(NSString *)resource
 {
-    return [NSURL URLWithString:[NSString stringWithFormat:@"%@:///%@", WKInspectorResourceScheme, resource]].URLByStandardizingPath;
+    return [NSURL URLWithString:adoptNS([[NSString alloc] initWithFormat:@"%@:///%@", WKInspectorResourceScheme, resource]).get()].URLByStandardizingPath;
 }
 
 // MARK: WKUIDelegate methods
@@ -270,6 +285,8 @@ static NSString * const WKInspectorResourceScheme = @"inspector-resource";
 
 - (void)webViewWebContentProcessDidTerminate:(WKWebView *)webView
 {
+    [_webView removeObserver:self forKeyPath:safeAreaInsetsKVOKey];
+
     if (!!_delegate && [_delegate respondsToSelector:@selector(inspectorViewControllerInspectorDidCrash:)])
         [_delegate inspectorViewControllerInspectorDidCrash:self];
 }

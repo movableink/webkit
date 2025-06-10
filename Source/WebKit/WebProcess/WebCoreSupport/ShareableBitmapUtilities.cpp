@@ -33,6 +33,7 @@
 #include <WebCore/ImageBuffer.h>
 #include <WebCore/IntSize.h>
 #include <WebCore/LocalFrame.h>
+#include <WebCore/NativeImage.h>
 #include <WebCore/PlatformScreen.h>
 #include <WebCore/RenderElementInlines.h>
 #include <WebCore/RenderImage.h>

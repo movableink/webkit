@@ -25,11 +25,11 @@
 
 WI.HeapSnapshotNodeProxy = class HeapSnapshotNodeProxy
 {
-    constructor(target, snapshotObjectId, {id, className, size, retainedSize, internal, isObjectType, gcRoot, dead, dominatorNodeIdentifier, hasChildren})
+    constructor(target, snapshotObjectId, {id, className, size, retainedSize, internal, isObjectType, isElementType, gcRoot, dead, dominatorNodeIdentifier, hasChildren})
     {
-        console.assert(target instanceof WI.Target, target);
+        console.assert(!target || target instanceof WI.Target || target instanceof WI.ImportedTarget, target);
 
-        this._target = target;
+        this._target = target || null;
         this._proxyObjectId = snapshotObjectId;
 
         this.id = id;
@@ -38,6 +38,7 @@ WI.HeapSnapshotNodeProxy = class HeapSnapshotNodeProxy
         this.retainedSize = retainedSize;
         this.internal = internal;
         this.isObjectType = isObjectType;
+        this.isElementType = isElementType;
         this.gcRoot = gcRoot;
         this.dead = dead;
         this.dominatorNodeIdentifier = dominatorNodeIdentifier;
@@ -54,6 +55,11 @@ WI.HeapSnapshotNodeProxy = class HeapSnapshotNodeProxy
     // Public
 
     get target() { return this._target; }
+
+    get imported()
+    {
+        return !this._target || this._target instanceof WI.ImportedTarget;
+    }
 
     // Proxied
 

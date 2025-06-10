@@ -97,7 +97,6 @@ public:
 
 #if ENABLE(MEDIA_STREAM)
     void setUseMockCaptureDevices(bool);
-    void setUseSCContentSharingPicker(bool);
     void enableMicrophoneMuteStatusAPI();
     void setOrientationForMediaCapture(WebCore::IntDegrees);
     void rotationAngleForCaptureDeviceChanged(const String&, WebCore::VideoFrameRotation);
@@ -172,6 +171,12 @@ public:
 
 #if PLATFORM(VISION) && ENABLE(MODEL_PROCESS)
     void requestSharedSimulationConnection(audit_token_t, CompletionHandler<void(std::optional<IPC::SharedFileHandle>)>&&);
+    void createMemoryAttributionIDForTask(WebCore::ProcessIdentity, CompletionHandler<void(const std::optional<String>&)>&&);
+    void unregisterMemoryAttributionID(const String&, CompletionHandler<void()>&&);
+#endif
+
+#if PLATFORM(COCOA)
+    void postWillTakeSnapshotNotification(CompletionHandler<void()>&&);
 #endif
 
 private:
@@ -243,9 +248,6 @@ private:
     bool m_shouldListenToVoiceActivity { false };
     Markable<WebPageProxyIdentifier> m_lastPageUsingMicrophone;
     bool m_isMicrophoneMuteStatusAPIEnabled { false };
-#endif
-#if HAVE(SC_CONTENT_SHARING_PICKER)
-    bool m_useSCContentSharingPicker { false };
 #endif
 #if PLATFORM(COCOA)
     bool m_hasSentTCCDSandboxExtension { false };

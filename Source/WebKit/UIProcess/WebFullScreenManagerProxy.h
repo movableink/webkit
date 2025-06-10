@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "FullScreenMediaDetails.h"
 #include "MessageReceiver.h"
 #include <WebCore/BoxExtents.h>
+#include <WebCore/FrameIdentifier.h>
 #include <WebCore/HTMLMediaElement.h>
 #include <WebCore/HTMLMediaElementEnums.h>
 #include <WebCore/ProcessIdentifier.h>
@@ -55,7 +56,6 @@ class WebFullScreenManagerProxy;
 class WebPageProxy;
 class WebProcessProxy;
 struct SharedPreferencesForWebProcess;
-template<typename> class Awaitable;
 
 class WebFullScreenManagerProxyClient : public CanMakeCheckedPtr<WebFullScreenManagerProxyClient> {
     WTF_MAKE_FAST_ALLOCATED;
@@ -159,7 +159,7 @@ private:
     WeakPtr<WebProcessProxy> m_fullScreenProcess;
 
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
 #endif
 };

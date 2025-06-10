@@ -105,6 +105,8 @@ public:
     void dump(TextStream&, DumpStyleValues = DumpStyleValues::All) const;
 
 private:
+    bool containsCurrentColor() const;
+
     RectEdges<BorderValue> m_edges;
     NinePieceImage m_image;
     RectCorners<LengthSize> m_radii { LengthSize { LengthType::Fixed, LengthType::Fixed } };

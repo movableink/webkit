@@ -50,10 +50,10 @@ T createStructure()
 
 inline String resultToString(XrResult value, XrInstance instance)
 {
-    char buffer[XR_MAX_RESULT_STRING_SIZE];
-    XrResult result = xrResultToString(instance, value, buffer);
+    std::array<char, XR_MAX_RESULT_STRING_SIZE> buffer;
+    XrResult result = xrResultToString(instance, value, buffer.data());
     if (result == XR_SUCCESS)
-        return String::fromLatin1(buffer);
+        return String::fromLatin1(buffer.data());
     return makeString("<unknown "_s, int(value), '>');
 }
 

@@ -1,4 +1,3 @@
-//@ mustCrash!
 //@ skip if $buildType != "debug" # crash relies on a Debug ASSERT
 //@ $skipModes << :lockdown # because signal handler not supported.
 //@ runDefault("--useLLInt=true")
@@ -34,6 +33,3 @@ for (var i = 0; i < 100; ++i) {
     putter(d);
     shouldBe('p3' in d, false);
 }
-
-if ($vm.assertEnabled())
-    throw new Error();

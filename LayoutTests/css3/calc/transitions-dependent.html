@@ -72,11 +72,11 @@ expectedValues = [
     [1.00, "innerTransition", 'width', 490, "outer"],
 ];
 
-function getPropertyCSSValue(elementId, property)
+function propertyValue(elementId, property)
 {
     let element = document.getElementById(elementId);
     let style = window.getComputedStyle(element, null);
-    return style.getPropertyValue(property);
+    return parseFloat(style.getPropertyValue(property))
 }
 
 function initTransitionOnElement(elementId)
@@ -99,7 +99,7 @@ function runTest(expected)
         let [time, elementId, property, expectedValue, dependsOn] = expected[i];
 
         pauseTransitionAtTimeOnElement(property, time, document.getElementById(dependsOn));
-        let actual = Number.parseFloat(getPropertyCSSValue(elementId, property));
+        let actual = propertyValue(elementId, property)
 
         if (actual == expectedValue)
             result.innerHTML += `PASS - "${property}" property for "${elementId}" element at ${time}s was: ${actual}<br/>`;
@@ -113,7 +113,7 @@ function runTest(expected)
         let [time, elementId, property, expectedValue, dependsOn] = expected[i];
 
         pauseTransitionAtTimeOnElement(property, time, document.getElementById(elementId));
-        let actual = Number.parseFloat(getPropertyCSSValue(elementId, property));
+        let actual = propertyValue(elementId, property)
 
         if (actual == expectedValue)
             result.innerHTML += `PASS - "${property}" property for "${elementId}" element at ${time}s was: ${actual}<br/>`;

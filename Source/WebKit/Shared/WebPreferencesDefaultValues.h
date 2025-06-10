@@ -46,6 +46,12 @@
 #define Webgpuhdr_feature_status Preview
 #endif
 
+#if defined(ENABLE_SUPPORT_HDR_DISPLAY_BY_DEFAULT) && ENABLE_SUPPORT_HDR_DISPLAY_BY_DEFAULT && defined(HAVE_SUPPORT_HDR_DISPLAY) && HAVE_SUPPORT_HDR_DISPLAY
+#define Supporthdrdisplay_feature_status Stable
+#else
+#define Supporthdrdisplay_feature_status Testable
+#endif
+
 #if defined(ENABLE_WEBXR_WEBGPU_BY_DEFAULT) && ENABLE_WEBXR_WEBGPU_BY_DEFAULT && PLATFORM(VISION)
 #define Webxr_layers_feature_status Stable
 #else
@@ -82,7 +88,6 @@ namespace WebKit {
 
 #if PLATFORM(IOS_FAMILY)
 bool defaultPassiveTouchListenersAsDefaultOnDocument();
-bool defaultCSSOMViewScrollingAPIEnabled();
 bool defaultShouldPrintBackgrounds();
 bool defaultUseAsyncUIKitInteractions();
 bool defaultWriteRichTextDataWhenCopyingOrDragging();
@@ -100,10 +105,6 @@ bool defaultScrollAnimatorEnabled();
 bool defaultPassiveWheelListenersAsDefaultOnDocument();
 bool defaultWheelEventGesturesBecomeNonBlocking();
 bool defaultAppleMailPaginationQuirkEnabled();
-#endif
-
-#if PLATFORM(COCOA)
-bool defaultFixedContainerEdgeSamplingEnabled();
 #endif
 
 #if ENABLE(MEDIA_STREAM)
@@ -152,15 +153,10 @@ bool defaultShouldDropNearSuspendedAssertionAfterDelay();
 bool defaultShouldTakeNearSuspendedAssertion();
 bool defaultShowModalDialogEnabled();
 bool defaultLinearMediaPlayerEnabled();
-bool defaultLiveRangeSelectionEnabled();
 
 bool defaultShouldEnableScreenOrientationAPI();
 bool defaultPopoverAttributeEnabled();
 bool defaultUseGPUProcessForDOMRenderingEnabled();
-
-#if HAVE(SC_CONTENT_SHARING_PICKER)
-bool defaultUseSCContentSharingPicker();
-#endif
 
 #if USE(LIBWEBRTC)
 bool defaultPeerConnectionEnabledAvailable();
@@ -170,13 +166,17 @@ bool defaultPeerConnectionEnabledAvailable();
 bool defaultBuiltInNotificationsEnabled();
 #endif
 
+#if ENABLE(DEVICE_ORIENTATION)
+bool defaultDeviceOrientationPermissionAPIEnabled();
+#endif
+
+#if ENABLE(REQUIRES_PAGE_VISIBILITY_FOR_NOW_PLAYING)
 bool defaultRequiresPageVisibilityForVideoToBeNowPlaying();
+#endif
 
 bool defaultCookieStoreAPIEnabled();
 
-#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
 bool defaultContentInsetBackgroundFillEnabled();
-#endif
 
 #if ENABLE(SCREEN_TIME)
 bool defaultScreenTimeEnabled();

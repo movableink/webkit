@@ -63,7 +63,7 @@ class IntlMathematicalValue {
     WTF_MAKE_TZONE_ALLOCATED(IntlMathematicalValue);
 public:
     enum class NumberType { Integer, Infinity, NaN, };
-    using Value = std::variant<double, CString>;
+    using Value = Variant<double, CString>;
 
     IntlMathematicalValue() = default;
 

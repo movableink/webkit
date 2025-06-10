@@ -35,6 +35,7 @@
 #import "PlatformAudioTrackConfiguration.h"
 #import "PlatformVideoTrackConfiguration.h"
 #import "SharedBuffer.h"
+#import "VideoProjectionMetadata.h"
 #import <AVFoundation/AVAssetTrack.h>
 #import <AVFoundation/AVMediaSelectionGroup.h>
 #import <AVFoundation/AVMetadataItem.h>
@@ -102,12 +103,18 @@ void AVTrackPrivateAVFObjCImpl::initializeAssetTrack()
 
     [m_assetTrack loadValuesAsynchronouslyForKeys:assetTrackConfigurationKeyNames() completionHandler:[weakThis = WeakPtr(this)] () mutable {
         callOnMainThread([weakThis = WTFMove(weakThis)] {
-            if (weakThis && weakThis->m_audioTrackConfigurationObserver)
-                (*weakThis->m_audioTrackConfigurationObserver)();
-            if (weakThis && weakThis->m_videoTrackConfigurationObserver)
-                (*weakThis->m_videoTrackConfigurationObserver)();
+            if (RefPtr protectedThis = weakThis.get())
+                protectedThis->initializationCompleted();
         });
     }];
+}
+
+void AVTrackPrivateAVFObjCImpl::initializationCompleted()
+{
+    if (m_audioTrackConfigurationObserver)
+        (*m_audioTrackConfigurationObserver)();
+    if (m_videoTrackConfigurationObserver)
+        (*m_videoTrackConfigurationObserver)();
 }
 
 bool AVTrackPrivateAVFObjCImpl::enabled() const
@@ -295,12 +302,18 @@ AtomString AVTrackPrivateAVFObjCImpl::label() const
 
 AtomString AVTrackPrivateAVFObjCImpl::language() const
 {
-    if (m_assetTrack)
-        return AtomString { languageForAVAssetTrack(m_assetTrack.get()) };
-    if (m_mediaSelectionOption)
-        return AtomString { languageForAVMediaSelectionOption(m_mediaSelectionOption->avMediaSelectionOption()) };
+    if (m_assetTrack) {
+        auto language = languageForAVAssetTrack(m_assetTrack.get());
+        if (!language.isEmpty())
+            return AtomString { language };
+    }
 
-    ASSERT_NOT_REACHED();
+    if (m_mediaSelectionOption) {
+        auto language = languageForAVMediaSelectionOption(m_mediaSelectionOption->avMediaSelectionOption());
+        if (!language.isEmpty())
+            return AtomString { language };
+    }
+
     return emptyAtom();
 }
 
@@ -348,7 +361,7 @@ PlatformVideoTrackConfiguration AVTrackPrivateAVFObjCImpl::videoTrackConfigurati
         framerate(),
         bitrate(),
         spatialVideoMetadata(),
-        isImmersiveVideo(),
+        videoProjectionMetadata(),
     };
 }
 
@@ -449,18 +462,12 @@ uint64_t AVTrackPrivateAVFObjCImpl::bitrate() const
 
 std::optional<SpatialVideoMetadata> AVTrackPrivateAVFObjCImpl::spatialVideoMetadata() const
 {
-    auto metadata = videoMetadataFromFormatDescription(formatDescriptionFor(*this).get());
-    if (metadata && std::holds_alternative<SpatialVideoMetadata>(*metadata))
-        return std::get<SpatialVideoMetadata>(*metadata);
-    return { };
+    return spatialVideoMetadataFromFormatDescription(formatDescriptionFor(*this).get());
 }
 
-bool AVTrackPrivateAVFObjCImpl::isImmersiveVideo() const
+std::optional<VideoProjectionMetadata> AVTrackPrivateAVFObjCImpl::videoProjectionMetadata() const
 {
-    auto metadata = videoMetadataFromFormatDescription(formatDescriptionFor(*this).get());
-    if (metadata && std::holds_alternative<bool>(*metadata))
-        return std::get<bool>(*metadata);
-    return false;
+    return videoProjectionMetadataFromFormatDescription(formatDescriptionFor(*this).get());
 }
 
 }

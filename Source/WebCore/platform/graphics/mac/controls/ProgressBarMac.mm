@@ -44,6 +44,8 @@ ProgressBarMac::ProgressBarMac(ProgressBarPart& owningPart, ControlFactoryMac& c
 {
 }
 
+ProgressBarMac::~ProgressBarMac() = default;
+
 IntSize ProgressBarMac::cellSize(NSControlSize controlSize, const ControlStyle&) const
 {
     static const std::array<IntSize, 4> sizes =
@@ -125,6 +127,8 @@ void ProgressBarMac::draw(GraphicsContext& context, const FloatRoundedRect& bord
             return kCUISizeSmall;
         case NSControlSizeRegular:
         case NSControlSizeLarge:
+            return kCUISizeRegular;
+        default:
             return kCUISizeRegular;
         }
         ASSERT_NOT_REACHED();

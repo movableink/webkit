@@ -73,6 +73,18 @@ WI.NetworkManager = class NetworkManager extends WI.Object
                 for (let serializedLocalResourceOverride of serializedLocalResourceOverrides) {
                     let localResourceOverride = WI.LocalResourceOverride.fromJSON(serializedLocalResourceOverride);
 
+                    if (localResourceOverride.isRegex) {
+                        // FIXME <https://webkit.org/b/294126> Remove fix for stored local overrides created before URL regex checking was added
+                        try {
+                            localResourceOverride._urlRegex;
+                        } catch {
+                            const key = null;
+                            WI.objectStores.localResourceOverrides.associateObject(localResourceOverride, key, serializedLocalResourceOverride);
+                            WI.objectStores.localResourceOverrides.deleteObject(localResourceOverride);
+                            continue;
+                        }
+                    }
+
                     let supported = false;
                     switch (localResourceOverride.type) {
                     case WI.LocalResourceOverride.InterceptType.Block:
@@ -1516,7 +1528,7 @@ WI.NetworkManager = class NetworkManager extends WI.Object
     {
         this._downloadingSourceMaps.add(sourceMapURL);
 
-        let sourceMapLoaded = (error, content, mimeType, statusCode) => {
+        let sourceMapLoaded = async (error, content, mimeType, statusCode) => {
             if (error || statusCode >= 400) {
                 this._sourceMapLoadFailed(sourceMapURL);
                 return;
@@ -1535,7 +1547,7 @@ WI.NetworkManager = class NetworkManager extends WI.Object
             try {
                 let payload = JSON.parse(content);
                 let baseURL = sourceMapURL.startsWith("data:") ? originalSourceCode.url : sourceMapURL;
-                let sourceMap = new WI.SourceMap(baseURL, originalSourceCode, payload);
+                let sourceMap = await WI.SourceMap.fromJSON(originalSourceCode, baseURL, payload);
                 this._sourceMapLoadAndParseSucceeded(sourceMapURL, sourceMap);
             } catch (error) {
                 this._sourceMapParseFailed(sourceMapURL, error);
@@ -1580,6 +1592,8 @@ WI.NetworkManager = class NetworkManager extends WI.Object
             sourceMapURL = parseURL(sourceMapURL).lastPathComponent;
 
         let message = WI.UIString("Source Map \u0022%s\u0022 has %s").format(sourceMapURL, error);
+
+        this.dispatchEventToListeners(WI.NetworkManager.Event.SourceMapParseFailed, {sourceMapURL});
 
         if (window.InspectorTest) {
             console.warn(message);
@@ -1754,4 +1768,5 @@ WI.NetworkManager.Event = {
     LocalResourceOverrideAdded: "network-manager-local-resource-override-added",
     LocalResourceOverrideRemoved: "network-manager-local-resource-override-removed",
     EmulatedConditionChanged: "network-manager-emulated-condition-changed",
+    SourceMapParseFailed: "network-manager-source-map-parse-failed",
 };

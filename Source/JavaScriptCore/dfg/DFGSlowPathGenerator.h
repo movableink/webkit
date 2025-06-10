@@ -35,6 +35,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #include "DFGSpeculativeJIT.h"
 #include <wtf/FastMalloc.h>
 #include <wtf/FunctionTraits.h>
+#include <wtf/SequesteredMalloc.h>
 
 namespace JSC { namespace DFG {
 

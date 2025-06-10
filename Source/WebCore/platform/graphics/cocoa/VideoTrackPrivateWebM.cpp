@@ -190,7 +190,7 @@ IGNORE_WARNINGS_BEGIN("c99-designator")
         .colorSpace = colorSpace(),
         .framerate = framerate(),
         .spatialVideoMetadata = { },
-        .isImmersiveVideo = false
+        .videoProjectionMetadata = { },
     };
 IGNORE_WARNINGS_END
     setConfiguration(WTFMove(configuration));

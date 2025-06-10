@@ -44,15 +44,9 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Text);
 
-Ref<Text> Text::create(Document& document, String&& data)
-{
-    return adoptRef(*new Text(document, WTFMove(data), TEXT_NODE, { }));
-}
-
 Ref<Text> Text::createEditingText(Document& document, String&& data)
 {
-    auto node = adoptRef(*new Text(document, WTFMove(data), TEXT_NODE, { }));
-    node->setStateFlag(StateFlag::IsSpecialInternalNode);
+    auto node = adoptRef(*new Text(document, WTFMove(data), TEXT_NODE, { TypeFlag::IsPseudoElementOrSpecialInternalNode }));
     ASSERT(node->isEditingText());
     return node;
 }
@@ -247,7 +241,7 @@ void Text::setDataAndUpdate(const String& newData, unsigned offsetOfReplacedData
     if (!offsetOfReplacedData) {
         Ref document = this->document();
         CheckedPtr textManipulationController = document->textManipulationControllerIfExists();
-        if (UNLIKELY(textManipulationController && oldData != newData))
+        if (textManipulationController && oldData != newData) [[unlikely]]
             textManipulationController->didUpdateContentForNode(*this);
     }
 }

@@ -28,22 +28,24 @@ internal import WebKit_Internal
 
 extension WKWebpagePreferences.ContentMode {
     init(_ wrapped: WebPage.NavigationPreferences.ContentMode) {
-        self = switch wrapped {
-        case .recommended: .recommended
-        case .mobile: .mobile
-        case .desktop: .desktop
-        }
+        self =
+            switch wrapped {
+            case .recommended: .recommended
+            case .mobile: .mobile
+            case .desktop: .desktop
+            }
     }
 }
 
 extension WKWebpagePreferences.UpgradeToHTTPSPolicy {
     init(_ wrapped: WebPage.NavigationPreferences.UpgradeToHTTPSPolicy) {
-        self = switch wrapped {
-        case .keepAsRequested: .keepAsRequested
-        case .automaticFallbackToHTTP: .automaticFallbackToHTTP
-        case .userMediatedFallbackToHTTP: .userMediatedFallbackToHTTP
-        case .errorOnFailure: .errorOnFailure
-        }
+        self =
+            switch wrapped {
+            case .keepAsRequested: .keepAsRequested
+            case .automaticFallbackToHTTP: .automaticFallbackToHTTP
+            case .userMediatedFallbackToHTTP: .userMediatedFallbackToHTTP
+            case .errorOnFailure: .errorOnFailure
+            }
     }
 }
 
@@ -55,7 +57,7 @@ extension WKWebpagePreferences {
         self.preferredHTTPSNavigationPolicy = .init(wrapped.preferredHTTPSNavigationPolicy)
         self.allowsContentJavaScript = wrapped.allowsContentJavaScript
 
-        if let isLockdownModeEnabled = wrapped._isLockdownModeEnabled, self.isLockdownModeEnabled != isLockdownModeEnabled {
+        if let isLockdownModeEnabled = wrapped.backingIsLockdownModeEnabled, self.isLockdownModeEnabled != isLockdownModeEnabled {
             self.isLockdownModeEnabled = isLockdownModeEnabled
         }
     }

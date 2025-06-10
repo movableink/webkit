@@ -35,7 +35,9 @@
 #include "MathMLElement.h"
 #include "MathMLNames.h"
 #include "MathMLPresentationElement.h"
+#include "RenderChildIterator.h"
 #include "RenderBoxInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderTableInlines.h"
 #include "RenderView.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -216,7 +218,7 @@ void RenderMathMLBlock::layoutBlock(RelayoutChildren relayoutChildren, LayoutUni
 
     updateLogicalHeight();
 
-    layoutPositionedObjects(relayoutChildren);
+    layoutOutOfFlowBoxes(relayoutChildren);
 
     repainter.repaintAfterLayout();
 
@@ -242,9 +244,9 @@ void RenderMathMLBlock::styleDidChange(StyleDifference diff, const RenderStyle* 
 
 void RenderMathMLBlock::insertPositionedChildrenIntoContainingBlock()
 {
-    for (auto* child = firstChildBox(); child; child = child->nextSiblingBox()) {
-        if (child->isOutOfFlowPositioned())
-            child->containingBlock()->insertPositionedObject(*child);
+    for (auto& child : childrenOfType<RenderBox>(*this)) {
+        if (child.isOutOfFlowPositioned())
+            child.containingBlock()->addOutOfFlowBox(child);
     }
 }
 
@@ -256,9 +258,9 @@ void RenderMathMLBlock::layoutFloatingChildren()
     // However, WebKit does not currently do this since `display: math` is unimplemented. See webkit.org/b/278533.
     // Since this leaves floats as neither positioned nor in-flow, perform dummy layout for floating children.
     // FIXME: Per the spec, there should be no floating children inside MathML renderers.
-    for (auto* child = firstChildBox(); child; child = child->nextSiblingBox()) {
-        if (child->isFloating())
-            child->layoutIfNeeded();
+    for (auto& child : childrenOfType<RenderBox>(*this)) {
+        if (child.isFloating())
+            child.layoutIfNeeded();
     }
 }
 
@@ -271,7 +273,7 @@ void RenderMathMLBlock::shiftInFlowChildren(LayoutUnit left, LayoutUnit top)
 
 void RenderMathMLBlock::adjustPreferredLogicalWidthsForBorderAndPadding()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
     m_minPreferredLogicalWidth += borderAndPaddingLogicalWidth();
     m_maxPreferredLogicalWidth += borderAndPaddingLogicalWidth();
 }
@@ -302,7 +304,7 @@ RenderMathMLBlock::SizeAppliedToMathContent RenderMathMLBlock::sizeAppliedToMath
 LayoutUnit RenderMathMLBlock::applySizeToMathContent(LayoutPhase phase, const SizeAppliedToMathContent& sizes)
 {
     if (phase == LayoutPhase::CalculatePreferredLogicalWidth) {
-        ASSERT(preferredLogicalWidthsDirty());
+        ASSERT(needsPreferredLogicalWidthsUpdate());
         if (sizes.logicalWidth) {
             m_minPreferredLogicalWidth = *sizes.logicalWidth;
             m_maxPreferredLogicalWidth = *sizes.logicalWidth;

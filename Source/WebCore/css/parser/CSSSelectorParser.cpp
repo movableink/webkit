@@ -34,7 +34,6 @@
 #include "CSSParserIdioms.h"
 #include "CSSPropertyParserConsumer+Ident.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
-#include "CSSSelector.h"
 #include "CSSSelectorInlines.h"
 #include "CSSTokenizer.h"
 #include "CommonAtomStrings.h"
@@ -42,6 +41,7 @@
 #include "MutableCSSSelector.h"
 #include "PseudoElementIdentifier.h"
 #include "SelectorPseudoTypeMap.h"
+#include "UserAgentParts.h"
 #include <memory>
 #include <wtf/OptionSet.h>
 #include <wtf/SetForScope.h>
@@ -250,6 +250,11 @@ MutableCSSSelectorList CSSSelectorParser::consumeNestedComplexForgivingSelectorL
     });
 }
 
+std::optional<CSSSelectorList> CSSSelectorParser::parseSelectorList(const String& string, const CSSParserContext& context, StyleSheetContents* styleSheet, CSSParserEnum::NestedContext nestedContext)
+{
+    return parseCSSSelectorList(CSSTokenizer(string).tokenRange(), context, styleSheet, nestedContext);
+}
+
 bool CSSSelectorParser::supportsComplexSelector(CSSParserTokenRange range, const CSSSelectorParserContext& context)
 {
     range.consumeWhitespace();
@@ -321,7 +326,7 @@ static std::optional<FixedVector<AtomString>> consumeCommaSeparatedCustomIdentLi
     Vector<AtomString> customIdents { };
 
     do {
-        auto ident = CSSPropertyParserHelpers::consumeCustomIdentRaw(range, /* shouldLowercase */ true);
+        auto ident = CSSPropertyParserHelpers::consumeCustomIdentRaw(range);
         if (ident.isEmpty())
             return std::nullopt;
 
@@ -794,6 +799,20 @@ std::unique_ptr<MutableCSSSelector> CSSSelectorParser::consumePseudo(CSSParserTo
     else {
         selector = MutableCSSSelector::parsePseudoElementSelector(token.value(), m_context);
 #if ENABLE(VIDEO)
+        if (m_context.webkitMediaTextTrackDisplayQuirkEnabled
+            && token.type() == IdentToken
+            && selector
+            && selector->match() == CSSSelector::Match::PseudoElement
+            && selector->pseudoElement() == CSSSelector::PseudoElement::UserAgentPart
+            && selector->value() == UserAgentParts::webkitMediaTextTrackDisplay()) {
+            // This quirk will convert a `::-webkit-media-text-track-display` selector
+            // into a `::-webkit-media-text-track-container` selector, so
+            // that websites which were previously using that selector to move cues
+            // with transform:translateY() rules can continue to do so, without hitting
+            // the PropertyAllowList::Cue restriction.
+            selector->setValue(UserAgentParts::webkitMediaTextTrackContainer());
+        }
+
         // Treat the ident version of cue as PseudoElement::UserAgentPart.
         if (token.type() == IdentToken && selector && selector->match() == CSSSelector::Match::PseudoElement && selector->pseudoElement() == CSSSelector::PseudoElement::Cue)
             selector->setPseudoElement(CSSSelector::PseudoElement::UserAgentPart);
@@ -1055,7 +1074,7 @@ CSSSelector::Match CSSSelectorParser::consumeAttributeMatch(CSSParserTokenRange&
     case DelimiterToken:
         if (token.delimiter() == '=')
             return CSSSelector::Match::Exact;
-        FALLTHROUGH;
+        [[fallthrough]];
     default:
         m_failedParsing = true;
         return CSSSelector::Match::Exact;

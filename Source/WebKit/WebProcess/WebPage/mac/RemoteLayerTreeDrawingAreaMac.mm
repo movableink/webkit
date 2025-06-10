@@ -90,17 +90,14 @@ void RemoteLayerTreeDrawingAreaMac::willCommitLayerTree(RemoteLayerTreeTransacti
     if (!frameView)
         return;
 
-    RefPtr renderViewGraphicsLayer = frameView->graphicsLayerForPageScale();
-    if (!renderViewGraphicsLayer)
-        return;
+    if (RefPtr renderViewGraphicsLayer = frameView->graphicsLayerForPageScale())
+        transaction.setPageScalingLayerID(renderViewGraphicsLayer->primaryLayerID());
 
-    transaction.setPageScalingLayerID(renderViewGraphicsLayer->primaryLayerID());
+    if (RefPtr scrolledContentsLayer = frameView->graphicsLayerForScrolledContents())
+        transaction.setScrolledContentsLayerID(scrolledContentsLayer->primaryLayerID());
 
-    RefPtr scrolledContentsLayer = frameView->graphicsLayerForScrolledContents();
-    if (!scrolledContentsLayer)
-        return;
-
-    transaction.setScrolledContentsLayerID(scrolledContentsLayer->primaryLayerID());
+    if (RefPtr mainFrameClipLayerID = frameView->clipLayer())
+        transaction.setMainFrameClipLayerID(mainFrameClipLayerID->primaryLayerID());
 }
 
 } // namespace WebKit

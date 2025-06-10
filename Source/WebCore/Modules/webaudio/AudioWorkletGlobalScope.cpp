@@ -100,7 +100,7 @@ ExceptionOr<void> AudioWorkletGlobalScope::registerProcessor(String&& name, Ref<
     Vector<AudioParamDescriptor> parameterDescriptors;
     if (!parameterDescriptorsValue.isUndefined()) {
         auto parameterDescriptorsConversionResult = convert<IDLSequence<IDLDictionary<AudioParamDescriptor>>>(*globalObject, parameterDescriptorsValue);
-        if (UNLIKELY(parameterDescriptorsConversionResult.hasException(scope)))
+        if (parameterDescriptorsConversionResult.hasException(scope)) [[unlikely]]
             return Exception { ExceptionCode::ExistingExceptionError };
 
         parameterDescriptors = parameterDescriptorsConversionResult.releaseReturnValue();

@@ -65,6 +65,16 @@ namespace Layout {
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(InlineContentCache);
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(InlineFormattingContext);
 
+static size_t estimatedDisplayBoxSize(size_t inlineItemSize)
+{
+    if (inlineItemSize == 1) {
+        // Common case of blocks with only one word where we produce 2 boxes (root inline and text box)
+        return 2;
+    }
+    // This value represents a simple average derived from typical web page content.
+    return inlineItemSize * 0.6;
+}
+
 static std::optional<InlineItemRange> partialRangeForDamage(const InlineItemList& inlineItemList, const InlineDamage& lineDamage)
 {
     auto layoutStartPosition = lineDamage.layoutStartPosition()->inlineItemPosition;
@@ -288,7 +298,7 @@ InlineLayoutResult InlineFormattingContext::lineLayout(AbstractLineBuilder& line
 
     auto layoutResult = InlineLayoutResult { };
     if (!needsLayoutRange.start)
-        layoutResult.displayContent.boxes.reserveInitialCapacity(inlineItemList.size());
+        layoutResult.displayContent.boxes.reserveInitialCapacity(estimatedDisplayBoxSize(inlineItemList.size()));
 
     auto floatingContext = this->floatingContext();
     auto lineLogicalTop = InlineLayoutUnit { constraints.logicalTop() };

@@ -199,20 +199,29 @@ void CustomElementRegistry::initialize(Node& root)
         return;
     }
 
-    if (auto* shadowRoot = dynamicDowncast<ShadowRoot>(root); shadowRoot && shadowRoot->usesNullCustomElementRegistry()) {
+    if (RefPtr document = dynamicDowncast<Document>(*containerRoot); document && document->usesNullCustomElementRegistry()) {
+        document->clearUsesNullCustomElementRegistry();
+        document->setCustomElementRegistry(*this);
+    } else if (RefPtr shadowRoot = dynamicDowncast<ShadowRoot>(*containerRoot); shadowRoot && shadowRoot->usesNullCustomElementRegistry()) {
         ASSERT(shadowRoot->hasScopedCustomElementRegistry());
         shadowRoot->clearUsesNullCustomElementRegistry();
         shadowRoot->setCustomElementRegistry(*this);
-    }
+    } else if (auto* documentFragment = dynamicDowncast<DocumentFragment>(*containerRoot); documentFragment && documentFragment->usesNullCustomElementRegistry())
+        documentFragment->clearUsesNullCustomElementRegistry();
 
     RefPtr registryOfTreeScope = root.isInTreeScope() ? root.treeScope().customElementRegistry() : nullptr;
-    for (Ref element : descendantsOfType<Element>(*containerRoot)) {
-        if (element->usesNullCustomElementRegistry()) {
-            element->clearUsesNullCustomElementRegistry();
-            if (this != registryOfTreeScope)
-                addToScopedCustomElementRegistryMap(element, *this);
-        }
-    }
+    auto updateRegistryIfNeeded = [&](Element& element) {
+        if (!element.usesNullCustomElementRegistry())
+            return;
+        element.clearUsesNullCustomElementRegistry();
+        if (this != registryOfTreeScope)
+            addToScopedCustomElementRegistryMap(element, *this);
+    };
+
+    if (RefPtr element = dynamicDowncast<Element>(*containerRoot))
+        updateRegistryIfNeeded(*element);
+    for (Ref element : descendantsOfType<Element>(*containerRoot))
+        updateRegistryIfNeeded(element);
 }
 
 void CustomElementRegistry::addToScopedCustomElementRegistryMap(Element& element, CustomElementRegistry& registry)
@@ -221,7 +230,7 @@ void CustomElementRegistry::addToScopedCustomElementRegistryMap(Element& element
     if (element.usesScopedCustomElementRegistryMap())
         return;
     element.setUsesScopedCustomElementRegistryMap();
-    registry.didAssociateWithDocument(element.document());
+    registry.didAssociateWithDocument(element.protectedDocument().get());
     auto result = scopedCustomElementRegistryMap().add(element, registry);
     ASSERT_UNUSED(result, result.isNewEntry);
 }

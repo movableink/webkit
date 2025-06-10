@@ -17,11 +17,11 @@
 
 namespace skgpu::graphite {
 
+class Buffer;
 class VulkanBuffer;
 class VulkanDescriptorSet;
 class VulkanSharedContext;
 class VulkanTexture;
-class Buffer;
 
 class VulkanCommandBuffer final : public CommandBuffer {
 public:
@@ -77,6 +77,7 @@ private:
                          const Texture* colorTexture,
                          const Texture* resolveTexture,
                          const Texture* depthStencilTexture,
+                         SkIPoint resolveOffset,
                          SkIRect viewport,
                          const DrawPassList&) override;
 
@@ -85,6 +86,9 @@ private:
                          const Texture* colorTexture,
                          const Texture* resolveTexture,
                          const Texture* depthStencilTexture);
+
+    void performOncePerRPUpdates(SkIRect viewport, bool bindDstAsInputAttachment);
+
     void endRenderPass();
 
     void addDrawPass(const DrawPass*);
@@ -96,6 +100,7 @@ private:
     void recordTextureAndSamplerDescSet(
             const DrawPass*, const DrawPassCommands::BindTexturesAndSamplers*);
 
+    bool updateAndBindInputAttachment(const VulkanTexture&, const int setIdx, VkPipelineLayout);
     void bindTextureSamplers();
     void bindUniformBuffers();
     void syncDescriptorSets();
@@ -110,12 +115,6 @@ private:
     void pushConstants(const PushConstantInfo&, VkPipelineLayout compatibleLayout);
 
     void setBlendConstants(float* blendConstants);
-    void bindDrawBuffers(const BindBufferInfo& vertices,
-                         const BindBufferInfo& instances,
-                         const BindBufferInfo& indices,
-                         const BindBufferInfo& indirect);
-    void bindVertexBuffers(const Buffer* vertexBuffer, size_t vertexOffset,
-                           const Buffer* instanceBuffer, size_t instanceOffset);
     void bindInputBuffer(const Buffer* buffer, VkDeviceSize offset, uint32_t binding);
     void bindIndexBuffer(const Buffer* indexBuffer, size_t offset);
     void bindIndirectBuffer(const Buffer* indirectBuffer, size_t offset);
@@ -133,6 +132,7 @@ private:
                               unsigned int baseInstance, unsigned int instanceCount);
     void drawIndirect(PrimitiveType type);
     void drawIndexedIndirect(PrimitiveType type);
+    void addBarrier(BarrierType type);
 
     // TODO: The virtuals in this class have not yet been implemented as we still haven't
     // implemented the objects they use.
@@ -166,7 +166,7 @@ private:
     bool onSynchronizeBufferToCpu(const Buffer*, bool* outDidResultInWork) override;
     bool onClearBuffer(const Buffer*, size_t offset, size_t size) override;
 
-    enum BarrierType {
+    enum PipelineBarrierType {
         kBufferMemory_BarrierType,
         kImageMemory_BarrierType
     };
@@ -174,7 +174,7 @@ private:
                          VkPipelineStageFlags srcStageMask,
                          VkPipelineStageFlags dstStageMask,
                          bool byRegion,
-                         BarrierType barrierType,
+                         PipelineBarrierType barrierType,
                          void* barrier);
     void submitPipelineBarriers(bool forSelfDependency = false);
 
@@ -182,7 +182,6 @@ private:
                              VulkanTexture& resolveTexture,
                              SkISize dstDimensions,
                              SkIRect nativeBounds);
-    bool updateAndBindLoadMSAAInputAttachment(const VulkanTexture& resolveTexture);
     void nextSubpass();
     void setViewport(SkIRect viewport);
 
@@ -196,7 +195,10 @@ private:
     // Track whether there is currently an active render pass (beginRenderPass has been called, but
     // not endRenderPass)
     bool fActiveRenderPass = false;
-
+    // Store a ptr to the active RenderPass's target texture so we have access to it for any
+    // AddBarrier DrawPassCommands that pertain to the dst. A raw ptr is acceptable here because the
+    // target texture is kept alive via a command buffer reference.
+    VulkanTexture* fTargetTexture = nullptr;
     const VulkanGraphicsPipeline* fActiveGraphicsPipeline = nullptr;
 
     VkFence fSubmitFence = VK_NULL_HANDLE;
@@ -221,12 +223,8 @@ private:
 
     int fNumTextureSamplers = 0;
 
-    VkBuffer fBoundInputBuffers[VulkanGraphicsPipeline::kNumInputBuffers];
-    size_t fBoundInputBufferOffsets[VulkanGraphicsPipeline::kNumInputBuffers];
-
-    VkBuffer fBoundIndexBuffer = VK_NULL_HANDLE;
+    // Tracking for whether an indirect buffer should be rebound.
     VkBuffer fBoundIndirectBuffer = VK_NULL_HANDLE;
-    size_t fBoundIndexBufferOffset = 0;
     size_t fBoundIndirectBufferOffset = 0;
 
     float fCachedBlendConstant[4];

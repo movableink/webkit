@@ -101,7 +101,7 @@ public:
 
     WEBCORE_EXPORT void setInspectable(bool);
 
-#if ENABLE(REMOTE_INSPECTOR) && ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
+#if ENABLE(REMOTE_INSPECTOR)
     ServiceWorkerDebuggable& remoteDebuggable() { return m_remoteDebuggable; }
 #endif
 
@@ -115,10 +115,6 @@ private:
 
     WEBCORE_EXPORT static void networkStateChanged(bool isOnLine);
     bool postTaskForModeToWorkerOrWorkletGlobalScope(ScriptExecutionContext::Task&&, const String& mode);
-
-#if ENABLE(REMOTE_INSPECTOR) && ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
-    void threadStartedRunningDebuggerTasks();
-#endif
 
     // WorkerLoaderProxy
     void postTaskToLoader(ScriptExecutionContext::Task&&) final;

@@ -135,17 +135,28 @@ std::optional<SharedVideoFrame::Buffer> SharedVideoFrameWriter::writeBuffer(CVPi
         return { };
 
     if (canUseIOSurface) {
-        if (auto surface = CVPixelBufferGetIOSurface(pixelBuffer))
-            return MachSendRight::adopt(IOSurfaceCreateMachPort(surface));
+        if (RetainPtr surface = CVPixelBufferGetIOSurface(pixelBuffer))
+            return MachSendRight::adopt(IOSurfaceCreateMachPort(surface.get()));
     }
 
     auto scope = makeScopeExit([this] { signalInCaseOfError(); });
 
-    auto info = SharedVideoFrameInfo::fromCVPixelBuffer(pixelBuffer);
+    RetainPtr pixelBufferToWrite = pixelBuffer;
+    if (CVPixelBufferGetPixelFormatType(pixelBuffer) == kCVPixelFormatType_Lossless_420YpCbCr8BiPlanarVideoRange) {
+        if (!m_compressedPixelBufferConformer)
+            m_compressedPixelBufferConformer = makeUnique<WebCore::PixelBufferConformerCV>(kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange);
+        pixelBufferToWrite = m_compressedPixelBufferConformer->convert(pixelBuffer);
+        if (!pixelBufferToWrite) {
+            RELEASE_LOG_ERROR(WebRTC, "SharedVideoFrameWriter::writeBuffer cannot convert pixel buffer");
+            return { };
+        }
+    }
+
+    auto info = SharedVideoFrameInfo::fromCVPixelBuffer(pixelBufferToWrite.get());
     if (!prepareWriting(info, newSemaphoreCallback, newMemoryCallback))
         return { };
 
-    if (!info.writePixelBuffer(pixelBuffer, m_storage->mutableSpan()))
+    if (!info.writePixelBuffer(pixelBufferToWrite.get(), m_storage->mutableSpan()))
         return { };
 
     scope.release();

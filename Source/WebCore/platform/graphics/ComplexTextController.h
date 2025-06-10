@@ -112,12 +112,12 @@ public:
         unsigned indexBegin() const { return m_indexBegin; }
         unsigned indexEnd() const { return m_indexEnd; }
         unsigned endOffsetAt(unsigned i) const { ASSERT(!m_isMonotonic); return m_glyphEndOffsets[i]; }
-        std::span<const CGGlyph> glyphs() const { return m_glyphs.span(); }
+        std::span<const CGGlyph> glyphs() const LIFETIME_BOUND { return m_glyphs.span(); }
 
         void growInitialAdvanceHorizontally(float delta) { m_initialAdvance.expand(delta, 0); }
         FloatSize initialAdvance() const { return m_initialAdvance; }
-        std::span<const FloatSize> baseAdvances() const { return m_baseAdvances.span(); }
-        std::span<const FloatPoint> glyphOrigins() const { return m_glyphOrigins.size() == glyphCount() ? m_glyphOrigins.span() : std::span<const FloatPoint> { }; }
+        std::span<const FloatSize> baseAdvances() const LIFETIME_BOUND { return m_baseAdvances.span(); }
+        std::span<const FloatPoint> glyphOrigins() const LIFETIME_BOUND { return m_glyphOrigins.size() == glyphCount() ? m_glyphOrigins.span() : std::span<const FloatPoint> { }; }
         bool isLTR() const { return m_isLTR; }
         bool isMonotonic() const { return m_isMonotonic; }
         void setIsNonMonotonic();
@@ -194,15 +194,15 @@ private:
     Vector<unsigned, 16> m_glyphCountFromStartToIndex;
 
 #if PLATFORM(COCOA)
-    Vector<RetainPtr<CTLineRef>> m_coreTextLines;
+    Vector<RetainPtr<CTLineRef>, 4> m_coreTextLines;
 #endif
 
     Vector<String> m_stringsFor8BitRuns;
 
     SingleThreadWeakHashSet<const Font>* m_fallbackFonts { nullptr };
 
-    const FontCascade& m_fontCascade;
-    const TextRun& m_run;
+    const CheckedRef<const FontCascade> m_fontCascade;
+    const CheckedRef<const TextRun> m_run;
 
     unsigned m_currentCharacter { 0 };
     unsigned m_end { 0 };

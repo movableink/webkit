@@ -374,8 +374,10 @@ static WPEView* wpeDisplayDRMCreateView(WPEDisplay* display)
     auto* displayDRM = WPE_DISPLAY_DRM(display);
     auto* view = wpe_view_drm_new(displayDRM);
 
-    GRefPtr<WPEToplevel> toplevel = adoptGRef(wpe_toplevel_drm_new(displayDRM));
-    wpe_view_set_toplevel(view, toplevel.get());
+    if (wpe_settings_get_boolean(wpe_display_get_settings(display), WPE_SETTING_CREATE_VIEWS_WITH_A_TOPLEVEL, nullptr)) {
+        GRefPtr<WPEToplevel> toplevel = adoptGRef(wpe_toplevel_drm_new(displayDRM));
+        wpe_view_set_toplevel(view, toplevel.get());
+    }
 
     displayDRM->priv->seat->setView(view);
     return view;

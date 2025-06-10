@@ -60,6 +60,11 @@ JavaScriptEvaluationResult::JavaScriptEvaluationResult(JSGlobalContextRef contex
     , m_wireBytes(m_valueFromJS ? m_valueFromJS->wireBytes().span() : std::span<const uint8_t>())
 {
 }
+
+std::optional<JavaScriptEvaluationResult> JavaScriptEvaluationResult::extract(JSGlobalContextRef context, JSValueRef value)
+{
+    return JavaScriptEvaluationResult { context, value };
+}
 #endif
 
 JavaScriptEvaluationResult::JavaScriptEvaluationResult(JavaScriptEvaluationResult&&) = default;
@@ -69,22 +74,3 @@ JavaScriptEvaluationResult& JavaScriptEvaluationResult::operator=(JavaScriptEval
 JavaScriptEvaluationResult::~JavaScriptEvaluationResult() = default;
 
 } // namespace WebKit
-
-namespace IPC {
-
-Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>> AsyncReplyError<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>>::create()
-{
-    return makeUnexpected(std::nullopt);
-}
-
-Expected<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>, String> AsyncReplyError<Expected<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>, String>>::create()
-{
-    return makeUnexpected(String());
-}
-
-Expected<WebKit::JavaScriptEvaluationResult, String> AsyncReplyError<Expected<WebKit::JavaScriptEvaluationResult, String>>::create()
-{
-    return makeUnexpected(String());
-}
-
-} // namespace IPC

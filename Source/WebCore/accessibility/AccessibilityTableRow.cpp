@@ -127,26 +127,6 @@ void AccessibilityTableRow::setRowIndex(unsigned rowIndex)
 #endif
 }
 
-AccessibilityObject* AccessibilityTableRow::rowHeader()
-{
-    const auto& rowChildren = unignoredChildren();
-    if (rowChildren.isEmpty())
-        return nullptr;
-    
-    Ref firstCell = rowChildren[0].get();
-    if (!firstCell->node() || !firstCell->node()->hasTagName(thTag))
-        return nullptr;
-
-    // Verify that the row header is not part of an entire row of headers.
-    // In that case, it is unlikely this is a row header.
-    for (const auto& child : rowChildren) {
-        // We found a non-header cell, so this is not an entire row of headers -- return the original header cell.
-        if (child->node() && !child->node()->hasTagName(thTag))
-            return &downcast<AccessibilityObject>(firstCell.get());
-    }
-    return nullptr;
-}
-
 void AccessibilityTableRow::addChildren()
 {
     // If the element specifies its cells through aria-owns, return that first.
@@ -164,28 +144,32 @@ void AccessibilityTableRow::addChildren()
     // column in that set, then authors may place aria-colindex on each row, setting the value to the index of the first column of the set."
     // Update child cells' axColIndex if there's an aria-colindex value set for the row. So the cell doesn't have to go through the siblings
     // to calculate the index.
-    int colIndex = axColumnIndex();
-    if (colIndex == -1)
+    std::optional colIndex = axColumnIndex();
+    if (!colIndex)
         return;
 
     unsigned index = 0;
     for (const auto& cell : unignoredChildren()) {
         if (auto* tableCell = dynamicDowncast<AccessibilityTableCell>(cell.get()))
-            tableCell->setAXColIndexFromRow(colIndex + index);
+            tableCell->setAXColIndexFromRow(*colIndex + index);
         index++;
     }
+
+#ifndef NDEBUG
+    verifyChildrenIndexInParent();
+#endif
 }
 
-int AccessibilityTableRow::axColumnIndex() const
+std::optional<unsigned> AccessibilityTableRow::axColumnIndex() const
 {
     int value = getIntegralAttribute(aria_colindexAttr);
-    return value >= 1 ? value : -1;
+    return value >= 1 ? std::optional(value) : std::nullopt;
 }
 
-int AccessibilityTableRow::axRowIndex() const
+std::optional<unsigned> AccessibilityTableRow::axRowIndex() const
 {
     int value = getIntegralAttribute(aria_rowindexAttr);
-    return value >= 1 ? value : -1;
+    return value >= 1 ? std::optional(value) : std::nullopt;
 }
     
 } // namespace WebCore

@@ -57,12 +57,8 @@ class QQuickWebView;
 typedef QQuickWebView* PlatformWKView;
 typedef QQuickView* PlatformWindow;
 #elif PLATFORM(WPE)
-namespace WPEToolingBackends {
-class HeadlessViewBackend;
-}
-struct wpe_view_backend;
 typedef WKViewRef PlatformWKView;
-typedef WPEToolingBackends::HeadlessViewBackend *PlatformWindow;
+typedef void* PlatformWindow;
 #elif PLATFORM(WIN)
 typedef WKViewRef PlatformWKView;
 typedef HWND PlatformWindow;

@@ -32,8 +32,6 @@
 #import "TestWKWebView.h"
 #import <wtf/RetainPtr.h>
 
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
-
 @interface TitlebarSeparatorTestWKWebView : TestWKWebView
 - (id<NSScrollViewSeparatorTrackingAdapter>)separatorTrackingAdapter;
 @end
@@ -187,7 +185,5 @@ TEST(WKWebViewTitlebarSeparatorTests, ParentWhileScrolled)
     auto separatorTrackingAdapter = (id<NSScrollViewSeparatorTrackingAdapter>)webView.get();
     EXPECT_TRUE([separatorTrackingAdapter hasScrolledContentsUnderTitlebar]);
 }
-
-#endif // HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 
 #endif // PLATFORM(MAC)

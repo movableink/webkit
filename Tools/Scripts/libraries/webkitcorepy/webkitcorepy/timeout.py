@@ -25,11 +25,11 @@ import collections
 import math
 import os
 import signal
-import time
 import threading
+import time
+from unittest import mock
 
 from webkitcorepy import log, string_utils
-
 
 ORIGINAL_SLEEP = time.sleep
 
@@ -58,9 +58,7 @@ class Timeout(object):
     class DisableAlarm(object):
         def __init__(self, patch=True):
             if patch:
-                # Allows mock to be managed via autoinstall
-                from mock import patch
-                self._patch = patch('time.sleep', new=ORIGINAL_SLEEP)
+                self._patch = mock.patch('time.sleep', new=ORIGINAL_SLEEP)
             else:
                 self._patch = None
 
@@ -166,9 +164,7 @@ class Timeout(object):
         self.data = None
 
         if patch:
-            # Allows mock to be managed via autoinstall
-            from mock import patch
-            self._patch = patch('time.sleep', new=self.sleep)
+            self._patch = mock.patch('time.sleep', new=self.sleep)
         else:
             self._patch = None
 

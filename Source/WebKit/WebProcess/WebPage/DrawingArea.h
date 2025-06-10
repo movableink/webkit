@@ -70,10 +70,6 @@ class LayerTreeHost;
 struct WebPageCreationParameters;
 struct WebPreferencesStore;
 
-#if ENABLE(DAMAGE_TRACKING)
-class FrameDamageForTesting;
-#endif
-
 class DrawingArea : public RefCounted<DrawingArea>, public IPC::MessageReceiver, public WebCore::DisplayRefreshMonitorFactory {
     WTF_MAKE_TZONE_ALLOCATED(DrawingArea);
     WTF_MAKE_NONCOPYABLE(DrawingArea);
@@ -146,7 +142,6 @@ public:
     virtual void dispatchAfterEnsuringUpdatedScrollPosition(WTF::Function<void ()>&&);
 
     virtual void activityStateDidChange(OptionSet<WebCore::ActivityState>, ActivityStateChangeID, CompletionHandler<void()>&& completionHandler) { completionHandler(); };
-    virtual void setLayerHostingMode(LayerHostingMode) { }
 
     virtual void tryMarkLayersVolatile(CompletionHandler<void(bool)>&&);
 
@@ -182,7 +177,8 @@ public:
 #endif
 
 #if ENABLE(DAMAGE_TRACKING)
-    virtual FrameDamageForTesting* frameDamageForTesting() const { return nullptr; }
+    virtual void resetDamageHistoryForTesting() { }
+    virtual void foreachRegionInDamageHistoryForTesting(Function<void(const WebCore::Region&)>&&) const { }
 #endif
 
     virtual void adoptLayersFromDrawingArea(DrawingArea&) { }

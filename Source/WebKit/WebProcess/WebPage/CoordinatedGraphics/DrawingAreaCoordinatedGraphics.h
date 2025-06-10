@@ -99,7 +99,8 @@ private:
 #endif
 
 #if ENABLE(DAMAGE_TRACKING)
-    FrameDamageForTesting* frameDamageForTesting() const override;
+    void resetDamageHistoryForTesting() override;
+    void foreachRegionInDamageHistoryForTesting(Function<void(const WebCore::Region&)>&&) const override;
 #endif
 
 #if PLATFORM(GTK)

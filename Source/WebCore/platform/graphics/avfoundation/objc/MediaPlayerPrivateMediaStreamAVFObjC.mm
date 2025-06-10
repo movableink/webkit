@@ -34,7 +34,6 @@
 #import "LocalSampleBufferDisplayLayer.h"
 #import "Logging.h"
 #import "MediaPlayer.h"
-#import "MediaSessionManagerCocoa.h"
 #import "MediaStreamPrivate.h"
 #import "PixelBufferConformerCV.h"
 #import "PlatformDynamicRangeLimitCocoa.h"
@@ -42,6 +41,7 @@
 #import "VideoFrameMetadata.h"
 #import "VideoLayerManagerObjC.h"
 #import "VideoTrackPrivateMediaStream.h"
+#import <numbers>
 #import <objc_runtime.h>
 #import <pal/avfoundation/MediaTimeAVFoundation.h>
 #import <pal/spi/cocoa/AVFoundationSPI.h>
@@ -50,7 +50,7 @@
 #import <wtf/MainThread.h>
 #import <wtf/NeverDestroyed.h>
 #import <wtf/TZoneMallocInlines.h>
-#include <wtf/text/MakeString.h>
+#import <wtf/text/MakeString.h>
 
 #import "CoreVideoSoftLink.h"
 #import <pal/cf/CoreMediaSoftLink.h>
@@ -190,12 +190,6 @@ MediaPlayerPrivateMediaStreamAVFObjC::~MediaPlayerPrivateMediaStreamAVFObjC()
 
 class MediaPlayerFactoryMediaStreamAVFObjC final : public MediaPlayerFactory {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(MediaPlayerFactoryMediaStreamAVFObjC);
-public:
-    MediaPlayerFactoryMediaStreamAVFObjC()
-    {
-        MediaSessionManagerCocoa::ensureCodecsRegistered();
-    }
-
 private:
     MediaPlayerEnums::MediaEngineIdentifier identifier() const final { return MediaPlayerEnums::MediaEngineIdentifier::AVFoundationMediaStream; };
 
@@ -291,7 +285,7 @@ void MediaPlayerPrivateMediaStreamAVFObjC::processNewVideoFrame(VideoFrame& vide
     if (!isMainThread()) {
         {
             Locker locker { m_currentVideoFrameLock };
-            m_currentVideoFrame = &videoFrame;
+            m_currentVideoFrame = videoFrame;
         }
         scheduleDeferredTask([weakThis = WeakPtr { *this }, metadata, presentationTime]() mutable {
             RefPtr protectedThis = weakThis.get();
@@ -313,7 +307,7 @@ void MediaPlayerPrivateMediaStreamAVFObjC::processNewVideoFrame(VideoFrame& vide
         return;
 
     if (!m_imagePainter.videoFrame || m_displayMode != PausedImage) {
-        m_imagePainter.videoFrame = &videoFrame;
+        m_imagePainter.videoFrame = videoFrame;
         m_imagePainter.cgImage = nullptr;
         if (m_readyState < MediaPlayer::ReadyState::HaveEnoughData)
             updateReadyState();
@@ -448,12 +442,8 @@ void MediaPlayerPrivateMediaStreamAVFObjC::layersAreInitialized(IntSize size, bo
 
     sampleBufferDisplayLayer->updateDisplayMode(m_displayMode < PausedImage, hideRootLayer());
 
-#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
-    if ([sampleBufferDisplayLayer->rootLayer() respondsToSelector:@selector(setPreferredDynamicRange:)]) {
-        if (auto player = m_player.get())
-            [sampleBufferDisplayLayer->rootLayer() setPreferredDynamicRange:platformDynamicRangeLimitString(player->platformDynamicRangeLimit())];
-    }
-#endif // HAVE(SUPPORT_HDR_DISPLAY_APIS)
+    if (RefPtr player = m_player.get())
+        setLayerDynamicRangeLimit(sampleBufferDisplayLayer->rootLayer(), player->platformDynamicRangeLimit());
 
     m_videoLayerManager->setVideoLayer(sampleBufferDisplayLayer->rootLayer(), size);
 
@@ -512,7 +502,7 @@ void MediaPlayerPrivateMediaStreamAVFObjC::load(MediaStreamPrivate& stream)
 
     m_intrinsicSize = { };
 
-    m_mediaStreamPrivate = &stream;
+    m_mediaStreamPrivate = stream;
     stream.addObserver(*this);
     m_ended = !stream.active();
 
@@ -1105,7 +1095,7 @@ static inline CGAffineTransform videoTransformationMatrix(VideoFrame& videoFrame
     if (!width || !height)
         return CGAffineTransformIdentity;
 
-    auto videoTransform = CGAffineTransformMakeRotation(static_cast<int>(videoFrame.rotation()) * M_PI / 180);
+    auto videoTransform = CGAffineTransformMakeRotation(static_cast<int>(videoFrame.rotation()) * std::numbers::pi / 180);
     if (videoFrame.isMirrored())
         videoTransform = CGAffineTransformScale(videoTransform, -1, 1);
 
@@ -1202,14 +1192,10 @@ void MediaPlayerPrivateMediaStreamAVFObjC::setBufferingPolicy(MediaPlayer::Buffe
 
 void MediaPlayerPrivateMediaStreamAVFObjC::setPlatformDynamicRangeLimit(PlatformDynamicRangeLimit platformDynamicRangeLimit)
 {
-#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
     if (RefPtr sampleBufferDisplayLayer = m_sampleBufferDisplayLayer) {
-        if (auto* rootLayer = sampleBufferDisplayLayer->rootLayer(); rootLayer && [rootLayer respondsToSelector:@selector(setPreferredDynamicRange:)])
-            [rootLayer setPreferredDynamicRange:platformDynamicRangeLimitString(platformDynamicRangeLimit)];
+        if (RetainPtr rootLayer = sampleBufferDisplayLayer->rootLayer())
+            setLayerDynamicRangeLimit(rootLayer.get(), platformDynamicRangeLimit);
     }
-#else // HAVE(SUPPORT_HDR_DISPLAY_APIS)
-    UNUSED_PARAM(platformDynamicRangeLimit);
-#endif // HAVE(SUPPORT_HDR_DISPLAY_APIS)
 }
 
 void MediaPlayerPrivateMediaStreamAVFObjC::audioOutputDeviceChanged()

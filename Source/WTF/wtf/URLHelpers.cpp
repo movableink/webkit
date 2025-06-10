@@ -186,7 +186,8 @@ bool isLookalikeSequence<USCRIPT_ARABIC>(const std::optional<char32_t>& previous
     auto isArabicCodePoint = [](const std::optional<char32_t>& codePoint) {
         if (!codePoint)
             return false;
-        return ublock_getCode(*codePoint) == UBLOCK_ARABIC;
+        UErrorCode err = U_ZERO_ERROR;
+        return uscript_getScript(*codePoint, &err) == USCRIPT_ARABIC && U_SUCCESS(err);
     };
     return isArabicDiacritic(codePoint) && !isArabicCodePoint(previousCodePoint);
 }
@@ -930,7 +931,7 @@ String userVisibleURL(const CString& url)
     }
     
     // Check string to see if it can be converted to display using UTF-8  
-    String result = String::fromUTF8(after.data());
+    String result = String::fromUTF8(after.span().data());
     if (!result) {
         // Could not convert to UTF-8.
         // Convert characters greater than 0x7f to escape sequences.
@@ -953,7 +954,7 @@ String userVisibleURL(const CString& url)
         }
         after[afterIndex] = '\0';
         // Note: after.data() points to a null-terminated, pure ASCII string.
-        result = String::fromUTF8(after.data());
+        result = String::fromUTF8(after.span().data());
         ASSERT(!!result);
     }
 

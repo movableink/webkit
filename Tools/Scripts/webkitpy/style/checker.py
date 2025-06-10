@@ -251,6 +251,22 @@ _PATH_RULES_SPECIFIER = [
      ["-readability/naming/underscores"]),
 
     ([
+     # MALLOC_HEAP_BREAKDOWN framework for non-apple ports exposes C-style header.
+     os.path.join('Source', 'WTF', 'wtf', 'malloc_heap_breakdown', 'malloc', 'malloc.h')],
+     ["-readability/naming/underscores", "-readability/parameter_name", "-readability/null"]),
+
+    ([
+     # MALLOC_HEAP_BREAKDOWN framework for non-apple ports is a first-party code, but it doesn't
+     # use WTF as it's indirect WTF's dependency.
+     os.path.join('Source', 'WTF', 'wtf', 'malloc_heap_breakdown', 'main.cpp')],
+     ["-readability/naming/underscores",
+      "-safercpp/atoi",
+      "-safercpp/printf",
+      "-runtime/lock_guard",
+      "-runtime/wtf_make_unique",
+      "-runtime/wtf_move"]),
+
+    ([
       # To use GStreamer GL without conflicts of GL symbols,
       # we should include gst/gl/gl.h before including OpenGL[ES]Shims
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'MediaPlayerPrivateGStreamer.cpp')],
@@ -312,6 +328,8 @@ _PATH_RULES_SPECIFIER = [
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'WebKitWebSourceGStreamer.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'WebKitAudioSinkGStreamer.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'WebKitAudioSinkGStreamer.h'),
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'eme', 'WebKitThunderParser.cpp'),
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'eme', 'WebKitThunderParser.h'),
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'mse', 'WebKitMediaSourceGStreamer.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'audio', 'gstreamer', 'WebKitWebAudioSourceGStreamer.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'gstreamer', 'VideoEncoderPrivateGStreamer.cpp'),
@@ -324,6 +342,8 @@ _PATH_RULES_SPECIFIER = [
       os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerMockDevice.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerMockDeviceProvider.h'),
       os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerMockDeviceProvider.cpp'),
+      os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerRTPVideoRotationHeaderExtension.h'),
+      os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerRTPVideoRotationHeaderExtension.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'network', 'soup', 'ProxyResolverSoup.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'network', 'soup', 'ProxyResolverSoup.h'),
       os.path.join('Source', 'WebCore', 'platform', 'network', 'soup', 'WebKitAutoconfigProxyResolver.cpp'),
@@ -372,10 +392,22 @@ _PATH_RULES_SPECIFIER = [
       "-whitespace/indent"]),
 
     ([
+      # Source/bmalloc/libpas/src/ is first-party code, but largely operates
+      # as an separate codebase, with a few different style rules.
+      os.path.join('Source', 'bmalloc', 'libpas', 'src')],
+     ["-readability/naming/underscores",
+      "-whitespace/declaration",
+      "-whitespace/indent"]),
+
+    ([
       # There is no way to avoid the symbols __jit_debug_register_code
       # and __jit_debug_descriptor when integrating with gdb.
       os.path.join('Source', 'JavaScriptCore', 'jit', 'GDBInterface.cpp')],
      ["-readability/naming"]),
+
+    ([  # Some test cases intentionally use invalid JSON input files.
+        os.path.join('Source', 'JavaScriptCore', 'inspector', 'scripts', 'tests')],
+        ["-json/syntax"]),
 
     ([  # On some systems the trailing CR is causing parser failure.
       os.path.join('Source', 'JavaScriptCore', 'parser', 'Keywords.table')],
@@ -513,6 +545,7 @@ _SKIPPED_FILES_WITH_WARNING = [
     re.compile(re.escape(os.path.join('Source', 'WebKit', 'UIProcess', 'API', 'gtk') + os.path.sep) + r'WebKit(?!.*Private\.h).*\.h$'),
     re.compile(re.escape(os.path.join('Source', 'WebKit', 'UIProcess', 'API', 'wpe') + os.path.sep) + r'WebKit(?!.*Private\.h).*\.h$'),
     re.compile(re.escape(os.path.join('Source', 'WebKit', 'WPEPlatform', 'wpe') + os.path.sep) + r'WPE(?!.*Private\.h).*\.h$'),
+    re.compile(re.escape(os.path.join('Source', 'WebKit', 'WPEPlatform', 'wpe', 'atk') + os.path.sep) + r'WPE(?!.*Private\.h).*\.h$'),
     re.compile(re.escape(os.path.join('Source', 'WebKit', 'WPEPlatform', 'wpe', 'drm') + os.path.sep) + r'WPE(?!.*Private\.h).*\.h$'),
     re.compile(re.escape(os.path.join('Source', 'WebKit', 'WPEPlatform', 'wpe', 'headless') + os.path.sep) + r'WPE(?!.*Private\.h).*\.h$'),
     re.compile(re.escape(os.path.join('Source', 'WebKit', 'WPEPlatform', 'wpe', 'wayland') + os.path.sep) + r'WPE(?!.*Private\.h).*\.h$'),
@@ -563,6 +596,9 @@ _SKIPPED_FILES_WITHOUT_WARNING = [
 
     # Skia.
     os.path.join('Source', 'ThirdParty', 'skia'),
+
+    # test262 tests are imported.
+    os.path.join('JSTests', 'test262'),
     ]
 
 # Extensions of files which are allowed to contain carriage returns.

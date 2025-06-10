@@ -465,7 +465,7 @@ void PrivateClickMeasurementManager::attribute(SourceSite&& sourceSite, Attribut
         if (!attributionSecondsUntilSendData)
             return;
 
-        if (UNLIKELY(protectedThis->debugModeEnabled())) {
+        if (protectedThis->debugModeEnabled()) [[unlikely]] {
             for (auto& message : debugInfo.messages)
                 protectedThis->m_client->broadcastConsoleMessage(message.messageLevel, message.message);
         }
@@ -480,7 +480,7 @@ void PrivateClickMeasurementManager::attribute(SourceSite&& sourceSite, Attribut
             if (protectedThis->m_firePendingAttributionRequestsTimer.isActive() && protectedThis->m_firePendingAttributionRequestsTimer.secondsUntilFire() < *minSecondsUntilSend)
                 return;
 
-            if (UNLIKELY(protectedThis->debugModeEnabled())) {
+            if (protectedThis->debugModeEnabled()) [[unlikely]] {
                 protectedThis->m_client->broadcastConsoleMessage(MessageLevel::Log, makeString("[Private Click Measurement] Setting timer for firing attribution request to the debug mode timeout of "_s, debugModeSecondsUntilSend.seconds(), " seconds where the regular timeout would have been "_s, minSecondsUntilSend.value().seconds(), " seconds."_s));
                 minSecondsUntilSend = debugModeSecondsUntilSend;
             } else

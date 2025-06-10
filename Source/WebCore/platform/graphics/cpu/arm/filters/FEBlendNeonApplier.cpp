@@ -170,7 +170,7 @@ void FEBlendNeonApplier::applyPlatform(unsigned char* srcPixelArrayA, unsigned c
     }
 }
 
-bool FEBlendNeonApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
+bool FEBlendNeonApplier::apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
     Ref input = inputs[0];
     Ref input2 = inputs[1];

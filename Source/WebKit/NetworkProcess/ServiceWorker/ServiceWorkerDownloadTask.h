@@ -30,7 +30,7 @@
 #include "NetworkConnectionToWebProcess.h"
 #include "NetworkDataTask.h"
 #include <WebCore/FetchIdentifier.h>
-#include <wtf/FileSystem.h>
+#include <wtf/FileHandle.h>
 #include <wtf/FunctionDispatcher.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -72,7 +72,7 @@ private:
     Ref<NetworkProcess> protectedNetworkProcess() const;
 
     // IPC Message
-    void didReceiveData(const IPC::SharedBufferReference&, uint64_t encodedDataLength);
+    void didReceiveData(const IPC::SharedBufferReference&);
     void didReceiveFormData(const IPC::FormDataReference&);
     void didFinish();
     void didFail(WebCore::ResourceError&&);
@@ -101,7 +101,7 @@ private:
     DownloadID m_downloadID;
     Ref<NetworkProcess> m_networkProcess;
     RefPtr<SandboxExtension> m_sandboxExtension;
-    FileSystem::PlatformFileHandle m_downloadFile { FileSystem::invalidPlatformFileHandle };
+    FileSystem::FileHandle m_downloadFile;
     uint64_t m_downloadBytesWritten { 0 };
     std::optional<uint64_t> m_expectedContentLength;
     State m_state { State::Suspended };

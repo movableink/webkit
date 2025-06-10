@@ -31,6 +31,7 @@
 #include "Blob.h"
 #include "EventNames.h"
 #include "ExceptionCode.h"
+#include "ExceptionOr.h"
 #include "Logging.h"
 #include "MessageEvent.h"
 #include "RTCDataChannelRemoteHandler.h"
@@ -39,6 +40,7 @@
 #include "ScriptExecutionContext.h"
 #include "SharedBuffer.h"
 #include <JavaScriptCore/ArrayBufferView.h>
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>

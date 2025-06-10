@@ -138,10 +138,15 @@ AcceleratedSurfaceDMABuf::RenderTarget::~RenderTarget()
 }
 
 #if ENABLE(DAMAGE_TRACKING)
-void AcceleratedSurfaceDMABuf::RenderTarget::addDamage(const WebCore::Damage& damage)
+void AcceleratedSurfaceDMABuf::RenderTarget::addDamage(const std::optional<WebCore::Damage>& damage)
 {
-    if (!m_damage.isInvalid())
-        m_damage.add(damage);
+    if (!m_damage)
+        return;
+
+    if (damage)
+        m_damage->add(*damage);
+    else
+        m_damage = std::nullopt;
 }
 #endif
 
@@ -162,13 +167,6 @@ void AcceleratedSurfaceDMABuf::RenderTarget::willRenderFrame()
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
-}
-
-void AcceleratedSurfaceDMABuf::RenderTarget::didRenderFrame()
-{
-#if ENABLE(DAMAGE_TRACKING)
-    m_damage = WebCore::Damage { };
-#endif
 }
 
 void AcceleratedSurfaceDMABuf::RenderTarget::setReleaseFenceFD(UnixFileDescriptor&& releaseFence)
@@ -547,7 +545,7 @@ void AcceleratedSurfaceDMABuf::SwapChain::releaseTarget(uint64_t targetID, UnixF
     if (index != notFound) {
         m_lockedTargets[index]->setReleaseFenceFD(WTFMove(releaseFence));
         m_freeTargets.insert(0, WTFMove(m_lockedTargets[index]));
-        m_lockedTargets.remove(index);
+        m_lockedTargets.removeAt(index);
     }
 }
 
@@ -563,7 +561,7 @@ void AcceleratedSurfaceDMABuf::SwapChain::releaseUnusedBuffers()
 }
 
 #if ENABLE(DAMAGE_TRACKING)
-void AcceleratedSurfaceDMABuf::SwapChain::addDamage(const WebCore::Damage& damage)
+void AcceleratedSurfaceDMABuf::SwapChain::addDamage(const std::optional<WebCore::Damage>& damage)
 {
     for (auto& renderTarget : m_freeTargets)
         renderTarget->addDamage(damage);
@@ -679,27 +677,24 @@ void AcceleratedSurfaceDMABuf::didRenderFrame()
 
     m_target->didRenderFrame();
 
-    const auto& damageRects = [this]() -> Vector<WebCore::IntRect, 1> {
+    Vector<WebCore::IntRect, 1> damageRects;
 #if ENABLE(DAMAGE_TRACKING)
-        return m_frameDamage.rects();
-#else
-        return { };
+    m_target->setDamage(WebCore::Damage(m_size));
+    if (m_frameDamage) {
+        damageRects = m_frameDamage->rects();
+        m_frameDamage = std::nullopt;
+    }
 #endif
-    }();
 
-    WebProcess::singleton().parentProcessConnection()->send(Messages::AcceleratedBackingStoreDMABuf::Frame(m_target->id(), damageRects, WTFMove(renderingFence)), m_id);
-
-#if ENABLE(DAMAGE_TRACKING)
-    m_frameDamage = WebCore::Damage();
-#endif
+    WebProcess::singleton().parentProcessConnection()->send(Messages::AcceleratedBackingStoreDMABuf::Frame(m_target->id(), WTFMove(damageRects), WTFMove(renderingFence)), m_id);
 }
 
 #if ENABLE(DAMAGE_TRACKING)
-const WebCore::Damage& AcceleratedSurfaceDMABuf::addDamage(const WebCore::Damage& damage)
+const std::optional<WebCore::Damage>& AcceleratedSurfaceDMABuf::frameDamageSinceLastUse()
 {
-    m_frameDamage = damage;
-    m_swapChain.addDamage(damage);
-    return m_target ? m_target->damage() : WebCore::Damage::invalid();
+    m_swapChain.addDamage(m_frameDamage);
+    ASSERT(m_target);
+    return m_target->damage();
 }
 #endif
 

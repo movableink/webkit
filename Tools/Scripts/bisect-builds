@@ -45,7 +45,7 @@ import tempfile
 import urllib
 
 
-REST_API_URL = 'https://q1tzqfy48e.execute-api.us-west-2.amazonaws.com/v2_2/'
+REST_API_URL = 'https://archives.webkit.org/'
 REST_API_ARCHIVE_ENDPOINT = 'archives/'
 REST_API_MINIFIED_ARCHIVE_ENDPOINT = 'minified-archives/'
 REST_API_PLATFORM_ENDPOINT = 'platforms'
@@ -192,17 +192,17 @@ def get_indices_from_revisions(revision_list, start_revision, end_revision):
 
 
 def get_sorted_revisions(revisions_dict):
-    revisions = [int(item['revision']['N']) for item in revisions_dict['revisions']['Items']]
+    revisions = [item['identifier']['S'] for item in revisions_dict['revisions']['Items']]
     return sorted(revisions)
 
 
 def get_s3_location_for_revision(url, revision):
-    url = '/'.join([url, str(revision)])
+    url = '?'.join([url, f'identifier={str(revision)}'])
     r = urllib.request.urlopen(url)
     data = json.load(r)
 
-    for archive in data['archive']:
-        s3_url = archive['s3_url']
+    for archive in data['revisions']['Items']:
+        s3_url = archive['s3_url']['S']
     return s3_url
 
 
@@ -344,7 +344,7 @@ def print_list_and_exit(revision_list, options):
     print_platforms(minified_platforms())
     print('Supported unminified platforms:')
     print_platforms(unminified_platforms())
-    print('{} revisions available for {}:'.format(len(revision_list), options.queue))
+    print('{} identifiers available for {}:'.format(len(revision_list), options.queue))
     print(revision_list)
     exit(0)
 
@@ -355,8 +355,8 @@ def fetch_revision_list(options, last_evaluated_key=None):
     data = json.load(r)
     revision_list = get_sorted_revisions(data)
 
-    if 'LastEvaluatedKey' in data['revisions']:
-        last_evaluated_key = data['revisions']['LastEvaluatedKey']
+    if 'LastEvaluatedKey' in data:
+        last_evaluated_key = data['LastEvaluatedKey']
         revision_list += fetch_revision_list(options, last_evaluated_key)
 
     return revision_list

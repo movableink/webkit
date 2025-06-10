@@ -39,6 +39,7 @@
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderInline.h"
 #include "RenderLineBreak.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGInlineText.h"
 #include "RenderText.h"
 

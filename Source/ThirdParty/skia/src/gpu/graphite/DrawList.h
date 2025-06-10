@@ -16,7 +16,7 @@
 #include "src/gpu/graphite/PaintParams.h"
 #include "src/gpu/graphite/geom/Geometry.h"
 #include "src/gpu/graphite/geom/Rect.h"
-#include "src/gpu/graphite/geom/Transform_graphite.h"
+#include "src/gpu/graphite/geom/Transform.h"
 
 #include <limits>
 #include <optional>
@@ -68,6 +68,9 @@ public:
     static constexpr int kMaxRenderSteps = 4096;
     static_assert(kMaxRenderSteps <= std::numeric_limits<uint16_t>::max());
 
+    // Add a construtor to prevent default zero initialization of SkTBlockList members' storage.
+    DrawList() {}
+
     // DrawList requires that all Transforms be valid and asserts as much; invalid transforms should
     // be detected at the Device level or similar. The provided Renderer must be compatible with the
     // 'shape' and 'stroke' parameters. If the renderer uses coverage AA, 'ordering' must have a
@@ -83,8 +86,13 @@ public:
 
     int renderStepCount() const { return fRenderStepCount; }
 
-    // Bounds for a dst read required by this DrawList.
+    // Bounds for a dst read required by this DrawList. These bounds are only valid if drawsReadDst
+    // returns true.
     const Rect& dstReadBounds() const { return fDstReadBounds; }
+    bool drawsReadDst() const { return !fDstReadBounds.isEmptyNegativeOrNaN(); }
+    bool drawsRequireMSAA() const { return fRequiresMSAA; }
+    SkEnumBitMask<DepthStencilFlags> depthStencilFlags() const { return fDepthStencilFlags; }
+
 
     SkDEBUGCODE(bool hasCoverageMaskDraws() const { return fCoverageMaskShapeDrawCount > 0; })
 
@@ -102,6 +110,10 @@ private:
                 : fRenderer(renderer)
                 , fDrawParams(transform, geometry, clip, order, stroke)
                 , fPaintParams(paint ? std::optional<PaintParams>(*paint) : std::nullopt) {}
+
+        bool readsFromDst() const {
+            return fPaintParams.has_value() ? fPaintParams.value().dstReadRequired() : false;
+        }
     };
 
     // The returned Transform reference remains valid for the lifetime of the DrawList.
@@ -121,6 +133,9 @@ private:
     // Tracked for all paints that read from the dst. If it is later determined that the
     // DstReadStrategy is not kTextureCopy, this value can simply be ignored.
     Rect fDstReadBounds = Rect::InfiniteInverted();
+    // Other properties of draws contained within this DrawList
+    bool fRequiresMSAA = false;
+    SkEnumBitMask<DepthStencilFlags> fDepthStencilFlags = DepthStencilFlags::kNone;
 };
 
 } // namespace skgpu::graphite

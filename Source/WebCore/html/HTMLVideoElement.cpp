@@ -113,7 +113,7 @@ void HTMLVideoElement::didAttachRenderers()
 
     if (shouldDisplayPosterImage()) {
         if (!m_imageLoader)
-            m_imageLoader = makeUniqueWithoutRefCountedCheck<HTMLImageLoader>(*this);
+            lazyInitialize(m_imageLoader, makeUniqueWithoutRefCountedCheck<HTMLImageLoader>(*this));
         m_imageLoader->updateFromElement();
         if (CheckedPtr renderer = this->renderer())
             renderer->checkedImageResource()->setCachedImage(m_imageLoader->protectedImage());
@@ -193,7 +193,7 @@ void HTMLVideoElement::attributeChanged(const QualifiedName& name, const AtomStr
     if (name == posterAttr) {
         if (shouldDisplayPosterImage()) {
             if (!m_imageLoader)
-                m_imageLoader = makeUniqueWithoutRefCountedCheck<HTMLImageLoader>(*this);
+                lazyInitialize(m_imageLoader, makeUniqueWithoutRefCountedCheck<HTMLImageLoader>(*this));
             m_imageLoader->updateFromElementIgnoringPreviousError();
         } else {
             if (CheckedPtr renderer = this->renderer()) {
@@ -635,6 +635,24 @@ void HTMLVideoElement::didExitFullscreenOrPictureInPicture()
     HTMLMediaElement::didStopBeingFullscreenElement();
 }
 
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+void HTMLVideoElement::didEnterExternalPlayback()
+{
+    m_isInExternalPlayback = true;
+
+    if (RefPtr player = this->player())
+        player->setInFullscreenOrPictureInPicture(true);
+}
+
+void HTMLVideoElement::didExitExternalPlayback()
+{
+    m_isInExternalPlayback = false;
+
+    if (RefPtr player = this->player())
+        player->setInFullscreenOrPictureInPicture(false);
+}
+#endif
+
 bool HTMLVideoElement::isChangingPresentationMode() const
 {
     return isChangingVideoFullscreenMode();
@@ -699,7 +717,7 @@ void HTMLVideoElement::cancelVideoFrameCallback(unsigned identifier)
     index = m_videoFrameRequests.findIf([identifier](auto& request) { return request->identifier == identifier; });
     if (index == notFound)
         return;
-    m_videoFrameRequests.remove(index);
+    m_videoFrameRequests.removeAt(index);
 
     if (m_videoFrameRequests.isEmpty()) {
         if (RefPtr player = this->player())
@@ -749,7 +767,7 @@ void HTMLVideoElement::serviceRequestVideoFrameCallbacks(ReducedResolutionSecond
     m_videoFrameRequests.swap(m_servicedVideoFrameRequests);
     for (auto& request : m_servicedVideoFrameRequests) {
         if (RefPtr callback = std::exchange(request->callback, { }))
-            callback->handleEvent(std::round(now.milliseconds()), *videoFrameMetadata);
+            callback->invoke(std::round(now.milliseconds()), *videoFrameMetadata);
     }
     m_servicedVideoFrameRequests.clear();
 

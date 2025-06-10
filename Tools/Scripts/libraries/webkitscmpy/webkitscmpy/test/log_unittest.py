@@ -24,7 +24,7 @@ import os
 import time
 import sys
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from webkitcorepy import OutputCapture, Terminal, testing
 from webkitcorepy.mocks import Time as MockTime
@@ -78,7 +78,7 @@ Date:   {}
 
     1st commit
 '''.format(*reversed([
-                datetime.utcfromtimestamp(commit.timestamp + time.timezone).strftime('%a %b %d %H:%M:%S %Y +0000')
+                datetime.fromtimestamp(commit.timestamp + time.timezone, timezone.utc).strftime('%a %b %d %H:%M:%S %Y +0000')
                 for commit in mocks.local.Git(self.path).commits['main']
             ])),
         )
@@ -127,7 +127,7 @@ Date:   {}
     1st commit
     git-svn-id: https://svn.example.org/repository/repository/trunk@1 268f45cc-cd09-0410-ab3c-d52691b4dbfc
 '''.format(*reversed([
-                    datetime.utcfromtimestamp(commit.timestamp + time.timezone).strftime('%a %b %d %H:%M:%S %Y +0000')
+                    datetime.fromtimestamp(commit.timestamp + time.timezone, timezone.utc).strftime('%a %b %d %H:%M:%S %Y +0000')
                     for commit in mocks.local.Git(self.path).commits['main']
                 ])),
             )
@@ -176,7 +176,7 @@ Date:   {}
     1st commit
     git-svn-id: https://svn.example.org/repository/repository/trunk@1 268f45cc-cd09-0410-ab3c-d52691b4dbfc
 '''.format(*reversed([
-                    datetime.utcfromtimestamp(commit.timestamp + time.timezone).strftime('%a %b %d %H:%M:%S %Y +0000')
+                    datetime.fromtimestamp(commit.timestamp + time.timezone, timezone.utc).strftime('%a %b %d %H:%M:%S %Y +0000')
                     for commit in mocks.local.Git(self.path).commits['main']
                 ])),
             )

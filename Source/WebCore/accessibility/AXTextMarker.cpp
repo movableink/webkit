@@ -29,7 +29,9 @@
 #include "AXLogger.h"
 #include "AXObjectCache.h"
 #include "AXTreeStore.h"
+#include "BoundaryPointInlines.h"
 #include "HTMLInputElement.h"
+#include "Logging.h"
 #include "RenderObject.h"
 #include "TextBoundaries.h"
 #include "TextIterator.h"
@@ -37,6 +39,7 @@
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/Scope.h>
 
 namespace WebCore {
 
@@ -191,7 +194,7 @@ std::optional<BoundaryPoint> AXTextMarker::boundaryPoint() const
     RefPtr node = characterOffset.node;
 
     int offset = characterOffset.startIndex + characterOffset.offset;
-    if (AccessibilityObject::replacedNodeNeedsCharacter(*node) || node->hasTagName(HTMLNames::brTag))
+    if (AccessibilityObject::replacedNodeNeedsCharacter(*node) || WebCore::elementName(*node) == ElementName::HTML_br)
         node = nodeAndOffsetForReplacedNode(*node, offset, characterOffset.offset);
     if (!node)
         return std::nullopt;
@@ -224,17 +227,26 @@ String AXTextMarker::debugDescription() const
 {
     auto separator = ", "_s;
     RefPtr object = this->object();
-    return makeString(
-        "treeID "_s, treeID() ? treeID()->loggingString() : ""_s
-        , separator, "objectID "_s, objectID() ? objectID()->loggingString() : ""_s
-        , separator, "role "_s, object ? accessibilityRoleToString(object->roleValue()) : "no object"_str
+
+    // Most text markers have the default affinity of downstream — avoid noisy output by only logging anything if
+    // the value is the non-default one: upstream.
+    String affinity = m_data.affinity == Affinity::Downstream ? ""_s : makeString(separator, "upstream"_s);
+    String origin = m_data.origin == TextMarkerOrigin::Unknown ? ""_s : makeString(separator, originToString(m_data.origin));
+    // If there is no object, we'll log it once here, then emptyString() for role which also requires an object.
+    String id = object ? makeString("ID "_s, object->objectID().loggingString()) : String("no object"_s);
+
+    return makeString("{"_s
+        , id
+        , object ? makeString(separator, "role "_s, accessibilityRoleToString(object->role())) : ""_s
         , isIgnored() ? makeString(separator, "ignored"_s) : ""_s
-        , separator, "anchor "_s, m_data.anchorType
-        , separator, "affinity "_s, m_data.affinity
+        // Anchor type and other fields below are not used for text markers processed off the main-thread.
+        , isMainThread() ? makeString(separator, "anchor "_s, m_data.anchorType) : ""_s
+        , affinity
         , separator, "offset "_s, m_data.offset
-        , separator, "characterStart "_s, m_data.characterStart
-        , separator, "characterOffset "_s, m_data.characterOffset
-        , separator, "origin "_s, originToString(m_data.origin)
+        , isMainThread() ? makeString(separator, "charStart "_s, m_data.characterStart) : ""_s
+        , isMainThread() ? makeString(separator, "charOffset "_s, m_data.characterOffset) : ""_s
+        , origin
+        , "}"_s
     );
 }
 
@@ -276,7 +288,7 @@ AXTextMarkerRange::AXTextMarkerRange(const std::optional<SimpleRange>& range)
 
 AXTextMarkerRange::AXTextMarkerRange(const AXTextMarker& start, const AXTextMarker& end)
 {
-    std::partial_ordering order = partialOrder(start, end);
+    auto order = start <=> end;
     if (order == std::partial_ordering::unordered) {
         m_start = { };
         m_end = { };
@@ -290,7 +302,7 @@ AXTextMarkerRange::AXTextMarkerRange(const AXTextMarker& start, const AXTextMark
 
 AXTextMarkerRange::AXTextMarkerRange(AXTextMarker&& start, AXTextMarker&& end)
 {
-    std::partial_ordering order = partialOrder(start, end);
+    auto order = start <=> end;
     if (order == std::partial_ordering::unordered) {
         m_start = { };
         m_end = { };
@@ -333,8 +345,10 @@ std::optional<SimpleRange> AXTextMarkerRange::simpleRange() const
 
 std::optional<CharacterRange> AXTextMarkerRange::characterRange() const
 {
-    if (m_start.m_data.objectID != m_end.m_data.objectID
-        || UNLIKELY(m_start.m_data.treeID != m_end.m_data.treeID))
+    if (m_start.m_data.objectID != m_end.m_data.objectID)
+        return std::nullopt;
+
+    if (m_start.m_data.treeID != m_end.m_data.treeID) [[unlikely]]
         return std::nullopt;
 
     if (m_start.m_data.characterOffset > m_end.m_data.characterOffset) {
@@ -346,9 +360,9 @@ std::optional<CharacterRange> AXTextMarkerRange::characterRange() const
 
 std::optional<AXTextMarkerRange> AXTextMarkerRange::intersectionWith(const AXTextMarkerRange& other) const
 {
-    if (UNLIKELY(m_start.m_data.treeID != m_end.m_data.treeID
+    if (m_start.m_data.treeID != m_end.m_data.treeID
         || other.m_start.m_data.treeID != other.m_end.m_data.treeID
-        || m_start.m_data.treeID != other.m_start.m_data.treeID))
+        || m_start.m_data.treeID != other.m_start.m_data.treeID) [[unlikely]]
         return std::nullopt;
 
     // Fast path: both ranges span one object
@@ -447,22 +461,39 @@ std::optional<AXTextMarkerRange> AXTextMarkerRange::intersectionWith(const AXTex
 
 String AXTextMarkerRange::debugDescription() const
 {
-    return makeString("start: {"_s, m_start.debugDescription(), "}\nend:   {"_s, m_end.debugDescription(), '}');
+    return makeString("text: '"_s, toString(), "'"_s,
+        ", start: {"_s, m_start.debugDescription(), '}',
+        ", end: {"_s, m_end.debugDescription(), '}');
 }
 
-std::partial_ordering partialOrder(const AXTextMarker& marker1, const AXTextMarker& marker2)
+std::partial_ordering operator<=>(const AXTextMarker& marker1, const AXTextMarker& marker2)
 {
-    if (marker1.objectID() == marker2.objectID() && LIKELY(marker1.treeID() == marker2.treeID())) {
-        if (LIKELY(marker1.m_data.characterOffset < marker2.m_data.characterOffset))
-            return std::partial_ordering::less;
-        if (marker1.m_data.characterOffset > marker2.m_data.characterOffset)
-            return std::partial_ordering::greater;
-        return std::partial_ordering::equivalent;
+    if (!marker1.isValid() || !marker2.isValid())
+        return std::partial_ordering::unordered;
+
+    if (marker1.objectID() == marker2.objectID()) {
+        if (marker1.treeID() == marker2.treeID()) [[likely]] {
+            if (marker1.m_data.characterOffset < marker2.m_data.characterOffset) [[likely]]
+                return std::partial_ordering::less;
+            if (marker1.m_data.characterOffset > marker2.m_data.characterOffset)
+                return std::partial_ordering::greater;
+            return std::partial_ordering::equivalent;
+        }
     }
+
+    // If one of the objects is the root web area with an offset of 0, we know
+    // that it is the first possible text marker, so we can fast-path the ordering.
+    RefPtr object = marker1.object();
+    if (object && !marker1.offset() && object->isRootWebArea())
+        return std::partial_ordering::less;
+
+    RefPtr otherObject = marker2.object();
+    if (otherObject && !marker2.offset() && otherObject->isRootWebArea())
+        return std::partial_ordering::greater;
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
     if (AXObjectCache::useAXThreadTextApis())
-        return marker1.partialOrderByTraversal(marker2);
+        return object && otherObject ? object->partialOrder(*otherObject) : std::partial_ordering::unordered;
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
 
     auto result = std::partial_ordering::unordered;
@@ -482,7 +513,119 @@ bool AXTextMarkerRange::isConfinedTo(std::optional<AXID> objectID) const
 {
     return m_start.objectID() == objectID
         && m_end.objectID() == objectID
-        && LIKELY(m_start.treeID() == m_end.treeID());
+        && m_start.treeID() == m_end.treeID();
+}
+
+#if ENABLE(AX_THREAD_TEXT_APIS)
+String listMarkerTextOnSameLine(const AXTextMarker& marker)
+{
+    RefPtr textMarkerObject = marker.object();
+    if (!textMarkerObject)
+        return { };
+
+    if (marker.offset()) {
+        // Don't return list marker text if this AXTextMarker isn't directly adjacent to the list marker.
+        // We determine this by the offset — any non-zero offset text marker is not adjacent to the list marker.
+        return { };
+    }
+
+    RefPtr listItemAncestor = Accessibility::findAncestor(*textMarkerObject, /* includeSelf */ true, [] (const auto& selfOrAncestor) {
+        return selfOrAncestor.isListItem();
+    });
+
+    if (listItemAncestor) {
+        if (RefPtr listMarker = findUnignoredDescendant(*listItemAncestor, /* includeSelf */ false, [] (const auto& descendant) {
+            return descendant.role() == AccessibilityRole::ListMarker;
+        })) {
+            auto lineID = listMarker->listMarkerLineID();
+            if (lineID && lineID == marker.lineID())
+                return listMarker->listMarkerText();
+        }
+    }
+    return { };
+}
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+
+String AXTextMarkerRange::toString() const
+{
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    if (!isMainThread() && AXObjectCache::useAXThreadTextApis()) {
+        // Traverses from m_start to m_end, collecting all text along the way.
+        auto start = m_start.toTextRunMarker();
+        if (!start.isValid())
+            return emptyString();
+        auto end = m_end.toTextRunMarker();
+        if (!end.isValid())
+            return emptyString();
+
+        StringBuilder result;
+        result.append(listMarkerTextOnSameLine(start));
+
+        if (start.isolatedObject() == end.isolatedObject()) {
+            size_t minOffset = std::min(start.offset(), end.offset());
+            size_t maxOffset = std::max(start.offset(), end.offset());
+            result.append(start.runs()->substring(minOffset, maxOffset - minOffset));
+            return result.toString();
+        }
+
+        auto emitNewlineOnExit = [&] (AXIsolatedObject& object) {
+            // FIXME: This function should not just be emitting newlines, but instead handling every character type in TextEmissionBehavior.
+            auto behavior = object.textEmissionBehavior();
+            if (behavior != TextEmissionBehavior::Newline && behavior != TextEmissionBehavior::DoubleNewline)
+                return;
+
+            // Like TextIterator, don't emit a newline if the most recently emitted character was already a newline.
+            if (result.length() && result[result.length() - 1] != '\n') {
+                result.append('\n');
+                if (behavior == TextEmissionBehavior::DoubleNewline)
+                    result.append('\n');
+            }
+        };
+
+        result.append(start.runs()->substring(start.offset()));
+
+        // FIXME: If we've been given reversed markers, i.e. the end marker actually comes before the start marker,
+        // we may want to detect this and try searching AXDirection::Previous?
+        RefPtr current = findObjectWithRuns(*start.isolatedObject(), AXDirection::Next, std::nullopt, emitNewlineOnExit);
+        while (current && current->objectID() != end.objectID()) {
+            const auto* runs = current->textRuns();
+            for (unsigned i = 0; i < runs->size(); i++)
+                result.append(runs->at(i).text);
+            current = findObjectWithRuns(*current, AXDirection::Next, std::nullopt, emitNewlineOnExit);
+        }
+        result.append(end.runs()->substring(0, end.offset()));
+        return result.toString();
+    }
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+
+    return Accessibility::retrieveValueFromMainThread<String>([this] () -> String {
+        auto range = simpleRange();
+        if (!range)
+            return { };
+
+        TextIterator it = TextIterator(*range, { TextIteratorBehavior::IgnoresFullSizeKana });
+        if (it.atEnd())
+            return { };
+
+        StringBuilder builder;
+        for (; !it.atEnd(); it.advance()) {
+            // non-zero length means textual node, zero length means replaced node (AKA "attachments" in AX)
+            if (it.text().length()) {
+                // If this is in a list item, we need to add the text for the list marker
+                // because a RenderListMarker does not have a Node equivalent and thus does not appear
+                // when iterating text.
+                // Don't add list marker text for new line character.
+                if (it.text().length() != 1 || !isASCIIWhitespace(it.text()[0]))
+                    builder.append(AccessibilityObject::listMarkerTextForNodeAndPosition(it.node(), makeDeprecatedLegacyPosition(it.range().start)));
+                it.appendTextToStringBuilder(builder);
+            } else {
+                if (AccessibilityObject::replacedNodeNeedsCharacter(*it.node()))
+                    builder.append(objectReplacementCharacter);
+            }
+        }
+
+        return builder.toString().isolatedCopy();
+    });
 }
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
@@ -520,7 +663,7 @@ AXTextRunLineID AXTextMarker::lineID() const
         return toTextRunMarker().lineID();
 
     const auto* runs = this->runs();
-    size_t runIndex = runs->indexForOffset(offset());
+    size_t runIndex = runs->indexForOffset(offset(), affinity());
     return runIndex != notFound ? runs->lineID(runIndex) : AXTextRunLineID();
 }
 
@@ -635,11 +778,6 @@ int AXTextMarker::lineNumberForIndex(unsigned index) const
         return -1;
     }
 
-    // To match the behavior of the VisiblePosition implementation of this functionality, we need to
-    // check an extra position ahead (as tested by ax-thread-text-apis/textarea-line-for-index.html),
-    // so increment index.
-    ++index;
-
     unsigned lineIndex = 0;
     auto currentMarker = *this;
     while (index) {
@@ -664,7 +802,7 @@ bool AXTextMarker::atLineBoundaryForDirection(AXDirection direction) const
     if (!isInTextRun())
         return toTextRunMarker().atLineBoundaryForDirection(direction);
 
-    size_t runIndex = runs()->indexForOffset(offset());
+    size_t runIndex = runs()->indexForOffset(offset(), affinity());
     TEXT_MARKER_ASSERT(runIndex != notFound, "atLineBoundaryForDirection (1)");
     if (runIndex == notFound)
         return false;
@@ -677,6 +815,11 @@ bool AXTextMarker::atLineBoundaryForDirection(AXDirection direction) const
 bool AXTextMarker::atLineBoundaryForDirection(AXDirection direction, const AXTextRuns* runs, size_t runIndex) const
 {
     auto* nextObjectWithRuns = findObjectWithRuns(*isolatedObject(), direction);
+    // If the next object is a line break, it will often have the same line index as the previous static text
+    // (even though it is a newline). In this case, advance one object to check the next line index.
+    if (nextObjectWithRuns && nextObjectWithRuns->isLineBreak())
+        nextObjectWithRuns = findObjectWithRuns(*nextObjectWithRuns, direction);
+
     auto* nextRuns = nextObjectWithRuns ? nextObjectWithRuns->textRuns() : nullptr;
     // If there are more runs in the same containing block with the same line, we are not at a start or end and can exit early.
     // No need to continue searching when the containing block changes.
@@ -753,18 +896,18 @@ unsigned AXTextMarker::offsetFromRoot() const
     return 0;
 }
 
-AXTextMarker AXTextMarker::nextMarkerFromOffset(unsigned offset) const
+AXTextMarker AXTextMarker::nextMarkerFromOffset(unsigned offset, ForceSingleOffsetMovement forceSingleOffsetMovement) const
 {
     RELEASE_ASSERT(!isMainThread());
 
     if (!isValid())
         return { };
     if (!isInTextRun())
-        return toTextRunMarker().nextMarkerFromOffset(offset);
+        return toTextRunMarker().nextMarkerFromOffset(offset, forceSingleOffsetMovement);
 
     auto marker = *this;
     while (offset) {
-        if (auto newMarker = marker.findMarker(AXDirection::Next))
+        if (auto newMarker = marker.findMarker(AXDirection::Next, CoalesceObjectBreaks::No, IgnoreBRs::No, /* stopAtID */ std::nullopt, forceSingleOffsetMovement))
             marker = WTFMove(newMarker);
         else
             break;
@@ -839,8 +982,7 @@ static FloatRect viewportRelativeFrameFromRuns(Ref<AXIsolatedObject> object, uns
         return relativeFrame;
     }
 
-    float estimatedLineHeight = relativeFrame.height() / runs->size();
-    auto runsLocalRect = runs->localRect(start, end, estimatedLineHeight);
+    auto runsLocalRect = runs->localRect(start, end, object->fontOrientation());
     // The rect we got above is a "local" rect, relative to nothing else. Move it to be
     // anchored at this object's relative frame.
     runsLocalRect.move(relativeFrame.x(), relativeFrame.y());
@@ -894,68 +1036,6 @@ AXTextMarkerRange AXTextMarkerRange::convertToDomOffsetRange() const
     };
 }
 
-String AXTextMarkerRange::toString() const
-{
-    RELEASE_ASSERT(!isMainThread());
-
-    auto start = m_start.toTextRunMarker();
-    if (!start.isValid())
-        return emptyString();
-    auto end = m_end.toTextRunMarker();
-    if (!end.isValid())
-        return emptyString();
-
-    StringBuilder result;
-    RefPtr startObject = start.isolatedObject();
-    RefPtr listItemAncestor = Accessibility::findAncestor(*startObject, /* includeSelf */ true, [] (const auto& object) {
-        return object.isListItem();
-    });
-    if (listItemAncestor) {
-        if (RefPtr listMarker = findUnignoredDescendant(*listItemAncestor, /* includeSelf */ false, [] (const auto& object) {
-            return object.roleValue() == AccessibilityRole::ListMarker;
-        })) {
-            auto lineID = listMarker->listMarkerLineID();
-            if (lineID && lineID == start.lineID())
-                result.append(listMarker->listMarkerText());
-        }
-    }
-
-    if (startObject.get() == end.isolatedObject()) {
-        size_t minOffset = std::min(start.offset(), end.offset());
-        size_t maxOffset = std::max(start.offset(), end.offset());
-        result.append(start.runs()->substring(minOffset, maxOffset - minOffset));
-        return result.toString();
-    }
-
-    auto emitNewlineOnExit = [&] (AXIsolatedObject& object) {
-        // FIXME: This function should not just be emitting newlines, but instead handling every character type in TextEmissionBehavior.
-        auto behavior = object.textEmissionBehavior();
-        if (behavior != TextEmissionBehavior::Newline && behavior != TextEmissionBehavior::DoubleNewline)
-            return;
-
-        // Like TextIterator, don't emit a newline if the most recently emitted character was already a newline.
-        if (result.length() && result[result.length() - 1] != '\n') {
-            result.append('\n');
-            if (behavior == TextEmissionBehavior::DoubleNewline)
-                result.append('\n');
-        }
-    };
-
-    result.append(start.runs()->substring(start.offset()));
-
-    // FIXME: If we've been given reversed markers, i.e. the end marker actually comes before the start marker,
-    // we may want to detect this and try searching AXDirection::Previous?
-    RefPtr current = findObjectWithRuns(*start.isolatedObject(), AXDirection::Next, std::nullopt, emitNewlineOnExit);
-    while (current && current->objectID() != end.objectID()) {
-        const auto* runs = current->textRuns();
-        for (unsigned i = 0; i < runs->size(); i++)
-            result.append(runs->at(i).text);
-        current = findObjectWithRuns(*current, AXDirection::Next, std::nullopt, emitNewlineOnExit);
-    }
-    result.append(end.runs()->substring(0, end.offset()));
-    return result.toString();
-}
-
 const AXTextRuns* AXTextMarker::runs() const
 {
     ASSERT(!isMainThread());
@@ -987,7 +1067,7 @@ static int nextSentenceEndFromOffset(StringView text, unsigned offset)
     return endIndex;
 }
 
-AXTextMarker AXTextMarker::findMarker(AXDirection direction, CoalesceObjectBreaks coalesceObjectBreaks, IgnoreBRs ignoreBRs, std::optional<AXID> stopAtID) const
+AXTextMarker AXTextMarker::findMarker(AXDirection direction, CoalesceObjectBreaks coalesceObjectBreaks, IgnoreBRs ignoreBRs, std::optional<AXID> stopAtID, ForceSingleOffsetMovement forceSingleOffsetMovement) const
 {
     // This method has two boolean options:
     // - coalesceObjectBreaks: Mimics behavior from textMarkerDataForNextCharacterOffset, where we skip nodes
@@ -1008,10 +1088,10 @@ AXTextMarker AXTextMarker::findMarker(AXDirection direction, CoalesceObjectBreak
     }
 
     // If the BR isn't in an editable ancestor, we shouldn't be including it (in most cases of findMarker).
-    bool shouldSkipBR = ignoreBRs == IgnoreBRs::Yes && object && object->roleValue() == AccessibilityRole::LineBreak && !object->editableAncestor();
+    bool shouldSkipBR = ignoreBRs == IgnoreBRs::Yes && object && object->role() == AccessibilityRole::LineBreak && !object->editableAncestor();
     bool isWithinRunBounds = ((direction == AXDirection::Next && offset() < runs->totalLength()) || (direction == AXDirection::Previous && offset()));
     if (!shouldSkipBR && isWithinRunBounds) {
-        if (runs->containsOnlyASCII) {
+        if (runs->containsOnlyASCII || forceSingleOffsetMovement == ForceSingleOffsetMovement::Yes) {
             // In the common case where the text-runs only contain ASCII, all we need to do is the move the offset by 1,
             // which is more efficient than turning the runs into a string and creating a CachedTextBreakIterator.
             return AXTextMarker { treeID(), objectID(), direction == AXDirection::Next ? offset() + 1 : offset() - 1 };
@@ -1047,7 +1127,7 @@ AXTextMarker AXTextMarker::findLine(AXDirection direction, AXTextUnitBoundary bo
     if (!isInTextRun())
         return toTextRunMarker(stopAtID).findLine(direction, boundary, includeTrailingLineBreak, stopAtID);
 
-    size_t runIndex = runs()->indexForOffset(offset());
+    size_t runIndex = runs()->indexForOffset(offset(), affinity());
     TEXT_MARKER_ASSERT(runIndex != notFound, "findLine (1)");
     if (runIndex == notFound)
         return { };
@@ -1060,8 +1140,35 @@ AXTextMarker AXTextMarker::findLine(AXDirection direction, AXTextUnitBoundary bo
     // we need the end position of the next line instead. Determine this by checking the next or previous marker.
     if (atLineBoundaryForDirection(direction, currentRuns, runIndex)) {
         auto adjacentMarker = findMarker(direction, CoalesceObjectBreaks::No, IgnoreBRs::Yes, stopAtID);
-        bool findOnNextLine = (direction == AXDirection::Previous && boundary == AXTextUnitBoundary::Start)
-            || (direction == AXDirection::Next && boundary == AXTextUnitBoundary::End);
+        bool findingNextLineEnd = direction == AXDirection::Next && boundary == AXTextUnitBoundary::End;
+        bool findOnNextLine = findingNextLineEnd || (direction == AXDirection::Previous && boundary == AXTextUnitBoundary::Start);
+
+        if (findingNextLineEnd && currentRuns == adjacentMarker.runs()) {
+            // Imagine wanting to find the next-line-end in this markup (taken from
+            // editable-single-letter-soft-linebreak-lines.html), where | represents the current position:
+            //   A| (offset 1, upstream)
+            //   B
+            //   C
+            // `findMarker` currently doesn't set any affinity, leaving it as the default value of downstream.
+            // Thus, adjacentMarker will be (offset 2, downstream), which actually skips the line "B" is on:
+            //   A
+            //   B
+            //  |C
+            // We need to detect this to avoid skipping a line.
+            size_t adjacentRunIndex = currentRuns->indexForOffset(adjacentMarker.offset(), adjacentMarker.affinity());
+            if (adjacentRunIndex != notFound && adjacentRunIndex > runIndex && adjacentRunIndex - runIndex > 1) {
+                // The scenario we're trying to detect should only have resulted in one run / line being skipped.
+                // Our affinity flip won't result in the correct behavior if we've somehow jumped >2 lines.
+                ASSERT(adjacentRunIndex - runIndex == 2);
+                // This scenario really should only happen with single "entity" runs (where an entity could be an ASCII
+                // character, or a multi-byte emoji that occupies multiple indices but is one atomic entity).
+                ASSERT(!currentRuns->containsOnlyASCII || (currentRuns->runLength(runIndex) == 1 && currentRuns->runLength(adjacentRunIndex) == 1));
+                // The next line end is simply the adjacent marker with an upstream affinity (with an ASSERT to verify this).
+                ASSERT(currentRuns->indexForOffset(adjacentMarker.offset(), Affinity::Upstream) == runIndex + 1);
+                adjacentMarker.setAffinity(Affinity::Upstream);
+                return adjacentMarker;
+            }
+        }
 
         if (findOnNextLine)
             return adjacentMarker.findLine(direction, boundary, includeTrailingLineBreak, stopAtID);
@@ -1083,8 +1190,18 @@ AXTextMarker AXTextMarker::findLine(AXDirection direction, AXTextUnitBoundary bo
         // We should search in the right direction for a change in the line index.
         for (size_t i = runIndex; direction == AXDirection::Next ? i < currentRuns->size() : i >= 0; direction == AXDirection::Next ? i++ : i--) {
             cumulativeOffset += currentRuns->runLength(i);
-            if (currentRuns->lineID(i) != startLineID)
+            if (currentRuns->lineID(i) != startLineID) {
+                if (boundary == AXTextUnitBoundary::End) {
+                    // We are returning a line-end position, which is upstream in the case of soft linebreaks, e.g.:
+                    // foo|
+                    // bar
+                    // rather than:
+                    // foo
+                    // |bar
+                    linePosition.setAffinity(Affinity::Upstream);
+                }
                 return linePosition;
+            }
             linePosition = AXTextMarker(*currentObject, computeOffset(cumulativeOffset, currentRuns->runLength(i)), origin);
 
             if (direction == AXDirection::Previous && !i) {
@@ -1094,7 +1211,7 @@ AXTextMarker AXTextMarker::findLine(AXDirection direction, AXTextUnitBoundary bo
         }
         currentObject = findObjectWithRuns(*currentObject, direction, stopAtID);
         if (currentObject) {
-            if (includeTrailingLineBreak == IncludeTrailingLineBreak::No && currentObject->roleValue() == AccessibilityRole::LineBreak)
+            if (includeTrailingLineBreak == IncludeTrailingLineBreak::No && currentObject->role() == AccessibilityRole::LineBreak)
                 break;
             currentRuns = currentObject->textRuns();
             // Reset the runIndex to 0 or the maximum, since we should start iterating from the very beginning/end of the next object's runs, depending on the direction.
@@ -1111,7 +1228,7 @@ AXTextMarker AXTextMarker::findParagraph(AXDirection direction, AXTextUnitBounda
     if (!isInTextRun())
         return toTextRunMarker().findParagraph(direction, boundary);
 
-    size_t runIndex = runs()->indexForOffset(offset());
+    size_t runIndex = runs()->indexForOffset(offset(), affinity());
     TEXT_MARKER_ASSERT(runIndex != notFound, "findParagraph");
     if (runIndex == notFound)
         return { };
@@ -1155,7 +1272,7 @@ AXTextMarker AXTextMarker::findParagraph(AXDirection direction, AXTextUnitBounda
         bool isContainingBlockBoundary = currentRuns && previousRuns && currentRuns->containingBlock != previousRuns->containingBlock;
         // Don't bother computing isEditBoundary if isContainingBlockBoundary since we only need one or the other below.
         bool isEditBoundary = !isContainingBlockBoundary && previousObject && currentObject && !!previousObject->editableAncestor() != !!currentObject->editableAncestor();
-        if (!currentObject || !currentRuns || currentObject->roleValue() == AccessibilityRole::LineBreak || isContainingBlockBoundary || isEditBoundary)
+        if (!currentObject || !currentRuns || currentObject->role() == AccessibilityRole::LineBreak || isContainingBlockBoundary || isEditBoundary)
             return { *previousObject, direction == AXDirection::Next ? previousRuns->totalLength() : 0, origin };
     }
     return { };
@@ -1251,7 +1368,7 @@ AXTextMarker AXTextMarker::findWordOrSentence(AXDirection direction, bool findWo
                 return resultMarker;
 
             // We only stop at line breaks when finding words, as for sentences, the text break iterator needs to find the next sentence boundary, which isn't necessarily at a break.
-            bool shouldStopAtLineBreaks = findWord && currentObject->roleValue() == AccessibilityRole::LineBreak && !currentObject->editableAncestor();
+            bool shouldStopAtLineBreaks = findWord && currentObject->role() == AccessibilityRole::LineBreak && !currentObject->editableAncestor();
 
             // Also stop when we hit the border of an editable object.
             if (shouldStopAtLineBreaks || lastObjectIsEditable != !!currentObject->editableAncestor())
@@ -1280,7 +1397,7 @@ AXTextMarker AXTextMarker::previousParagraphStart() const
     // Like previousParagraphStartCharacterOffset, advance one if the object is a line break.
     RefPtr currentObject = isolatedObject();
     if (RefPtr adjacentObject = adjacentMarker.isolatedObject(); currentObject && adjacentObject) {
-        if (currentObject->roleValue() != AccessibilityRole::LineBreak && adjacentObject->roleValue() == AccessibilityRole::LineBreak)
+        if (currentObject->role() != AccessibilityRole::LineBreak && adjacentObject->role() == AccessibilityRole::LineBreak)
             adjacentMarker = adjacentMarker.findMarker(AXDirection::Previous, CoalesceObjectBreaks::No, IgnoreBRs::No);
     }
 
@@ -1294,7 +1411,7 @@ AXTextMarker AXTextMarker::nextParagraphEnd() const
     // Like nextParagraphEndCharacterOffset, advance one if the object is a line break.
     RefPtr currentObject = isolatedObject();
     if (RefPtr adjacentObject = adjacentMarker.isolatedObject(); currentObject && adjacentObject) {
-        if (currentObject->roleValue() != AccessibilityRole::LineBreak && adjacentObject->roleValue() == AccessibilityRole::LineBreak)
+        if (currentObject->role() != AccessibilityRole::LineBreak && adjacentObject->role() == AccessibilityRole::LineBreak)
             adjacentMarker = adjacentMarker.findMarker(AXDirection::Next, CoalesceObjectBreaks::No, IgnoreBRs::No);
     }
 
@@ -1402,18 +1519,26 @@ AXTextMarkerRange AXTextMarker::wordRange(WordRangeType type) const
 
     if (type == WordRangeType::Right) {
         endMarker = nextWordEnd();
+        // To match the live tree, if we end up in the same spot, return a length 0 text marker.
+        if (hasSameObjectAndOffset(endMarker))
+            return { *this, *this };
+
         startMarker = endMarker.previousWordStart();
         // Don't return a right word if the word start is more than a position away from current text marker (e.g., there's a space between the word and current marker).
-        std::partial_ordering order = partialOrder(startMarker, *this);
+        auto order = startMarker <=> *this;
         if (order == std::partial_ordering::unordered)
             return { };
         if (is_gt(order))
             return { *this, *this };
     } else {
         startMarker = previousWordStart();
+        // To match the live tree, if we end up in the same spot, return a length 0 text marker.
+        if (hasSameObjectAndOffset(startMarker))
+            return { *this, *this };
+
         endMarker = startMarker.nextWordEnd();
         // Don't return a left word if the word end is more than a position away from current text marker.
-        std::partial_ordering order = partialOrder(endMarker, *this);
+        auto order = endMarker <=> *this;
         if (order == std::partial_ordering::unordered)
             return { };
         if (is_lt(order))
@@ -1467,57 +1592,6 @@ bool AXTextMarker::equivalentTextPosition(const AXTextMarker& other) const
     return objectID() != other.objectID() && (findMarker(AXDirection::Next, CoalesceObjectBreaks::No, IgnoreBRs::Yes) == other || findMarker(AXDirection::Previous, CoalesceObjectBreaks::No, IgnoreBRs::Yes) == other);
 }
 
-std::partial_ordering AXTextMarker::partialOrderByTraversal(const AXTextMarker& other) const
-{
-    RELEASE_ASSERT(!isMainThread());
-
-    if (hasSameObjectAndOffset(other))
-        return std::partial_ordering::equivalent;
-    if (!isValid() || !other.isValid())
-        return std::partial_ordering::unordered;
-
-    // If one of the objects is the root web area with an offset of 0, we know that it is the first possible text marker, so
-    // can fast-path the ordering.
-    RefPtr current = object();
-    if (current && !offset() && current->isRootWebArea())
-        return std::partial_ordering::less;
-
-    if (!other.offset()) {
-        RefPtr otherObject = other.object();
-        if (otherObject && otherObject->isRootWebArea())
-            return std::partial_ordering::greater;
-    }
-
-    // If we're here, expect that we've already handled the case where we just need to compare
-    // offsets within the same object.
-    TEXT_MARKER_ASSERT(objectID() != other.objectID(), "partialOrderByTraversal (1)");
-    if (objectID() == other.objectID())
-        return std::partial_ordering::equivalent;
-
-    // Search forwards for ther other marker. If we find it, we are before it in tree order,
-    // and thus are std::partial_ordering::less.
-    while (current && current->objectID() != other.objectID())
-        current = current->nextInPreOrder();
-
-    if (current)
-        return std::partial_ordering::less;
-
-    // Reset the object and search backwards.
-    current = object();
-    while (current && current->objectID() != other.objectID())
-        current = current->previousInPreOrder();
-
-    if (current)
-        return std::partial_ordering::greater;
-
-    // It is possible to reach here if the live and isolated trees are not synced, and [next/previous]inPreOrder
-    // is unable to traverse between two nodes. This can happen when an element's parent or subtree is removed and
-    // those updates have not been fully applied.
-    // We don't release assert here, since the callers of partialOrder can now handle unordered ordering.
-    TEXT_MARKER_ASSERT_NOT_REACHED("partialOrderByTraversal (2)");
-    return std::partial_ordering::unordered;
-}
-
 namespace Accessibility {
 // Finds the next object with text runs in the given direction, optionally stopping at the given ID and returning std::nullopt.
 // You may optionally pass a lambda that runs each time an object is "exited" in the traversal, i.e. we processed its children
@@ -1532,12 +1606,12 @@ AXIsolatedObject* findObjectWithRuns(AXIsolatedObject& start, AXDirection direct
         auto nextInPreOrder = [&] (AXIsolatedObject& object) -> AXIsolatedObject* {
             const auto& children = object.childrenIncludingIgnored();
             if (!children.isEmpty()) {
-                auto role = object.roleValue();
-                if (role != AccessibilityRole::Column && role != AccessibilityRole::TableHeaderContainer && !object.isReplacedElement()) {
+                auto role = object.role();
+                if (role != AccessibilityRole::Column && role != AccessibilityRole::TableHeaderContainer && (object.isImage() || !object.isReplacedElement())) {
                     // Table columns and header containers add cells despite not being their "true" parent (which are the rows).
                     // Don't allow a pre-order traversal of these object types to return cells to avoid an infinite loop.
                     //
-                    // We also don't want to descend into replaced elements (e.g. <audio>), which can have user-agent shadow tree markup.
+                    // We also don't want to descend into non-image replaced elements (e.g. <audio>), which can have user-agent shadow tree markup.
                     // This matches TextIterator behavior, and prevents us from emitting incorrect text.
                     return downcast<AXIsolatedObject>(children[0].ptr());
                 }

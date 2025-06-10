@@ -167,7 +167,7 @@ public:
     void setOverrideLineNumber(int overrideLineNumber)
     {
         if (overrideLineNumber == overrideLineNumberNotFound) {
-            if (UNLIKELY(m_rareData))
+            if (m_rareData) [[unlikely]]
                 m_rareData->m_overrideLineNumber = std::nullopt;
             return;
         }
@@ -176,21 +176,21 @@ public:
 
     std::optional<int> overrideLineNumber() const
     {
-        if (UNLIKELY(m_rareData))
+        if (m_rareData) [[unlikely]]
             return m_rareData->m_overrideLineNumber;
         return std::nullopt;
     }
 
     int lineCount() const
     {
-        if (UNLIKELY(m_rareData))
+        if (m_rareData) [[unlikely]]
             return m_rareData->m_lineCount;
         return m_unlinkedExecutable->lineCount();
     }
 
     int endColumn() const
     {
-        if (UNLIKELY(m_rareData))
+        if (m_rareData) [[unlikely]]
             return m_rareData->m_endColumn;
         return m_unlinkedExecutable->linkedEndColumn(m_source.startColumn().oneBasedInt());
     }
@@ -207,21 +207,21 @@ public:
 
     unsigned functionEnd() const
     {
-        if (UNLIKELY(m_rareData))
+        if (m_rareData) [[unlikely]]
             return m_rareData->m_functionEnd;
         return m_unlinkedExecutable->unlinkedFunctionEnd();
     }
 
     unsigned functionStart() const
     {
-        if (UNLIKELY(m_rareData))
+        if (m_rareData) [[unlikely]]
             return m_rareData->m_functionStart;
         return m_unlinkedExecutable->unlinkedFunctionStart();
     }
 
     unsigned parametersStartOffset() const
     {
-        if (UNLIKELY(m_rareData))
+        if (m_rareData) [[unlikely]]
             return m_rareData->m_parametersStartOffset;
         return m_unlinkedExecutable->parametersStartOffset();
     }
@@ -243,7 +243,7 @@ public:
     // Cached poly proto structure for the result of constructing this executable.
     Structure* cachedPolyProtoStructure()
     {
-        if (UNLIKELY(m_rareData))
+        if (m_rareData) [[unlikely]]
             return m_rareData->m_cachedPolyProtoStructureID.get();
         return nullptr;
     }
@@ -318,7 +318,7 @@ private:
 
     RareData& ensureRareData()
     {
-        if (LIKELY(m_rareData))
+        if (m_rareData) [[likely]]
             return *m_rareData;
         return ensureRareDataSlow();
     }

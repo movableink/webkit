@@ -148,7 +148,7 @@ auto WorkerInspectorProxy::pageOrWorkerGlobalScopeIdentifier(ScriptExecutionCont
 void WorkerInspectorProxy::workerStarted(ScriptExecutionContext& scriptExecutionContext, WorkerThread* thread, const URL& url, const String& name)
 {
     ASSERT(!m_workerThread);
-    m_scriptExecutionContext = &scriptExecutionContext;
+    m_scriptExecutionContext = scriptExecutionContext;
     m_contextIdentifier = pageOrWorkerGlobalScopeIdentifier(scriptExecutionContext);
 
     m_workerThread = thread;

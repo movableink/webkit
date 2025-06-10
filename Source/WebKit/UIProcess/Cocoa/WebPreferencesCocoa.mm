@@ -36,10 +36,10 @@
 
 namespace WebKit {
 
-static inline NSString *makeKey(const String& identifier, const String& keyPrefix, const String& key)
+static inline RetainPtr<NSString> makeKey(const String& identifier, const String& keyPrefix, const String& key)
 {
     ASSERT(!identifier.isEmpty());
-    return makeString(identifier, keyPrefix, key);
+    return makeString(identifier, keyPrefix, key).createNSString();
 }
 
 bool WebPreferences::platformGetStringUserValueForKey(const String& key, String& userValue)
@@ -47,14 +47,11 @@ bool WebPreferences::platformGetStringUserValueForKey(const String& key, String&
     if (!m_identifier)
         return false;
 
-    id object = [[NSUserDefaults standardUserDefaults] objectForKey:makeKey(m_identifier, m_keyPrefix, key)];
-    if (!object)
-        return false;
-    auto *str = dynamic_objc_cast<NSString>(object);
-    if (!str)
+    RetainPtr string = [[NSUserDefaults standardUserDefaults] stringForKey:makeKey(m_identifier, m_keyPrefix, key).get()];
+    if (!string)
         return false;
 
-    userValue = str;
+    userValue = string.get();
     return true;
 }
 
@@ -63,7 +60,7 @@ bool WebPreferences::platformGetBoolUserValueForKey(const String& key, bool& use
     if (!m_identifier)
         return false;
 
-    id object = [[NSUserDefaults standardUserDefaults] objectForKey:makeKey(m_identifier, m_keyPrefix, key)];
+    RetainPtr object = [[NSUserDefaults standardUserDefaults] objectForKey:makeKey(m_identifier, m_keyPrefix, key).get()];
     if (!object)
         return false;
     if (![object respondsToSelector:@selector(boolValue)])
@@ -78,7 +75,7 @@ bool WebPreferences::platformGetUInt32UserValueForKey(const String& key, uint32_
     if (!m_identifier)
         return false;
 
-    id object = [[NSUserDefaults standardUserDefaults] objectForKey:makeKey(m_identifier, m_keyPrefix, key)];
+    RetainPtr object = [[NSUserDefaults standardUserDefaults] objectForKey:makeKey(m_identifier, m_keyPrefix, key).get()];
     if (!object)
         return false;
     if (![object respondsToSelector:@selector(intValue)])
@@ -93,7 +90,7 @@ bool WebPreferences::platformGetDoubleUserValueForKey(const String& key, double&
     if (!m_identifier)
         return false;
 
-    id object = [[NSUserDefaults standardUserDefaults] objectForKey:makeKey(m_identifier, m_keyPrefix, key)];
+    RetainPtr object = [[NSUserDefaults standardUserDefaults] objectForKey:makeKey(m_identifier, m_keyPrefix, key).get()];
     if (!object)
         return false;
     if (![object respondsToSelector:@selector(doubleValue)])
@@ -103,17 +100,17 @@ bool WebPreferences::platformGetDoubleUserValueForKey(const String& key, double&
     return true;
 }
 
-static id debugUserDefaultsValue(const String& identifier, const String& keyPrefix, const String& globalDebugKeyPrefix, const String& key)
+static RetainPtr<id> debugUserDefaultsValue(const String& identifier, const String& keyPrefix, const String& globalDebugKeyPrefix, const String& key)
 {
-    NSUserDefaults *standardUserDefaults = [NSUserDefaults standardUserDefaults];
-    id object = nil;
+    RetainPtr standardUserDefaults = [NSUserDefaults standardUserDefaults];
+    RetainPtr<id> object;
 
     if (!identifier.isEmpty())
-        object = [standardUserDefaults objectForKey:makeKey(identifier, keyPrefix, key)];
+        object = [standardUserDefaults objectForKey:makeKey(identifier, keyPrefix, key).get()];
 
     if (!object) {
         // Allow debug preferences to be set globally, using the debug key prefix.
-        object = [standardUserDefaults objectForKey:[globalDebugKeyPrefix stringByAppendingString:key]];
+        object = [standardUserDefaults objectForKey:[globalDebugKeyPrefix.createNSString() stringByAppendingString:key.createNSString().get()]];
     }
 
     return object;
@@ -121,7 +118,7 @@ static id debugUserDefaultsValue(const String& identifier, const String& keyPref
 
 static void setDebugBoolValueIfInUserDefaults(const String& identifier, const String& keyPrefix, const String& globalDebugKeyPrefix, const String& key, WebPreferencesStore& store)
 {
-    id object = debugUserDefaultsValue(identifier, keyPrefix, globalDebugKeyPrefix, key);
+    RetainPtr object = debugUserDefaultsValue(identifier, keyPrefix, globalDebugKeyPrefix, key);
     if (!object)
         return;
     if (![object respondsToSelector:@selector(boolValue)])
@@ -132,7 +129,7 @@ static void setDebugBoolValueIfInUserDefaults(const String& identifier, const St
 
 static void setDebugUInt32ValueIfInUserDefaults(const String& identifier, const String& keyPrefix, const String& globalDebugKeyPrefix, const String& key, WebPreferencesStore& store)
 {
-    id object = debugUserDefaultsValue(identifier, keyPrefix, globalDebugKeyPrefix, key);
+    RetainPtr object = debugUserDefaultsValue(identifier, keyPrefix, globalDebugKeyPrefix, key);
     if (!object)
         return;
     if (![object respondsToSelector:@selector(unsignedIntegerValue)])
@@ -184,7 +181,7 @@ void WebPreferences::platformUpdateStringValueForKey(const String& key, const St
     if (!m_identifier)
         return;
 
-    [[NSUserDefaults standardUserDefaults] setObject:value forKey:makeKey(m_identifier, m_keyPrefix, key)];
+    [[NSUserDefaults standardUserDefaults] setObject:value.createNSString().get() forKey:makeKey(m_identifier, m_keyPrefix, key).get()];
 }
 
 void WebPreferences::platformUpdateBoolValueForKey(const String& key, bool value)
@@ -192,7 +189,7 @@ void WebPreferences::platformUpdateBoolValueForKey(const String& key, bool value
     if (!m_identifier)
         return;
 
-    [[NSUserDefaults standardUserDefaults] setBool:value forKey:makeKey(m_identifier, m_keyPrefix, key)];
+    [[NSUserDefaults standardUserDefaults] setBool:value forKey:makeKey(m_identifier, m_keyPrefix, key).get()];
 }
 
 void WebPreferences::platformUpdateUInt32ValueForKey(const String& key, uint32_t value)
@@ -200,7 +197,7 @@ void WebPreferences::platformUpdateUInt32ValueForKey(const String& key, uint32_t
     if (!m_identifier)
         return;
 
-    [[NSUserDefaults standardUserDefaults] setInteger:value forKey:makeKey(m_identifier, m_keyPrefix, key)];
+    [[NSUserDefaults standardUserDefaults] setInteger:value forKey:makeKey(m_identifier, m_keyPrefix, key).get()];
 }
 
 void WebPreferences::platformUpdateDoubleValueForKey(const String& key, double value)
@@ -208,7 +205,7 @@ void WebPreferences::platformUpdateDoubleValueForKey(const String& key, double v
     if (!m_identifier)
         return;
 
-    [[NSUserDefaults standardUserDefaults] setDouble:value forKey:makeKey(m_identifier, m_keyPrefix, key)];
+    [[NSUserDefaults standardUserDefaults] setDouble:value forKey:makeKey(m_identifier, m_keyPrefix, key).get()];
 }
 
 void WebPreferences::platformUpdateFloatValueForKey(const String& key, float value)
@@ -216,7 +213,7 @@ void WebPreferences::platformUpdateFloatValueForKey(const String& key, float val
     if (!m_identifier)
         return;
 
-    [[NSUserDefaults standardUserDefaults] setFloat:value forKey:makeKey(m_identifier, m_keyPrefix, key)];
+    [[NSUserDefaults standardUserDefaults] setFloat:value forKey:makeKey(m_identifier, m_keyPrefix, key).get()];
 }
 
 void WebPreferences::platformDeleteKey(const String& key)
@@ -224,7 +221,7 @@ void WebPreferences::platformDeleteKey(const String& key)
     if (!m_identifier)
         return;
 
-    [[NSUserDefaults standardUserDefaults] removeObjectForKey:makeKey(m_identifier, m_keyPrefix, key)];
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:makeKey(m_identifier, m_keyPrefix, key).get()];
 }
 
 } // namespace WebKit

@@ -82,7 +82,7 @@ public:
     struct Entry {
         JSValue value;
         WTF::Range<unsigned> range;
-        std::variant<std::monostate, Object, Array> properties;
+        Variant<std::monostate, Object, Array> properties;
     };
 
     JSONRanges() = default;
@@ -291,8 +291,10 @@ private:
 
     JSValue parsePrimitiveValue(VM&);
 
-    ALWAYS_INLINE Identifier makeIdentifier(VM&, typename Lexer::LiteralParserTokenPtr);
-    ALWAYS_INLINE JSString* makeJSString(VM&, typename Lexer::LiteralParserTokenPtr);
+    static ALWAYS_INLINE bool equalIdentifier(UniquedStringImpl*, typename Lexer::LiteralParserTokenPtr);
+    static ALWAYS_INLINE AtomStringImpl* existingIdentifier(VM&, typename Lexer::LiteralParserTokenPtr);
+    static ALWAYS_INLINE Identifier makeIdentifier(VM&, typename Lexer::LiteralParserTokenPtr);
+    static ALWAYS_INLINE JSString* makeJSString(VM&, typename Lexer::LiteralParserTokenPtr);
 
     void setErrorMessageForToken(TokenType);
 

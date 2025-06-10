@@ -162,7 +162,7 @@ private:
     WeakPtr<IDBConnectionToServerDelegate> m_delegate;
     bool m_serverConnectionIsValid { true };
 
-    std::unique_ptr<IDBConnectionProxy> m_proxy;
+    UniqueRef<IDBConnectionProxy> m_proxy;
 };
 
 } // namespace IDBClient

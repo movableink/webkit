@@ -26,9 +26,11 @@
 #include "config.h"
 #include "YouTubePluginReplacement.h"
 
+#include "ExceptionOr.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLNames.h"
 #include "HTMLPlugInElement.h"
+#include "NodeInlines.h"
 #include "RenderElement.h"
 #include "Settings.h"
 #include "ShadowRoot.h"

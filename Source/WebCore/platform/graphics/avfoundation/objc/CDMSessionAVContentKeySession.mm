@@ -29,6 +29,7 @@
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA) && ENABLE(MEDIA_SOURCE)
 
 #import "CDMFairPlayStreaming.h"
+#import "CDMInstanceFairPlayStreamingAVFObjC.h"
 #import "CDMPrivateMediaSourceAVFObjC.h"
 #import "LegacyCDM.h"
 #import "Logging.h"
@@ -49,6 +50,7 @@
 #import <wtf/FileSystem.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/WorkQueue.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
 
 #import <pal/cocoa/AVFoundationSoftLink.h>
@@ -208,15 +210,15 @@ void CDMSessionAVContentKeySession::releaseKeys()
             return;
 
         RetainPtr certificateData = toNSData(m_certificate->span());
-        NSArray* expiredSessions = [PAL::getAVContentKeySessionClass() pendingExpiredSessionReportsWithAppIdentifier:certificateData.get() storageDirectoryAtURL:[NSURL fileURLWithPath:storagePath]];
+        NSArray* expiredSessions = [PAL::getAVContentKeySessionClass() pendingExpiredSessionReportsWithAppIdentifier:certificateData.get() storageDirectoryAtURL:[NSURL fileURLWithPath:storagePath.createNSString().get()]];
         for (NSData* expiredSessionData in expiredSessions) {
             static const NSString *PlaybackSessionIdKey = @"PlaybackSessionID";
             NSDictionary *expiredSession = [NSPropertyListSerialization propertyListWithData:expiredSessionData options:kCFPropertyListImmutable format:nullptr error:nullptr];
-            NSString *playbackSessionIdValue = (NSString *)[expiredSession objectForKey:PlaybackSessionIdKey];
-            if (![playbackSessionIdValue isKindOfClass:[NSString class]])
+            RetainPtr playbackSessionIdValue = dynamic_objc_cast<NSString>([expiredSession objectForKey:PlaybackSessionIdKey]);
+            if (!playbackSessionIdValue)
                 continue;
 
-            if (m_sessionId == String(playbackSessionIdValue)) {
+            if (m_sessionId == String(playbackSessionIdValue.get())) {
                 ALWAYS_LOG(LOGIDENTIFIER, "found session, sending expiration message");
                 m_expiredSession = expiredSessionData;
                 m_client->sendMessage(Uint8Array::create(span(m_expiredSession.get())).ptr(), emptyString());
@@ -258,7 +260,7 @@ bool CDMSessionAVContentKeySession::update(Uint8Array* key, RefPtr<Uint8Array>& 
         RetainPtr certificateData = toNSData(m_certificate->span());
 
         if ([PAL::getAVContentKeySessionClass() respondsToSelector:@selector(removePendingExpiredSessionReports:withAppIdentifier:storageDirectoryAtURL:)])
-            [PAL::getAVContentKeySessionClass() removePendingExpiredSessionReports:@[m_expiredSession.get()] withAppIdentifier:certificateData.get() storageDirectoryAtURL:[NSURL fileURLWithPath:storagePath]];
+            [PAL::getAVContentKeySessionClass() removePendingExpiredSessionReports:@[m_expiredSession.get()] withAppIdentifier:certificateData.get() storageDirectoryAtURL:[NSURL fileURLWithPath:storagePath.createNSString().get()]];
         m_expiredSession = nullptr;
         return true;
     }
@@ -314,11 +316,15 @@ bool CDMSessionAVContentKeySession::update(Uint8Array* key, RefPtr<Uint8Array>& 
         ASSERT(contentKeyRequest);
         RetainPtr certificateData = toNSData(m_certificate->span());
 
-        RetainPtr<NSDictionary> options;
+        RetainPtr options = CDMInstanceSessionFairPlayStreamingAVFObjC::optionsForKeyRequestWithHashSalt(m_client->mediaKeysHashSalt());
+
         if (!m_protocolVersions.isEmpty() && PAL::canLoad_AVFoundation_AVContentKeyRequestProtocolVersionsKey()) {
-            options = @{ AVContentKeyRequestProtocolVersionsKey: createNSArray(m_protocolVersions, [] (int version) -> NSNumber * {
+            RetainPtr mutableOptions = adoptNS([[NSMutableDictionary alloc] init]);
+            [mutableOptions addEntriesFromDictionary:options.get()];
+            [mutableOptions setValue:createNSArray(m_protocolVersions, [] (int version) -> NSNumber * {
                 return version ? @(version) : nil;
-            }).get() };
+            }).get() forKey:AVContentKeyRequestProtocolVersionsKey];
+            options = WTFMove(mutableOptions);
         }
 
         errorCode = MediaPlayer::NoError;
@@ -422,7 +428,7 @@ RefPtr<Uint8Array> CDMSessionAVContentKeySession::generateKeyReleaseMessage(unsi
         return nullptr;
     }
 
-    NSArray* expiredSessions = [PAL::getAVContentKeySessionClass() pendingExpiredSessionReportsWithAppIdentifier:certificateData.get() storageDirectoryAtURL:[NSURL fileURLWithPath:storagePath]];
+    NSArray* expiredSessions = [PAL::getAVContentKeySessionClass() pendingExpiredSessionReportsWithAppIdentifier:certificateData.get() storageDirectoryAtURL:[NSURL fileURLWithPath:storagePath.createNSString().get()]];
     if (![expiredSessions count]) {
         ALWAYS_LOG(LOGIDENTIFIER, "no expired sessions found");
 
@@ -476,7 +482,7 @@ AVContentKeySession* CDMSessionAVContentKeySession::contentKeySession()
                 return nil;
         }
 
-        storageURL = [NSURL fileURLWithPath:storagePath];
+        storageURL = [NSURL fileURLWithPath:storagePath.createNSString().get()];
     }
 
 #if HAVE(AVCONTENTKEYREQUEST_COMPATABILITIY_MODE)

@@ -33,9 +33,7 @@
 #include "QualifiedName.h"
 #include "RenderPtr.h"
 #include "ScrollTypes.h"
-#include "ShadowRootMode.h"
 #include "SimulatedClickOptions.h"
-#include "WebAnimationTypes.h"
 #include <JavaScriptCore/Forward.h>
 
 #define DUMP_NODE_STATISTICS 0
@@ -50,6 +48,8 @@ namespace WebCore {
 class Attr;
 class Attribute;
 class AttributeIteratorAccessor;
+class CSSAnimation;
+class CSSTransition;
 class CustomElementDefaultARIA;
 class CustomElementReactionQueue;
 class CustomStateSet;
@@ -71,6 +71,7 @@ class IntSize;
 class JSCustomElementInterface;
 class KeyframeEffectStack;
 class KeyboardEvent;
+class LayoutUnit;
 class LocalFrame;
 class Locale;
 class PlatformKeyboardEvent;
@@ -80,6 +81,7 @@ class PopoverData;
 class PseudoElement;
 class RenderStyle;
 class RenderTreePosition;
+class Settings;
 class SpaceSplitString;
 class StylePropertyMap;
 class StylePropertyMapReadOnly;
@@ -95,6 +97,8 @@ class WebAnimation;
 class AttachmentAssociatedElement;
 #endif
 
+enum CSSPropertyID : uint16_t;
+
 enum class AnimationImpact : uint8_t;
 enum class EventHandling : uint8_t;
 enum class EventProcessing : uint8_t;
@@ -102,9 +106,11 @@ enum class FullscreenNavigationUI : uint8_t;
 enum class FullscreenKeyboardLock : uint8_t;
 enum class IsSyntheticClick : bool { No, Yes };
 enum class ParserContentPolicy : uint8_t;
+enum class PopoverState : uint8_t { None, Auto, Manual };
 enum class ResolveURLs : uint8_t { No, NoExcludingURLsForPrivacy, Yes, YesExcludingURLsForPrivacy };
 enum class SelectionRestorationMode : uint8_t;
 enum class ShadowRootDelegatesFocus : bool { No, Yes };
+enum class ShadowRootMode : uint8_t;
 enum class ShadowRootClonable : bool { No, Yes };
 enum class ShadowRootSerializable : bool { No, Yes };
 enum class VisibilityAdjustment : uint8_t;
@@ -121,6 +127,7 @@ enum class CommandType: uint8_t {
 
     ShowModal,
     Close,
+    RequestClose,
 };
 
 struct CheckVisibilityOptions;
@@ -136,9 +143,13 @@ struct ScrollToOptions;
 struct SecurityPolicyViolationEventInit;
 struct ShadowRootInit;
 
+using AnimatableCSSProperty = Variant<CSSPropertyID, AtomString>;
+using AnimatableCSSPropertyToTransitionMap = UncheckedKeyHashMap<AnimatableCSSProperty, Ref<CSSTransition>>;
+using AnimationCollection = ListHashSet<Ref<WebAnimation>>;
+using CSSAnimationCollection = ListHashSet<Ref<CSSAnimation>>;
 using ElementName = NodeName;
 using ExplicitlySetAttrElementsMap = UncheckedKeyHashMap<QualifiedName, Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>>>;
-using TrustedTypeOrString = std::variant<RefPtr<TrustedHTML>, RefPtr<TrustedScript>, RefPtr<TrustedScriptURL>, AtomString>;
+using TrustedTypeOrString = Variant<RefPtr<TrustedHTML>, RefPtr<TrustedScript>, RefPtr<TrustedScriptURL>, AtomString>;
 
 // https://drafts.csswg.org/css-contain/#relevant-to-the-user
 enum class ContentRelevancy : uint8_t {
@@ -148,8 +159,8 @@ enum class ContentRelevancy : uint8_t {
     Selected = 1 << 3,
 };
 
-namespace Calculation {
-class RandomKeyMap;
+namespace CSSCalc {
+struct RandomCachingKey;
 }
 
 namespace CSS {
@@ -162,6 +173,7 @@ enum class Change : uint8_t;
 struct PseudoElementIdentifier;
 struct ResolutionContext;
 struct ResolvedStyle;
+struct UnadjustedStyle;
 }
 
 class Element : public ContainerNode {
@@ -258,7 +270,7 @@ public:
 
     bool checkVisibility(const CheckVisibilityOptions&);
 
-    WEBCORE_EXPORT void scrollIntoView(std::optional<std::variant<bool, ScrollIntoViewOptions>>&& arg);
+    WEBCORE_EXPORT void scrollIntoView(std::optional<Variant<bool, ScrollIntoViewOptions>>&& arg);
     WEBCORE_EXPORT void scrollIntoView(bool alignToTop = true);
     WEBCORE_EXPORT void scrollIntoViewIfNeeded(bool centerIfNeeded = true);
     WEBCORE_EXPORT void scrollIntoViewIfNotVisible(bool centerIfNotVisible = true);
@@ -301,7 +313,7 @@ public:
     // This does not update layout, and uses absoluteBoundingBoxRect().
     WEBCORE_EXPORT IntRect boundingBoxInRootViewCoordinates() const;
 
-    WEBCORE_EXPORT std::optional<std::pair<CheckedPtr<RenderObject>, FloatRect>> boundingAbsoluteRectWithoutLayout() const;
+    WEBCORE_EXPORT std::optional<std::pair<CheckedPtr<RenderElement>, FloatRect>> boundingAbsoluteRectWithoutLayout() const;
 
     WEBCORE_EXPORT FloatRect boundingClientRect();
 
@@ -472,7 +484,7 @@ public:
     ExceptionOr<void> insertAdjacentHTML(const String& where, const String& html, NodeVector* addedNodes);
 
     WEBCORE_EXPORT ExceptionOr<Element*> insertAdjacentElement(const String& where, Element& newChild);
-    WEBCORE_EXPORT ExceptionOr<void> insertAdjacentHTML(const String& where, std::variant<RefPtr<TrustedHTML>, String>&&);
+    WEBCORE_EXPORT ExceptionOr<void> insertAdjacentHTML(const String& where, Variant<RefPtr<TrustedHTML>, String>&&);
     WEBCORE_EXPORT ExceptionOr<void> insertAdjacentText(const String& where, String&& text);
 
     using Node::computedStyle;
@@ -545,13 +557,13 @@ public:
     virtual void blur();
     virtual void runFocusingStepsForAutofocus();
 
-    ExceptionOr<void> setHTMLUnsafe(std::variant<RefPtr<TrustedHTML>, String>&&);
+    ExceptionOr<void> setHTMLUnsafe(Variant<RefPtr<TrustedHTML>, String>&&);
     String getHTML(GetHTMLOptions&&) const;
 
     WEBCORE_EXPORT String innerHTML() const;
     WEBCORE_EXPORT String outerHTML() const;
-    WEBCORE_EXPORT ExceptionOr<void> setInnerHTML(std::variant<RefPtr<TrustedHTML>, String>&&);
-    WEBCORE_EXPORT ExceptionOr<void> setOuterHTML(std::variant<RefPtr<TrustedHTML>, String>&&);
+    WEBCORE_EXPORT ExceptionOr<void> setInnerHTML(Variant<RefPtr<TrustedHTML>, String>&&);
+    WEBCORE_EXPORT ExceptionOr<void> setOuterHTML(Variant<RefPtr<TrustedHTML>, String>&&);
     WEBCORE_EXPORT String innerText();
     WEBCORE_EXPORT String outerText();
  
@@ -579,6 +591,9 @@ public:
     PseudoElement& ensurePseudoElement(PseudoId);
     WEBCORE_EXPORT PseudoElement* beforePseudoElement() const;
     WEBCORE_EXPORT PseudoElement* afterPseudoElement() const;
+    RefPtr<PseudoElement> pseudoElementIfExists(Style::PseudoElementIdentifier);
+    RefPtr<const PseudoElement> pseudoElementIfExists(Style::PseudoElementIdentifier) const;
+
     bool childNeedsShadowWalker() const;
     void didShadowTreeAwareChildrenChange();
 
@@ -593,6 +608,7 @@ public:
     WEBCORE_EXPORT ExceptionOr<Element*> closest(const String& selectors);
 
     WEBCORE_EXPORT DOMTokenList& classList();
+    WEBCORE_EXPORT Ref<DOMTokenList> protectedClassList();
 
     SpaceSplitString partNames() const;
     DOMTokenList& part();
@@ -632,6 +648,7 @@ public:
     KeyframeEffectStack* keyframeEffectStack(const std::optional<Style::PseudoElementIdentifier>&) const;
     KeyframeEffectStack& ensureKeyframeEffectStack(const std::optional<Style::PseudoElementIdentifier>&);
     bool hasKeyframeEffects(const std::optional<Style::PseudoElementIdentifier>&) const;
+    bool mayHaveKeyframeEffects() const;
 
     const AnimationCollection* animations(const std::optional<Style::PseudoElementIdentifier>&) const;
     bool hasCompletedTransitionForProperty(const std::optional<Style::PseudoElementIdentifier>&, const AnimatableCSSProperty&) const;
@@ -665,7 +682,7 @@ public:
     void removeFromTopLayer();
 
 #if ENABLE(FULLSCREEN_API)
-    bool hasFullscreenFlag() const { return hasElementStateFlag(ElementStateFlag::IsFullscreen); }
+    bool hasFullscreenFlag() const { return hasStateFlag(StateFlag::IsFullscreen); }
     void setFullscreenFlag(bool);
     WEBCORE_EXPORT void webkitRequestFullscreen();
     virtual void requestFullscreen(FullscreenOptions&&, RefPtr<DeferredPromise>&&);
@@ -675,6 +692,7 @@ public:
     PopoverData& ensurePopoverData();
     void clearPopoverData();
     bool isPopoverShowing() const;
+    PopoverState popoverState() const;
 
     Element* invokedPopover() const;
     void setInvokedPopover(RefPtr<Element>&&);
@@ -726,14 +744,14 @@ public:
 
     void enqueueSecurityPolicyViolationEvent(SecurityPolicyViolationEventInit&&);
 
-    virtual void willRecalcStyle(Style::Change);
-    virtual void didRecalcStyle(Style::Change);
+    virtual void willRecalcStyle(OptionSet<Style::Change>);
+    virtual void didRecalcStyle(OptionSet<Style::Change>);
     virtual void willResetComputedStyle();
     virtual void willAttachRenderers();
     virtual void didAttachRenderers();
     virtual void willDetachRenderers();
     virtual void didDetachRenderers();
-    virtual std::optional<Style::ResolvedStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle* shadowHostStyle);
+    virtual std::optional<Style::UnadjustedStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle* shadowHostStyle);
 
     LayoutRect absoluteEventHandlerBounds(bool& includesFixedPositionElements) override;
 
@@ -756,7 +774,7 @@ public:
 #endif
 
     Style::Resolver& styleResolver();
-    Style::ResolvedStyle resolveStyle(const Style::ResolutionContext&);
+    Style::UnadjustedStyle resolveStyle(const Style::ResolutionContext&);
 
     // Invalidates the style of a single element. Style is resolved lazily.
     // Descendant elements are resolved as needed, for example if an inherited property changes.
@@ -815,7 +833,7 @@ public:
 
     RefPtr<Element> findAnchorElementForLink(String& outAnchorName);
 
-    ExceptionOr<Ref<WebAnimation>> animate(JSC::JSGlobalObject&, JSC::Strong<JSC::JSObject>&&, std::optional<std::variant<double, KeyframeAnimationOptions>>&&);
+    ExceptionOr<Ref<WebAnimation>> animate(JSC::JSGlobalObject&, JSC::Strong<JSC::JSObject>&&, std::optional<Variant<double, KeyframeAnimationOptions>>&&);
     Vector<RefPtr<WebAnimation>> getAnimations(std::optional<GetAnimationsOptions>);
 
     WEBCORE_EXPORT ElementIdentifier identifier() const;
@@ -851,8 +869,8 @@ public:
     AtomString viewTransitionCapturedName(const std::optional<Style::PseudoElementIdentifier>&) const;
     void setViewTransitionCapturedName(const std::optional<Style::PseudoElementIdentifier>&, AtomString);
 
-    Ref<Calculation::RandomKeyMap> randomKeyMap(const std::optional<Style::PseudoElementIdentifier>&) const;
-    bool hasRandomKeyMap() const;
+    double lookupCSSRandomBaseValue(const std::optional<Style::PseudoElementIdentifier>&, const CSSCalc::RandomCachingKey&) const;
+    bool hasRandomCachingKeyMap() const;
 
 protected:
     Element(const QualifiedName&, Document&, OptionSet<TypeFlag>);
@@ -1000,8 +1018,8 @@ private:
     bool hasLanguageAttribute() const { return hasLangAttr() || hasXMLLangAttr(); }
     bool hasLangAttrKnownToMatchDocumentElement() const { return hasLanguageAttribute() && effectiveLangKnownToMatchDocumentElement(); }
 
-    bool hasEverHadSmoothScroll() const { return hasElementStateFlag(ElementStateFlag::EverHadSmoothScroll); }
-    void setHasEverHadSmoothScroll(bool value) { return setElementStateFlag(ElementStateFlag::EverHadSmoothScroll, value); }
+    bool hasEverHadSmoothScroll() const { return hasStateFlag(StateFlag::EverHadSmoothScroll); }
+    void setHasEverHadSmoothScroll(bool value) { return setStateFlag(StateFlag::EverHadSmoothScroll, value); }
 
     void parentOrShadowHostNode() const = delete; // Call parentNode() instead.
 
@@ -1031,7 +1049,7 @@ inline void Element::clearAfterPseudoElement()
 inline void Element::disconnectFromIntersectionObservers()
 {
     auto* observerData = intersectionObserverDataIfExists();
-    if (LIKELY(!observerData))
+    if (!observerData) [[likely]]
         return;
     disconnectFromIntersectionObserversSlow(*observerData);
 }
@@ -1039,7 +1057,7 @@ inline void Element::disconnectFromIntersectionObservers()
 inline void Element::disconnectFromResizeObservers()
 {
     auto* observerData = resizeObserverDataIfExists();
-    if (LIKELY(!observerData))
+    if (!observerData) [[likely]]
         return;
     disconnectFromResizeObserversSlow(*observerData);
 }

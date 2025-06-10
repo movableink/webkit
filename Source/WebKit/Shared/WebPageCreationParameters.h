@@ -169,13 +169,9 @@ struct WebPageCreationParameters {
     
     WebCore::ScrollPinningBehavior scrollPinningBehavior { WebCore::ScrollPinningBehavior::DoNotPin };
 
-    // FIXME: This should be std::optional<WebCore::ScrollbarOverlayStyle>, but we would need to
-    // correctly handle enums inside Optionals when encoding and decoding. 
-    std::optional<uint32_t> scrollbarOverlayStyle { };
+    std::optional<WebCore::ScrollbarOverlayStyle> scrollbarOverlayStyle { };
 
     bool backgroundExtendsBeyondPage { false };
-
-    LayerHostingMode layerHostingMode { LayerHostingMode::InProcess };
 
     bool hasResourceLoadClient { false };
 
@@ -225,9 +221,6 @@ struct WebPageCreationParameters {
 #endif
 #if HAVE(STATIC_FONT_REGISTRY)
     Vector<SandboxExtension::Handle> fontMachExtensionHandles { };
-#endif
-#if HAVE(HOSTED_CORE_ANIMATION)
-    WTF::MachSendRight acceleratedCompositingPort { };
 #endif
 #if HAVE(APP_ACCENT_COLORS)
     WebCore::Color accentColor { };
@@ -356,6 +349,11 @@ struct WebPageCreationParameters {
     String presentingApplicationBundleIdentifier;
 #endif
     bool hasReceivedAXRequestInUIProcess { false };
+    bool shouldSendConsoleLogsToUIProcessForTesting { false };
+
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    bool defaultContentInsetBackgroundFillEnabled { false };
+#endif
 };
 
 } // namespace WebKit

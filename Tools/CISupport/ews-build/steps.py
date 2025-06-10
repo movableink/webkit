@@ -46,6 +46,8 @@ import socket
 import sys
 import time
 
+from Shared.steps import ShellMixin
+
 if sys.version_info < (3, 9):  # noqa: UP036
     print('ERROR: Minimum supported Python version for this code is Python 3.9')
     sys.exit(1)
@@ -550,23 +552,6 @@ class GitHubMixin(object):
             defer.returnValue(False)
 
 
-class ShellMixin(object):
-    WINDOWS_SHELL_PLATFORMS = ['win', 'playstation']
-
-    def has_windows_shell(self):
-        return self.getProperty('platform', '*') in self.WINDOWS_SHELL_PLATFORMS
-
-    def shell_command(self, command):
-        if self.has_windows_shell():
-            return ['sh', '-c', command]
-        return ['/bin/sh', '-c', command]
-
-    def shell_exit_0(self):
-        if self.has_windows_shell():
-            return 'exit 0'
-        return 'true'
-
-
 class AddToLogMixin(object):
     @defer.inlineCallbacks
     def _addToLog(self, logName, message):
@@ -886,6 +871,27 @@ class CheckOutSpecificRevision(shell.ShellCommandNewStyle):
         return super().run()
 
 
+class SetCredentialHelper(steps.ShellSequence, ShellMixin):
+    name = 'set-credential-helper'
+    descriptionDone = ['Set credential helper']
+    flunkOnFailure = False
+    haltOnFailure = False
+    warnOnFailure = False
+
+    def __init__(self, **kwargs):
+        super().__init__(timeout=5 * 60, logEnviron=False, **kwargs)
+
+    def doStepIf(self, step):
+        return self.getProperty('sensitive', True)
+
+    def run(self):
+        self.commands = [
+            util.ShellArg(command=['git', 'config', '--global', 'credential.helper', '!echo_credentials() { sleep 1; echo "username=${GIT_USER}"; echo "password=${GIT_PASSWORD}"; }; echo_credentials'], logname='stdio'),
+        ]
+
+        return super().run()
+
+
 class FetchBranches(steps.ShellSequence, ShellMixin):
     name = 'fetch-branch-references'
     descriptionDone = ['Updated branch information']
@@ -898,7 +904,6 @@ class FetchBranches(steps.ShellSequence, ShellMixin):
     def run(self):
         self.commands = [
             util.ShellArg(command=['git', 'fetch', DEFAULT_REMOTE, '--prune'], logname='stdio'),
-            util.ShellArg(command=['git', 'config', 'credential.helper', '!echo_credentials() { sleep 1; echo "username=${GIT_USER}"; echo "password=${GIT_PASSWORD}"; }; echo_credentials'], logname='stdio'),
         ]
 
         project = self.getProperty('project', GITHUB_PROJECTS[0])
@@ -2118,7 +2123,7 @@ class ValidateCommitterAndReviewer(buildstep.BuildStep, GitHubMixin, AddToLogMix
         if patch_id:
             comment += f'\n\nRejecting attachment {patch_id} from commit queue.'
         elif pr_number:
-            comment += f'\n\nIf you do have {status} permmissions, please ensure that your GitHub username is added to contributors.json.'
+            comment += f'\n\nIf you do have {status} permissions, please ensure that your GitHub username is added to contributors.json.'
             comment += f'\n\nRejecting {self.getProperty("github.head.sha", f"#{pr_number}")} from merge queue.'
         return self.fail_build(reason, comment)
 
@@ -2161,6 +2166,8 @@ class ValidateCommitterAndReviewer(buildstep.BuildStep, GitHubMixin, AddToLogMix
         return contributor and contributor['status'] == 'reviewer'
 
     def is_committer(self, email):
+        if email == 'webkit-integration':
+            return True
         contributor = self.contributors.get(email.lower())
         return contributor and contributor['status'] in ['reviewer', 'committer']
 
@@ -2613,7 +2620,7 @@ class CheckStatusOfPR(buildstep.BuildStep, GitHubMixin, AddToLogMixin):
     flunkOnFailure = False
     haltOnFailure = False
     EMBEDDED_CHECKS = ['ios', 'ios-sim', 'ios-wk2', 'ios-wk2-wpt', 'api-ios', 'vision', 'vision-sim', 'vision-wk2', 'tv', 'tv-sim', 'watch', 'watch-sim']
-    MACOS_CHECKS = ['mac', 'mac-AS-debug', 'api-mac', 'mac-wk1', 'mac-wk2', 'mac-AS-debug-wk2', 'mac-wk2-stress', 'jsc', 'jsc-arm64']
+    MACOS_CHECKS = ['mac', 'mac-AS-debug', 'api-mac', 'mac-wk1', 'mac-wk2', 'mac-AS-debug-wk2', 'mac-wk2-stress', 'mac-safer-cpp', 'jsc', 'jsc-arm64']
     LINUX_CHECKS = ['gtk', 'gtk-wk2', 'api-gtk', 'wpe', 'wpe-cairo', 'wpe-wk2', 'api-wpe']
     WINDOWS_CHECKS = ['win']
     EWS_WEBKIT_FAILED = 0
@@ -5951,7 +5958,7 @@ class PrintConfiguration(steps.ShellSequence):
     warnOnFailure = False
     logEnviron = False
     command_list_generic = [['hostname']]
-    command_list_apple = [['df', '-hl'], ['date'], ['sw_vers'], ['system_profiler', 'SPSoftwareDataType', 'SPHardwareDataType'], ['/bin/sh', '-c', 'echo TimezoneVers: $(cat /usr/share/zoneinfo/+VERSION)'], ['xcodebuild', '-sdk', '-version']]
+    command_list_apple = [['df', '-hl'], ['date'], ['sw_vers'], ['system_profiler', 'SPSoftwareDataType', 'SPHardwareDataType'], ['cat', '/usr/share/zoneinfo/+VERSION'], ['xcodebuild', '-sdk', '-version']]
     command_list_linux = [['df', '-hl', '--exclude-type=fuse.portal'], ['date'], ['uname', '-a'], ['uptime']]
 
     def __init__(self, **kwargs):
@@ -6231,7 +6238,7 @@ class PushCommitToWebKitRepo(shell.ShellCommand):
 class DetermineLandedIdentifier(shell.ShellCommandNewStyle):
     name = 'determine-landed-identifier'
     descriptionDone = ['Determined landed identifier']
-    command = ['/bin/sh', '-c', "git log -1 --no-decorate | grep 'Canonical link: https://commits\\.webkit\\.org/'"]
+    command = ['/bin/bash', '--posix', '-o', 'pipefail', '-c', "git log -1 --no-decorate | grep 'Canonical link: https://commits\\.webkit\\.org/'"]
     CANONICAL_LINK_RE = re.compile(r'\ACanonical link: https://commits\.webkit\.org/(?P<identifier>\d+.?\d*@\S+)\Z')
     haltOnFailure = False
 
@@ -6878,6 +6885,7 @@ class PushPullRequestBranch(shell.ShellCommandNewStyle):
         if self.results == SUCCESS:
             return {'step': 'Pushed to pull request branch'}
         if self.results == FAILURE:
+            self.setProperty('build_summary', '')
             return {'step': 'Failed to push to pull request branch'}
         return super().getResultSummary()
 
@@ -7139,9 +7147,9 @@ class ParseStaticAnalyzerResultsWithoutChange(ParseStaticAnalyzerResults):
 
 class FindModifiedSaferCPPExpectations(shell.ShellCommandNewStyle, AddToLogMixin):
     name = 'find-modified-safer-cpp-expectations'
-    RE_FILE = r'^(\+|-)(?P<file>[^/+/-].+(?:\.cpp|\.mm|\.h))$'
+    RE_FILE = r'^(\+|-)(?P<file>[^/+/-].+(?:\.cpp|\.mm|\.h|\.m|\.c))$'
     RE_EXPECTATIONS = r'^(\+\+\+).+(Source/(?P<project>.+)/SaferCPPExpectations/(?P<checker>.+)Expectations)$'
-    command = ['git', 'diff', 'head~1', '--', '*Expectations']
+    command = ['git', 'diff', 'HEAD~1', '--', '*Expectations']
 
     def __init__(self, **kwargs):
         super().__init__(logEnviron=False, **kwargs)
@@ -7240,10 +7248,20 @@ class FindUnexpectedStaticAnalyzerResults(shell.ShellCommandNewStyle, AnalyzeCha
             if not results_json:
                 return defer.returnValue(FAILURE)
 
-            unexpected_passes = self.get_unexpected_tests(results_json, 'passes') or ['Empty']
-            unexpected_failures = self.get_unexpected_tests(results_json, 'failures') or ['Empty']
+            unexpected_passes = self.get_unexpected_tests(results_json, 'passes') or []
+            unexpected_failures = self.get_unexpected_tests(results_json, 'failures') or []
 
-            if set(user_added_tests) == set(unexpected_passes) and set(user_removed_tests) == set(unexpected_failures):
+            needs_filter = False
+            for test in unexpected_passes:
+                if test not in user_added_tests:
+                    needs_filter = True
+                    break
+            for test in unexpected_failures:
+                if test not in user_removed_tests or needs_filter:
+                    needs_filter = True
+                    break
+
+            if not needs_filter:
                 yield self._addToLog('stdio', 'Skipping second build since all unexpected results come from user modified expectations.\n')
                 unexpected_results_after_filter = True
             else:
@@ -7449,7 +7467,7 @@ class FindUnexpectedStaticAnalyzerResultsWithoutChange(FindUnexpectedStaticAnaly
 
         self.command = ['python3', 'Tools/Scripts/compare-static-analysis-results', os.path.join(self.getProperty('builddir'), 'build/new')]
         self.command += ['--build-output', SCAN_BUILD_OUTPUT_DIR, '--archived-dir', os.path.join(self.getProperty('builddir'), 'build/baseline')]
-        self.command += ['--scan-build-path', '../llvm-project/clang/tools/scan-build/bin/scan-build', '--delete-results']  # Only generate results page on the second comparison
+        self.command += ['--scan-build-path', '../llvm-project/clang/tools/scan-build/bin/scan-build']  # Only generate results page on the second comparison
         if CURRENT_HOSTNAME in EWS_BUILD_HOSTNAMES + TESTING_ENVIRONMENT_HOSTNAMES and self.getProperty('github.base.ref', DEFAULT_BRANCH) == DEFAULT_BRANCH:
             self.command += [
                 '--builder-name', self.getProperty('buildername', ''),
@@ -7490,7 +7508,7 @@ class FindUnexpectedStaticAnalyzerResultsWithoutChange(FindUnexpectedStaticAnaly
             steps_to_add += [GenerateSaferCPPResultsIndex(), DeleteStaticAnalyzerResults(), ArchiveStaticAnalyzerResults(), UploadStaticAnalyzerResults(), ExtractStaticAnalyzerTestResults(), DisplaySaferCPPResults()]
             self.build.addStepsAfterCurrentStep(steps_to_add)
         elif has_unexpected_results:
-            self.build.addStepsAfterCurrentStep([ArchiveStaticAnalyzerResults(), UploadStaticAnalyzerResults(), ExtractStaticAnalyzerTestResults(), DisplaySaferCPPResults()])
+            self.build.addStepsAfterCurrentStep([DeleteStaticAnalyzerResults(), ArchiveStaticAnalyzerResults(), UploadStaticAnalyzerResults(), ExtractStaticAnalyzerTestResults(), DisplaySaferCPPResults()])
 
         self.result_message = self.createResultMessage()
         return defer.returnValue(rc)
@@ -7509,7 +7527,10 @@ class FindUnexpectedStaticAnalyzerResultsWithoutChange(FindUnexpectedStaticAnaly
                 yield self._addToLog('stdio', f'   Invalid test format. Ignoring {test_name}...\n')
                 continue
             yield self._addToLog('stdio', f'Filtering results for {test_name}:\n')
-            if test_name in first_run_passes and test_name not in self.unexpected_failures_filtered['passes'][project][checker]:
+            if self.unexpected_results_filtered['passes'][project].get(checker) is None:
+                # Account for new checkers
+                self.unexpected_results_filtered['passes'][project][checker] = []
+            if test_name in first_run_passes and test_name not in self.unexpected_results_filtered['passes'][project][checker]:
                 self.unexpected_results_filtered['passes'][project][checker].append(file)
                 yield self._addToLog('stdio', f'   Added {test_name} to unexpected passes.\n')
             try:
@@ -7534,8 +7555,10 @@ class FindUnexpectedStaticAnalyzerResultsWithoutChange(FindUnexpectedStaticAnaly
         filtered_passes = self.get_unexpected_tests(self.unexpected_results_filtered, 'passes') or []
         filtered_failures = self.get_unexpected_tests(self.unexpected_results_filtered, 'failures') or []
         self.setProperty('num_unexpected_issues', 0)
-        self.setProperty('num_failing_files', len(filtered_failures))
-        self.setProperty('num_passing_files', len(filtered_passes))
+        failing_files = ['/'.join(test.split('/')[1:-1]) for test in filtered_failures]
+        passing_files = ['/'.join(test.split('/')[1:-1]) for test in filtered_passes]
+        self.setProperty('num_failing_files', len(set(failing_files)))
+        self.setProperty('num_passing_files', len(set(passing_files)))
 
         yield self._addToLog('stdio', f'\nSuccessfully filtered results! Updating unexpected_results.json on disk.\n')
         self.write_unexpected_results_file_to_master()
@@ -7637,17 +7660,18 @@ class DisplaySaferCPPResults(buildstep.BuildStep, AddToLogMixin):
     def run(self):
         commands_for_comment = set()
         num_issues = self.getProperty('num_unexpected_issues', 0)
+        num_failing_files = self.getProperty('num_failing_files', 0)
         self.resultDirectory = f"public_html/results/{self.getProperty('buildername')}/{self.getProperty('change_id')}-{self.getProperty('buildnumber')}"
         unexpected_results_data = self.loadResultsData(os.path.join(self.resultDirectory, SCAN_BUILD_OUTPUT_DIR, 'unexpected_results.json'))
         is_log = yield self.getFilesPerProject(unexpected_results_data, 'passes', commands_for_comment)
         is_log += yield self.getFilesPerProject(unexpected_results_data, 'failures', commands_for_comment)
-        if num_issues:
+        if num_issues or num_failing_files:
             if not is_log:
-                pluralSuffix = 's' if num_issues > 1 else ''
+                pluralSuffix = 's' if num_issues > 1 or num_issues == 0 else ''
                 yield self._addToLog('stdio', f'Ignored {num_issues} pre-existing failure{pluralSuffix}')
             self.addURL("View failures", self.resultDirectoryURL() + SCAN_BUILD_OUTPUT_DIR + "/new-results.html")
         self.createComment(commands_for_comment)
-        if self.getProperty('num_failing_files', 0):
+        if num_failing_files:
             return defer.returnValue(FAILURE)
         return defer.returnValue(SUCCESS)
 
@@ -7692,8 +7716,9 @@ class DisplaySaferCPPResults(buildstep.BuildStep, AddToLogMixin):
         comment = f'### Safer C++ Build {formatted_build_link} ({commit_url})\n'
 
         if num_failures:
-            pluralSuffix = 's' if num_issues > 1 else ''
-            comment += f":x: Found [{num_issues} new failure{pluralSuffix}]({results_link}). "
+            issue_comment = f" with {num_issues} issue{'s' if num_issues > 1 else ''}" if num_issues else ''
+            pluralSuffix = 's' if num_failures > 1 else ''
+            comment += f":x: Found [{num_failures} failing file{pluralSuffix}{issue_comment}]({results_link}). "
             comment += 'Please address these issues before landing. See [WebKit Guidelines for Safer C++ Programming](https://github.com/WebKit/WebKit/wiki/Safer-CPP-Guidelines).\n(cc @rniwa)\n'
         if num_passes:
             pluralSuffix = 's' if num_passes > 1 else ''

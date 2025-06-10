@@ -38,6 +38,7 @@ class MenuListMac final : public ControlMac {
     WTF_MAKE_TZONE_ALLOCATED(MenuListMac);
 public:
     MenuListMac(MenuListPart& owningPart, ControlFactoryMac&, NSPopUpButtonCell *);
+    ~MenuListMac();
 
 private:
     IntSize cellSize(NSControlSize, const ControlStyle&) const override;

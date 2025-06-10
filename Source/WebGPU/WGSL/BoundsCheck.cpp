@@ -150,7 +150,7 @@ void BoundsCheckVisitor::visit(AST::IndexAccessExpression& access)
             replace(constant(size));
         },
         [&](AST::Expression* size) {
-            // FIXME: this should be a pipeline creation error, not a runtime error
+            // FIXME: <rdar://150369771> this should be a pipeline-creation error, not a runtime error
             replace(*size);
         },
         [&](std::monostate) {

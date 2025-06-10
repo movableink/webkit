@@ -34,6 +34,6 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-values/reference/ic-unit-013-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-values/reference/ic-unit-014-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-values/reference/vh-support-atviewport-ref.htm
-/LayoutTests/imported/w3c/web-platform-tests/css/css-values/reference/vh_not_refreshing_on_chrome-ref.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-values/reference/vh_not_refreshing_on_chrome_iframe-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-values/reference/vh-update-and-transition-in-subframe-iframe-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-values/reference/vh-update-and-transition-in-subframe-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-values/reference/viewport-unit-011-ref.html

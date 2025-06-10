@@ -32,6 +32,7 @@
 #include "APIUserScript.h"
 #include "APIUserStyleSheet.h"
 #include "InjectUserScriptImmediately.h"
+#include "JavaScriptEvaluationResult.h"
 #include "NetworkContentRuleListManagerMessages.h"
 #include "NetworkProcessProxy.h"
 #include "WebPageCreationParameters.h"

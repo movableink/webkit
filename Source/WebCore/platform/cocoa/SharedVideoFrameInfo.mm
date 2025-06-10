@@ -91,8 +91,11 @@ size_t SharedVideoFrameInfo::storageSize() const
     if (!WTF::safeAdd(sizePlaneA, sizePlaneB, size) || !WTF::safeAdd(size, sizeof(SharedVideoFrameInfo), size))
         return 0;
 
-    if (m_bufferType == kCVPixelFormatType_420YpCbCr8VideoRange_8A_TriPlanar && !WTF::safeAdd(sizePlaneA, size, size))
-        return 0;
+    if (m_bufferType == kCVPixelFormatType_420YpCbCr8VideoRange_8A_TriPlanar) {
+        size_t sizePlaneAlpha;
+        if (!WTF::safeMultiply(m_bytesPerRowPlaneAlpha, m_height, sizePlaneAlpha) || !WTF::safeAdd(sizePlaneAlpha, size, size))
+            return 0;
+    }
 
     const_cast<SharedVideoFrameInfo*>(this)->m_storageSize = size;
     return m_storageSize;
@@ -153,12 +156,12 @@ std::optional<SharedVideoFrameInfo> SharedVideoFrameInfo::decode(std::span<const
     if (!bytesPerRowPlaneB)
         return std::nullopt;
 
-    std::optional<uint32_t> bytesPerRowPlaneA;
-    decoder >> bytesPerRowPlaneA;
-    if (!bytesPerRowPlaneB)
+    std::optional<uint32_t> bytesPerRowPlaneAlpha;
+    decoder >> bytesPerRowPlaneAlpha;
+    if (!bytesPerRowPlaneAlpha)
         return std::nullopt;
 
-    SharedVideoFrameInfo info { *bufferType, *width, *height, *bytesPerRow , *widthPlaneB, *heightPlaneB, *bytesPerRowPlaneB, *bytesPerRowPlaneA };
+    SharedVideoFrameInfo info { *bufferType, *width, *height, *bytesPerRow , *widthPlaneB, *heightPlaneB, *bytesPerRowPlaneB, *bytesPerRowPlaneAlpha };
     if (!info.storageSize())
         return std::nullopt;
 
@@ -206,10 +209,7 @@ RetainPtr<CVPixelBufferRef> SharedVideoFrameInfo::createPixelBufferFromMemory(st
 
     data = copyToCVPixelBufferPlane(rawPixelBuffer, 0, data, m_height, m_bytesPerRow);
     if (CVPixelBufferGetPlaneCount(rawPixelBuffer) >= 2) {
-        if (CVPixelBufferGetWidthOfPlane(rawPixelBuffer, 1) != m_widthPlaneB || CVPixelBufferGetHeightOfPlane(rawPixelBuffer, 1) != m_heightPlaneB)
-            return nullptr;
-        data = copyToCVPixelBufferPlane(rawPixelBuffer, 1, data, m_heightPlaneB, m_bytesPerRowPlaneB);
-
+        data = copyToCVPixelBufferPlane(rawPixelBuffer, 1, data, std::min<size_t>(m_heightPlaneB, CVPixelBufferGetHeightOfPlane(rawPixelBuffer, 1)), m_bytesPerRowPlaneB);
         if (CVPixelBufferGetPlaneCount(rawPixelBuffer) == 3)
             copyToCVPixelBufferPlane(rawPixelBuffer, 2, data, m_height, m_bytesPerRowPlaneAlpha);
     }
@@ -234,7 +234,7 @@ bool SharedVideoFrameInfo::writePixelBuffer(CVPixelBufferRef pixelBuffer, std::s
 
     auto planeA = CVPixelBufferGetSpanOfPlane(pixelBuffer, 0);
     if (!planeA.data()) {
-        RELEASE_LOG_ERROR(WebRTC, "SharedVideoFrameInfo::writePixelBuffer plane A is null");
+        RELEASE_LOG_FAULT(WebRTC, "SharedVideoFrameInfo::writePixelBuffer plane A is null");
         return false;
     }
 

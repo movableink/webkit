@@ -46,8 +46,10 @@
 #include "pas_utility_heap.h"
 #include "pas_utils.h"
 #include <stdio.h>
+#if !PAS_OS(WINDOWS)
 #include <sys/time.h>
 #include <unistd.h>
+#endif
 
 static const bool verbose = false;
 static bool is_shut_down_enabled = true;
@@ -122,11 +124,19 @@ static pas_scavenger_data* ensure_data_instance(pas_lock_hold_mode heap_lock_hol
 
 static double get_time_in_milliseconds(void)
 {
+#if PAS_OS(WINDOWS)
+    LARGE_INTEGER frequency, counter;
+    QueryPerformanceFrequency(&frequency);
+    QueryPerformanceCounter(&counter);
+
+    return (counter.QuadPart * 1000.) / frequency.QuadPart;
+#else
     struct timeval current_time;
     
     gettimeofday(&current_time, NULL);
     
     return current_time.tv_sec * 1000. + current_time.tv_usec / 1000.;
+#endif
 }
 
 static void timed_wait(pthread_cond_t* cond, pthread_mutex_t* mutex,
@@ -159,7 +169,15 @@ static bool handle_expendable_memory(pas_expendable_memory_scavenge_kind kind)
     return should_go_again;
 }
 
+#if PAS_OS(WINDOWS)
+#define R_NULL 0
+
+unsigned scavenger_thread_main(void* arg)
+#else
+#define R_NULL NULL
+
 static void* scavenger_thread_main(void* arg)
+#endif
 {
     pas_scavenger_data* data;
     pas_scavenger_activity_callback did_start_callback;
@@ -192,6 +210,8 @@ static void* scavenger_thread_main(void* arg)
     configured_qos_class = pas_scavenger_requested_qos_class;
     pthread_set_qos_class_self_np(configured_qos_class, 0);
 #endif
+
+    PAS_PROFILE(SCAVENGER_THREAD_MAIN, data);
 
     for (;;) {
         pas_page_sharing_pool_scavenge_result scavenge_result;
@@ -393,12 +413,12 @@ static void* scavenger_thread_main(void* arg)
             
             if (verbose)
                 pas_log("Killing the scavenger.\n");
-            return NULL;
+            return R_NULL;
         }
     }
 
-    PAS_ASSERT(!"Should not be reached");
-    return NULL;
+    PAS_ASSERT_NOT_REACHED();
+    return R_NULL;
 }
 
 bool pas_scavenger_try_install_foreign_work_callback(
@@ -599,7 +619,7 @@ void pas_scavenger_perform_synchronous_operation(
 {
     switch (kind) {
     case pas_scavenger_invalid_synchronous_operation_kind:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return;
     case pas_scavenger_clear_all_non_tlc_caches_kind:
         pas_scavenger_clear_all_non_tlc_caches();
@@ -620,7 +640,7 @@ void pas_scavenger_perform_synchronous_operation(
         pas_scavenger_run_synchronously_now();
         return;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
 }
 
 void pas_scavenger_disable_shut_down(void)

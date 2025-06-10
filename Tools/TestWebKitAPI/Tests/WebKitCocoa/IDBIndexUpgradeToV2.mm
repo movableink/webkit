@@ -63,9 +63,9 @@ TEST(IndexedDB, IndexUpgradeToV2)
     NSURL *url1 = [NSBundle.test_resourcesBundle URLForResource:@"IndexUpgrade" withExtension:@"sqlite3"];
     NSURL *url2 = [NSBundle.test_resourcesBundle URLForResource:@"IndexUpgrade" withExtension:@"blob"];
 
-    NSString *hash = WebCore::SQLiteFileSystem::computeHashForFileName("index-upgrade-test"_s);
+    RetainPtr hash = WebCore::SQLiteFileSystem::computeHashForFileName("index-upgrade-test"_s).createNSString();
     NSString *originDirectory = @"~/Library/WebKit/com.apple.WebKit.TestWebKitAPI/WebsiteData/IndexedDB/v1/file__0/";
-    NSString *databaseDirectory = [[originDirectory stringByAppendingString:hash] stringByExpandingTildeInPath];
+    NSString *databaseDirectory = [[originDirectory stringByAppendingString:hash.get()] stringByExpandingTildeInPath];
     NSURL *targetURL = [NSURL fileURLWithPath:databaseDirectory];
     [[NSFileManager defaultManager] removeItemAtURL:targetURL error:nil];
     [[NSFileManager defaultManager] createDirectoryAtURL:targetURL withIntermediateDirectories:YES attributes:nil error:nil];
@@ -99,7 +99,7 @@ static void runMultipleIndicesTestWithDatabase(NSString* databaseName)
         done = true;
     }];
     TestWebKitAPI::Util::run(&done);
-    RetainPtr databaseDirectory = [[NSURL fileURLWithPath:originDirectoryString.get() isDirectory:YES] URLByAppendingPathComponent:hash];
+    RetainPtr databaseDirectory = [[NSURL fileURLWithPath:originDirectoryString.get() isDirectory:YES] URLByAppendingPathComponent:hash.createNSString().get()];
     [[NSFileManager defaultManager] removeItemAtURL:databaseDirectory.get() error:nil];
     [[NSFileManager defaultManager] createDirectoryAtURL:databaseDirectory.get() withIntermediateDirectories:YES attributes:nil error:nil];
     [[NSFileManager defaultManager] copyItemAtURL:url.get() toURL:[databaseDirectory URLByAppendingPathComponent:@"IndexedDB.sqlite3"] error:nil];

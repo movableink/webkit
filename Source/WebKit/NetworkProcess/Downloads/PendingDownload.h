@@ -48,8 +48,9 @@ namespace WebKit {
 
 class Download;
 class NetworkLoad;
-class NetworkLoadParameters;
 class NetworkSession;
+
+struct NetworkLoadParameters;
 
 class PendingDownload : public RefCountedAndCanMakeWeakPtr<PendingDownload>, public NetworkLoadClient, public IPC::MessageSender {
     WTF_MAKE_TZONE_ALLOCATED(PendingDownload);
@@ -88,7 +89,7 @@ private:
     bool isAllowedToAskUserForCredentials() const final { return m_isAllowedToAskUserForCredentials; }
     void willSendRedirectedRequest(WebCore::ResourceRequest&&, WebCore::ResourceRequest&& redirectRequest, WebCore::ResourceResponse&& redirectResponse, CompletionHandler<void(WebCore::ResourceRequest&&)>&&) override;
     void didReceiveResponse(WebCore::ResourceResponse&&, PrivateRelayed, ResponseCompletionHandler&&) override;
-    void didReceiveBuffer(const WebCore::FragmentedSharedBuffer&, uint64_t reportedEncodedDataLength) override { };
+    void didReceiveBuffer(const WebCore::FragmentedSharedBuffer&) override { };
     void didFinishLoading(const WebCore::NetworkLoadMetrics&) override { };
     void didFailLoading(const WebCore::ResourceError&) override;
     bool isDownloadTriggeredWithDownloadAttribute() const;

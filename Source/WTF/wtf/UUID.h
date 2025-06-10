@@ -66,7 +66,7 @@ public:
     WTF_EXPORT_PRIVATE static UUID createVersion5(UUID, std::span<const uint8_t>);
 
 #ifdef __OBJC__
-    WTF_EXPORT_PRIVATE operator NSUUID *() const;
+    WTF_EXPORT_PRIVATE RetainPtr<NSUUID> createNSUUID() const;
     WTF_EXPORT_PRIVATE static std::optional<UUID> fromNSUUID(NSUUID *);
 #endif
 
@@ -110,6 +110,12 @@ public:
     explicit constexpr UUID(HashTableEmptyValueType)
         : m_data(emptyValue)
     {
+    }
+
+    static bool isValid(uint64_t high, uint64_t low)
+    {
+        auto data = (static_cast<UInt128>(high) << 64) | low;
+        return data != deletedValue && data != emptyValue;
     }
 
     constexpr bool isHashTableDeletedValue() const { return m_data == deletedValue; }

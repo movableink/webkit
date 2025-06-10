@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@
 #include "HTMLElement.h"
 #include "HTMLNames.h"
 #include "Logging.h"
+#include "NodeInlines.h"
 #include "PopoverData.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "RenderBlock.h"
@@ -197,7 +198,8 @@ void HTMLDialogElement::requestClose(const String& returnValue)
 
 bool HTMLDialogElement::isValidCommandType(const CommandType command)
 {
-    return HTMLElement::isValidCommandType(command) || command == CommandType::ShowModal || command == CommandType::Close;
+    return HTMLElement::isValidCommandType(command) || command == CommandType::ShowModal || command == CommandType::Close
+        || command == CommandType::RequestClose;
 }
 
 bool HTMLDialogElement::handleCommandInternal(HTMLButtonElement& invoker, const CommandType& command)
@@ -211,6 +213,10 @@ bool HTMLDialogElement::handleCommandInternal(HTMLButtonElement& invoker, const 
     if (isOpen()) {
         if (command == CommandType::Close) {
             close(invoker.value().string());
+            return true;
+        }
+        if (command == CommandType::RequestClose) {
+            requestClose(invoker.value().string());
             return true;
         }
     } else {
@@ -249,7 +255,7 @@ void HTMLDialogElement::runFocusingSteps()
         control = this;
 
     Ref controlDocument = control->document();
-    RefPtr page = controlDocument->protectedPage();
+    RefPtr page = controlDocument->page();
     if (!page)
         return;
 
@@ -258,13 +264,11 @@ void HTMLDialogElement::runFocusingSteps()
     else if (m_isModal)
         protectedDocument()->setFocusedElement(nullptr); // Focus fixup rule
 
-    if (!controlDocument->isSameOriginAsTopDocument())
+    RefPtr topDocument = controlDocument->sameOriginTopLevelTraversable();
+    if (!topDocument)
         return;
 
-    if (RefPtr mainFrameDocument = controlDocument->mainFrameDocument())
-        mainFrameDocument->clearAutofocusCandidates();
-    else
-        LOG_ONCE(SiteIsolation, "Unable to fully perform HTMLDialogElement::runFocusingSteps() without access to the main frame document ");
+    topDocument->clearAutofocusCandidates();
     page->setAutofocusProcessed();
 }
 

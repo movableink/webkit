@@ -64,8 +64,8 @@ struct Color {
 private:
     struct EmptyToken { constexpr bool operator==(const EmptyToken&) const = default; };
 
-    // FIXME: Replace std::variant with a generic CompactPointerVariant type.
-    using ColorKind = std::variant<
+    // FIXME: Replace Variant with a generic CompactPointerVariant type.
+    using ColorKind = Variant<
         EmptyToken,
         ResolvedColor,
         CurrentColor,
@@ -170,13 +170,16 @@ bool containsCurrentColor(const Color&);
 void serializationForCSS(StringBuilder&, const CSS::SerializationContext&, const Color&);
 WEBCORE_EXPORT String serializationForCSS(const CSS::SerializationContext&, const Color&);
 
+template<> struct Serialize<Color> {
+    void operator()(StringBuilder&, const CSS::SerializationContext&, const RenderStyle&, const Color&);
+};
+
 WTF::TextStream& operator<<(WTF::TextStream&, const Color&);
 
 // MARK: - Conversion
 
 Color toStyleColor(const CSS::Color&, ColorResolutionState&);
 Color toStyleColor(const CSS::Color&, Ref<const Document>, const RenderStyle&, const CSSToLengthConversionData&, ForVisitedLink);
-Color toStyleColorWithResolvedCurrentColor(const CSS::Color&, Ref<const Document>, RenderStyle&, const CSSToLengthConversionData&, ForVisitedLink);
 
 template<> struct ToCSS<Color> {
     auto operator()(const Color&, const RenderStyle&) -> CSS::Color;
@@ -184,6 +187,10 @@ template<> struct ToCSS<Color> {
 template<> struct ToStyle<CSS::Color> {
     auto operator()(const CSS::Color&, const BuilderState&, ForVisitedLink) -> Color;
     auto operator()(const CSS::Color&, const BuilderState&) -> Color;
+};
+
+template<> struct CSSValueCreation<Color> {
+    Ref<CSSValue> operator()(CSSValuePool&, const RenderStyle&, const Color&);
 };
 
 template<typename... F> decltype(auto) Color::switchOn(F&&... f) const

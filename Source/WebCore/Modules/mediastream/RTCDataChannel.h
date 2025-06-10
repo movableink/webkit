@@ -31,7 +31,7 @@
 #include "DetachedRTCDataChannel.h"
 #include "Event.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
+#include "EventTargetInterfaces.h"
 #include "NetworkSendQueue.h"
 #include "RTCDataChannelHandler.h"
 #include "RTCDataChannelHandlerClient.h"
@@ -49,6 +49,7 @@ namespace WebCore {
 
 class Blob;
 class RTCPeerConnectionHandler;
+template<typename> class ExceptionOr;
 
 class RTCDataChannel final : public RefCounted<RTCDataChannel>, public ActiveDOMObject, public RTCDataChannelHandlerClient, public EventTarget {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCDataChannel);

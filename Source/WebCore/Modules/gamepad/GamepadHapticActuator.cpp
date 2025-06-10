@@ -28,12 +28,14 @@
 #if ENABLE(GAMEPAD)
 #include "GamepadHapticActuator.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "EventLoop.h"
 #include "Gamepad.h"
 #include "GamepadEffectParameters.h"
 #include "GamepadProvider.h"
 #include "JSDOMPromiseDeferred.h"
+#include "Settings.h"
 #include <wtf/CompletionHandler.h>
 
 namespace WebCore {

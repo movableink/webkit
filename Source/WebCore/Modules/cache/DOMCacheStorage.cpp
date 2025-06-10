@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,8 +33,9 @@
 #include "JSDOMPromiseDeferred.h"
 #include "JSFetchResponse.h"
 #include "MultiCacheQueryOptions.h"
-#include "ScriptExecutionContext.h"
+#include "ScriptExecutionContextInlines.h"
 #include "SecurityOrigin.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
@@ -168,7 +169,7 @@ public:
     }
 
 private:
-    Ref<CacheStorageConnection> m_connection;
+    const Ref<CacheStorageConnection> m_connection;
     ClientOrigin m_origin;
 };
 

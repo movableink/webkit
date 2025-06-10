@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -163,7 +163,7 @@ PlatformImagePtr RemoteImageDecoderAVF::createFrameImageAtIndex(size_t index, Su
         if (!gpuProcessConnection)
             return;
 
-        auto sendResult = gpuProcessConnection->protectedConnection()->sendSync(Messages::RemoteImageDecoderAVFProxy::CreateFrameImageAtIndex(protectedThis->m_identifier, index), 0);
+        auto sendResult = gpuProcessConnection->connection().sendSync(Messages::RemoteImageDecoderAVFProxy::CreateFrameImageAtIndex(protectedThis->m_identifier, index), 0);
         auto [imageHandle] = sendResult.takeReplyOr(std::nullopt);
         if (!imageHandle)
             return;
@@ -188,7 +188,7 @@ void RemoteImageDecoderAVF::setExpectedContentSize(long long expectedContentSize
     if (!gpuProcessConnection)
         return;
 
-    gpuProcessConnection->protectedConnection()->send(Messages::RemoteImageDecoderAVFProxy::SetExpectedContentSize(m_identifier, expectedContentSize), 0);
+    gpuProcessConnection->connection().send(Messages::RemoteImageDecoderAVFProxy::SetExpectedContentSize(m_identifier, expectedContentSize), 0);
 }
 
 // If allDataReceived is true, the caller expects encodedDataStatus() to be >= EncodedDataStatus::SizeAvailable
@@ -199,7 +199,7 @@ void RemoteImageDecoderAVF::setData(const FragmentedSharedBuffer& data, bool all
     if (!gpuProcessConnection)
         return;
 
-    auto sendResult = gpuProcessConnection->protectedConnection()->sendSync(Messages::RemoteImageDecoderAVFProxy::SetData(m_identifier, IPC::SharedBufferReference(data), allDataReceived), 0);
+    auto sendResult = gpuProcessConnection->connection().sendSync(Messages::RemoteImageDecoderAVFProxy::SetData(m_identifier, IPC::SharedBufferReference(data), allDataReceived), 0);
     if (!sendResult.succeeded())
         return;
     auto [frameCount, size, hasTrack, frameInfos] = sendResult.takeReply();
@@ -220,7 +220,7 @@ void RemoteImageDecoderAVF::clearFrameBufferCache(size_t index)
         m_frameImages.remove(i);
 
     if (auto gpuProcessConnection = m_gpuProcessConnection.get())
-        gpuProcessConnection->protectedConnection()->send(Messages::RemoteImageDecoderAVFProxy::ClearFrameBufferCache(m_identifier, index), 0);
+        gpuProcessConnection->connection().send(Messages::RemoteImageDecoderAVFProxy::ClearFrameBufferCache(m_identifier, index), 0);
 }
 
 void RemoteImageDecoderAVF::encodedDataStatusChanged(size_t frameCount, const WebCore::IntSize& size, bool hasTrack)

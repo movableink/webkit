@@ -97,25 +97,22 @@ static bool usePersistentCredentialStorage = false;
 
 namespace TestWebKitAPI {
 
-
-// FIXME: Re-enable this test once webkit.org/b/208451 is resolved.
-#if !(PLATFORM(IOS) || PLATFORM(VISION))
 TEST(WKWebsiteDataStore, RemoveAndFetchData)
 {
+    RetainPtr defaultDataStore = [WKWebsiteDataStore defaultDataStore];
     readyToContinue = false;
-    [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:[WKWebsiteDataStore _allWebsiteDataTypesIncludingPrivate] modifiedSince:[NSDate distantPast] completionHandler:^() {
+    [defaultDataStore removeDataOfTypes:[WKWebsiteDataStore _allWebsiteDataTypesIncludingPrivate] modifiedSince:[NSDate distantPast] completionHandler:^() {
         readyToContinue = true;
     }];
     TestWebKitAPI::Util::run(&readyToContinue);
     
     readyToContinue = false;
-    [[WKWebsiteDataStore defaultDataStore] fetchDataRecordsOfTypes:[WKWebsiteDataStore _allWebsiteDataTypesIncludingPrivate] completionHandler:^(NSArray<WKWebsiteDataRecord *> *dataRecords) {
+    [defaultDataStore fetchDataRecordsOfTypes:[WKWebsiteDataStore _allWebsiteDataTypesIncludingPrivate] completionHandler:^(NSArray<WKWebsiteDataRecord *> *dataRecords) {
         EXPECT_EQ(0u, dataRecords.count);
         readyToContinue = true;
     }];
     TestWebKitAPI::Util::run(&readyToContinue);
 }
-#endif // !(PLATFORM(IOS) || PLATFORM(VISION))
 
 TEST(WKWebsiteDataStore, RemoveEphemeralData)
 {
@@ -171,8 +168,7 @@ self.addEventListener('install', (event) => {
 });
 )SWRESOURCE"_s;
 
-// Fixme rdar://145508632 https://bugs.webkit.org/show_bug.cgi?id=288408
-TEST(WKWebsiteDataStore, DISABLED_RemoveDataWaitUntilWebProcessesExit)
+TEST(WKWebsiteDataStore, RemoveDataWaitUntilWebProcessesExit)
 {
     readyToContinue = false;
     [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:[WKWebsiteDataStore _allWebsiteDataTypesIncludingPrivate] modifiedSince:[NSDate distantPast] completionHandler:^() {
@@ -214,6 +210,10 @@ TEST(WKWebsiteDataStore, DISABLED_RemoveDataWaitUntilWebProcessesExit)
     readyToContinue = false;
     [[configuration websiteDataStore] fetchDataRecordsOfTypes:[WKWebsiteDataStore _allWebsiteDataTypesIncludingPrivate] completionHandler:^(NSArray<WKWebsiteDataRecord *> *dataRecords) {
         EXPECT_EQ(dataRecords.count, 0u);
+        for (WKWebsiteDataRecord* record in dataRecords) {
+            for (NSString *type in record.dataTypes)
+                NSLog(@"Unexpected record with type: [%@]", type);
+        }
         readyToContinue = true;
     }];
     TestWebKitAPI::Util::run(&readyToContinue);
@@ -508,7 +508,7 @@ TEST(WKWebsiteDataStore, ClearCustomDataStoreNoWebViews)
                     "Hello"_s);
                 break;
             case 2:
-                EXPECT_FALSE(strnstr(request.data(), "Cookie: a=b\r\n", request.size()));
+                EXPECT_FALSE(contains(request.span(), "Cookie: a=b\r\n"_span));
                 connection.send(
                     "HTTP/1.1 200 OK\r\n"
                     "Content-Length: 5\r\n"
@@ -628,6 +628,43 @@ TEST(WKWebsiteDataStore, RemoveDataStoreWithIdentifier)
     EXPECT_TRUE([fileManager fileExistsAtPath:generalStorageDirectory.get().path]);
 
     __block bool done = false;
+    [WKWebsiteDataStore _removeDataStoreWithIdentifier:uuid.get() completionHandler:^(NSError *error) {
+        done = true;
+        EXPECT_NULL(error);
+    }];
+    TestWebKitAPI::Util::run(&done);
+    EXPECT_FALSE([fileManager fileExistsAtPath:generalStorageDirectory.get().path]);
+}
+
+TEST(WKWebsiteDataStore, RemoveSessionWithIdentifierFromNetworkProcess)
+{
+    // Launch network process with operation on default data store.
+    __block bool done = false;
+    RetainPtr defaultDataStore = [WKWebsiteDataStore defaultDataStore];
+    [defaultDataStore removeDataOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] modifiedSince:[NSDate distantPast] completionHandler:^() {
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    pid_t defaultNetworkProcessIdentifier = [defaultDataStore _networkProcessIdentifier];
+    EXPECT_NE(defaultNetworkProcessIdentifier, 0);
+
+    NSString *uuidString = @"68753a44-4d6f-1226-9c60-0050e4c00067";
+    RetainPtr uuid = adoptNS([[NSUUID alloc] initWithUUIDString:uuidString]);
+    RetainPtr<NSURL> generalStorageDirectory;
+    @autoreleasepool {
+        RetainPtr websiteDataStore = createWebsiteDataStoreAndPrepare(uuid.get(), @"");
+        generalStorageDirectory = websiteDataStore.get()._configuration.generalStorageDirectory;
+        EXPECT_EQ(defaultNetworkProcessIdentifier, [websiteDataStore _networkProcessIdentifier]);
+    }
+
+    EXPECT_NOT_NULL(generalStorageDirectory.get());
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    EXPECT_TRUE([fileManager fileExistsAtPath:generalStorageDirectory.get().path]);
+
+    // Make sure network process is still alive.
+    EXPECT_FALSE(kill(defaultNetworkProcessIdentifier, 0));
+
+    done = false;
     [WKWebsiteDataStore _removeDataStoreWithIdentifier:uuid.get() completionHandler:^(NSError *error) {
         done = true;
         EXPECT_NULL(error);

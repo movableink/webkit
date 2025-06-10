@@ -94,6 +94,8 @@ class Runner(object):
             args.append('--gtest_also_run_disabled_tests=1')
         if (port.get_option('remote_layer_tree')):
             args.append('--remote-layer-tree')
+        if (port.get_option('site_isolation')):
+            args.append('--site-isolation')
         if (port.get_option('no_remote_layer_tree')):
             args.append('--no-remote-layer-tree')
         if (port.get_option('use_gpu_process')):

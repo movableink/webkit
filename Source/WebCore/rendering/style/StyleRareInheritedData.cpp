@@ -27,9 +27,9 @@
 #include "RenderStyleInlines.h"
 #include "RenderStyleConstants.h"
 #include "RenderStyleDifference.h"
-#include "ShadowData.h"
 #include "StyleFilterData.h"
 #include "StyleImage.h"
+#include "StylePrimitiveNumericTypes+Logging.h"
 #include <wtf/PointerComparison.h>
 
 namespace WebCore {
@@ -143,8 +143,9 @@ StyleRareInheritedData::StyleRareInheritedData()
     , hasAutoAccentColor(true)
     , effectiveInert(false)
     , isInSubtreeWithBlendMode(false)
-    , isInVisibilityAdjustmentSubtree(false)
+    , isForceHidden(false)
     , usedContentVisibility(static_cast<unsigned>(ContentVisibility::Visible))
+    , insideDefaultButton(false)
 #if HAVE(CORE_MATERIAL)
     , usedAppleVisualEffectForSubtree(static_cast<unsigned>(AppleVisualEffect::None))
 #endif
@@ -184,7 +185,7 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , visitedLinkCaretColor(o.visitedLinkCaretColor)
     , accentColor(o.accentColor)
     , dynamicRangeLimit(o.dynamicRangeLimit)
-    , textShadow(o.textShadow ? makeUnique<ShadowData>(*o.textShadow) : nullptr)
+    , textShadow(o.textShadow)
     , cursorData(o.cursorData)
     , indent(o.indent)
     , usedZoom(o.usedZoom)
@@ -243,8 +244,9 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , hasAutoAccentColor(o.hasAutoAccentColor)
     , effectiveInert(o.effectiveInert)
     , isInSubtreeWithBlendMode(o.isInSubtreeWithBlendMode)
-    , isInVisibilityAdjustmentSubtree(o.isInVisibilityAdjustmentSubtree)
+    , isForceHidden(o.isForceHidden)
     , usedContentVisibility(o.usedContentVisibility)
+    , insideDefaultButton(o.insideDefaultButton)
 #if HAVE(CORE_MATERIAL)
     , usedAppleVisualEffectForSubtree(o.usedAppleVisualEffectForSubtree)
 #endif
@@ -301,7 +303,7 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
 #if ENABLE(TOUCH_EVENTS)
         && tapHighlightColor == o.tapHighlightColor
 #endif
-        && arePointingToEqualData(textShadow, o.textShadow)
+        && textShadow == o.textShadow
         && arePointingToEqualData(cursorData, o.cursorData)
         && indent == o.indent
         && usedZoom == o.usedZoom
@@ -374,11 +376,12 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && hasVisitedLinkAutoCaretColor == o.hasVisitedLinkAutoCaretColor
         && hasAutoAccentColor == o.hasAutoAccentColor
         && isInSubtreeWithBlendMode == o.isInSubtreeWithBlendMode
-        && isInVisibilityAdjustmentSubtree == o.isInVisibilityAdjustmentSubtree
+        && isForceHidden == o.isForceHidden
         && usedTouchActions == o.usedTouchActions
         && eventListenerRegionTypes == o.eventListenerRegionTypes
         && effectiveInert == o.effectiveInert
         && usedContentVisibility == o.usedContentVisibility
+        && insideDefaultButton == o.insideDefaultButton
 #if HAVE(CORE_MATERIAL)
         && usedAppleVisualEffectForSubtree == o.usedAppleVisualEffectForSubtree
 #endif
@@ -459,7 +462,7 @@ void StyleRareInheritedData::dumpDifferences(TextStream& ts, const StyleRareInhe
     LOG_IF_DIFFERENT_WITH_CAST(TextIndentType, textIndentType);
     LOG_IF_DIFFERENT_WITH_CAST(TextUnderlinePosition, textUnderlinePosition);
 
-    LOG_RAW_OPTIONSET_IF_DIFFERENT(LineBoxContain, lineBoxContain);
+    LOG_RAW_OPTIONSET_IF_DIFFERENT(Style::LineBoxContain, lineBoxContain);
 
     LOG_IF_DIFFERENT_WITH_CAST(ImageOrientation, imageOrientation);
     LOG_IF_DIFFERENT_WITH_CAST(ImageRendering, imageRendering);
@@ -500,9 +503,11 @@ void StyleRareInheritedData::dumpDifferences(TextStream& ts, const StyleRareInhe
     LOG_IF_DIFFERENT_WITH_CAST(bool, hasAutoAccentColor);
     LOG_IF_DIFFERENT_WITH_CAST(bool, effectiveInert);
     LOG_IF_DIFFERENT_WITH_CAST(bool, isInSubtreeWithBlendMode);
-    LOG_IF_DIFFERENT_WITH_CAST(bool, isInVisibilityAdjustmentSubtree);
+    LOG_IF_DIFFERENT_WITH_CAST(bool, isForceHidden);
 
     LOG_IF_DIFFERENT_WITH_CAST(ContentVisibility, usedContentVisibility);
+
+    LOG_IF_DIFFERENT_WITH_CAST(bool, insideDefaultButton);
 
 #if HAVE(CORE_MATERIAL)
     LOG_IF_DIFFERENT_WITH_CAST(AppleVisualEffect, usedAppleVisualEffectForSubtree);

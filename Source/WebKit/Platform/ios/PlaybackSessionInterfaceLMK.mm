@@ -31,12 +31,14 @@
 #import "VideoPresentationInterfaceLMK.h"
 #import "WKSLinearMediaPlayer.h"
 #import "WKSLinearMediaTypes.h"
+#import <WebCore/ExceptionOr.h>
 #import <WebCore/MediaSelectionOption.h>
 #import <WebCore/NowPlayingInfo.h>
 #import <WebCore/PlaybackSessionModel.h>
 #import <WebCore/SharedBuffer.h>
 #import <WebCore/SpatialVideoMetadata.h>
 #import <WebCore/TimeRanges.h>
+#import <WebCore/VideoProjectionMetadata.h>
 #import <wtf/OSObjectPtr.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/WeakPtr.h>
@@ -285,13 +287,11 @@ void PlaybackSessionInterfaceLMK::rateChanged(OptionSet<WebCore::PlaybackSession
         [m_player setPlaybackRate:playbackState.contains(WebCore::PlaybackSessionModel::PlaybackState::Playing) ? playbackRate : 0];
 }
 
-void PlaybackSessionInterfaceLMK::seekableRangesChanged(const WebCore::TimeRanges& timeRanges, double, double)
+void PlaybackSessionInterfaceLMK::seekableRangesChanged(const WebCore::PlatformTimeRanges& timeRanges, double, double)
 {
     RetainPtr seekableRanges = adoptNS([[NSMutableArray alloc] initWithCapacity:timeRanges.length()]);
     for (unsigned i = 0; i < timeRanges.length(); ++i) {
-        double lowerBound = timeRanges.start(i).releaseReturnValue();
-        double upperBound = timeRanges.end(i).releaseReturnValue();
-        RetainPtr timeRange = adoptNS([allocWKSLinearMediaTimeRangeInstance() initWithLowerBound:lowerBound upperBound:upperBound]);
+        RetainPtr timeRange = adoptNS([allocWKSLinearMediaTimeRangeInstance() initWithLowerBound:timeRanges.start(i).toDouble() upperBound:timeRanges.end(i).toDouble()]);
         [seekableRanges addObject:timeRange.get()];
     }
 
@@ -308,7 +308,7 @@ void PlaybackSessionInterfaceLMK::audioMediaSelectionOptionsChanged(const Vector
 {
     RetainPtr audioTracks = adoptNS([[NSMutableArray alloc] initWithCapacity:options.size()]);
     for (auto& option : options) {
-        RetainPtr audioTrack = adoptNS([allocWKSLinearMediaTrackInstance() initWithLocalizedDisplayName:option.displayName]);
+        RetainPtr audioTrack = adoptNS([allocWKSLinearMediaTrackInstance() initWithLocalizedDisplayName:option.displayName.createNSString().get()]);
         [audioTracks addObject:audioTrack.get()];
     }
 
@@ -320,7 +320,7 @@ void PlaybackSessionInterfaceLMK::legibleMediaSelectionOptionsChanged(const Vect
 {
     RetainPtr legibleTracks = adoptNS([[NSMutableArray alloc] initWithCapacity:options.size()]);
     for (auto& option : options) {
-        RetainPtr legibleTrack = adoptNS([allocWKSLinearMediaTrackInstance() initWithLocalizedDisplayName:option.displayName]);
+        RetainPtr legibleTrack = adoptNS([allocWKSLinearMediaTrackInstance() initWithLocalizedDisplayName:option.displayName.createNSString().get()]);
         [legibleTracks addObject:legibleTrack.get()];
     }
 
@@ -369,7 +369,7 @@ void PlaybackSessionInterfaceLMK::supportsLinearMediaPlayerChanged(bool supports
         // If the player is in external presentation (which uses LinearMediaPlayer) but the current
         // media engine does not support it, exit external presentation.
         if (RefPtr videoPresentationInterface = m_videoPresentationInterface.get())
-            videoPresentationInterface->exitExternalPlayback([](bool) { });
+            videoPresentationInterface->exitExternalPlayback();
         break;
     case WKSLinearMediaPresentationStateInline:
     case WKSLinearMediaPresentationStateExitingFullscreen:
@@ -387,9 +387,9 @@ void PlaybackSessionInterfaceLMK::spatialVideoMetadataChanged(const std::optiona
     [m_player setSpatialVideoMetadata:spatialVideoMetadata.get()];
 }
 
-void PlaybackSessionInterfaceLMK::isImmersiveVideoChanged(bool value)
+void PlaybackSessionInterfaceLMK::videoProjectionMetadataChanged(const std::optional<WebCore::VideoProjectionMetadata>& metadata)
 {
-    [m_player setIsImmersiveVideo:value];
+    [m_player setIsImmersiveVideo:!!metadata];
 }
 
 void PlaybackSessionInterfaceLMK::startObservingNowPlayingMetadata()
@@ -427,7 +427,7 @@ static RetainPtr<NSData> artworkData(const WebCore::NowPlayingMetadata& metadata
 
 void PlaybackSessionInterfaceLMK::nowPlayingMetadataChanged(const WebCore::NowPlayingMetadata& metadata)
 {
-    RetainPtr contentMetadata = adoptNS([allocWKSLinearMediaContentMetadataInstance() initWithTitle:metadata.title subtitle:metadata.artist]);
+    RetainPtr contentMetadata = adoptNS([allocWKSLinearMediaContentMetadataInstance() initWithTitle:metadata.title.createNSString().get() subtitle:metadata.artist.createNSString().get()]);
     [m_player setContentMetadata:contentMetadata.get()];
     [m_player setArtwork:artworkData(metadata).get()];
 }

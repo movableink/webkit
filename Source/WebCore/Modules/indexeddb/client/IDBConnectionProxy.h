@@ -32,6 +32,7 @@
 #include "IDBResourceIdentifier.h"
 #include "IndexKey.h"
 #include "TransactionOperation.h"
+#include <pal/SessionID.h>
 #include <wtf/CrossThreadQueue.h>
 #include <wtf/CrossThreadTask.h>
 #include <wtf/Forward.h>

@@ -35,6 +35,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 #if TARGET_OS_IOS
 @class UIFindInteraction;
+@class UIConversationContext;
 #endif
 
 @class WKBackForwardList;
@@ -540,6 +541,10 @@ The uniform type identifier kUTTypeWebArchive can be used get the related pasteb
 */
 @property (nonatomic, nullable, copy) id interactionState WK_API_AVAILABLE(macos(12.0), ios(15.0));
 
+/*! @abstract A Boolean value indicating whether Screen Time blocking has occurred.
+ */
+@property (nonatomic, readonly) BOOL isBlockedByScreenTime WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
+
 /*! @abstract Sets the webpage contents from the passed data as if it was the
  response to the supplied request. The request is never actually sent to the
  supplied URL, though loads of resources defined in the NSData object would
@@ -655,6 +660,16 @@ The uniform type identifier kUTTypeWebArchive can be used get the related pasteb
 
 #endif
 
+#if TARGET_OS_IOS && !TARGET_OS_MACCATALYST && __IPHONE_OS_VERSION_MIN_REQUIRED >= 180400
+
+/*! @abstract A reference to a conversation, such as a mail or messaging thread.
+ @discussion Set this conversation context before the keyboard appears; the keyboard uses this context to initialize its conversation context value. When your conversation updates, update the smart reply by setting this property.
+ */
+
+@property (strong, nonatomic) UIConversationContext *conversationContext WK_API_AVAILABLE(ios(WK_IOS_TBA)) WK_API_UNAVAILABLE(tvos, watchos, visionos, macCatalyst);
+
+#endif // TARGET_OS_IOS && !TARGET_OS_MACCATALYST && __IPHONE_OS_VERSION_MIN_REQUIRED >= 180400
+
 /*!
 @abstract Controls whether this @link WKWebView @/link is inspectable in Web Inspector.
 @discussion The default value is NO.
@@ -665,6 +680,26 @@ The uniform type identifier kUTTypeWebArchive can be used get the related pasteb
  @discussion @link WKWebView @/link is key-value observing (KVO) compliant for this property.
  */
 @property (nonatomic, readonly, getter=isWritingToolsActive) BOOL writingToolsActive WK_API_AVAILABLE(macos(15.0), ios(18.0), visionos(WK_XROS_TBA));
+
+/* @enum WKWebViewDataType
+   @abstract The type of WKWebView data.
+   @constant WKWebViewDataTypeSessionStorage Session Storage data.
+*/
+typedef NS_OPTIONS(NSUInteger, WKWebViewDataType) {
+    WKWebViewDataTypeSessionStorage = 1 << 0
+} WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
+
+/* @abstract Called when the client wants to fetch WKWebView data.
+   @param dataTypes The option set of WKWebView data types whose data the client wants to fetch.
+   @param completionHandler The completion handler that should be invoked with the retrieved data and possibly an error. The retrieved data will be a serialized blob. If an error occurred, the retrieved data will be nil. An error may occur if the data cannot be retrieved for some reason (such as a crash).
+*/
+- (void)fetchDataOfTypes:(WKWebViewDataType)dataTypes completionHandler:(WK_SWIFT_UI_ACTOR void (^)(NSData * _Nullable data, NSError * _Nullable error))completionHandler NS_SWIFT_NAME(fetchData(of:completionHandler:)) WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
+
+/* @abstract Called when the client wants to restore WKWebView data.
+   @param data The serialized blob containing the data that the client wants to restore.
+   @param completionHandler The completion handler that may be invoked with an error if the data is in an invalid format or if the data cannot be restored for some other reason (such as a crash).
+ */
+- (void)restoreData:(NSData *)data completionHandler:(WK_SWIFT_UI_ACTOR void(^)(NSError * _Nullable error))completionHandler NS_SWIFT_NAME(restoreData(_:completionHandler:)) WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
 
 @end
 

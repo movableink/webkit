@@ -44,6 +44,7 @@
 #import "WebProcess.h"
 #import <QuartzCore/QuartzCore.h>
 #import <WebCore/DebugPageOverlays.h>
+#import <WebCore/FrameInlines.h>
 #import <WebCore/LocalFrame.h>
 #import <WebCore/LocalFrameView.h>
 #import <WebCore/PageOverlayController.h>
@@ -410,10 +411,11 @@ void RemoteLayerTreeDrawingArea::updateRendering()
     Vector<std::unique_ptr<ThreadSafeImageBufferSetFlusher>> flushers;
     for (auto& transaction : transactions)
         flushers.appendVector(backingStoreCollection->didFlushLayers(transaction.first));
-    bool haveFlushers = flushers.size();
 
-    if (haveFlushers)
-        webPage->didPaintLayers();
+    OptionSet<WebPage::DidUpdateRenderingFlags> didUpdateRenderingFlags;
+    if (flushers.size())
+        didUpdateRenderingFlags.add(WebPage::DidUpdateRenderingFlags::PaintedLayers);
+    webPage->didUpdateRendering(didUpdateRenderingFlags);
 
     m_backingStoreFlusher->markHasPendingFlush();
 

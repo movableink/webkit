@@ -424,7 +424,7 @@ namespace JSC {
 #if USE(BIGINT32)
         void emit_op_is_big_int(const JSInstruction*);
 #else
-        NO_RETURN void emit_op_is_big_int(const JSInstruction*);
+        [[noreturn]] void emit_op_is_big_int(const JSInstruction*);
 #endif
         void emit_op_is_object(const JSInstruction*);
         void emit_op_is_cell_with_type(const JSInstruction*);
@@ -480,7 +480,7 @@ namespace JSC {
         void emit_op_new_async_generator_func(const JSInstruction*);
         void emit_op_new_async_generator_func_exp(const JSInstruction*);
         void emit_op_new_object(const JSInstruction*);
-        void emit_op_new_regexp(const JSInstruction*);
+        void emit_op_new_reg_exp(const JSInstruction*);
         void emit_op_create_lexical_environment(const JSInstruction*);
         void emit_op_create_direct_arguments(const JSInstruction*);
         void emit_op_create_scoped_arguments(const JSInstruction*);

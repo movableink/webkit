@@ -35,13 +35,15 @@
 
 namespace API {
 
+#if !PLATFORM(COCOA)
+
 static constexpr auto SharedJSContextWKMaxIdleTime = 10_s;
 
 class SharedJSContextWK {
 public:
     static SharedJSContextWK& singleton()
     {
-        static MainThreadNeverDestroyed<SharedJSContextWK> sharedContext;
+        static MainRunLoopNeverDestroyed<SharedJSContextWK> sharedContext;
         return sharedContext.get();
     }
 
@@ -85,7 +87,7 @@ public:
     }
 
 private:
-    friend class NeverDestroyed<SharedJSContextWK, MainThreadAccessTraits>;
+    friend class NeverDestroyed<SharedJSContextWK, MainRunLoopAccessTraits>;
 
     SharedJSContextWK()
         : m_timer(RunLoop::main(), this, &SharedJSContextWK::releaseContextIfNecessary)
@@ -165,13 +167,6 @@ WKRetainPtr<WKTypeRef> SerializedScriptValue::deserializeWK(WebCore::SerializedS
     return valueToWKObject(context.get(), value);
 }
 
-Vector<uint8_t> SerializedScriptValue::serializeCryptoKey(const WebCore::CryptoKey& key)
-{
-    ASSERT(RunLoop::isMain());
-    JSRetainPtr context = SharedJSContextWK::singleton().ensureContext();
-    ASSERT(context);
-
-    return WebCore::SerializedScriptValue::serializeCryptoKey(context.get(), key);
-}
+#endif // !PLATFORM(COCOA)
 
 } // API

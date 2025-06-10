@@ -30,6 +30,7 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "Editor.h"
 #include "ElementChildIteratorInlines.h"
 #include "ElementRareData.h"
@@ -52,6 +53,7 @@
 #include "MIMETypeRegistry.h"
 #include "MediaQueryEvaluator.h"
 #include "MouseEvent.h"
+#include "NodeInlines.h"
 #include "NodeName.h"
 #include "NodeTraversal.h"
 #include "PlatformMouseEvent.h"
@@ -565,7 +567,7 @@ void HTMLImageElement::setPictureElement(HTMLPictureElement* pictureElement)
 unsigned HTMLImageElement::width()
 {
     if (inRenderedDocument())
-        protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+        protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, this);
 
     if (!renderer()) {
         // check the attribute first for an explicit pixel value
@@ -588,7 +590,7 @@ unsigned HTMLImageElement::width()
 unsigned HTMLImageElement::height()
 {
     if (inRenderedDocument())
-        protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+        protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, this);
 
     if (!renderer()) {
         // check the attribute first for an explicit pixel value
@@ -740,7 +742,7 @@ void HTMLImageElement::setWidth(unsigned value)
 
 int HTMLImageElement::x() const
 {
-    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, this);
     auto renderer = this->renderer();
     if (!renderer)
         return 0;
@@ -751,7 +753,7 @@ int HTMLImageElement::x() const
 
 int HTMLImageElement::y() const
 {
-    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, this);
     auto renderer = this->renderer();
     if (!renderer)
         return 0;

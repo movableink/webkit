@@ -37,13 +37,6 @@ void WebViewTest::platformDestroy()
 #endif
 }
 
-void WebViewTest::platformInitializeWebView()
-{
-    g_assert_true(WEBKIT_WEB_VIEW(m_webView));
-    g_assert_true(g_object_is_floating(m_webView));
-    g_object_ref_sink(m_webView);
-}
-
 void WebViewTest::quitMainLoopAfterProcessingPendingEvents()
 {
     while (g_main_context_pending(nullptr))
@@ -54,17 +47,17 @@ void WebViewTest::quitMainLoopAfterProcessingPendingEvents()
 void WebViewTest::resizeView(int width, int height)
 {
     GtkAllocation allocation;
-    gtk_widget_get_allocation(GTK_WIDGET(m_webView), &allocation);
+    gtk_widget_get_allocation(GTK_WIDGET(m_webView.get()), &allocation);
     if (width != -1)
         allocation.width = width;
     if (height != -1)
         allocation.height = height;
-    gtk_widget_size_allocate(GTK_WIDGET(m_webView), &allocation);
+    gtk_widget_size_allocate(GTK_WIDGET(m_webView.get()), &allocation);
 }
 
 void WebViewTest::hideView()
 {
-    gtk_widget_hide(GTK_WIDGET(m_webView));
+    gtk_widget_hide(GTK_WIDGET(m_webView.get()));
 }
 
 void WebViewTest::showInWindow(int width, int height)
@@ -72,11 +65,11 @@ void WebViewTest::showInWindow(int width, int height)
     g_assert_null(m_parentWindow);
 #if USE(GTK4)
     m_parentWindow = gtk_window_new();
-    gtk_window_set_child(GTK_WINDOW(m_parentWindow), GTK_WIDGET(m_webView));
+    gtk_window_set_child(GTK_WINDOW(m_parentWindow), GTK_WIDGET(m_webView.get()));
 #else
     m_parentWindow = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_container_add(GTK_CONTAINER(m_parentWindow), GTK_WIDGET(m_webView));
-    gtk_widget_show(GTK_WIDGET(m_webView));
+    gtk_container_add(GTK_CONTAINER(m_parentWindow), GTK_WIDGET(m_webView.get()));
+    gtk_widget_show(GTK_WIDGET(m_webView.get()));
 #endif
 
     if (width && height)
@@ -88,29 +81,58 @@ void WebViewTest::showInWindow(int width, int height)
         g_main_context_iteration(nullptr, TRUE);
 }
 
-void WebViewTest::mouseMoveTo(int x, int y, unsigned mouseModifiers)
+static unsigned testModifiersToGDK(const OptionSet<WebViewTest::Modifiers> modifiers)
 {
-    g_assert_nonnull(m_parentWindow);
-    webkitWebViewBaseSynthesizeMouseEvent(WEBKIT_WEB_VIEW_BASE(m_webView), MouseEventType::Motion, 0, 0, x, y, mouseModifiers, 0);
+    unsigned gdkModifiers = 0;
+    if (modifiers.contains(WebViewTest::Modifiers::Control))
+        gdkModifiers |= GDK_CONTROL_MASK;
+    if (modifiers.contains(WebViewTest::Modifiers::Shift))
+        gdkModifiers |= GDK_SHIFT_MASK;
+    if (modifiers.contains(WebViewTest::Modifiers::Alt))
+        gdkModifiers |= GDK_MOD1_MASK;
+    if (modifiers.contains(WebViewTest::Modifiers::Meta))
+        gdkModifiers |= GDK_META_MASK;
+    return gdkModifiers;
 }
 
-void WebViewTest::clickMouseButton(int x, int y, unsigned button, unsigned mouseModifiers)
+static unsigned testMouseButtonToGDK(WebViewTest::MouseButton button)
 {
-    webkitWebViewBaseSynthesizeMouseEvent(WEBKIT_WEB_VIEW_BASE(m_webView), MouseEventType::Press, button, 1 << (8 + button - 1), x, y, mouseModifiers, 1);
-    webkitWebViewBaseSynthesizeMouseEvent(WEBKIT_WEB_VIEW_BASE(m_webView), MouseEventType::Release, button, 0, x, y, mouseModifiers, 0);
+    switch (button) {
+    case WebViewTest::MouseButton::Primary:
+        return GDK_BUTTON_PRIMARY;
+    case WebViewTest::MouseButton::Middle:
+        return GDK_BUTTON_MIDDLE;
+    case WebViewTest::MouseButton::Secondary:
+        return GDK_BUTTON_SECONDARY;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+void WebViewTest::mouseMoveTo(int x, int y, OptionSet<Modifiers> mouseModifiers)
+{
+    g_assert_nonnull(m_parentWindow);
+    webkitWebViewBaseSynthesizeMouseEvent(WEBKIT_WEB_VIEW_BASE(m_webView.get()), MouseEventType::Motion, 0, 0, x, y, testModifiersToGDK(mouseModifiers), 0);
+}
+
+void WebViewTest::clickMouseButton(int x, int y, MouseButton button, OptionSet<Modifiers> mouseModifiers)
+{
+    auto gdkModifiers = testModifiersToGDK(mouseModifiers);
+    auto gdkButton = testMouseButtonToGDK(button);
+    webkitWebViewBaseSynthesizeMouseEvent(WEBKIT_WEB_VIEW_BASE(m_webView.get()), MouseEventType::Press, gdkButton, 1 << (8 + gdkButton - 1), x, y, gdkModifiers, 1);
+    webkitWebViewBaseSynthesizeMouseEvent(WEBKIT_WEB_VIEW_BASE(m_webView.get()), MouseEventType::Release, gdkButton, 0, x, y, gdkModifiers, 0);
 }
 
 void WebViewTest::emitPopupMenuSignal()
 {
-    GtkWidget* viewWidget = GTK_WIDGET(m_webView);
+    GtkWidget* viewWidget = GTK_WIDGET(m_webView.get());
     g_assert_true(gtk_widget_get_realized(viewWidget));
 
     gboolean handled;
     g_signal_emit_by_name(viewWidget, "popup-menu", &handled);
 }
 
-void WebViewTest::keyStroke(unsigned keyVal, unsigned keyModifiers)
+void WebViewTest::keyStroke(unsigned keyVal, OptionSet<Modifiers> keyModifiers)
 {
     g_assert_nonnull(m_parentWindow);
-    webkitWebViewBaseSynthesizeKeyEvent(WEBKIT_WEB_VIEW_BASE(m_webView), KeyEventType::Insert, keyVal, keyModifiers, ShouldTranslateKeyboardState::No);
+    webkitWebViewBaseSynthesizeKeyEvent(WEBKIT_WEB_VIEW_BASE(m_webView.get()), KeyEventType::Insert, keyVal, testModifiersToGDK(keyModifiers), ShouldTranslateKeyboardState::No);
 }

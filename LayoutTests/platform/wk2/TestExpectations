@@ -210,13 +210,13 @@ media/modern-media-controls/scrubber-support/scrubber-support-drag.html [ Timeou
 media/encrypted-media/clearKey/clearKey-session-life-cycle.html [ Failure Crash ]
 
 # webkit.org/b/221790
-# webgl/1.0.3/conformance/textures/tex-image-and-sub-image-2d-with-video-rgb565.html [ Failure ]
-# webgl/1.0.3/conformance/textures/tex-image-and-sub-image-2d-with-video-rgba4444.html [ Failure ]
-# webgl/1.0.3/conformance/textures/tex-image-and-sub-image-2d-with-video-rgba5551.html [ Failure ]
-# webgl/1.0.3/conformance/textures/tex-image-and-sub-image-2d-with-video.html [ Failure ]
+# webgl/1.0.x/conformance/textures/tex-image-and-sub-image-2d-with-video-rgb565.html [ Failure ]
+# webgl/1.0.x/conformance/textures/tex-image-and-sub-image-2d-with-video-rgba4444.html [ Failure ]
+# webgl/1.0.x/conformance/textures/tex-image-and-sub-image-2d-with-video-rgba5551.html [ Failure ]
+# webgl/1.0.x/conformance/textures/tex-image-and-sub-image-2d-with-video.html [ Failure ]
 
 # webkit.org/b/221806
-# webgl/2.0.0/conformance/textures/video/tex-2d-rgb-rgb-unsigned_byte.html [ Failure ]
+# webgl/2.0.y/conformance/textures/video/tex-2d-rgb-rgb-unsigned_byte.html [ Failure ]
 
 webkit.org/b/222569 fast/mediastream/media-stream-track-interrupted.html [ Crash Pass ]
 
@@ -816,4 +816,6 @@ webkit.org/b/288847 imported/w3c/web-platform-tests/cookie-store/cookieStore_eve
 
 webkit.org/b/288851 imported/w3c/web-platform-tests/fetch/http-cache/invalidate.any.html [ Pass Failure ]
 
-webkit.org/b/288871 imported/w3c/web-platform-tests/workers/WorkerGlobalScope_ErrorEvent_message.htm [ Pass Failure ]
+webkit.org/b/289542 imported/w3c/web-platform-tests/navigation-api/navigate-event/intercept-handler-throws.html [ Pass Failure ]
+
+webkit.org/b/289550 imported/w3c/web-platform-tests/fetch/http-cache/invalidate.any.sharedworker.html [ Pass Failure ]

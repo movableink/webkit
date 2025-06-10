@@ -77,7 +77,6 @@ license {
 
 cc_defaults {
     name: "skia_arch_defaults",
-    cpp_std: "gnu++17",
     arch: {
         arm: {
             srcs: [],
@@ -149,6 +148,57 @@ cc_library_static {
     ],
 }
 
+// Skia's ffi.rs pulls in a number of additional rust sources.
+// There isn't anywhere to explicitly mention them here, but the dependency
+// should be tracked by the Soong build. If not, it will be necessary to find
+// some means of adding them as dependencies here.
+rust_ffi_static {
+    name: "libskia_rust_ffi",
+    host_supported: true,
+    crate_name: "skia",
+    srcs: ["src/ports/fontations/src/ffi.rs"],
+    include_dirs: ["src/ports/fontations/src"],
+    rustlibs: [
+      "libcxx",
+      "libskrifa",
+      "libread_fonts",
+      "libfont_types",
+    ],
+    features: [ "cxx" ],
+    target: {
+        windows: {
+            enabled: true,
+        },
+    },
+}
+
+gensrcs {
+    name: "libskia_cxx_bridge_code",
+    tools: ["cxxbridge"],
+    cmd: "$$(location cxxbridge) $$(in) >> $$(out)",
+    srcs: ["src/ports/fontations/src/ffi.rs"],
+    output_extension: "cpp",
+}
+
+gensrcs {
+    name: "libskia_cxx_bridge_header",
+    tools: ["cxxbridge"],
+    cmd: "$$(location cxxbridge) $$(in) --header >> $$(out)",
+    srcs: ["src/ports/fontations/src/ffi.rs"],
+    output_extension: "rs.h",
+    export_include_dirs: ["."]
+}
+
+cc_library_static {
+    name: "libskia_skcms",
+    srcs: [
+        $skcms_srcs
+    ],
+    export_include_dirs: [
+        "modules/skcms",
+    ],
+}
+
 cc_library_static {
     name: "libskia",
     host_supported: true,
@@ -161,6 +211,12 @@ cc_library_static {
 
     srcs: [
         $srcs
+    ],
+    generated_headers: [
+      "libskia_cxx_bridge_header",
+    ],
+    generated_sources: [
+      "libskia_cxx_bridge_code",
     ],
 
     target: {
@@ -272,10 +328,13 @@ cc_defaults {
     cflags: [
         "-DSK_PDF_USE_HARFBUZZ_SUBSET",
     ],
+    whole_static_libs: [
+        "libskia_rust_ffi",
+        "libskrifa",
+    ],
     target: {
       android: {
         shared_libs: [
-            "libheif",
             "libmediandk", // Needed to link libcrabbyavif_ffi in some configurations.
         ],
         whole_static_libs: [
@@ -354,8 +413,8 @@ cc_defaults {
     ],
 }
 
-cc_library_shared {
-    name: "libskqp_jni",
+cc_defaults {
+    name: "skqp_jni_defaults",
     sdk_version: "$skqp_sdk_version",
     stl: "libc++_static",
     compile_multilib: "both",
@@ -406,18 +465,41 @@ cc_library_shared {
           "libwuffs_mirror_release_c",
     ]
 }
+''')
+
+# This template is separate from the general bp template so that multiple SkQP
+# variants can be generated.
+# Note: override_android_test doesn't support the fields we would need to
+# override, so we have to live with some duplication between multiple instances
+# of android_test.
+skqp_instance_bp = string.Template('''cc_library_shared {
+    // Note: this must be included in the list of libraries that SkQP attempts
+    // to load in
+    // platform_tools/android/apps/skqp/src/main/java/org/skia/skqp/SkQP.java
+    name: "$skqp_jni_lib_name",
+    defaults: ["skqp_jni_defaults"],
+    // Appended to the list of cflags set in skqp_jni_defaults
+    cflags: [
+        $skqp_extra_cflags
+    ],
+}
 
 android_test {
-    name: "CtsSkQPTestCases",
+    // Module (and APK) name
+    name: "$skqp_name",
     team: "trendy_team_android_core_graphics_stack",
     defaults: ["cts_defaults"],
     test_suites: [
-        "general-tests",
-        "cts",
+        $skqp_test_suites
     ],
 
+    // These both override the package names set in AndroidManifest.xml (which
+    // remain there to allow building/running SkQP outside of Android framework)
+    package_name: "$skqp_package_name",
+    instrumentation_target_package: "$skqp_package_name",
+
     libs: ["android.test.runner.stubs"],
-    jni_libs: ["libskqp_jni"],
+    jni_libs: ["$skqp_jni_lib_name"],
     compile_multilib: "both",
 
     static_libs: [
@@ -425,14 +507,13 @@ android_test {
         "ctstestrunner-axt",
     ],
     manifest: "platform_tools/android/apps/skqp/src/main/AndroidManifest.xml",
-    test_config: "platform_tools/android/apps/skqp/src/main/AndroidTest.xml",
+    test_config_template: "platform_tools/android/apps/skqp/src/main/AndroidTestTemplate.xml",
 
     asset_dirs: ["platform_tools/android/apps/skqp/src/main/assets", "resources"],
     resource_dirs: ["platform_tools/android/apps/skqp/src/main/res"],
     srcs: ["platform_tools/android/apps/skqp/src/main/java/**/*.java"],
 
     sdk_version: "test_current",
-
 }
 ''')
 
@@ -444,6 +525,8 @@ def generate_args(target_os, enable_gpu, renderengine = False):
     # gn_to_bp_utils' GetArchSources will take care of architecture-specific
     # files.
     'target_cpu':                           '"none"',
+
+    'skia_use_libheif':                     'false',
 
     # Use the custom FontMgr, as the framework will handle fonts.
     'skia_enable_fontmgr_custom_directory': 'false',
@@ -497,11 +580,9 @@ def generate_args(target_os, enable_gpu, renderengine = False):
     d['win_toolchain_version'] = '"placeholder_version"'
 
   if target_os == '"android"' and not renderengine:
-    d['skia_use_libheif']  = 'true'
     d['skia_use_crabbyavif'] = 'true'
     d['skia_use_jpeg_gainmaps'] = 'true'
   else:
-    d['skia_use_libheif']  = 'false'
     d['skia_use_crabbyavif'] = 'false'
 
   if renderengine:
@@ -519,6 +600,7 @@ def generate_args(target_os, enable_gpu, renderengine = False):
   else:
     d['skia_enable_android_utils'] = 'true'
     d['skia_use_freetype'] = 'true'
+    d['skia_use_fontations'] = 'true'
     d['skia_use_fixed_gamma_text'] = 'true'
     d['skia_enable_fontmgr_custom_empty'] = 'true'
     d['skia_use_wuffs'] = 'true'
@@ -532,9 +614,11 @@ gn_args_win   = generate_args('"win"',     False)
 gn_args_renderengine  = generate_args('"android"', True, True)
 
 js = gn_to_bp_utils.GenerateJSONFromGN(gn_args)
+build_dir = js['build_settings']['build_dir']
 
+# Also remove generated files and directories.
 def strip_slashes(lst):
-  return {str(p.lstrip('/')) for p in lst}
+  return {str(p.lstrip('/')) for p in lst if not p.startswith(build_dir)}
 
 android_srcs    = strip_slashes(js['targets']['//:skia']['sources'])
 cflags          = strip_slashes(js['targets']['//:skia']['cflags'])
@@ -555,6 +639,8 @@ nanobench_target = js['targets']['//:nanobench']
 nanobench_srcs     = strip_slashes(nanobench_target['sources'])
 nanobench_includes = strip_slashes(nanobench_target['include_dirs'])
 
+skcms_srcs = strip_slashes(js['targets']['//modules/skcms:skcms']['sources'])
+
 
 gn_to_bp_utils.GrabDependentValues(js, '//:gm', 'sources', gm_srcs, '//:skia')
 gn_to_bp_utils.GrabDependentValues(js, '//:tests', 'sources', test_srcs, '//:skia')
@@ -569,9 +655,15 @@ gm_includes   .add("modules/skcms")
 
 # Android's build (soong) will break if we list anything other than these file
 # types in `srcs` (e.g. all header extensions must be excluded).
-def strip_non_srcs(sources):
+# All libcxx generated *.rs.* must also be excluded.
+def is_src(s):
   src_extensions = ['.s', '.S', '.c', '.cpp', '.cc', '.cxx', '.mm']
-  return {s for s in sources if os.path.splitext(s)[1] in src_extensions}
+  (base, ext) = os.path.splitext(s)
+  (_, baseExt) = os.path.splitext(base)
+  return ext in src_extensions and baseExt != ".rs"
+
+def strip_non_srcs(sources):
+  return {s for s in sources if is_src(s) }
 
 VMA_DEP = "//src/gpu/vk/vulkanmemoryallocator:vulkanmemoryallocator"
 
@@ -608,6 +700,7 @@ gm_srcs         = strip_non_srcs(gm_srcs)
 test_srcs       = strip_non_srcs(test_srcs)
 dm_srcs         = strip_non_srcs(dm_srcs).difference(gm_srcs).difference(test_srcs)
 nanobench_srcs  = strip_non_srcs(nanobench_srcs).difference(gm_srcs)
+skcms_srcs      = strip_non_srcs(skcms_srcs)
 
 test_minus_gm_includes = test_includes.difference(gm_includes)
 test_minus_gm_srcs = test_srcs.difference(gm_srcs)
@@ -771,6 +864,8 @@ with open('Android.bp', 'w') as Android_bp:
     'nanobench_includes'    : bpfmt(8, nanobench_includes),
     'nanobench_srcs'        : bpfmt(8, nanobench_srcs),
 
+    'skcms_srcs': bpfmt(8, skcms_srcs),
+
     'skqp_sdk_version': skqp_sdk_version,
     'skqp_includes':    bpfmt(8, skqp_includes),
     'skqp_srcs':        bpfmt(8, skqp_srcs),
@@ -783,4 +878,26 @@ with open('Android.bp', 'w') as Android_bp:
     'win_srcs':      bpfmt(10, win_srcs),
 
     'renderengine_srcs': bpfmt(8, renderengine_srcs),
+  }), file=Android_bp)
+
+  print(skqp_instance_bp.substitute({
+    'skqp_name':         'CtsSkQPTestCases',
+    'skqp_package_name': 'org.skia.skqp',
+    'skqp_jni_lib_name': 'libskqp_jni',
+    'skqp_test_suites':  bpfmt(8, ['general-tests', 'cts'], False),
+    'skqp_extra_cflags': '',
+  }), file=Android_bp)
+
+  # This duplicated SkQP test module runs all tests that are included in SkQP,
+  # regardless of the device's actual vendor API level (excluding those marked
+  # with kNever). This is used for ensuring coverage, and isn't enforced in CTS.
+  #
+  # This build is currently only maintained for soong / blueprint builds of SkQP
+  # in the Android framework itself due to staffing constraints.
+  print(skqp_instance_bp.substitute({
+    'skqp_name':         'AllSkQPTestCases',
+    'skqp_package_name': 'org.skia.skqp_alltests',
+    'skqp_jni_lib_name': 'libskqp_jni_alltests',
+    'skqp_test_suites':  bpfmt(8, ['general-tests'], False),
+    'skqp_extra_cflags': bpfmt(8, ['-DSKQP_ENFORCE_ALL_INCLUDED_TESTS'], False),
   }), file=Android_bp)

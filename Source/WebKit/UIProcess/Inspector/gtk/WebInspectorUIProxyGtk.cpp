@@ -191,7 +191,7 @@ RefPtr<WebPageProxy> WebInspectorUIProxy::platformCreateFrontendPage()
     });
     if (m_underTest)
         preferences->setHiddenPageDOMTimerThrottlingEnabled(false);
-    Ref inspectedPagePreferences = protectedInspectedPage()->protectedPreferences();
+    Ref inspectedPagePreferences = protectedInspectedPage()->preferences();
     preferences->setAcceleratedCompositingEnabled(inspectedPagePreferences->acceleratedCompositingEnabled());
     preferences->setForceCompositingMode(inspectedPagePreferences->forceCompositingMode());
     preferences->setThreadedScrollingEnabled(inspectedPagePreferences->threadedScrollingEnabled());

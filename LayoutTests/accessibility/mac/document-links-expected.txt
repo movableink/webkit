@@ -3,8 +3,6 @@ This test passes if all four links on the page are found.
 On success, you will see a series of "PASS" messages, followed by "TEST COMPLETE".
 
 
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXLink
 AXSubrole: (null)
 AXRoleDescription: link
@@ -41,8 +39,6 @@ AXLinkRelationshipType:
 AXPath: <AXLink>
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXLink
 AXSubrole: (null)
 AXRoleDescription: link
@@ -79,8 +75,6 @@ AXLinkRelationshipType:
 AXPath: <AXLink>
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXLink
 AXSubrole: (null)
 AXRoleDescription: link
@@ -116,8 +110,6 @@ AXAccessKey: (null)
 AXLinkRelationshipType:
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXLink
 AXSubrole: (null)
 AXRoleDescription: link

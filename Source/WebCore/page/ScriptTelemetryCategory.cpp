@@ -26,6 +26,8 @@
 #include "config.h"
 #include "ScriptTelemetryCategory.h"
 
+#include "AdvancedPrivacyProtections.h"
+
 #if !(USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/ScriptTelemetryCategoryAdditions.cpp>))
 #include <wtf/URL.h>
 #include <wtf/text/MakeString.h>
@@ -45,20 +47,12 @@ ASCIILiteral description(ScriptTelemetryCategory category)
         return "Canvas"_s;
     case ScriptTelemetryCategory::Cookies:
         return "Cookies"_s;
-    case ScriptTelemetryCategory::Gamepads:
-        return "Gamepads"_s;
     case ScriptTelemetryCategory::HardwareConcurrency:
         return "HardwareConcurrency"_s;
     case ScriptTelemetryCategory::LocalStorage:
         return "LocalStorage"_s;
-    case ScriptTelemetryCategory::MediaDevices:
-        return "MediaDevices"_s;
-    case ScriptTelemetryCategory::Notifications:
-        return "Notifications"_s;
     case ScriptTelemetryCategory::Payments:
         return "Payments"_s;
-    case ScriptTelemetryCategory::Permissions:
-        return "Permissions"_s;
     case ScriptTelemetryCategory::QueryParameters:
         return "QueryParameters"_s;
     case ScriptTelemetryCategory::Referrer:
@@ -72,6 +66,14 @@ ASCIILiteral description(ScriptTelemetryCategory category)
     }
     ASSERT_NOT_REACHED();
     return { };
+}
+
+bool shouldEnableScriptTelemetry(ScriptTelemetryCategory category, OptionSet<AdvancedPrivacyProtections> protections)
+{
+    if (protections.contains(AdvancedPrivacyProtections::BaselineProtections))
+        return true;
+
+    return category != ScriptTelemetryCategory::FormControls;
 }
 
 #if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/ScriptTelemetryCategoryAdditions.cpp>)

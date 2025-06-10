@@ -40,7 +40,9 @@
 #include "DownloadProxy.h"
 #include "DownloadProxyMap.h"
 #include "DownloadProxyMessages.h"
+#include "FormDataReference.h"
 #include "FrameInfoData.h"
+#include "ITPThirdPartyData.h"
 #include "LegacyGlobalSettings.h"
 #include "LoadedWebArchive.h"
 #include "Logging.h"
@@ -68,6 +70,7 @@
 #include "WebProcessPool.h"
 #include "WebProcessProxy.h"
 #include "WebProcessProxyMessages.h"
+#include "WebPushMessage.h"
 #include "WebResourceLoadStatisticsStore.h"
 #include "WebUserContentControllerProxy.h"
 #include "WebsiteData.h"
@@ -157,7 +160,8 @@ Ref<NetworkProcessProxy> NetworkProcessProxy::ensureDefaultNetworkProcess()
 void NetworkProcessProxy::terminate()
 {
     AuxiliaryProcessProxy::terminate();
-    protectedConnection()->invalidate();
+    if (hasConnection())
+        protectedConnection()->invalidate();
 }
 
 void NetworkProcessProxy::requestTermination()
@@ -364,7 +368,7 @@ void NetworkProcessProxy::synthesizeAppIsBackground(bool background)
 Ref<DownloadProxy> NetworkProcessProxy::createDownloadProxy(WebsiteDataStore& dataStore, Ref<API::DownloadClient>&& client, const ResourceRequest& resourceRequest, const std::optional<FrameInfoData>& frameInfo, WebPageProxy* originatingPage)
 {
     if (!m_downloadProxyMap)
-        m_downloadProxyMap = makeUniqueWithoutRefCountedCheck<DownloadProxyMap>(*this);
+        lazyInitialize(m_downloadProxyMap, makeUniqueWithoutRefCountedCheck<DownloadProxyMap>(*this));
 
     return Ref { *m_downloadProxyMap }->createDownloadProxy(dataStore, WTFMove(client), resourceRequest, frameInfo, originatingPage);
 }
@@ -499,7 +503,7 @@ void NetworkProcessProxy::processAuthenticationChallenge(PAL::SessionID sessionI
 {
     RefPtr store = websiteDataStoreFromSessionID(sessionID);
     if (!store || authenticationChallenge->core().protectionSpace().authenticationScheme() != ProtectionSpace::AuthenticationScheme::ServerTrustEvaluationRequested) {
-        authenticationChallenge->protectedListener()->completeChallenge(AuthenticationChallengeDisposition::PerformDefaultHandling);
+        authenticationChallenge->listener().completeChallenge(AuthenticationChallengeDisposition::PerformDefaultHandling);
         return;
     }
     store->client().didReceiveAuthenticationChallenge(WTFMove(authenticationChallenge));
@@ -527,7 +531,7 @@ void NetworkProcessProxy::didReceiveAuthenticationChallenge(PAL::SessionID sessi
     }
 
     if (!topOrigin) {
-        authenticationChallenge->protectedListener()->completeChallenge(AuthenticationChallengeDisposition::RejectProtectionSpaceAndContinue);
+        authenticationChallenge->listener().completeChallenge(AuthenticationChallengeDisposition::RejectProtectionSpaceAndContinue);
         return;
     }
 
@@ -1670,7 +1674,11 @@ void NetworkProcessProxy::preconnectTo(PAL::SessionID sessionID, WebPageProxyIde
 {
     if (!request.url().isValid() || !request.url().protocolIsInHTTPFamily())
         return;
-    send(Messages::NetworkProcess::PreconnectTo(sessionID, webPageProxyID, webPageID, WTFMove(request), storedCredentialsPolicy, isNavigatingToAppBoundDomain), 0);
+
+    uint64_t cookiesVersion = 0;
+    if (RefPtr store = websiteDataStoreFromSessionID(sessionID))
+        cookiesVersion = store->cookiesVersion();
+    send(Messages::NetworkProcess::PreconnectTo(sessionID, webPageProxyID, webPageID, WTFMove(request), storedCredentialsPolicy, isNavigatingToAppBoundDomain, cookiesVersion), 0);
 }
 
 static bool anyProcessPoolHasForegroundWebProcesses()
@@ -2010,7 +2018,7 @@ void NetworkProcessProxy::setEmulatedConditions(PAL::SessionID sessionID, std::o
 
 #endif // ENABLE(INSPECTOR_NETWORK_THROTTLING)
 
-void NetworkProcessProxy::fetchLocalStorage(PAL::SessionID sessionID, CompletionHandler<void(HashMap<WebCore::ClientOrigin, HashMap<String, String>>&&)>&& completionHandler)
+void NetworkProcessProxy::fetchLocalStorage(PAL::SessionID sessionID, CompletionHandler<void(std::optional<HashMap<WebCore::ClientOrigin, HashMap<String, String>>>&&)>&& completionHandler)
 {
     sendWithAsyncReply(Messages::NetworkProcess::FetchLocalStorage(sessionID), WTFMove(completionHandler));
 }

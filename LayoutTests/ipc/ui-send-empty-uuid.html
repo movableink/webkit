@@ -4,7 +4,7 @@
     if (window.testRunner)
         testRunner.dumpAsText()
 
-    if (window.IPC) {
+    if (window.IPC && IPC.messages.WebPageProxy_ModelElementLoadRemotePreview) {
         IPC.sendMessage(
           'UI',
           IPC.webPageProxyID,

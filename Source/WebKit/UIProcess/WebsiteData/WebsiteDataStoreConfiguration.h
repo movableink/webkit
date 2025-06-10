@@ -259,6 +259,11 @@ public:
     void setMemoryFootprintNotificationThresholds(Vector<size_t>&& thresholds) { m_memoryFootprintNotificationThresholds = WTFMove(thresholds); }
     const Vector<size_t>& memoryFootprintNotificationThresholds() { return m_memoryFootprintNotificationThresholds; }
 
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    void setWebContentRestrictionsConfigurationFile(String&& file) { m_webContentRestrictionsConfigurationFile = WTFMove(file); }
+    const String& webContentRestrictionsConfigurationFile() const { return m_webContentRestrictionsConfigurationFile; }
+#endif
+
     struct Directories {
         String applicationCacheFlatFileSubdirectoryName { "Files"_s };
         String applicationCacheDirectory;
@@ -354,6 +359,13 @@ private:
 #endif
     Vector<size_t> m_memoryFootprintNotificationThresholds;
     std::optional<bool> m_defaultTrackingPreventionEnabledOverride;
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    String m_webContentRestrictionsConfigurationFile;
+#endif
 };
 
 }
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebsiteDataStoreConfiguration)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::WebsiteDataStoreConfiguration; }
+SPECIALIZE_TYPE_TRAITS_END()

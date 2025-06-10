@@ -25,7 +25,7 @@
                   (children 1
                     (GraphicsLayer
                       (anchor 0.00 0.00)
-                      (children 3
+                      (children 2
                         (GraphicsLayer
                           (anchor 0.00 0.00)
                           (transform [0.97 0.00 0.00 0.00] [0.00 0.97 0.00 0.00] [0.00 0.00 1.00 0.00] [11.00 7.00 0.00 1.00])
@@ -49,13 +49,6 @@
                         (GraphicsLayer
                           (anchor 0.00 0.00)
                           (bounds 285.00 294.00)
-                          (drawsContent 1)
-                          (transform [0.97 0.00 0.00 0.00] [0.00 0.97 0.00 0.00] [0.00 0.00 1.00 0.00] [11.00 7.00 0.00 1.00])
-                        )
-                        (GraphicsLayer
-                          (anchor 0.00 0.00)
-                          (bounds 285.00 294.00)
-                          (blendMode multiply)
                           (drawsContent 1)
                           (transform [0.97 0.00 0.00 0.00] [0.00 0.97 0.00 0.00] [0.00 0.00 1.00 0.00] [11.00 7.00 0.00 1.00])
                         )

@@ -61,10 +61,14 @@ static void validateChallenge(NSURLAuthenticationChallenge *challenge, uint16_t 
     verifyCertificateAndPublicKey(challenge.protectionSpace.serverTrust);
 }
 
-// FIXME: Fix WebTransportServer constructor and re-enable these tests once rdar://141009498 is available in OS builds.
+// FIXME: Re-enable these tests once rdar://148050136 is fixed.
+#if PLATFORM(MAC)
+TEST(WebTransport, ClientBidirectional)
+#else
 TEST(WebTransport, DISABLED_ClientBidirectional)
+#endif
 {
-    WebTransportServer echoServer([](ConnectionGroup group) -> Task {
+    WebTransportServer echoServer([](ConnectionGroup group) -> ConnectionTask {
         auto connection = co_await group.receiveIncomingConnection();
         auto request = co_await connection.awaitableReceiveBytes();
         co_await connection.awaitableSend(WTFMove(request));
@@ -106,10 +110,14 @@ TEST(WebTransport, DISABLED_ClientBidirectional)
     EXPECT_TRUE(challenged);
 }
 
-// FIXME: Fix WebTransportServer constructor and re-enable these tests once rdar://141009498 is available in OS builds.
+// FIXME: Re-enable these tests once rdar://148050136 is fixed.
+#if PLATFORM(MAC)
+TEST(WebTransport, Datagram)
+#else
 TEST(WebTransport, DISABLED_Datagram)
+#endif
 {
-    WebTransportServer echoServer([](ConnectionGroup group) -> Task {
+    WebTransportServer echoServer([](ConnectionGroup group) -> ConnectionTask {
         auto datagramConnection = group.createWebTransportConnection(ConnectionGroup::ConnectionType::Datagram);
         auto request = co_await datagramConnection.awaitableReceiveBytes();
         co_await datagramConnection.awaitableSend(WTFMove(request));
@@ -130,11 +138,18 @@ TEST(WebTransport, DISABLED_Datagram)
 
     NSString *html = [NSString stringWithFormat:@""
         "<script>async function test() {"
+        "  var s = 'unexpected unset value';"
+        "  try {"
+        "    let t = new WebTransport('https://127.0.0.1:1/');"
+        "    await t.ready;"
+        "    alert('unexpected success');"
+        "  } catch (e) { s = 'abc' }"
+        "  "
         "  try {"
         "    let t = new WebTransport('https://127.0.0.1:%d/');"
         "    await t.ready;"
         "    let w = t.datagrams.writable.getWriter();"
-        "    await w.write(new TextEncoder().encode('abc'));"
+        "    await w.write(new TextEncoder().encode(s));"
         "    await w.close();"
         "    let r = t.datagrams.readable.getReader();"
         "    const { value, done } = await r.read();"
@@ -150,10 +165,14 @@ TEST(WebTransport, DISABLED_Datagram)
     EXPECT_TRUE(challenged);
 }
 
-// FIXME: Fix WebTransportServer constructor and re-enable these tests once rdar://141009498 is available in OS builds.
+// FIXME: Re-enable these tests once rdar://148050136 is fixed.
+#if PLATFORM(MAC)
+TEST(WebTransport, Unidirectional)
+#else
 TEST(WebTransport, DISABLED_Unidirectional)
+#endif
 {
-    WebTransportServer echoServer([](ConnectionGroup group) -> Task {
+    WebTransportServer echoServer([](ConnectionGroup group) -> ConnectionTask {
         auto connection = co_await group.receiveIncomingConnection();
         auto request = co_await connection.awaitableReceiveBytes();
         auto serverUnidirectionalStream = group.createWebTransportConnection(ConnectionGroup::ConnectionType::Unidirectional);
@@ -198,10 +217,10 @@ TEST(WebTransport, DISABLED_Unidirectional)
     EXPECT_TRUE(challenged);
 }
 
-// FIXME: Fix WebTransportServer constructor and re-enable these tests once rdar://141009498 is available in OS builds.
+// FIXME: Fix and enable this test.
 TEST(WebTransport, DISABLED_ServerBidirectional)
 {
-    WebTransportServer echoServer([](ConnectionGroup group) -> Task {
+    WebTransportServer echoServer([](ConnectionGroup group) -> ConnectionTask {
         auto connection = co_await group.receiveIncomingConnection();
         auto request = co_await connection.awaitableReceiveBytes();
         auto serverBidirectionalStream = group.createWebTransportConnection(ConnectionGroup::ConnectionType::Bidirectional);
@@ -248,10 +267,14 @@ TEST(WebTransport, DISABLED_ServerBidirectional)
     EXPECT_TRUE(challenged);
 }
 
-// FIXME: Fix WebTransportServer constructor and re-enable these tests once rdar://141009498 is available in OS builds.
+// FIXME: Re-enable these tests once rdar://148050136 is fixed.
+#if PLATFORM(MAC)
+TEST(WebTransport, NetworkProcessCrash)
+#else
 TEST(WebTransport, DISABLED_NetworkProcessCrash)
+#endif
 {
-    WebTransportServer echoServer([](ConnectionGroup group) -> Task {
+    WebTransportServer echoServer([](ConnectionGroup group) -> ConnectionTask {
         auto datagramConnection = group.createWebTransportConnection(ConnectionGroup::ConnectionType::Datagram);
         co_await datagramConnection.awaitableSend(@"abc");
         auto bidiConnection = group.createWebTransportConnection(ConnectionGroup::ConnectionType::Bidirectional);
@@ -421,10 +444,14 @@ TEST(WebTransport, DISABLED_NetworkProcessCrash)
     EXPECT_EQ(obj, nil);
 }
 
-// FIXME: Fix WebTransportServer constructor and re-enable these tests once rdar://141009498 is available in OS builds.
+// FIXME: Re-enable these tests once rdar://148050136 is fixed.
+#if PLATFORM(MAC)
+TEST(WebTransport, Worker)
+#else
 TEST(WebTransport, DISABLED_Worker)
+#endif
 {
-    WebTransportServer transportServer([](ConnectionGroup group) -> Task {
+    WebTransportServer transportServer([](ConnectionGroup group) -> ConnectionTask {
         auto connection = co_await group.receiveIncomingConnection();
         auto request = co_await connection.awaitableReceiveBytes();
         auto serverBidirectionalStream = group.createWebTransportConnection(ConnectionGroup::ConnectionType::Bidirectional);

@@ -46,6 +46,7 @@
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderChildIterator.h"
 #include "RenderElementInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderScrollbar.h"
 #include "RenderStyleSetters.h"
 #include "RenderText.h"
@@ -127,15 +128,15 @@ void RenderMenuList::adjustInnerStyle()
     // when the content overflows, treat it the same as align-items: flex-start.
     // But we only do that for the cases where html.css would otherwise use center.
     if (style().alignItems().position() == ItemPosition::Center) {
-        innerStyle.setMarginBefore(Length());
-        innerStyle.setMarginAfter(Length());
+        innerStyle.setMarginBefore(CSS::Keyword::Auto { });
+        innerStyle.setMarginAfter(CSS::Keyword::Auto { });
 
         innerStyle.setAlignSelfPosition(ItemPosition::FlexStart);
     }
 
     auto paddingBox = theme().popupInternalPaddingBox(style());
     if (!writingMode().isHorizontal())
-        paddingBox = LengthBox(paddingBox.left().value(), paddingBox.top().value(), paddingBox.right().value(), paddingBox.bottom().value());
+        paddingBox = { paddingBox.left(), paddingBox.top(), paddingBox.right(), paddingBox.bottom() };
 
     innerStyle.setPaddingBox(WTFMove(paddingBox));
 
@@ -194,7 +195,7 @@ HTMLSelectElement& RenderMenuList::selectElement() const
 void RenderMenuList::didAttachChild(RenderObject& child, RenderObject*)
 {
     if (CheckedPtr cache = document().existingAXObjectCache())
-        cache->childrenChanged(this, &child);
+        cache->childrenChanged(*this, &child);
 }
 
 void RenderMenuList::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
@@ -372,7 +373,7 @@ void RenderMenuList::computePreferredLogicalWidths()
 
     RenderBox::computePreferredLogicalWidths(style().logicalMinWidth(), style().logicalMaxWidth(), writingMode().isHorizontal() ? horizontalBorderAndPaddingExtent() : verticalBorderAndPaddingExtent());
 
-    setPreferredLogicalWidthsDirty(false);
+    clearNeedsPreferredWidthsUpdate();
 }
 
 #if PLATFORM(IOS_FAMILY)

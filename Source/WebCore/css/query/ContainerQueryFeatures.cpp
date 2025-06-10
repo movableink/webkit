@@ -32,6 +32,7 @@
 #include "CustomPropertyRegistry.h"
 #include "RenderBoxInlines.h"
 #include "RenderElementInlines.h"
+#include "RenderObjectInlines.h"
 #include "StyleBuilder.h"
 #include <wtf/NeverDestroyed.h>
 
@@ -311,8 +312,9 @@ struct StyleFeatureSchema : public FeatureSchema {
             };
 
             auto dummyStyle = RenderStyle::clone(style);
+            auto dummyMatchResult = Style::MatchResult::create();
 
-            auto styleBuilder = Style::Builder { dummyStyle, WTFMove(builderContext), { }, { } };
+            auto styleBuilder = Style::Builder { dummyStyle, WTFMove(builderContext), dummyMatchResult, { } };
             return styleBuilder.resolveCustomPropertyForContainerQueries(*featureValue);
         }();
 

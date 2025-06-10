@@ -23,6 +23,7 @@
 #include "RenderCounter.h"
 
 #include "CSSCounterStyleRegistry.h"
+#include "ContainerNodeInlines.h"
 #include "CounterDirectives.h"
 #include "CounterNode.h"
 #include "Document.h"
@@ -33,6 +34,7 @@
 #include "PseudoElement.h"
 #include "RenderElementInlines.h"
 #include "RenderListItem.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyle.h"
 #include "RenderView.h"
 #include <wtf/StdLibExtras.h>

@@ -265,4 +265,8 @@ PASS Invalid 'use' field: importKey(jwk(private), {name: Ed25519}, true, [sign])
 PASS Invalid 'use' field: importKey(jwk (public) , {name: Ed25519}, true, [verify])
 PASS Invalid 'crv' field: importKey(jwk(private), {name: Ed25519}, true, [sign])
 PASS Invalid 'crv' field: importKey(jwk (public) , {name: Ed25519}, true, [verify])
+PASS Invalid 'alg' field 'ed25519': importKey(jwk(private), {name: Ed25519}, true, [sign])
+PASS Invalid 'alg' field 'ED25519': importKey(jwk(private), {name: Ed25519}, true, [sign])
+PASS Invalid 'alg' field 'ed25519': importKey(jwk (public) , {name: Ed25519}, true, [verify])
+PASS Invalid 'alg' field 'ED25519': importKey(jwk (public) , {name: Ed25519}, true, [verify])
 

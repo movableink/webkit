@@ -31,7 +31,3 @@
 SOFT_LINK_FRAMEWORK_FOR_HEADER(WebKit, AppKit)
 SOFT_LINK_CLASS_FOR_HEADER(WebKit, NSAccessibilityRemoteUIElement)
 #endif
-
-#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/AppKitSoftLinkAdditions.h>)
-#import <WebKitAdditions/AppKitSoftLinkAdditions.h>
-#endif

@@ -12,8 +12,7 @@
         (rect (0,0) width=768 height=1004)
 
       (interaction regions [
-        (interaction (8,8) width=332 height=57)
-        (cornerRadius 5.00)])
+        (interaction (8,8) width=332 height=57)])
       )
     )
   )

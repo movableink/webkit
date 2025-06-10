@@ -50,7 +50,7 @@ private:
 
     bool tryCopyToLayer(ImageBuffer&) override;
 
-    Ref<GraphicsLayerContentsDisplayDelegate> m_delegate;
+    const Ref<GraphicsLayerContentsDisplayDelegate> m_delegate;
 };
 
 } // namespace WebCore

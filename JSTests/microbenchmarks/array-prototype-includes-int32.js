@@ -8,4 +8,4 @@ for (var i = 0; i < array.length; i++)
     array[i] = i;
 
 for (var i = 0; i < 1e6; ++i)
-    test(array, 512);
+    test(array, i % 1024);

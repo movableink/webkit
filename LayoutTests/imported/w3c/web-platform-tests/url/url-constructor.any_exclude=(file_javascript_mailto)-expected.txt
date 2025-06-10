@@ -236,6 +236,14 @@ PASS Parsing: <http://[:]> against <http://other.com/>
 PASS Parsing: <http://GOO 　goo.com> against <http://other.com/>
 PASS Parsing: <http://GOO​⁠﻿goo.com> against <http://other.com/>
 PASS Parsing: <\0 http://example.com/ \r > without base
+PASS Parsing: <non-special:opaque  > without base
+PASS Parsing: <non-special:opaque  ?hi> without base
+PASS Parsing: <non-special:opaque  #hi> without base
+PASS Parsing: <non-special:opaque  x?hi> without base
+PASS Parsing: <non-special:opaque  x#hi> without base
+PASS Parsing: <non-special:opaque 		  	#hi> without base
+PASS Parsing: <non-special:opaque 		  #hi> without base
+PASS Parsing: <non-special:opaque		  \r #hi> without base
 PASS Parsing: <http://www.foo。bar.com> against <http://other.com/>
 PASS Parsing: <http://﷐zyx.com> against <http://other.com/>
 PASS Parsing: <http://%ef%b7%90zyx.com> against <http://other.com/>

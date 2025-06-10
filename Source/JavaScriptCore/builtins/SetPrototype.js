@@ -86,8 +86,11 @@ function union(other)
         @throwTypeError("Set.prototype.union expects other.keys to be callable");
 
     var iterator = keys.@call(other);
+    var iteratorNextMethod = iterator.next;
     var wrapper = {
-        @@iterator: function () { return iterator; }
+        @@iterator: function () {
+           return { next: function () { return iteratorNextMethod.@call(iterator); } };
+        }
     };
 
     var result = @setClone(this);
@@ -212,8 +215,11 @@ function symmetricDifference(other)
         @throwTypeError("Set.prototype.symmetricDifference expects other.keys to be callable");
 
     var iterator = keys.@call(other);
+    var iteratorNextMethod = iterator.next;
     var wrapper = {
-        @@iterator: function () { return iterator; }
+        @@iterator: function () {
+            return { next: function () { return iteratorNextMethod.@call(iterator); } };
+        }
     };
 
     var result = @setClone(this);

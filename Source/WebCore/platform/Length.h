@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "AnimationUtilities.h"
+#include "LayoutUnit.h"
 #include <string.h>
 #include <wtf/Assertions.h>
 #include <wtf/Forward.h>
@@ -65,7 +65,7 @@ struct Length {
 public:
     Length(LengthType = LengthType::Auto);
 
-    using FloatOrInt = std::variant<float, int>;
+    using FloatOrInt = Variant<float, int>;
     struct AutoData { };
     struct NormalData { };
     struct RelativeData {
@@ -106,7 +106,7 @@ public:
     };
     struct ContentData { };
     struct UndefinedData { };
-    using IPCData = std::variant<
+    using IPCData = Variant<
         AutoData,
         NormalData,
         RelativeData,
@@ -610,6 +610,29 @@ inline bool Length::isContent() const
 
 Length convertTo100PercentMinusLength(const Length&);
 Length convertTo100PercentMinusLengthSum(const Length&, const Length&);
+
+inline bool canInterpolateLengths(const Length& from, const Length& to, bool isLengthPercentage)
+{
+    if (from.type() == to.type())
+        return true;
+
+    // Some properties allow for <length-percentage> and <number> values. We must allow animating
+    // between a <length> and a <percentage>, but exclude animating between a <number> and either
+    // a <length> or <percentage>. We can use Length::isRelative() to determine whether we are
+    // dealing with a <number> as opposed to a <length> or <percentage>.
+    if (isLengthPercentage) {
+        return (from.isFixed() || from.isPercentOrCalculated() || from.isRelative())
+            && (to.isFixed() || to.isPercentOrCalculated() || to.isRelative())
+            && from.isRelative() == to.isRelative();
+    }
+
+    if (from.isCalculated())
+        return to.isFixed() || to.isPercentOrCalculated();
+    if (to.isCalculated())
+        return from.isFixed() || from.isPercentOrCalculated();
+
+    return false;
+}
 
 inline bool lengthsRequireInterpolationForAccumulativeIteration(const Length& from, const Length& to)
 {

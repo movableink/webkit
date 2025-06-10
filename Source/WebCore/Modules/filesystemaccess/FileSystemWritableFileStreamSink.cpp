@@ -43,7 +43,7 @@ static ExceptionOr<FileSystemWritableFileStream::WriteParams> writeParamsFromChu
         switch (params.type) {
         case FileSystemWriteCommandType::Write:
             if (!params.data)
-                return Exception { ExceptionCode::TypeError, "Data is missing"_s };
+                return Exception { ExceptionCode::SyntaxError, "Data is missing"_s };
             return params;
         case FileSystemWriteCommandType::Seek:
             // FIXME: Reconsider exception type when https://github.com/whatwg/fs/issues/168 is closed.
@@ -122,7 +122,7 @@ static ExceptionOr<FileSystemWritableFileStream::ChunkType> convertFileSystemWri
 {
     auto scope = DECLARE_THROW_SCOPE(context.vm());
     auto chunkResult = convert<IDLUnion<IDLArrayBufferView, IDLArrayBuffer, IDLInterface<Blob>, IDLUSVString, IDLDictionary<FileSystemWritableFileStream::WriteParams>>>(*context.globalObject(), value);
-    if (UNLIKELY(chunkResult.hasException(scope)))
+    if (chunkResult.hasException(scope)) [[unlikely]]
         return Exception { ExceptionCode::ExistingExceptionError };
 
     return chunkResult.releaseReturnValue();

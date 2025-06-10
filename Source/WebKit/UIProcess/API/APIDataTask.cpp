@@ -57,7 +57,7 @@ void DataTask::cancel()
 void DataTask::networkProcessCrashed()
 {
     m_activity = nullptr;
-    m_client->didCompleteWithError(*this, WebCore::internalError(m_originalURL));
+    protectedClient()->didCompleteWithError(*this, WebCore::internalError(m_originalURL));
 }
 
 DataTask::DataTask(std::optional<WebKit::DataTaskIdentifier> identifier, WeakPtr<WebKit::WebPageProxy>&& page, WTF::URL&& originalURL, bool shouldRunAtForegroundPriority)
@@ -75,7 +75,7 @@ DataTask::DataTask(std::optional<WebKit::DataTaskIdentifier> identifier, WeakPtr
 void DataTask::didCompleteWithError(WebCore::ResourceError&& error)
 {
     m_activity = nullptr;
-    m_client->didCompleteWithError(*this, WTFMove(error));
+    protectedClient()->didCompleteWithError(*this, WTFMove(error));
 }
 
 } // namespace API

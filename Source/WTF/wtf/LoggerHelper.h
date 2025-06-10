@@ -88,11 +88,11 @@ public:
 
 #if defined(__OBJC__)
 #define OBJC_LOGIDENTIFIER WTF::Logger::LogSiteIdentifier(__PRETTY_FUNCTION__, self.logIdentifier)
-#define OBJC_ALWAYS_LOG(...)     if (self.loggerPtr && self.logChannel) self.loggerPtr->logAlways(*self.logChannel, __VA_ARGS__)
-#define OBJC_ERROR_LOG(...)      if (self.loggerPtr && self.logChannel) self.loggerPtr->error(*self.logChannel, __VA_ARGS__)
-#define OBJC_WARNING_LOG(...)    if (self.loggerPtr && self.logChannel) self.loggerPtr->warning(*self.logChannel, __VA_ARGS__)
-#define OBJC_INFO_LOG(...)       if (self.loggerPtr && self.logChannel) self.loggerPtr->info(*self.logChannel, __VA_ARGS__)
-#define OBJC_DEBUG_LOG(...)      if (self.loggerPtr && self.logChannel) self.loggerPtr->debug(*self.logChannel, __VA_ARGS__)
+#define OBJC_ALWAYS_LOG(...)     if (RefPtr<const Logger> logger = self.loggerPtr; logger && self.logChannel) logger->logAlways(*self.logChannel, __VA_ARGS__)
+#define OBJC_ERROR_LOG(...)      if (RefPtr<const Logger> logger = self.loggerPtr; logger && self.logChannel) logger->error(*self.logChannel, __VA_ARGS__)
+#define OBJC_WARNING_LOG(...)    if (RefPtr<const Logger> logger = self.loggerPtr; logger && self.logChannel) logger->warning(*self.logChannel, __VA_ARGS__)
+#define OBJC_INFO_LOG(...)       if (RefPtr<const Logger> logger = self.loggerPtr; logger && self.logChannel) logger->info(*self.logChannel, __VA_ARGS__)
+#define OBJC_DEBUG_LOG(...)      if (RefPtr<const Logger> logger = self.loggerPtr; logger && self.logChannel) logger->debug(*self.logChannel, __VA_ARGS__)
 #endif
 
     static uint64_t childLogIdentifier(uint64_t parentIdentifier, uint64_t childIdentifier)
@@ -110,6 +110,7 @@ public:
 #else // RELEASE_LOG_DISABLED
 
 #define LOGIDENTIFIER (std::nullopt)
+#define LOGIDENTIFIER_WITH_THIS(thisPtr) (UNUSED_PARAM(thisPtr))
 
 #define ALWAYS_LOG(channelName, ...)  (UNUSED_PARAM(channelName))
 #define ERROR_LOG(channelName, ...)   (UNUSED_PARAM(channelName))
@@ -119,13 +120,13 @@ public:
 #define DEBUG_LOG(channelName, ...)   (UNUSED_PARAM(channelName))
 #define WILL_LOG(_level_)    false
 
-#define ALWAYS_LOG_WITH_THIS(thisPtr, channelName, ...)   (UNUSED_PARAM(channelName))
-#define ERROR_LOG_WITH_THIS(thisPtr, channelName, ...)    (UNUSED_PARAM(channelName))
-#define INFO_LOG_WITH_THIS(thisPtr, channelName, ...)     (UNUSED_PARAM(channelName))
+#define ALWAYS_LOG_WITH_THIS(thisPtr, channelName, ...)   do { UNUSED_PARAM(thisPtr); UNUSED_PARAM(channelName); } while (0)
+#define ERROR_LOG_WITH_THIS(thisPtr, channelName, ...)    do { UNUSED_PARAM(thisPtr); UNUSED_PARAM(channelName); } while (0)
+#define INFO_LOG_WITH_THIS(thisPtr, channelName, ...)     do { UNUSED_PARAM(thisPtr); UNUSED_PARAM(channelName); } while (0)
 
-#define ALWAYS_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, channelName, ...)  (UNUSED_PARAM(channelName))
-#define ERROR_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, channelName, ...)   (UNUSED_PARAM(channelName))
-#define INFO_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, channelName, ...)    (UNUSED_PARAM(channelName))
+#define ALWAYS_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, channelName, ...)  do { UNUSED_PARAM(thisPtr); UNUSED_PARAM(channelName); } while (0)
+#define ERROR_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, channelName, ...)   do { UNUSED_PARAM(thisPtr); UNUSED_PARAM(channelName); } while (0)
+#define INFO_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, channelName, ...)    do { UNUSED_PARAM(thisPtr); UNUSED_PARAM(channelName); } while (0)
 
 #define ALWAYS_LOG_IF(condition, ...)     ((void)0)
 #define ERROR_LOG_IF(condition, ...)      ((void)0)

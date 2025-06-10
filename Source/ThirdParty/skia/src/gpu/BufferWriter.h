@@ -10,13 +10,13 @@
 
 #include "include/core/SkImageInfo.h"
 #include "include/core/SkRect.h"
-#include "include/private/SkColorData.h"
 #include "include/private/base/SkAssert.h"
 #include "include/private/base/SkDebug.h"
 #include "include/private/base/SkTemplates.h"
 #include "include/private/base/SkTo.h"
 #include "src/base/SkRectMemcpy.h"
 #include "src/base/SkVx.h"
+#include "src/core/SkColorData.h"
 #include "src/core/SkConvertPixels.h"
 
 #include <array>
@@ -246,6 +246,12 @@ struct VertexWriter : public BufferWriter {
         this->writeQuadVertex<1>(remainder...);
         this->writeQuadVertex<2>(remainder...);
         this->writeQuadVertex<3>(remainder...);
+    }
+
+    void zeroBytes(size_t bytesToZero) {
+        this->validate(bytesToZero);
+        memset(fPtr, 0, bytesToZero);
+        *this = this->makeOffset(bytesToZero);
     }
 
 private:

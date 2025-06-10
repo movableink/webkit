@@ -540,7 +540,7 @@ static _WKStorageBlockingPolicy toAPI(WebCore::StorageBlockingPolicy policy)
 
 - (NSString *)_fixedPitchFontFamily
 {
-    return _preferences->fixedFontFamily();
+    return _preferences->fixedFontFamily().createNSString().autorelease();
 }
 
 - (void)_setFixedPitchFontFamily:(NSString *)fixedPitchFontFamily
@@ -1003,7 +1003,7 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
 
 - (NSString *)_defaultTextEncodingName
 {
-    return _preferences->defaultTextEncodingName();
+    return _preferences->defaultTextEncodingName().createNSString().autorelease();
 }
 
 - (void)_setAuthorAndUserStylesEnabled:(BOOL)enabled
@@ -1133,7 +1133,7 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
 
 - (NSString *)_standardFontFamily
 {
-    return _preferences->standardFontFamily();
+    return _preferences->standardFontFamily().createNSString().autorelease();
 }
 
 - (void)_setBackspaceKeyNavigationEnabled:(BOOL)enabled
@@ -1607,16 +1607,6 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
     return _preferences->appBadgeEnabled();
 }
 
-- (void)_setClientBadgeEnabled:(BOOL)enabled
-{
-    _preferences->setClientBadgeEnabled(enabled);
-}
-
-- (BOOL)_clientBadgeEnabled
-{
-    return _preferences->clientBadgeEnabled();
-}
-
 - (void)_setVerifyWindowOpenUserGestureFromUIProcess:(BOOL)enabled
 {
     _preferences->setVerifyWindowOpenUserGestureFromUIProcess(enabled);
@@ -1735,12 +1725,18 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
 
 - (void)_setRequiresPageVisibilityForVideoToBeNowPlayingForTesting:(BOOL)enabled
 {
+#if ENABLE(REQUIRES_PAGE_VISIBILITY_FOR_NOW_PLAYING)
     _preferences->setRequiresPageVisibilityForVideoToBeNowPlaying(enabled);
+#endif
 }
 
 - (BOOL)_requiresPageVisibilityForVideoToBeNowPlayingForTesting
 {
+#if ENABLE(REQUIRES_PAGE_VISIBILITY_FOR_NOW_PLAYING)
     return _preferences->requiresPageVisibilityForVideoToBeNowPlaying();
+#else
+    return NO;
+#endif
 }
 
 - (BOOL)_siteIsolationEnabled
@@ -1925,6 +1921,20 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
 - (BOOL)_mediaStreamEnabled
 {
     return YES;
+}
+
+- (void)_setClientBadgeEnabled:(BOOL)enabled
+{
+}
+
+- (BOOL)_clientBadgeEnabled
+{
+    return NO;
+}
+
++ (void)_forceSiteIsolationAlwaysOnForTesting
+{
+    WebKit::WebPreferences::forceSiteIsolationAlwaysOnForTesting();
 }
 
 #if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WKPreferencesAdditions.mm>)

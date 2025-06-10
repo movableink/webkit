@@ -44,8 +44,22 @@ function injectFrameRedirectingTo(url, shouldBlock) {
     injectFrame("/security/contentSecurityPolicy/resources/redir.py?url=" + url, shouldBlock);
 }
 
-function injectWorker(url, expectBlock) {
+function injectWorker(url, expectBlock, isAsync) {
     window.onload = function() {
+        if (isAsync) {
+            try {
+                const w = new Worker(url);
+                if (expectBlock == EXPECT_BLOCK) {
+                    w.onerror = () => {
+                        testPassed("The worker failed asynchronously");
+                        finishJSTest();
+                    }
+                }
+            } catch(e) {
+                testFailed("Constructing a worker failed with " + e);
+            }
+            return;
+        }
         if (expectBlock == EXPECT_BLOCK)
             shouldThrow("var w = new Worker('" + url + "');");
         else

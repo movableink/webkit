@@ -84,7 +84,7 @@ private:
 
     void timerFired();
 
-    RenderLayer* m_layer;
+    const CheckedPtr<RenderLayer> m_layer;
     Timer m_timer;
     int m_currentLoop { 0 };
     int m_totalLoops { 0 };

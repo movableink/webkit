@@ -38,7 +38,7 @@
     if (WebCoreObjCScheduleDeallocateOnMainRunLoop(WKNSData.class, self))
         return;
 
-    _data->~Data();
+    Ref { *_data }->~Data();
 
     [super dealloc];
 }

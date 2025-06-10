@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -81,11 +81,6 @@ JSWindowProxy& JSWindowProxy::create(VM& vm, DOMWindow& window, DOMWrapperWorld&
 void JSWindowProxy::destroy(JSCell* cell)
 {
     static_cast<JSWindowProxy*>(cell)->JSWindowProxy::~JSWindowProxy();
-}
-
-DOMWrapperWorld& JSWindowProxy::world()
-{
-    return m_world;
 }
 
 void JSWindowProxy::setWindow(VM& vm, JSDOMGlobalObject& window)
@@ -190,11 +185,6 @@ JSC::GCClient::IsoSubspace* JSWindowProxy::subspaceForImpl(JSC::VM& vm)
     return &downcast<JSVMClientData>(vm.clientData)->windowProxySpace();
 }
 
-Ref<DOMWrapperWorld> JSWindowProxy::protectedWorld()
-{
-    return m_world;
-}
-
 #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
 
 struct FrameInfo {
@@ -225,7 +215,7 @@ static bool hasSameMainFrame(const Frame* a, const FrameInfo& b)
     return a && (&a->mainFrame() == b.mainFrame.ptr());
 }
 
-static void logCrossTabPropertyAccess(Frame& childFrame, const std::variant<PropertyName, unsigned>& propertyName)
+static void logCrossTabPropertyAccess(Frame& childFrame, const Variant<PropertyName, unsigned>& propertyName)
 {
 #if LOG_DISABLED
     UNUSED_PARAM(childFrame);
@@ -249,7 +239,7 @@ static void logCrossTabPropertyAccess(Frame& childFrame, const std::variant<Prop
 #endif // #if LOG_DISABLED
 }
 
-static void checkCrossTabWindowProxyUsage(JSWindowProxy* proxy, JSGlobalObject* lexicalGlobalObject, const std::variant<PropertyName, unsigned>& propertyName)
+static void checkCrossTabWindowProxyUsage(JSWindowProxy* proxy, JSGlobalObject* lexicalGlobalObject, const Variant<PropertyName, unsigned>& propertyName)
 {
     if (!proxy || !lexicalGlobalObject)
         return;

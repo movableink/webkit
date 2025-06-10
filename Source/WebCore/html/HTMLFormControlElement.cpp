@@ -60,7 +60,7 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLFormControlElement);
 using namespace HTMLNames;
 
 HTMLFormControlElement::HTMLFormControlElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
-    : HTMLElement(tagName, document, { TypeFlag::IsFormControlElement, TypeFlag::HasCustomStyleResolveCallbacks, TypeFlag::HasDidMoveToNewDocument } )
+    : HTMLElement(tagName, document, { TypeFlag::IsShadowRootOrFormControlElement, TypeFlag::HasCustomStyleResolveCallbacks, TypeFlag::HasDidMoveToNewDocument } )
     , ValidatedFormListedElement(form)
     , m_isRequired(false)
     , m_valueMatchesRenderer(false)
@@ -225,7 +225,7 @@ void HTMLFormControlElement::dispatchFormControlInputEvent()
     dispatchInputEvent();
 }
 
-void HTMLFormControlElement::didRecalcStyle(Style::Change)
+void HTMLFormControlElement::didRecalcStyle(OptionSet<Style::Change>)
 {
     // updateFromElement() can cause the selection to change, and in turn
     // trigger synchronous layout, so it must not be called during style recalc.
@@ -403,7 +403,7 @@ void HTMLFormControlElement::handlePopoverTargetAction(const EventTarget* eventT
     ASSERT(popover->popoverData());
 
     if (RefPtr eventTargetNode = dynamicDowncast<Node>(eventTarget)) {
-        if (popover->containsIncludingShadowDOM(eventTargetNode.get()) && popover->isDescendantOrShadowDescendantOf(this))
+        if (popover->isShadowIncludingInclusiveAncestorOf(eventTargetNode.get()) && popover->isShadowIncludingDescendantOf(this))
             return;
     }
 

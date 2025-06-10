@@ -172,3 +172,7 @@ private:
 };
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::DownloadProxy)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::Download; }
+SPECIALIZE_TYPE_TRAITS_END()

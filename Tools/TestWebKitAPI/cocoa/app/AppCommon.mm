@@ -29,6 +29,7 @@
 #import "TestBundleLoader.h"
 #import <Foundation/Foundation.h>
 #import <WebKit/WebKitPrivate.h>
+#import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 
 namespace TestWebKitAPI {
 
@@ -54,9 +55,7 @@ void initializeApp()
 
     [NSUserDefaults.standardUserDefaults setVolatileDomain:argumentDomain forName:NSArgumentDomain];
 
-#if !defined(BUILDING_TEST_IPC) && !defined(BUILDING_TEST_WTF) && !defined(BUILDING_TEST_WGSL)
-    [WKProcessPool _setLinkedOnOrAfterEverythingForTesting];
-#endif
+    enableAllSDKAlignedBehaviors();
 
     registerTestClasses();
 }

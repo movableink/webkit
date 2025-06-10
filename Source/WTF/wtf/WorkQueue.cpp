@@ -108,7 +108,7 @@ void ConcurrentWorkQueue::apply(size_t iterations, WTF::Function<void(size_t ind
         }
 
     private:
-        NO_RETURN void threadBody()
+        [[noreturn]] void threadBody()
         {
             while (true) {
                 const WTF::Function<void ()>* function;

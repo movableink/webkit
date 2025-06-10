@@ -56,7 +56,7 @@ DateTimeFieldElement::DateTimeFieldElement(Document& document, DateTimeFieldElem
 {
 }
 
-std::optional<Style::ResolvedStyle> DateTimeFieldElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
+std::optional<Style::UnadjustedStyle> DateTimeFieldElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
 {
     auto elementStyle = resolveStyle(resolutionContext);
 
@@ -184,7 +184,9 @@ AtomString DateTimeFieldElement::localeIdentifier() const
 
 String DateTimeFieldElement::visibleValue() const
 {
-    return hasValue() ? value() : placeholderValue();
+    if (hasValue())
+        return value();
+    return placeholderValue();
 }
 
 void DateTimeFieldElement::updateVisibleValue(EventBehavior eventBehavior)

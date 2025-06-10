@@ -174,12 +174,12 @@ void SocketConnection::sendMessage(const char* messageName, GVariant* parameters
     size_t parametersSize = parameters ? g_variant_get_size(parameters) : 0;
     CheckedSize messageNameLength = strlen(messageName);
     messageNameLength++;
-    if (UNLIKELY(messageNameLength.hasOverflowed())) {
+    if (messageNameLength.hasOverflowed()) [[unlikely]] {
         g_warning("Trying to send message with invalid too long name");
         return;
     }
     CheckedUint32 bodySize = messageNameLength + parametersSize;
-    if (UNLIKELY(bodySize.hasOverflowed())) {
+    if (bodySize.hasOverflowed()) [[unlikely]] {
         g_warning("Trying to send message '%s' with invalid too long body", messageName);
         return;
     }

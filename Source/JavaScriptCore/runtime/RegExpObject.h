@@ -76,7 +76,7 @@ public:
         VM& vm = getVM(globalObject);
         auto scope = DECLARE_THROW_SCOPE(vm);
 
-        if (LIKELY(lastIndexIsWritable())) {
+        if (lastIndexIsWritable()) [[likely]] {
             m_lastIndex.setWithoutWriteBarrier(jsNumber(lastIndex));
             return true;
         }
@@ -88,7 +88,7 @@ public:
         VM& vm = getVM(globalObject);
         auto scope = DECLARE_THROW_SCOPE(vm);
 
-        if (LIKELY(lastIndexIsWritable())) {
+        if (lastIndexIsWritable()) [[likely]] {
             m_lastIndex.set(vm, this, lastIndex);
             return true;
         }

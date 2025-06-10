@@ -104,6 +104,7 @@
 .open-resource-dialog > .scroll-container {
     display: flex;
     flex-direction: column;
+    position: relative;
     overflow-y: auto;
 
     border-bottom-left-radius: 4px;
@@ -112,6 +113,10 @@
 
 .open-resource-dialog.has-results .scroll-container {
     border-top: solid 1px var(--border-color);
+}
+
+.open-resource-dialog > .scroll-container > .virtualized-spacer {
+    flex-shrink: 0;
 }
 
 .open-resource-dialog .tree-outline .item {

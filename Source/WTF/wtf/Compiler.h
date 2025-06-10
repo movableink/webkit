@@ -216,27 +216,17 @@
 
 /* FALLTHROUGH */
 
-#if !defined(FALLTHROUGH) && defined(__cplusplus) && defined(__has_cpp_attribute)
-
-#if __has_cpp_attribute(fallthrough)
-#define FALLTHROUGH [[fallthrough]]
-#elif __has_cpp_attribute(clang::fallthrough)
-#define FALLTHROUGH [[clang::fallthrough]]
-#elif __has_cpp_attribute(gnu::fallthrough)
-#define FALLTHROUGH [[gnu::fallthrough]]
-#endif
-
-#elif !defined(FALLTHROUGH) && !defined(__cplusplus)
+#if !defined(FALLTHROUGH) && !defined(__cplusplus)
 
 #if COMPILER_HAS_ATTRIBUTE(fallthrough)
 #define FALLTHROUGH __attribute__ ((fallthrough))
 #endif
 
-#endif // !defined(FALLTHROUGH) && defined(__cplusplus) && defined(__has_cpp_attribute)
-
 #if !defined(FALLTHROUGH)
 #define FALLTHROUGH
 #endif
+
+#endif // !defined(FALLTHROUGH) && !defined(__cplusplus)
 
 /* LIFETIME_BOUND */
 
@@ -254,22 +244,10 @@
 #define LIFETIME_BOUND
 #endif
 
-/* LIKELY */
-
-#if !defined(LIKELY)
-#define LIKELY(x) __builtin_expect(!!(x), 1)
-#endif
-
 /* NEVER_INLINE */
 
 #if !defined(NEVER_INLINE)
 #define NEVER_INLINE __attribute__((__noinline__))
-#endif
-
-/* NO_RETURN */
-
-#if !defined(NO_RETURN)
-#define NO_RETURN __attribute((__noreturn__))
 #endif
 
 /* NOT_TAIL_CALLED */
@@ -309,12 +287,6 @@
 /* RETURNS_NONNULL */
 #if !defined(RETURNS_NONNULL)
 #define RETURNS_NONNULL __attribute__((returns_nonnull))
-#endif
-
-/* NO_RETURN_WITH_VALUE */
-
-#if !defined(NO_RETURN_WITH_VALUE)
-#define NO_RETURN_WITH_VALUE NO_RETURN
 #endif
 
 /* OBJC_CLASS */
@@ -394,12 +366,6 @@
 
 #if !defined(NO_REORDER)
 #define NO_REORDER
-#endif
-
-/* UNLIKELY */
-
-#if !defined(UNLIKELY)
-#define UNLIKELY(x) __builtin_expect(!!(x), 0)
 #endif
 
 /* UNUSED_LABEL */
@@ -561,12 +527,17 @@
 #if COMPILER(APPLE_CLANG) || defined(CLANG_WEBKIT_BRANCH) || !defined __clang_major__ || __clang_major__ >= 19
 #define SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE \
     IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("webkit.UncountedLambdaCapturesChecker")
+#define SUPPRESS_UNRETAINED_LOCAL \
+    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("alpha.webkit.UnretainedLocalVarsChecker")
+#define SUPPRESS_UNRETAINED_ARG \
+    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("alpha.webkit.UnretainedCallArgsChecker")
 #else
 #define SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE
+#define SUPPRESS_UNRETAINED_LOCAL
+#define SUPPRESS_UNRETAINED_ARG
 #endif
 
-#define SUPPRESS_REFCOUNTED_WITHOUT_VIRTUAL_DESTRUCTOR \
-    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE_ON_CLASS("webkit.RefCntblBaseVirtualDtor")
+// To suppress webkit.RefCntblBaseVirtualDtor, use NoVirtualDestructorBase instead.
 
 #define SUPPRESS_MEMORY_UNSAFE_CAST \
     IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("alpha.webkit.MemoryUnsafeCastChecker")
@@ -576,6 +547,12 @@
 
 #define IGNORE_NULL_CHECK_WARNINGS_BEGIN IGNORE_WARNINGS_BEGIN("nonnull")
 #define IGNORE_NULL_CHECK_WARNINGS_END IGNORE_WARNINGS_END
+
+#if COMPILER(CLANG)
+#define DECLARE_SYSTEM_HEADER _Pragma(_COMPILER_STRINGIZE(clang system_header))
+#else
+#define DECLARE_SYSTEM_HEADER
+#endif
 
 /* NOESCAPE */
 /* This attribute promises that a function argumemnt will only be used for the duration of the function,
@@ -672,3 +649,7 @@
     ALLOW_COMMA_END \
     ALLOW_DEPRECATED_DECLARATIONS_END \
     ALLOW_UNUSED_PARAMETERS_END
+
+// Used to indicate that a class member has a specialized implementation in Swift. See
+// "SwiftCXXThunk.h".
+#define HAS_SWIFTCXX_THUNK  NS_REFINED_FOR_SWIFT

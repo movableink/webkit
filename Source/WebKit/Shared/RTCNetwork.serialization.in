@@ -31,7 +31,7 @@ enum class WebKit::RTC::Network::EcnMarking : int {
 }
 
 [CustomHeader] struct WebKit::RTC::Network::IPAddress {
-    std::variant<WebKit::RTC::Network::IPAddress::UnspecifiedFamily, uint32_t, std::array<uint32_t, 4>> value;
+    Variant<WebKit::RTC::Network::IPAddress::UnspecifiedFamily, uint32_t, std::array<uint32_t, 4>> value;
 };
 
 [Nested] struct WebKit::RTC::Network::IPAddress::UnspecifiedFamily {

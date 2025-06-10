@@ -170,6 +170,7 @@ MESSAGE_RECEIVERS = \
 	UIProcess/Inspector/RemoteWebInspectorUIProxy \
 	UIProcess/Inspector/WebInspectorUIExtensionControllerProxy \
 	UIProcess/DrawingAreaProxy \
+	UIProcess/WebFrameProxy \
 	UIProcess/Network/NetworkProcessProxy \
 	UIProcess/Network/CustomProtocols/LegacyCustomProtocolManagerProxy \
 	UIProcess/WebPageProxy \
@@ -198,6 +199,7 @@ MESSAGE_RECEIVERS = \
 	UIProcess/SpeechRecognitionServer \
 	UIProcess/XR/PlatformXRSystem \
 	WebProcess/Databases/IndexedDB/WebIDBConnectionToServer \
+	WebProcess/DigitalCredentials/DigitalCredentialsCoordinator \
 	WebProcess/Extensions/WebExtensionContextProxy \
 	WebProcess/Extensions/WebExtensionControllerProxy \
 	WebProcess/GPU/GPUProcessConnection \
@@ -265,6 +267,7 @@ MESSAGE_RECEIVERS = \
 	WebProcess/WebPage/RemoteLayerTree/RemoteScrollingCoordinator \
 	WebProcess/WebPage/ViewGestureGeometryCollector \
 	WebProcess/WebPage/DrawingArea \
+	WebProcess/WebPage/WebFrame \
 	WebProcess/WebPage/WebPage \
 	WebProcess/WebPage/WebPageTesting \
 	WebProcess/WebPage/VisitedLinkTableController \
@@ -415,8 +418,15 @@ LOG_OUTPUT_FILES = \
     WebKitLogClientDeclarations.h \
     WebCoreLogClientDeclarations.h \
 
-$(LOG_OUTPUT_FILES) : $(WebKit2)/Scripts/generate-derived-log-sources.py Platform/LogMessages.in $(WebCorePrivateHeaders)/LogMessages.in
-	PYTHONPATH=$(WebCorePrivateHeaders) $(PYTHON) $^ $(LOG_OUTPUT_FILES)
+LOG_IN_FILES = \
+	$(WebKit2)/Platform/LogMessages.in \
+	$(WebCorePrivateHeaders)/LogMessages.in \
+
+GENERATE_DERIVED_LOG_SOURCES_SCRIPT = $(WebKit2)/Scripts/generate-derived-log-sources.py
+
+$(LOG_OUTPUT_FILES) : $(GENERATE_DERIVED_LOG_SOURCES_SCRIPT) $(LOG_IN_FILES) $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
+	@echo Generating derived log sources from $(LOG_IN_FILES)
+	PYTHONPATH=$(WebCorePrivateHeaders) $(PYTHON) $(GENERATE_DERIVED_LOG_SOURCES_SCRIPT) $(LOG_IN_FILES) $(LOG_OUTPUT_FILES) "$(FEATURE_AND_PLATFORM_DEFINES)"
 
 all : $(GENERATED_MESSAGES_FILES)
 
@@ -516,6 +526,9 @@ WEBDRIVER_BIDI_PROTOCOL_INPUT_FILES = \
     $(WebKit2)/UIProcess/Automation/protocol/BidiBrowser.json \
     $(WebKit2)/UIProcess/Automation/protocol/BidiBrowsingContext.json \
     $(WebKit2)/UIProcess/Automation/protocol/BidiLog.json \
+    $(WebKit2)/UIProcess/Automation/protocol/BidiScript.json \
+    $(WebKit2)/UIProcess/Automation/protocol/BidiSession.json \
+    $(WebKit2)/UIProcess/Automation/protocol/BidiStorage.json \
 #
 
 WEBDRIVER_BIDI_PROTOCOL_OUTPUT_FILES = \
@@ -673,7 +686,6 @@ SERIALIZATION_DESCRIPTION_FILES = \
 	Shared/ContextMenuContextData.serialization.in \
 	Shared/CoordinateSystem.serialization.in \
 	Shared/DebuggableInfoData.serialization.in \
-	Shared/DisplayListArgumentCoders.serialization.in \
 	Shared/DocumentEditingContext.serialization.in \
 	Shared/DragControllerAction.serialization.in \
 	Shared/DrawingAreaInfo.serialization.in \
@@ -717,6 +729,7 @@ SERIALIZATION_DESCRIPTION_FILES = \
 	Shared/ios/HardwareKeyboardState.serialization.in \
 	Shared/ios/InteractionInformationAtPosition.serialization.in \
 	Shared/ios/InteractionInformationRequest.serialization.in \
+	Shared/ios/DragInitiationResult.serialization.in \
 	Shared/ios/WebAutocorrectionContext.serialization.in \
 	Shared/ios/WebAutocorrectionData.serialization.in \
 	Shared/JavaScriptCore.serialization.in \
@@ -737,6 +750,7 @@ SERIALIZATION_DESCRIPTION_FILES = \
 	Shared/PushMessageForTesting.serialization.in \
 	Shared/RTCNetwork.serialization.in \
 	Shared/RTCPacketOptions.serialization.in \
+	Shared/RemoteWebTouchEvent.serialization.in \
 	Shared/RemoteWorkerInitializationData.serialization.in \
 	Shared/RemoteWorkerType.serialization.in \
 	Shared/ResourceLoadInfo.serialization.in \
@@ -1008,7 +1022,18 @@ all : JSWebExtensionAPIUnified.mm $(EXTENSION_INTERFACES:%=JS%.h) $(EXTENSION_IN
 ifeq ($(USE_INTERNAL_SDK),YES)
 WEBKIT_ADDITIONS_SWIFT_FILES = \
 	MaterialAdditions.swift \
+	WebPageWebViewAdditions.swift \
 	WKSeparatedImageView.swift \
+	CredentialUpdaterShim.swift \
+	ISO18013MobileDocumentRequest+Extras.swift \
+	WKIdentityDocumentPresentmentController.swift \
+	WKIdentityDocumentPresentmentMobileDocumentRequest.swift \
+	WKIdentityDocumentPresentmentMobileDocumentRequest+Extras.swift \
+	WKIdentityDocumentPresentmentRawRequest.swift \
+	WKIdentityDocumentPresentmentRequest.swift \
+	WKIdentityDocumentPresentmentResponse.swift \
+	WKIdentityDocumentRawRequestValidator.swift \
+	WKPDFPageNumberIndicatorAdditions.swift \
 #
 
 $(WEBKIT_ADDITIONS_SWIFT_FILES): %.swift : %.swift.in

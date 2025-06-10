@@ -121,8 +121,8 @@ public:
     };
     
     // Use this to iterate over set bits.
-    constexpr iterator begin() const { return iterator(*this, findBit(0, true)); }
-    constexpr iterator end() const { return iterator(*this, bitSetSize); }
+    constexpr iterator begin() const LIFETIME_BOUND { return iterator(*this, findBit(0, true)); }
+    constexpr iterator end() const LIFETIME_BOUND { return iterator(*this, bitSetSize); }
     
     constexpr void mergeAndClear(BitSet&);
     constexpr void setAndClear(BitSet&);

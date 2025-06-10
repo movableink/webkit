@@ -30,6 +30,7 @@
 #include "DeprecatedGlobalSettings.h"
 #include "MediaPlayer.h"
 #include "ThreadGlobalData.h"
+#include <ranges>
 #include <wtf/FixedVector.h>
 #include <wtf/HashMap.h>
 #include <wtf/MainThread.h>
@@ -161,7 +162,7 @@ constexpr ComparableCaseFoldingASCIILiteral supportedImageMIMETypeArray[] = {
 template<ASCIISubset subset, unsigned size> static FixedVector<ASCIILiteral> makeFixedVector(const ComparableASCIISubsetLiteral<subset> (&array)[size])
 {
     FixedVector<ASCIILiteral> result(std::size(array));
-    std::transform(std::begin(array), std::end(array), result.begin(), [] (auto literal) {
+    std::ranges::transform(array, result.begin(), [](auto literal) {
         return literal.literal;
     });
     return result;

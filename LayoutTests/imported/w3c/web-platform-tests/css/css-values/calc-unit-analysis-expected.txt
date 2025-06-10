@@ -8,4 +8,5 @@ PASS subtraction_of_number_and_length
 PASS multiplication_of_length_and_number
 PASS multiplication_of_number_and_length
 PASS multiplication_of_length_and_length
+PASS division_by_non_number
 

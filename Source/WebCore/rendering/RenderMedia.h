@@ -27,6 +27,7 @@
 
 #if ENABLE(VIDEO)
 
+#include "ContainerNodeInlines.h"
 #include "HTMLMediaElement.h"
 #include "RenderImage.h"
 
@@ -40,6 +41,7 @@ public:
     virtual ~RenderMedia();
 
     HTMLMediaElement& mediaElement() const { return downcast<HTMLMediaElement>(nodeForNonAnonymous()); }
+    Ref<HTMLMediaElement> protectedMediaElement() const { return mediaElement(); }
 
     bool shouldDisplayBrokenImageIcon() const final { return false; }
 

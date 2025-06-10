@@ -319,7 +319,7 @@ inline bool isSubtypeSlow(Type sub, Type parent)
             return TypeInformation::get(sub.index).expand().is<FunctionSignature>();
     }
 
-    if ((isExnref(sub) || isI31ref(sub) || isStructref(sub) || isArrayref(sub)) && (isAnyref(parent) || isEqref(parent)))
+    if ((isI31ref(sub) || isStructref(sub) || isArrayref(sub)) && (isAnyref(parent) || isEqref(parent)))
         return true;
 
     if (isEqref(sub) && isAnyref(parent))
@@ -428,6 +428,24 @@ inline bool isDefaultableType(StorageType type)
         return !type.as<Type>().isRef();
     // All packed types are defaultable.
     return true;
+}
+
+inline size_t sizeOfType(TypeKind kind)
+{
+    switch (kind) {
+    case Wasm::TypeKind::I32:
+    case Wasm::TypeKind::F32:
+        return sizeof(uint32_t);
+    case Wasm::TypeKind::I64:
+    case Wasm::TypeKind::F64:
+    case Wasm::TypeKind::Ref:
+    case Wasm::TypeKind::RefNull:
+        return sizeof(uint64_t);
+    case Wasm::TypeKind::V128:
+        return sizeof(v128_t);
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+    }
 }
 
 inline JSValue internalizeExternref(JSValue value)
@@ -794,7 +812,7 @@ struct InternalFunction {
     unsigned osrEntryScratchBufferSize { 0 };
 };
 
-extern const uintptr_t NullWasmCallee;
+extern const CalleeBits NullWasmCallee;
 
 struct alignas(8) WasmCallableFunction {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
@@ -802,7 +820,8 @@ struct alignas(8) WasmCallableFunction {
     static constexpr ptrdiff_t offsetOfEntrypointLoadLocation() { return OBJECT_OFFSETOF(WasmCallableFunction, entrypointLoadLocation); }
     static constexpr ptrdiff_t offsetOfBoxedWasmCalleeLoadLocation() { return OBJECT_OFFSETOF(WasmCallableFunction, boxedWasmCalleeLoadLocation); }
 
-    const uintptr_t* boxedWasmCalleeLoadLocation { &NullWasmCallee };
+    // FIXME: This always points to the interpreter callee anyway so there's no point in having the extra indirection.
+    const CalleeBits* boxedWasmCalleeLoadLocation { &NullWasmCallee };
     // Target instance and entrypoint are only set for wasm->wasm calls, and are otherwise nullptr. The js-specific logic occurs through import function.
     WriteBarrier<JSWebAssemblyInstance> targetInstance { };
     LoadLocation entrypointLoadLocation { };
@@ -819,7 +838,7 @@ struct WasmToWasmImportableFunction : public WasmCallableFunction {
     // FIXME: Pack type index and code pointer into one 64-bit value. See <https://bugs.webkit.org/show_bug.cgi?id=165511>.
     TypeIndex typeIndex { TypeDefinition::invalidIndex };
     // Used when GC proposal is enabled, otherwise can be null.
-    const RTT* rtt;
+    const RTT* rtt { nullptr };
 };
 using FunctionIndexSpace = Vector<WasmToWasmImportableFunction>;
 
@@ -829,7 +848,7 @@ struct WasmOrJSImportableFunction : public WasmToWasmImportableFunction {
 
     CodePtr<WasmEntryPtrTag> importFunctionStub;
     WriteBarrier<JSObject> importFunction { };
-    uintptr_t boxedCallee { 0xBEEF };
+    CalleeBits boxedCallee { 0xBEEF };
 };
 
 struct WasmOrJSImportableFunctionCallLinkInfo final : public WasmOrJSImportableFunction {

@@ -69,6 +69,7 @@ public:
     void removeSuperfluousInteractionRegions();
     void shrinkWrapInteractionRegions();
     void copyInteractionRegionsToEventRegion(float minimumCornerRadius);
+    void reserveCapacityForInteractionRegions(size_t);
 #endif
 
 private:

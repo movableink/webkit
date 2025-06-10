@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,6 +57,7 @@ class MachSendRight;
 
 namespace WebCore {
 struct GenericCueData;
+struct MessageForTesting;
 class ISOWebVTTCue;
 class SerializedPlatformDataCueValue;
 class VideoLayerManager;
@@ -107,13 +108,15 @@ public:
     WebCore::MediaPlayerEnums::MediaEngineIdentifier remoteEngineIdentifier() const { return m_remoteEngineIdentifier; }
     std::optional<WebCore::MediaPlayerIdentifier> identifier() const final { return m_id; }
     IPC::Connection& connection() const { return protectedManager()->gpuProcessConnection().connection(); }
-    Ref<IPC::Connection> protectedConnection() const { return protectedManager()->gpuProcessConnection().protectedConnection(); }
+    // FIXME: <rdar://152831358> We only need protectedConnection() for MediaPlayerPrivateRemoteCocoa.mm which is suspect.
+    Ref<IPC::Connection> protectedConnection() const { return protectedManager()->gpuProcessConnection().connection(); }
     RefPtr<WebCore::MediaPlayer> player() const { return m_player.get(); }
 
     WebCore::MediaPlayer::ReadyState readyState() const final { return m_readyState; }
     void setReadyState(WebCore::MediaPlayer::ReadyState);
 
     void commitAllTransactions(CompletionHandler<void()>&&);
+    void reportGPUMemoryFootprint(uint64_t);
     void networkStateChanged(RemoteMediaPlayerState&&);
     void readyStateChanged(RemoteMediaPlayerState&&, WebCore::MediaPlayer::ReadyState);
     void volumeChanged(double);
@@ -247,7 +250,7 @@ private:
     uint64_t logIdentifier() const final { return m_logIdentifier; }
     WTFLogChannel& logChannel() const final;
 
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
 #endif
 
@@ -498,6 +501,9 @@ private:
     void sceneIdentifierDidChange() final;
 #endif
 
+    void setMessageClientForTesting(WeakPtr<WebCore::MessageClientForTesting>) final;
+    void sendInternalMessage(const WebCore::MessageForTesting&);
+
     ThreadSafeWeakPtr<WebCore::MediaPlayer> m_player;
 #if PLATFORM(COCOA)
     mutable UniqueRef<WebCore::VideoLayerManager> m_videoLayerManager;
@@ -553,6 +559,7 @@ private:
     bool m_isGatheringVideoFrameMetadata { false };
     String m_defaultSpatialTrackingLabel;
     String m_spatialTrackingLabel;
+    WeakPtr<WebCore::MessageClientForTesting> m_internalMessageClient;
 };
 
 } // namespace WebKit

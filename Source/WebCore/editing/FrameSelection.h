@@ -28,13 +28,11 @@
 #include "AXTextStateChangeIntent.h"
 #include "CaretAnimator.h"
 #include "Color.h"
-#include "EditingStyle.h"
-#include "Element.h"
 #include "IntRect.h"
 #include "LayoutRect.h"
-#include "Range.h"
 #include "ScrollAlignment.h"
 #include "ScrollBehavior.h"
+#include "ScrollTypes.h"
 #include "VisibleSelection.h"
 #include <wtf/CheckedRef.h>
 #include <wtf/Noncopyable.h>
@@ -43,10 +41,13 @@
 namespace WebCore {
 
 class CharacterData;
+class Element;
 class GraphicsContext;
+class EditingStyle;
 class HTMLFormElement;
 class LocalFrame;
 class MutableStyleProperties;
+class Range;
 class RenderBlock;
 class RenderObject;
 class RenderView;
@@ -262,8 +263,8 @@ public:
 
     EditingStyle* typingStyle() const;
     WEBCORE_EXPORT RefPtr<MutableStyleProperties> copyTypingStyle() const;
-    void setTypingStyle(RefPtr<EditingStyle>&& style) { m_typingStyle = WTFMove(style); }
-    void clearTypingStyle();
+    WEBCORE_EXPORT void setTypingStyle(RefPtr<EditingStyle>&&);
+    WEBCORE_EXPORT void clearTypingStyle();
 
     enum class ClipToVisibleContent : bool { No, Yes };
     WEBCORE_EXPORT FloatRect selectionBounds(ClipToVisibleContent = ClipToVisibleContent::Yes);
@@ -343,7 +344,7 @@ private:
     void caretAnimationDidUpdate(CaretAnimator&) final;
 
     Document* document() final;
-    RefPtr<Document> protectedDocument() const { return m_document.get(); }
+    inline RefPtr<Document> protectedDocument() const; // Defined in DocumentInlines.h
 
     Node* caretNode() final;
 
@@ -402,11 +403,6 @@ constexpr auto FrameSelection::defaultSetSelectionOptions(UserTriggered userTrig
 inline EditingStyle* FrameSelection::typingStyle() const
 {
     return m_typingStyle.get();
-}
-
-inline void FrameSelection::clearTypingStyle()
-{
-    m_typingStyle = nullptr;
 }
 
 #if !(PLATFORM(COCOA) || USE(ATSPI))

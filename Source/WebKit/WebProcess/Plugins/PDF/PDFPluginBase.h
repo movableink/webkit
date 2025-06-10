@@ -150,6 +150,7 @@ public:
 
     virtual double scaleFactor() const = 0;
     virtual void setPageScaleFactor(double, std::optional<WebCore::IntPoint> origin) = 0;
+    virtual void mainFramePageScaleFactorDidChange() { }
 
     virtual double minScaleFactor() const { return 0.25; }
     virtual double maxScaleFactor() const { return 5; }
@@ -169,7 +170,7 @@ public:
 
     void updateControlTints(WebCore::GraphicsContext&);
 
-    virtual RefPtr<WebCore::FragmentedSharedBuffer> liveResourceData() const = 0;
+    RefPtr<WebCore::FragmentedSharedBuffer> liveResourceData() const;
 
     virtual bool wantsWheelEvents() const = 0;
     virtual bool handleMouseEvent(const WebMouseEvent&) = 0;
@@ -187,7 +188,7 @@ public:
     virtual bool existingSelectionContainsPoint(const WebCore::FloatPoint&) const = 0;
     virtual WebCore::FloatRect rectForSelectionInRootView(PDFSelection *) const = 0;
 
-    virtual unsigned countFindMatches(const String& target, WebCore::FindOptions, unsigned maxMatchCount) = 0;
+    unsigned countFindMatches(const String& target, WebCore::FindOptions, unsigned maxMatchCount);
     virtual bool findString(const String& target, WebCore::FindOptions, unsigned maxMatchCount) = 0;
     virtual Vector<WebCore::FloatRect> rectsForTextMatchesInRect(const WebCore::IntRect&) const { return { }; }
     virtual bool drawsFindOverlay() const = 0;
@@ -262,7 +263,7 @@ public:
     void save(CompletionHandler<void(const String&, const URL&, std::span<const uint8_t>)>&&);
 #endif
 
-    void openWithPreview(CompletionHandler<void(const String&, FrameInfoData&&, std::span<const uint8_t>, const String&)>&&);
+    void openWithPreview(CompletionHandler<void(const String&, std::optional<FrameInfoData>&&, std::span<const uint8_t>)>&&);
 
     void notifyCursorChanged(WebCore::PlatformCursorType);
 
@@ -322,6 +323,7 @@ public:
     virtual void setSelectionRange(WebCore::FloatPoint /* pointInRootView */, WebCore::TextGranularity) { }
     virtual void clearSelection() { }
     virtual std::pair<URL, WebCore::FloatRect> linkURLAndBoundsAtPoint(WebCore::FloatPoint /* pointInRootView */) const { return { }; }
+    virtual std::tuple<URL, WebCore::FloatRect, RefPtr<WebCore::TextIndicator>> linkDataAtPoint(WebCore::FloatPoint /* pointInRootView */) { return { }; }
     virtual std::optional<WebCore::FloatRect> highlightRectForTapAtPoint(WebCore::FloatPoint /* pointInRootView */) const { return std::nullopt; }
     virtual void handleSyntheticClick(WebCore::PlatformMouseEvent&&) { }
     virtual SelectionWasFlipped moveSelectionEndpoint(WebCore::FloatPoint /* pointInRootView */, SelectionEndpoint);
@@ -359,8 +361,8 @@ private:
     bool getByteRanges(CFMutableArrayRef, std::span<const CFRange>) const;
 
 #if !LOG_DISABLED
-    uint64_t streamedBytesForDebugLogging() const;
-    void incrementalLoaderLogWithBytes(const String&, uint64_t streamedBytes);
+    std::optional<uint64_t> streamedBytesForDebugLogging() const;
+    void incrementalLoaderLogWithBytes(const String&, std::optional<uint64_t>&& streamedBytes);
 #endif
 
 protected:
@@ -380,7 +382,7 @@ protected:
     virtual unsigned firstPageHeight() const = 0;
 
     NSData *originalData() const;
-    virtual NSData *liveData() const = 0;
+    NSData *liveData() const;
 
     void addArchiveResource();
 
@@ -392,6 +394,9 @@ protected:
     WebCore::IntRect scrollCornerRect() const final;
     WebCore::ScrollableArea* enclosingScrollableArea() const final;
     bool scrollAnimatorEnabled() const final { return true; }
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    bool vectorBasedControlsEnabled() const final;
+#endif
     bool isScrollableOrRubberbandable() final { return true; }
     bool hasScrollableOrRubberbandableAncestor() final { return true; }
     WebCore::IntRect scrollableAreaBoundingBox(bool* = nullptr) const final;
@@ -511,7 +516,7 @@ protected:
 
 #if ENABLE(PDF_HUD)
     CompletionHandler<void(const String&, const URL&, std::span<const uint8_t>)> m_pendingSaveCompletionHandler;
-    CompletionHandler<void(const String&, FrameInfoData&&, std::span<const uint8_t>, const String&)> m_pendingOpenCompletionHandler;
+    CompletionHandler<void(const String&, std::optional<FrameInfoData>&&, std::span<const uint8_t>)> m_pendingOpenCompletionHandler;
 #endif
 };
 

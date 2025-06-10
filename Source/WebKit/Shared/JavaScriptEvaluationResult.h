@@ -34,6 +34,7 @@
 
 #if PLATFORM(COCOA)
 #include <wtf/RetainPtr.h>
+OBJC_CLASS JSValue;
 OBJC_CLASS NSMutableArray;
 OBJC_CLASS NSMutableDictionary;
 #endif
@@ -61,17 +62,17 @@ class JavaScriptEvaluationResult {
 public:
 #if PLATFORM(COCOA)
     enum class NullType : bool { NullPointer, NSNull };
-    using Variant = std::variant<NullType, bool, CoreIPCNumber, String, Seconds, Vector<JSObjectID>, HashMap<JSObjectID, JSObjectID>>;
+    using Variant = Variant<NullType, bool, CoreIPCNumber, String, Seconds, Vector<JSObjectID>, HashMap<JSObjectID, JSObjectID>>;
 
     JavaScriptEvaluationResult(JSObjectID, HashMap<JSObjectID, Variant>&&);
-    static Expected<JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>> extract(JSGlobalContextRef, JSValueRef);
     static std::optional<JavaScriptEvaluationResult> extract(id);
 #else
     JavaScriptEvaluationResult(std::span<const uint8_t> wireBytes)
         : m_wireBytes(wireBytes) { }
 #endif
 
-    JavaScriptEvaluationResult(JSGlobalContextRef, JSValueRef);
+    static std::optional<JavaScriptEvaluationResult> extract(JSGlobalContextRef, JSValueRef);
+
     JavaScriptEvaluationResult(JavaScriptEvaluationResult&&);
     JavaScriptEvaluationResult& operator=(JavaScriptEvaluationResult&&);
     ~JavaScriptEvaluationResult();
@@ -91,6 +92,8 @@ public:
     JSValueRef toJS(JSGlobalContextRef);
 
 private:
+    JavaScriptEvaluationResult(JSGlobalContextRef, JSValueRef);
+
 #if PLATFORM(COCOA)
     JavaScriptEvaluationResult(id);
 
@@ -99,6 +102,7 @@ private:
 
     Variant toVariant(id);
     JSObjectID addObjectToMap(id);
+    Variant jsValueToVariant(JSValue *);
 
     // Used for deserializing from IPC to ObjC
     HashMap<JSObjectID, RetainPtr<id>> m_instantiatedNSObjects;
@@ -111,6 +115,7 @@ private:
     Vector<std::pair<Vector<JSObjectID>, Ref<API::Array>>> m_arrays;
 
     // Used for serializing to IPC
+    HashMap<RetainPtr<JSValue>, JSObjectID> m_jsObjectsInMap;
     HashMap<RetainPtr<id>, JSObjectID> m_objectsInMap;
     std::optional<JSObjectID> m_nullObjectID;
 
@@ -121,23 +126,6 @@ private:
     RefPtr<WebCore::SerializedScriptValue> m_valueFromJS;
     std::span<const uint8_t> m_wireBytes;
 #endif
-};
-
-}
-
-namespace IPC {
-
-template<typename> struct AsyncReplyError;
-template<> struct AsyncReplyError<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>> {
-    static Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>> create();
-};
-
-template<> struct AsyncReplyError<Expected<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>, String>> {
-    static Expected<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>, String> create();
-};
-
-template<> struct AsyncReplyError<Expected<WebKit::JavaScriptEvaluationResult, String>> {
-    static Expected<WebKit::JavaScriptEvaluationResult, String> create();
 };
 
 }

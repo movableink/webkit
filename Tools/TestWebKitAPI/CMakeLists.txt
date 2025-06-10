@@ -224,7 +224,6 @@ if (ENABLE_WEBCORE)
         Tests/WebCore/PublicSuffix.cpp
         Tests/WebCore/RegionTests.cpp
         Tests/WebCore/RenderStyleChange.cpp
-        Tests/WebCore/ResourceMonitor.cpp
         Tests/WebCore/SecurityOrigin.cpp
         Tests/WebCore/SharedBuffer.cpp
         Tests/WebCore/SharedBufferTest.cpp
@@ -304,7 +303,6 @@ if (ENABLE_WEBKIT)
         Tests/WebKit/DidNotHandleKeyDown.cpp
         Tests/WebKit/DocumentStartUserScriptAlertCrash.cpp
         Tests/WebKit/DownloadDecideDestinationCrash.cpp
-        Tests/WebKit/EnumerateMediaDevices.cpp
         Tests/WebKit/EvaluateJavaScript.cpp
         Tests/WebKit/FailedLoad.cpp
         Tests/WebKit/Find.cpp

@@ -101,21 +101,21 @@ public:
     void setStartOfCode()
     {
         m_pcToCodeOriginMapBuilder.appendItem(labelIgnoringWatchpoints(), CodeOrigin(BytecodeIndex(0)));
-        if (LIKELY(!m_disassembler))
+        if (!m_disassembler) [[likely]]
             return;
         m_disassembler->setStartOfCode(labelIgnoringWatchpoints());
     }
     
     void setForBlockIndex(BlockIndex blockIndex)
     {
-        if (LIKELY(!m_disassembler))
+        if (!m_disassembler) [[likely]]
             return;
         m_disassembler->setForBlockIndex(blockIndex, labelIgnoringWatchpoints());
     }
     
     void setForNode(Node* node)
     {
-        if (LIKELY(!m_disassembler))
+        if (!m_disassembler) [[likely]]
             return;
         m_disassembler->setForNode(node, labelIgnoringWatchpoints());
     }
@@ -270,14 +270,6 @@ public:
     void noticeOSREntry(BasicBlock&, JITCompiler::Label blockHead, LinkBuffer&);
     void noticeCatchEntrypoint(BasicBlock&, JITCompiler::Label blockHead, LinkBuffer&, Vector<FlushFormat>&& argumentFormats);
 
-    unsigned appendOSRExit(OSRExit&& exit)
-    {
-        unsigned result = m_osrExit.size();
-        m_osrExit.append(WTFMove(exit));
-        return result;
-    }
-
-
     unsigned appendSpeculationRecovery(const SpeculationRecovery& recovery)
     {
         unsigned result = m_speculationRecovery.size();
@@ -380,8 +372,6 @@ public:
     std::tuple<CompileTimeStructureStubInfo, StructureStubInfoIndex> addStructureStubInfo();
     std::tuple<CompileTimeCallLinkInfo, LinkableConstant> addCallLinkInfo(CodeOrigin);
     LinkerIR::Constant addToConstantPool(LinkerIR::Type, void*);
-
-    void appendExceptionHandlingOSRExit(SpeculativeJIT*, ExitKind, unsigned eventStreamIndex, CodeOrigin, HandlerInfo* exceptionHandler, CallSiteIndex, MacroAssembler::JumpList jumpsToFail = MacroAssembler::JumpList());
 
 protected:
     friend class OSRExitJumpPlaceholder;

@@ -27,7 +27,7 @@
 
 #if ENABLE(FULLSCREEN_API)
 
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "GCReachableRef.h"
 #include "HTMLMediaElement.h"
 #include "HTMLMediaElementEnums.h"
@@ -65,7 +65,7 @@ public:
     const Document& document() const { return m_document.get(); }
     Ref<Document> protectedDocument() const { return m_document.get(); }
     Page* page() const { return document().page(); }
-    LocalFrame* frame() const { return document().frame(); }
+    LocalFrame* frame() const;
     Element* documentElement() const { return document().documentElement(); }
     bool isSimpleFullscreenDocument() const;
     Document::BackForwardCacheState backForwardCacheState() const { return document().backForwardCacheState(); }
@@ -102,6 +102,8 @@ public:
     WEBCORE_EXPORT bool isAnimatingFullscreen() const;
     WEBCORE_EXPORT void setAnimatingFullscreen(bool);
 
+    void clear();
+
 protected:
     friend class Document;
 
@@ -116,7 +118,8 @@ private:
 #endif
 
     Document* mainFrameDocument() { return protectedDocument()->mainFrameDocument(); }
-    RefPtr<Document> protectedMainFrameDocument() { return mainFrameDocument(); }
+
+    RefPtr<Element> fullscreenOrPendingElement() const { return m_fullscreenElement ? m_fullscreenElement : m_pendingFullscreenElement; }
 
     bool didEnterFullscreen();
 
@@ -125,6 +128,9 @@ private:
     void queueFullscreenChangeEventForElement(Element& target) { m_pendingEvents.append({ EventType::Change, GCReachableRef(target) }); }
 
     WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
+
+    RefPtr<Element> m_fullscreenElement;
+    RefPtr<Element> m_pendingFullscreenElement;
 
     Deque<std::pair<EventType, GCReachableRef<Element>>> m_pendingEvents;
 

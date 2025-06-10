@@ -2,6 +2,7 @@
 <style>
   :root { background: #102030e0; color: #99ddbbcc; font-size: 15px; }
 </style>
+<script src="../../../resources/js-test-pre.js"></script>
 <script>
 globalThis.testRunner?.dumpAsText();
 globalThis.testRunner?.waitUntilDone();
@@ -128,6 +129,7 @@ let device0 = await adapter0.requestDevice({
   label: '\u5f2c\u4bc8',
   defaultQueue: {label: '\u{1fd58}\u0dd9\u75ba\u5628\uff4b\u803b\u4dea\u2863\u0221\u0987\u{1f9db}'},
   requiredFeatures: [
+    'depth-clip-control',
     'depth32float-stencil8',
     'texture-compression-astc',
     'indirect-first-instance',
@@ -17782,7 +17784,7 @@ videoFrame40.close();
       
     }
   }
-  console.log('Pass')
+  debug('Pass')
     globalThis.testRunner?.notifyDone();
 };
 </script>

@@ -549,6 +549,7 @@ TEST(AnimatedResize, CreateWebPageAfterAnimatedResize)
 }
 
 #if HAVE(UI_WINDOW_SCENE_LIVE_RESIZE)
+
 TEST(AnimatedResize, MinimumEffectiveDeviceWidthChangeIsDeferredDuringLiveResize)
 {
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 200, 200)]);
@@ -567,6 +568,32 @@ TEST(AnimatedResize, MinimumEffectiveDeviceWidthChangeIsDeferredDuringLiveResize
     [webView waitForNextPresentationUpdate];
     EXPECT_EQ([webView scrollView].zoomScale, 0.5);
 }
+
+TEST(AnimatedResize, PinScrollPositionRelativeToTopEdgeOnPageScaleChange)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 1024, 768)]);
+    RetainPtr scrollView = [webView scrollView];
+
+    [scrollView setContentInset:UIEdgeInsetsMake(64, 0, 0, 0)];
+
+    constexpr unsigned layoutWidth = 900;
+    [webView synchronouslyLoadHTMLString:[NSString stringWithFormat:@"<head><meta name='viewport' content='width=%u'></head>", layoutWidth]];
+
+    CGPoint top = CGPointMake(0, -[scrollView contentInset].top);
+    [scrollView setContentOffset:top];
+
+    CGRect frame = [webView frame];
+
+    [webView _beginLiveResize];
+    [webView setFrame:CGRectMake(0, 0, frame.size.width - 200, frame.size.height)];
+    [webView _endLiveResize];
+
+    [webView waitForNextPresentationUpdate];
+
+    EXPECT_NEAR([scrollView zoomScale], [webView frame].size.width / layoutWidth, 0.0001);
+    EXPECT_TRUE(CGPointEqualToPoint([scrollView contentOffset], top));
+}
+
 #endif
 
 TEST(AnimatedResize, ResizeWithWithSubsequentNoOpResizeIsNotCancelled)

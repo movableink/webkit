@@ -232,7 +232,12 @@ TEST_F(CARingBufferTest, FetchTimeBoundsInvalid)
     EXPECT_EQ(makeBounds(std::numeric_limits<uint64_t>::max() - 32u, std::numeric_limits<uint64_t>::max()), ringBuffer().getFetchTimeBounds());
 }
 
+// FIXME when rdar://151622059 is resolved.
+#if PLATFORM(IOS)
+TEST_F(CARingBufferTest, DISABLED_FetchTimeBoundsConsistent)
+#else
 TEST_F(CARingBufferTest, FetchTimeBoundsConsistent)
+#endif
 {
     const size_t capacity = 32;
     setup(44100, 1, CAAudioStreamDescription::PCMFormat::Float32, true, capacity);

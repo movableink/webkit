@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,8 +34,10 @@
 #include "CookieListItem.h"
 #include "CookieStoreDeleteOptions.h"
 #include "CookieStoreGetOptions.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "EventNames.h"
+#include "EventTargetInterfaces.h"
+#include "EventTargetInlines.h"
 #include "ExceptionOr.h"
 #include "JSCookieListItem.h"
 #include "JSDOMPromiseDeferred.h"
@@ -229,7 +231,7 @@ CookieStore::CookieStore(ScriptExecutionContext* context)
 
 CookieStore::~CookieStore()
 {
-    protectedMainThreadBridge()->detach();
+    m_mainThreadBridge->detach();
 }
 
 static bool containsInvalidCharacters(const String& string)
@@ -305,7 +307,7 @@ void CookieStore::get(CookieStoreGetOptions&& options, Ref<DeferredPromise>&& pr
         promise->resolve<IDLDictionary<CookieListItem>>(CookieListItem(WTFMove(cookies[0])));
     };
 
-    protectedMainThreadBridge()->get(WTFMove(options), WTFMove(url), WTFMove(completionHandler));
+    m_mainThreadBridge->get(WTFMove(options), WTFMove(url), WTFMove(completionHandler));
 }
 
 void CookieStore::getAll(String&& name, Ref<DeferredPromise>&& promise)
@@ -365,7 +367,7 @@ void CookieStore::getAll(CookieStoreGetOptions&& options, Ref<DeferredPromise>&&
         }));
     };
 
-    protectedMainThreadBridge()->getAll(WTFMove(options), WTFMove(url), WTFMove(completionHandler));
+    m_mainThreadBridge->getAll(WTFMove(options), WTFMove(url), WTFMove(completionHandler));
 }
 
 void CookieStore::set(String&& name, String&& value, Ref<DeferredPromise>&& promise)
@@ -528,7 +530,7 @@ void CookieStore::set(CookieInit&& options, Ref<DeferredPromise>&& promise)
             promise->resolve();
     };
 
-    protectedMainThreadBridge()->set(WTFMove(options), WTFMove(cookie), WTFMove(url), WTFMove(completionHandler));
+    m_mainThreadBridge->set(WTFMove(options), WTFMove(cookie), WTFMove(url), WTFMove(completionHandler));
 }
 
 void CookieStore::remove(String&& name, Ref<DeferredPromise>&& promise)
@@ -622,6 +624,9 @@ void CookieStore::stop()
 
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
     auto host = document->url().host().toString();
+    if (host.isEmpty())
+        return;
+
     page->protectedCookieJar()->removeChangeListener(host, *this);
 #endif
     m_hasChangeEventListener = false;
@@ -649,6 +654,10 @@ void CookieStore::eventListenersDidChange()
     if (!document)
         return;
 
+    auto host = document->url().host().toString();
+    if (host.isEmpty())
+        return;
+
     bool hadChangeEventListener = m_hasChangeEventListener;
     m_hasChangeEventListener = hasEventListeners(eventNames().changeEvent);
 
@@ -661,7 +670,6 @@ void CookieStore::eventListenersDidChange()
 
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
     Ref cookieJar = page->cookieJar();
-    auto host = document->url().host().toString();
     if (m_hasChangeEventListener)
         cookieJar->addChangeListener(*document, *this);
     else
@@ -672,11 +680,6 @@ void CookieStore::eventListenersDidChange()
 RefPtr<DeferredPromise> CookieStore::takePromise(uint64_t promiseIdentifier)
 {
     return m_promises.take(promiseIdentifier);
-}
-
-Ref<CookieStore::MainThreadBridge> CookieStore::protectedMainThreadBridge() const
-{
-    return m_mainThreadBridge;
 }
 
 }

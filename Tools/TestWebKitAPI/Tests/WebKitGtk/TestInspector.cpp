@@ -62,9 +62,9 @@ public:
 
     InspectorTest()
         : WebViewTest()
-        , m_inspector(webkit_web_view_get_inspector(m_webView))
+        , m_inspector(webkit_web_view_get_inspector(m_webView.get()))
     {
-        webkit_settings_set_enable_developer_extras(webkit_web_view_get_settings(m_webView), TRUE);
+        webkit_settings_set_enable_developer_extras(webkit_web_view_get_settings(m_webView.get()), TRUE);
         assertObjectIsDeletedWhenTestFinishes(G_OBJECT(m_inspector));
         g_signal_connect(m_inspector, "open-window", G_CALLBACK(openWindowCallback), this);
         g_signal_connect(m_inspector, "bring-to-front", G_CALLBACK(bringToFrontCallback), this);
@@ -285,22 +285,22 @@ public:
 
         GtkWidget* pane;
 #if USE(GTK4)
-        if (gtk_window_get_child(GTK_WINDOW(m_parentWindow)) == GTK_WIDGET(m_webView)) {
-            GRefPtr<WebKitWebView> inspectedView = m_webView;
+        if (gtk_window_get_child(GTK_WINDOW(m_parentWindow)) == GTK_WIDGET(m_webView.get())) {
+            GRefPtr<WebKitWebView> inspectedView = m_webView.get();
             gtk_window_set_child(GTK_WINDOW(m_parentWindow), nullptr);
             pane = gtk_paned_new(GTK_ORIENTATION_VERTICAL);
-            gtk_paned_set_start_child(GTK_PANED(pane), GTK_WIDGET(m_webView));
+            gtk_paned_set_start_child(GTK_PANED(pane), GTK_WIDGET(m_webView.get()));
             gtk_window_set_child(GTK_WINDOW(m_parentWindow), pane);
         } else
             pane = gtk_window_get_child(GTK_WINDOW(m_parentWindow));
         gtk_paned_set_position(GTK_PANED(pane), webkit_web_inspector_get_attached_height(m_inspector));
         gtk_paned_set_end_child(GTK_PANED(pane), GTK_WIDGET(inspectorView.get()));
 #else
-        if (gtk_bin_get_child(GTK_BIN(m_parentWindow)) == GTK_WIDGET(m_webView)) {
-            GRefPtr<WebKitWebView> inspectedView = m_webView;
-            gtk_container_remove(GTK_CONTAINER(m_parentWindow), GTK_WIDGET(m_webView));
+        if (gtk_bin_get_child(GTK_BIN(m_parentWindow)) == GTK_WIDGET(m_webView.get())) {
+            GRefPtr<WebKitWebView> inspectedView = m_webView.get();
+            gtk_container_remove(GTK_CONTAINER(m_parentWindow), GTK_WIDGET(m_webView.get()));
             pane = gtk_paned_new(GTK_ORIENTATION_VERTICAL);
-            gtk_paned_add1(GTK_PANED(pane), GTK_WIDGET(m_webView));
+            gtk_paned_add1(GTK_PANED(pane), GTK_WIDGET(m_webView.get()));
             gtk_container_add(GTK_CONTAINER(m_parentWindow), pane);
             gtk_widget_show_all(pane);
         } else

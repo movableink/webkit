@@ -73,6 +73,14 @@ Geolocation* NavigatorGeolocation::geolocation(Navigator& navigator)
     return NavigatorGeolocation::from(navigator)->geolocation();
 }
 
+Geolocation* NavigatorGeolocation::optionalGeolocation(Navigator& navigator)
+{
+    NavigatorGeolocation* supplement = static_cast<NavigatorGeolocation*>(Supplement<Navigator>::from(&navigator, supplementName()));
+    if (!supplement)
+        return nullptr;
+    return supplement->m_geolocation.get();
+}
+
 Geolocation* NavigatorGeolocation::geolocation() const
 {
     if (!m_geolocation)

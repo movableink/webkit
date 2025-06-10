@@ -47,6 +47,7 @@ public:
     void clearBackingStore() final;
     void createContextAndPaintContents() final;
 
+    RemoteImageBufferSetProxy* bufferSet() { return m_bufferSet.get(); }
     RefPtr<RemoteImageBufferSetProxy> protectedBufferSet() { return m_bufferSet; }
 
     std::unique_ptr<ThreadSafeImageBufferSetFlusher> createFlusher(ThreadSafeImageBufferSetFlusher::FlushType) final;

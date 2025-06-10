@@ -8,7 +8,7 @@ import re
 import sys
 import tempfile
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from portabilityLayer import get_state, set_state
 from urllib.parse import parse_qs
 
@@ -84,7 +84,7 @@ def generate_response(path, range_start=None, range_end=None):
             time.sleep(initial_delay / 1000)
 
         if os.path.isfile(path):
-            sys.stdout.write('Last-Modified: {} GMT\r\n'.format(datetime.utcfromtimestamp(os.stat(path).st_mtime).strftime('%a, %d %b %Y %H:%M:%S')))
+            sys.stdout.write('Last-Modified: {} GMT\r\n'.format(datetime.fromtimestamp(os.stat(path).st_mtime, timezone.utc).strftime('%a, %d %b %Y %H:%M:%S')))
 
             file_len = os.path.getsize(path)
             if range_start is not None or range_end is not None:

@@ -512,12 +512,18 @@ WI.DebuggerManager = class DebuggerManager extends WI.Object
 
     scriptForIdentifier(id, target)
     {
+        if (target instanceof WI.ImportedTarget)
+            return null;
+
         console.assert(target instanceof WI.Target);
         return this.dataForTarget(target).scriptForIdentifier(id);
     }
 
     scriptsForURL(url, target)
     {
+        if (target instanceof WI.ImportedTarget)
+            return [];
+
         // FIXME: This may not be safe. A Resource's URL may differ from a Script's URL.
         console.assert(target instanceof WI.Target);
         return this.dataForTarget(target).scriptsForURL(url);

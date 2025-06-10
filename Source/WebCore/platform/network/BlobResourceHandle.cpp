@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -245,13 +246,15 @@ void BlobResourceHandle::getSizeForNext()
     case BlobDataItem::Type::Data:
         didGetSize(item.length());
         break;
-    case BlobDataItem::Type::File:
+    case BlobDataItem::Type::File: {
         // Files know their sizes, but asking the stream to verify that the file wasn't modified.
+        RefPtr file = item.file();
         if (m_async)
-            m_asyncStream->getSize(item.protectedFile()->path(), item.file()->expectedModificationTime());
+            m_asyncStream->getSize(file->path(), file->expectedModificationTime());
         else
-            didGetSize(m_stream->getSize(item.protectedFile()->path(), item.file()->expectedModificationTime()));
+            didGetSize(m_stream->getSize(file->path(), file->expectedModificationTime()));
         break;
+    }
     default:
         ASSERT_NOT_REACHED();
     }
@@ -568,7 +571,7 @@ void BlobResourceHandle::notifyResponseOnSuccess()
 {
     ASSERT(isMainThread());
 
-    ResourceResponse response(firstRequest().url(), extractMIMETypeFromMediaType(m_blobData->contentType()), m_totalRemainingSize, String());
+    ResourceResponse response(URL { firstRequest().url() }, extractMIMETypeFromMediaType(m_blobData->contentType()), m_totalRemainingSize, String());
     response.setHTTPStatusCode(m_isRangeRequest ? httpPartialContent : httpOK);
     response.setHTTPStatusText(m_isRangeRequest ? httpPartialContentText : httpOKText);
 

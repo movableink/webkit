@@ -45,7 +45,7 @@ NSString *WebPlugInContainingElementKey =       @"WebPlugInContainingElementKey"
     if (!(self = [super initWithPath:pluginPath]))
         return nil;
 
-    nsBundle = [[NSBundle alloc] initWithPath:path];
+    nsBundle = [[NSBundle alloc] initWithPath:path.createNSString().get()];
 
     if (!nsBundle) {
         [self release];
@@ -105,7 +105,7 @@ NSString *WebPlugInContainingElementKey =       @"WebPlugInContainingElementKey"
     
 #if !LOG_DISABLED
     CFAbsoluteTime duration = CFAbsoluteTimeGetCurrent() - start;
-    LOG(Plugins, "principalClass took %f seconds for: %@", duration, (NSString *)[self pluginInfo].name);
+    LOG(Plugins, "principalClass took %f seconds for: %@", duration, [self pluginInfo].name.createNSString().get());
 #endif
     return [super load];
 }

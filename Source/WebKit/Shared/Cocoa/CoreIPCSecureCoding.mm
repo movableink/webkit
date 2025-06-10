@@ -34,6 +34,7 @@
 #import <wtf/RuntimeApplicationChecks.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/cocoa/NSStringExtras.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/text/StringHash.h>
 
 namespace WebKit {
@@ -48,19 +49,15 @@ static std::unique_ptr<HashSet<String>>& internalClassNamesExemptFromSecureCodin
         if (isInAuxiliaryProcess())
             return;
 
-        id object = [[NSUserDefaults standardUserDefaults] objectForKey:@"WebKitCrashOnSecureCodingWithExemptClassesKey"];
-        if (!object)
+        RetainPtr<NSArray> array = [[NSUserDefaults standardUserDefaults] arrayForKey:@"WebKitCrashOnSecureCodingWithExemptClassesKey"];
+        if (!array)
             return;
 
         exemptClassNames.get() = WTF::makeUnique<HashSet<String>>();
 
-        if (![object isKindOfClass:NSArray.class])
-            return;
-
-        for (id value in (NSArray *)object) {
-            if (![value isKindOfClass:[NSString class]])
-                continue;
-            exemptClassNames.get()->add((NSString *)object);
+        for (id value in array.get()) {
+            if (RetainPtr string = dynamic_objc_cast<NSString>(value))
+                exemptClassNames.get()->add(string.get());
         }
     });
 
@@ -72,7 +69,7 @@ const HashSet<String>* classNamesExemptFromSecureCodingCrash()
     return internalClassNamesExemptFromSecureCodingCrash().get();
 }
 
-void applyProcessCreationParameters(const AuxiliaryProcessCreationParameters& parameters)
+void applyProcessCreationParameters(AuxiliaryProcessCreationParameters&& parameters)
 {
     RELEASE_ASSERT(isInAuxiliaryProcess());
 
@@ -96,7 +93,7 @@ bool conformsToWebKitSecureCoding(id object)
 }
 
 #if !HAVE(WK_SECURE_CODING_NSURLREQUEST)
-NO_RETURN static void crashWithClassName(Class objectClass)
+[[noreturn]] static void crashWithClassName(Class objectClass)
 {
     WebKit::logAndSetCrashLogMessage("NSSecureCoding path used for unexpected object"_s);
 

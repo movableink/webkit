@@ -64,6 +64,7 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextControlPlaceholderElement);
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SearchFieldResultsButtonElement);
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SearchFieldCancelButtonElement);
 
+using namespace CSS::Literals;
 using namespace HTMLNames;
 
 TextControlInnerContainer::TextControlInnerContainer(Document& document)
@@ -95,7 +96,7 @@ static inline bool isNumberInput(const Element* element)
 }
 #endif
 
-std::optional<Style::ResolvedStyle> TextControlInnerContainer::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle*)
+std::optional<Style::UnadjustedStyle> TextControlInnerContainer::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
 {
     auto elementStyle = resolveStyle(resolutionContext);
     if (isStrongPasswordTextField(shadowHost())) {
@@ -104,10 +105,8 @@ std::optional<Style::ResolvedStyle> TextControlInnerContainer::resolveCustomStyl
         elementStyle.style->setOverflowY(Overflow::Hidden);
     }
 
-#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
-    if (isNumberInput(shadowHost()) && shadowHost()->document().settings().vectorBasedControlsOnMacEnabled())
-        elementStyle.style->setAlignItems(StyleSelfAlignmentData(ItemPosition::Stretch));
-#endif
+    if (shadowHostStyle)
+        RenderTheme::singleton().adjustTextControlInnerContainerStyle(*elementStyle.style, *shadowHostStyle, shadowHost());
 
     return elementStyle;
 }
@@ -122,7 +121,7 @@ Ref<TextControlInnerElement> TextControlInnerElement::create(Document& document)
     return adoptRef(*new TextControlInnerElement(document));
 }
 
-std::optional<Style::ResolvedStyle> TextControlInnerElement::resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle* shadowHostStyle)
+std::optional<Style::UnadjustedStyle> TextControlInnerElement::resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle* shadowHostStyle)
 {
     auto newStyle = RenderStyle::createPtr();
     newStyle->inheritFrom(*shadowHostStyle);
@@ -153,7 +152,7 @@ std::optional<Style::ResolvedStyle> TextControlInnerElement::resolveCustomStyle(
         newStyle->setFlexBasis(Length { pixels, LengthType::Fixed });
     }
 
-    return Style::ResolvedStyle { WTFMove(newStyle) };
+    return Style::UnadjustedStyle { WTFMove(newStyle) };
 }
 
 // MARK: TextControlInnerTextElement
@@ -177,7 +176,7 @@ void TextControlInnerTextElement::updateInnerTextElementEditabilityImpl(bool isE
     const auto& value = isEditable ? plaintextOnlyAtom() : falseAtom();
     if (initialization) {
         Attribute attribute(contenteditableAttr, value);
-        parserSetAttributes(std::span(&attribute, 1));
+        parserSetAttributes(singleElementSpan(attribute));
     } else
         setAttributeWithoutSynchronization(contenteditableAttr, value);
 }
@@ -210,10 +209,14 @@ RenderTextControlInnerBlock* TextControlInnerTextElement::renderer() const
     return downcast<RenderTextControlInnerBlock>(HTMLDivElement::renderer());
 }
 
-std::optional<Style::ResolvedStyle> TextControlInnerTextElement::resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle* shadowHostStyle)
+std::optional<Style::UnadjustedStyle> TextControlInnerTextElement::resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle* shadowHostStyle)
 {
     auto style = downcast<HTMLTextFormControlElement>(*shadowHost()).createInnerTextStyle(*shadowHostStyle);
-    return Style::ResolvedStyle { makeUnique<RenderStyle>(WTFMove(style)) };
+
+    if (shadowHostStyle)
+        RenderTheme::singleton().adjustTextControlInnerTextStyle(style, *shadowHostStyle, shadowHost());
+
+    return Style::UnadjustedStyle { makeUnique<RenderStyle>(WTFMove(style)) };
 }
 
 // MARK: TextControlPlaceholderElement
@@ -231,7 +234,7 @@ Ref<TextControlPlaceholderElement> TextControlPlaceholderElement::create(Documen
     return element;
 }
 
-std::optional<Style::ResolvedStyle> TextControlPlaceholderElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
+std::optional<Style::UnadjustedStyle> TextControlPlaceholderElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
 {
     auto style = resolveStyle(resolutionContext);
 
@@ -240,9 +243,13 @@ std::optional<Style::ResolvedStyle> TextControlPlaceholderElement::resolveCustom
 
     if (RefPtr inputElement = dynamicDowncast<HTMLInputElement>(controlElement)) {
         style.style->setTextOverflow(inputElement->shouldTruncateText(*shadowHostStyle) ? TextOverflow::Ellipsis : TextOverflow::Clip);
-        style.style->setPaddingTop(Length { 0, LengthType::Fixed });
-        style.style->setPaddingBottom(Length { 0, LengthType::Fixed });
+        style.style->setPaddingTop(0_css_px);
+        style.style->setPaddingBottom(0_css_px);
     }
+
+    if (shadowHostStyle)
+        RenderTheme::singleton().adjustTextControlInnerPlaceholderStyle(*style.style, *shadowHostStyle, shadowHost());
+
     return style;
 }
 
@@ -264,8 +271,10 @@ Ref<SearchFieldResultsButtonElement> SearchFieldResultsButtonElement::create(Doc
     return adoptRef(*new SearchFieldResultsButtonElement(document));
 }
 
-std::optional<Style::ResolvedStyle> SearchFieldResultsButtonElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
+std::optional<Style::UnadjustedStyle> SearchFieldResultsButtonElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
 {
+    m_canAdjustStyleForAppearance = true;
+
     RefPtr input = downcast<HTMLInputElement>(shadowHost());
     if (input && input->maxResults() >= 0)
         return std::nullopt;
@@ -283,7 +292,7 @@ std::optional<Style::ResolvedStyle> SearchFieldResultsButtonElement::resolveCust
     // on the platform and writing mode. Only adjust the style when that default is used.
     auto usedAppearance = shadowHostStyle->usedAppearance();
     if (usedAppearance != StyleAppearance::SearchField && usedAppearance != StyleAppearance::TextField) {
-        SetForScope canAdjustStyleForAppearance(m_canAdjustStyleForAppearance, false);
+        m_canAdjustStyleForAppearance = false;
         return resolveStyle(resolutionContext);
     }
 
@@ -344,11 +353,11 @@ Ref<SearchFieldCancelButtonElement> SearchFieldCancelButtonElement::create(Docum
     return element;
 }
 
-std::optional<Style::ResolvedStyle> SearchFieldCancelButtonElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
+std::optional<Style::UnadjustedStyle> SearchFieldCancelButtonElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
 {
     auto elementStyle = resolveStyle(resolutionContext);
     Ref inputElement = downcast<HTMLInputElement>(*shadowHost());
-    elementStyle.style->setVisibility(elementStyle.style->usedVisibility() == Visibility::Hidden || inputElement->value().isEmpty() ? Visibility::Hidden : Visibility::Visible);
+    elementStyle.style->setVisibility(elementStyle.style->usedVisibility() == Visibility::Hidden || inputElement->value()->isEmpty() ? Visibility::Hidden : Visibility::Visible);
 
     if (shadowHostStyle && searchFieldStyleHasExplicitlySpecifiedTextFieldAppearance(*shadowHostStyle))
         elementStyle.style->setDisplay(DisplayType::None);

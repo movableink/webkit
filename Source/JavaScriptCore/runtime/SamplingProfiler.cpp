@@ -352,7 +352,7 @@ void SamplingProfiler::timerLoop()
         Seconds stackTraceProcessingTime = 0_s;
         {
             Locker locker { m_lock };
-            if (UNLIKELY(m_isShutDown))
+            if (m_isShutDown) [[unlikely]]
                 return;
 
             if (!m_isPaused && m_jscExecutionThread)
@@ -504,8 +504,7 @@ void SamplingProfiler::processUnverifiedStackTraces()
                 location.lineColumn = codeBlock->lineColumnForBytecodeIndex(bytecodeIndex);
                 location.bytecodeIndex = bytecodeIndex;
             }
-            if (codeBlock->hasHash())
-                location.codeBlockHash = codeBlock->hash();
+            location.codeBlockHash = codeBlock->hash();
             location.jitType = jitType;
         };
 

@@ -39,7 +39,7 @@
 #include "LocaleToScriptMapping.h"
 #include "NodeRenderStyle.h"
 #include "Page.h"
-#include "RenderObject.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleSetters.h"
 #include "RenderView.h"
 #include "Settings.h"

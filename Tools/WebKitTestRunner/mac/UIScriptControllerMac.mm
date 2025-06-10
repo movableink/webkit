@@ -348,7 +348,7 @@ void UIScriptControllerMac::copyText(JSStringRef text)
 {
     NSPasteboard *pasteboard = NSPasteboard.generalPasteboard;
     [pasteboard declareTypes:@[NSPasteboardTypeString] owner:nil];
-    [pasteboard setString:text->string() forType:NSPasteboardTypeString];
+    [pasteboard setString:text->string().createNSString().get() forType:NSPasteboardTypeString];
 }
 
 static NSString *const TopLevelEventInfoKey = @"events";
@@ -388,7 +388,7 @@ void UIScriptControllerMac::sendEventStream(JSStringRef eventsJSON, JSValueRef c
     unsigned callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
 
     auto jsonString = eventsJSON->string();
-    auto eventInfo = dynamic_objc_cast<NSDictionary>([NSJSONSerialization JSONObjectWithData:[(NSString *)jsonString dataUsingEncoding:NSUTF8StringEncoding] options:NSJSONReadingMutableContainers | NSJSONReadingMutableLeaves error:nil]);
+    auto eventInfo = dynamic_objc_cast<NSDictionary>([NSJSONSerialization JSONObjectWithData:[jsonString.createNSString() dataUsingEncoding:NSUTF8StringEncoding] options:NSJSONReadingMutableContainers | NSJSONReadingMutableLeaves error:nil]);
     if (!eventInfo || ![eventInfo isKindOfClass:[NSDictionary class]]) {
         WTFLogAlways("JSON is not convertible to a dictionary");
         return;
@@ -486,8 +486,8 @@ void UIScriptControllerMac::setInlinePrediction(JSStringRef jsText, unsigned sta
         return;
 
     auto fullText = jsText->string();
-    RetainPtr markedText = adoptNS([[NSMutableAttributedString alloc] initWithString:fullText.left(startIndex)]);
-    [markedText appendAttributedString:adoptNS([[NSAttributedString alloc] initWithString:fullText.substring(startIndex) attributes:@{
+    RetainPtr markedText = adoptNS([[NSMutableAttributedString alloc] initWithString:fullText.left(startIndex).createNSString().get()]);
+    [markedText appendAttributedString:adoptNS([[NSAttributedString alloc] initWithString:fullText.substring(startIndex).createNSString().get() attributes:@{
         NSForegroundColorAttributeName : NSColor.grayColor,
         NSTextCompletionAttributeName : @YES
     }]).get()];

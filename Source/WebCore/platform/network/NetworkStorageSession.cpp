@@ -30,11 +30,13 @@
 #include "Cookie.h"
 #include "CookieJar.h"
 #include "HTTPCookieAcceptPolicy.h"
+#include "Logging.h"
 #include "NotImplemented.h"
 #include "PublicSuffixStore.h"
 #include "ResourceRequest.h"
 #include "ShouldPartitionCookie.h"
 #include "Site.h"
+#include <algorithm>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/ProcessPrivilege.h>
 #include <wtf/RunLoop.h>
@@ -92,11 +94,6 @@ bool NetworkStorageSession::trackingPreventionEnabled() const
 void NetworkStorageSession::setTrackingPreventionDebugLoggingEnabled(bool enabled)
 {
     m_isTrackingPreventionDebugLoggingEnabled = enabled;
-}
-
-bool NetworkStorageSession::trackingPreventionDebugLoggingEnabled() const
-{
-    return m_isTrackingPreventionDebugLoggingEnabled;
 }
 
 bool NetworkStorageSession::shouldBlockThirdPartyCookies(const RegistrableDomain& registrableDomain) const
@@ -208,7 +205,7 @@ ThirdPartyCookieBlockingDecision NetworkStorageSession::thirdPartyCookieBlocking
     case ThirdPartyCookieBlockingMode::AllOnSitesWithoutUserInteraction:
         if (!hasHadUserInteractionAsFirstParty(firstPartyDomain))
             return decideThirdPartyCookieBlocking(false);
-        FALLTHROUGH;
+        [[fallthrough]];
     case ThirdPartyCookieBlockingMode::OnlyAccordingToPerDomainPolicy:
         return decideThirdPartyCookieBlocking(!shouldBlockThirdPartyCookies(resourceDomain));
     }
@@ -590,7 +587,7 @@ std::optional<OrganizationStorageAccessPromptQuirk> NetworkStorageSession::stora
         auto entry = quirkDomains.find(topDomain);
         if (entry == quirkDomains.end())
             continue;
-        if (!WTF::anyOf(entry->value, [&subDomain](auto&& entry) { return entry == subDomain; }))
+        if (!std::ranges::any_of(entry->value, [&subDomain](auto&& entry) { return entry == subDomain; }))
             break;
         return quirk;
     }
@@ -631,6 +628,39 @@ void NetworkStorageSession::cookieEnabledStateMayHaveChanged()
 {
     for (Ref observer : m_cookiesEnabledStateObservers)
         observer->cookieEnabledStateMayHaveChanged();
+}
+
+void NetworkStorageSession::setCookiesVersion(uint64_t version)
+{
+    // Ensure version always increases.
+    if (version <= m_cookiesVersion)
+        return;
+
+    RELEASE_LOG(Loading, "%p - NetworkStorageSession::setCookiesVersion session=%" PRIu64 ", version=%" PRIu64, this, m_sessionID.toUInt64(), version);
+    m_cookiesVersion = version;
+    auto cookiesVersionChangeCallbacks = std::exchange(m_cookiesVersionChangeCallbacks, { });
+    while (!cookiesVersionChangeCallbacks.isEmpty()) {
+        auto callback = cookiesVersionChangeCallbacks.takeFirst();
+        if (callback.version <= m_cookiesVersion) {
+            callback.callback(CookieVersionChangeCallback::Reason::VersionChange);
+            continue;
+        }
+        m_cookiesVersionChangeCallbacks.append(WTFMove(callback));
+    }
+}
+
+void NetworkStorageSession::addCookiesVersionChangeCallback(CookieVersionChangeCallback&& callback)
+{
+    ASSERT(callback.version < m_cookiesVersion);
+    m_cookiesVersionChangeCallbacks.append(WTFMove(callback));
+}
+
+void NetworkStorageSession::clearCookiesVersionChangeCallbacks()
+{
+    while (!m_cookiesVersionChangeCallbacks.isEmpty()) {
+        auto callback = m_cookiesVersionChangeCallbacks.takeFirst();
+        callback.callback(CookieVersionChangeCallback::Reason::SessionClose);
+    }
 }
 
 }

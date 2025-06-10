@@ -1,0 +1,288 @@
+CONSOLE MESSAGE: 13
+CONSOLE MESSAGE: 14
+CONSOLE MESSAGE: 13
+CONSOLE MESSAGE: 13
+CONSOLE MESSAGE: 13
+CONSOLE MESSAGE: 13
+CONSOLE MESSAGE: 24
+CONSOLE MESSAGE: 25
+CONSOLE MESSAGE: 24
+CONSOLE MESSAGE: 24
+CONSOLE MESSAGE: 24
+CONSOLE MESSAGE: 24
+CONSOLE MESSAGE: 13
+
+PASS #1 Reinitialize the default imports
+PASS #2 Test that WebAssembly compilation fails
+PASS #3 Test that WebAssembly compilation fails
+PASS #4 Test that WebAssembly compilation fails
+PASS #5 Test that WebAssembly compilation fails
+PASS #6 Test that WebAssembly compilation fails
+PASS #7 Test that WebAssembly compilation fails
+PASS #8 Test that WebAssembly compilation fails
+PASS #9 Test that WebAssembly compilation fails
+PASS #10 Test that WebAssembly compilation fails
+PASS #11 Test that WebAssembly compilation fails
+PASS #12 Test that WebAssembly compilation fails
+PASS #13 Test that WebAssembly compilation fails
+PASS #14 Test that WebAssembly compilation fails
+PASS #15 Test that WebAssembly compilation fails
+PASS #16 Test that WebAssembly compilation fails
+PASS #17 Test that WebAssembly compilation fails
+PASS #18 Test that WebAssembly compilation fails
+PASS #19 Test that WebAssembly compilation fails
+PASS #20 Test that WebAssembly compilation fails
+PASS #21 Test that WebAssembly compilation fails
+PASS #22 Reinitialize the default imports
+PASS #23 Test that WebAssembly instantiation succeeds
+PASS #24 Test that WebAssembly instantiation succeeds
+PASS #25 Test that a WebAssembly code returns a specific result
+PASS #26 Test that WebAssembly instantiation succeeds
+PASS #27 Run a WebAssembly test without special assertions
+PASS #28 Test that WebAssembly compilation fails
+PASS #29 Test that WebAssembly instantiation succeeds
+PASS #30 Test that a WebAssembly code returns a specific result
+PASS #31 Test that WebAssembly instantiation succeeds
+PASS #32 Test that a WebAssembly code returns a specific result
+PASS #33 Test that WebAssembly instantiation succeeds
+PASS #34 Test that WebAssembly instantiation succeeds
+PASS #35 Test that WebAssembly instantiation succeeds
+PASS #36 Test that WebAssembly instantiation succeeds
+PASS #37 Test that WebAssembly instantiation succeeds
+PASS #38 Test that WebAssembly instantiation succeeds
+PASS #39 Test that WebAssembly instantiation succeeds
+PASS #40 Test that WebAssembly instantiation fails
+PASS #41 Test that a WebAssembly module is unlinkable
+PASS #42 Test that WebAssembly instantiation fails
+PASS #43 Test that a WebAssembly module is unlinkable
+PASS #44 Test that WebAssembly instantiation fails
+PASS #45 Test that a WebAssembly module is unlinkable
+PASS #46 Test that WebAssembly instantiation fails
+PASS #47 Test that a WebAssembly module is unlinkable
+PASS #48 Test that WebAssembly instantiation fails
+PASS #49 Test that a WebAssembly module is unlinkable
+PASS #50 Test that WebAssembly instantiation fails
+PASS #51 Test that a WebAssembly module is unlinkable
+PASS #52 Test that WebAssembly instantiation fails
+PASS #53 Test that a WebAssembly module is unlinkable
+PASS #54 Test that WebAssembly instantiation fails
+PASS #55 Test that a WebAssembly module is unlinkable
+PASS #56 Test that WebAssembly instantiation fails
+PASS #57 Test that a WebAssembly module is unlinkable
+PASS #58 Test that WebAssembly instantiation fails
+PASS #59 Test that a WebAssembly module is unlinkable
+PASS #60 Test that WebAssembly instantiation fails
+PASS #61 Test that a WebAssembly module is unlinkable
+PASS #62 Test that WebAssembly instantiation fails
+PASS #63 Test that a WebAssembly module is unlinkable
+PASS #64 Test that WebAssembly instantiation fails
+PASS #65 Test that a WebAssembly module is unlinkable
+PASS #66 Test that WebAssembly instantiation fails
+PASS #67 Test that a WebAssembly module is unlinkable
+PASS #68 Test that WebAssembly instantiation fails
+PASS #69 Test that a WebAssembly module is unlinkable
+PASS #70 Test that WebAssembly instantiation fails
+PASS #71 Test that a WebAssembly module is unlinkable
+PASS #72 Test that WebAssembly instantiation fails
+PASS #73 Test that a WebAssembly module is unlinkable
+PASS #74 Test that WebAssembly instantiation fails
+PASS #75 Test that a WebAssembly module is unlinkable
+PASS #76 Test that WebAssembly instantiation fails
+PASS #77 Test that a WebAssembly module is unlinkable
+PASS #78 Test that WebAssembly instantiation fails
+PASS #79 Test that a WebAssembly module is unlinkable
+PASS #80 Test that WebAssembly instantiation fails
+PASS #81 Test that a WebAssembly module is unlinkable
+PASS #82 Test that WebAssembly instantiation fails
+PASS #83 Test that a WebAssembly module is unlinkable
+PASS #84 Test that WebAssembly instantiation fails
+PASS #85 Test that a WebAssembly module is unlinkable
+PASS #86 Test that WebAssembly instantiation fails
+PASS #87 Test that a WebAssembly module is unlinkable
+PASS #88 Test that WebAssembly instantiation succeeds
+PASS #89 Test that a WebAssembly code returns a specific result
+PASS #90 Test that a WebAssembly code returns a specific result
+PASS #91 Test that a WebAssembly code returns a specific result
+PASS #92 Test that a WebAssembly code returns a specific result
+PASS #93 Test that WebAssembly instantiation succeeds
+PASS #94 Run a WebAssembly test without special assertions
+PASS #95 Test that WebAssembly instantiation succeeds
+PASS #96 Run a WebAssembly test without special assertions
+PASS #97 Test that WebAssembly instantiation succeeds
+PASS #98 Run a WebAssembly test without special assertions
+PASS #99 Test that WebAssembly instantiation succeeds
+PASS #100 Test that WebAssembly instantiation succeeds
+PASS #101 Test that WebAssembly instantiation succeeds
+PASS #102 Test that WebAssembly instantiation fails
+PASS #103 Test that a WebAssembly module is unlinkable
+PASS #104 Test that WebAssembly instantiation fails
+PASS #105 Test that a WebAssembly module is unlinkable
+PASS #106 Test that WebAssembly instantiation fails
+PASS #107 Test that a WebAssembly module is unlinkable
+PASS #108 Test that WebAssembly instantiation fails
+PASS #109 Test that a WebAssembly module is unlinkable
+PASS #110 Test that WebAssembly instantiation fails
+PASS #111 Test that a WebAssembly module is unlinkable
+PASS #112 Test that WebAssembly instantiation fails
+PASS #113 Test that a WebAssembly module is unlinkable
+PASS #114 Test that WebAssembly instantiation fails
+PASS #115 Test that a WebAssembly module is unlinkable
+PASS #116 Test that WebAssembly instantiation fails
+PASS #117 Test that a WebAssembly module is unlinkable
+PASS #118 Test that WebAssembly instantiation fails
+PASS #119 Test that a WebAssembly module is unlinkable
+PASS #120 Test that WebAssembly instantiation fails
+PASS #121 Test that a WebAssembly module is unlinkable
+PASS #122 Test that WebAssembly instantiation fails
+PASS #123 Test that a WebAssembly module is unlinkable
+PASS #124 Test that WebAssembly instantiation fails
+PASS #125 Test that a WebAssembly module is unlinkable
+PASS #126 Test that WebAssembly instantiation fails
+PASS #127 Test that a WebAssembly module is unlinkable
+PASS #128 Test that WebAssembly instantiation fails
+PASS #129 Test that a WebAssembly module is unlinkable
+PASS #130 Test that WebAssembly instantiation fails
+PASS #131 Test that a WebAssembly module is unlinkable
+PASS #132 Test that WebAssembly instantiation fails
+PASS #133 Test that a WebAssembly module is unlinkable
+PASS #134 Test that WebAssembly instantiation fails
+PASS #135 Test that a WebAssembly module is unlinkable
+PASS #136 Test that WebAssembly instantiation fails
+PASS #137 Test that a WebAssembly module is unlinkable
+PASS #138 Test that WebAssembly instantiation fails
+PASS #139 Test that a WebAssembly module is unlinkable
+PASS #140 Test that WebAssembly instantiation fails
+PASS #141 Test that a WebAssembly module is unlinkable
+PASS #142 Test that WebAssembly instantiation succeeds
+PASS #143 Test that a WebAssembly code traps
+PASS #144 Test that a WebAssembly code returns a specific result
+PASS #145 Test that a WebAssembly code returns a specific result
+PASS #146 Test that a WebAssembly code traps
+PASS #147 Test that a WebAssembly code traps
+PASS #148 Test that WebAssembly instantiation succeeds
+PASS #149 Test that a WebAssembly code traps
+PASS #150 Test that a WebAssembly code returns a specific result
+PASS #151 Test that a WebAssembly code returns a specific result
+PASS #152 Test that a WebAssembly code traps
+PASS #153 Test that a WebAssembly code traps
+PASS #154 Test that WebAssembly instantiation succeeds
+PASS #155 Test that WebAssembly instantiation succeeds
+PASS #156 Test that WebAssembly instantiation succeeds
+PASS #157 Test that WebAssembly instantiation succeeds
+PASS #158 Test that WebAssembly instantiation succeeds
+PASS #159 Test that WebAssembly instantiation succeeds
+PASS #160 Test that WebAssembly instantiation succeeds
+PASS #161 Test that WebAssembly instantiation succeeds
+PASS #162 Test that WebAssembly instantiation succeeds
+PASS #163 Test that WebAssembly instantiation succeeds
+PASS #164 Test that WebAssembly instantiation succeeds
+PASS #165 Test that WebAssembly instantiation succeeds
+PASS #166 Test that WebAssembly instantiation succeeds
+PASS #167 Test that WebAssembly instantiation succeeds
+PASS #168 Test that WebAssembly instantiation succeeds
+PASS #169 Test that WebAssembly instantiation succeeds
+PASS #170 Test that WebAssembly instantiation succeeds
+PASS #171 Test that WebAssembly instantiation succeeds
+PASS #172 Test that WebAssembly instantiation succeeds
+PASS #173 Test that WebAssembly instantiation succeeds
+PASS #174 Test that WebAssembly instantiation succeeds
+PASS #175 Test that WebAssembly instantiation fails
+PASS #176 Test that a WebAssembly module is unlinkable
+PASS #177 Test that WebAssembly instantiation fails
+PASS #178 Test that a WebAssembly module is unlinkable
+PASS #179 Test that WebAssembly instantiation fails
+PASS #180 Test that a WebAssembly module is unlinkable
+PASS #181 Test that WebAssembly instantiation fails
+PASS #182 Test that a WebAssembly module is unlinkable
+PASS #183 Test that WebAssembly instantiation fails
+PASS #184 Test that a WebAssembly module is unlinkable
+PASS #185 Test that WebAssembly instantiation fails
+PASS #186 Test that a WebAssembly module is unlinkable
+PASS #187 Test that WebAssembly instantiation fails
+PASS #188 Test that a WebAssembly module is unlinkable
+PASS #189 Test that WebAssembly instantiation fails
+PASS #190 Test that a WebAssembly module is unlinkable
+PASS #191 Test that WebAssembly instantiation fails
+PASS #192 Test that a WebAssembly module is unlinkable
+PASS #193 Test that WebAssembly instantiation fails
+PASS #194 Test that a WebAssembly module is unlinkable
+PASS #195 Test that WebAssembly instantiation fails
+PASS #196 Test that a WebAssembly module is unlinkable
+PASS #197 Test that WebAssembly instantiation fails
+PASS #198 Test that a WebAssembly module is unlinkable
+PASS #199 Test that WebAssembly instantiation succeeds
+PASS #200 Test that a WebAssembly code returns a specific result
+PASS #201 Test that a WebAssembly code returns a specific result
+PASS #202 Test that a WebAssembly code returns a specific result
+PASS #203 Test that a WebAssembly code traps
+PASS #204 Test that WebAssembly instantiation succeeds
+PASS #205 Test that a WebAssembly code returns a specific result
+PASS #206 Test that a WebAssembly code returns a specific result
+PASS #207 Test that a WebAssembly code returns a specific result
+PASS #208 Test that a WebAssembly code traps
+PASS #209 Test that WebAssembly compilation fails
+PASS #210 Test that WebAssembly compilation fails
+PASS #211 Test that WebAssembly compilation fails
+PASS #212 Test that WebAssembly instantiation succeeds
+PASS #213 Test that WebAssembly instantiation succeeds
+PASS #214 Test that WebAssembly instantiation succeeds
+PASS #215 Test that WebAssembly instantiation succeeds
+PASS #216 Test that WebAssembly instantiation succeeds
+PASS #217 Test that WebAssembly instantiation succeeds
+PASS #218 Test that WebAssembly instantiation succeeds
+PASS #219 Test that WebAssembly instantiation succeeds
+PASS #220 Test that WebAssembly instantiation succeeds
+PASS #221 Test that WebAssembly instantiation fails
+PASS #222 Test that a WebAssembly module is unlinkable
+PASS #223 Test that WebAssembly instantiation fails
+PASS #224 Test that a WebAssembly module is unlinkable
+PASS #225 Test that WebAssembly instantiation fails
+PASS #226 Test that a WebAssembly module is unlinkable
+PASS #227 Test that WebAssembly instantiation fails
+PASS #228 Test that a WebAssembly module is unlinkable
+PASS #229 Test that WebAssembly instantiation fails
+PASS #230 Test that a WebAssembly module is unlinkable
+PASS #231 Test that WebAssembly instantiation fails
+PASS #232 Test that a WebAssembly module is unlinkable
+PASS #233 Test that WebAssembly instantiation fails
+PASS #234 Test that a WebAssembly module is unlinkable
+PASS #235 Test that WebAssembly instantiation fails
+PASS #236 Test that a WebAssembly module is unlinkable
+PASS #237 Test that WebAssembly instantiation fails
+PASS #238 Test that a WebAssembly module is unlinkable
+PASS #239 Test that WebAssembly instantiation fails
+PASS #240 Test that a WebAssembly module is unlinkable
+PASS #241 Test that WebAssembly instantiation fails
+PASS #242 Test that a WebAssembly module is unlinkable
+PASS #243 Test that WebAssembly instantiation fails
+PASS #244 Test that a WebAssembly module is unlinkable
+PASS #245 Test that WebAssembly instantiation fails
+PASS #246 Test that a WebAssembly module is unlinkable
+PASS #247 Test that WebAssembly instantiation fails
+PASS #248 Test that a WebAssembly module is unlinkable
+PASS #249 Test that WebAssembly instantiation succeeds
+PASS #250 Test that a WebAssembly code returns a specific result
+PASS #251 Test that a WebAssembly code returns a specific result
+PASS #252 Test that a WebAssembly code returns a specific result
+PASS #253 Test that a WebAssembly code returns a specific result
+PASS #254 Test that a WebAssembly code returns a specific result
+PASS #255 Test that WebAssembly compilation fails
+PASS #256 Test that WebAssembly compilation fails
+PASS #257 Test that WebAssembly compilation fails
+PASS #258 Test that WebAssembly compilation fails
+PASS #259 Test that WebAssembly compilation fails
+PASS #260 Test that WebAssembly compilation fails
+PASS #261 Test that WebAssembly compilation fails
+PASS #262 Test that WebAssembly compilation fails
+PASS #263 Test that WebAssembly compilation fails
+PASS #264 Test that WebAssembly compilation fails
+PASS #265 Test that WebAssembly compilation fails
+PASS #266 Test that WebAssembly compilation fails
+PASS #267 Test that WebAssembly compilation fails
+PASS #268 Test that WebAssembly compilation fails
+PASS #269 Test that WebAssembly compilation fails
+PASS #270 Test that WebAssembly compilation fails
+PASS #271 Test that WebAssembly instantiation succeeds
+PASS #272 Test that WebAssembly instantiation fails
+PASS #273 Test that a WebAssembly module is unlinkable
+

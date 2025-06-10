@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2009 Adam Barth. All rights reserved.
@@ -164,17 +164,15 @@ protected:
     }
 
     Document& initiatingDocument() { return m_initiatingDocument.get(); }
-    Ref<Document> protectedInitiatingDocument() { return m_initiatingDocument; }
     SecurityOrigin* securityOrigin() const { return m_securityOrigin.get(); }
-    RefPtr<SecurityOrigin> protectedSecurityOrigin() const { return m_securityOrigin; }
     const URL& url() const { return m_url; }
-    String referrer() const { return m_referrer; }
+    const String& referrer() const { return m_referrer; }
 
 private:
-    Ref<Document> m_initiatingDocument;
-    RefPtr<SecurityOrigin> m_securityOrigin;
+    const Ref<Document> m_initiatingDocument;
+    const RefPtr<SecurityOrigin> m_securityOrigin;
     URLKeepingBlobAlive m_url;
-    String m_referrer;
+    const String m_referrer;
     bool m_haveToldClient { false };
 };
 
@@ -209,10 +207,10 @@ public:
         UserGestureIndicator gestureIndicator { userGestureToForward() };
 
         bool refresh = equalIgnoringFragmentIdentifier(localFrame->document()->url(), url());
-        ResourceRequest resourceRequest { url(), referrer(), refresh ? ResourceRequestCachePolicy::ReloadIgnoringCacheData : ResourceRequestCachePolicy::UseProtocolCachePolicy };
+        ResourceRequest resourceRequest { URL { url() }, String { referrer() }, refresh ? ResourceRequestCachePolicy::ReloadIgnoringCacheData : ResourceRequestCachePolicy::UseProtocolCachePolicy };
         if (initiatedByMainFrame() == InitiatedByMainFrame::Yes)
             resourceRequest.setRequester(ResourceRequestRequester::Main);
-        FrameLoadRequest frameLoadRequest { protectedInitiatingDocument(), *protectedSecurityOrigin(), WTFMove(resourceRequest), selfTargetFrameName(), initiatedByMainFrame() };
+        FrameLoadRequest frameLoadRequest { initiatingDocument(), *securityOrigin(), WTFMove(resourceRequest), selfTargetFrameName(), initiatedByMainFrame() };
         frameLoadRequest.setLockHistory(lockHistory());
         frameLoadRequest.setLockBackForwardList(lockBackForwardList());
         frameLoadRequest.disableNavigationToInvalidURL();
@@ -244,8 +242,8 @@ public:
     {
         UserGestureIndicator gestureIndicator { userGestureToForward() };
 
-        ResourceRequest resourceRequest { url(), referrer(), ResourceRequestCachePolicy::UseProtocolCachePolicy };
-        FrameLoadRequest frameLoadRequest { protectedInitiatingDocument(), *protectedSecurityOrigin(), WTFMove(resourceRequest), selfTargetFrameName(), initiatedByMainFrame() };
+        ResourceRequest resourceRequest { URL { url() }, String { referrer() }, ResourceRequestCachePolicy::UseProtocolCachePolicy };
+        FrameLoadRequest frameLoadRequest { initiatingDocument(), *securityOrigin(), WTFMove(resourceRequest), selfTargetFrameName(), initiatedByMainFrame() };
         frameLoadRequest.setLockHistory(lockHistory());
         frameLoadRequest.setLockBackForwardList(lockBackForwardList());
         frameLoadRequest.disableNavigationToInvalidURL();
@@ -273,8 +271,8 @@ public:
     {
         UserGestureIndicator gestureIndicator { userGestureToForward() };
 
-        ResourceRequest resourceRequest { url(), referrer(), ResourceRequestCachePolicy::ReloadIgnoringCacheData };
-        FrameLoadRequest frameLoadRequest { protectedInitiatingDocument(), *protectedSecurityOrigin(), WTFMove(resourceRequest), selfTargetFrameName(), initiatedByMainFrame() };
+        ResourceRequest resourceRequest { URL { url() }, String { referrer() }, ResourceRequestCachePolicy::ReloadIgnoringCacheData };
+        FrameLoadRequest frameLoadRequest { initiatingDocument(), *securityOrigin(), WTFMove(resourceRequest), selfTargetFrameName(), initiatedByMainFrame() };
         frameLoadRequest.setLockHistory(lockHistory());
         frameLoadRequest.setLockBackForwardList(lockBackForwardList());
         frameLoadRequest.setShouldOpenExternalURLsPolicy(shouldOpenExternalURLs());
@@ -313,7 +311,7 @@ public:
     }
 
 private:
-    Ref<HistoryItem> m_historyItem;
+    const Ref<HistoryItem> m_historyItem;
 };
 
 // This matches ScheduledHistoryNavigation, but instead of having a HistoryItem provided, it finds
@@ -414,8 +412,7 @@ public:
     void fire(Frame& frame) final
     {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
-        Ref submission = m_submission;
-        if (submission->wasCancelled())
+        if (m_submission->wasCancelled())
             return;
 
         UserGestureIndicator gestureIndicator(userGestureToForward());
@@ -424,23 +421,23 @@ public:
         // Now that the timer has fired, we need to repeat the security check which normally is done when
         // selecting a target, in case conditions have changed. Other code paths avoid this by targeting
         // without leaving a time window. If we fail the check just silently drop the form submission.
-        Ref requestingDocument = submission->state().sourceDocument();
+        Ref requestingDocument = m_submission->state().sourceDocument();
         if (requestingDocument->canNavigate(&frame) != CanNavigateState::Able)
             return;
         FrameLoadRequest frameLoadRequest { requestingDocument.copyRef(), requestingDocument->protectedSecurityOrigin(), { }, { }, initiatedByMainFrame() };
         frameLoadRequest.setLockHistory(lockHistory());
         frameLoadRequest.setLockBackForwardList(lockBackForwardList());
-        frameLoadRequest.setReferrerPolicy(submission->referrerPolicy());
-        frameLoadRequest.setNewFrameOpenerPolicy(submission->newFrameOpenerPolicy());
+        frameLoadRequest.setReferrerPolicy(m_submission->referrerPolicy());
+        frameLoadRequest.setNewFrameOpenerPolicy(m_submission->newFrameOpenerPolicy());
         frameLoadRequest.setShouldOpenExternalURLsPolicy(shouldOpenExternalURLs());
         frameLoadRequest.disableShouldReplaceDocumentIfJavaScriptURL();
-        submission->populateFrameLoadRequest(frameLoadRequest);
+        m_submission->populateFrameLoadRequest(frameLoadRequest);
         auto navigationHistoryBehavior = m_navigationHistoryBehavior;
         if (localFrame && localFrame->document() != requestingDocument.ptr())
             navigationHistoryBehavior = NavigationHistoryBehavior::Push;
         frameLoadRequest.setNavigationHistoryBehavior(navigationHistoryBehavior);
         if (localFrame)
-            localFrame->protectedLoader()->loadFrameRequest(WTFMove(frameLoadRequest), submission->protectedEvent().get(), submission->takeState());
+            localFrame->protectedLoader()->loadFrameRequest(WTFMove(frameLoadRequest), m_submission->protectedEvent().get(), m_submission->takeState());
         else
             frame.changeLocation(WTFMove(frameLoadRequest));
     }
@@ -484,7 +481,7 @@ public:
     }
 
 private:
-    Ref<FormSubmission> m_submission;
+    const Ref<FormSubmission> m_submission;
     bool m_haveToldClient { false };
     NavigationHistoryBehavior m_navigationHistoryBehavior { NavigationHistoryBehavior::Push };
 };
@@ -505,16 +502,16 @@ public:
         UserGestureIndicator gestureIndicator { userGestureToForward() };
 
         Ref originDocument = m_originDocument.get();
-        ResourceResponse replacementResponse { originDocument->url(), textPlainContentTypeAtom(), 0, "UTF-8"_s };
-        SubstituteData replacementData { SharedBuffer::create(), originDocument->url(), replacementResponse, SubstituteData::SessionHistoryVisibility::Hidden };
+        ResourceResponse replacementResponse { URL { originDocument->url() }, String { textPlainContentTypeAtom() }, 0, "UTF-8"_s };
+        SubstituteData replacementData { SharedBuffer::create(), URL { originDocument->url() }, WTFMove(replacementResponse), SubstituteData::SessionHistoryVisibility::Hidden };
 
-        ResourceRequest resourceRequest { originDocument->url(), emptyString(), ResourceRequestCachePolicy::ReloadIgnoringCacheData };
+        ResourceRequest resourceRequest { URL { originDocument->url() }, emptyString(), ResourceRequestCachePolicy::ReloadIgnoringCacheData };
         if (RefPtr documentLoader = originDocument->loader())
             resourceRequest.setIsAppInitiated(documentLoader->lastNavigationWasAppInitiated());
         FrameLoadRequest frameLoadRequest { originDocument.copyRef(), originDocument->protectedSecurityOrigin(), WTFMove(resourceRequest), { }, initiatedByMainFrame() };
         frameLoadRequest.setLockHistory(lockHistory());
         frameLoadRequest.setLockBackForwardList(lockBackForwardList());
-        frameLoadRequest.setSubstituteData(replacementData);
+        frameLoadRequest.setSubstituteData(WTFMove(replacementData));
         frameLoadRequest.setShouldOpenExternalURLsPolicy(shouldOpenExternalURLs());
         localFrame->protectedLoader()->load(WTFMove(frameLoadRequest));
     }

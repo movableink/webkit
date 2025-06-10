@@ -50,7 +50,10 @@ JITData::JITData(unsigned stubInfoSize, unsigned poolSize, const JITCode& jitCod
         case LinkerIR::Type::ArrayIteratorProtocolWatchpointSet:
         case LinkerIR::Type::NumberToStringWatchpointSet:
         case LinkerIR::Type::StructureCacheClearedWatchpointSet:
+        case LinkerIR::Type::StringToStringWatchpointSet:
+        case LinkerIR::Type::StringValueOfWatchpointSet:
         case LinkerIR::Type::StringSymbolReplaceWatchpointSet:
+        case LinkerIR::Type::StringSymbolToPrimitiveWatchpointSet:
         case LinkerIR::Type::RegExpPrimordialPropertiesWatchpointSet:
         case LinkerIR::Type::ArraySpeciesWatchpointSet:
         case LinkerIR::Type::ArrayPrototypeChainIsSaneWatchpointSet:
@@ -98,12 +101,24 @@ bool JITData::tryInitialize(VM& vm, CodeBlock* codeBlock, const JITCode& jitCode
     for (unsigned i = 0; i < jitCode.m_linkerIR.size(); ++i) {
         auto entry = jitCode.m_linkerIR.at(i);
         switch (entry.type()) {
+        case LinkerIR::Type::Invalid: {
+            trailingSpan()[i] = entry.pointer();
+            break;
+        }
         case LinkerIR::Type::CallLinkInfo: {
             unsigned index = std::bit_cast<uintptr_t>(entry.pointer());
             const UnlinkedCallLinkInfo& unlinkedCallLinkInfo = jitCode.m_unlinkedCallLinkInfos[index];
             OptimizingCallLinkInfo& callLinkInfo = m_callLinkInfos[index];
             callLinkInfo.initializeFromDFGUnlinkedCallLinkInfo(vm, unlinkedCallLinkInfo, codeBlock);
             trailingSpan()[i] = &callLinkInfo;
+            break;
+        }
+        case LinkerIR::Type::CellPointer: {
+            trailingSpan()[i] = entry.pointer();
+            break;
+        }
+        case LinkerIR::Type::NonCellPointer: {
+            trailingSpan()[i] = entry.pointer();
             break;
         }
         case LinkerIR::Type::GlobalObject: {
@@ -140,9 +155,24 @@ bool JITData::tryInitialize(VM& vm, CodeBlock* codeBlock, const JITCode& jitCode
             success &= attemptToWatch(codeBlock, m_globalObject->structureCacheClearedWatchpointSet(), watchpoint);
             break;
         }
+        case LinkerIR::Type::StringToStringWatchpointSet: {
+            auto& watchpoint = m_watchpoints[indexOfWatchpoints++];
+            success &= attemptToWatch(codeBlock, m_globalObject->stringToStringWatchpointSet(), watchpoint);
+            break;
+        }
+        case LinkerIR::Type::StringValueOfWatchpointSet: {
+            auto& watchpoint = m_watchpoints[indexOfWatchpoints++];
+            success &= attemptToWatch(codeBlock, m_globalObject->stringValueOfWatchpointSet(), watchpoint);
+            break;
+        }
         case LinkerIR::Type::StringSymbolReplaceWatchpointSet: {
             auto& watchpoint = m_watchpoints[indexOfWatchpoints++];
             success &= attemptToWatch(codeBlock, m_globalObject->stringSymbolReplaceWatchpointSet(), watchpoint);
+            break;
+        }
+        case LinkerIR::Type::StringSymbolToPrimitiveWatchpointSet: {
+            auto& watchpoint = m_watchpoints[indexOfWatchpoints++];
+            success &= attemptToWatch(codeBlock, m_globalObject->stringSymbolToPrimitiveWatchpointSet(), watchpoint);
             break;
         }
         case LinkerIR::Type::RegExpPrimordialPropertiesWatchpointSet: {
@@ -168,12 +198,6 @@ bool JITData::tryInitialize(VM& vm, CodeBlock* codeBlock, const JITCode& jitCode
         case LinkerIR::Type::ObjectPrototypeChainIsSaneWatchpointSet: {
             auto& watchpoint = m_watchpoints[indexOfWatchpoints++];
             success &= attemptToWatch(codeBlock, m_globalObject->objectPrototypeChainIsSaneWatchpointSet(), watchpoint);
-            break;
-        }
-        case LinkerIR::Type::Invalid:
-        case LinkerIR::Type::CellPointer:
-        case LinkerIR::Type::NonCellPointer: {
-            trailingSpan()[i] = entry.pointer();
             break;
         }
         }

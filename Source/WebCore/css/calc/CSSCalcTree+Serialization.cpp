@@ -35,6 +35,7 @@
 #include "CSSUnits.h"
 #include "ContainerQueryFeatures.h"
 #include "MediaQueryFeatures.h"
+#include <ranges>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -74,6 +75,8 @@ struct ParenthesisSaver {
 // https://drafts.csswg.org/css-values-4/#serialize-a-math-function
 static void serializeMathFunction(StringBuilder&, const Child&, SerializationState&);
 static void serializeMathFunction(StringBuilder&, const Symbol&, SerializationState&);
+static void serializeMathFunction(StringBuilder&, const SiblingCount&, SerializationState&);
+static void serializeMathFunction(StringBuilder&, const SiblingIndex&, SerializationState&);
 template<Numeric Op> static void serializeMathFunction(StringBuilder&, const Op&, SerializationState&);
 template<typename Op> static void serializeMathFunction(StringBuilder&, const IndirectNode<Op>&, SerializationState&);
 
@@ -102,6 +105,8 @@ static void serializeCalculationTree(StringBuilder&, const Child&, Serialization
 static void serializeCalculationTree(StringBuilder&, const ChildOrNone&, SerializationState&);
 static void serializeCalculationTree(StringBuilder&, const CSS::Keyword::None&, SerializationState&);
 static void serializeCalculationTree(StringBuilder&, const Symbol&, SerializationState&);
+static void serializeCalculationTree(StringBuilder&, const SiblingCount&, SerializationState&);
+static void serializeCalculationTree(StringBuilder&, const SiblingIndex&, SerializationState&);
 static void serializeCalculationTree(StringBuilder&, const IndirectNode<Sum>&, SerializationState&);
 static void serializeCalculationTree(StringBuilder&, const IndirectNode<Product>&, SerializationState&);
 static void serializeCalculationTree(StringBuilder&, const IndirectNode<Negate>&, SerializationState&);
@@ -198,7 +203,6 @@ static unsigned sortPriority(CSSUnitType unit)
     case CSSUnitType::CSS_QUIRKY_EM:
     case CSSUnitType::CSS_STRING:
     case CSSUnitType::CSS_UNKNOWN:
-    case CSSUnitType::CSS_URI:
     case CSSUnitType::CSS_VALUE_ID:
     case CSSUnitType::CustomIdent:
         break;
@@ -238,9 +242,7 @@ static Vector<ChildRepresentation, 16> generateSortedChildrenMap(const Children&
     for (size_t i = 0; i < children.size(); ++i)
         sortedChildrenMap.append(ChildRepresentation { .index = i, .sortPriority = sortPriority(children[i]) });
 
-    std::stable_sort(sortedChildrenMap.begin(), sortedChildrenMap.end(), [](const auto& first, const auto& second) -> bool {
-        return first.sortPriority < second.sortPriority;
-    });
+    std::ranges::stable_sort(sortedChildrenMap, { }, &ChildRepresentation::sortPriority);
 
     return sortedChildrenMap;
 }
@@ -292,6 +294,16 @@ void serializeMathFunction(StringBuilder& builder, const Symbol& fn, Serializati
     builder.append("calc("_s);
     serializeCalculationTree(builder, fn, state);
     builder.append(')');
+}
+
+void serializeMathFunction(StringBuilder& builder, const SiblingCount& fn, SerializationState& state)
+{
+    serializeCalculationTree(builder, fn, state);
+}
+
+void serializeMathFunction(StringBuilder& builder, const SiblingIndex& fn, SerializationState& state)
+{
+    serializeCalculationTree(builder, fn, state);
 }
 
 template<typename Op> void serializeMathFunction(StringBuilder& builder, const IndirectNode<Op>& fn, SerializationState& state)
@@ -374,19 +386,28 @@ void serializeMathFunctionArguments(StringBuilder& builder, const IndirectNode<P
 
 void serializeMathFunctionArguments(StringBuilder& builder, const IndirectNode<Random>& fn, SerializationState& state)
 {
-    if (!fn->cachingOptions.identifier.isNull() && fn->cachingOptions.perElement)
-        builder.append(fn->cachingOptions.identifier, ' ', nameLiteralForSerialization(CSSValuePerElement), ", "_s);
-    else if (!fn->cachingOptions.identifier.isNull())
-        builder.append(fn->cachingOptions.identifier, ", "_s);
-    else if (fn->cachingOptions.perElement)
-        builder.append(nameLiteralForSerialization(CSSValuePerElement), ", "_s);
+    WTF::switchOn(fn->sharing,
+        [&](const Random::SharingOptions& options) {
+            if (std::holds_alternative<AtomString>(options.identifier) && options.elementShared)
+                builder.append(std::get<AtomString>(options.identifier), ' ', nameLiteralForSerialization(CSSValueElementShared), ", "_s);
+            else if (std::holds_alternative<AtomString>(options.identifier))
+                builder.append(std::get<AtomString>(options.identifier), ", "_s);
+            else if (options.elementShared)
+                builder.append(nameLiteralForSerialization(CSSValueElementShared), ", "_s);
+        },
+        [&](const Random::SharingFixed& fixed) {
+            builder.append(nameLiteralForSerialization(CSSValueFixed), ' ');
+            serializationForCSS(builder, state.serializationContext, fixed.value);
+            builder.append(", "_s);
+        }
+    );
 
     serializeCalculationTree(builder, fn->min, state);
     builder.append(", "_s);
     serializeCalculationTree(builder, fn->max, state);
 
     if (fn->step) {
-        builder.append(", "_s, nameLiteralForSerialization(CSSValueBy), ' ');
+        builder.append(", "_s);
         serializeCalculationTree(builder, *fn->step, state);
     }
 }
@@ -546,6 +567,20 @@ void serializeCalculationTree(StringBuilder& builder, const Symbol& root, Serial
     // 2. If root is a numeric value, or a non-math function, serialize root per the normal rules for it and return the result.
 
     builder.append(nameLiteralForSerialization(root.id));
+}
+
+void serializeCalculationTree(StringBuilder& builder, const SiblingCount& root, SerializationState&)
+{
+    // 2. If root is a numeric value, or a non-math function, serialize root per the normal rules for it and return the result.
+
+    builder.append(nameLiteralForSerialization(root.id), "()"_s);
+}
+
+void serializeCalculationTree(StringBuilder& builder, const SiblingIndex& root, SerializationState&)
+{
+    // 2. If root is a numeric value, or a non-math function, serialize root per the normal rules for it and return the result.
+
+    builder.append(nameLiteralForSerialization(root.id), "()"_s);
 }
 
 void serializeCalculationTree(StringBuilder& builder, const IndirectNode<Sum>& root, SerializationState& state)

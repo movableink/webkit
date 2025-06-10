@@ -125,8 +125,8 @@ def parse_args(args):
             help="Use the remote layer tree drawing model (OS X WebKit2 only)"),
         optparse.make_option("--no-remote-layer-tree", action="store_true", default=False,
             help="Disable the remote layer tree drawing model (OS X WebKit2 only)"),
-        optparse.make_option("--wpe-platform-api", action="store_true", default=False,
-            help="Use the WPE platform API (WPE only)"),
+        optparse.make_option("--wpe-legacy-api", action="store_true", default=False,
+            help="Use the WPE legacy API (WPE only)"),
         optparse.make_option("--internal-feature", type="string", action="append", default=[],
             help="Enable (disable) an internal feature (--internal-feature FeatureName[=true|false])"),
         optparse.make_option("--experimental-feature", type="string", action="append", default=[],
@@ -249,13 +249,8 @@ def parse_args(args):
     ]))
 
     option_group_definitions.append(("Testing Options", [
-        optparse.make_option("--build", dest="build",
-            action="store_true", default=True,
-            help="Check to ensure the DumpRenderTree build is up-to-date "
-                 "(default)."),
-        optparse.make_option("--no-build", dest="build",
-            action="store_false", help="Don't check to see if the "
-                                       "DumpRenderTree build is up-to-date."),
+        optparse.make_option("--build", dest="build", action="store_true", default=False, help="Check to ensure the DumpRenderTree build is up-to-date."),
+        optparse.make_option("--no-build", dest="build", action="store_false", help="Don't check to see if the DumpRenderTree or WebKitTestRunner build is up-to-date (default)."),
         optparse.make_option("-n", "--dry-run", action="store_true",
             default=False,
             help="Do everything but actually run the tests or upload results."),

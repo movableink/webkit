@@ -56,7 +56,7 @@ void WebExtensionAPIWebRequestEvent::enumerateListeners(WebExtensionTabIdentifie
 
     for (auto& listener : listenersCopy) {
         auto* filter = listener.filter.get();
-        if (filter && ![filter matchesRequestForResourceOfType:resourceType URL:resourceURL tabID:toWebAPI(tabIdentifier) windowID:toWebAPI(windowIdentifier)])
+        if (filter && ![filter matchesRequestForResourceOfType:resourceType URL:resourceURL.createNSURL().get() tabID:toWebAPI(tabIdentifier) windowID:toWebAPI(windowIdentifier)])
             continue;
 
         function(*listener.callback, listener.extraInfo);

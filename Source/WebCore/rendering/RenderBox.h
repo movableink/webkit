@@ -38,7 +38,7 @@ class RenderBoxFragmentInfo;
 class RenderFragmentContainer;
 class RoundedRectRadii;
 struct PaintInfo;
-struct PositionedLayoutConstraints;
+class PositionedLayoutConstraints;
 
 enum class AvailableLogicalHeightType : bool { ExcludeMarginBorderPadding, IncludeMarginBorderPadding };
 
@@ -269,8 +269,8 @@ public:
     bool hitTestClipPath(const HitTestLocation&, const LayoutPoint& accumulatedOffset) const;
     bool hitTestBorderRadius(const HitTestLocation&, const LayoutPoint& accumulatedOffset) const;
 
-    LayoutUnit minPreferredLogicalWidth() const override;
-    LayoutUnit maxPreferredLogicalWidth() const override;
+    virtual LayoutUnit minPreferredLogicalWidth() const;
+    virtual LayoutUnit maxPreferredLogicalWidth() const;
     virtual void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const = 0;
 
     std::optional<LayoutUnit> overridingBorderBoxLogicalWidth() const;
@@ -498,7 +498,7 @@ public:
     VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
 
     void removeFloatingAndInvalidateForLayout();
-    void removeFloatingOrPositionedChildFromBlockLists();
+    void removeFloatingOrOutOfFlowChildFromBlockLists();
     
     RenderLayer* enclosingFloatPaintingLayer() const;
     
@@ -530,21 +530,8 @@ public:
 
     // These represent your location relative to your container as a physical offset.
     // In layout related methods you almost always want the logical location (e.g. x() and y()).
-    LayoutPoint topLeftLocation() const
-    {
-        // This is inlined for speed, since it is used by updateLayerPosition() during scrolling.
-        if (!document().view() || !document().view()->hasFlippedBlockRenderers())
-            return location();
-        return topLeftLocationWithFlipping();
-    }
-
-    LayoutSize topLeftLocationOffset() const
-    {
-        // This is inlined for speed, since it is used by updateLayerPosition() during scrolling.
-        if (!document().view() || !document().view()->hasFlippedBlockRenderers())
-            return locationOffset();
-        return toLayoutSize(topLeftLocationWithFlipping());
-    }
+    LayoutPoint topLeftLocation() const; // Defined in RenderBoxInlines.h
+    LayoutSize topLeftLocationOffset() const; // Defined in RenderBoxInlines.h
 
     LayoutRect logicalVisualOverflowRectForPropagation(const WritingMode) const;
     LayoutRect visualOverflowRectForPropagation(const WritingMode) const;
@@ -554,7 +541,7 @@ public:
     bool hasRenderOverflow() const { return !!m_overflow; }
     bool hasVisualOverflow() const { return m_overflow && !borderBoxRect().contains(m_overflow->visualOverflowRect()); }
 
-    virtual bool needsPreferredWidthsRecalculation() const;
+    virtual bool shouldInvalidatePreferredWidths() const;
     virtual void computeIntrinsicRatioInformation(FloatSize& /* intrinsicSize */, FloatSize& /* intrinsicRatio */) const { }
 
     ScrollPosition scrollPosition() const;
@@ -588,16 +575,10 @@ public:
         return layoutOverflowRect.y() < paddingBoxRect.y() || layoutOverflowRect.maxY() > paddingBoxRect.maxY();
     }
 
-    virtual RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const
-    {
-        ASSERT_NOT_REACHED();
-        return nullptr;
-    }
-
     void markShapeOutsideDependentsForLayout()
     {
         if (isFloating())
-            removeFloatingOrPositionedChildFromBlockLists();
+            removeFloatingOrOutOfFlowChildFromBlockLists();
     }
 
     // True if this box can have a range in an outside fragmentation context.
@@ -606,6 +587,8 @@ public:
 
     bool isGridItem() const { return parent() && parent()->isRenderGrid() && !isExcludedFromNormalLayout(); }
     bool isFlexItem() const { return parent() && parent()->isRenderFlexibleBox() && !isExcludedFromNormalLayout(); }
+
+    inline bool isColumnSpanner() const;
 
     virtual void adjustBorderBoxRectForPainting(LayoutRect&) { };
 
@@ -633,6 +616,10 @@ public:
 
     void invalidateAncestorBackgroundObscurationStatus();
 
+    inline bool backgroundIsKnownToBeObscured(const LayoutPoint& paintOffset);
+
+    virtual bool hasIntrinsicAspectRatio() const { return isReplacedOrAtomicInline() && (isImage() || isRenderVideo() || isRenderHTMLCanvas() || isRenderViewTransitionCapture()); }
+
 protected:
     RenderBox(Type, Element&, RenderStyle&&, OptionSet<TypeFlag> = { }, TypeSpecificFlags = { });
     RenderBox(Type, Document&, RenderStyle&&, OptionSet<TypeFlag> = { }, TypeSpecificFlags = { });
@@ -654,7 +641,7 @@ protected:
     // Returns false if it could not cheaply compute the extent (e.g. fixed background), in which case the returned rect may be incorrect.
     bool getBackgroundPaintedExtent(const LayoutPoint& paintOffset, LayoutRect&) const;
     virtual bool foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect, unsigned maxDepthToTest) const;
-    bool computeBackgroundIsKnownToBeObscured(const LayoutPoint& paintOffset) override;
+    virtual bool computeBackgroundIsKnownToBeObscured(const LayoutPoint& paintOffset);
 
     void paintMaskImages(const PaintInfo&, const LayoutRect&);
 
@@ -671,7 +658,7 @@ protected:
     LayoutRect localOutlineBoundsRepaintRect() const;
 
     void mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const override;
-    const RenderObject* pushMappingToContainer(const RenderLayerModelObject*, RenderGeometryMap&) const override;
+    const RenderElement* pushMappingToContainer(const RenderLayerModelObject*, RenderGeometryMap&) const override;
     void mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode>, TransformState&) const override;
 
     bool skipContainingBlockForPercentHeightCalculation(const RenderBox& containingBlock, bool isPerpendicularWritingMode) const;
@@ -753,8 +740,6 @@ private:
     ShapeOutsideInfo& ensureShapeOutsideInfo();
     void removeShapeOutsideInfo();
 
-    void computeAnchorCenteredPosition(const PositionedLayoutConstraints&, LogicalExtentComputedValues&) const;
-
 private:
     // The width/height of the contents + borders + padding.  The x/y location is relative to our container (which is not always our parent).
     LayoutRect m_frameRect;
@@ -776,6 +761,8 @@ private:
     static bool s_hadNonVisibleOverflow;
 };
 
+inline bool isSkippedContentRoot(const RenderBox&);
+
 inline RenderBox* RenderBox::parentBox() const
 {
     if (auto* box = dynamicDowncast<RenderBox>(parent()))
@@ -787,8 +774,8 @@ inline RenderBox* RenderBox::parentBox() const
 
 inline RenderBox* RenderBox::firstChildBox() const
 {
-    if (auto* box = dynamicDowncast<RenderBox>(firstChild()))
-        return box;
+    if (CheckedPtr box = dynamicDowncast<RenderBox>(firstChild()))
+        return box.get();
 
     ASSERT(!firstChild());
     return nullptr;
@@ -801,8 +788,8 @@ inline RenderBox* RenderBox::firstInFlowChildBox() const
 
 inline RenderBox* RenderBox::lastChildBox() const
 {
-    if (auto* box = dynamicDowncast<RenderBox>(lastChild()))
-        return box;
+    if (CheckedPtr box = dynamicDowncast<RenderBox>(lastChild()))
+        return box.get();
 
     ASSERT(!lastChild());
     return nullptr;
@@ -815,8 +802,8 @@ inline RenderBox* RenderBox::lastInFlowChildBox() const
 
 inline RenderBox* RenderBox::previousSiblingBox() const
 {
-    if (auto* box = dynamicDowncast<RenderBox>(previousSibling()))
-        return box;
+    if (CheckedPtr box = dynamicDowncast<RenderBox>(previousSibling()))
+        return box.get();
 
     ASSERT(!previousSibling());
     return nullptr;
@@ -824,17 +811,17 @@ inline RenderBox* RenderBox::previousSiblingBox() const
 
 inline RenderBox* RenderBox::previousInFlowSiblingBox() const
 {
-    for (RenderBox* curr = previousSiblingBox(); curr; curr = curr->previousSiblingBox()) {
+    for (CheckedPtr curr = previousSiblingBox(); curr; curr = curr->previousSiblingBox()) {
         if (!curr->isFloatingOrOutOfFlowPositioned())
-            return curr;
+            return curr.get();
     }
     return nullptr;
 }
 
 inline RenderBox* RenderBox::nextSiblingBox() const
 {
-    if (auto* box = dynamicDowncast<RenderBox>(nextSibling()))
-        return box;
+    if (CheckedPtr box = dynamicDowncast<RenderBox>(nextSibling()))
+        return box.get();
 
     ASSERT(!nextSibling());
     return nullptr;
@@ -842,9 +829,9 @@ inline RenderBox* RenderBox::nextSiblingBox() const
 
 inline RenderBox* RenderBox::nextInFlowSiblingBox() const
 {
-    for (RenderBox* curr = nextSiblingBox(); curr; curr = curr->nextSiblingBox()) {
+    for (CheckedPtr curr = nextSiblingBox(); curr; curr = curr->nextSiblingBox()) {
         if (!curr->isFloatingOrOutOfFlowPositioned())
-            return curr;
+            return curr.get();
     }
     return nullptr;
 }

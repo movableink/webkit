@@ -24,12 +24,15 @@ import logging
 import os
 import time
 import unittest
+from unittest.mock import patch
 
-from mock import patch
-from webkitbugspy import Tracker, bugzilla, github, radar, mocks as bmocks
+from webkitbugspy import Tracker, bugzilla, github, radar
+from webkitbugspy import mocks as bmocks
 from webkitcorepy import OutputCapture, testing
-from webkitcorepy.mocks import Terminal as MockTerminal, Environment
-from webkitscmpy import Contributor, Commit, PullRequest, local, program, mocks, remote
+from webkitcorepy.mocks import Environment
+from webkitcorepy.mocks import Terminal as MockTerminal
+
+from webkitscmpy import Commit, Contributor, PullRequest, local, mocks, program, remote
 
 
 class TestPullRequest(unittest.TestCase):

@@ -129,7 +129,12 @@ TEST(WebSocket, PageWithAttributedBundleIdentifierDestroyed)
     EXPECT_EQ(originalNetworkProcessPID, configuration.get().websiteDataStore._networkProcessIdentifier);
 }
 
+// FIXME rdar://147876703
+#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) || PLATFORM(MAC) && (__MAC_OS_X_VERSION_MIN_REQUIRED > 150000 )
+TEST(WebSocket, DISABLED_CloseCode)
+#else
 TEST(WebSocket, CloseCode)
+#endif
 {
     bool receivedWebSocketClose { false };
     Vector<uint8_t> closeData;

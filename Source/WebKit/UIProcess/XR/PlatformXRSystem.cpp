@@ -59,11 +59,9 @@ PlatformXRSystem::~PlatformXRSystem()
     page->protectedLegacyMainFrameProcess()->removeMessageReceiver(Messages::PlatformXRSystem::messageReceiverName(), page->webPageIDInMainFrameProcess());
 }
 
-std::optional<SharedPreferencesForWebProcess> PlatformXRSystem::sharedPreferencesForWebProcess() const
+std::optional<SharedPreferencesForWebProcess> PlatformXRSystem::sharedPreferencesForWebProcess(IPC::Connection& connection) const
 {
-    if (!m_page)
-        return std::nullopt;
-    return m_page->legacyMainFrameProcess().sharedPreferencesForWebProcess();
+    return WebProcessProxy::fromConnection(connection)->sharedPreferencesForWebProcess();
 }
 
 void PlatformXRSystem::invalidate()
@@ -94,7 +92,7 @@ void PlatformXRSystem::ensureImmersiveSessionActivity()
     if (m_immersiveSessionActivity && m_immersiveSessionActivity->isValid())
         return;
 
-    m_immersiveSessionActivity = page->protectedLegacyMainFrameProcess()->throttler().foregroundActivity("XR immersive session"_s);
+    m_immersiveSessionActivity = page->protectedLegacyMainFrameProcess()->protectedThrottler()->foregroundActivity("XR immersive session"_s);
 }
 
 void PlatformXRSystem::enumerateImmersiveXRDevices(CompletionHandler<void(Vector<XRDeviceInfo>&&)>&& completionHandler)

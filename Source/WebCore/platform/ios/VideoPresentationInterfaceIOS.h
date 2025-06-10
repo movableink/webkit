@@ -85,6 +85,7 @@ public:
     void hasVideoChanged(bool) override { }
     WEBCORE_EXPORT void videoDimensionsChanged(const FloatSize&) override;
     WEBCORE_EXPORT void setPlayerIdentifier(std::optional<MediaPlayerIdentifier>) override;
+    WEBCORE_EXPORT void audioSessionCategoryChanged(WebCore::AudioSessionCategory, WebCore::AudioSessionMode, WebCore::RouteSharingPolicy) override;
 
     // PlaybackSessionModelClient
     WEBCORE_EXPORT void externalPlaybackChanged(bool enabled, PlaybackSessionModel::ExternalPlaybackTargetType, const String& localizedDeviceName) override;
@@ -109,8 +110,10 @@ public:
     WEBCORE_EXPORT void preparedToReturnToStandby();
     bool changingStandbyOnly() { return m_changingStandbyOnly; }
     WEBCORE_EXPORT void failedToRestoreFullscreen();
-    WEBCORE_EXPORT virtual void enterExternalPlayback(CompletionHandler<void(bool, UIViewController *)>&&);
-    WEBCORE_EXPORT virtual void exitExternalPlayback(CompletionHandler<void(bool)>&&);
+    WEBCORE_EXPORT virtual void enterExternalPlayback(CompletionHandler<void(bool, UIViewController *)>&&, CompletionHandler<void(bool)>&&);
+    WEBCORE_EXPORT virtual void exitExternalPlayback();
+    virtual bool cleanupExternalPlayback() { return false; }
+
 
     enum class ExitFullScreenReason {
         DoneButtonTapped,
@@ -231,7 +234,6 @@ protected:
     virtual void updateRouteSharingPolicy() = 0;
     virtual void setupPlayerViewController() = 0;
     virtual void invalidatePlayerViewController() = 0;
-    virtual bool cleanupExternalPlayback() { return false; }
     virtual UIViewController *playerViewController() const = 0;
     WEBCORE_EXPORT void doSetup();
 

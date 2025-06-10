@@ -50,10 +50,10 @@ UserMediaPermissionRequestProxyMac::~UserMediaPermissionRequestProxyMac()
 void UserMediaPermissionRequestProxyMac::invalidate()
 {
 #if ENABLE(MEDIA_STREAM)
-    if (m_hasPendingGetDispayMediaPrompt) {
+    if (m_hasPendingGetDisplayMediaPrompt) {
         if (RefPtr page = protectedManager()->page())
             DisplayCaptureSessionManager::singleton().cancelGetDisplayMediaPrompt(*page);
-        m_hasPendingGetDispayMediaPrompt = false;
+        m_hasPendingGetDisplayMediaPrompt = false;
     }
 #endif
     UserMediaPermissionRequestProxy::invalidate();
@@ -69,17 +69,17 @@ void UserMediaPermissionRequestProxyMac::promptForGetDisplayMedia(UserMediaDispl
     if (!page)
         return;
 
-    m_hasPendingGetDispayMediaPrompt = true;
+    m_hasPendingGetDisplayMediaPrompt = true;
     DisplayCaptureSessionManager::singleton().promptForGetDisplayMedia(promptType, *page, topLevelDocumentSecurityOrigin().data(), [protectedThis = Ref { *this }](std::optional<CaptureDevice> device) mutable {
 
-        protectedThis->m_hasPendingGetDispayMediaPrompt = false;
+        protectedThis->m_hasPendingGetDisplayMediaPrompt = false;
 
         if (!device) {
             protectedThis->deny(UserMediaPermissionRequestProxy::UserMediaAccessDenialReason::PermissionDenied);
             return;
         }
 
-        protectedThis->setEligibleVideoDeviceUIDs({ device.value() });
+        protectedThis->setEligibleVideoDevices({ device.value() });
         protectedThis->allow(String(), device.value().persistentId());
     });
 #else

@@ -64,16 +64,16 @@ struct ResolutionContext;
 class KeyframeEffect final : public AnimationEffect, public Style::Interpolation::Client, public KeyframeInterpolation {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(KeyframeEffect);
 public:
-    static ExceptionOr<Ref<KeyframeEffect>> create(JSC::JSGlobalObject&, Document&, Element*, JSC::Strong<JSC::JSObject>&&, std::optional<std::variant<double, KeyframeEffectOptions>>&&);
+    static ExceptionOr<Ref<KeyframeEffect>> create(JSC::JSGlobalObject&, Document&, Element*, JSC::Strong<JSC::JSObject>&&, std::optional<Variant<double, KeyframeEffectOptions>>&&);
     static Ref<KeyframeEffect> create(Ref<KeyframeEffect>&&);
     static Ref<KeyframeEffect> create(const Element&, const std::optional<Style::PseudoElementIdentifier>&);
 
-    using KeyframeOffset = std::variant<std::nullptr_t, double, TimelineRangeOffset, String>;
+    using KeyframeOffset = Variant<std::nullptr_t, double, TimelineRangeOffset, String>;
 
     struct BasePropertyIndexedKeyframe {
-        std::variant<std::nullptr_t, Vector<KeyframeOffset>, double, TimelineRangeOffset, String> offset = Vector<KeyframeOffset>();
-        std::variant<Vector<String>, String> easing = Vector<String>();
-        std::variant<Vector<CompositeOperationOrAuto>, CompositeOperationOrAuto> composite = Vector<CompositeOperationOrAuto>();
+        Variant<std::nullptr_t, Vector<KeyframeOffset>, double, TimelineRangeOffset, String> offset = Vector<KeyframeOffset>();
+        Variant<Vector<String>, String> easing = Vector<String>();
+        Variant<Vector<CompositeOperationOrAuto>, CompositeOperationOrAuto> composite = Vector<CompositeOperationOrAuto>();
     };
 
     struct BaseKeyframe {
@@ -133,7 +133,7 @@ public:
     void setBindingsComposite(CompositeOperation);
 
     void getAnimatedStyle(std::unique_ptr<RenderStyle>& animatedStyle);
-    OptionSet<AnimationImpact> apply(RenderStyle& targetStyle, const Style::ResolutionContext&, std::optional<Seconds> = std::nullopt);
+    OptionSet<AnimationImpact> apply(RenderStyle& targetStyle, const Style::ResolutionContext&);
     void invalidate();
 
     void animationRelevancyDidChange();
@@ -278,6 +278,7 @@ private:
     void animationSuspensionStateDidChange(bool) final;
     void animationTimelineDidChange(const AnimationTimeline*) final;
     void animationDidFinish() final;
+    void animationPlaybackRateDidChange() final;
     void setAnimation(WebAnimation*) final;
     Seconds timeToNextTick(const BasicEffectTiming&) final;
     bool ticksContinuouslyWhileActive() const final;
@@ -298,8 +299,7 @@ private:
 
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
 
-    AtomString m_keyframesName;
-    BlendingKeyframes m_blendingKeyframes { emptyAtom() };
+    BlendingKeyframes m_blendingKeyframes { };
     UncheckedKeyHashSet<AnimatableCSSProperty> m_animatedProperties;
     UncheckedKeyHashSet<AnimatableCSSProperty> m_acceleratedProperties;
     UncheckedKeyHashSet<AnimatableCSSProperty> m_acceleratedPropertiesWithImplicitKeyframe;

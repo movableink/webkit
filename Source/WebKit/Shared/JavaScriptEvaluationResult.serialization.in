@@ -23,7 +23,7 @@
 class WebKit::JavaScriptEvaluationResult {
 #if PLATFORM(COCOA)
     WebKit::JSObjectID root()
-    HashMap<WebKit::JSObjectID, std::variant<WebKit::JavaScriptEvaluationResult::NullType, bool, WebKit::CoreIPCNumber, String, Seconds, Vector<WebKit::JSObjectID>, HashMap<WebKit::JSObjectID, WebKit::JSObjectID>>> map()
+    HashMap<WebKit::JSObjectID, Variant<WebKit::JavaScriptEvaluationResult::NullType, bool, WebKit::CoreIPCNumber, String, Seconds, Vector<WebKit::JSObjectID>, HashMap<WebKit::JSObjectID, WebKit::JSObjectID>>> map()
 #else
     std::span<const uint8_t> wireBytes()
 #endif

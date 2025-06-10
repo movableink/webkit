@@ -140,30 +140,28 @@ void EventRegionContext::uniteInteractionRegions(RenderObject& renderer, const F
 
     if (auto interactionRegion = interactionRegionForRenderedRegion(renderer, layerBounds, clipOffset, transform)) {
         auto rectForTracking = enclosingIntRect(interactionRegion->rectInLayerCoordinates);
-        
+
         if (interactionRegion->type == InteractionRegion::Type::Occlusion) {
-            if (m_occlusionRects.contains(rectForTracking))
+            auto result = m_occlusionRects.add(rectForTracking);
+            if (!result.isNewEntry)
                 return;
-            m_occlusionRects.add(rectForTracking);
-            
+
             m_interactionRegions.append(*interactionRegion);
             return;
         }
 
         if (interactionRegion->type == InteractionRegion::Type::Guard) {
-            if (m_guardRects.contains(rectForTracking))
+            auto result = m_guardRects.add(rectForTracking, Inflated::No);
+            if (!result.isNewEntry)
                 return;
-            m_guardRects.set(rectForTracking, Inflated::No);
 
             m_interactionRegions.append(*interactionRegion);
             return;
         }
-        
-        
-        if (m_interactionRectsAndContentHints.contains(rectForTracking)) {
-            m_interactionRectsAndContentHints.set(rectForTracking, interactionRegion->contentHint);
+
+        auto result = m_interactionRectsAndContentHints.set(rectForTracking, interactionRegion->contentHint);
+        if (!result.isNewEntry)
             return;
-        }
 
         bool defaultContentHint = interactionRegion->contentHint == InteractionRegion::ContentHint::Default;
         if (defaultContentHint && shouldConsolidateInteractionRegion(renderer, rectForTracking, interactionRegion->elementIdentifier))
@@ -175,8 +173,6 @@ void EventRegionContext::uniteInteractionRegions(RenderObject& renderer, const F
             if (auto* renderElement = dynamicDowncast<RenderElement>(renderer))
                 m_containerRemovalCandidates.add(renderElement->element()->identifier());
         }
-
-        m_interactionRectsAndContentHints.add(rectForTracking, interactionRegion->contentHint);
 
         auto discoveredAddResult = m_discoveredRegionsByElement.add(interactionRegion->elementIdentifier, Vector<InteractionRegion>());
         discoveredAddResult.iterator->value.append(*interactionRegion);
@@ -253,10 +249,8 @@ bool EventRegionContext::shouldConsolidateInteractionRegion(RenderObject& render
         }
 
         // We found a region nested inside a container candidate for removal, flag it for removal.
-        if (m_containerRemovalCandidates.contains(ancestorElementIdentifier)) {
-            m_containerRemovalCandidates.remove(ancestorElementIdentifier);
+        if (m_containerRemovalCandidates.remove(ancestorElementIdentifier))
             m_containersToRemove.add(ancestorElementIdentifier);
-        }
 
         return false;
     }
@@ -389,6 +383,11 @@ void EventRegionContext::copyInteractionRegionsToEventRegion(float minimumCorner
     removeSuperfluousInteractionRegions();
     shrinkWrapInteractionRegions();
     m_eventRegion.appendInteractionRegions(m_interactionRegions);
+}
+
+void EventRegionContext::reserveCapacityForInteractionRegions(size_t previousSize)
+{
+    m_interactionRegions.reserveCapacity(previousSize);
 }
 
 #endif
@@ -755,47 +754,47 @@ void EventRegion::dump(TextStream& ts) const
 #if ENABLE(TOUCH_ACTION_REGIONS)
     if (!m_touchActionRegions.isEmpty()) {
         TextStream::IndentScope indentScope(ts);
-        ts << indent << "(touch-action\n";
+        ts << indent << "(touch-action\n"_s;
         for (unsigned i = 0; i < m_touchActionRegions.size(); ++i) {
             if (m_touchActionRegions[i].isEmpty())
                 continue;
             TextStream::IndentScope indentScope(ts);
-            ts << indent << "(" << toTouchAction(i);
+            ts << indent << '(' << toTouchAction(i);
             ts << indent << m_touchActionRegions[i];
-            ts << indent << ")\n";
+            ts << indent << ")\n"_s;
         }
-        ts << indent << ")\n";
+        ts << indent << ")\n"_s;
     }
 #endif
 
 #if ENABLE(WHEEL_EVENT_REGIONS)
     if (!m_wheelEventListenerRegion.isEmpty()) {
-        ts << indent << "(wheel event listener region" << m_wheelEventListenerRegion;
+        ts << indent << "(wheel event listener region"_s << m_wheelEventListenerRegion;
         if (!m_nonPassiveWheelEventListenerRegion.isEmpty()) {
             TextStream::IndentScope indentScope(ts);
-            ts << indent << "(non-passive" << m_nonPassiveWheelEventListenerRegion;
-            ts << indent << ")\n";
+            ts << indent << "(non-passive"_s << m_nonPassiveWheelEventListenerRegion;
+            ts << indent << ")\n"_s;
         }
-        ts << indent << ")\n";
+        ts << indent << ")\n"_s;
     }
 #endif
 
 #if ENABLE(TOUCH_EVENT_REGIONS)
     if (!m_touchEventListenerRegion.isEmpty())
-        ts << indent << "(touch event listener region:" << m_touchEventListenerRegion << ")\n";
+        ts << indent << "(touch event listener region:"_s << m_touchEventListenerRegion << '\n';
 #endif
 
 #if ENABLE(EDITABLE_REGION)
     if (m_editableRegion && !m_editableRegion->isEmpty()) {
-        ts << indent << "(editable region" << *m_editableRegion;
-        ts << indent << ")\n";
+        ts << indent << "(editable region"_s << *m_editableRegion;
+        ts << indent << ")\n"_s;
     }
 #endif
     
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
     if (!m_interactionRegions.isEmpty()) {
-        ts.dumpProperty("interaction regions", m_interactionRegions);
-        ts << "\n";
+        ts.dumpProperty("interaction regions"_s, m_interactionRegions);
+        ts << '\n';
     }
 #endif
 }
@@ -804,13 +803,13 @@ void EventRegion::dump(TextStream& ts) const
 TextStream& operator<<(TextStream& ts, const TouchEventListenerRegion& region)
 {
     if (!region.start.isEmpty())
-        ts << " touchStart: " << region.start;
+        ts << " touchStart: "_s << region.start;
     if (!region.end.isEmpty())
-        ts << " touchEnd: " << region.end;
+        ts << " touchEnd: "_s << region.end;
     if (!region.cancel.isEmpty())
-        ts << " touchCancel: " << region.cancel;
+        ts << " touchCancel: "_s << region.cancel;
     if (!region.move.isEmpty())
-        ts << " touchMove: " << region.move;
+        ts << " touchMove: "_s << region.move;
     return ts;
 }
 #endif
@@ -819,17 +818,17 @@ TextStream& operator<<(TextStream& ts, TouchAction touchAction)
 {
     switch (touchAction) {
     case TouchAction::None:
-        return ts << "none";
+        return ts << "none"_s;
     case TouchAction::Manipulation:
-        return ts << "manipulation";
+        return ts << "manipulation"_s;
     case TouchAction::PanX:
-        return ts << "pan-x";
+        return ts << "pan-x"_s;
     case TouchAction::PanY:
-        return ts << "pan-y";
+        return ts << "pan-y"_s;
     case TouchAction::PinchZoom:
-        return ts << "pinch-zoom";
+        return ts << "pinch-zoom"_s;
     case TouchAction::Auto:
-        return ts << "auto";
+        return ts << "auto"_s;
     }
     ASSERT_NOT_REACHED();
     return ts;

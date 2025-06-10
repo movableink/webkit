@@ -29,7 +29,7 @@
 #if PLATFORM(IOS_FAMILY) && ENABLE(MODEL_PROCESS)
 
 #import "Logging.h"
-#import "RealityKitBridging.h"
+#import "WKRKEntity.h"
 #import <CoreRE/CoreRE.h>
 #import <UIKit/UIKit.h>
 #import <WebKitAdditions/REPtr.h>
@@ -61,13 +61,9 @@
     dispatch_once(&onceToken, ^{
         NSString * const debugFlag = @"ModelDebugEnableStereoContent";
         id value = [[NSUserDefaults standardUserDefaults] objectForKey:debugFlag];
-        if (![value isKindOfClass:NSNumber.class] && ![value isKindOfClass:NSString.class]) {
-#if PLATFORM(IOS_FAMILY_SIMULATOR)
-            stereoContentEnabled = NO;
-#else
+        if (![value isKindOfClass:NSNumber.class] && ![value isKindOfClass:NSString.class])
             stereoContentEnabled = YES;
-#endif
-        } else
+        else
             stereoContentEnabled = [[NSUserDefaults standardUserDefaults] boolForKey:debugFlag];
 
         RELEASE_LOG_INFO(ModelElement, "Stereo content enabled: %d", stereoContentEnabled);
@@ -113,7 +109,8 @@
         REEntityAddComponentByClass(_stereoContentEntity.get(), RENetworkComponentGetComponentType());
         REPtr<REComponentRef> stereoContentComponent = REEntityGetOrAddComponentByClass(_stereoContentEntity.get(), REEmbeddedStereoContentComponentGetComponentType());
         REPtr<REComponentRef> worldRootComponent = REEntityGetOrAddComponentByClass(_stereoContentEntity.get(), REWorldRootComponentGetComponentType());
-        if (stereoContentComponent && worldRootComponent) {
+        REPtr<REComponentRef> portalCrossingComponent = REEntityGetOrAddComponentByClass(_stereoContentEntity.get(), REPortalCrossingFlagsComponentGetComponentType());
+        if (stereoContentComponent && worldRootComponent && portalCrossingComponent) {
             REPtr<REWorldRootRef> worldRoot = adoptRE(RECreateWorldRoot());
             REEmbeddedStereoContentComponentSetWorldRoot(stereoContentComponent.get(), worldRoot.get());
             REWorldRootComponentSetWorldRoot(worldRootComponent.get(), worldRoot.get());
@@ -124,6 +121,12 @@
             REEmbeddedStereoContentComponentSetAllowsCrossing(stereoContentComponent.get(), true);
             REEmbeddedStereoContentComponentSetIsStereo(stereoContentComponent.get(), true);
             REEmbeddedStereoContentComponentSetEnableClipping(stereoContentComponent.get(), true);
+
+            // FIXME: https://bugs.webkit.org/show_bug.cgi?id=290950
+            REEmbeddedStereoContentComponentSetLightingBlendDistance(stereoContentComponent.get(), 0.1);
+
+            REPortalCrossingFlagsComponentSetEnabled(portalCrossingComponent.get(), false);
+            REPortalCrossingFlagsComponentSetInherited(portalCrossingComponent.get(), false);
 
             REEntitySetParent(_stereoContentEntity.get(), _rootEntity.get());
 
@@ -283,7 +286,7 @@
         return;
     }
 
-    [self.layer setValue:(__bridge id)cachedCGColor(*backgroundColor).get() forKeyPath:@"separatedOptions.material.clearColor"];
+    [self.layer setValue:(__bridge id)cachedCGColor(backgroundColor->opaqueColor()).get() forKeyPath:@"separatedOptions.material.clearColor"];
 }
 
 #if HAVE(RE_STEREO_CONTENT_SUPPORT)
@@ -294,6 +297,17 @@
     [_stereoContentLayer setFrame:self.bounds];
 }
 #endif
+
+- (void)setPortalCrossing:(BOOL)enabled
+{
+#if HAVE(RE_STEREO_CONTENT_SUPPORT)
+    if (REPtr<REComponentRef> portalCrossingComponent = REEntityGetOrAddComponentByClass(_stereoContentEntity.get(), REPortalCrossingFlagsComponentGetComponentType())) {
+        REPortalCrossingFlagsComponentSetEnabled(portalCrossingComponent.get(), enabled);
+        REPortalCrossingFlagsComponentSetInherited(portalCrossingComponent.get(), enabled);
+        RENetworkMarkComponentDirty(portalCrossingComponent.get());
+    }
+#endif
+}
 
 @end
 

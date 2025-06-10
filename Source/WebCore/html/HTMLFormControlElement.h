@@ -124,7 +124,7 @@ protected:
 
     bool isMouseFocusable() const override;
 
-    void didRecalcStyle(Style::Change) override;
+    void didRecalcStyle(OptionSet<Style::Change>) override;
 
     void dispatchBlurEvent(RefPtr<Element>&& newFocusedElement) override;
 

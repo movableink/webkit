@@ -2,7 +2,7 @@
 tbd-version: 4
 targets: [arm64-xros, arm64e-xros]
 install-name: /System/Library/PrivateFrameworks/RemotePairingDevice.framework/RemotePairingDevice
-current-version: 199.0.4
+current-version: 199.120.5
 swift-abi-version: 7
 exports:
 -       targets: [arm64-xros, arm64e-xros]

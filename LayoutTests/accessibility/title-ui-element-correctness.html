@@ -102,6 +102,7 @@ if (window.accessibilityController) {
         // Test label that gets a control reparented into it.
         output += expect("hasTitleUIElement(axElement('control5'))", "false");
         output += evalAndReturn("reparentNodeIntoContainer(document.getElementById('control5'), document.getElementById('label5'));");
+        await waitFor(() => axElement("control5"));
         output += await expectAsync("axElement('control5').titleUIElement() != null", "true");
         output += await expectAsync("axElement('control5').titleUIElement().isEqual(axElement('label5'))", "true");
 

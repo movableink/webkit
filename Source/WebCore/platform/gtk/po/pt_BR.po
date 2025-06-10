@@ -4,21 +4,22 @@
 # Henrique P. Machado <hpmachado@gnome.org>, 2011.
 # Enrico Nicoletto <liverig@gmail.com>, 2013.
 # Rafael Fontenelle <rafaelff@gnome.org>, 2016-2025.
+# Álvaro Burns <>, 2025.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: webkit HEAD\n"
 "Report-Msgid-Bugs-To: https://bugs.webkit.org/enter_bug.cgi?"
 "product=WebKit&component=WebKitGTK\n"
-"POT-Creation-Date: 2025-02-14 15:59+0000\n"
-"PO-Revision-Date: 2025-02-15 00:25-0300\n"
-"Last-Translator: Rafael Fontenelle <rafaelff@gnome.org>\n"
+"POT-Creation-Date: 2025-03-24 03:55+0000\n"
+"PO-Revision-Date: 2025-03-15 10:25-0300\n"
+"Last-Translator: Álvaro Burns <>\n"
 "Language-Team: Brazilian Portuguese <https://br.gnome.org/traducao>\n"
 "Language: pt_BR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n > 1)\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "X-Generator: Gtranslator 47.1\n"
 
 #: ../LocalizedStringsGtk.cpp:43
@@ -1166,7 +1167,11 @@ msgstr "Copiar link com destaque"
 msgid "View Spatial"
 msgstr "Visão espacial"
 
-#: ../../network/soup/NetworkStorageSessionSoup.cpp:299
+#: ../../LocalizedStrings.cpp:1584
+msgid "View Immersive"
+msgstr "Visão imersiva"
+
+#: ../../network/soup/NetworkStorageSessionSoup.cpp:327
 msgid "WebKitGTK password"
 msgstr "Senha de WebKitGTK"
 
@@ -1448,7 +1453,7 @@ msgid "Plug-in handled load"
 msgstr "Carregamento tratado de plug-in"
 
 #: ../../../../WebKit/Shared/WebErrors.cpp:95
-#: ../../../../WebKit/UIProcess/API/glib/WebKitWebView.cpp:2572
+#: ../../../../WebKit/UIProcess/API/glib/WebKitWebView.cpp:2575
 msgid "Load request cancelled"
 msgstr "Solicitação de carregamento cancelada"
 
@@ -2026,7 +2031,7 @@ msgid "WebRTC UDP ports range, the format is min-port:max-port"
 msgstr "Faixa de portas UDP WebRTC, o formato é porta-min:porta-max"
 
 #: ../../../../WebKit/UIProcess/API/glib/WebKitWebResource.cpp:358
-#: ../../../../WebKit/UIProcess/API/glib/WebKitWebView.cpp:5316
+#: ../../../../WebKit/UIProcess/API/glib/WebKitWebView.cpp:5355
 #: ../../../../WebKit/WebProcess/InjectedBundle/API/glib/WebKitWebExtension.cpp:281
 #: ../../../../WebKit/WebProcess/InjectedBundle/API/glib/WebKitWebPage.cpp:940
 msgid "Operation was cancelled"
@@ -2036,12 +2041,12 @@ msgstr "Operação foi cancelada"
 msgid "Local files"
 msgstr "Arquivos locais"
 
-#: ../../../../WebKit/UIProcess/API/glib/WebKitWebView.cpp:5081
-#: ../../../../WebKit/UIProcess/API/glib/WebKitWebView.cpp:5105
+#: ../../../../WebKit/UIProcess/API/glib/WebKitWebView.cpp:5120
+#: ../../../../WebKit/UIProcess/API/glib/WebKitWebView.cpp:5144
 msgid "There was an error creating the snapshot"
 msgstr "Ocorreu um erro ao criar a captura instantânea"
 
-#: ../../../../WebKit/UIProcess/API/glib/WebKitWebView.cpp:5322
+#: ../../../../WebKit/UIProcess/API/glib/WebKitWebView.cpp:5361
 #: ../../../../WebKit/WebProcess/InjectedBundle/API/glib/WebKitWebExtension.cpp:287
 #: ../../../../WebKit/WebProcess/InjectedBundle/API/glib/WebKitWebPage.cpp:946
 #, c-format
@@ -2129,7 +2134,7 @@ msgstr "Permanecer na página"
 msgid "Leave Page"
 msgstr "Sair da página"
 
-#: ../../../../WebKit/UIProcess/API/gtk/WebKitWebViewBase.cpp:2658
+#: ../../../../WebKit/UIProcess/API/gtk/WebKitWebViewBase.cpp:2654
 msgid "Website running in fullscreen mode"
 msgstr "Site mostrado em modo de tela cheia"
 

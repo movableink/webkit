@@ -32,6 +32,7 @@
 #include "CommonVM.h"
 #include "ComposedTreeAncestorIterator.h"
 #include "ContainerNodeAlgorithms.h"
+#include "ContainerNodeInlines.h"
 #include "ContextMenuController.h"
 #include "CustomElementRegistry.h"
 #include "DataTransfer.h"
@@ -44,6 +45,7 @@
 #include "EventHandler.h"
 #include "EventLoop.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "GCReachableRef.h"
 #include "HTMLAreaElement.h"
 #include "HTMLBodyElement.h"
@@ -71,10 +73,11 @@
 #include "Quirks.h"
 #include "RenderBlock.h"
 #include "RenderBox.h"
+#include "RenderObjectInlines.h"
 #include "RenderTextControl.h"
 #include "RenderTreeUpdater.h"
 #include "RenderView.h"
-#include "SVGElement.h"
+#include "SVGElementInlines.h"
 #include "ScopedEventQueue.h"
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
@@ -85,12 +88,12 @@
 #include "TextEvent.h"
 #include "TextManipulationController.h"
 #include "TouchEvent.h"
+#include "TreeScopeInlines.h"
 #include "WebCoreOpaqueRoot.h"
 #include "WheelEvent.h"
 #include "XMLNSNames.h"
 #include "XMLNames.h"
 #include <JavaScriptCore/HeapInlines.h>
-#include <variant>
 #include <wtf/HexNumber.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/SHA1.h>
@@ -122,11 +125,11 @@ public:
 #if ASSERT_ENABLED
     bool inRemovedLastRefFunction;
     bool adoptionIsRequired;
+    bool deletionHasBegun;
 #endif
     uint32_t refCountAndParentBit;
     uint32_t nodeFlags;
-    uint16_t elementStateFlags;
-    uint16_t styleBitfields;
+    uint32_t stateFlags;
     void* parentNode;
     void* treeScope;
     void* previous;
@@ -658,7 +661,7 @@ ExceptionOr<NodeVector> Node::convertNodesOrStringsIntoNodeVector(FixedVector<No
         ASSERT(std::holds_alternative<RefPtr<Node>>(variant));
         RefPtr node = WTFMove(std::get<RefPtr<Node>>(variant));
         ASSERT(node);
-        if (auto* fragment = dynamicDowncast<DocumentFragment>(node.get()); UNLIKELY(fragment)) {
+        if (auto* fragment = dynamicDowncast<DocumentFragment>(node.get()); fragment) [[unlikely]] {
             for (auto* child = fragment->firstChild(); child; child = child->nextSibling())
                 nodeVector.append(*child);
         } else
@@ -820,12 +823,12 @@ Ref<Node> Node::cloneNode(bool deep)
 {
     ASSERT(!isShadowRoot());
     RefPtr registry = CustomElementRegistry::registryForNodeOrTreeScope(*this, treeScope());
-    return cloneNodeInternal(document(), deep ? CloningOperation::Everything : CloningOperation::OnlySelf, registry.get());
+    return cloneNodeInternal(document(), deep ? CloningOperation::Everything : CloningOperation::SelfOnly, registry.get());
 }
 
 ExceptionOr<Ref<Node>> Node::cloneNodeForBindings(bool deep)
 {
-    if (UNLIKELY(isShadowRoot()))
+    if (isShadowRoot()) [[unlikely]]
         return Exception { ExceptionCode::NotSupportedError };
     return cloneNode(deep);
 }
@@ -935,16 +938,6 @@ Node::Editability Node::computeEditability(UserSelectAllTreatment treatment, Sho
     return computeEditabilityWithStyle(nullptr, treatment, shouldUpdateStyle);
 }
 
-RenderBox* Node::renderBox() const
-{
-    return dynamicDowncast<RenderBox>(renderer());
-}
-
-RenderBoxModelObject* Node::renderBoxModelObject() const
-{
-    return dynamicDowncast<RenderBoxModelObject>(renderer());
-}
-    
 LayoutRect Node::absoluteBoundingRect(bool* isReplaced)
 {
     RenderObject* hitRenderer = this->renderer();
@@ -1172,11 +1165,12 @@ ExceptionOr<void> Node::checkSetPrefix(const AtomString& prefix)
     return { };
 }
 
+// https://dom.spec.whatwg.org/#concept-tree-descendant
 bool Node::isDescendantOf(const Node& other) const
 {
     // Return true if other is an ancestor of this.
-    if (other.isDocumentNode())
-        return &treeScope().rootNode() == &other && !isDocumentNode() && isConnected();
+    if (other.isTreeScope())
+        return &treeScope().rootNode() == &other && !isTreeScope() && isInTreeScope();
     if (!other.hasChildNodes() || isConnected() != other.isConnected())
         return false;
     for (auto ancestor = parentNode(); ancestor; ancestor = ancestor->parentNode()) {
@@ -1186,7 +1180,8 @@ bool Node::isDescendantOf(const Node& other) const
     return false;
 }
 
-bool Node::isDescendantOrShadowDescendantOf(const Node& other) const
+// https://dom.spec.whatwg.org/#concept-shadow-including-inclusive-ancestor
+bool Node::isShadowIncludingDescendantOf(const Node& other) const
 {
     if (isDescendantOf(other))
         return true;
@@ -1195,21 +1190,7 @@ bool Node::isDescendantOrShadowDescendantOf(const Node& other) const
         if (other.contains(*host))
             return true;
     }
-    
-    return false;
-}
 
-bool Node::contains(const Node& node) const
-{
-    return this == &node || node.isDescendantOf(*this);
-}
-
-bool Node::containsIncludingShadowDOM(const Node* node) const
-{
-    for (; node; node = node->parentOrShadowHostNode()) {
-        if (node == this)
-            return true;
-    }
     return false;
 }
 
@@ -1312,6 +1293,11 @@ Element* Node::shadowHost() const
     return nullptr;
 }
 
+RefPtr<Element> Node::protectedShadowHost() const
+{
+    return shadowHost();
+}
+
 ShadowRoot* Node::containingShadowRoot() const
 {
     return dynamicDowncast<ShadowRoot>(treeScope().rootNode());
@@ -1322,17 +1308,12 @@ RefPtr<ShadowRoot> Node::protectedContainingShadowRoot() const
     return containingShadowRoot();
 }
 
-CheckedPtr<RenderObject> Node::checkedRenderer() const
-{
-    return renderer();
-}
-
 #if ASSERT_ENABLED
 // https://dom.spec.whatwg.org/#concept-closed-shadow-hidden
 static bool isClosedShadowHiddenUsingSpecDefinition(const Node& A, const Node& B)
 {
     return A.isInShadowTree()
-        && !A.rootNode().containsIncludingShadowDOM(&B)
+        && !A.rootNode().isShadowIncludingInclusiveAncestorOf(&B)
         && (A.containingShadowRoot()->mode() != ShadowRootMode::Open || isClosedShadowHiddenUsingSpecDefinition(*A.shadowHost(), B));
 }
 #endif
@@ -1399,6 +1380,8 @@ void Node::setManuallyAssignedSlot(HTMLSlotElement* slotElement)
         RenderTreeUpdater::tearDownRenderer(*text);
 
     ensureRareData().setManuallyAssignedSlot(slotElement);
+
+    InspectorInstrumentation::didChangeAssignedSlot(*this);
 }
 
 bool Node::hasEverPaintedImages() const
@@ -1788,7 +1771,7 @@ static void appendTextContent(const Node* node, bool convertBRsToNewlines, bool&
             content.append('\n');
             break;
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     case Node::DOCUMENT_FRAGMENT_NODE:
         isNullString = false;
         for (RefPtr child = node->firstChild(); child; child = child->nextSibling()) {
@@ -1855,7 +1838,7 @@ static inline unsigned short compareDetachedElementsPosition(Node& firstNode, No
     SHA1::Digest firstHash = hashPointer(&firstNode);
     SHA1::Digest secondHash = hashPointer(&secondNode);
 
-    unsigned short direction = compareSpans(std::span { firstHash }, std::span { secondHash }) > 0 ? Node::DOCUMENT_POSITION_PRECEDING : Node::DOCUMENT_POSITION_FOLLOWING;
+    unsigned short direction = is_gt(compareSpans(std::span { firstHash }, std::span { secondHash })) ? Node::DOCUMENT_POSITION_PRECEDING : Node::DOCUMENT_POSITION_FOLLOWING;
 
     return Node::DOCUMENT_POSITION_DISCONNECTED | Node::DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC | direction;
 }
@@ -2208,7 +2191,7 @@ enum EventTargetInterfaceType Node::eventTargetInterface() const
 }
 
 template <typename MoveNodeFunction, typename MoveShadowRootFunction>
-static unsigned traverseSubtreeToUpdateTreeScope(Node& root, MoveNodeFunction moveNode, MoveShadowRootFunction moveShadowRoot)
+static unsigned traverseSubtreeToUpdateTreeScope(Node& root, NOESCAPE const MoveNodeFunction& moveNode, NOESCAPE const MoveShadowRootFunction& moveShadowRoot)
 {
     unsigned count = 0;
     for (Node* node = &root; node; node = NodeTraversal::next(*node, &root)) {
@@ -2318,7 +2301,7 @@ void Node::moveTreeToNewScope(Node& root, TreeScope& oldScope, TreeScope& newSco
             if (newScopeIsUAShadowTree)
                 node.setEventTargetFlag(EventTargetFlag::HasBeenInUserAgentShadowTree);
             node.setTreeScope(newScope);
-            if (UNLIKELY(!node.hasRareData()))
+            if (!node.hasRareData()) [[likely]]
                 return;
             if (auto* nodeLists = node.rareData()->nodeLists())
                 nodeLists->adoptTreeScope();
@@ -2382,7 +2365,7 @@ void Node::moveNodeToNewDocumentSlowCase(Document& oldDocument, Document& newDoc
     }
 
     auto* textManipulationController = oldDocument.textManipulationControllerIfExists();
-    if (UNLIKELY(textManipulationController))
+    if (textManipulationController) [[unlikely]]
         textManipulationController->removeNode(*this);
 
     if (hasEventTargetData()) {
@@ -2932,7 +2915,7 @@ void Node::removedLastRef()
         svgElement->detachAllProperties();
 
 #if ASSERT_ENABLED
-    setStateFlag(StateFlag::DeletionHasBegun);
+    m_deletionHasBegun = true;
 #endif
     delete this;
 }
@@ -3153,7 +3136,7 @@ std::partial_ordering treeOrderForTesting(TreeType type, const Node& a, const No
 
 TextStream& operator<<(TextStream& ts, const Node& node)
 {
-    ts << "node " << &node << " " << node.debugDescription();
+    ts << node.debugDescription();
     return ts;
 }
 

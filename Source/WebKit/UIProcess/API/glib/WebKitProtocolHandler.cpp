@@ -64,8 +64,11 @@
 #include <gtk/gtk.h>
 #endif
 
-#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM)
+#if PLATFORM(WPE)
+#include "WPEUtilities.h"
+#if ENABLE(WPE_PLATFORM)
 #include <wpe/wpe-platform.h>
+#endif
 #endif
 
 #if USE(GBM)
@@ -449,12 +452,7 @@ void WebKitProtocolHandler::handleGPU(WebKitURISchemeRequest* request)
 #endif
 
 #if PLATFORM(WPE)
-#if ENABLE(WPE_PLATFORM)
-    bool usingWPEPlatformAPI = !!g_type_class_peek(WPE_TYPE_DISPLAY);
-#else
-    bool usingWPEPlatformAPI = false;
-#endif
-
+    bool usingWPEPlatformAPI = WKWPE::isUsingWPEPlatformAPI();
     if (!usingWPEPlatformAPI) {
         addTableRow(versionObject, "WPE version"_s, makeString(WPE_MAJOR_VERSION, '.', WPE_MINOR_VERSION, '.', WPE_MICRO_VERSION, " (build) "_s, wpe_get_major_version(), '.', wpe_get_minor_version(), '.', wpe_get_micro_version(), " (runtime)"_s));
         addTableRow(versionObject, "WPE backend"_s, String::fromUTF8(wpe_loader_get_loaded_implementation_library_name()));

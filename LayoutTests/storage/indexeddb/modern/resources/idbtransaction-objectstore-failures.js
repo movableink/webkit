@@ -2,16 +2,13 @@ description("This tests some obvious failures that can happen while calling tran
 
 indexedDBTest(prepareDatabase);
 
-
-function done()
-{
-    finishJSTest();
-}
-
 function prepareDatabase(event)
 {
     debug("Upgrade needed: Old version - " + event.oldVersion + " New version - " + event.newVersion);
-    
+
+    // Set error event handler to null to avoid unexpected error message being printed.
+    event.target.onerror = null;
+
     var tx = event.target.transaction;
     var db = event.target.result;
 
@@ -54,17 +51,14 @@ function prepareDatabase(event)
     }
       
     tx.onabort = function(event) {
-        debug("First version change transaction abort");
-        done();
+        endTestWithLog("First version change transaction abort");
     }
 
     tx.oncomplete = function(event) {
-        debug("First version change transaction unexpected complete");
-        done();
+        endTestWithLog("First version change transaction unexpected complete");
     }
 
     tx.onerror = function(event) {
-        debug("First version change transaction unexpected error - " + event);
-        done();
+        endTestWithLog("First version change transaction unexpected error - " + event);
     }
 }

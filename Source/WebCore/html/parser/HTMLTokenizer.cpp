@@ -1406,7 +1406,7 @@ inline bool HTMLTokenizer::temporaryBufferIs(ASCIILiteral expectedString)
 {
     if (m_temporaryBuffer.size() != expectedString.length())
         return false;
-    return equal(m_temporaryBuffer.data(), expectedString.span8());
+    return equal(m_temporaryBuffer.span().data(), expectedString.span8());
 }
 
 inline void HTMLTokenizer::appendToPossibleEndTag(UChar character)
@@ -1419,7 +1419,7 @@ inline bool HTMLTokenizer::isAppropriateEndTag() const
 {
     if (m_bufferedEndTagName.size() != m_appropriateEndTagName.size())
         return false;
-    return equal(m_bufferedEndTagName.data(), m_appropriateEndTagName.span());
+    return equal(m_bufferedEndTagName.span().data(), m_appropriateEndTagName.span());
 }
 
 inline void HTMLTokenizer::parseError()

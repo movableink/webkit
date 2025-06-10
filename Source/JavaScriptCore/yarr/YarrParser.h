@@ -51,31 +51,31 @@ enum class CharacterClassSetOp : uint8_t {
 template <class T> concept YarrSyntaxCheckable = requires (T& checker, Vector<Vector<char32_t>>& disjunctionStrings, const String& subpatternName) {
     { checker.assertionBOL() } -> std::same_as<void>;
     { checker.assertionEOL() } -> std::same_as<void>;
-    { checker.assertionWordBoundary(bool{}) } -> std::same_as<void>;
+    { checker.assertionWordBoundary(bool { }) } -> std::same_as<void>;
     { checker.atomPatternCharacter(char32_t { }, bool { }) } -> std::same_as<void>;
-    { checker.atomBuiltInCharacterClass(BuiltInCharacterClassID{}, bool{}) } -> std::same_as<void>;
-    { checker.atomCharacterClassBegin(bool{}) } -> std::same_as<void>;
+    { checker.atomBuiltInCharacterClass(BuiltInCharacterClassID { }, bool { }) } -> std::same_as<void>;
+    { checker.atomCharacterClassBegin(bool { }) } -> std::same_as<void>;
     { checker.atomCharacterClassBegin() } -> std::same_as<void>;
-    { checker.atomCharacterClassAtom(UChar{}) } -> std::same_as<void>;
-    { checker.atomCharacterClassRange(UChar{}, UChar{}) } -> std::same_as<void>;
+    { checker.atomCharacterClassAtom(UChar { }) } -> std::same_as<void>;
+    { checker.atomCharacterClassRange(UChar { }, UChar { }) } -> std::same_as<void>;
     { checker.atomPatternCharacter(char32_t { }, bool { }) } -> std::same_as<void>;
-    { checker.atomCharacterClassBuiltIn(BuiltInCharacterClassID{}, bool{}) } -> std::same_as<void>;
+    { checker.atomCharacterClassBuiltIn(BuiltInCharacterClassID { }, bool { }) } -> std::same_as<void>;
     { checker.atomClassStringDisjunction(disjunctionStrings) } -> std::same_as<void>;
-    { checker.atomCharacterClassSetOp(CharacterClassSetOp{}) } -> std::same_as<void>;
-    { checker.atomCharacterClassPushNested() } -> std::same_as<void>;
-    { checker.atomCharacterClassPopNested() } -> std::same_as<void>;
+    { checker.atomCharacterClassSetOp(CharacterClassSetOp { }) } -> std::same_as<void>;
+    { checker.atomCharacterClassPushNested(bool { }) } -> std::same_as<void>;
+    { checker.atomCharacterClassPopNested(bool { }) } -> std::same_as<void>;
     { checker.atomCharacterClassEnd() } -> std::same_as<void>;
     { checker.atomParenthesesSubpatternBegin() } -> std::same_as<void>;
-    { checker.atomParenthesesSubpatternBegin(bool{}) } -> std::same_as<void>;
-    { checker.atomParenthesesSubpatternBegin(bool{}, std::optional<String>{}) } -> std::same_as<void>;
-    { checker.atomParentheticalAssertionBegin(bool{}, MatchDirection{}) } -> std::same_as<void>;
-    { checker.atomParentheticalModifierBegin(OptionSet<Flags>{}, OptionSet<Flags>{})} -> std::same_as<void>;
+    { checker.atomParenthesesSubpatternBegin(bool { }) } -> std::same_as<void>;
+    { checker.atomParenthesesSubpatternBegin(bool { }, std::optional<String> { }) } -> std::same_as<void>;
+    { checker.atomParentheticalAssertionBegin(bool { }, MatchDirection { }) } -> std::same_as<void>;
+    { checker.atomParentheticalModifierBegin(OptionSet<Flags> { }, OptionSet<Flags> { }) } -> std::same_as<void>;
     { checker.atomParenthesesEnd() } -> std::same_as<void>;
-    { checker.atomBackReference(unsigned{}) } -> std::same_as<void>;
+    { checker.atomBackReference(unsigned { }) } -> std::same_as<void>;
     { checker.atomNamedBackReference(subpatternName) } -> std::same_as<void>;
     { checker.atomNamedForwardReference(subpatternName) } -> std::same_as<void>;
-    { checker.quantifyAtom(unsigned{}, unsigned{}, bool{}) } -> std::same_as<void>;
-    { checker.disjunction(CreateDisjunctionPurpose{}) } -> std::same_as<void>;
+    { checker.quantifyAtom(unsigned { }, unsigned { }, bool { }) } -> std::same_as<void>;
+    { checker.disjunction(CreateDisjunctionPurpose { }) } -> std::same_as<void>;
     { checker.resetForReparsing() } -> std::same_as<void>;
 };
 
@@ -266,7 +266,7 @@ private:
                     return;
                 }
                 // Otherwise just fall through - cached character so treat this as CharacterClassConstructionState::Empty.
-                FALLTHROUGH;
+                [[fallthrough]];
 
             case CharacterClassConstructionState::Empty:
                 m_character = ch;
@@ -315,7 +315,7 @@ private:
             case CharacterClassConstructionState::CachedCharacter:
                 // Flush the currently cached character, then fall through.
                 m_delegate.atomCharacterClassAtom(m_character);
-                FALLTHROUGH;
+                [[fallthrough]];
             case CharacterClassConstructionState::Empty:
             case CharacterClassConstructionState::AfterCharacterClass:
                 m_delegate.atomCharacterClassBuiltIn(classID, invert);
@@ -333,7 +333,7 @@ private:
             case CharacterClassConstructionState::CachedCharacterHyphen:
                 m_delegate.atomCharacterClassAtom(m_character);
                 m_delegate.atomCharacterClassAtom('-');
-                FALLTHROUGH;
+                [[fallthrough]];
             case CharacterClassConstructionState::AfterCharacterClassHyphen:
                 if (m_isUnicode) {
                     m_errorCode = ErrorCode::CharacterClassRangeInvalid;
@@ -433,7 +433,9 @@ private:
 
         void nestedClassBegin(bool invert)
         {
-            m_delegate.atomCharacterClassPushNested();
+            flushCachedCharacterIfNeeded();
+
+            m_delegate.atomCharacterClassPushNested(invert);
             nestedParseState.append(NestingState(m_setOp, m_mayContainStrings, m_inverted));
             m_setOp = CharacterClassSetOp::Default;
             m_mayContainStrings = false;
@@ -459,7 +461,7 @@ private:
             m_inverted = lastState.m_inverted;
             m_mayContainStrings = lastState.m_mayContainStrings;
 
-            m_delegate.atomCharacterClassPopNested();
+            m_delegate.atomCharacterClassPopNested(m_inverted);
             m_state = ClassSetConstructionState::AfterSetOperand;
             computeMayContainStrings(rhsMayContainStrings);
             return false;
@@ -612,13 +614,13 @@ private:
                     return;
                 }
                 // Otherwise just fall through - cached character so treat this as ClassSetConstructionState::Empty.
-                FALLTHROUGH;
+                [[fallthrough]];
 
             case ClassSetConstructionState::AfterSetRange:
                 switchFromDefaultOpToUnionOpIfNeeded();
 
                 // Continue processing the current character.
-                FALLTHROUGH;
+                [[fallthrough]];
 
             case ClassSetConstructionState::Empty:
             case ClassSetConstructionState::AfterSetOperator:
@@ -706,13 +708,13 @@ private:
 
                 // Yes, we really want to fall through to the AfterSetRange case to switch from Default to Union op
                 // and then handle the built in class by falling through again.
-                FALLTHROUGH;
+                [[fallthrough]];
 
             case ClassSetConstructionState::AfterSetRange:
                 switchFromDefaultOpToUnionOpIfNeeded();
 
                 // Continue processing the current character.
-                FALLTHROUGH;
+                [[fallthrough]];
 
             case ClassSetConstructionState::Empty:
             case ClassSetConstructionState::AfterCharacterClass:
@@ -731,7 +733,7 @@ private:
             case ClassSetConstructionState::CachedCharacterHyphen:
                 m_delegate.atomCharacterClassAtom(m_character);
                 m_delegate.atomCharacterClassAtom('-');
-                FALLTHROUGH;
+                [[fallthrough]];
             case ClassSetConstructionState::AfterCharacterClassHyphen:
                 m_errorCode = ErrorCode::CharacterClassRangeInvalid;
                 return;
@@ -1364,7 +1366,8 @@ private:
         };
 
         while (!atEndOfPattern()) {
-            switch (peek()) {
+            auto ch = peek();
+            switch (ch) {
             case ']':
                 consume();
                 if (classSetConstructor.nestedClassEnd())
@@ -1823,7 +1826,7 @@ private:
 
                 restoreState(state);
                 // if we did not find a complete quantifer, fall through to the default case.
-                FALLTHROUGH;
+                [[fallthrough]];
             }
 
             default:
@@ -1833,6 +1836,11 @@ private:
 
             if (hasError(m_errorCode))
                 return;
+
+            if (m_delegate.abortedDueToError()) {
+                m_errorCode = m_delegate.abortErrorCode();
+                return;
+            }
         }
 
         if (!m_parenthesesStack.isEmpty())
@@ -2213,6 +2221,38 @@ private:
  * message where a parse error occurs.
  *
  * The Delegate must implement `YarrSyntaxCheckable` concept.
+ * The Delegate must implement the following interface:
+ *
+ *    void assertionBOL();
+ *    void assertionEOL();
+ *    void assertionWordBoundary(bool invert);
+ *
+ *    void atomPatternCharacter(char32_t ch);
+ *    void atomBuiltInCharacterClass(BuiltInCharacterClassID classID, bool invert);
+ *    void atomCharacterClassBegin(bool invert)
+ *    void atomCharacterClassAtom(char32_t ch)
+ *    void atomCharacterClassRange(char32_t begin, char32_t end)
+ *    void atomCharacterClassBuiltIn(BuiltInCharacterClassID classID, bool invert)
+ *    void atomClassStringDisjunction(Vector<Vector<char32_t>>&)
+ *    void atomCharacterClassSetOp(CharacterClassSetOp setOp)
+ *    void atomCharacterClassPushNested(bool invert)
+ *    void atomCharacterClassPopNested(bool invert)
+ *    void atomCharacterClassEnd()
+ *    void atomParenthesesSubpatternBegin(bool capture = true, std::optional<String> groupName);
+ *    void atomParentheticalAssertionBegin(bool invert, MatchDirection matchDirection);
+ *    void atomParenthesesEnd();
+ *    void atomBackReference(unsigned subpatternId);
+ *    void atomNamedBackReference(const String& subpatternName);
+ *    void atomNamedForwardReference(const String& subpatternName);
+ *
+ *    void quantifyAtom(unsigned min, unsigned max, bool greedy);
+ *
+ *    void disjunction(CreateDisjunctionPurpose purpose);
+ *
+ *    bool abortedDueToError() const;
+ *    ErrorCode abortErrorCode() const;
+ *
+ *    void resetForReparsing();
  *
  * The regular expression is described by a sequence of assertion*() and atom*()
  * callbacks to the delegate, describing the terms in the regular expression.

@@ -28,11 +28,12 @@
 #include "GStreamerCaptureDeviceManager.h"
 #include "MockRealtimeMediaSourceCenter.h"
 #include <gst/app/gstappsrc.h>
+#include <numbers>
 #include <wtf/IndexedRange.h>
 
 namespace WebCore {
 
-static constexpr double s_Tau = 2 * M_PI;
+static constexpr double s_Tau = 2 * std::numbers::pi;
 static constexpr double s_BipBopDuration = 0.07;
 static constexpr double s_BipBopVolume = 0.5;
 static constexpr double s_BipFrequency = 1500;
@@ -216,7 +217,7 @@ void MockRealtimeAudioSourceGStreamer::reconfigure()
     auto rate = sampleRate();
     size_t sampleCount = 2 * rate;
 
-    m_maximiumFrameCount = WTF::roundUpToPowerOfTwo(renderInterval().seconds() * sampleRate());
+    m_maximiumFrameCount = roundUpToPowerOfTwo<uint32_t>(renderInterval().seconds() * sampleRate());
     gst_audio_info_set_format(&info, GST_AUDIO_FORMAT_F32LE, rate, 1, nullptr);
     m_streamFormat = GStreamerAudioStreamDescription(info);
     m_caps = adoptGRef(gst_audio_info_to_caps(&info));

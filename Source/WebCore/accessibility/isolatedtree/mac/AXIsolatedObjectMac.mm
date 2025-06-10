@@ -34,33 +34,45 @@
 
 namespace WebCore {
 
-void AXIsolatedObject::initializePlatformProperties(const Ref<const AccessibilityObject>& object)
+void appendBasePlatformProperties(AXPropertyVector& properties, OptionSet<AXPropertyFlag>& propertyFlags, const Ref<AccessibilityObject>& object)
 {
+    auto setProperty = [&] (AXProperty property, AXPropertyValueVariant&& value) {
+        setPropertyIn(property, WTFMove(value), properties, propertyFlags);
+    };
+
+    // These attributes are used to serve APIs on static text, but, we cache them on the highest-level ancestor
+    // to avoid caching the same value multiple times.
+    auto* parent = object->parentObject();
+    auto style = object->stylesForAttributedString();
+    std::optional<RetainPtr<CTFontRef>> parentFont = parent ? std::optional(parent->font()) : std::nullopt;
+    if (!parentFont || parentFont != style.font)
+        setProperty(AXProperty::Font, style.font);
+    std::optional<Color> parentTextColor = parent ? std::optional(parent->textColor()) : std::nullopt;
+    if (!parentTextColor || *parentTextColor != style.textColor)
+        setProperty(AXProperty::TextColor, WTFMove(style.textColor));
+}
+
+void appendPlatformProperties(AXPropertyVector& properties, OptionSet<AXPropertyFlag>& propertyFlags, const Ref<AccessibilityObject>& object)
+{
+    auto setProperty = [&] (AXProperty property, AXPropertyValueVariant&& value) {
+        setPropertyIn(property, WTFMove(value), properties, propertyFlags);
+    };
+
     setProperty(AXProperty::HasApplePDFAnnotationAttribute, object->hasApplePDFAnnotationAttribute());
-    setProperty(AXProperty::SpeechHint, object->speechHintAttributeValue().isolatedCopy());
+    setProperty(AXProperty::SpeakAs, object->speakAs());
 #if ENABLE(AX_THREAD_TEXT_APIS)
     if (object->isStaticText()) {
         auto style = object->stylesForAttributedString();
+        // Font and TextColor are handled in initializeBasePlatformProperties, since ignored objects could be "containers" where those styles are set.
         setProperty(AXProperty::BackgroundColor, WTFMove(style.backgroundColor));
-        setProperty(AXProperty::Font, style.font);
         setProperty(AXProperty::HasLinethrough, style.hasLinethrough());
         setProperty(AXProperty::HasTextShadow, style.hasTextShadow);
         setProperty(AXProperty::HasUnderline, style.hasUnderline());
         setProperty(AXProperty::IsSubscript, style.isSubscript);
         setProperty(AXProperty::IsSuperscript, style.isSuperscript);
         setProperty(AXProperty::LinethroughColor, style.linethroughColor());
-        // FIXME: We're going to end up caching a lot of the same TextColor properties over and over.
-        //  1. Should we implement some kind of Color interning?
-        //  2. Or maybe have a "main" text color mechanism, where when we create the isolated tree, we try to compute the
-        //     "main" text color by walking n-number of RenderTexts. Then AXIsolatedObject::setProperty, if the Color is
-        //     equivalent to the "main" one, we consider the color to be "isDefaultValue", thus not caching it.
-        //       - Probably want to do this for both TextColor and BackgroundColor.
-        //       - Maybe set this as an OpportunisticTask to re-compute the main colors, and if it has changed, walk all
-        //         objects and uncache properties for those with the new "main" color? Not sure if this is worth it...
-        //       - Only trigger the walk if font-color changes?
-        // Resolve this FIXME before shipping AX_THREAD_TEXT_APIS.
-        setProperty(AXProperty::TextColor, WTFMove(style.textColor));
         setProperty(AXProperty::UnderlineColor, style.underlineColor());
+        setProperty(AXProperty::FontOrientation, object->fontOrientation());
     }
     // FIXME: Can we compute this off the main-thread with our cached text runs?
     setProperty(AXProperty::StringValue, object->stringValue().isolatedCopy());
@@ -108,8 +120,8 @@ void AXIsolatedObject::initializePlatformProperties(const Ref<const Accessibilit
     }
 
     if (object->isScrollView()) {
-        m_platformWidget = object->platformWidget();
-        m_remoteParent = object->remoteParentObject();
+        setProperty(AXProperty::PlatformWidget, RetainPtr(object->platformWidget()));
+        setProperty(AXProperty::RemoteParent, object->remoteParent());
     }
 }
 
@@ -117,7 +129,7 @@ AttributedStringStyle AXIsolatedObject::stylesForAttributedString() const
 {
     return {
         font(),
-        colorAttributeValue(AXProperty::TextColor),
+        textColor(),
         colorAttributeValue(AXProperty::BackgroundColor),
         boolAttributeValue(AXProperty::IsSubscript),
         boolAttributeValue(AXProperty::IsSuperscript),
@@ -131,13 +143,13 @@ AttributedStringStyle AXIsolatedObject::stylesForAttributedString() const
     };
 }
 
-RemoteAXObjectRef AXIsolatedObject::remoteParentObject() const
+RetainPtr<RemoteAXObjectRef> AXIsolatedObject::remoteParent() const
 {
     auto* scrollView = Accessibility::findAncestor<AXCoreObject>(*this, true, [] (const AXCoreObject& object) {
         return object.isScrollView();
     });
     auto* isolatedObject = dynamicDowncast<AXIsolatedObject>(scrollView);
-    return isolatedObject ? isolatedObject->m_remoteParent.get() : nil;
+    return isolatedObject ? isolatedObject->propertyValue<RetainPtr<id>>(AXProperty::RemoteParent) : nil;
 }
 
 FloatRect AXIsolatedObject::primaryScreenRect() const
@@ -196,8 +208,8 @@ std::optional<String> AXIsolatedObject::textContent() const
     if (AXObjectCache::useAXThreadTextApis())
         return textMarkerRange().toString();
 #else
-    if (m_propertyMap.contains(AXProperty::TextContent))
-        return stringAttributeValue(AXProperty::TextContent);
+    if (std::optional textContent = optionalAttributeValue<String>(AXProperty::TextContent))
+        return *textContent;
     if (auto attributedText = propertyValue<RetainPtr<NSAttributedString>>(AXProperty::AttributedText))
         return String { [attributedText string] };
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
@@ -233,10 +245,11 @@ AXTextMarkerRange AXIsolatedObject::textMarkerRange() const
 
         auto thisMarker = AXTextMarker { *this, 0 };
         AXTextMarkerRange range { thisMarker, thisMarker };
-        auto endMarker = thisMarker.findLastBefore(stopObject ? std::optional { stopObject->objectID() } : std::nullopt);
+        auto startMarker = thisMarker.toTextRunMarker();
+        auto endMarker = startMarker.findLastBefore(stopObject ? std::optional { stopObject->objectID() } : std::nullopt);
         if (endMarker.isValid() && endMarker.isInTextRun()) {
             // One or more of our descendants have text, so let's form a range from the first and last text positions.
-            range = { thisMarker.toTextRunMarker(), WTFMove(endMarker) };
+            range = { WTFMove(startMarker), WTFMove(endMarker) };
         }
         return range;
     }
@@ -334,18 +347,18 @@ RetainPtr<NSAttributedString> AXIsolatedObject::attributedStringForTextMarkerRan
     if (!nsRange)
         return nil;
 
-    // If the range spans the beginning of the node, account for the length of the text marker prefix, if any.
+    // If the range spans the beginning of the node, account for the length of the list marker prefix, if any.
     if (!nsRange->location)
         nsRange->length += textContentPrefixFromListMarker().length();
 
     if (!attributedStringContainsRange(attributedText.get(), *nsRange))
         return nil;
 
-    NSMutableAttributedString *result = [[NSMutableAttributedString alloc] initWithAttributedString:[attributedText attributedSubstringFromRange:*nsRange]];
-    if (!result.length)
+    RetainPtr result = adoptNS([[NSMutableAttributedString alloc] initWithAttributedString:[attributedText attributedSubstringFromRange:*nsRange]]);
+    if (!result.get().length)
         return result;
 
-    auto resultRange = NSMakeRange(0, result.length);
+    auto resultRange = NSMakeRange(0, result.get().length);
     // The AttributedString is cached with spelling info. If the caller does not request spelling info, we have to remove it before returning.
     if (spellCheck == SpellCheck::No) {
         [result removeAttribute:NSAccessibilityDidSpellCheckAttribute range:resultRange];
@@ -356,7 +369,7 @@ RetainPtr<NSAttributedString> AXIsolatedObject::attributedStringForTextMarkerRan
         ASSERT(_AXGetClientForCurrentRequestUntrusted() == kAXClientTypeWebKitTesting);
         // We're going to spellcheck, so remove AXDidSpellCheck: NO.
         [result removeAttribute:NSAccessibilityDidSpellCheckAttribute range:resultRange];
-        performFunctionOnMainThreadAndWait([result = retainPtr(result), &resultRange] (AccessibilityObject* axObject) {
+        performFunctionOnMainThreadAndWait([result = RetainPtr { result }, &resultRange] (AccessibilityObject* axObject) {
             if (auto* node = axObject->node())
                 attributedStringSetSpelling(result.get(), *node, String { [result string] }, resultRange);
         });

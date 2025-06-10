@@ -96,6 +96,8 @@ public:
     CDMInstanceClearKey();
     virtual ~CDMInstanceClearKey();
 
+    uint32_t getNextSessionIdValue() { return m_nextSessionIdValue++; }
+
     // CDMInstance
     ImplementationType implementationType() const final { return ImplementationType::ClearKey; }
     void initializeWithConfiguration(const CDMKeySystemConfiguration&, AllowDistinctiveIdentifiers, AllowPersistentState, SuccessCallback&&) final;
@@ -103,6 +105,9 @@ public:
     void setStorageDirectory(const String&) final;
     const String& keySystem() const final;
     RefPtr<CDMInstanceSession> createSession() final;
+
+private:
+    uint32_t m_nextSessionIdValue { 0 };
 };
 
 class CDMInstanceSessionClearKey final : public CDMInstanceSessionProxy {
@@ -116,7 +121,7 @@ public:
     void removeSessionData(const String&, LicenseType, RemoveSessionDataCallback&&) final;
     void storeRecordOfKeyUsage(const String&) final;
 private:
-    RefPtr<CDMInstanceClearKey> protectedParentInstance() const;
+    CDMInstanceClearKey* parentInstance() const;
 
     String m_sessionID;
     KeyStore m_keyStore;

@@ -34,7 +34,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
-CodeBlockHash::CodeBlockHash(std::span<const char, 6> string)
+CodeBlockHash::CodeBlockHash(std::span<const char, stringLength> string)
     : m_hash(sixCharacterHashStringToInteger(string))
 {
 }

@@ -39,6 +39,7 @@
 #include "DocumentInlines.h"
 #include "HTMLNames.h"
 #include "MediaQueryEvaluator.h"
+#include "MutableCSSSelector.h"
 #include "RuleSetBuilder.h"
 #include "SVGElement.h"
 #include "ScriptExecutionContext.h"
@@ -50,6 +51,7 @@
 #include "StyleRuleImport.h"
 #include "StyleSheetContents.h"
 #include "UserAgentParts.h"
+#include <ranges>
 
 namespace WebCore {
 namespace Style {
@@ -149,7 +151,7 @@ void RuleSet::addRule(RuleData&& ruleData, CascadeLayerIdentifier cascadeLayerId
             auto oldSize = container.size();
             container.grow(m_ruleCount);
             auto newlyAllocated = container.mutableSpan().subspan(oldSize);
-            std::fill(newlyAllocated.begin(), newlyAllocated.end(), 0);
+            std::ranges::fill(newlyAllocated, 0);
             container.last() = identifier;
         }
     };
@@ -395,7 +397,7 @@ void RuleSet::addPageRule(StyleRulePage& rule)
 
 void RuleSet::setViewTransitionRule(StyleRuleViewTransition& rule)
 {
-    m_viewTransitionRule = &rule;
+    m_viewTransitionRule = rule;
 }
 
 RefPtr<StyleRuleViewTransition> RuleSet::viewTransitionRule() const

@@ -116,7 +116,9 @@ public:
     void setInspectorClient(std::unique_ptr<API::InspectorClient>&&);
 
     // Public APIs
+    WebPageProxy* inspectedPage() const { return m_inspectedPage.get(); }
     RefPtr<WebPageProxy> protectedInspectedPage() const { return m_inspectedPage.get(); }
+    WebPageProxy* inspectorPage() const { return m_inspectorPage.get(); }
     RefPtr<WebPageProxy> protectedInspectorPage() const { return m_inspectorPage.get(); }
 
 #if ENABLE(INSPECTOR_EXTENSIONS)
@@ -369,3 +371,7 @@ private:
 };
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebInspectorUIProxy)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::Inspector; }
+SPECIALIZE_TYPE_TRAITS_END()

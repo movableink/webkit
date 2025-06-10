@@ -695,7 +695,6 @@ set(webrtc_SOURCES
     Source/webrtc/api/video_codecs/builtin_video_encoder_factory.cc
     Source/webrtc/api/video_codecs/h264_profile_level_id.cc
     Source/webrtc/api/video_codecs/h265_profile_tier_level.cc
-    Source/webrtc/api/video_codecs/libaom_av1_encoder_factory.cc
     Source/webrtc/api/video_codecs/scalability_mode.cc
     Source/webrtc/api/video_codecs/scalability_mode_helper.cc
     Source/webrtc/api/video_codecs/sdp_video_format.cc
@@ -1019,11 +1018,8 @@ set(webrtc_SOURCES
     Source/webrtc/modules/audio_device/fine_audio_buffer.cc
     Source/webrtc/modules/audio_device/linux/alsasymboltable_linux.cc
     Source/webrtc/modules/audio_device/linux/audio_device_alsa_linux.cc
-    Source/webrtc/modules/audio_device/linux/audio_device_pulse_linux.cc
     Source/webrtc/modules/audio_device/linux/audio_mixer_manager_alsa_linux.cc
-    Source/webrtc/modules/audio_device/linux/audio_mixer_manager_pulse_linux.cc
     Source/webrtc/modules/audio_device/linux/latebindingsymboltable_linux.cc
-    Source/webrtc/modules/audio_device/linux/pulseaudiosymboltable_linux.cc
     Source/webrtc/modules/audio_mixer/audio_frame_manipulator.cc
     Source/webrtc/modules/audio_mixer/audio_mixer_impl.cc
     Source/webrtc/modules/audio_mixer/default_output_rate_calculator.cc
@@ -2059,8 +2055,10 @@ if (APPLE)
         Source/webrtc/rtc_base/system/cocoa_threading.mm
 
         Source/webrtc/sdk/WebKit/WebKitUtilities.mm
+        Source/webrtc/sdk/WebKit/WebKitVP9Decoder.cpp
         Source/webrtc/sdk/WebKit/WebKitDecoder.mm
         Source/webrtc/sdk/WebKit/WebKitEncoder.mm
+        Source/webrtc/sdk/WebKit/WebKitDecoderReceiver.cpp
 
         Source/webrtc/sdk/objc/api/peerconnection/RTCVideoEncoderSettings+Private.mm
         Source/webrtc/sdk/objc/api/video_codec/RTCVideoCodecConstants.mm

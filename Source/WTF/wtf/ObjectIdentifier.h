@@ -277,40 +277,16 @@ public:
         : StringTypeAdapter<UUID>(identifier.toRawValue()) { }
 };
 
-template<typename T, typename ThreadSafety>
-bool operator==(const ObjectIdentifierGeneric<T, ThreadSafety, UUID>& a, const ObjectIdentifierGeneric<T, ThreadSafety, UUID>& b)
+template<typename T, typename ThreadSafety, typename RawValue>
+bool operator==(const ObjectIdentifierGeneric<T, ThreadSafety, RawValue>& a, const ObjectIdentifierGeneric<T, ThreadSafety, RawValue>& b)
 {
     return a.toRawValue() == b.toRawValue();
 }
 
 template<typename T, typename ThreadSafety>
-bool operator==(const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& a, const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& b)
+std::strong_ordering operator<=>(const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& a, const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& b)
 {
-    return a.toRawValue() == b.toRawValue();
-}
-
-template<typename T, typename ThreadSafety>
-bool operator>(const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& a, const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& b)
-{
-    return a.toRawValue() > b.toRawValue();
-}
-
-template<typename T, typename ThreadSafety>
-bool operator>=(const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& a, const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& b)
-{
-    return a.toRawValue() >= b.toRawValue();
-}
-
-template<typename T, typename ThreadSafety>
-bool operator<(const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& a, const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& b)
-{
-    return a.toRawValue() < b.toRawValue();
-}
-
-template<typename T, typename ThreadSafety>
-bool operator<=(const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& a, const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& b)
-{
-    return a.toRawValue() <= b.toRawValue();
+    return a.toRawValue() <=> b.toRawValue();
 }
 
 } // namespace WTF

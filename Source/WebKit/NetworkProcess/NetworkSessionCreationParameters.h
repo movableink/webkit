@@ -103,9 +103,9 @@ struct NetworkSessionCreationParameters {
     String webPushMachServiceName;
     String webPushPartitionString;
     bool enablePrivateClickMeasurementDebugMode { false };
-    bool isBlobRegistryTopOriginPartitioningEnabled { false };
     bool isOptInCookiePartitioningEnabled { false };
     bool shouldSendPrivateTokenIPCForTesting { false };
+    uint64_t cookiesVersion { 0 };
 
     UnifiedOriginStorageLevel unifiedOriginStorageLevel { UnifiedOriginStorageLevel::Standard };
     uint64_t perOriginStorageQuota;
@@ -130,7 +130,7 @@ struct NetworkSessionCreationParameters {
     bool isDeclarativeWebPushEnabled { false };
 #endif
 #if HAVE(NW_PROXY_CONFIG)
-    std::optional<Vector<std::pair<Vector<uint8_t>, WTF::UUID>>> proxyConfigData;
+    std::optional<Vector<std::pair<Vector<uint8_t>, std::optional<WTF::UUID>>>> proxyConfigData;
 #endif
     ResourceLoadStatisticsParameters resourceLoadStatisticsParameters;
 
@@ -142,6 +142,10 @@ struct NetworkSessionCreationParameters {
     bool isLegacyTLSAllowed { false };
 #else
     bool isLegacyTLSAllowed { true };
+#endif
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    String webContentRestrictionsConfigurationFile;
+    SandboxExtension::Handle webContentRestrictionsConfigurationExtensionHandle;
 #endif
 };
 

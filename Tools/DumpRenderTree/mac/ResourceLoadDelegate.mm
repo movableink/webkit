@@ -60,7 +60,7 @@
     NSString *str = [NSString stringWithFormat:@"<NSError domain %@, code %ld", [self domain], static_cast<long>([self code])];
     NSURL *failingURL;
 
-    if ((failingURL = [[self userInfo] objectForKey:@"NSErrorFailingURLKey"]))
+    if ((failingURL = [[self userInfo] objectForKey:NSURLErrorFailingURLErrorKey]))
         str = [str stringByAppendingFormat:@", failing URL \"%@\"", [failingURL _drt_descriptionSuitableForTestResult]];
 
     str = [str stringByAppendingFormat:@">"];
@@ -271,7 +271,7 @@ BOOL canAuthenticateServerTrustAgainstProtectionSpace(NSString *host)
 -(void)webView: (WebView *)wv resource:identifier didFailLoadingWithError:(NSError *)error fromDataSource:(WebDataSource *)dataSource
 {
     if (!gUsingServerMode && done) {
-        NSURL *failingURL = [error.userInfo[@"NSErrorFailingURLKey"] _webkit_canonicalize_with_wtf];
+        NSURL *failingURL = [error.userInfo[NSURLErrorFailingURLErrorKey] _webkit_canonicalize_with_wtf];
         if ([self.mainResourceURL isEqual:failingURL]) {
             NSString *string = [NSString stringWithFormat:@"Failed to load %@\n%@", identifier, [error _drt_descriptionSuitableForTestResult]];
             printf("%s\n", string.UTF8String);

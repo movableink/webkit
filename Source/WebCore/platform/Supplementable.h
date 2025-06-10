@@ -119,7 +119,7 @@ private:
     using SupplementMap = UncheckedKeyHashMap<ASCIILiteral, std::unique_ptr<Supplement<T>>>;
     SupplementMap m_supplements;
 #if ASSERT_ENABLED
-    Ref<Thread> m_thread { Thread::currentSingleton() };
+    const Ref<Thread> m_thread { Thread::currentSingleton() };
 #endif
 };
 

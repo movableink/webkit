@@ -68,7 +68,7 @@ public:
         }
         void advance(CompletionHandler<void(ExceptionOr<Result>&&)>&&);
 
-        Ref<FileSystemDirectoryHandle> m_source;
+        const Ref<FileSystemDirectoryHandle> m_source;
         size_t m_index { 0 };
         Vector<String> m_keys;
         bool m_isInitialized { false };

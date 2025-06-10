@@ -92,10 +92,10 @@ void GPUBuffer::mapAsync(GPUMapModeFlags mode, std::optional<GPUSize64> offset, 
     });
 }
 
-static auto makeArrayBuffer(std::variant<std::span<const uint8_t>, size_t> source, size_t offset, auto& cachedArrayBuffers, auto& device, auto& buffer)
+static auto makeArrayBuffer(Variant<std::span<const uint8_t>, size_t> source, size_t offset, auto& cachedArrayBuffers, auto& device, auto& buffer)
 {
     RefPtr<ArrayBuffer> arrayBuffer;
-    std::visit(WTF::makeVisitor([&](std::span<const uint8_t> source) {
+    WTF::visit(WTF::makeVisitor([&](std::span<const uint8_t> source) {
         arrayBuffer = ArrayBuffer::create(source);
     }, [&](size_t numberOfElements) {
         arrayBuffer = ArrayBuffer::create(numberOfElements, 1);

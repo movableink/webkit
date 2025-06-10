@@ -34,13 +34,8 @@
 #include "XMLDocumentParserScope.h"
 #include "XSLImportRule.h"
 #include "XSLTProcessor.h"
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
-IGNORE_WARNINGS_BEGIN("undef")
 #include <libxml/uri.h>
 #include <libxslt/xsltutils.h>
-IGNORE_WARNINGS_END
-IGNORE_WARNINGS_END
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/HexNumber.h>
 #include <wtf/text/MakeString.h>
@@ -214,10 +209,7 @@ void XSLStyleSheet::loadChildSheets()
             if (IS_XSLT_ELEM(curr) && IS_XSLT_NAME(curr, "import")) {
                 xmlChar* uriRef = xsltGetNsProp(curr, (const xmlChar*)"href", XSLT_NAMESPACE);
                 loadChildSheet(String::fromUTF8((const char*)uriRef));
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
                 xmlFree(uriRef);
-IGNORE_WARNINGS_END
             } else
                 break;
             curr = curr->next;
@@ -228,10 +220,7 @@ IGNORE_WARNINGS_END
             if (curr->type == XML_ELEMENT_NODE && IS_XSLT_ELEM(curr) && IS_XSLT_NAME(curr, "include")) {
                 xmlChar* uriRef = xsltGetNsProp(curr, (const xmlChar*)"href", XSLT_NAMESPACE);
                 loadChildSheet(String::fromUTF8((const char*)uriRef));
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
                 xmlFree(uriRef);
-IGNORE_WARNINGS_END
             }
             curr = curr->next;
         }
@@ -301,11 +290,8 @@ xmlDocPtr XSLStyleSheet::locateStylesheetSubResource(xmlDocPtr parentDoc, const 
             xmlChar* base = xmlNodeGetBase(parentDoc, (xmlNodePtr)parentDoc);
             xmlChar* childURI = xmlBuildURI((const xmlChar*)importHref.data(), base);
             bool equalURIs = xmlStrEqual(uri, childURI);
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
             xmlFree(base);
             xmlFree(childURI);
-IGNORE_WARNINGS_END
             if (equalURIs) {
                 child->markAsProcessed();
                 return child->document();

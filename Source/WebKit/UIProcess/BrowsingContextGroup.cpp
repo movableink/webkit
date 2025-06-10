@@ -44,7 +44,7 @@ BrowsingContextGroup::~BrowsingContextGroup() = default;
 
 Ref<FrameProcess> BrowsingContextGroup::ensureProcessForSite(const Site& site, WebProcessProxy& process, const WebPreferences& preferences, InjectBrowsingContextIntoProcess injectBrowsingContextIntoProcess)
 {
-    if (!site.isEmpty() && preferences.siteIsolationEnabled()) {
+    if (preferences.siteIsolationEnabled()) {
         if (RefPtr existingProcess = processForSite(site)) {
             if (existingProcess->process().coreProcessIdentifier() == process.coreProcessIdentifier())
                 return existingProcess.releaseNonNull();
@@ -82,7 +82,7 @@ void BrowsingContextGroup::addFrameProcessAndInjectPageContextIf(FrameProcess& p
     auto& site = process.site();
     if (m_processMap.get(site) == &process)
         return;
-    ASSERT(site.isEmpty() || !m_processMap.get(site) || m_processMap.get(site)->process().state() == WebProcessProxy::State::Terminated);
+    ASSERT(!m_processMap.get(site) || m_processMap.get(site)->process().state() == WebProcessProxy::State::Terminated);
     m_processMap.set(site, process);
     Ref processProxy = process.process();
     for (Ref page : m_pages) {

@@ -106,6 +106,57 @@ void DebugHeap::dump()
     malloc_zone_print(m_zone, verbose);
 }
 
+#elif BOS(WINDOWS)
+
+// DebugHeap unimplemented on Windows
+// This might be possible with _aligned_malloc, _aligned_realloc and _aligned_free, however there may be an impedence mismatch compared to Linux's APIs.
+// For example, it might attempt to free larger contiguous regions with a single free which might fail.
+
+DebugHeap::DebugHeap(const LockHolder&)
+    : m_pageSize(vmPageSize())
+{
+}
+
+void* DebugHeap::malloc(size_t size, FailureAction action)
+{
+    BUNUSED_PARAM(size);
+    BUNUSED_PARAM(action);
+    RELEASE_BASSERT_NOT_REACHED();
+    return nullptr;
+}
+
+void* DebugHeap::memalign(size_t alignment, size_t size, FailureAction action)
+{
+    BUNUSED_PARAM(alignment);
+    BUNUSED_PARAM(size);
+    BUNUSED_PARAM(action);
+    RELEASE_BASSERT_NOT_REACHED();
+    return nullptr;
+}
+
+void* DebugHeap::realloc(void* object, size_t size, FailureAction action)
+{
+    BUNUSED_PARAM(object);
+    BUNUSED_PARAM(size);
+    BUNUSED_PARAM(action);
+    RELEASE_BASSERT_NOT_REACHED();
+    return nullptr;
+}
+
+void DebugHeap::free(void* object)
+{
+    BUNUSED_PARAM(object);
+    RELEASE_BASSERT_NOT_REACHED();
+}
+
+void DebugHeap::scavenge()
+{
+}
+
+void DebugHeap::dump()
+{
+}
+
 #else
 
 DebugHeap::DebugHeap(const LockHolder&)
@@ -220,17 +271,44 @@ bool pas_debug_heap_is_enabled(pas_heap_config_kind kind)
 
 void* pas_debug_heap_malloc(size_t size)
 {
-    return DebugHeap::getExisting()->malloc(size, FailureAction::ReturnNull);
+    auto debugHeap = DebugHeap::getExisting();
+    PAS_PROFILE(DEBUG_HEAP_ALLOCATION, debugHeap, size, 0, pas_non_compact_allocation_mode);
+    return debugHeap->malloc(size, FailureAction::ReturnNull);
 }
 
 void* pas_debug_heap_memalign(size_t alignment, size_t size)
 {
-    return DebugHeap::getExisting()->memalign(alignment, size, FailureAction::ReturnNull);
+    auto debugHeap = DebugHeap::getExisting();
+    PAS_PROFILE(DEBUG_HEAP_ALLOCATION, debugHeap, size, alignment, pas_non_compact_allocation_mode);
+    return debugHeap->memalign(alignment, size, FailureAction::ReturnNull);
 }
 
 void* pas_debug_heap_realloc(void* ptr, size_t size)
 {
-    return DebugHeap::getExisting()->realloc(ptr, size, FailureAction::ReturnNull);
+    auto debugHeap = DebugHeap::getExisting();
+    PAS_PROFILE(DEBUG_HEAP_REALLOCATION, debugHeap, ptr, size, pas_non_compact_allocation_mode);
+    return debugHeap->realloc(ptr, size, FailureAction::ReturnNull);
+}
+
+void* pas_debug_heap_malloc_compact(size_t size)
+{
+    auto debugHeap = DebugHeap::getExisting();
+    PAS_PROFILE(DEBUG_HEAP_ALLOCATION, debugHeap, size, 0, pas_always_compact_allocation_mode);
+    return debugHeap->malloc(size, FailureAction::ReturnNull);
+}
+
+void* pas_debug_heap_memalign_compact(size_t alignment, size_t size)
+{
+    auto debugHeap = DebugHeap::getExisting();
+    PAS_PROFILE(DEBUG_HEAP_ALLOCATION, debugHeap, size, alignment, pas_always_compact_allocation_mode);
+    return debugHeap->memalign(alignment, size, FailureAction::ReturnNull);
+}
+
+void* pas_debug_heap_realloc_compact(void* ptr, size_t size)
+{
+    auto debugHeap = DebugHeap::getExisting();
+    PAS_PROFILE(DEBUG_HEAP_REALLOCATION, debugHeap, ptr, size, pas_always_compact_allocation_mode);
+    return debugHeap->realloc(ptr, size, FailureAction::ReturnNull);
 }
 
 void pas_debug_heap_free(void* ptr)
@@ -262,6 +340,29 @@ void* pas_debug_heap_memalign(size_t alignment, size_t size)
 }
 
 void* pas_debug_heap_realloc(void* ptr, size_t size)
+{
+    BUNUSED_PARAM(ptr);
+    BUNUSED_PARAM(size);
+    RELEASE_BASSERT_NOT_REACHED();
+    return nullptr;
+}
+
+void* pas_debug_heap_malloc_compact(size_t size)
+{
+    BUNUSED_PARAM(size);
+    RELEASE_BASSERT_NOT_REACHED();
+    return nullptr;
+}
+
+void* pas_debug_heap_memalign_compact(size_t alignment, size_t size)
+{
+    BUNUSED_PARAM(size);
+    BUNUSED_PARAM(alignment);
+    RELEASE_BASSERT_NOT_REACHED();
+    return nullptr;
+}
+
+void* pas_debug_heap_realloc_compact(void* ptr, size_t size)
 {
     BUNUSED_PARAM(ptr);
     BUNUSED_PARAM(size);

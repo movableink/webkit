@@ -92,6 +92,14 @@ public:
     String sourceURLDirective() const { return m_sourceURLDirective; }
     String sourceMappingURLDirective() const { return m_sourceMappingURLDirective; }
     void clear();
+    void clearErrorCodeAndBuffers()
+    {
+        m_error = 0;
+        m_lexErrorMessage = String();
+
+        m_buffer8.shrink(0);
+        m_buffer16.shrink(0);
+    }
     void setOffset(int offset, int lineStartOffset)
     {
         m_error = 0;
@@ -103,7 +111,7 @@ public:
 
         m_buffer8.shrink(0);
         m_buffer16.shrink(0);
-        if (LIKELY(m_code < m_codeEnd))
+        if (m_code < m_codeEnd) [[likely]]
             m_current = *m_code;
         else
             m_current = 0;
@@ -184,7 +192,7 @@ private:
     template <bool shouldBuildStrings> ALWAYS_INLINE StringParseResult parseComplexEscape(bool strictMode);
     ALWAYS_INLINE StringParseResult parseTemplateLiteral(JSTokenData*, RawStringsBuildMode);
     
-    using NumberParseResult = std::variant<double, const Identifier*>;
+    using NumberParseResult = Variant<double, const Identifier*>;
     ALWAYS_INLINE std::optional<NumberParseResult> parseHex();
     ALWAYS_INLINE std::optional<NumberParseResult> parseBinary();
     ALWAYS_INLINE std::optional<NumberParseResult> parseOctal();

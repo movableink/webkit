@@ -51,8 +51,8 @@ public:
     };
     using const_iterator = iterator;
 
-    iterator begin() const { return { *this, 0 }; }
-    iterator end() const { return { *this, size() }; }
+    iterator begin() const LIFETIME_BOUND { return { *this, 0 }; }
+    iterator end() const LIFETIME_BOUND { return { *this, size() }; }
 
     bool hasValue(CSSValue&) const;
     bool hasValue(CSSValueID) const;

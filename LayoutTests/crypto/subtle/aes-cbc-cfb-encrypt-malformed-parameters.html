@@ -17,9 +17,8 @@ var extractable = false;
 var plainText = asciiToUint8Array("Hello, World!");
 var rawKey = asciiToUint8Array("jnOw99oOZFLIEPMr");
 
-if (window.internals)
-  internals.settings.setDeprecateAESCFBWebCryptoEnabled(false);
- 
+shouldReject('crypto.subtle.importKey("raw", rawKey, "aes-cfb-8", extractable, ["encrypt"])');
+
 crypto.subtle.importKey("raw", rawKey, "aes-cbc", extractable, ["encrypt"]).then(function(result) {
     key = result;
     // Malformed AlgorithmIdentifiers
@@ -36,19 +35,6 @@ crypto.subtle.importKey("raw", rawKey, "aes-cbc", extractable, ["encrypt"]).then
     shouldReject('crypto.subtle.encrypt({name: "aes-cbc", iv: asciiToUint8Array("")}, key, plainText)');
     shouldReject('crypto.subtle.encrypt({name: "aes-cbc", iv: asciiToUint8Array("j")}, key, plainText)');
     shouldReject('crypto.subtle.encrypt({name: "aes-cbc", iv: asciiToUint8Array("jnOw99oOZFLIEPMrd")}, key, plainText)');
-
-    finishJSTest();
-});
-
-crypto.subtle.importKey("raw", rawKey, "aes-cfb-8", extractable, ["encrypt"]).then(function(result) {
-    key = result;
-    // Malformed AlgorithmIdentifiers
-    shouldReject('crypto.subtle.encrypt("aes-cfb-8", key, plainText)');
-    shouldReject('crypto.subtle.encrypt({name: "aes-cfb-8"}, key, plainText)');
-    // Wrong iv length
-    shouldReject('crypto.subtle.encrypt({name: "aes-cfb-8", iv: asciiToUint8Array("")}, key, plainText)');
-    shouldReject('crypto.subtle.encrypt({name: "aes-cfb-8", iv: asciiToUint8Array("j")}, key, plainText)');
-    shouldReject('crypto.subtle.encrypt({name: "aes-cfb-8", iv: asciiToUint8Array("jnOw99oOZFLIEPMrd")}, key, plainText)');
 
     finishJSTest();
 });

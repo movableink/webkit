@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -78,6 +78,12 @@ LibWebRTCProvider::~LibWebRTCProvider()
 {
 }
 
+#if !PLATFORM(COCOA)
+void LibWebRTCProvider::registerWebKitVP9Decoder()
+{
+}
+#endif
+
 static inline rtc::SocketAddress prepareSocketAddress(const rtc::SocketAddress& address, bool disableNonLocalhostConnections)
 {
     auto result = address;
@@ -115,7 +121,7 @@ public:
 
 private:
     bool m_disableNonLocalhostConnections { false };
-    UniqueRef<rtc::BasicPacketSocketFactory> m_socketFactory;
+    const UniqueRef<rtc::BasicPacketSocketFactory> m_socketFactory;
 };
 
 struct PeerConnectionFactoryAndThreads {
@@ -522,13 +528,14 @@ std::optional<MediaCapabilitiesDecodingInfo> LibWebRTCProvider::videoDecodingCap
         }
         info.powerEfficient = decodingInfo ? decodingInfo->powerEfficient : isSupportingVP9HardwareDecoder();
         info.smooth = decodingInfo ? decodingInfo->smooth : isVPSoftwareDecoderSmooth(configuration);
-    } else if (equalLettersIgnoringASCIICase(containerType, "video/h264"_s)) {
-        // FIXME: Provide more granular H.264 decoder information.
-        info.powerEfficient = info.smooth = isH264EncoderSmooth(configuration);
-    } else if (equalLettersIgnoringASCIICase(containerType, "video/h265"_s))
+    } else if (equalLettersIgnoringASCIICase(containerType, "video/h264"_s))
         info.powerEfficient = info.smooth = true;
-    else if (equalLettersIgnoringASCIICase(containerType, "video/av1"_s))
+    else if (equalLettersIgnoringASCIICase(containerType, "video/h265"_s))
+        info.powerEfficient = info.smooth = true;
+    else if (equalLettersIgnoringASCIICase(containerType, "video/av1"_s)) {
+        // FIXME: Set value to true if AV1 is only enabled when HW decoder support is enabled.
         info.powerEfficient = false;
+    }
 
     info.supported = true;
     return { info };

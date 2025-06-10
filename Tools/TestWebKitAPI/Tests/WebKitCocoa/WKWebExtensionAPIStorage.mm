@@ -108,7 +108,12 @@ TEST(WKWebExtensionAPIStorage, UndefinedProperties)
     Util::loadAndRunExtension(storageManifest, @{ @"background.js": backgroundScript });
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPIStorage, DISABLED_SetAccessLevelTrustedContexts)
+#else
 TEST(WKWebExtensionAPIStorage, SetAccessLevelTrustedContexts)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } }
@@ -149,7 +154,12 @@ TEST(WKWebExtensionAPIStorage, SetAccessLevelTrustedContexts)
     [manager run];
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPIStorage, DISABLED_SetAccessLevelTrustedAndUntrustedContexts)
+#else
 TEST(WKWebExtensionAPIStorage, SetAccessLevelTrustedAndUntrustedContexts)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } }
@@ -362,6 +372,24 @@ TEST(WKWebExtensionAPIStorage, GetBytesInUse)
 
         @"await browser?.storage?.local?.clear()",
         @"result = await browser?.storage?.local?.getBytesInUse()",
+        @"browser.test.assertEq(result, 0)",
+
+        @"browser.test.notifyPass()",
+    ]);
+
+    Util::loadAndRunExtension(storageManifest, @{ @"background.js": backgroundScript });
+}
+
+TEST(WKWebExtensionAPIStorage, GetBytesInUseWhenEmpty)
+{
+    auto *backgroundScript = Util::constructScript(@[
+        @"var result = await browser?.storage?.local?.getBytesInUse()",
+        @"browser.test.assertEq(result, 0)",
+
+        @"result = await browser?.storage?.local?.getBytesInUse('nonexistent')",
+        @"browser.test.assertEq(result, 0)",
+
+        @"result = await browser?.storage?.local?.getBytesInUse([ 'a', 'b', 'c' ])",
         @"browser.test.assertEq(result, 0)",
 
         @"browser.test.notifyPass()",

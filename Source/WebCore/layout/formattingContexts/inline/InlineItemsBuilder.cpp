@@ -60,7 +60,7 @@ static std::optional<WhitespaceContent> moveToNextNonWhitespacePosition(std::spa
     };
     auto nextNonWhiteSpacePosition = startPosition;
     while (nextNonWhiteSpacePosition < characters.size() && isWhitespaceCharacter(characters[nextNonWhiteSpacePosition])) {
-        if (UNLIKELY(stopAtWordSeparatorBoundary && hasWordSeparatorCharacter && !isWordSeparatorCharacter))
+        if (stopAtWordSeparatorBoundary && hasWordSeparatorCharacter && !isWordSeparatorCharacter) [[unlikely]]
             break;
         ++nextNonWhiteSpacePosition;
     }
@@ -150,6 +150,7 @@ void InlineItemsBuilder::computeInlineBoxBoundaryTextSpacings(const InlineItemLi
                 ASSERT_NOT_REACHED();
                 // Skip unbalanced inline box start/end pairs.
                 processInlineBoxBoundary = false;
+                currentCharacterDepth = 0;
                 continue;
             }
             processInlineBoxBoundary = true;
@@ -816,7 +817,7 @@ InlineContentCache::InlineItems::ContentAttributes InlineItemsBuilder::computeCo
 
 bool InlineItemsBuilder::buildInlineItemListForTextFromBreakingPositionsCache(const InlineTextBox& inlineTextBox, InlineItemList& inlineItemList)
 {
-    auto text = inlineTextBox.content();
+    auto& text = inlineTextBox.content();
     auto* breakingPositions = TextBreakingPositionCache::singleton().get({ text, { inlineTextBox.style() }, m_securityOrigin.data() });
     if (!breakingPositions)
         return false;
@@ -836,7 +837,7 @@ bool InlineItemsBuilder::buildInlineItemListForTextFromBreakingPositionsCache(co
             ASSERT_NOT_REACHED();
             if (inlineItemList.size() > intialSize) {
                 // Revert.
-                !intialSize ? inlineItemList.clear() : inlineItemList.remove(intialSize, inlineItemList.size() - intialSize);
+                !intialSize ? inlineItemList.clear() : inlineItemList.removeAt(intialSize, inlineItemList.size() - intialSize);
             }
             return false;
         }

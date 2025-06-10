@@ -29,9 +29,9 @@
 #if ENABLE(GAMEPAD) && USE(LIBWPE)
 
 #include "PlatformGamepad.h"
+#include <wpe/wpe.h>
 
-struct wpe_gamepad;
-struct wpe_gamepad_provider;
+#if WPE_CHECK_VERSION(1, 13, 90)
 
 namespace WebCore {
 
@@ -56,5 +56,7 @@ private:
 };
 
 } // namespace WebCore
+
+#endif // WPE_CHECK_VERSION(1, 13, 90)
 
 #endif // ENABLE(GAMEPAD) && USE(LIBWPE)

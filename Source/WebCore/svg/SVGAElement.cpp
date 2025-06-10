@@ -35,6 +35,7 @@
 #include "LocalFrame.h"
 #include "MouseEvent.h"
 #include "PlatformMouseEvent.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGInline.h"
 #include "RenderSVGText.h"
 #include "RenderSVGTransformableContainer.h"
@@ -231,13 +232,13 @@ SharedStringHash SVGAElement::visitedLinkHash() const
 DOMTokenList& SVGAElement::relList()
 {
     if (!m_relList) {
-        m_relList = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, SVGNames::relAttr, [](Document&, StringView token) {
+        lazyInitialize(m_relList, makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, SVGNames::relAttr, [](Document&, StringView token) {
 #if USE(SYSTEM_PREVIEW)
             if (equalLettersIgnoringASCIICase(token, "ar"_s))
                 return true;
 #endif
             return equalLettersIgnoringASCIICase(token, "noreferrer"_s) || equalLettersIgnoringASCIICase(token, "noopener"_s);
-        });
+        }));
     }
     return *m_relList;
 }

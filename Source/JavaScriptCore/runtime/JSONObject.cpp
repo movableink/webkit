@@ -220,8 +220,7 @@ inline PropertyNameForFunctionCall::PropertyNameForFunctionCall(PropertyName pro
 }
 
 inline PropertyNameForFunctionCall::PropertyNameForFunctionCall(unsigned number)
-    : m_propertyName(nullptr)
-    , m_number(number)
+    : m_number(number)
 {
 }
 
@@ -304,11 +303,11 @@ String Stringifier::stringify(JSGlobalObject& globalObject, JSValue value, JSVal
     Holder root(Holder::RootHolder, object);
     auto stringifyResult = stringifier.appendStringifiedValue(result, value, root, emptyPropertyName);
     RETURN_IF_EXCEPTION(scope, { });
-    if (UNLIKELY(result.hasOverflowed())) {
+    if (result.hasOverflowed()) [[unlikely]] {
         throwOutOfMemoryError(&globalObject, scope);
         return { };
     }
-    if (UNLIKELY(stringifyResult != StringifySucceeded))
+    if (stringifyResult != StringifySucceeded) [[unlikely]]
         RELEASE_AND_RETURN(scope, { });
     RELEASE_AND_RETURN(scope, result.toString());
 }
@@ -354,7 +353,7 @@ Stringifier::StringifyResult Stringifier::appendStringifiedValue(StringBuilder& 
     // Recursion is avoided by !holderStackWasEmpty check and do/while loop at the end of this method.
     // We're having this recursion check here as a fail safe in case the code
     // below get modified such that recursion is no longer avoided.
-    if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
         throwStackOverflowError(m_globalObject, scope);
         return StringifyFailed;
     }
@@ -442,7 +441,7 @@ Stringifier::StringifyResult Stringifier::appendStringifiedValue(StringBuilder& 
         return StringifyFailedDueToUndefinedOrSymbolValue;
     }
 
-    if (UNLIKELY(builder.hasOverflowed()))
+    if (builder.hasOverflowed()) [[unlikely]]
         return StringifyFailed;
 
     // Handle cycle detection, and put the holder on the stack.
@@ -453,7 +452,7 @@ Stringifier::StringifyResult Stringifier::appendStringifiedValue(StringBuilder& 
         }
     }
 
-    if (UNLIKELY(m_holderStack.size() >= maximumSideStackRecursion)) {
+    if (m_holderStack.size() >= maximumSideStackRecursion) [[unlikely]] {
         throwStackOverflowError(m_globalObject, scope);
         return StringifyFailed;
     }
@@ -471,7 +470,7 @@ Stringifier::StringifyResult Stringifier::appendStringifiedValue(StringBuilder& 
         while (m_holderStack.last().appendNextProperty(*this, builder))
             RETURN_IF_EXCEPTION(scope, StringifyFailed);
         RETURN_IF_EXCEPTION(scope, StringifyFailed);
-        if (UNLIKELY(builder.hasOverflowed()))
+        if (builder.hasOverflowed()) [[unlikely]]
             return StringifyFailed;
         m_holderStack.removeLast();
         m_objectStack.removeLast();
@@ -533,7 +532,7 @@ bool Stringifier::Holder::appendNextProperty(Stringifier& stringifier, StringBui
         if (m_isArray) {
             uint64_t length = toLength(globalObject, m_object);
             RETURN_IF_EXCEPTION(scope, false);
-            if (UNLIKELY(length > std::numeric_limits<uint32_t>::max())) {
+            if (length > std::numeric_limits<uint32_t>::max()) [[unlikely]] {
                 throwOutOfMemoryError(globalObject, scope);
                 return false;
             }
@@ -569,7 +568,7 @@ bool Stringifier::Holder::appendNextProperty(Stringifier& stringifier, StringBui
         }
         stringifier.indent();
     }
-    if (UNLIKELY(builder.hasOverflowed()))
+    if (builder.hasOverflowed()) [[unlikely]]
         return false;
 
     // Last time through, finish up and return false.
@@ -604,7 +603,7 @@ bool Stringifier::Holder::appendNextProperty(Stringifier& stringifier, StringBui
         stringifyResult = stringifier.appendStringifiedValue(builder, value, *this, index);
         ASSERT(stringifyResult != StringifyFailedDueToUndefinedOrSymbolValue);
     } else {
-        PropertyName propertyName { nullptr };
+        PropertyName propertyName;
         JSValue value;
         if (m_hasFastObjectProperties) {
             propertyName = std::get<0>(m_propertiesAndOffsets[index]);
@@ -801,7 +800,7 @@ ALWAYS_INLINE CharType* FastStringifier<CharType, bufferMode>::buffer()
     if constexpr (bufferMode == BufferMode::StaticBuffer)
         return m_buffer;
     else
-        return m_dynamicBuffer.data();
+        return m_dynamicBuffer.mutableSpan().data();
 }
 
 template<typename CharType, BufferMode bufferMode>
@@ -810,7 +809,7 @@ ALWAYS_INLINE const CharType* FastStringifier<CharType, bufferMode>::buffer() co
     if constexpr (bufferMode == BufferMode::StaticBuffer)
         return m_buffer;
     else
-        return m_dynamicBuffer.data();
+        return m_dynamicBuffer.span().data();
 }
 
 template<typename CharType, BufferMode bufferMode>
@@ -965,10 +964,10 @@ bool FastStringifier<CharType, bufferMode>::hasRemainingCapacitySlow(unsigned si
         return true;
     } else {
         size_t newSize = std::max<size_t>(m_dynamicBuffer.size() * 2, m_dynamicBuffer.size() + size);
-        if (UNLIKELY(newSize > StringImpl::MaxLength))
+        if (newSize > StringImpl::MaxLength) [[unlikely]]
             return false;
 
-        if (UNLIKELY(!m_dynamicBuffer.tryGrow(newSize)))
+        if (!m_dynamicBuffer.tryGrow(newSize)) [[unlikely]]
             return false;
 
         m_capacity = m_dynamicBuffer.size();
@@ -1033,7 +1032,7 @@ inline bool FastStringifier<CharType, bufferMode>::mayHaveToJSON(JSObject& objec
 {
     if (auto function = object.structure()->cachedSpecialProperty(CachedSpecialPropertyKey::ToJSON))
         return !function.isUndefined();
-    if (UNLIKELY(object.noSideEffectMayHaveNonIndexProperty(m_vm, m_vm.propertyNames->toJSON))) {
+    if (object.noSideEffectMayHaveNonIndexProperty(m_vm, m_vm.propertyNames->toJSON)) [[unlikely]] {
         // Getting the property value so we can cache it could cause side effects; instead return true without caching anything.
         return true;
     }
@@ -1046,7 +1045,7 @@ inline bool FastStringifier<CharType, bufferMode>::mayHaveToJSON(JSObject& objec
 template<typename CharType, BufferMode bufferMode>
 inline void FastStringifier<CharType, bufferMode>::append(char a, char b, char c, char d)
 {
-    if (UNLIKELY(!hasRemainingCapacity(4))) {
+    if (!hasRemainingCapacity(4)) [[unlikely]] {
         recordBufferFull();
         return;
     }
@@ -1060,7 +1059,7 @@ inline void FastStringifier<CharType, bufferMode>::append(char a, char b, char c
 template<typename CharType, BufferMode bufferMode>
 inline void FastStringifier<CharType, bufferMode>::append(char a, char b, char c, char d, char e)
 {
-    if (UNLIKELY(!hasRemainingCapacity(5))) {
+    if (!hasRemainingCapacity(5)) [[unlikely]] {
         recordBufferFull();
         return;
     }
@@ -1118,10 +1117,10 @@ static ALWAYS_INLINE bool stringCopySameType(std::span<const CharType> span, Cha
 #endif
     for (auto character : span) {
         if constexpr (sizeof(CharType) != 1) {
-            if (UNLIKELY(U16_IS_SURROGATE(character)))
+            if (U16_IS_SURROGATE(character)) [[unlikely]]
                 return true;
         }
-        if (UNLIKELY(character <= 0xff && WTF::escapedFormsForJSON[character]))
+        if (character <= 0xff && WTF::escapedFormsForJSON[character]) [[unlikely]]
             return true;
         *cursor++ = character;
     }
@@ -1163,7 +1162,7 @@ static ALWAYS_INLINE bool stringCopyUpconvert(std::span<const LChar> span, UChar
     }
 #endif
     for (auto character : span) {
-        if (UNLIKELY(WTF::escapedFormsForJSON[character]))
+        if (WTF::escapedFormsForJSON[character]) [[unlikely]]
             return true;
         *cursor++ = character;
     }
@@ -1174,7 +1173,7 @@ template<typename CharType, BufferMode bufferMode>
 void FastStringifier<CharType, bufferMode>::append(JSValue value)
 {
     if constexpr (bufferMode == BufferMode::DynamicBuffer) {
-        if (UNLIKELY(std::bit_cast<uint8_t*>(currentStackPointer()) < m_stackLimit)) {
+        if (std::bit_cast<uint8_t*>(currentStackPointer()) < m_stackLimit) [[unlikely]] {
             recordFailure(FailureReason::StackOverflow, "stack overflow"_s);
             return;
         }
@@ -1198,7 +1197,7 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
     if (value.isInt32()) {
         auto number = value.asInt32();
         constexpr unsigned maxInt32StringLength = 11; // -INT32_MIN, "-2147483648".
-        if (UNLIKELY(!hasRemainingCapacity(maxInt32StringLength))) {
+        if (!hasRemainingCapacity(maxInt32StringLength)) [[unlikely]] {
             recordBufferFull();
             return;
         }
@@ -1224,7 +1223,7 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
             append('n', 'u', 'l', 'l');
             return;
         }
-        if (UNLIKELY(!hasRemainingCapacity(WTF::dragonbox::max_string_length<WTF::dragonbox::ieee754_binary64>()))) {
+        if (!hasRemainingCapacity(WTF::dragonbox::max_string_length<WTF::dragonbox::ieee754_binary64>())) [[unlikely]] {
             recordBufferFull();
             return;
         }
@@ -1241,7 +1240,7 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
         return;
     }
 
-    if (UNLIKELY(!value.isCell())) {
+    if (!value.isCell()) [[unlikely]] {
         recordFailure("value type"_s);
         return;
     }
@@ -1250,44 +1249,44 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
     switch (cell.type()) {
     case StringType: {
         auto string = asString(&cell)->tryGetValue();
-        if (UNLIKELY(string.data.isNull())) {
+        if (string.data.isNull()) [[unlikely]] {
             recordFailure("String::tryGetValue"_s);
             return;
         }
 
         auto stringLength = string.data.length();
         if constexpr (sizeof(CharType) == 1) {
-            if (UNLIKELY(!string.data.is8Bit())) {
+            if (!string.data.is8Bit()) [[unlikely]] {
                 if constexpr (bufferMode == BufferMode::DynamicBuffer)
                     recordFailure(FailureReason::Unknown, "16-bit string"_s);
                 else
                     recordFailure(m_length < (m_capacity / 2) ? FailureReason::Found16BitEarly : FailureReason::Found16BitLate, "16-bit string"_s);
                 return;
             }
-            if (UNLIKELY(!hasRemainingCapacity(1 + stringLength + 1))) {
+            if (!hasRemainingCapacity(1 + stringLength + 1)) [[unlikely]] {
                 recordBufferFull();
                 return;
             }
             buffer()[m_length] = '"';
-            if (LIKELY(!stringCopySameType(string.data.span8(), buffer() + m_length + 1))) {
+            if (!stringCopySameType(string.data.span8(), buffer() + m_length + 1)) [[likely]] {
                 buffer()[m_length + 1 + stringLength] = '"';
                 m_length += 1 + stringLength + 1;
                 return;
             }
         } else {
-            if (UNLIKELY(!hasRemainingCapacity(1 + stringLength + 1))) {
+            if (!hasRemainingCapacity(1 + stringLength + 1)) [[unlikely]] {
                 recordBufferFull();
                 return;
             }
             buffer()[m_length] = '"';
             if (string.data.is8Bit()) {
-                if (LIKELY(!stringCopyUpconvert(string.data.span8(), buffer() + m_length + 1))) {
+                if (!stringCopyUpconvert(string.data.span8(), buffer() + m_length + 1)) [[likely]] {
                     buffer()[m_length + 1 + stringLength] = '"';
                     m_length += 1 + stringLength + 1;
                     return;
                 }
             } else {
-                if (LIKELY(!stringCopySameType(string.data.span16(), buffer() + m_length + 1))) {
+                if (!stringCopySameType(string.data.span16(), buffer() + m_length + 1)) [[likely]] {
                     buffer()[m_length + 1 + stringLength] = '"';
                     m_length += 1 + stringLength + 1;
                     return;
@@ -1295,7 +1294,12 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
             }
         }
 
-        if (UNLIKELY(!hasRemainingCapacity(1 + static_cast<size_t>(stringLength) * 6 + 1))) {
+        auto escapedLength = 1 + CheckedUint32 { stringLength } * 6 + 1;
+        if (escapedLength.hasOverflowed()) [[unlikely]] {
+            recordBufferFull();
+            return;
+        }
+        if (!hasRemainingCapacity(escapedLength.value())) [[unlikely]] {
             recordBufferFull();
             return;
         }
@@ -1315,32 +1319,32 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
     case ObjectType:
     case FinalObjectType: {
         auto& object = *asObject(&cell);
-        if (UNLIKELY(object.isCallable())) {
+        if (object.isCallable()) [[unlikely]] {
             recordFailure("callable object"_s);
             return;
         }
         auto& structure = *object.structure();
-        if (UNLIKELY(structure.hasPolyProto())) {
+        if (structure.hasPolyProto()) [[unlikely]] {
             recordFailure("hasPolyProto"_s);
             return;
         }
-        if (UNLIKELY(structure.storedPrototype() != m_globalObject.objectPrototype())) {
+        if (structure.storedPrototype() != m_globalObject.objectPrototype()) [[unlikely]] {
             recordFailure("non-standard object prototype"_s);
             return;
         }
         if (!m_checkedObjectPrototype) {
-            if (UNLIKELY(mayHaveToJSON(*m_globalObject.objectPrototype()))) {
+            if (mayHaveToJSON(*m_globalObject.objectPrototype())) [[unlikely]] {
                 recordFailure("object prototype may have toJSON"_s);
                 return;
             }
             m_checkedObjectPrototype = true;
         }
-        if (UNLIKELY(!hasRemainingCapacity())) {
+        if (!hasRemainingCapacity()) [[unlikely]] {
             recordBufferFull();
             return;
         }
         buffer()[m_length++] = '{';
-        if (UNLIKELY(!structure.canPerformFastPropertyEnumeration())) {
+        if (!structure.canPerformFastPropertyEnumeration()) [[unlikely]] {
             recordFastPropertyEnumerationFailure(object);
             return;
         }
@@ -1348,19 +1352,19 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
             if (entry.attributes() & PropertyAttribute::DontEnum)
                 return true;
             auto& name = *entry.key();
-            if (UNLIKELY(name.isSymbol())) {
+            if (name.isSymbol()) [[unlikely]] {
                 recordFailure("symbol"_s);
                 return false;
             }
 
             // Right now, we do not support 16-bit name here since name in 16-bit is significantly more rare than 16-bit string.
-            if (UNLIKELY(!name.is8Bit())) {
+            if (!name.is8Bit()) [[unlikely]] {
                 recordFailure("16-bit property name"_s);
                 return false;
             }
             auto span = name.span8();
 
-            if (UNLIKELY(object.structure() != &structure)) {
+            if (object.structure() != &structure) [[unlikely]] {
                 ASSERT_NOT_REACHED();
                 recordFailure("unexpected structure transition"_s);
                 return false;
@@ -1370,7 +1374,7 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
                 return true;
 
             bool needComma = buffer()[m_length - 1] != '{';
-            if (UNLIKELY(!hasRemainingCapacity(needComma + 1 + span.size() + 2))) {
+            if (!hasRemainingCapacity(needComma + 1 + span.size() + 2)) [[unlikely]] {
                 recordBufferFull();
                 return false;
             }
@@ -1379,12 +1383,12 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
             buffer()[m_length] = '"';
 
             if constexpr (sizeof(CharType) == 2) {
-                if (UNLIKELY(stringCopyUpconvert(span, buffer() + m_length + 1))) {
+                if (stringCopyUpconvert(span, buffer() + m_length + 1)) [[unlikely]] {
                     recordFailure("property name character needs escaping"_s);
                     return false;
                 }
             } else {
-                if (UNLIKELY(stringCopySameType(span, buffer() + m_length + 1))) {
+                if (stringCopySameType(span, buffer() + m_length + 1)) [[unlikely]] {
                     recordFailure("property name character needs escaping"_s);
                     return false;
                 }
@@ -1396,9 +1400,9 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
             append(value);
             return !haveFailure();
         });
-        if (UNLIKELY(haveFailure()))
+        if (haveFailure()) [[unlikely]]
             return;
-        if (UNLIKELY(!hasRemainingCapacity())) {
+        if (!hasRemainingCapacity()) [[unlikely]] {
             recordBufferFull();
             return;
         }
@@ -1409,16 +1413,16 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
     case ArrayType: {
         auto& array = *asArray(&cell);
         if (!m_checkedArrayPrototype) {
-            if (UNLIKELY(mayHaveToJSON(*m_globalObject.arrayPrototype()))) {
+            if (mayHaveToJSON(*m_globalObject.arrayPrototype())) [[unlikely]] {
                 recordFailure("array prototype may have toJSON"_s);
                 return;
             }
             m_checkedArrayPrototype = true;
         }
         auto& structure = *array.structure();
-        if (UNLIKELY(!m_globalObject.isOriginalArrayStructure(&structure))) {
+        if (!m_globalObject.isOriginalArrayStructure(&structure)) [[unlikely]] {
             structure.forEachProperty(m_vm, [&](const PropertyTableEntry& entry) -> bool {
-                if (UNLIKELY(entry.key() == m_vm.propertyNames->toJSON)) {
+                if (entry.key() == m_vm.propertyNames->toJSON) [[unlikely]] {
                     recordFailure("array has toJSON"_s);
                     return false;
                 }
@@ -1427,28 +1431,28 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
             if (haveFailure())
                 return;
         }
-        if (UNLIKELY(!hasRemainingCapacity())) {
+        if (!hasRemainingCapacity()) [[unlikely]] {
             recordBufferFull();
             return;
         }
         buffer()[m_length++] = '[';
         for (unsigned i = 0, length = array.length(); i < length; ++i) {
             if (i) {
-                if (UNLIKELY(!hasRemainingCapacity())) {
+                if (!hasRemainingCapacity()) [[unlikely]] {
                     recordBufferFull();
                     return;
                 }
                 buffer()[m_length++] = ',';
             }
-            if (UNLIKELY(!array.canGetIndexQuickly(i))) {
+            if (!array.canGetIndexQuickly(i)) [[unlikely]] {
                 recordFailure("!canGetIndexQuickly"_s);
                 return;
             }
             append(array.getIndexQuickly(i));
-            if (UNLIKELY(haveFailure()))
+            if (haveFailure()) [[unlikely]]
                 return;
         }
-        if (UNLIKELY(!hasRemainingCapacity())) {
+        if (!hasRemainingCapacity()) [[unlikely]] {
             recordBufferFull();
             return;
         }
@@ -1486,7 +1490,7 @@ static NEVER_INLINE String stringify(JSGlobalObject& globalObject, JSValue value
 {
     VM& vm = globalObject.vm();
     uint8_t* stackLimit = std::bit_cast<uint8_t*>(vm.softStackLimit());
-    if (LIKELY(std::bit_cast<uint8_t*>(currentStackPointer()) >= stackLimit)) {
+    if (std::bit_cast<uint8_t*>(currentStackPointer()) >= stackLimit) [[likely]] {
         std::optional<FailureReason> failureReason;
         failureReason = std::nullopt;
         if (String result = FastStringifier<LChar, BufferMode::StaticBuffer>::stringify(globalObject, value, replacer, space, failureReason); !result.isNull())
@@ -1603,7 +1607,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                 ASSERT(isArray(m_globalObject, inValue));
                 EXCEPTION_ASSERT(!scope.exception());
 
-                if (UNLIKELY(markedStack.size() >= maximumSideStackRecursion))
+                if (markedStack.size() >= maximumSideStackRecursion) [[unlikely]]
                     return throwStackOverflowError(m_globalObject, scope);
 
                 JSObject* array = asObject(inValue);
@@ -1617,7 +1621,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                 }
                 uint64_t length = toLength(m_globalObject, array);
                 RETURN_IF_EXCEPTION(scope, { });
-                if (UNLIKELY(length > std::numeric_limits<uint32_t>::max())) {
+                if (length > std::numeric_limits<uint32_t>::max()) [[unlikely]] {
                     throwOutOfMemoryError(m_globalObject, scope);
                     return { };
                 }
@@ -1626,7 +1630,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                 indexStack.append(0);
             }
             arrayStartVisitMember:
-            FALLTHROUGH;
+            [[fallthrough]];
             case ArrayStartVisitMember: {
                 JSObject* array = asObject(markedStack.last());
                 uint32_t index = indexStack.last();
@@ -1671,7 +1675,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                     outValue = inValue;
                     outValueRange = inValueRange;
                 }
-                FALLTHROUGH;
+                [[fallthrough]];
             }
             case ArrayEndVisitMember: {
                 JSObject* array = asObject(markedStack.last());
@@ -1689,7 +1693,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
             case ObjectStartState: {
                 ASSERT(inValue.isObject());
                 ASSERT(!isJSArray(inValue));
-                if (UNLIKELY(markedStack.size() >= maximumSideStackRecursion))
+                if (markedStack.size() >= maximumSideStackRecursion) [[unlikely]]
                     return throwStackOverflowError(m_globalObject, scope);
 
                 JSObject* object = asObject(inValue);
@@ -1707,7 +1711,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                 RETURN_IF_EXCEPTION(scope, { });
             }
             objectStartVisitMember:
-            FALLTHROUGH;
+            [[fallthrough]];
             case ObjectStartVisitMember: {
                 JSObject* object = jsCast<JSObject*>(markedStack.last());
                 uint32_t index = indexStack.last();
@@ -1747,7 +1751,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                     outValue = inValue;
                     outValueRange = inValueRange;
                 }
-                FALLTHROUGH;
+                [[fallthrough]];
             }
             case ObjectEndVisitMember: {
                 JSObject* object = jsCast<JSObject*>(markedStack.last());
@@ -1759,7 +1763,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                 else {
                     unsigned attributes;
                     PropertyOffset offset = object->getDirectOffset(vm, prop, attributes);
-                    if (LIKELY(offset != invalidOffset && attributes == static_cast<unsigned>(PropertyAttribute::None))) {
+                    if (offset != invalidOffset && attributes == static_cast<unsigned>(PropertyAttribute::None)) [[likely]] {
                         object->putDirectOffset(vm, offset, filteredValue);
                         object->structure()->didReplaceProperty(offset);
                     } else {
@@ -1951,19 +1955,19 @@ JSC_DEFINE_HOST_FUNCTION(jsonProtoFuncRawJSON, (JSGlobalObject* globalObject, Ca
 
     String string = jsString->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    if (UNLIKELY(string.isEmpty())) {
+    if (string.isEmpty()) [[unlikely]] {
         throwSyntaxError(globalObject, scope, "JSON.rawJSON cannot accept empty string"_s);
         return { };
     }
 
     UChar firstCharacter = string[0];
-    if (UNLIKELY(isJSONWhitespace(firstCharacter))) {
+    if (isJSONWhitespace(firstCharacter)) [[unlikely]] {
         throwSyntaxError(globalObject, scope, makeString("JSON.rawJSON cannot accept string starting with '"_s, firstCharacter, "'"_s));
         return { };
     }
 
     UChar lastCharacter = string[string.length() - 1];
-    if (UNLIKELY(isJSONWhitespace(lastCharacter))) {
+    if (isJSONWhitespace(lastCharacter)) [[unlikely]] {
         throwSyntaxError(globalObject, scope, makeString("JSON.rawJSON cannot accept string ending with '"_s, lastCharacter, "'"_s));
         return { };
     }
@@ -1974,7 +1978,7 @@ JSC_DEFINE_HOST_FUNCTION(jsonProtoFuncRawJSON, (JSGlobalObject* globalObject, Ca
             LiteralParser<LChar, JSONReviverMode::Disabled> jsonParser(globalObject, string.span8(), StrictJSON);
             result = jsonParser.tryLiteralParsePrimitiveValue();
             RETURN_IF_EXCEPTION(scope, { });
-            if (UNLIKELY(!result)) {
+            if (!result) [[unlikely]] {
                 throwSyntaxError(globalObject, scope, jsonParser.getErrorMessage());
                 return { };
             }
@@ -1982,14 +1986,14 @@ JSC_DEFINE_HOST_FUNCTION(jsonProtoFuncRawJSON, (JSGlobalObject* globalObject, Ca
             LiteralParser<UChar, JSONReviverMode::Disabled> jsonParser(globalObject, string.span16(), StrictJSON);
             result = jsonParser.tryLiteralParsePrimitiveValue();
             RETURN_IF_EXCEPTION(scope, { });
-            if (UNLIKELY(!result)) {
+            if (!result) [[unlikely]] {
                 throwSyntaxError(globalObject, scope, jsonParser.getErrorMessage());
                 return { };
             }
         }
     }
     auto* object = JSRawJSONObject::tryCreate(vm, globalObject->rawJSONObjectStructure(), jsString);
-    if (UNLIKELY(!object)) {
+    if (!object) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }

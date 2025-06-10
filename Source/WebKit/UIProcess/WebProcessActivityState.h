@@ -76,7 +76,7 @@ private:
     WebProcessProxy& process() const;
     Ref<WebProcessProxy> protectedProcess() const;
 
-    std::variant<WeakRef<WebPageProxy>, WeakRef<RemotePageProxy>> m_page;
+    Variant<WeakRef<WebPageProxy>, WeakRef<RemotePageProxy>> m_page;
 
     RefPtr<ProcessThrottlerActivity> m_isVisibleActivity;
 #if ENABLE(WEB_PROCESS_SUSPENSION_DELAY)

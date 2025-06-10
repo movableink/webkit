@@ -36,10 +36,11 @@
 #include "WKTextAnimationType.h"
 #include <WebCore/DOMPasteAccess.h>
 #include <WebCore/FocusDirection.h>
+#include <WebCore/KeypressCommand.h>
 #include <WebCore/PlatformPlaybackSessionInterface.h>
 #include <WebCore/ScrollTypes.h>
 #include <WebCore/ShareableBitmap.h>
-#include <WebCore/TextIndicatorWindow.h>
+#include <WebCore/TextIndicator.h>
 #include <WebCore/UserInterfaceLayoutDirection.h>
 #include <WebKit/WKDragDestinationAction.h>
 #include <WebKit/_WKOverlayScrollbarStyle.h>
@@ -65,6 +66,7 @@ OBJC_CLASS NSTextInputContext;
 OBJC_CLASS NSTextPlaceholder;
 OBJC_CLASS NSView;
 OBJC_CLASS QLPreviewPanel;
+OBJC_CLASS WebTextIndicatorLayer;
 OBJC_CLASS WKAccessibilitySettingsObserver;
 OBJC_CLASS WKBrowsingContextController;
 OBJC_CLASS WKDOMPasteMenuDelegate;
@@ -184,10 +186,11 @@ enum class ReplacementBehavior : uint8_t;
 
 namespace WebCore {
 struct DragItem;
-struct KeypressCommand;
-#if ENABLE(DIGITAL_CREDENTIALS_UI)
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
 struct DigitalCredentialsRequestData;
 #endif
+
 }
 
 namespace WebKit {
@@ -251,11 +254,11 @@ public:
     void viewWillStartLiveResize();
     void viewDidEndLiveResize();
 
-    void createPDFHUD(PDFPluginIdentifier, const WebCore::IntRect&);
+    void createPDFHUD(PDFPluginIdentifier, WebCore::FrameIdentifier, const WebCore::IntRect&);
     void updatePDFHUDLocation(PDFPluginIdentifier, const WebCore::IntRect&);
     void removePDFHUD(PDFPluginIdentifier);
     void removeAllPDFHUDs();
-    NSSet *pdfHUDs();
+    RetainPtr<NSSet> pdfHUDs();
 
     void renewGState();
     void setFrameSize(CGSize);
@@ -276,7 +279,7 @@ public:
 
     void drawRect(CGRect);
     bool canChangeFrameLayout(WebFrameProxy&);
-    NSPrintOperation *printOperationWithPrintInfo(NSPrintInfo *, WebFrameProxy&);
+    RetainPtr<NSPrintOperation> printOperationWithPrintInfo(NSPrintInfo *, WebFrameProxy&);
 
     void setAutomaticallyAdjustsContentInsets(bool);
     bool automaticallyAdjustsContentInsets() const;
@@ -302,7 +305,7 @@ public:
     void setViewScale(CGFloat);
     CGFloat viewScale() const;
 
-    void showWarningView(const BrowsingWarning&, CompletionHandler<void(std::variant<ContinueUnsafeLoad, URL>&&)>&&);
+    void showWarningView(const BrowsingWarning&, CompletionHandler<void(Variant<ContinueUnsafeLoad, URL>&&)>&&);
     void clearWarningView();
     void clearWarningViewIfForMainFrameNavigation();
 
@@ -321,15 +324,14 @@ public:
     void windowWillBeginSheet();
     void windowDidChangeBackingProperties(CGFloat oldBackingScaleFactor);
     void windowDidChangeScreen();
-    void windowDidChangeLayerHosting();
     void windowDidChangeOcclusionState();
     void windowWillClose();
+    void windowWillEnterOrExitFullScreen();
+    void windowDidEnterOrExitFullScreen();
     void screenDidChangeColorSpace();
     bool shouldDelayWindowOrderingForEvent(NSEvent *);
     bool windowResizeMouseLocationIsInVisibleScrollerThumb(CGPoint);
-    void applicationShouldSuppressHDR();
-    void applicationShouldAllowHDR();
-    void updateHDRState();
+    void applicationShouldSuppressHDR(bool);
 
     void accessibilitySettingsDidChange();
 
@@ -346,13 +348,11 @@ public:
 
     void pageDidScroll(const WebCore::IntPoint&);
 
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
     NSRect scrollViewFrame();
     bool hasScrolledContentsUnderTitlebar();
     void updateTitlebarAdjacencyState();
-#endif
 
-    NSView *hitTest(CGPoint);
+    RetainPtr<NSView> hitTest(CGPoint);
 
     WebCore::DestinationColorSpace colorSpace();
 
@@ -467,9 +467,9 @@ public:
 
     void preferencesDidChange();
 
-    void setTextIndicator(WebCore::TextIndicator&, WebCore::TextIndicatorLifetime = WebCore::TextIndicatorLifetime::Permanent);
-    void clearTextIndicatorWithAnimation(WebCore::TextIndicatorDismissalAnimation);
-    void setTextIndicatorAnimationProgress(float);
+    void teardownTextIndicatorLayer();
+    void startTextIndicatorFadeOut();
+    CALayer *textIndicatorInstallationLayer();
     void dismissContentRelativeChildWindowsFromViewOnly();
     void dismissContentRelativeChildWindowsWithAnimation(bool);
     void dismissContentRelativeChildWindowsWithAnimationFromViewOnly(bool);
@@ -521,7 +521,7 @@ public:
     CALayer *acceleratedCompositingRootLayer() const { return m_rootLayer.get(); }
 
     void setThumbnailView(_WKThumbnailView *);
-    _WKThumbnailView *thumbnailView() const { return m_thumbnailView; }
+    RetainPtr<_WKThumbnailView> thumbnailView() const { return m_thumbnailView.get(); }
 
     void setHeaderBannerLayer(CALayer *);
     CALayer *headerBannerLayer() const { return m_headerBannerLayer.get(); }
@@ -529,9 +529,9 @@ public:
     CALayer *footerBannerLayer() const { return m_footerBannerLayer.get(); }
 
     void setInspectorAttachmentView(NSView *);
-    NSView *inspectorAttachmentView();
+    RetainPtr<NSView> inspectorAttachmentView();
     
-    void showShareSheet(const WebCore::ShareDataWithParsedURL&, WTF::CompletionHandler<void(bool)>&&, WKWebView *);
+    void showShareSheet(WebCore::ShareDataWithParsedURL&&, WTF::CompletionHandler<void(bool)>&&, WKWebView *);
     void shareSheetDidDismiss(WKShareSheet *);
 
 #if HAVE(DIGITAL_CREDENTIALS_UI)
@@ -580,6 +580,7 @@ public:
     _WKWarningView *warningView() { return m_warningView.get(); }
 
     ViewGestureController* gestureController() { return m_gestureController.get(); }
+    RefPtr<ViewGestureController> protectedGestureController() const;
     ViewGestureController& ensureGestureController();
     Ref<ViewGestureController> ensureProtectedGestureController();
     void setAllowsBackForwardNavigationGestures(bool);
@@ -591,7 +592,9 @@ public:
     void setMagnification(double);
     double magnification() const;
     void setCustomSwipeViews(NSArray *);
-    void setCustomSwipeViewsTopContentInset(float);
+    WebCore::FloatRect windowRelativeBoundsForCustomSwipeViews() const;
+    WebCore::FloatBoxExtent customSwipeViewsObscuredContentInsets() const;
+    void setCustomSwipeViewsObscuredContentInsets(WebCore::FloatBoxExtent&&);
     bool tryToSwipeWithEvent(NSEvent *, bool ignoringPinnedState);
     void setDidMoveSwipeSnapshotCallback(BlockPtr<void (CGRect)>&&);
 
@@ -701,7 +704,7 @@ public:
     NSTouchBar *currentTouchBar() const { return m_currentTouchBar.get(); }
     NSCandidateListTouchBarItem *candidateListTouchBarItem() const;
 #if ENABLE(WEB_PLAYBACK_CONTROLS_MANAGER)
-    RefPtr<WebCore::PlatformPlaybackSessionInterface> protectedPlaybackSessionInterface() const;
+    WebCore::PlatformPlaybackSessionInterface* playbackSessionInterface() const;
     bool isPictureInPictureActive();
     void togglePictureInPicture();
     bool isInWindowFullscreenActive() const;
@@ -788,6 +791,12 @@ public:
 
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
     void updateContentInsetFillViews();
+    WKNSContentInsetFillView *topContentInsetFillView() const { return m_topContentInsetFillView.get(); }
+    void registerViewAboveTopContentInsetArea(NSView *);
+    void unregisterViewAboveTopContentInsetArea(NSView *);
+    void updateTopContentInsetFillDueToScrolling();
+    void updateTopContentInsetFillCaptureColor();
+    void updateTopContentInsetFillStyle();
 #endif
 
 private:
@@ -878,7 +887,7 @@ private:
 
     void viewWillMoveToWindowImpl(NSWindow *);
 
-    id toolTipOwnerForSendingMouseEvents() const;
+    RetainPtr<id> toolTipOwnerForSendingMouseEvents() const;
 
 #if ENABLE(DRAG_SUPPORT)
     void sendDragEndToPage(CGPoint endPoint, NSDragOperation);
@@ -907,6 +916,7 @@ private:
     bool m_needsViewFrameInWindowCoordinates;
     bool m_didScheduleWindowAndViewFrameUpdate { false };
     bool m_windowOcclusionDetectionEnabled { true };
+    bool m_windowIsEnteringOrExitingFullScreen { false };
 
     CGSize m_scrollOffsetAdjustment { 0, 0 };
 
@@ -944,8 +954,6 @@ private:
 
     id m_flagsChangedEventMonitor { nullptr };
 
-    std::unique_ptr<WebCore::TextIndicatorWindow> m_textIndicatorWindow;
-
     std::unique_ptr<PAL::HysteresisActivity> m_contentRelativeViewsHysteresis;
 
     RetainPtr<NSColorSpace> m_colorSpace;
@@ -979,7 +987,7 @@ private:
     RetainPtr<CALayer> m_headerBannerLayer;
     RetainPtr<CALayer> m_footerBannerLayer;
 
-    _WKThumbnailView *m_thumbnailView { nullptr };
+    WeakObjCPtr<_WKThumbnailView> m_thumbnailView;
 
     RetainPtr<_WKRemoteObjectRegistry> m_remoteObjectRegistry;
 
@@ -1006,7 +1014,14 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     // the application to distinguish the case of a new event from one
     // that has been already sent to WebCore.
     RetainPtr<NSEvent> m_keyDownEventBeingResent;
-    Vector<WebCore::KeypressCommand>* m_collectedKeypressCommands { nullptr };
+
+    struct CheckedCommands : public CanMakeCheckedPtr<CheckedCommands> {
+        WTF_MAKE_FAST_ALLOCATED;
+        WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(CheckedCommands);
+    public:
+        Vector<WebCore::KeypressCommand> commands;
+    };
+    CheckedPtr<CheckedCommands> m_collectedKeypressCommands;
 
     String m_lastStringForCandidateRequest;
     NSInteger m_lastCandidateRequestSequenceNumber;
@@ -1024,11 +1039,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     RetainPtr<WKTextAnimationManager> m_textAnimationTypeManager;
 #endif
 
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
     bool m_pageIsScrolledToTop { true };
     bool m_isRegisteredScrollViewSeparatorTrackingAdapter { false };
     NSRect m_lastScrollViewFrame { NSZeroRect };
-#endif
 
     RetainPtr<NSMenu> m_domPasteMenu;
     RetainPtr<WKDOMPasteMenuDelegate> m_domPasteMenuDelegate;
@@ -1065,14 +1078,14 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
     RetainPtr<WKNSContentInsetFillView> m_topContentInsetFillView;
+    RetainPtr<NSHashTable<NSView *>> m_viewsAboveTopContentInsetArea;
 #endif
 
 #if HAVE(INLINE_PREDICTIONS)
     bool m_inlinePredictionsEnabled { false };
 #endif
-    bool m_hdrAllowed { true };
 };
-    
+
 } // namespace WebKit
 
 #endif // PLATFORM(MAC)

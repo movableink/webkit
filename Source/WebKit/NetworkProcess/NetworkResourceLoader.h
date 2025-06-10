@@ -122,9 +122,9 @@ public:
     Ref<NetworkConnectionToWebProcess> protectedConnectionToWebProcess() const;
     PAL::SessionID sessionID() const { return m_connection->sessionID(); }
     WebCore::ResourceLoaderIdentifier coreIdentifier() const { return *m_parameters.identifier; }
-    WebCore::FrameIdentifier frameID() const { return *m_parameters.webFrameID; }
-    WebCore::PageIdentifier pageID() const { return *m_parameters.webPageID; }
-    WebPageProxyIdentifier webPageProxyID() const { return *m_parameters.webPageProxyID; }
+    WebCore::FrameIdentifier frameID() const { return m_parameters.webFrameID; }
+    WebCore::PageIdentifier pageID() const { return m_parameters.webPageID; }
+    WebPageProxyIdentifier webPageProxyID() const { return m_parameters.webPageProxyID; }
     const NetworkResourceLoadParameters& parameters() const { return m_parameters; }
     NetworkResourceLoadIdentifier identifier() const { return m_resourceLoadID; }
     const URL& firstResponseURL() const { return m_firstResponseURL; }
@@ -140,7 +140,7 @@ public:
     void willSendRedirectedRequest(WebCore::ResourceRequest&&, WebCore::ResourceRequest&& redirectRequest, WebCore::ResourceResponse&&, CompletionHandler<void(WebCore::ResourceRequest&&)>&&) final;
     void didReceiveInformationalResponse(WebCore::ResourceResponse&&) final;
     void didReceiveResponse(WebCore::ResourceResponse&&, PrivateRelayed, ResponseCompletionHandler&&) final;
-    void didReceiveBuffer(const WebCore::FragmentedSharedBuffer&, uint64_t reportedEncodedDataLength) final;
+    void didReceiveBuffer(const WebCore::FragmentedSharedBuffer&) final;
     void didFinishLoading(const WebCore::NetworkLoadMetrics&) final;
     void didFailLoading(const WebCore::ResourceError&) final;
     void didBlockAuthenticationChallenge() final;
@@ -179,7 +179,7 @@ public:
     bool isAppInitiated();
 
 #if ENABLE(CONTENT_FILTERING)
-    bool continueAfterServiceWorkerReceivedData(const WebCore::SharedBuffer&, uint64_t encodedDataLength);
+    bool continueAfterServiceWorkerReceivedData(const WebCore::SharedBuffer&);
     bool continueAfterServiceWorkerReceivedResponse(const WebCore::ResourceResponse&);
     void serviceWorkerDidFinish();
 #endif
@@ -200,10 +200,16 @@ private:
 
 #if ENABLE(CONTENT_FILTERING)
     // ContentFilterClient
-    void dataReceivedThroughContentFilter(const WebCore::SharedBuffer&, size_t) final;
+    void dataReceivedThroughContentFilter(const WebCore::SharedBuffer&) final;
     WebCore::ResourceError contentFilterDidBlock(WebCore::ContentFilterUnblockHandler, String&& unblockRequestDeniedScript) final;
     void cancelMainResourceLoadForContentFilter(const WebCore::ResourceError&) final;
-    void handleProvisionalLoadFailureFromContentFilter(const URL& blockedPageURL, WebCore::SubstituteData&) final;
+    void handleProvisionalLoadFailureFromContentFilter(const URL& blockedPageURL, WebCore::SubstituteData&&) final;
+#if HAVE(WEBCONTENTRESTRICTIONS)
+    bool usesWebContentRestrictions() final;
+#endif
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    String webContentRestrictionsConfigurationPath() const final;
+#endif
 #endif
 
     void processClearSiteDataHeader(const WebCore::ResourceResponse&, CompletionHandler<void()>&&);
@@ -242,7 +248,7 @@ private:
 
     void startBufferingTimerIfNeeded();
     void bufferingTimerFired();
-    void sendBuffer(const WebCore::FragmentedSharedBuffer&, size_t encodedDataLength);
+    void sendBuffer(const WebCore::FragmentedSharedBuffer&);
 
     void consumeSandboxExtensions();
     void invalidateSandboxExtensions();
@@ -272,7 +278,7 @@ private:
     // ReportingClient
     void notifyReportObservers(Ref<WebCore::Report>&&) final;
     String endpointURIForToken(const String&) const final;
-    void sendReportToEndpoints(const URL& baseURL, const Vector<String>& endpointURIs, const Vector<String>& endpointTokens, Ref<WebCore::FormData>&& report, WebCore::ViolationReportType) final;
+    void sendReportToEndpoints(const URL& baseURL, std::span<const String> endpointURIs, std::span<const String> endpointTokens, Ref<WebCore::FormData>&& report, WebCore::ViolationReportType) final;
     String httpUserAgent() const final { return originalRequest().httpUserAgent(); }
     void initializeReportingEndpoints(const WebCore::ResourceResponse&);
     WebCore::FrameIdentifier frameIdentifierForReport() const;
@@ -286,7 +292,7 @@ private:
 
     bool shouldSendResourceLoadMessages() const;
 
-    void sendDidReceiveDataMessage(const WebCore::FragmentedSharedBuffer&, size_t encodedDataLength);
+    void sendDidReceiveDataMessage(const WebCore::FragmentedSharedBuffer&);
 
 #if ENABLE(CONTENT_EXTENSIONS)
     void updateBytesTransferredOverNetwork(size_t bytesTransferredOverNetwork);
@@ -295,6 +301,7 @@ private:
 #endif
 
     NetworkResourceLoadParameters m_parameters;
+    Vector<Ref<SandboxExtension>> m_extensionsToRevoke;
 
     Ref<NetworkConnectionToWebProcess> m_connection;
 
@@ -302,7 +309,6 @@ private:
 
     WebCore::ResourceResponse m_response;
 
-    size_t m_bufferedDataEncodedDataLength { 0 };
     WebCore::SharedBufferBuilder m_bufferedData;
     unsigned m_redirectCount { 0 };
 

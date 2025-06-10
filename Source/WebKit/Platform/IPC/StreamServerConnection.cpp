@@ -62,7 +62,7 @@ StreamServerConnection::~StreamServerConnection()
 
 void StreamServerConnection::open(StreamConnectionWorkQueue& workQueue)
 {
-    m_workQueue = &workQueue;
+    m_workQueue = workQueue;
     // FIXME(http://webkit.org/b/238986): Workaround for not being able to deliver messages from the dedicated connection to the work queue the client uses.
     Ref connection = m_connection;
     connection->addMessageReceiveQueue(*this, { });

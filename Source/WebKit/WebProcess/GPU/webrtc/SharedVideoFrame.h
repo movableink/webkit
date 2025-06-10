@@ -30,6 +30,7 @@
 #include "IPCSemaphore.h"
 #include "RemoteVideoFrameIdentifier.h"
 #include <WebCore/IntSize.h>
+#include <WebCore/PixelBufferConformerCV.h>
 #include <WebCore/ProcessIdentity.h>
 #include <WebCore/SharedMemory.h>
 #include <wtf/MediaTime.h>
@@ -38,7 +39,7 @@
 #include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
-typedef struct __CVBuffer* CVPixelBufferRef;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer* CVPixelBufferRef;
 typedef struct __CVPixelBufferPool* CVPixelBufferPoolRef;
 
 namespace WebCore {
@@ -60,7 +61,7 @@ struct SharedVideoFrame {
     MediaTime time;
     bool mirrored { false };
     WebCore::VideoFrameRotation rotation { };
-    using Buffer = std::variant<std::nullptr_t, RemoteVideoFrameReadReference, MachSendRight, WebCore::IntSize>;
+    using Buffer = Variant<std::nullptr_t, RemoteVideoFrameReadReference, MachSendRight, WebCore::IntSize>;
     Buffer buffer;
 };
 
@@ -93,6 +94,7 @@ private:
 
     UniqueRef<IPC::Semaphore> m_semaphore;
     RefPtr<WebCore::SharedMemory> m_storage;
+    std::unique_ptr<WebCore::PixelBufferConformerCV> m_compressedPixelBufferConformer;
     bool m_isSemaphoreInUse { false };
     bool m_isDisabled { false };
     bool m_shouldSignalInCaseOfError { false };

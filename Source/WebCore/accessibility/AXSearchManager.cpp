@@ -56,7 +56,7 @@ bool AXSearchManager::matchForSearchKeyAtIndex(Ref<AXCoreObject> axObject, const
         // The AccessibilitySearchKey::AnyType matches any non-null AccessibilityObject.
         return true;
     case AccessibilitySearchKey::Article:
-        return axObject->roleValue() == AccessibilityRole::DocumentArticle;
+        return axObject->role() == AccessibilityRole::DocumentArticle;
     case AccessibilitySearchKey::BlockquoteSameLevel:
         return criteria.startObject
             && axObject->isBlockquote()
@@ -73,7 +73,7 @@ bool AXSearchManager::matchForSearchKeyAtIndex(Ref<AXCoreObject> axObject, const
         return axObject->isControl() || axObject->isSummary();
     case AccessibilitySearchKey::DifferentType:
         return criteria.startObject
-            && axObject->roleValue() != criteria.startObject->roleValue();
+            && axObject->role() != criteria.startObject->role();
     case AccessibilitySearchKey::FontChange:
         return criteria.startObject
             && !axObject->hasSameFont(*criteria.startObject);
@@ -114,7 +114,7 @@ bool AXSearchManager::matchForSearchKeyAtIndex(Ref<AXCoreObject> axObject, const
         bool isLink = axObject->isLink();
 #if PLATFORM(IOS_FAMILY)
         if (!isLink)
-            isLink = axObject->isDescendantOfRole(AccessibilityRole::WebCoreLink);
+            isLink = axObject->isDescendantOfRole(AccessibilityRole::Link);
 #endif
         return isLink;
     }
@@ -137,7 +137,7 @@ bool AXSearchManager::matchForSearchKeyAtIndex(Ref<AXCoreObject> axObject, const
         return axObject->isRadioGroup() || isRadioButtonInDifferentAdhocGroup(axObject, criteria.startObject);
     case AccessibilitySearchKey::SameType:
         return criteria.startObject
-            && axObject->roleValue() == criteria.startObject->roleValue();
+            && axObject->role() == criteria.startObject->role();
     case AccessibilitySearchKey::StaticText:
         return axObject->isStaticText();
     case AccessibilitySearchKey::StyleChange:
@@ -154,9 +154,9 @@ bool AXSearchManager::matchForSearchKeyAtIndex(Ref<AXCoreObject> axObject, const
     case AccessibilitySearchKey::Underline:
         return axObject->hasUnderline();
     case AccessibilitySearchKey::UnvisitedLink:
-        return axObject->isUnvisited();
+        return axObject->isUnvisitedLink();
     case AccessibilitySearchKey::VisitedLink:
-        return axObject->isVisited();
+        return axObject->isVisitedLink();
     default:
         return false;
     }
@@ -197,7 +197,7 @@ bool AXSearchManager::matchWithResultsLimit(Ref<AXCoreObject> object, const Acce
 
 static void appendAccessibilityObject(Ref<AXCoreObject> object, AccessibilityObject::AccessibilityChildrenVector& results)
 {
-    if (LIKELY(!object->isAttachment()))
+    if (!object->isAttachment()) [[likely]]
         results.append(WTFMove(object));
     else {
         // Find the next descendant of this attachment object so search can continue through frames.
@@ -242,6 +242,7 @@ static void appendChildrenToArray(Ref<AXCoreObject> object, bool isForward, RefP
         // We should only ever hit this case with a live object (not an isolated object), as it would require startObject to be ignored,
         // and we should never have created an isolated object from an ignored live object.
         // FIXME: This is not true for ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE), fix this before shipping it.
+        // FIXME: We hit this ASSERT on google.com. https://bugs.webkit.org/show_bug.cgi?id=293263
         ASSERT(is<AccessibilityObject>(startObject));
         auto* newStartObject = dynamicDowncast<AccessibilityObject>(startObject.get());
         // Get the un-ignored sibling based on the search direction, and update the searchPosition.

@@ -45,17 +45,17 @@ namespace WebCore::Style::Interpolation {
 
 // MARK: - Base Wrappers
 
-template<typename T>
+template<typename T, typename GetterType = T>
 class WrapperWithGetter : public WrapperBase {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    WrapperWithGetter(CSSPropertyID property, T (RenderStyle::*getter)() const)
+    WrapperWithGetter(CSSPropertyID property, GetterType (RenderStyle::*getter)() const)
         : WrapperBase(property)
         , m_getter(getter)
     {
     }
 
-    T value(const RenderStyle& style) const
+    GetterType value(const RenderStyle& style) const
     {
         return (style.*m_getter)();
     }
@@ -75,15 +75,15 @@ public:
 #endif
 
 private:
-    T (RenderStyle::*m_getter)() const;
+    GetterType (RenderStyle::*m_getter)() const;
 };
 
-template<typename T>
-class Wrapper : public WrapperWithGetter<T> {
+template<typename T, typename GetterType = T, typename SetterType = T>
+class Wrapper : public WrapperWithGetter<T, GetterType> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    Wrapper(CSSPropertyID property, T (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T))
-        : WrapperWithGetter<T>(property, getter)
+    Wrapper(CSSPropertyID property, GetterType (RenderStyle::*getter)() const, void (RenderStyle::*setter)(SetterType))
+        : WrapperWithGetter<T, GetterType>(property, getter)
         , m_setter(setter)
     {
     }
@@ -94,8 +94,16 @@ public:
     }
 
 protected:
-    void (RenderStyle::*m_setter)(T);
+    void (RenderStyle::*m_setter)(SetterType);
 };
+
+// Deduction guide for getter/setters that return and take values.
+template<typename T>
+Wrapper(CSSPropertyID, T (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T)) -> Wrapper<T, T, T>;
+
+// Deduction guide for getter/setters that return const references and take r-value references.
+template<typename T>
+Wrapper(CSSPropertyID, const T& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T&&)) -> Wrapper<T, const T&, T&&>;
 
 template<typename T>
 class RefCountedWrapper : public WrapperWithGetter<T*> {
@@ -138,12 +146,17 @@ public:
 
     bool canInterpolate(const RenderStyle& from, const RenderStyle& to, CompositeOperation) const final
     {
-        return Style::canBlend(this->value(from), this->value(to));
+        return Style::canBlend(this->value(from), this->value(to), from, to);
+    }
+
+    bool requiresInterpolationForAccumulativeIteration(const RenderStyle& from, const RenderStyle& to) const final
+    {
+        return Style::requiresInterpolationForAccumulativeIteration(this->value(from), this->value(to), from, to);
     }
 
     void interpolate(RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, const Context& context) const final
     {
-        (destination.*m_setter)(Style::blend(this->value(from), this->value(to), context));
+        (destination.*m_setter)(Style::blend(this->value(from), this->value(to), from, to, context));
     }
 
 #if !LOG_DISABLED
@@ -153,6 +166,7 @@ public:
     }
 #endif
 
+private:
     const StyleType& value(const RenderStyle& style) const
     {
         return (style.*m_getter)();
@@ -402,12 +416,11 @@ private:
 
 // MARK: - Discrete Wrappers
 
-template<typename T>
-class DiscreteWrapper : public WrapperWithGetter<T> {
+template<typename T, typename GetterType = T, typename SetterType = T> class DiscreteWrapper : public WrapperWithGetter<T, GetterType> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    DiscreteWrapper(CSSPropertyID property, T (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T))
-        : WrapperWithGetter<T>(property, getter)
+    DiscreteWrapper(CSSPropertyID property, GetterType (RenderStyle::*getter)() const, void (RenderStyle::*setter)(SetterType))
+        : WrapperWithGetter<T, GetterType>(property, getter)
         , m_setter(setter)
     {
     }
@@ -420,11 +433,33 @@ public:
     void interpolate(RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, const Context& context) const override
     {
         ASSERT(!context.progress || context.progress == 1.0);
-        (destination.*this->m_setter)(this->value(context.progress ? to : from));
+        (destination.*this->m_setter)(T { this->value(context.progress ? to : from) });
     }
 
 private:
-    void (RenderStyle::*m_setter)(T);
+    void (RenderStyle::*m_setter)(SetterType);
+};
+
+// Deduction guide for getter/setters that return and take values.
+template<typename T>
+DiscreteWrapper(CSSPropertyID, T (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T)) -> DiscreteWrapper<T, T, T>;
+
+// Deduction guide for getter/setters that return const references and take r-value references.
+template<typename T>
+DiscreteWrapper(CSSPropertyID, const T& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T&&)) -> DiscreteWrapper<T, const T&, T&&>;
+
+class FontSizeWrapper final : public Wrapper<float> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+public:
+    FontSizeWrapper()
+        : Wrapper<float>(CSSPropertyID::CSSPropertyFontSize, &RenderStyle::computedFontSize, &RenderStyle::setFontSize)
+    {
+    }
+
+    bool equals(const RenderStyle& a, const RenderStyle& b) const final
+    {
+        return a.specifiedFontSize() == b.specifiedFontSize();
+    }
 };
 
 class DiscreteFontDescriptionWrapper : public WrapperBase {
@@ -1086,9 +1121,9 @@ public:
     void (RenderStyle::*m_setter)(FilterOperations&&);
 };
 
-inline const ShadowData* shadowForInterpolation(const ShadowData* srcShadow, const ShadowData* otherShadow)
+inline const BoxShadow& shadowForInterpolation(const BoxShadow& shadowToMatch)
 {
-    static NeverDestroyed<ShadowData> defaultShadowData {
+    static NeverDestroyed<BoxShadow> defaultShadowData {
         BoxShadow {
             .color = { WebCore::Color::transparentBlack },
             .location = { { 0 }, { 0 } },
@@ -1098,7 +1133,7 @@ inline const ShadowData* shadowForInterpolation(const ShadowData* srcShadow, con
             .isWebkitBoxShadow = false
         }
     };
-    static NeverDestroyed<ShadowData> defaultInsetShadowData {
+    static NeverDestroyed<BoxShadow> defaultInsetShadowData {
         BoxShadow {
             .color = { WebCore::Color::transparentBlack },
             .location = { { 0 }, { 0 } },
@@ -1108,7 +1143,7 @@ inline const ShadowData* shadowForInterpolation(const ShadowData* srcShadow, con
             .isWebkitBoxShadow = false
         }
     };
-    static NeverDestroyed<ShadowData> defaultWebKitBoxShadowData {
+    static NeverDestroyed<BoxShadow> defaultWebKitBoxShadowData {
         BoxShadow {
             .color = { WebCore::Color::transparentBlack },
             .location = { { 0 }, { 0 } },
@@ -1118,7 +1153,7 @@ inline const ShadowData* shadowForInterpolation(const ShadowData* srcShadow, con
             .isWebkitBoxShadow = true
         }
     };
-    static NeverDestroyed<ShadowData> defaultInsetWebKitBoxShadowData {
+    static NeverDestroyed<BoxShadow> defaultInsetWebKitBoxShadowData {
         BoxShadow {
             .color = { WebCore::Color::transparentBlack },
             .location = { { 0 }, { 0 } },
@@ -1129,63 +1164,62 @@ inline const ShadowData* shadowForInterpolation(const ShadowData* srcShadow, con
         }
     };
 
-    if (srcShadow)
-        return srcShadow;
-
-    if (otherShadow->style() == ShadowStyle::Inset)
-        return otherShadow->isWebkitBoxShadow() ? &defaultInsetWebKitBoxShadowData.get() : &defaultInsetShadowData.get();
-
-    return otherShadow->isWebkitBoxShadow() ? &defaultWebKitBoxShadowData.get() : &defaultShadowData.get();
+    if (isInset(shadowToMatch))
+        return shadowToMatch.isWebkitBoxShadow ? defaultInsetWebKitBoxShadowData.get() : defaultInsetShadowData.get();
+    else
+        return shadowToMatch.isWebkitBoxShadow ? defaultWebKitBoxShadowData.get() : defaultShadowData.get();
 }
 
-class ShadowWrapper final : public WrapperBase {
+inline const TextShadow& shadowForInterpolation(const TextShadow&)
+{
+    static NeverDestroyed<TextShadow> defaultShadowData {
+        TextShadow {
+            .color = { WebCore::Color::transparentBlack },
+            .location = { { 0 }, { 0 } },
+            .blur = { 0 },
+        }
+    };
+    return defaultShadowData.get();
+}
+
+template<typename ShadowType> class ShadowWrapper final : public WrapperWithGetter<const FixedVector<ShadowType>&> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    ShadowWrapper(CSSPropertyID property, const ShadowData* (RenderStyle::*getter)() const, void (RenderStyle::*setter)(std::unique_ptr<ShadowData>, bool))
-        : WrapperBase(property)
-        , m_getter(getter)
+    ShadowWrapper(CSSPropertyID property, const FixedVector<ShadowType>& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(FixedVector<ShadowType>&&))
+        : WrapperWithGetter<const FixedVector<ShadowType>&>(property, getter)
         , m_setter(setter)
     {
     }
 
-    bool equals(const RenderStyle& a, const RenderStyle& b) const final
-    {
-        if (&a == &b)
-            return true;
-
-        auto* shadowA = (a.*m_getter)();
-        auto* shadowB = (b.*m_getter)();
-
-        while (true) {
-            if (!shadowA || !shadowB)
-                return shadowA == shadowB;
-
-            if (*shadowA != *shadowB)
-                return false;
-
-            shadowA = shadowA->next();
-            shadowB = shadowB->next();
-        }
-
-        return true;
-    }
-
-    bool canInterpolate(const RenderStyle& from, const RenderStyle& to, CompositeOperation compositeOperation) const final
+    bool canInterpolate(const RenderStyle& fromStyle, const RenderStyle& toStyle, CompositeOperation compositeOperation) const final
     {
         if (compositeOperation != CompositeOperation::Replace)
             return true;
 
-        auto* fromShadow = (from.*m_getter)();
-        auto* toShadow = (to.*m_getter)();
-
         // The only scenario where we can't interpolate is if specified items don't have the same shadow style.
-        while (fromShadow && toShadow) {
-            if (fromShadow->style() != toShadow->style())
-                return false;
-            fromShadow = fromShadow->next();
-            toShadow = toShadow->next();
-        }
 
+        auto& fromShadowList = this->value(fromStyle);
+        auto& toShadowList = this->value(toStyle);
+
+        auto fromLength = fromShadowList.size();
+        auto toLength = toShadowList.size();
+
+        // FIXME: Something like LLVM ADT's zip_shortest (https://llvm.org/doxygen/structllvm_1_1detail_1_1zip__shortest.html) would allow this to be done without indexing:
+        //
+        // return std::ranges::all_of(
+        //     zip_shortest(makeReversedRange(fromShadowList), makeReversedRange(toShadowList)),
+        //     [](const auto& pair) {
+        //         return shadowStyle(std::get<0>(pair)) == shadowStyle(std::get<1>(pair));
+        //     }
+        // );
+
+        size_t minLength = std::min(fromLength, toLength);
+        for (size_t i = 0; i < minLength; ++i) {
+            auto fromIndex = fromLength - i - 1;
+            auto toIndex = toLength - i - 1;
+            if (shadowStyle(fromShadowList[fromIndex]) != shadowStyle(toShadowList[toIndex]))
+                return false;
+        }
         return true;
     }
 
@@ -1194,138 +1228,87 @@ public:
         return true;
     }
 
-    void interpolate(RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, const Context& context) const final
+    void interpolate(RenderStyle& destination, const RenderStyle& fromStyle, const RenderStyle& toStyle, const Context& context) const final
     {
-        auto* fromShadow = (from.*m_getter)();
-        auto* toShadow = (to.*m_getter)();
+        auto& fromShadowList = this->value(fromStyle);
+        auto& toShadowList = this->value(toStyle);
 
         if (context.isDiscrete) {
             ASSERT(!context.progress || context.progress == 1.0);
-            auto* shadow = context.progress ? toShadow : fromShadow;
-            (destination.*m_setter)(shadow ? makeUnique<ShadowData>(*shadow) : nullptr, false);
+            (destination.*m_setter)(FixedVector<ShadowType> { context.progress ? toShadowList : fromShadowList });
             return;
         }
 
-        size_t fromLength = shadowListLength(fromShadow);
-        size_t toLength = shadowListLength(toShadow);
+        auto fromLength = fromShadowList.size();
+        auto toLength = toShadowList.size();
 
-        if (fromLength == toLength || (fromLength <= 1 && toLength <= 1)) {
-            (destination.*m_setter)(blendSimpleOrMatchedShadowLists(fromShadow, toShadow, from, to, context), false);
-            return;
-        }
-
-        (destination.*m_setter)(blendMismatchedShadowLists(fromShadow, toShadow, fromLength, toLength, from, to, context), false);
+        if (!fromLength && !toLength)
+            (destination.*m_setter)({ });
+        else if (fromLength == toLength)
+            (destination.*m_setter)(blendMatchedShadowLists(fromShadowList, toShadowList, fromLength, fromStyle, toStyle, context));
+        else
+            (destination.*m_setter)(blendMismatchedShadowLists(fromShadowList, toShadowList, fromLength, toLength, fromStyle, toStyle, context));
     }
 
-#if !LOG_DISABLED
-    void log(const RenderStyle&, const RenderStyle&, const RenderStyle&, double progress) const final
+    FixedVector<ShadowType> addShadowLists(const FixedVector<ShadowType>& fromShadowList, const FixedVector<ShadowType>& toShadowList, size_t fromLength, size_t toLength) const
     {
-        // FIXME: better logging.
-        LOG_WITH_STREAM(Animations, stream << "  blending ShadowData at " << TextStream::FormatNumberRespectingIntegers(progress));
+        auto combinedSize = fromLength + toLength;
+        return FixedVector<ShadowType>::createWithSizeFromGenerator(combinedSize, [&](auto index) -> ShadowType {
+            if (index < toLength)
+                return toShadowList[index];
+            return fromShadowList[index - toLength];
+        });
     }
-#endif
 
-    std::unique_ptr<ShadowData> addShadowLists(const ShadowData* shadowA, const ShadowData* shadowB) const
+    FixedVector<ShadowType> blendMatchedShadowLists(const FixedVector<ShadowType>& fromShadowList, const FixedVector<ShadowType>& toShadowList, size_t length, const RenderStyle& fromStyle, const RenderStyle& toStyle, const Context& context) const
     {
-        std::unique_ptr<ShadowData> newShadowData;
-        ShadowData* lastShadow = nullptr;
-        auto addShadows = [&](const ShadowData* shadow) {
-            while (shadow) {
-                auto blendedShadow = makeUnique<ShadowData>(*shadow);
-                auto* blendedShadowPtr = blendedShadow.get();
-                if (!lastShadow)
-                    newShadowData = WTFMove(blendedShadow);
-                else
-                    lastShadow->setNext(WTFMove(blendedShadow));
+        // from or to might be empty in which case we don't want to do additivity, but do replace instead.
+        if (!fromShadowList.isEmpty() && !toShadowList.isEmpty() && context.compositeOperation == CompositeOperation::Add)
+            return addShadowLists(fromShadowList, toShadowList, length, length);
 
-                lastShadow = blendedShadowPtr;
-                shadow = shadow ? shadow->next() : nullptr;
+        return FixedVector<ShadowType>::createWithSizeFromGenerator(length, [&](auto index) -> ShadowType {
+            return Style::blend(fromShadowList[index], toShadowList[index], fromStyle, toStyle, context);
+        });
+    }
+
+    FixedVector<ShadowType> blendMismatchedShadowLists(const FixedVector<ShadowType>& fromShadowList, const FixedVector<ShadowType>& toShadowList, size_t fromLength, size_t toLength, const RenderStyle& fromStyle, const RenderStyle& toStyle, const Context& context) const
+    {
+        if (!fromShadowList.isEmpty() && !toShadowList.isEmpty() && context.compositeOperation != CompositeOperation::Replace)
+            return addShadowLists(fromShadowList, toShadowList, fromLength, toLength);
+
+        auto maxLength = std::max(fromLength, toLength);
+        return FixedVector<ShadowType>::createWithSizeFromGenerator(maxLength, [&](auto index) -> ShadowType {
+            auto indexFromEnd = maxLength - index - 1;
+            bool hasFrom = indexFromEnd < fromLength;
+            bool hasTo = indexFromEnd < toLength;
+
+            if (hasFrom && hasTo) {
+                const auto& fromShadow = fromShadowList[index - (maxLength - fromLength)];
+                const auto& toShadow = toShadowList[index - (maxLength - toLength)];
+                return Style::blend(fromShadow, toShadow, fromStyle, toStyle, context);
+            } else if (hasFrom) {
+                const auto& fromShadow = fromShadowList[index - (maxLength - fromLength)];
+                const auto& toShadow = shadowForInterpolation(fromShadow);
+                return Style::blend(fromShadow, toShadow, fromStyle, toStyle, context);
+            } else if (hasTo) {
+                const auto& toShadow = toShadowList[index - (maxLength - toLength)];
+                const auto& fromShadow = shadowForInterpolation(toShadow);
+                return Style::blend(fromShadow, toShadow, fromStyle, toStyle, context);
             }
-        };
-        addShadows(shadowB);
-        addShadows(shadowA);
-        return newShadowData;
-    }
 
-    std::unique_ptr<ShadowData> blendSimpleOrMatchedShadowLists(const ShadowData* shadowA, const ShadowData* shadowB, const RenderStyle& styleA, const RenderStyle& styleB, const Context& context) const
-    {
-        // from or to might be null in which case we don't want to do additivity, but do replace instead.
-        if (shadowA && shadowB && context.compositeOperation == CompositeOperation::Add)
-            return addShadowLists(shadowA, shadowB);
-
-        std::unique_ptr<ShadowData> newShadowData;
-        ShadowData* lastShadow = nullptr;
-
-        while (shadowA || shadowB) {
-            auto* srcShadow = shadowForInterpolation(shadowA, shadowB);
-            auto* dstShadow = shadowForInterpolation(shadowB, shadowA);
-
-            auto blendedShadow = blendFunc(srcShadow, dstShadow, styleA, styleB, context);
-            auto* blendedShadowPtr = blendedShadow.get();
-
-            if (!lastShadow)
-                newShadowData = WTFMove(blendedShadow);
-            else
-                lastShadow->setNext(WTFMove(blendedShadow));
-
-            lastShadow = blendedShadowPtr;
-
-            shadowA = shadowA ? shadowA->next() : 0;
-            shadowB = shadowB ? shadowB->next() : 0;
-        }
-
-        return newShadowData;
-    }
-
-    std::unique_ptr<ShadowData> blendMismatchedShadowLists(const ShadowData* shadowA, const ShadowData* shadowB, int fromLength, int toLength, const RenderStyle& styleA, const RenderStyle& styleB, const Context& context) const
-    {
-        if (shadowA && shadowB && context.compositeOperation != CompositeOperation::Replace)
-            return addShadowLists(shadowA, shadowB);
-
-        // The shadows in ShadowData are stored in reverse order, so when animating mismatched lists,
-        // reverse them and match from the end.
-        Vector<const ShadowData*, 4> fromShadows(fromLength);
-        for (int i = fromLength - 1; i >= 0; --i) {
-            fromShadows[i] = shadowA;
-            shadowA = shadowA->next();
-        }
-
-        Vector<const ShadowData*, 4> toShadows(toLength);
-        for (int i = toLength - 1; i >= 0; --i) {
-            toShadows[i] = shadowB;
-            shadowB = shadowB->next();
-        }
-
-        std::unique_ptr<ShadowData> newShadowData;
-
-        int maxLength = std::max(fromLength, toLength);
-        for (int i = 0; i < maxLength; ++i) {
-            auto* fromShadow = i < fromLength ? fromShadows[i] : nullptr;
-            auto* toShadow = i < toLength ? toShadows[i] : nullptr;
-
-            auto* srcShadow = shadowForInterpolation(fromShadow, toShadow);
-            auto* dstShadow = shadowForInterpolation(toShadow, fromShadow);
-
-            auto blendedShadow = blendFunc(srcShadow, dstShadow, styleA, styleB, context);
-            // Insert at the start of the list to preserve the order.
-            blendedShadow->setNext(WTFMove(newShadowData));
-            newShadowData = WTFMove(blendedShadow);
-        }
-
-        return newShadowData;
+            RELEASE_ASSERT_NOT_REACHED();
+        });
     }
 
 private:
-    const ShadowData* (RenderStyle::*m_getter)() const;
-    void (RenderStyle::*m_setter)(std::unique_ptr<ShadowData>, bool);
+    void (RenderStyle::*m_setter)(FixedVector<ShadowType>&&);
 };
 
-class StyleColorWrapper : public WrapperBase {
+class StyleColorWrapper : public WrapperWithGetter<const Style::Color&> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    StyleColorWrapper(CSSPropertyID property, const Style::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const Style::Color&))
-        : WrapperBase(property)
-        , m_getter(getter)
+    StyleColorWrapper(CSSPropertyID property, const Style::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(Style::Color&&))
+        : WrapperWithGetter(property, getter)
         , m_setter(setter)
     {
     }
@@ -1360,68 +1343,29 @@ public:
         auto fromColor = from.colorResolvingCurrentColor(fromStyleColor);
         auto toColor = to.colorResolvingCurrentColor(toStyleColor);
 
-        auto result = blendFunc(fromColor, toColor, context);
-        (destination.*m_setter)(WTFMove(result));
+        (destination.*m_setter)(blendFunc(fromColor, toColor, context));
     }
-
-#if !LOG_DISABLED
-    void log(const RenderStyle& from, const RenderStyle& to, const RenderStyle& destination, double progress) const final
-    {
-        // FIXME: better logging.
-        LOG_WITH_STREAM(Animations, stream << "  blending " << property() << " from " << value(from) << " to " << value(to) << " at " << TextStream::FormatNumberRespectingIntegers(progress) << " -> " << value(destination));
-    }
-#endif
 
 private:
-    const Style::Color& value(const RenderStyle& style) const
-    {
-        return (style.*m_getter)();
-    }
-
-    const Style::Color& (RenderStyle::*m_getter)() const;
-    void (RenderStyle::*m_setter)(const Style::Color&);
+    void (RenderStyle::*m_setter)(Style::Color&&);
 };
 
-class ColorWrapper final : public WrapperBase {
+class ColorWrapper final : public WrapperWithGetter<const WebCore::Color&> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    ColorWrapper(CSSPropertyID property, const WebCore::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const WebCore::Color&))
-        : WrapperBase(property)
-        , m_getter(getter)
+    ColorWrapper(CSSPropertyID property, const WebCore::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(WebCore::Color&&))
+        : WrapperWithGetter<const WebCore::Color&>(property, getter)
         , m_setter(setter)
     {
     }
 
-    bool equals(const RenderStyle& a, const RenderStyle& b) const override
-    {
-        if (&a == &b)
-            return true;
-
-        return value(a) == value(b);
-    }
-
     void interpolate(RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, const Context& context) const override
     {
-        auto result = blendFunc(value(from), value(to), context);
-        (destination.*m_setter)(WTFMove(result));
+        (destination.*m_setter)(blendFunc(value(from), value(to), context));
     }
-
-#if !LOG_DISABLED
-    void log(const RenderStyle& from, const RenderStyle& to, const RenderStyle& destination, double progress) const final
-    {
-        // FIXME: better logging.
-        LOG_WITH_STREAM(Animations, stream << "  blending " << property() << " from " << value(from) << " to " << value(to) << " at " << TextStream::FormatNumberRespectingIntegers(progress) << " -> " << value(destination));
-    }
-#endif
 
 private:
-    const WebCore::Color& value(const RenderStyle& style) const
-    {
-        return (style.*m_getter)();
-    }
-
-    const WebCore::Color& (RenderStyle::*m_getter)() const;
-    void (RenderStyle::*m_setter)(const WebCore::Color&);
+    void (RenderStyle::*m_setter)(WebCore::Color&&);
 };
 
 class ScrollbarColorWrapper final : public WrapperBase {
@@ -1480,7 +1424,7 @@ private:
 class VisitedAffectedStyleColorWrapper : public WrapperBase {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    VisitedAffectedStyleColorWrapper(CSSPropertyID property, const Style::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const Style::Color&), const Style::Color& (RenderStyle::*visitedGetter)() const, void (RenderStyle::*visitedSetter)(const Style::Color&))
+    VisitedAffectedStyleColorWrapper(CSSPropertyID property, const Style::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(Style::Color&&), const Style::Color& (RenderStyle::*visitedGetter)() const, void (RenderStyle::*visitedSetter)(Style::Color&&))
         : WrapperBase(property)
         , m_wrapper(StyleColorWrapper(property, getter, setter))
         , m_visitedWrapper(StyleColorWrapper(property, visitedGetter, visitedSetter))
@@ -1518,7 +1462,7 @@ public:
 class VisitedAffectedColorWrapper final : public WrapperBase {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    VisitedAffectedColorWrapper(CSSPropertyID property, const WebCore::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const WebCore::Color&), const WebCore::Color& (RenderStyle::*visitedGetter)() const, void (RenderStyle::*visitedSetter)(const WebCore::Color&))
+    VisitedAffectedColorWrapper(CSSPropertyID property, const WebCore::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(WebCore::Color&&), const WebCore::Color& (RenderStyle::*visitedGetter)() const, void (RenderStyle::*visitedSetter)(WebCore::Color&&))
         : WrapperBase(property)
         , m_wrapper(ColorWrapper(property, getter, setter))
         , m_visitedWrapper(ColorWrapper(property, visitedGetter, visitedSetter))
@@ -1584,7 +1528,7 @@ public:
         if (blendingRenderStyle.hasAutoAccentColor())
             destination.setHasAutoAccentColor();
         else
-            destination.setAccentColor(blendingRenderStyle.accentColor());
+            destination.setAccentColor(Color { blendingRenderStyle.accentColor() });
     }
 };
 
@@ -1617,7 +1561,7 @@ public:
             if (blendingRenderStyle.hasAutoCaretColor())
                 destination.setHasAutoCaretColor();
             else
-                destination.setCaretColor(blendingRenderStyle.caretColor());
+                destination.setCaretColor(Color { blendingRenderStyle.caretColor() });
         }
 
         if (canInterpolateCaretColor(from, to, true))
@@ -1627,7 +1571,7 @@ public:
             if (blendingRenderStyle.hasVisitedLinkAutoCaretColor())
                 destination.setHasVisitedLinkAutoCaretColor();
             else
-                destination.setVisitedLinkCaretColor(blendingRenderStyle.visitedLinkCaretColor());
+                destination.setVisitedLinkCaretColor(Color { blendingRenderStyle.visitedLinkCaretColor() });
         }
     }
 
@@ -1643,7 +1587,7 @@ private:
 class SVGPaintWrapper final : public WrapperBase {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    SVGPaintWrapper(CSSPropertyID property, SVGPaintType (RenderStyle::*paintTypeGetter)() const, const Style::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const Style::Color&))
+    SVGPaintWrapper(CSSPropertyID property, SVGPaintType (RenderStyle::*paintTypeGetter)() const, const Style::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(Style::Color&&))
         : WrapperBase(property)
         , m_paintTypeGetter(paintTypeGetter)
         , m_getter(getter)
@@ -1708,13 +1652,13 @@ public:
 private:
     SVGPaintType (RenderStyle::*m_paintTypeGetter)() const;
     const Style::Color& (RenderStyle::*m_getter)() const;
-    void (RenderStyle::*m_setter)(const Style::Color&);
+    void (RenderStyle::*m_setter)(Style::Color&&);
 };
 
 class VisitedAffectedSVGPaintWrapper final : public WrapperBase {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    VisitedAffectedSVGPaintWrapper(CSSPropertyID property, SVGPaintType (RenderStyle::*paintTypeGetter)() const, const Style::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const Style::Color&), SVGPaintType (RenderStyle::*visitedPaintTypeGetter)() const, const Style::Color& (RenderStyle::*visitedGetter)() const, void (RenderStyle::*visitedSetter)(const Style::Color&))
+    VisitedAffectedSVGPaintWrapper(CSSPropertyID property, SVGPaintType (RenderStyle::*paintTypeGetter)() const, const Style::Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(Style::Color&&), SVGPaintType (RenderStyle::*visitedPaintTypeGetter)() const, const Style::Color& (RenderStyle::*visitedGetter)() const, void (RenderStyle::*visitedSetter)(Style::Color&&))
         : WrapperBase(property)
         , m_wrapper(SVGPaintWrapper(property, paintTypeGetter, getter, setter))
         , m_visitedWrapper(SVGPaintWrapper(property, visitedPaintTypeGetter, visitedGetter, visitedSetter))
@@ -1824,29 +1768,50 @@ public:
     }
 };
 
-class BaselineShiftWrapper final : public Wrapper<SVGLengthValue> {
+class BaselineShiftWrapper final : public WrapperWithGetter<const WebCore::Length&> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
     BaselineShiftWrapper()
-        : Wrapper(CSSPropertyBaselineShift, &RenderStyle::baselineShiftValue, &RenderStyle::setBaselineShiftValue)
+        : WrapperWithGetter(CSSPropertyBaselineShift, &RenderStyle::baselineShiftValue)
     {
     }
 
     bool equals(const RenderStyle& a, const RenderStyle& b) const final
     {
-        return a.svgStyle().baselineShift() == b.svgStyle().baselineShift() && Wrapper::equals(a, b);
+        if (&a == &b)
+            return true;
+        if (a.svgStyle().baselineShift() != b.svgStyle().baselineShift())
+            return false;
+        if (a.svgStyle().baselineShift() != BaselineShift::Length)
+            return true;
+        return value(a) == value(b);
     }
 
-    bool canInterpolate(const RenderStyle& from, const RenderStyle& to, CompositeOperation compositeOperation) const final
+    bool canInterpolate(const RenderStyle& from, const RenderStyle& to, CompositeOperation) const final
     {
-        return from.svgStyle().baselineShift() == to.svgStyle().baselineShift() && Wrapper::canInterpolate(from, to, compositeOperation);
+        if (from.svgStyle().baselineShift() != to.svgStyle().baselineShift())
+            return false;
+        if (from.svgStyle().baselineShift() != BaselineShift::Length)
+            return true;
+        return canInterpolateLengths(value(from), value(to), true);
+    }
+
+    bool requiresInterpolationForAccumulativeIteration(const RenderStyle& from, const RenderStyle& to) const final
+    {
+        if (from.svgStyle().baselineShift() != to.svgStyle().baselineShift() || from.svgStyle().baselineShift() != BaselineShift::Length)
+            return false;
+        return lengthsRequireInterpolationForAccumulativeIteration(value(from), value(to));
     }
 
     void interpolate(RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, const Context& context) const final
     {
         auto& srcSVGStyle = !context.progress ? from.svgStyle() : to.svgStyle();
         destination.accessSVGStyle().setBaselineShift(srcSVGStyle.baselineShift());
-        Wrapper::interpolate(destination, from, to, context);
+
+        if (srcSVGStyle.baselineShift() != BaselineShift::Length)
+            return;
+
+        destination.accessSVGStyle().setBaselineShiftValue(blendFunc(value(from), value(to), context, ValueRange::All));
     }
 };
 
@@ -2221,7 +2186,6 @@ public:
 #endif
 };
 
-
 class QuotesWrapper final : public WrapperBase {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
@@ -2269,11 +2233,11 @@ public:
     }
 };
 
-template<typename T>
+template<typename T, typename GetterType = T, typename SetterType = T>
 class DiscreteSVGWrapper final : public WrapperBase {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    DiscreteSVGWrapper(CSSPropertyID property, T (SVGRenderStyle::*getter)() const, void (SVGRenderStyle::*setter)(T))
+    DiscreteSVGWrapper(CSSPropertyID property, GetterType (SVGRenderStyle::*getter)() const, void (SVGRenderStyle::*setter)(SetterType))
         : WrapperBase(property)
         , m_getter(getter)
         , m_setter(setter)
@@ -2293,7 +2257,7 @@ public:
     void interpolate(RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, const Context& context) const final
     {
         ASSERT(!context.progress || context.progress == 1.0);
-        (destination.accessSVGStyle().*this->m_setter)(this->value(context.progress ? to : from));
+        (destination.accessSVGStyle().*this->m_setter)(T { this->value(context.progress ? to : from) });
     }
 
 #if !LOG_DISABLED
@@ -2308,9 +2272,17 @@ private:
         return (style.svgStyle().*this->m_getter)();
     }
 
-    T (SVGRenderStyle::*m_getter)() const;
-    void (SVGRenderStyle::*m_setter)(T);
+    GetterType (SVGRenderStyle::*m_getter)() const;
+    void (SVGRenderStyle::*m_setter)(SetterType);
 };
+
+// Deduction guide for getter/setters that return and take values.
+template<typename T>
+DiscreteSVGWrapper(CSSPropertyID, T (SVGRenderStyle::*getter)() const, void (SVGRenderStyle::*setter)(T)) -> DiscreteSVGWrapper<T, T, T>;
+
+// Deduction guide for getter/setters that return const references and take r-value references.
+template<typename T>
+DiscreteSVGWrapper(CSSPropertyID, const T& (SVGRenderStyle::*getter)() const, void (SVGRenderStyle::*setter)(T&&)) -> DiscreteSVGWrapper<T, const T&, T&&>;
 
 class DWrapper final : public RefCountedWrapper<StylePathData> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
@@ -2427,12 +2399,9 @@ private:
 class FillLayerPositionWrapper final : public FillLayerWrapperWithGetter<const WebCore::Length&> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
-    FillLayerPositionWrapper(CSSPropertyID property, const WebCore::Length& (FillLayer::*lengthGetter)() const, void (FillLayer::*lengthSetter)(WebCore::Length), Edge (FillLayer::*originGetter)() const, void (FillLayer::*originSetter)(Edge), Edge farEdge)
+    FillLayerPositionWrapper(CSSPropertyID property, const WebCore::Length& (FillLayer::*lengthGetter)() const, void (FillLayer::*lengthSetter)(WebCore::Length))
         : FillLayerWrapperWithGetter(property, lengthGetter)
         , m_lengthSetter(lengthSetter)
-        , m_originGetter(originGetter)
-        , m_originSetter(originSetter)
-        , m_farEdge(farEdge)
     {
     }
 
@@ -2443,36 +2412,13 @@ private:
             return true;
         if (!a || !b)
             return false;
-
-        auto fromLength = value(a);
-        auto toLength = value(b);
-
-        Edge fromEdge = (a->*m_originGetter)();
-        Edge toEdge = (b->*m_originGetter)();
-
-        return fromLength == toLength && fromEdge == toEdge;
+        return value(a) == value(b);
     }
 
     void interpolate(FillLayer* destination, const FillLayer* from, const FillLayer* to, const Context& context) const final
     {
         auto fromLength = value(from);
         auto toLength = value(to);
-
-        Edge fromEdge = (from->*m_originGetter)();
-        Edge toEdge = (to->*m_originGetter)();
-
-        Edge destinationEdge = toEdge;
-        if (fromEdge != toEdge) {
-            // Convert the right/bottom into a calc expression,
-            if (fromEdge == m_farEdge)
-                fromLength = convertTo100PercentMinusLength(fromLength);
-            else if (toEdge == m_farEdge) {
-                toLength = convertTo100PercentMinusLength(toLength);
-                destinationEdge = fromEdge; // Now we have a calc(100% - l), it's relative to the left/top edge.
-            }
-        }
-
-        (destination->*m_originSetter)(destinationEdge);
         (destination->*m_lengthSetter)(blendFunc(fromLength, toLength, context));
     }
 
@@ -2484,9 +2430,6 @@ private:
 #endif
 
     void (FillLayer::*m_lengthSetter)(WebCore::Length);
-    Edge (FillLayer::*m_originGetter)() const;
-    void (FillLayer::*m_originSetter)(Edge);
-    Edge m_farEdge;
 };
 
 template<typename T>
@@ -2604,11 +2547,11 @@ public:
         switch (property) {
         case CSSPropertyBackgroundPositionX:
         case CSSPropertyWebkitMaskPositionX:
-            m_fillLayerWrapper = makeUnique<FillLayerPositionWrapper>(property, &FillLayer::xPosition, &FillLayer::setXPosition, &FillLayer::backgroundXOrigin, &FillLayer::setBackgroundXOrigin, Edge::Right);
+            m_fillLayerWrapper = makeUnique<FillLayerPositionWrapper>(property, &FillLayer::xPosition, &FillLayer::setXPosition);
             break;
         case CSSPropertyBackgroundPositionY:
         case CSSPropertyWebkitMaskPositionY:
-            m_fillLayerWrapper = makeUnique<FillLayerPositionWrapper>(property, &FillLayer::yPosition, &FillLayer::setYPosition, &FillLayer::backgroundYOrigin, &FillLayer::setBackgroundYOrigin, Edge::Bottom);
+            m_fillLayerWrapper = makeUnique<FillLayerPositionWrapper>(property, &FillLayer::yPosition, &FillLayer::setYPosition);
             break;
         case CSSPropertyBackgroundSize:
         case CSSPropertyWebkitBackgroundSize:

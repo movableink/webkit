@@ -34,6 +34,7 @@
 #import <WebCore/DNS.h>
 #import <WebCore/LinkDecorationFilteringData.h>
 #import <WebCore/OrganizationStorageAccessPromptQuirk.h>
+#import <numeric>
 #import <pal/spi/cf/CFNetworkSPI.h>
 #import <pal/spi/cocoa/NetworkSPI.h>
 #import <time.h>
@@ -101,7 +102,7 @@ Ref<ListDataObserver> ListDataControllerBase::observeUpdates(Function<void()>&& 
 {
     ASSERT(RunLoop::isMain());
     if (!m_notificationListener) {
-        m_notificationListener = adoptNS([[WKWebPrivacyNotificationListener alloc] initWithType:resourceType() callback:^{
+        m_notificationListener = adoptNS([[WKWebPrivacyNotificationListener alloc] initWithType:static_cast<WPResourceType>(resourceTypeValue()) callback:^{
             updateList([weakThis = WeakPtr { *this }] {
                 RefPtr protectedThis = weakThis.get();
                 if (!protectedThis)
@@ -135,7 +136,7 @@ void ListDataControllerBase::initializeIfNeeded()
     });
 }
 
-WPResourceType LinkDecorationFilteringController::resourceType() const
+unsigned LinkDecorationFilteringController::resourceTypeValue() const
 {
     return WPResourceTypeLinkFilteringData;
 }
@@ -223,9 +224,9 @@ void requestLinkDecorationFilteringData(LinkFilteringRulesCallback&& callback)
     }];
 }
 
-WPResourceType StorageAccessPromptQuirkController::resourceType() const
+unsigned StorageAccessPromptQuirkController::resourceTypeValue() const
 {
-    return static_cast<WPResourceType>(WPResourceTypeStorageAccessPromptQuirksData);
+    return WPResourceTypeStorageAccessPromptQuirksData;
 }
 
 void StorageAccessPromptQuirkController::didUpdateCachedListData()
@@ -265,7 +266,7 @@ void StorageAccessPromptQuirkController::updateList(CompletionHandler<void()>&& 
         return;
     }
 
-    static MainThreadNeverDestroyed<Vector<CompletionHandler<void()>, 1>> lookupCompletionHandlers;
+    static MainRunLoopNeverDestroyed<Vector<CompletionHandler<void()>, 1>> lookupCompletionHandlers;
     lookupCompletionHandlers->append(WTFMove(completionHandler));
     if (lookupCompletionHandlers->size() > 1)
         return;
@@ -294,9 +295,9 @@ void StorageAccessPromptQuirkController::updateList(CompletionHandler<void()>&& 
     }];
 }
 
-WPResourceType StorageAccessUserAgentStringQuirkController::resourceType() const
+unsigned StorageAccessUserAgentStringQuirkController::resourceTypeValue() const
 {
-    return static_cast<WPResourceType>(WPResourceTypeStorageAccessUserAgentStringQuirksData);
+    return WPResourceTypeStorageAccessUserAgentStringQuirksData;
 }
 
 void StorageAccessUserAgentStringQuirkController::updateList(CompletionHandler<void()>&& completionHandler)
@@ -307,7 +308,7 @@ void StorageAccessUserAgentStringQuirkController::updateList(CompletionHandler<v
         return;
     }
 
-    static MainThreadNeverDestroyed<Vector<CompletionHandler<void()>, 1>> lookupCompletionHandlers;
+    static MainRunLoopNeverDestroyed<Vector<CompletionHandler<void()>, 1>> lookupCompletionHandlers;
     lookupCompletionHandlers->append(WTFMove(completionHandler));
     if (lookupCompletionHandlers->size() > 1)
         return;
@@ -333,7 +334,7 @@ void StorageAccessUserAgentStringQuirkController::updateList(CompletionHandler<v
 
 RestrictedOpenerDomainsController& RestrictedOpenerDomainsController::shared()
 {
-    static MainThreadNeverDestroyed<RestrictedOpenerDomainsController> sharedInstance;
+    static MainRunLoopNeverDestroyed<RestrictedOpenerDomainsController> sharedInstance;
     return sharedInstance.get();
 }
 
@@ -407,31 +408,53 @@ RestrictedOpenerType RestrictedOpenerDomainsController::lookup(const WebCore::Re
 
 ResourceMonitorURLsController& ResourceMonitorURLsController::singleton()
 {
-    static MainThreadNeverDestroyed<ResourceMonitorURLsController> sharedInstance;
+    static MainRunLoopNeverDestroyed<ResourceMonitorURLsController> sharedInstance;
     return sharedInstance.get();
 }
 
 void ResourceMonitorURLsController::prepare(CompletionHandler<void(WKContentRuleList*, bool)>&& completionHandler)
 {
     ASSERT(RunLoop::isMain());
-    if (!PAL::isWebPrivacyFrameworkAvailable() || ![PAL::getWPResourcesClass() instancesRespondToSelector:@selector(prepareResouceMonitorRulesForStore:completionHandler:)]) {
+    if (!PAL::isWebPrivacyFrameworkAvailable() || ![PAL::getWPResourcesClass() instancesRespondToSelector:@selector(prepareResourceMonitorRulesForStore:completionHandler:)]) {
         completionHandler(nullptr, false);
         return;
     }
 
-    static MainThreadNeverDestroyed<Vector<CompletionHandler<void(WKContentRuleList*, bool)>, 1>> lookupCompletionHandlers;
+    static MainRunLoopNeverDestroyed<Vector<CompletionHandler<void(WKContentRuleList*, bool)>, 1>> lookupCompletionHandlers;
     lookupCompletionHandlers->append(WTFMove(completionHandler));
     if (lookupCompletionHandlers->size() > 1)
         return;
 
     WKContentRuleListStore *store = [WKContentRuleListStore defaultStore];
 
-    [[PAL::getWPResourcesClass() sharedInstance] prepareResouceMonitorRulesForStore:store completionHandler:^(WKContentRuleList *list, bool updated, NSError *error) {
+    [[PAL::getWPResourcesClass() sharedInstance] prepareResourceMonitorRulesForStore:store completionHandler:^(WKContentRuleList *list, bool updated, NSError *error) {
         if (error)
-            RELEASE_LOG_ERROR(ResourceLoadStatistics, "Failed to request resource monitor urls from WebPrivacy");
+            RELEASE_LOG_ERROR(ResourceMonitoring, "Failed to request resource monitor urls from WebPrivacy: %@", error);
 
         for (auto& completionHandler : std::exchange(lookupCompletionHandlers.get(), { }))
             completionHandler(list, updated);
+    }];
+}
+
+void ResourceMonitorURLsController::getSource(CompletionHandler<void(String&&)>&& completionHandler)
+{
+    ASSERT(RunLoop::isMain());
+    if (!PAL::isWebPrivacyFrameworkAvailable() || ![PAL::getWPResourcesClass() instancesRespondToSelector:@selector(requestResourceMonitorRulesSource:completionHandler:)]) {
+        completionHandler({ });
+        return;
+    }
+
+    static MainRunLoopNeverDestroyed<Vector<CompletionHandler<void(NSString *)>, 1>> lookupCompletionHandlers;
+    lookupCompletionHandlers->append(WTFMove(completionHandler));
+    if (lookupCompletionHandlers->size() > 1)
+        return;
+
+    [[PAL::getWPResourcesClass() sharedInstance] requestResourceMonitorRulesSource:nil completionHandler:^(NSString *source, NSError *error) {
+        if (error)
+            RELEASE_LOG_ERROR(ResourceMonitoring, "Failed to request resource monitor urls source from WebPrivacy");
+
+        for (auto& completionHandler : std::exchange(lookupCompletionHandlers.get(), { }))
+            completionHandler(source);
     }];
 }
 
@@ -546,17 +569,15 @@ public:
             lower = upper;
         else {
             while (upper - lower > 1) {
-                auto middle = (lower + upper) / 2;
-                switch (address.compare(list[middle].m_network)) {
-                case WebCore::IPAddress::ComparisonResult::Equal:
+                auto middle = std::midpoint(lower, upper);
+                auto compareResult = address <=> list[middle].m_network;
+                if (is_eq(compareResult))
                     return &list[middle];
-                case WebCore::IPAddress::ComparisonResult::Less:
+                if (is_lt(compareResult))
                     upper = middle;
-                    break;
-                case WebCore::IPAddress::ComparisonResult::Greater:
+                else if (is_gt(compareResult))
                     lower = middle;
-                    break;
-                case WebCore::IPAddress::ComparisonResult::CannotCompare:
+                else {
                     ASSERT_NOT_REACHED();
                     return nullptr;
                 }
@@ -737,12 +758,12 @@ void ScriptTelemetryController::updateList(CompletionHandler<void()>&& completio
 {
     RunLoop::protectedMain()->dispatch(WTFMove(completion));
 }
-
-WPResourceType ScriptTelemetryController::resourceType() const
-{
-    return static_cast<WPResourceType>(9);
-}
 #endif
+
+unsigned ScriptTelemetryController::resourceTypeValue() const
+{
+    return 9;
+}
 
 void ScriptTelemetryController::didUpdateCachedListData()
 {

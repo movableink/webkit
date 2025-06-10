@@ -43,6 +43,7 @@ public:
 #ifdef __OBJC__
     id sender() const { return m_sender.get(); }
     NSURLAuthenticationChallenge *nsURLAuthenticationChallenge() const { return m_nsChallenge.get(); }
+    RetainPtr<NSURLAuthenticationChallenge> protectedNSURLAuthenticationChallenge() const { return m_nsChallenge; }
 #endif
 
     WEBCORE_EXPORT void setAuthenticationClient(AuthenticationClient*); // Changes sender to one that invokes client methods.

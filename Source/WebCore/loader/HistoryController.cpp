@@ -47,6 +47,7 @@
 #include "Logging.h"
 #include "Navigation.h"
 #include "Page.h"
+#include "ProcessSwapDisposition.h"
 #include "ScrollingCoordinator.h"
 #include "SerializedScriptValue.h"
 #include "SharedStringHash.h"
@@ -59,6 +60,21 @@ namespace WebCore {
 static inline void addVisitedLink(Page& page, const URL& url)
 {
     page.protectedVisitedLinkStore()->addVisitedLink(page, computeSharedStringHash(url.string()));
+}
+
+static inline bool canRecordHistoryForFrame(const LocalFrame& frame)
+{
+    RefPtr page = frame.page();
+    if (!page)
+        return false;
+
+    if (!page->usesEphemeralSession())
+        return true;
+
+    if (RefPtr document = frame.document())
+        return document->settings().allowPrivacySensitiveOperationsInNonPersistentDataStores();
+
+    return false;
 }
 
 HistoryController::HistoryController(LocalFrame& frame)
@@ -216,7 +232,7 @@ void HistoryController::saveDocumentState()
         if (RefPtr documentLoader = document->loader())
             item->setShouldOpenExternalURLsPolicy(documentLoader->shouldOpenExternalURLsPolicyToPropagate());
 
-        LOG(Loading, "WebCoreLoading frame %" PRIu64 ": saving form state to %p", m_frame->frameID().object().toUInt64(), item.get());
+        LOG(Loading, "WebCoreLoading frame %" PRIu64 ": saving form state to %p", m_frame->frameID().toUInt64(), item.get());
         item->setDocumentState(document->formElementsState());
     }
 }
@@ -265,7 +281,7 @@ void HistoryController::restoreDocumentState()
 
     documentLoader->setShouldOpenExternalURLsPolicy(currentItem->shouldOpenExternalURLsPolicy());
 
-    LOG(Loading, "WebCoreLoading frame %" PRIu64 ": restoring form state from %p", m_frame->frameID().object().toUInt64(), currentItem.get());
+    LOG(Loading, "WebCoreLoading frame %" PRIu64 ": restoring form state from %p", m_frame->frameID().toUInt64(), currentItem.get());
     m_frame->protectedDocument()->setStateForNewFormElements(currentItem->documentState());
 }
 
@@ -307,7 +323,7 @@ bool HistoryController::shouldStopLoadingForHistoryItem(HistoryItem& targetItem)
 
 // Main funnel for navigating to a previous location (back/forward, non-search snap-back)
 // This includes recursion to handle loading into framesets properly
-void HistoryController::goToItem(HistoryItem& targetItem, FrameLoadType frameLoadType, ShouldTreatAsContinuingLoad shouldTreatAsContinuingLoad)
+void HistoryController::goToItem(HistoryItem& targetItem, FrameLoadType frameLoadType, ShouldTreatAsContinuingLoad shouldTreatAsContinuingLoad, ProcessSwapDisposition processSwapDisposition)
 {
     RELEASE_LOG(History, "%p - HistoryController::goToItem: item %p, type=%d", this, &targetItem, static_cast<int>(frameLoadType));
 
@@ -353,7 +369,7 @@ void HistoryController::goToItem(HistoryItem& targetItem, FrameLoadType frameLoa
         protectedThis->recursiveGoToItem(targetItem, currentItem.get(), frameLoadType, shouldTreatAsContinuingLoad);
     };
 
-    goToItemShared(targetItem, WTFMove(finishGoToItem));
+    goToItemShared(targetItem, WTFMove(finishGoToItem), processSwapDisposition);
 }
 
 struct HistoryController::FrameToNavigate {
@@ -423,7 +439,7 @@ void HistoryController::goToItemForNavigationAPI(HistoryItem& targetItem, FrameL
     goToItemShared(targetItem, WTFMove(finishGoToItem));
 }
 
-void HistoryController::goToItemShared(HistoryItem& targetItem, CompletionHandler<void(ShouldGoToHistoryItem)>&& completionHandler)
+void HistoryController::goToItemShared(HistoryItem& targetItem, CompletionHandler<void(ShouldGoToHistoryItem)>&& completionHandler, ProcessSwapDisposition processSwapDisposition)
 {
     m_policyItem = &targetItem;
 
@@ -433,9 +449,11 @@ void HistoryController::goToItemShared(HistoryItem& targetItem, CompletionHandle
     bool sameDocumentNavigation = current && targetItem.shouldDoSameDocumentNavigationTo(*current);
 
     Ref frame = m_frame.get();
-    if (sameDocumentNavigation || !frame->protectedLoader()->protectedClient()->supportsAsyncShouldGoToHistoryItem()) {
+    // FIXME <rdar://148849772>: Remove processSwapDisposition check once we have a better solution for passing context to newly spawned processes regarding COOP headers,
+    // and go back to asynchronous path.
+    if (sameDocumentNavigation || !frame->protectedLoader()->protectedClient()->supportsAsyncShouldGoToHistoryItem() || processSwapDisposition == ProcessSwapDisposition::COOP) {
         auto isSameDocumentNavigation = sameDocumentNavigation ? IsSameDocumentNavigation::Yes : IsSameDocumentNavigation::No;
-        auto result = frame->protectedLoader()->protectedClient()->shouldGoToHistoryItem(targetItem, isSameDocumentNavigation);
+        auto result = frame->protectedLoader()->protectedClient()->shouldGoToHistoryItem(targetItem, isSameDocumentNavigation, processSwapDisposition);
         completionHandler(result);
         return;
     }
@@ -532,7 +550,7 @@ void HistoryController::updateForStandardLoad(HistoryUpdateType updateType)
 
     Ref frameLoader = m_frame->loader();
 
-    bool usesEphemeralSession = m_frame->page() ? m_frame->page()->usesEphemeralSession() : true;
+    bool canRecordHistory = canRecordHistoryForFrame(m_frame);
     const URL& historyURL = frameLoader->protectedDocumentLoader()->urlForHistory();
 
     RefPtr documentLoader = frameLoader->documentLoader();
@@ -540,7 +558,7 @@ void HistoryController::updateForStandardLoad(HistoryUpdateType updateType)
         if (!historyURL.isEmpty()) {
             if (updateType != UpdateAllExceptBackForwardList)
                 updateBackForwardListClippedAtTarget(true);
-            if (!usesEphemeralSession) {
+            if (canRecordHistory) {
                 frameLoader->protectedClient()->updateGlobalHistory();
                 documentLoader->setDidCreateGlobalHistoryEntry(true);
                 if (documentLoader->unreachableURL().isEmpty())
@@ -552,7 +570,7 @@ void HistoryController::updateForStandardLoad(HistoryUpdateType updateType)
         updateCurrentItem();
     }
 
-    if (!historyURL.isEmpty() && !usesEphemeralSession) {
+    if (!historyURL.isEmpty() && canRecordHistory) {
         if (RefPtr page = m_frame->page())
             addVisitedLink(*page, historyURL);
 
@@ -566,14 +584,14 @@ void HistoryController::updateForRedirectWithLockedBackForwardList()
     LOG(History, "HistoryController %p updateForRedirectWithLockedBackForwardList: Updating History for redirect load in frame %p (main frame %d) %s", this, m_frame.ptr(), m_frame->isMainFrame(), m_frame->loader().documentLoader() ? m_frame->loader().documentLoader()->url().string().utf8().data() : "");
 
     RefPtr documentLoader = m_frame->loader().documentLoader();
-    bool usesEphemeralSession = m_frame->page() ? m_frame->page()->usesEphemeralSession() : true;
+    bool canRecordHistory = canRecordHistoryForFrame(m_frame);
     auto historyURL = documentLoader ? documentLoader->urlForHistory() : URL { };
 
     if (documentLoader && documentLoader->isClientRedirect()) {
-        if (!m_currentItem && !m_frame->tree().parent()) {
+        if (!m_currentItem && m_frame->isMainFrame()) {
             if (!historyURL.isEmpty()) {
                 updateBackForwardListClippedAtTarget(true);
-                if (!usesEphemeralSession) {
+                if (canRecordHistory) {
                     Ref frameLoader = m_frame->loader();
                     frameLoader->protectedClient()->updateGlobalHistory();
                     documentLoader->setDidCreateGlobalHistoryEntry(true);
@@ -596,7 +614,7 @@ void HistoryController::updateForRedirectWithLockedBackForwardList()
         }
     }
 
-    if (!historyURL.isEmpty() && !usesEphemeralSession) {
+    if (!historyURL.isEmpty() && canRecordHistory) {
         Ref frame = m_frame.get();
         if (RefPtr page = frame->page())
             addVisitedLink(*page, historyURL);
@@ -617,10 +635,10 @@ void HistoryController::updateForClientRedirect()
         currentItem->clearScrollPosition();
     }
 
-    bool usesEphemeralSession = m_frame->page() ? m_frame->page()->usesEphemeralSession() : true;
+    bool canRecordHistory = canRecordHistoryForFrame(m_frame);
     const URL& historyURL = m_frame->loader().protectedDocumentLoader()->urlForHistory();
 
-    if (!historyURL.isEmpty() && !usesEphemeralSession) {
+    if (!historyURL.isEmpty() && canRecordHistory) {
         if (RefPtr page = m_frame->page())
             addVisitedLink(*page, historyURL);
     }
@@ -722,8 +740,8 @@ void HistoryController::updateForSameDocumentNavigation()
 
     m_policyItem = nullptr;
 
-    bool usesEphemeralSession = page->usesEphemeralSession();
-    if (!usesEphemeralSession)
+    bool canRecordHistory = canRecordHistoryForFrame(frame);
+    if (canRecordHistory)
         addVisitedLink(*page, frame->document()->url());
 
     if (RefPtr localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame()))
@@ -731,7 +749,7 @@ void HistoryController::updateForSameDocumentNavigation()
 
     if (RefPtr currentItem = m_currentItem) {
         currentItem->setURL(frame->document()->url());
-        if (!usesEphemeralSession)
+        if (canRecordHistory)
             frame->protectedLoader()->protectedClient()->updateGlobalHistory();
     }
 }
@@ -779,7 +797,7 @@ void HistoryController::setCurrentItemTitle(const StringWithDirection& title)
 {
     // FIXME: This ignores the title's direction.
     if (RefPtr currentItem = m_currentItem)
-        currentItem->setTitle(title.string);
+        currentItem->setTitle(String { title.string });
 }
 
 bool HistoryController::currentItemShouldBeReplaced() const
@@ -839,7 +857,7 @@ void HistoryController::initializeItem(HistoryItem& item, RefPtr<DocumentLoader>
     item.setTarget(m_frame->tree().uniqueName());
     item.setFrameID(m_frame->frameID());
     // FIXME: Should store the title direction as well.
-    item.setTitle(title.string);
+    item.setTitle(WTFMove(title.string));
     item.setOriginalURLString(originalURL.string());
 
     if (!unreachableURL.isEmpty() || documentLoader->response().httpStatusCode() >= 400)
@@ -1056,7 +1074,7 @@ void HistoryController::pushState(RefPtr<SerializedScriptValue>&& stateObject, c
 
     page->checkedBackForward()->addItem(WTFMove(topItem));
 
-    if (page->usesEphemeralSession())
+    if (!canRecordHistoryForFrame(frame))
         return;
 
     addVisitedLink(*page, URL({ }, urlString));
@@ -1084,7 +1102,7 @@ void HistoryController::replaceState(RefPtr<SerializedScriptValue>&& stateObject
     Ref frame = m_frame.get();
     RefPtr page = frame->page();
     ASSERT(page);
-    if (page->usesEphemeralSession())
+    if (!canRecordHistoryForFrame(frame))
         return;
 
     addVisitedLink(*page, URL({ }, urlString));

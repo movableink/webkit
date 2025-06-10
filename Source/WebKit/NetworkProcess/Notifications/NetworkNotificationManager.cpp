@@ -36,6 +36,7 @@
 #include "PushClientConnectionMessages.h"
 #include "WebPushDaemonConnectionConfiguration.h"
 #include "WebPushMessage.h"
+#include <WebCore/NotificationData.h>
 #include <WebCore/SecurityOriginData.h>
 #include <wtf/TZoneMallocInlines.h>
 

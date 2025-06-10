@@ -2,7 +2,7 @@ Tests the #comp_tooltip portions of the AccName Name Computation algorithm.
 
  contents
 contents
-       contents           WPT CTRL + OPT
+      contents           WPT
 contents
 
 
@@ -11,7 +11,6 @@ PASS link with text with tooltip label and no contents
 PASS link with text with tooltip label and contents
 PASS div with text with tooltip label
 PASS img with tooltip label without alt
-PASS img with tooltip label with empty alt
 PASS img with tooltip label with alt
 PASS img with tooltip label without title
 PASS select with tooltip label
@@ -27,7 +26,6 @@ PASS email input with placeholder and tooltip label
 PASS url input with placeholder and tooltip label
 PASS textarea with placeholder and tooltip label
 PASS abbr with tooltip label
-PASS kbd with tooltip label
 PASS summary with tooltip label and contents
 PASS iframe with tooltip label
 

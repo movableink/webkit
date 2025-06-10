@@ -109,7 +109,7 @@ public:
 
     WebExtensionControllerConfiguration& configuration() const { return m_configuration.get(); }
     Ref<WebExtensionControllerConfiguration> protectedConfiguration() const { return m_configuration; }
-    WebExtensionControllerParameters parameters() const;
+    WebExtensionControllerParameters parameters(const API::PageConfiguration&) const;
 
     bool operator==(const WebExtensionController& other) const { return (this == &other); }
 
@@ -193,6 +193,9 @@ public:
 private:
     // IPC::MessageReceiver
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
+
+    bool hasLoadedContexts(IPC::Decoder&) const { return hasLoadedContexts(); }
+    bool inTestingMode(IPC::Decoder&) const { return inTestingMode(); }
 
     void initializePlatform();
 

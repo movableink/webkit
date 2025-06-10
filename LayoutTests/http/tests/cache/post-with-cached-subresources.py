@@ -4,7 +4,7 @@ import cgi
 import os
 import sys
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # This test loads an uncacheable main resource and a cacheable image subresource.
 # We request this page as a GET, then reload this page with a POST.
@@ -17,7 +17,7 @@ file = __file__.split(':/cygwin')[-1]
 http_root = os.path.dirname(os.path.dirname(os.path.abspath(os.path.dirname(file))))
 
 request_method = os.environ.get('REQUEST_METHOD', '')
-exp_time = datetime.utcnow() - timedelta(seconds=1)
+exp_time = datetime.now(timezone.utc) - timedelta(seconds=1)
 
 sys.stdout.write(
     'Cache-Control: no-cache, no-store, must-revalidate, max-age=0\r\n'

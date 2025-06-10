@@ -32,31 +32,10 @@
 namespace IPC {
 class Connection;
 
-template<> struct AsyncReplyError<Expected<WebCore::FileSystemHandleIdentifier, WebKit::FileSystemStorageError>> {
-    static Expected<WebCore::FileSystemHandleIdentifier, WebKit::FileSystemStorageError> create()
+template<> struct AsyncReplyError<WebKit::FileSystemStorageError> {
+    static WebKit::FileSystemStorageError create()
     {
-        return makeUnexpected(WebKit::FileSystemStorageError::Unknown);
-    }
-};
-
-template<> struct AsyncReplyError<Expected<WebCore::FileSystemWritableFileStreamIdentifier, WebKit::FileSystemStorageError>> {
-    static Expected<WebCore::FileSystemWritableFileStreamIdentifier, WebKit::FileSystemStorageError> create()
-    {
-        return makeUnexpected(WebKit::FileSystemStorageError::Unknown);
-    }
-};
-
-template<> struct AsyncReplyError<Expected<Vector<String>, WebKit::FileSystemStorageError>> {
-    static Expected<Vector<String>, WebKit::FileSystemStorageError> create()
-    {
-        return makeUnexpected(WebKit::FileSystemStorageError::Unknown);
-    }
-};
-
-template<> struct AsyncReplyError<Expected<std::pair<String, bool>, WebKit::FileSystemStorageError>> {
-    static Expected<std::pair<String, bool>, WebKit::FileSystemStorageError> create()
-    {
-        return makeUnexpected(WebKit::FileSystemStorageError::Unknown);
+        return WebKit::FileSystemStorageError::Unknown;
     }
 };
 

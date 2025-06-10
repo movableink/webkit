@@ -23,10 +23,12 @@
 
 import Foundation
 public import SwiftUI
-@_spi(Private) @_spi(CrossImportOverlay) import WebKit
+@_spi(CrossImportOverlay) import WebKit
 
 extension WebPage.NavigationAction {
     /// The modifier keys that were pressed at the time of the navigation request.
-    @_spi(Private)
+    @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
+    @available(watchOS, unavailable)
+    @available(tvOS, unavailable)
     public var modifierFlags: EventModifiers { EventModifiers(wrapped.modifierFlags) }
 }

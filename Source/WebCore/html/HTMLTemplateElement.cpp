@@ -37,6 +37,7 @@
 #include "ElementInlines.h"
 #include "ElementRareData.h"
 #include "HTMLNames.h"
+#include "NodeInlines.h"
 #include "NodeTraversal.h"
 #include "ShadowRoot.h"
 #include "ShadowRootInit.h"
@@ -114,7 +115,7 @@ Ref<Node> HTMLTemplateElement::cloneNodeInternal(Document& document, CloningOper
 {
     RefPtr<Node> clone;
     switch (type) {
-    case CloningOperation::OnlySelf:
+    case CloningOperation::SelfOnly:
         return cloneElementWithoutChildren(document, registry);
     case CloningOperation::SelfWithTemplateContent:
         clone = cloneElementWithoutChildren(document, registry);

@@ -30,7 +30,7 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "JITExceptions.h"
-#include "JSWebAssemblyArray.h"
+#include "JSWebAssemblyArrayInlines.h"
 #include "JSWebAssemblyHelpers.h"
 #include "JSWebAssemblyInstance.h"
 #include "JSWebAssemblyStruct.h"
@@ -53,13 +53,13 @@ inline EncodedJSValue refFunc(JSWebAssemblyInstance* instance, uint32_t index)
 }
 
 template <typename T>
-JSWebAssemblyArray* fillArray(JSWebAssemblyInstance* instance, Wasm::FieldType fieldType, uint32_t size, T value, RefPtr<const Wasm::RTT>&& rtt)
+JSWebAssemblyArray* tryFillArray(JSWebAssemblyInstance* instance, WebAssemblyGCStructure* structure, uint32_t size, T value)
 {
-    JSGlobalObject* globalObject = instance->globalObject();
     VM& vm = instance->vm();
 
-    auto* array = JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(rtt));
-    array->fill(vm, 0, static_cast<T>(value), size);
+    auto* array = JSWebAssemblyArray::tryCreate(vm, structure, size);
+    if (array) [[likely]]
+        array->fill(vm, 0, static_cast<T>(value), size);
     return array;
 }
 
@@ -67,74 +67,70 @@ inline JSValue arrayNew(JSWebAssemblyInstance* instance, uint32_t typeIndex, uin
 {
     ASSERT(typeIndex < instance->module().moduleInformation().typeCount());
 
-    const Wasm::TypeDefinition& arraySignature = instance->module().moduleInformation().typeSignatures[typeIndex]->expand();
+    WebAssemblyGCStructure* structure = instance->gcObjectStructure(typeIndex).get();
+    const Wasm::TypeDefinition& arraySignature = structure->typeDefinition();
     ASSERT(arraySignature.is<ArrayType>());
     Wasm::FieldType fieldType = arraySignature.as<ArrayType>()->elementType();
-    RefPtr arrayRTT = instance->module().moduleInformation().rtts[typeIndex];
 
     size_t elementSize = fieldType.type.elementSize();
 
-    if (UNLIKELY(productOverflows<uint32_t>(elementSize, size) || elementSize * size > maxArraySizeInBytes))
-        return jsNull();
-
     JSWebAssemblyArray* array = nullptr;
-
     switch (elementSize) {
     case sizeof(uint8_t): {
-        array = fillArray<uint8_t>(instance, fieldType, size, static_cast<uint8_t>(encValue), WTFMove(arrayRTT));
+        array = tryFillArray<uint8_t>(instance, structure, size, static_cast<uint8_t>(encValue));
         break;
     }
     case sizeof(uint16_t): {
-        array = fillArray<uint16_t>(instance, fieldType, size, static_cast<uint16_t>(encValue), WTFMove(arrayRTT));
+        array = tryFillArray<uint16_t>(instance, structure, size, static_cast<uint16_t>(encValue));
         break;
     }
     case sizeof(uint32_t): {
-        array = fillArray<uint32_t>(instance, fieldType, size, static_cast<uint32_t>(encValue), WTFMove(arrayRTT));
+        array = tryFillArray<uint32_t>(instance, structure, size, static_cast<uint32_t>(encValue));
         break;
     }
     case sizeof(uint64_t): {
-        array = fillArray<uint64_t>(instance, fieldType, size, encValue, WTFMove(arrayRTT));
+        array = tryFillArray<uint64_t>(instance, structure, size, encValue);
         break;
     }
     default:
         RELEASE_ASSERT_NOT_REACHED();
     }
-    ASSERT(array);
+    if (!array) [[unlikely]]
+        return jsNull();
     return array;
 }
 
 inline JSValue arrayNew(JSWebAssemblyInstance* instance, uint32_t typeIndex, uint32_t size, v128_t value)
 {
-    JSGlobalObject* globalObject = instance->globalObject();
     VM& vm = instance->vm();
 
     ASSERT(typeIndex < instance->module().moduleInformation().typeCount());
-    const Wasm::TypeDefinition& arraySignature = instance->module().moduleInformation().typeSignatures[typeIndex]->expand();
+
+    WebAssemblyGCStructure* structure = instance->gcObjectStructure(typeIndex).get();
+    const Wasm::TypeDefinition& arraySignature = structure->typeDefinition();
     ASSERT(arraySignature.is<ArrayType>());
     Wasm::FieldType fieldType = arraySignature.as<ArrayType>()->elementType();
-    ASSERT(fieldType.type.unpacked() == Wasm::Types::V128);
+    ASSERT_UNUSED(fieldType, fieldType.type.unpacked() == Wasm::Types::V128);
 
-    RefPtr rtt = instance->module().moduleInformation().rtts[typeIndex];
-    size_t elementSize = fieldType.type.elementSize();
-
-    if (UNLIKELY(productOverflows<uint32_t>(elementSize, size) || elementSize * size > maxArraySizeInBytes))
+    auto* array = JSWebAssemblyArray::tryCreate(vm, structure, size);
+    if (!array) [[unlikely]]
         return jsNull();
 
-    auto* array = JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(rtt));
     array->fill(vm, 0, value, size);
     return array;
 }
 
 template <typename T>
-JSWebAssemblyArray* copyElementsInReverse(JSWebAssemblyInstance* instance, Wasm::FieldType fieldType, uint32_t size, uint64_t* arguments, RefPtr<const Wasm::RTT>&& rtt)
+JSWebAssemblyArray* tryCopyElementsInReverse(JSWebAssemblyInstance* instance, WebAssemblyGCStructure* structure, uint32_t size, uint64_t* arguments)
 {
-    JSGlobalObject* globalObject = instance->globalObject();
     VM& vm = instance->vm();
 
-    auto* array = JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(rtt));
-    if (!size)
+    auto* array = JSWebAssemblyArray::tryCreate(vm, structure, size);
+    if (!array) [[unlikely]]
         return array;
 
+    if (!size)
+        return array;
 
     ASSERT(arguments);
     auto span = array->span<T>();
@@ -151,7 +147,8 @@ JSWebAssemblyArray* copyElementsInReverse(JSWebAssemblyInstance* instance, Wasm:
 inline JSValue arrayNewFixed(JSWebAssemblyInstance* instance, uint32_t typeIndex, uint32_t size, uint64_t* arguments)
 {
     // Get the array element type and determine the element size
-    const Wasm::TypeDefinition& arraySignature = instance->module().moduleInformation().typeSignatures[typeIndex]->expand();
+    WebAssemblyGCStructure* structure = instance->gcObjectStructure(typeIndex).get();
+    const Wasm::TypeDefinition& arraySignature = structure->typeDefinition();
     ASSERT(arraySignature.is<ArrayType>());
     Wasm::FieldType fieldType = arraySignature.as<ArrayType>()->elementType();
     size_t elementSize = fieldType.type.elementSize();
@@ -161,79 +158,80 @@ inline JSValue arrayNewFixed(JSWebAssemblyInstance* instance, uint32_t typeIndex
     JSWebAssemblyArray* array = nullptr;
     switch (elementSize) {
     case sizeof(uint8_t): {
-        array = copyElementsInReverse<uint8_t>(instance, fieldType, size, arguments, WTFMove(arrayRTT));
+        array = tryCopyElementsInReverse<uint8_t>(instance, structure, size, arguments);
         break;
     }
     case sizeof(uint16_t): {
-        array = copyElementsInReverse<uint16_t>(instance, fieldType, size, arguments, WTFMove(arrayRTT));
+        array = tryCopyElementsInReverse<uint16_t>(instance, structure, size, arguments);
         break;
     }
     case sizeof(uint32_t): {
-        array = copyElementsInReverse<uint32_t>(instance, fieldType, size, arguments, WTFMove(arrayRTT));
+        array = tryCopyElementsInReverse<uint32_t>(instance, structure, size, arguments);
         break;
     }
     case sizeof(uint64_t): {
-        array = copyElementsInReverse<uint64_t>(instance, fieldType, size, arguments, WTFMove(arrayRTT));
+        array = tryCopyElementsInReverse<uint64_t>(instance, structure, size, arguments);
         break;
     }
     default:
         RELEASE_ASSERT_NOT_REACHED();
     }
+    if (!array) [[unlikely]]
+        return jsNull();
     return array;
 }
 
 template<typename T>
-EncodedJSValue createArrayFromDataSegment(JSWebAssemblyInstance* instance, FieldType elementType, size_t arraySize, unsigned dataSegmentIndex, unsigned offset, RefPtr<const Wasm::RTT>&& rtt)
+EncodedJSValue createArrayFromDataSegment(JSWebAssemblyInstance* instance, WebAssemblyGCStructure* structure, size_t arraySize, unsigned dataSegmentIndex, unsigned offset)
 {
+    JSGlobalObject* globalObject = instance->globalObject();
+    VM& vm = globalObject->vm();
+    auto* array = JSWebAssemblyArray::tryCreate(vm, structure, arraySize);
+    if (!array) [[unlikely]]
+        return JSValue::encode(jsNull());
+
+    ASSERT(!array->elementsAreRefTypes());
+    auto span = array->span<T>();
+    // Copy the data from the segment into the temp `values` vector
+    if (!instance->copyDataSegment(array, dataSegmentIndex, offset, span.size_bytes(), reinterpret_cast<uint8_t*>(span.data()))) {
+        // If copyDataSegment() returns false, the segment access is out of bounds.
+        // In that case, the caller is responsible for throwing an exception.
+        return JSValue::encode(jsNull());
+    }
+    return JSValue::encode(array);
+}
+
+inline EncodedJSValue arrayNewData(JSWebAssemblyInstance* instance, uint32_t typeIndex, uint32_t dataSegmentIndex, uint32_t arraySize, uint32_t offset)
+{
+    // Check that the type index is within bounds
+    ASSERT(typeIndex < instance->module().moduleInformation().typeCount());
+    WebAssemblyGCStructure* structure = instance->gcObjectStructure(typeIndex).get();
+    const Wasm::TypeDefinition& arraySignature = structure->typeDefinition();
+    ASSERT(arraySignature.is<ArrayType>());
+
+    // Get the array element type
+    Wasm::FieldType fieldType = arraySignature.as<ArrayType>()->elementType();
     // Determine the array length in bytes from the element type and desired array size
-    size_t elementSize = elementType.type.elementSize();
+    size_t elementSize = fieldType.type.elementSize();
 
     // Check for overflow when determining array length in bytes
-    if (UNLIKELY(productOverflows<uint32_t>(elementSize, arraySize)))
+    if (productOverflows<uint32_t>(elementSize, arraySize)) [[unlikely]]
         return JSValue::encode(jsNull());
 
     uint32_t arrayLengthInBytes = arraySize * elementSize;
 
     // Check for offset + arrayLengthInBytes overflow
-    if (UNLIKELY(sumOverflows<uint32_t>(offset, arrayLengthInBytes)))
+    if (sumOverflows<uint32_t>(offset, arrayLengthInBytes)) [[unlikely]]
         return JSValue::encode(jsNull());
-
-    JSGlobalObject* globalObject = instance->globalObject();
-    VM& vm = globalObject->vm();
-    auto* array = JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), elementType, arraySize, WTFMove(rtt));
-
-    ASSERT(!array->elementsAreRefTypes());
-    return array->visitSpan([&](auto span) ALWAYS_INLINE_LAMBDA {
-        // Copy the data from the segment into the temp `values` vector
-        if (!instance->copyDataSegment(array, dataSegmentIndex, offset, arrayLengthInBytes, reinterpret_cast<uint8_t*>(span.data()))) {
-            // If copyDataSegment() returns false, the segment access is out of bounds.
-            // In that case, the caller is responsible for throwing an exception.
-            return JSValue::encode(jsNull());
-        }
-        return JSValue::encode(array);
-    });
-}
-
-inline EncodedJSValue arrayNewData(JSWebAssemblyInstance* instance, uint32_t typeIndex, uint32_t dataSegmentIndex, uint32_t arraySize, uint32_t offset)
-{
-    RefPtr arrayRTT = instance->module().moduleInformation().rtts[typeIndex];
-
-    // Check that the type index is within bounds
-    ASSERT(typeIndex < instance->module().moduleInformation().typeCount());
-    const Wasm::TypeDefinition& arraySignature = instance->module().moduleInformation().typeSignatures[typeIndex]->expand();
-    ASSERT(arraySignature.is<ArrayType>());
-
-    // Get the array element type
-    Wasm::FieldType fieldType = arraySignature.as<ArrayType>()->elementType();
 
     // Finally, allocate the array from the `values` vector
     if (fieldType.type.is<PackedType>()) {
         switch (fieldType.type.as<PackedType>()) {
         case PackedType::I8: {
-            return createArrayFromDataSegment<uint8_t>(instance, fieldType, arraySize, dataSegmentIndex, offset, WTFMove(arrayRTT));
+            return createArrayFromDataSegment<uint8_t>(instance, structure, arraySize, dataSegmentIndex, offset);
         }
         case PackedType::I16: {
-            return createArrayFromDataSegment<uint16_t>(instance, fieldType, arraySize, dataSegmentIndex, offset, WTFMove(arrayRTT));
+            return createArrayFromDataSegment<uint16_t>(instance, structure, arraySize, dataSegmentIndex, offset);
         }
         default:
             break;
@@ -242,14 +240,14 @@ inline EncodedJSValue arrayNewData(JSWebAssemblyInstance* instance, uint32_t typ
         switch (fieldType.type.as<Type>().kind) {
         case Wasm::TypeKind::I32:
         case Wasm::TypeKind::F32: {
-            return createArrayFromDataSegment<uint32_t>(instance, fieldType, arraySize, dataSegmentIndex, offset, WTFMove(arrayRTT));
+            return createArrayFromDataSegment<uint32_t>(instance, structure, arraySize, dataSegmentIndex, offset);
         }
         case Wasm::TypeKind::I64:
         case Wasm::TypeKind::F64: {
-            return createArrayFromDataSegment<uint64_t>(instance, fieldType, arraySize, dataSegmentIndex, offset, WTFMove(arrayRTT));
+            return createArrayFromDataSegment<uint64_t>(instance, structure, arraySize, dataSegmentIndex, offset);
         }
         case Wasm::TypeKind::V128: {
-            return createArrayFromDataSegment<v128_t>(instance, fieldType, arraySize, dataSegmentIndex, offset, WTFMove(arrayRTT));
+            return createArrayFromDataSegment<v128_t>(instance, structure, arraySize, dataSegmentIndex, offset);
         }
         default:
             break;
@@ -261,39 +259,28 @@ inline EncodedJSValue arrayNewData(JSWebAssemblyInstance* instance, uint32_t typ
 
 inline EncodedJSValue arrayNewElem(JSWebAssemblyInstance* instance, uint32_t typeIndex, uint32_t elemSegmentIndex, uint32_t arraySize, uint32_t offset)
 {
-    RefPtr arrayRTT = instance->module().moduleInformation().rtts[typeIndex];
-
     // Check that the type index is within bounds
     ASSERT(typeIndex < instance->module().moduleInformation().typeCount());
 
-#if ASSERT_ENABLED
-    const Wasm::TypeDefinition& arraySignature = instance->module().moduleInformation().typeSignatures[typeIndex]->expand();
-    ASSERT(arraySignature.is<ArrayType>());
-#else
-    UNUSED_PARAM(typeIndex);
-#endif
+    WebAssemblyGCStructure* structure = instance->gcObjectStructure(typeIndex).get();
+    ASSERT(structure->typeDefinition().is<ArrayType>());
 
     // Ensure that adding the offset to the desired array length doesn't overflow int32 or
     // overflow the length of the element segment
     auto element = instance->elementAt(elemSegmentIndex);
     size_t segmentLength = element ? element->length() : 0U;
     auto calculatedArrayEnd = CheckedUint32 { offset } + arraySize;
-    if (UNLIKELY(calculatedArrayEnd.hasOverflowed() || calculatedArrayEnd > segmentLength))
+    if (calculatedArrayEnd.hasOverflowed() || calculatedArrayEnd > segmentLength) [[unlikely]]
         return JSValue::encode(jsNull());
 
-    StorageType storageType(element->elementType);
-    if (segmentLength) {
-        size_t elementTypeSize = typeSizeInBytes(storageType);
-        auto newArraySizeInBytes = CheckedSize { elementTypeSize } * arraySize;
-        if (UNLIKELY(newArraySizeInBytes.hasOverflowed() || newArraySizeInBytes > maxArraySizeInBytes))
-            return JSValue::encode(jsNull());
-    }
-
-    JSGlobalObject* globalObject = instance->globalObject();
-    VM& vm = globalObject->vm();
-    auto* array = JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), FieldType { storageType, Mutability::Mutable }, arraySize, WTFMove(arrayRTT));
+    VM& vm = instance->vm();
+    StorageType arrayType = structure->typeDefinition().as<ArrayType>()->elementType().type;
+    ASSERT_UNUSED(arrayType, isSubtype(StorageType(element->elementType), arrayType));
+    auto* array = JSWebAssemblyArray::tryCreate(vm, structure, arraySize);
+    if (!array) [[unlikely]]
+        return JSValue::encode(jsNull());
     instance->copyElementSegment(array, instance->module().moduleInformation().elements[elemSegmentIndex], offset, arraySize, array->span<uint64_t>().data());
-    ASSERT(Wasm::isRefType(storageType.unpacked()));
+    ASSERT(Wasm::isRefType(element->elementType));
     vm.writeBarrier(array);
     return JSValue::encode(array);
 }
@@ -334,7 +321,7 @@ inline void arraySet(JSWebAssemblyInstance* instance, uint32_t typeIndex, Encode
     arrayObject->set(instance->vm(), index, value);
 }
 
-inline bool doArrayFill(VM& vm, EncodedJSValue arrayValue, uint32_t offset, std::variant<uint64_t, v128_t> value, uint32_t size)
+inline bool doArrayFill(VM& vm, EncodedJSValue arrayValue, uint32_t offset, Variant<uint64_t, v128_t> value, uint32_t size)
 {
     JSValue arrayRef = JSValue::decode(arrayValue);
     ASSERT(arrayRef.isObject());
@@ -475,10 +462,10 @@ inline EncodedJSValue structNew(JSWebAssemblyInstance* instance, uint32_t typeIn
     JSGlobalObject* globalObject = instance->globalObject();
     VM& vm = globalObject->vm();
 
-    const TypeDefinition& structTypeDefinition = instance->module().moduleInformation().typeSignatures[typeIndex]->expand();
-    const StructType& structType = *structTypeDefinition.as<StructType>();
-    auto structRTT = instance->module().moduleInformation().rtts[typeIndex];
-    JSWebAssemblyStruct* structValue = JSWebAssemblyStruct::create(vm, globalObject->webAssemblyStructStructure(), instance, typeIndex, WTFMove(structRTT));
+    WebAssemblyGCStructure* structure = instance->gcObjectStructure(typeIndex).get();
+    ASSERT(structure->typeDefinition().is<StructType>());
+    const StructType& structType = *structure->typeDefinition().as<StructType>();
+    JSWebAssemblyStruct* structValue = JSWebAssemblyStruct::create(vm, structure);
     if (static_cast<Wasm::UseDefaultValue>(useDefault) == Wasm::UseDefaultValue::Yes) {
         for (unsigned i = 0; i < structType.fieldCount(); ++i) {
             if (structType.field(i).type.unpacked() == Wasm::Types::V128) {

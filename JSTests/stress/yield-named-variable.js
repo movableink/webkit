@@ -189,10 +189,10 @@ function t1() {
 }
 `, `SyntaxError: Cannot use 'yield' as a catch parameter name in strict mode.`);
 
-testSyntax(`
+testSyntaxError(`
 function t1() {
     function yield() {
         "use strict";
     }
 }
-`);
+`, `SyntaxError: 'yield' is not a valid function name in strict mode.`);

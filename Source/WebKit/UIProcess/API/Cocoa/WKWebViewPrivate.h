@@ -176,8 +176,6 @@ typedef NS_ENUM(NSInteger, _WKImmediateActionType) {
 @property (nonatomic, weak, setter=_setIconLoadingDelegate:) id <_WKIconLoadingDelegate> _iconLoadingDelegate;
 @property (nonatomic, weak, setter=_setResourceLoadDelegate:) id <_WKResourceLoadDelegate> _resourceLoadDelegate WK_API_AVAILABLE(macos(11.0), ios(14.0));
 
-@property (nonatomic, readonly) BOOL _isBlockedByScreenTime WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
-
 @property (nonatomic, readonly) NSURL *_unreachableURL;
 @property (nonatomic, readonly) NSURL *_mainFrameURL WK_API_AVAILABLE(macos(10.15), ios(13.0));
 @property (nonatomic, readonly) NSURL *_resourceDirectoryURL WK_API_AVAILABLE(macos(10.15), ios(13.0));
@@ -404,17 +402,10 @@ for this property.
 
 @property (nonatomic, readonly) BOOL _isSuspended;
 
-@property (nonatomic, readonly) _WKRectEdge _fixedContainerEdges WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
 #if TARGET_OS_IPHONE
 @property (nonatomic, readonly) UIColor *_sampledTopFixedPositionContentColor WK_API_AVAILABLE(ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
-@property (nonatomic, readonly) UIColor *_sampledLeftFixedPositionContentColor WK_API_AVAILABLE(ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
-@property (nonatomic, readonly) UIColor *_sampledBottomFixedPositionContentColor WK_API_AVAILABLE(ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
-@property (nonatomic, readonly) UIColor *_sampledRightFixedPositionContentColor WK_API_AVAILABLE(ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
 #else
 @property (nonatomic, readonly) NSColor *_sampledTopFixedPositionContentColor WK_API_AVAILABLE(macos(WK_MAC_TBA));
-@property (nonatomic, readonly) NSColor *_sampledLeftFixedPositionContentColor WK_API_AVAILABLE(macos(WK_MAC_TBA));
-@property (nonatomic, readonly) NSColor *_sampledBottomFixedPositionContentColor WK_API_AVAILABLE(macos(WK_MAC_TBA));
-@property (nonatomic, readonly) NSColor *_sampledRightFixedPositionContentColor WK_API_AVAILABLE(macos(WK_MAC_TBA));
 #endif
 
 @property (nonatomic, readonly) BOOL _canTogglePictureInPicture;
@@ -438,6 +429,8 @@ for this property.
 - (void)_convertPoint:(CGPoint)point fromFrame:(WKFrameInfo *)frame toMainFrameCoordinates:(void (^)(CGPoint, NSError *error))completionHandler WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
 - (void)_convertRect:(CGRect)rect fromFrame:(WKFrameInfo *)frame toMainFrameCoordinates:(void (^)(CGRect, NSError *error))completionHandler WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
 
++ (NSString *)_userVisibleStringForURL:(NSURL *)url WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
+
 - (void)_takePDFSnapshotWithConfiguration:(WKSnapshotConfiguration *)snapshotConfiguration completionHandler:(void (^)(NSData *pdfSnapshotData, NSError *error))completionHandler WK_API_AVAILABLE(macos(10.15.4), ios(13.4));
 - (void)_getPDFFirstPageSizeInFrame:(_WKFrameHandle *)frame completionHandler:(void(^)(CGSize))completionHandler WK_API_AVAILABLE(macos(12.0), ios(15.0));
 
@@ -458,6 +451,8 @@ for this property.
 - (void)_restoreAndScrollToAppHighlight:(NSData *)highlight WK_API_AVAILABLE(macos(12.0), ios(15.0));
 - (void)_addAppHighlight WK_API_AVAILABLE(macos(12.0), ios(15.0));
 - (void)_addAppHighlightInNewGroup:(BOOL)newGroup originatedInApp:(BOOL)originatedInApp WK_API_AVAILABLE(macos(12.0), ios(15.0));
+
+- (void)_textFragmentDirectiveFromSelectionWithCompletionHandler:(void(^)(NSURL *))completionHandler WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
 
 #if TARGET_OS_IPHONE && !TARGET_OS_WATCH
 - (void)_targetedPreviewForElementWithID:(NSString *)elementID completionHandler:(WK_SWIFT_UI_ACTOR void (^)(UITargetedPreview *))completionHandler WK_API_AVAILABLE(ios(18.2), visionos(2.2));
@@ -759,8 +754,8 @@ typedef NS_OPTIONS(NSUInteger, _WKWebViewDataType) {
 @interface WKWebView (WKPrivateVision)
 @property (copy, setter=_setDefaultSTSLabel:) NSString *_defaultSTSLabel;
 
-- (void)_enterExternalPlaybackForNowPlayingMediaSessionWithCompletionHandler:(void (^)(UIViewController *nowPlayingViewController, NSError *error))completionHandler WK_API_AVAILABLE(visionos(WK_XROS_TBA));
-- (void)_exitExternalPlaybackWithCompletionHandler:(void (^)(NSError *error))completionHandler WK_API_AVAILABLE(visionos(WK_XROS_TBA));
+- (void)_enterExternalPlaybackForNowPlayingMediaSessionWithEnterCompletionHandler:(void (^)(UIViewController *nowPlayingViewController, NSError *error))enterHandler exitCompletionHandler:(void (^)(NSError *error))exitHandler WK_API_AVAILABLE(visionos(WK_XROS_TBA));
+- (void)_exitExternalPlayback WK_API_AVAILABLE(visionos(WK_XROS_TBA));
 @end
 #endif
 
@@ -855,6 +850,7 @@ typedef NS_OPTIONS(NSUInteger, _WKWebViewDataType) {
 - (void)_setCustomSwipeViews:(NSArray *)customSwipeViews WK_API_AVAILABLE(macos(10.13.4));
 - (void)_setDidMoveSwipeSnapshotCallback:(void(^)(CGRect))callback WK_API_AVAILABLE(macos(10.13.4));
 - (void)_setCustomSwipeViewsTopContentInset:(float)topContentInset WK_API_AVAILABLE(macos(10.13.4));
+- (void)_setCustomSwipeViewsObscuredContentInsets:(NSEdgeInsets)contentInsets WK_API_AVAILABLE(macos(WK_MAC_TBA));
 
 - (NSView *)_fullScreenPlaceholderView WK_API_AVAILABLE(macos(10.13.4));
 - (NSWindow *)_fullScreenWindow WK_API_AVAILABLE(macos(10.13.4));
@@ -883,6 +879,7 @@ typedef NS_OPTIONS(NSUInteger, _WKWebViewDataType) {
 - (void)_setTopContentInset:(CGFloat)topContentInset immediate:(BOOL)immediate WK_API_AVAILABLE(macos(WK_MAC_TBA));
 - (void)_setObscuredContentInsets:(NSEdgeInsets)insets immediate:(BOOL)immediate WK_API_AVAILABLE(macos(WK_MAC_TBA));
 @property (nonatomic, readonly) NSEdgeInsets _obscuredContentInsets WK_API_AVAILABLE(macos(WK_MAC_TBA));
+@property (nonatomic, setter=_setUsesAutomaticContentInsetBackgroundFill:) BOOL _usesAutomaticContentInsetBackgroundFill WK_API_AVAILABLE(macos(WK_MAC_TBA));
 
 - (void)_showWritingTools WK_API_AVAILABLE(macos(15.2));
 

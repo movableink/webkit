@@ -43,11 +43,6 @@
     String containerCachesDirectory;
 #endif
 
-#if PLATFORM(IOS_FAMILY)
-    Vector<WebKit::SandboxExtensionHandle> compilerServiceExtensionHandles;
-    Vector<WebKit::SandboxExtensionHandle> dynamicIOKitExtensionHandles;
-#endif
-
     std::optional<WebKit::SandboxExtensionHandle> mobileGestaltExtensionHandle;
 
 #if PLATFORM(COCOA) && ENABLE(REMOTE_INSPECTOR)

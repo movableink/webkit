@@ -63,5 +63,5 @@ bool UnevaluatedCalculationBase::equal(const UnevaluatedCalculationBase& other) 
     return calc == other.calc;
 }
 
-} // namespace CSS
+} // namespace Style
 } // namespace WebCore

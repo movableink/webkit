@@ -78,7 +78,7 @@ ThreadGlobalData& threadGlobalDataSlow()
 {
     auto& thread = Thread::currentSingleton();
     auto* clientData = thread.m_clientData.get();
-    if (UNLIKELY(clientData))
+    if (clientData) [[unlikely]]
         return *static_cast<ThreadGlobalData*>(clientData);
 
     auto data = adoptRef(*new ThreadGlobalData);
@@ -98,7 +98,7 @@ ThreadGlobalData& threadGlobalDataSlow()
 {
     auto& thread = Thread::currentSingleton();
     auto* clientData = thread.m_clientData.get();
-    if (UNLIKELY(clientData))
+    if (clientData) [[unlikely]]
         return *static_cast<ThreadGlobalData*>(clientData);
 
     auto data = adoptRef(*new ThreadGlobalData);

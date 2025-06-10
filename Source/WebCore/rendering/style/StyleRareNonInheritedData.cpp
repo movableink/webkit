@@ -21,10 +21,12 @@
 #include "config.h"
 #include "StyleRareNonInheritedData.h"
 
+#include "PathOperation.h"
 #include "RenderCounter.h"
 #include "RenderStyleDifference.h"
 #include "RenderStyleInlines.h"
-#include "ShadowData.h"
+#include "RotateTransformOperation.h"
+#include "ScaleTransformOperation.h"
 #include "StyleImage.h"
 #include "StyleReflection.h"
 #include "StyleResolver.h"
@@ -140,6 +142,8 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , appleVisualEffect(static_cast<unsigned>(RenderStyle::initialAppleVisualEffect()))
 #endif
     , scrollbarWidth(static_cast<unsigned>(RenderStyle::initialScrollbarWidth()))
+    , usesAnchorFunctions(false)
+    , isPopoverInvoker(false)
 {
 }
 
@@ -247,6 +251,8 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , appleVisualEffect(o.appleVisualEffect)
 #endif
     , scrollbarWidth(o.scrollbarWidth)
+    , usesAnchorFunctions(o.usesAnchorFunctions)
+    , isPopoverInvoker(o.isPopoverInvoker)
 {
 }
 
@@ -360,7 +366,9 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
 #if HAVE(CORE_MATERIAL)
         && appleVisualEffect == o.appleVisualEffect
 #endif
-        && scrollbarWidth == o.scrollbarWidth;
+        && scrollbarWidth == o.scrollbarWidth
+        && usesAnchorFunctions == o.usesAnchorFunctions
+        && isPopoverInvoker == o.isPopoverInvoker;
 }
 
 OptionSet<Containment> StyleRareNonInheritedData::usedContain() const
@@ -536,6 +544,9 @@ void StyleRareNonInheritedData::dumpDifferences(TextStream& ts, const StyleRareN
 #endif
 
     LOG_IF_DIFFERENT(scrollbarWidth);
+
+    LOG_IF_DIFFERENT_WITH_CAST(bool, usesAnchorFunctions);
+    LOG_IF_DIFFERENT_WITH_CAST(bool, isPopoverInvoker);
 }
 #endif // !LOG_DISABLED
 

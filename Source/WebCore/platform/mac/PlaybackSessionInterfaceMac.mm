@@ -154,25 +154,11 @@ void PlaybackSessionInterfaceMac::skipAd()
         model->skipAd();
 }
 #endif
-#if ENABLE(WEB_PLAYBACK_CONTROLS_MANAGER)
-static RetainPtr<NSMutableArray> timeRangesToArray(const TimeRanges& timeRanges)
-{
-    RetainPtr<NSMutableArray> rangeArray = adoptNS([[NSMutableArray alloc] init]);
 
-    for (unsigned i = 0; i < timeRanges.length(); i++) {
-        const PlatformTimeRanges& ranges = timeRanges.ranges();
-        CMTimeRange range = PAL::CMTimeRangeMake(PAL::toCMTime(ranges.start(i)), PAL::toCMTime(ranges.end(i)));
-        [rangeArray addObject:[NSValue valueWithCMTimeRange:range]];
-    }
-
-    return rangeArray;
-}
-#endif
-
-void PlaybackSessionInterfaceMac::seekableRangesChanged(const TimeRanges& timeRanges, double, double)
+void PlaybackSessionInterfaceMac::seekableRangesChanged(const PlatformTimeRanges& timeRanges, double, double)
 {
 #if ENABLE(WEB_PLAYBACK_CONTROLS_MANAGER)
-    [playBackControlsManager() setSeekableTimeRanges:timeRangesToArray(timeRanges).get()];
+    [playBackControlsManager() setSeekableTimeRanges:makeNSArray(timeRanges).get()];
 #else
     UNUSED_PARAM(timeRanges);
 #endif
@@ -268,7 +254,7 @@ void PlaybackSessionInterfaceMac::setPlayBackControlsManager(WebPlaybackControls
     manager.hasEnabledVideo = duration > 0;
     manager.defaultPlaybackRate = m_playbackSessionModel->defaultPlaybackRate();
     manager.rate = m_playbackSessionModel->isPlaying() ? m_playbackSessionModel->playbackRate() : 0.;
-    manager.seekableTimeRanges = timeRangesToArray(m_playbackSessionModel->seekableRanges()).get();
+    manager.seekableTimeRanges = makeNSArray(m_playbackSessionModel->seekableRanges()).get();
     manager.canTogglePlayback = YES;
     manager.playing = m_playbackSessionModel->isPlaying();
     [manager setAudioMediaSelectionOptions:m_playbackSessionModel->audioMediaSelectionOptions() withSelectedIndex:static_cast<NSUInteger>(m_playbackSessionModel->audioMediaSelectedIndex())];

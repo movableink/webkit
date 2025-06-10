@@ -33,6 +33,7 @@
 #include "PDFKitSPI.h"
 #include "PDFScrollingPresentationController.h"
 #include <WebCore/GraphicsLayer.h>
+#include <WebCore/GraphicsLayerFactory.h>
 #include <WebCore/LocalFrameView.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -215,7 +216,7 @@ void PDFPresentationController::setNeedsRepaintForPageCoverage(RepaintRequiremen
         }
         if (layer && !bounds.isEmpty())
             asyncRenderer->setNeedsRenderForRect(*layer, bounds);
-        asyncRenderer->setNeedsPagePreviewRenderForPageCoverage(coverage);
+        asyncRenderer->invalidatePreviewsForPageCoverage(coverage);
     }
 }
 

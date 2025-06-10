@@ -77,6 +77,7 @@
     }
 }
 
+#if ENABLE(REQUIRES_PAGE_VISIBILITY_FOR_NOW_PLAYING)
 - (void)expectRegisteredAsNowPlayingApplication:(BOOL)registeredAsNowPlayingApplication
 {
     [self requestActiveNowPlayingSessionInfo];
@@ -87,6 +88,7 @@
         finishedWaiting = self.registeredAsNowPlayingApplication == registeredAsNowPlayingApplication;
     }
 }
+#endif
 
 - (void)setWindowVisible:(BOOL)isVisible
 {
@@ -139,6 +141,7 @@ TEST(NowPlayingControlsTests, NowPlayingControlsShowForBackgroundPage)
     ASSERT_GE(webView.get().lastUpdatedElapsedTime, 0);
 }
 
+#if ENABLE(REQUIRES_PAGE_VISIBILITY_FOR_NOW_PLAYING)
 TEST(NowPlayingControlsTests, NowPlayingApplicationNotRegisteredForBackgroundPage)
 {
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
@@ -162,6 +165,7 @@ TEST(NowPlayingControlsTests, NowPlayingApplicationNotRegisteredForBackgroundPag
     ASSERT_EQ(10, webView.get().lastUpdatedDuration);
     ASSERT_GE(webView.get().lastUpdatedElapsedTime, 0);
 }
+#endif // ENABLE(REQUIRES_PAGE_VISIBILITY_FOR_NOW_PLAYING)
 
 TEST(NowPlayingControlsTests, NowPlayingControlsHideAfterShowingKeepsSessionActive)
 {

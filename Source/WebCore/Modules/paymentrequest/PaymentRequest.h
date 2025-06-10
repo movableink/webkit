@@ -29,13 +29,12 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
+#include "EventTargetInterfaces.h"
 #include "IDLTypes.h"
 #include "PaymentDetailsInit.h"
 #include "PaymentMethodChangeEvent.h"
 #include "PaymentOptions.h"
 #include "PaymentResponse.h"
-#include <variant>
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -51,6 +50,7 @@ enum class PaymentShippingType;
 struct PaymentDetailsUpdate;
 struct PaymentMethodData;
 template<typename IDLType> class DOMPromiseDeferred;
+template<typename> class ExceptionOr;
 
 class PaymentRequest final : public ActiveDOMObject, public EventTarget, public RefCounted<PaymentRequest> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PaymentRequest);
@@ -105,7 +105,7 @@ public:
     ExceptionOr<void> retry(PaymentValidationErrors&&);
     void cancel();
 
-    using MethodIdentifier = std::variant<String, URL>;
+    using MethodIdentifier = Variant<String, URL>;
 
 private:
     struct Method {

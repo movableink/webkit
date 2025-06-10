@@ -247,12 +247,11 @@ SkTypeface::LocalizedStrings* TestTypeface::onCreateFamilyNameIterator() const {
 
 class SkTestScalerContext : public SkScalerContext {
 public:
-    SkTestScalerContext(sk_sp<TestTypeface>           face,
+    SkTestScalerContext(TestTypeface& face,
                         const SkScalerContextEffects& effects,
-                        const SkDescriptor*           desc)
-            : SkScalerContext(std::move(face), effects, desc) {
+                        const SkDescriptor* desc)
+            : SkScalerContext(face, effects, desc) {
         fRec.getSingleMatrix(&fMatrix);
-        this->forceGenerateImageFromPath();
     }
 
 protected:
@@ -263,16 +262,16 @@ protected:
     GlyphMetrics generateMetrics(const SkGlyph& glyph, SkArenaAlloc*) override {
         GlyphMetrics mx(glyph.maskFormat());
 
-        auto advance = this->getTestTypeface()->getAdvance(glyph.getGlyphID());
-
+        SkPoint advance = this->getTestTypeface()->getAdvance(glyph.getGlyphID());
         mx.advance = fMatrix.mapXY(advance.fX, advance.fY);
-        return mx;
 
         // Always generates from paths, so SkScalerContext::makeGlyph will figure the bounds.
+        mx.computeFromPath = true;
+        return mx;
     }
 
-    void generateImage(const SkGlyph&, void*) override {
-        SK_ABORT("Should have generated from path.");
+    void generateImage(const SkGlyph& glyph, void* imageBuffer) override {
+        this->generateImageFromPath(glyph, imageBuffer);
     }
 
     bool generatePath(const SkGlyph& glyph, SkPath* path, bool* modified) override {
@@ -292,6 +291,5 @@ private:
 std::unique_ptr<SkScalerContext> TestTypeface::onCreateScalerContext(
     const SkScalerContextEffects& effects, const SkDescriptor* desc) const
 {
-    return std::make_unique<SkTestScalerContext>(
-            sk_ref_sp(const_cast<TestTypeface*>(this)), effects, desc);
+    return std::make_unique<SkTestScalerContext>(*const_cast<TestTypeface*>(this), effects, desc);
 }

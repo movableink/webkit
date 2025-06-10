@@ -92,6 +92,22 @@ constexpr std::array<BoxSide, 4> allBoxSides = {
     BoxSide::Left
 };
 
+constexpr BoxSide boxSideFromFlag(BoxSideFlag flag)
+{
+    switch (flag) {
+    case BoxSideFlag::Top:
+        return BoxSide::Top;
+    case BoxSideFlag::Right:
+        return BoxSide::Right;
+    case BoxSideFlag::Bottom:
+        return BoxSide::Bottom;
+    case BoxSideFlag::Left:
+        return BoxSide::Left;
+    }
+    ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
+    return BoxSide::Left;
+}
+
 using BoxSideSet = OptionSet<BoxSideFlag>;
 
 constexpr BoxSide mapSideLogicalToPhysical(const WritingMode, const LogicalBoxSide);

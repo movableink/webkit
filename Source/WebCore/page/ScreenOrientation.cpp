@@ -32,6 +32,7 @@
 #include "Element.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "JSDOMPromiseDeferred.h"
 #include "LocalDOMWindow.h"
@@ -137,8 +138,8 @@ void ScreenOrientation::lock(LockType lockType, Ref<DeferredPromise>&& promise)
         });
     }
     manager->setLockPromise(*this, WTFMove(promise));
-    manager->lock(lockType, [this, protectedThis = makePendingActivity(*this)](std::optional<Exception>&& exception) mutable {
-        queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [exception = WTFMove(exception)](auto& orientation) mutable {
+    manager->lock(lockType, [pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) mutable {
+        queueTaskKeepingObjectAlive(pendingActivity->object(), TaskSource::DOMManipulation, [exception = WTFMove(exception)](auto& orientation) mutable {
             auto* manager = orientation.manager();
             if (!manager)
                 return;

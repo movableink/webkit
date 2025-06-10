@@ -30,6 +30,7 @@
 #if ENABLE(MATHML)
 
 #include "RenderMathMLBlock.h"
+#include "RenderObjectInlines.h"
 
 namespace WebCore {
 

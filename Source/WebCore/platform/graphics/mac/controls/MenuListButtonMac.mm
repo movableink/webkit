@@ -43,6 +43,8 @@ MenuListButtonMac::MenuListButtonMac(MenuListButtonPart& owningPart, ControlFact
 {
 }
 
+MenuListButtonMac::~MenuListButtonMac() = default;
+
 static void interpolateGradient(const CGFloat* rawInData, CGFloat* rawOutData, std::span<const float, 4> dark, std::span<const float, 4> light)
 {
     auto inData = unsafeMakeSpan(rawInData, 1);
@@ -104,7 +106,7 @@ static void drawMenuListBackground(GraphicsContext& context, const FloatRect& re
 
     bool useDarkAppearance = style.states.contains(ControlStyle::State::DarkAppearance);
 
-    CGColorSpaceRef cspace = sRGBColorSpaceRef();
+    CGColorSpaceRef cspace = sRGBColorSpaceSingleton();
 
     FloatRect topGradient(rect.x(), rect.y(), rect.width(), rect.height() / 2.0f);
     struct CGFunctionCallbacks topCallbacks = { 0, useDarkAppearance ? darkTopGradientInterpolate : topGradientInterpolate, NULL };

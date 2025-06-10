@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2024 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,7 @@
 #include "FunctionOverrides.h"
 #include "IsoCellSetInlines.h"
 #include "Parser.h"
-#include "SourceProvider.h"
+#include "SourceProfiler.h"
 #include "Structure.h"
 #include "UnlinkedFunctionCodeBlock.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -193,14 +193,17 @@ FunctionExecutable* UnlinkedFunctionExecutable::link(VM& vm, ScriptExecutable* t
     SourceCode source = linkedSourceCode(passedParentSource);
     FunctionOverrides::OverrideInfo overrideInfo;
     bool hasFunctionOverride = false;
-    if (UNLIKELY(Options::functionOverrides()))
+    if (Options::functionOverrides()) [[unlikely]]
         hasFunctionOverride = FunctionOverrides::initializeOverrideFor(source, overrideInfo);
+
+    if (SourceProfiler::g_profilerHook) [[unlikely]]
+        SourceProfiler::profile(SourceProfiler::Type::Function, source);
 
     FunctionExecutable* result = FunctionExecutable::create(vm, topLevelExecutable, source, this, intrinsic, isInsideOrdinaryFunction);
     if (overrideLineNumber)
         result->setOverrideLineNumber(*overrideLineNumber);
 
-    if (UNLIKELY(hasFunctionOverride))
+    if (hasFunctionOverride) [[unlikely]]
         result->overrideInfo(overrideInfo);
 
     return result;

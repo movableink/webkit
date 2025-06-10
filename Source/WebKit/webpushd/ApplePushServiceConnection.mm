@@ -70,7 +70,7 @@ namespace WebPushD {
 
 ApplePushServiceConnection::ApplePushServiceConnection(const String& incomingPushServiceName)
 {
-    m_connection = adoptNS([[APSConnection alloc] initWithEnvironmentName:APSEnvironmentProduction namedDelegatePort:incomingPushServiceName queue:dispatch_get_main_queue()]);
+    m_connection = adoptNS([[APSConnection alloc] initWithEnvironmentName:APSEnvironmentProduction namedDelegatePort:incomingPushServiceName.createNSString().get() queue:dispatch_get_main_queue()]);
     m_delegate = adoptNS([[_WKAPSConnectionDelegate alloc] initWithConnection:this]);
     [m_connection setDelegate:m_delegate.get()];
 }
@@ -82,7 +82,7 @@ ApplePushServiceConnection::~ApplePushServiceConnection()
 
 static RetainPtr<APSURLTokenInfo> makeTokenInfo(const String& topic, const Vector<uint8_t>& vapidPublicKey)
 {
-    return adoptNS([[APSURLTokenInfo alloc] initWithTopic:topic vapidPublicKey:toNSData(vapidPublicKey).get()]);
+    return adoptNS([[APSURLTokenInfo alloc] initWithTopic:topic.createNSString().get() vapidPublicKey:toNSData(vapidPublicKey).get()]);
 }
 
 void ApplePushServiceConnection::subscribe(const String& topic, const Vector<uint8_t>& vapidPublicKey, SubscribeHandler&& subscribeHandler)

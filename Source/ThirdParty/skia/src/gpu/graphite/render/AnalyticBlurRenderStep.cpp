@@ -24,14 +24,15 @@
 #include "src/gpu/graphite/geom/AnalyticBlurMask.h"
 #include "src/gpu/graphite/geom/Geometry.h"
 #include "src/gpu/graphite/geom/Rect.h"
-#include "src/gpu/graphite/geom/Transform_graphite.h"
+#include "src/gpu/graphite/geom/Transform.h"
 #include "src/gpu/graphite/render/CommonDepthStencilSettings.h"
 
 namespace skgpu::graphite {
 
 AnalyticBlurRenderStep::AnalyticBlurRenderStep()
         : RenderStep(RenderStepID::kAnalyticBlur,
-                     Flags::kPerformsShading | Flags::kHasTextures | Flags::kEmitsCoverage,
+                     Flags::kPerformsShading | Flags::kHasTextures | Flags::kEmitsCoverage |
+                     Flags::kAppendVertices,
                      /*uniforms=*/
                      {{"localToDevice", SkSLType::kFloat4x4},
                       {"deviceToScaledShape", SkSLType::kFloat3x3},
@@ -41,21 +42,20 @@ AnalyticBlurRenderStep::AnalyticBlurRenderStep()
                       {"depth", SkSLType::kFloat}},
                      PrimitiveType::kTriangles,
                      kDirectDepthGreaterPass,
-                     /*vertexAttrs=*/
+                     /*staticAttrs=*/ {},
+                     /*appendAttrs=*/
                      {{"position", VertexAttribType::kFloat2, SkSLType::kFloat2},
                       {"ssboIndices", VertexAttribType::kUInt2, SkSLType::kUInt2}},
-                     /*instanceAttrs=*/{},
                      /*varyings=*/
                      // scaledShapeCoords are the fragment coordinates in local shape space, where
                      // the shape has been scaled to device space but not translated or rotated.
                      {{"scaledShapeCoords", SkSLType::kFloat2}}) {}
 
 std::string AnalyticBlurRenderStep::vertexSkSL() const {
-    return R"(
-        float4 devPosition = localToDevice * float4(position, depth, 1.0);
-        stepLocalCoords = position;
-        scaledShapeCoords = (deviceToScaledShape * devPosition.xy1).xy;
-    )";
+    return
+        "float4 devPosition = localToDevice * float4(position, depth, 1.0);\n"
+        "stepLocalCoords = position;\n"
+        "scaledShapeCoords = (deviceToScaledShape * devPosition.xy1).xy;\n";
 }
 
 std::string AnalyticBlurRenderStep::texturesAndSamplersSkSL(

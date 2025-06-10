@@ -59,6 +59,7 @@
 #import <QuartzCore/QuartzCore.h>
 #import <WebCore/AXObjectCache.h>
 #import <WebCore/BackForwardController.h>
+#import <WebCore/BoundaryPointInlines.h>
 #import <WebCore/ColorMac.h>
 #import <WebCore/DataDetection.h>
 #import <WebCore/DictionaryLookup.h>
@@ -93,6 +94,7 @@
 #import <WebCore/RenderElement.h>
 #import <WebCore/RenderObject.h>
 #import <WebCore/RenderStyle.h>
+#import <WebCore/RenderTheme.h>
 #import <WebCore/RenderView.h>
 #import <WebCore/ScrollView.h>
 #import <WebCore/StyleInheritedData.h>
@@ -132,10 +134,8 @@ void WebPage::platformInitializeAccessibility(ShouldInitializeNSAccessibility sh
     // Get the pid for the starting process.
     pid_t pid = legacyPresentingApplicationPID();
     createMockAccessibilityElement(pid);
-    if (shouldInitializeNSAccessibility == ShouldInitializeNSAccessibility::Yes) {
-        if (protectedCorePage()->localMainFrame())
-            accessibilityTransferRemoteToken(accessibilityRemoteTokenData());
-    }
+    if (protectedCorePage()->localMainFrame())
+        accessibilityTransferRemoteToken(accessibilityRemoteTokenData());
 
     // Close Mach connection to Launch Services.
 #if HAVE(LS_SERVER_CONNECTION_STATUS_RELEASE_NOTIFICATIONS_MASK)
@@ -520,15 +520,18 @@ void WebPage::cacheAXSize(const WebCore::IntSize& size)
     [m_mockAccessibilityElement setSize:size];
 }
 
-void WebPage::setAXIsolatedTreeRoot(WebCore::AXCoreObject* root)
+void WebPage::setIsolatedTree(Ref<WebCore::AXIsolatedTree>&& tree)
 {
-    [m_mockAccessibilityElement setIsolatedTreeRoot:root];
+    [m_mockAccessibilityElement setIsolatedTree:WTFMove(tree)];
 }
 #endif
 
 bool WebPage::platformCanHandleRequest(const WebCore::ResourceRequest& request)
 {
-    if ([NSURLConnection canHandleRequest:request.nsURLRequest(HTTPBodyUpdatePolicy::DoNotUpdateHTTPBody)])
+    RetainPtr nsRequest = request.nsURLRequest(HTTPBodyUpdatePolicy::DoNotUpdateHTTPBody);
+    if (!nsRequest.get().URL)
+        return false;
+    if ([NSURLConnection canHandleRequest:nsRequest.get()])
         return true;
 
     // FIXME: Return true if this scheme is any one WebKit2 knows how to handle.
@@ -807,8 +810,8 @@ void WebPage::performImmediateActionHitTestAtLocation(WebCore::FrameIdentifier f
             continue;
 
         pageOverlayDidOverrideDataDetectors = true;
-        if (auto* detectedContext = actionContext->context.get())
-            immediateActionResult.platformData.detectedDataActionContext = { { detectedContext } };
+        if (RetainPtr detectedContext = actionContext->context.get())
+            immediateActionResult.platformData.detectedDataActionContext = { { detectedContext.get() } };
         immediateActionResult.platformData.detectedDataBoundingBox = view->contentsToWindow(enclosingIntRect(unitedBoundingBoxes(RenderObject::absoluteTextQuads(actionContext->range))));
         immediateActionResult.platformData.detectedDataTextIndicator = TextIndicator::createWithRange(actionContext->range, indicatorOptions(actionContext->range), TextIndicatorPresentationTransition::FadeIn);
         immediateActionResult.platformData.detectedDataOriginatingPageOverlay = overlay->pageOverlayID();
@@ -1037,21 +1040,21 @@ void WebPage::savePDF(PDFPluginIdentifier identifier, CompletionHandler<void(con
     pdfPlugin->save(WTFMove(completionHandler));
 }
 
-void WebPage::openPDFWithPreview(PDFPluginIdentifier identifier, CompletionHandler<void(const String&, FrameInfoData&&, std::span<const uint8_t>, const String&)>&& completionHandler)
+void WebPage::openPDFWithPreview(PDFPluginIdentifier identifier, CompletionHandler<void(const String&, std::optional<FrameInfoData>&&, std::span<const uint8_t>)>&& completionHandler)
 {
     for (Ref pluginView : m_pluginViews) {
         if (pluginView->pdfPluginIdentifier() == identifier)
             return pluginView->openWithPreview(WTFMove(completionHandler));
     }
 
-    completionHandler({ }, { }, { }, { });
+    completionHandler({ }, { }, { });
 }
 
-void WebPage::createPDFHUD(PDFPluginBase& plugin, const IntRect& boundingBox)
+void WebPage::createPDFHUD(PDFPluginBase& plugin, WebCore::FrameIdentifier frameID, const IntRect& boundingBox)
 {
     auto addResult = m_pdfPlugInsWithHUD.add(plugin.identifier(), plugin);
     if (addResult.isNewEntry)
-        send(Messages::WebPageProxy::CreatePDFHUD(plugin.identifier(), boundingBox));
+        send(Messages::WebPageProxy::CreatePDFHUD(plugin.identifier(), frameID, boundingBox));
 }
 
 void WebPage::updatePDFHUDLocation(PDFPluginBase& plugin, const IntRect& boundingBox)
@@ -1080,9 +1083,6 @@ void WebPage::initializeAccessibility(Vector<SandboxExtension::Handle>&& handles
     });
 
     [NSApplication _accessibilityInitialize];
-
-    if (protectedCorePage()->localMainFrame())
-        accessibilityTransferRemoteToken(accessibilityRemoteTokenData());
 
     for (auto& extension : extensions)
         extension->revoke();

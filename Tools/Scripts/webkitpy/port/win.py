@@ -125,17 +125,11 @@ class WinPort(ApplePort):
             'SYSTEMROOT',
             'TEMP',
             'TMP',
-            'WEBKIT_LIBRARIES',
         ]
         for variable in variables_to_copy:
             self._copy_value_from_environ_if_set(env, variable)
         if 'WEBKIT_TESTFONTS' not in env:
             env['WEBKIT_TESTFONTS'] = self.path_from_webkit_base('Tools', 'WebKitTestRunner', 'fonts')
-        if 'WEBKIT_LIBRARIES' in env:
-            lib = self._filesystem.join(env['WEBKIT_LIBRARIES'], 'bin')
-        else:
-            lib = self.path_from_webkit_base('WebKitLibraries', 'win', 'bin')
-        env['PATH'] = lib + ';' + env['PATH']
         env['PYTHONUTF8'] = '1'
         env['XML_CATALOG_FILES'] = ''  # work around missing /etc/catalog <rdar://problem/4292995>
         return env

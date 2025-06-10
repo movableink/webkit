@@ -118,7 +118,7 @@ private:
 
     void doneWithKeyEvent(const NativeWebKeyboardEvent&, bool) override;
 #if ENABLE(TOUCH_EVENTS)
-    void doneWithTouchEvent(const NativeWebTouchEvent&, bool) override;
+    void doneWithTouchEvent(const WebTouchEvent&, bool) override;
 #endif
     void wheelEventWasNotHandledByWebCore(const NativeWebWheelEvent&) override;
 
@@ -177,6 +177,8 @@ private:
     void requestDOMPasteAccess(WebCore::DOMPasteAccessCategory, WebCore::DOMPasteRequiresInteraction, const WebCore::IntRect&, const String&, CompletionHandler<void(WebCore::DOMPasteAccessResponse)>&&) final;
 
     WebCore::UserInterfaceLayoutDirection userInterfaceLayoutDirection() override;
+
+    bool effectiveAppearanceIsDark() const override;
 
     void didChangeWebPageID() const override;
 

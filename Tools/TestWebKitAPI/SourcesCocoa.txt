@@ -31,6 +31,7 @@ cocoa/DaemonTestUtilities.mm
 cocoa/DragAndDropSimulator.mm
 cocoa/HostWindowManager.mm
 cocoa/ImageAnalysisTestingUtilities.mm
+cocoa/ModelLoadingMessageHandler.mm
 cocoa/NSItemProviderAdditions.mm
 cocoa/PlatformUtilitiesCocoa.mm
 cocoa/TestCocoa.mm
@@ -41,12 +42,17 @@ cocoa/TestNavigationDelegate.mm
 cocoa/TestProtocol.mm
 cocoa/TestResourceLoadDelegate.mm
 cocoa/TestUIDelegate.mm
+cocoa/TestScriptMessageHandler.mm
 cocoa/TestWebExtensionsDelegate.mm
 cocoa/TestWKWebView.mm
 cocoa/TestWKWebViewConfiguration.mm
 cocoa/UISideCompositingScope.mm
 cocoa/UserMediaCaptureUIDelegate.mm
 ios/IOSMouseEventTestHarness.mm
+
+Tests/mac/CustomSwipeViewTests.mm
+
+Tests/WTF/cocoa/URLExtras.mm
 
 Tests/WebKitCocoa/AVFoundationPreference.mm
 Tests/WebKitCocoa/AdaptiveImageGlyph.mm
@@ -140,6 +146,7 @@ Tests/WebKitCocoa/Geolocation.mm
 Tests/WebKitCocoa/GetDisplayMedia.mm
 Tests/WebKitCocoa/GetDisplayMediaWindowAndScreen.mm
 Tests/WebKitCocoa/GetResourceData.mm
+Tests/WebKitCocoa/HistoryDelegate.mm
 Tests/WebKitCocoa/HSTS.mm
 Tests/WebKitCocoa/IDBCheckpointWAL.mm
 Tests/WebKitCocoa/IDBDeleteRecovery.mm
@@ -186,6 +193,7 @@ Tests/WebKitCocoa/MediaType.mm
 Tests/WebKitCocoa/MemoryFootprintThreshold.mm
 Tests/WebKitCocoa/MessagePortProviders.mm
 Tests/WebKitCocoa/ModalAlerts.mm
+Tests/WebKitCocoa/ModelProcess.mm
 Tests/WebKitCocoa/MouseSupportUIDelegate.mm
 Tests/WebKitCocoa/NSAttributedStringWebKitAdditions.mm
 Tests/WebKitCocoa/NSFileManagerExtras.mm
@@ -300,6 +308,7 @@ Tests/WebKitCocoa/WKAttachmentTests.mm
 Tests/WebKitCocoa/WKContentExtensionStore.mm
 Tests/WebKitCocoa/WKContentViewEditingActions.mm
 Tests/WebKitCocoa/WKContentViewTargetForAction.mm
+Tests/WebKitCocoa/WKFragmentDirectiveGeneration.mm
 Tests/WebKitCocoa/WKHTTPCookieStore.mm
 Tests/WebKitCocoa/WKInspectorDelegate.mm
 Tests/WebKitCocoa/WKInspectorExtension.mm
@@ -372,6 +381,7 @@ Tests/WebKitCocoa/WKWebViewThemeColor.mm
 Tests/WebKitCocoa/WKWebViewUnderPageBackgroundColor.mm
 Tests/WebKitCocoa/WKWebsiteDatastore.mm
 Tests/WebKitCocoa/WebContentProcessDidTerminate.mm
+Tests/WebKitCocoa/WebContentRestrictions.mm
 Tests/WebKitCocoa/WebCryptoMasterKey.mm
 Tests/WebKitCocoa/WebLocks.mm
 Tests/WebKitCocoa/WebProcessKillIDBCleanup.mm
@@ -388,3 +398,5 @@ Tests/WebKitCocoa/_WKInputDelegate.mm
 Tests/WebKitCocoa/_WKWebAuthenticationPanel.mm
 Tests/WebKitCocoa/iOSMouseSupport.mm
 Tests/WebKitCocoa/iOSStylusSupport.mm
+
+Tests/WebKitCocoa/UI/VideoPresentationMode.mm

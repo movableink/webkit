@@ -684,7 +684,7 @@ private:
                 case PhantomNewAsyncFunction:
                 case PhantomNewAsyncGeneratorFunction:
                 case PhantomCreateActivation:
-                case PhantomNewRegexp:
+                case PhantomNewRegExp:
                 case GetMyArgumentByVal:
                 case GetMyArgumentByValOutOfBounds:
                 case PutHint:
@@ -908,7 +908,7 @@ private:
                 case PhantomDirectArguments:
                 case PhantomCreateRest:
                 case PhantomClonedArguments:
-                case PhantomNewRegexp:
+                case PhantomNewRegExp:
                 case MovHint:
                 case Upsilon:
                 case ForwardVarargs:
@@ -977,6 +977,10 @@ private:
 
                 case InitializeEntrypointArguments:
                     VALIDATE((node), node->entrypointIndex() < m_graph.m_numberOfEntrypoints);
+                    break;
+
+                case GetButterfly:
+                    VALIDATE((node), !node->child1()->isPhantomAllocation() || node->child1()->op() == PhantomNewArrayWithConstantSize);
                     break;
 
                 default:

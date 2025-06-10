@@ -15,13 +15,13 @@
 jsTestIsAsync = true;
 
 addEventListener("load", async () => {
-    description("This test verifies that an option's label attribute is not used as the corresponding menu item's title in quirks mode.");
+    description("This test verifies that an option's label attribute is used as the corresponding menu item's title in quirks mode.");
 
     shouldBeEqualToString("select.value", "Option 1 Text");
     await UIHelper.activateElement(select);
 
     items = await UIHelper.selectMenuItems();
-    shouldBeTrue("areArraysEqual(items, " + '["Option 1 Text", "", "Option 3 Text"]' + ")");
+    shouldBeTrue("areArraysEqual(items, " + '["Option 1 Text", "Option 2 Label", "Option 3 Label"]' + ")");
 
     await UIHelper.selectFormAccessoryPickerRow(1);
     await UIHelper.waitForContextMenuToHide();

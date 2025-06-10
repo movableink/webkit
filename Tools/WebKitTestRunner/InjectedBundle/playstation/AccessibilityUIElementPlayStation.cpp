@@ -346,6 +346,18 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::helpText() const
     return nullptr;
 }
 
+double AccessibilityUIElement::pageX()
+{
+    notImplemented();
+    return 0;
+}
+
+double AccessibilityUIElement::pageY()
+{
+    notImplemented();
+    return 0;
+}
+
 double AccessibilityUIElement::x()
 {
     notImplemented();
@@ -911,6 +923,12 @@ RefPtr<AccessibilityUIElement> AccessibilityUIElement::accessibilityElementForTe
 }
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::attributedStringForTextMarkerRange(AccessibilityTextMarkerRange*)
+{
+    notImplemented();
+    return nullptr;
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::attributedStringForTextMarkerRangeWithDidSpellCheck(AccessibilityTextMarkerRange*)
 {
     notImplemented();
     return nullptr;

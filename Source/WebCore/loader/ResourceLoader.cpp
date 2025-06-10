@@ -79,7 +79,7 @@
 
 #undef RESOURCELOADER_RELEASE_LOG
 #define PAGE_ID (this->frame() && this->frame()->pageID() ? this->frame()->pageID()->toUInt64() : 0)
-#define FRAME_ID (this->frame() ? this->frame()->frameID().object().toUInt64() : 0)
+#define FRAME_ID (this->frame() ? this->frame()->frameID().toUInt64() : 0)
 #define RESOURCELOADER_RELEASE_LOG(fmt, ...) RELEASE_LOG(Network, "%p - [pageID=%" PRIu64 ", frameID=%" PRIu64 ", frameLoader=%p, resourceID=%" PRIu64 "] ResourceLoader::" fmt, this, PAGE_ID, FRAME_ID, this->frameLoader(), identifier() ? identifier()->toUInt64() : 0, ##__VA_ARGS__)
 #define RESOURCELOADER_RELEASE_LOG_FORWARDABLE(fmt, ...) RELEASE_LOG_FORWARDABLE(Network, fmt, PAGE_ID, FRAME_ID, identifier() ? identifier()->toUInt64() : 0, ##__VA_ARGS__)
 
@@ -213,9 +213,9 @@ void ResourceLoader::init(ResourceRequest&& clientRequest, CompletionHandler<voi
     });
 }
 
-void ResourceLoader::deliverResponseAndData(const ResourceResponse& response, RefPtr<FragmentedSharedBuffer>&& buffer)
+void ResourceLoader::deliverResponseAndData(ResourceResponse&& response, RefPtr<FragmentedSharedBuffer>&& buffer)
 {
-    didReceiveResponse(response, [this, protectedThis = Ref { *this }, buffer = WTFMove(buffer)]() mutable {
+    didReceiveResponse(WTFMove(response), [this, protectedThis = Ref { *this }, buffer = WTFMove(buffer)]() mutable {
         if (reachedTerminalState())
             return;
 
@@ -350,7 +350,7 @@ void ResourceLoader::loadDataURL()
 
         auto dataSize = decodeResult->data.size();
         ResourceResponse dataResponse = ResourceResponse::dataURLResponse(url, decodeResult.value());
-        this->didReceiveResponse(dataResponse, [this, protectedThis = WTFMove(protectedThis), dataSize, data = SharedBuffer::create(WTFMove(decodeResult->data))]() {
+        this->didReceiveResponse(WTFMove(dataResponse), [this, protectedThis = WTFMove(protectedThis), dataSize, data = SharedBuffer::create(WTFMove(decodeResult->data))]() {
             if (!this->reachedTerminalState() && dataSize && m_request.httpMethod() != "HEAD"_s)
                 this->didReceiveBuffer(data, dataSize, DataPayloadWholeResource);
 
@@ -443,7 +443,7 @@ void ResourceLoader::willSendRequestInternal(ResourceRequest&& request, const Re
             auto results = page->protectedUserContentProvider()->processContentRuleListsForLoad(*page, request.url(), m_resourceType, *documentLoader, redirectResponse.url());
             bool blockedLoad = results.summary.blockedLoad;
             ContentExtensions::applyResultsToRequest(WTFMove(results), page.get(), request);
-            if (blockedLoad) {
+            if (blockedLoad && !results.summary.redirectedPriorToBlock) {
                 RESOURCELOADER_RELEASE_LOG("willSendRequestInternal: resource load canceled because of content blocker");
                 didFail(blockedByContentBlockerError());
                 completionHandler({ });
@@ -593,7 +593,7 @@ void ResourceLoader::didBlockAuthenticationChallenge()
         frame->protectedDocument()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, makeString("Blocked "_s, m_request.url().stringCenterEllipsizedToLength(), " from asking for credentials because it is a cross-origin request."_s));
 }
 
-void ResourceLoader::didReceiveResponse(const ResourceResponse& r, CompletionHandler<void()>&& policyCompletionHandler)
+void ResourceLoader::didReceiveResponse(ResourceResponse&& r, CompletionHandler<void()>&& policyCompletionHandler)
 {
     ASSERT(!m_reachedTerminalState);
     CompletionHandlerCallingScope completionHandlerCaller(WTFMove(policyCompletionHandler));
@@ -624,7 +624,7 @@ void ResourceLoader::didReceiveResponse(const ResourceResponse& r, CompletionHan
 
     logResourceResponseSource(frame.get(), r.source());
 
-    m_response = r;
+    m_response = WTFMove(r);
 
     RefPtr frameLoader = this->frameLoader();
     if (frameLoader && m_options.sendLoadCallbacks == SendCallbackPolicy::SendCallbacks && m_identifier)
@@ -823,7 +823,7 @@ void ResourceLoader::didReceiveResponseAsync(ResourceHandle*, ResourceResponse&&
         completionHandler();
         return;
     }
-    didReceiveResponse(response, WTFMove(completionHandler));
+    didReceiveResponse(WTFMove(response), WTFMove(completionHandler));
 }
 
 void ResourceLoader::didReceiveData(ResourceHandle*, const SharedBuffer& buffer, int encodedDataLength)
@@ -890,7 +890,7 @@ bool ResourceLoader::shouldIncludeCertificateInfo() const
 {
     if (m_options.certificateInfoPolicy == CertificateInfoPolicy::IncludeCertificateInfo)
         return true;
-    if (UNLIKELY(InspectorInstrumentation::hasFrontends()))
+    if (InspectorInstrumentation::hasFrontends()) [[unlikely]]
         return true;
     return false;
 }

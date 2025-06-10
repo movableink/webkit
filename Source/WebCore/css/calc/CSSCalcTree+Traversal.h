@@ -129,7 +129,7 @@ template<typename F, typename Op> void forAllChildNodes(const Op& root, const F&
         void operator()(const CQ::ContainerProgressProviding*)
         {
         }
-        void operator()(const Random::CachingOptions&)
+        void operator()(const Random::Sharing&)
         {
         }
     };

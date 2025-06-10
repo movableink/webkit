@@ -68,6 +68,7 @@ public:
     bool isInactiveStyleOriginatedTimeline() const { return m_isInactiveStyleOriginatedTimeline; }
 
     AnimationTimeline::ShouldUpdateAnimationsAndSendEvents documentWillUpdateAnimationsAndSendEvents() override;
+    void updateCurrentTimeIfStale();
 
     AnimationTimelinesController* controller() const override;
 
@@ -99,7 +100,7 @@ protected:
 
     static ScrollableArea* scrollableAreaForSourceRenderer(const RenderElement*, Document&);
 
-    std::optional<ResolvedScrollDirection> resolvedScrollDirection() const;
+    ResolvedScrollDirection resolvedScrollDirection() const;
 
 private:
     explicit ScrollTimeline();

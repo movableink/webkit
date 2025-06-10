@@ -27,6 +27,7 @@
 #include "ImageBufferShareableBitmapBackend.h"
 
 #include <WebCore/GraphicsContext.h>
+#include <WebCore/NativeImage.h>
 #include <WebCore/PixelBuffer.h>
 #include <WebCore/ShareableBitmap.h>
 #include <wtf/StdLibExtras.h>
@@ -157,7 +158,7 @@ void ImageBufferShareableBitmapBackend::getPixelBuffer(const IntRect& srcRect, P
     ImageBufferBackend::getPixelBuffer(srcRect, m_bitmap->span(), destination);
 }
 
-void ImageBufferShareableBitmapBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
+void ImageBufferShareableBitmapBackend::putPixelBuffer(const PixelBufferSourceView& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
 {
     ImageBufferBackend::putPixelBuffer(pixelBuffer, srcRect, destPoint, destFormat, m_bitmap->mutableSpan());
 }

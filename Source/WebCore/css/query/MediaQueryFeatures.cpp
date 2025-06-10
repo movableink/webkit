@@ -325,6 +325,8 @@ static const IdentifierSchema& anyHoverFeatureSchema()
         FixedVector { CSSValueNone, CSSValueHover },
         OptionSet<MediaQueryDynamicDependency>(),
         [](auto& context) {
+            if (context.document->quirks().shouldSupportHoverMediaQueries())
+                return MatchingIdentifiers { CSSValueHover };
             RefPtr page = context.document->frame()->page();
             bool isSupported = page && page->chrome().client().hoverSupportedByAnyAvailablePointingDevice();
             return MatchingIdentifiers { isSupported ? CSSValueHover : CSSValueNone };
@@ -535,6 +537,8 @@ static const IdentifierSchema& hoverFeatureSchema()
         FixedVector { CSSValueNone, CSSValueHover },
         OptionSet<MediaQueryDynamicDependency>(),
         [](auto& context) {
+            if (context.document->quirks().shouldSupportHoverMediaQueries())
+                return MatchingIdentifiers { CSSValueHover };
             RefPtr page = context.document->frame()->page();
             bool isSupported =  page && page->chrome().client().hoverSupportedByPrimaryPointingDevice();
             return MatchingIdentifiers { isSupported ? CSSValueHover : CSSValueNone };

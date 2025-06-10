@@ -15,3 +15,4 @@ None
 ------------------------------------------------------------------------
 List of files:
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/resources/RTCCertificate-postMessage-iframe.html
+/LayoutTests/imported/w3c/web-platform-tests/webrtc/resources/webrtc-test-helpers.sub.js

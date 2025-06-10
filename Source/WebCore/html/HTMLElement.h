@@ -22,15 +22,8 @@
 
 #pragma once
 
-#include "ColorTypes.h"
-#include "Document.h"
 #include "HTMLNames.h"
-#include "InputMode.h"
 #include "StyledElement.h"
-
-#if ENABLE(AUTOCAPITALIZE)
-#include "Autocapitalize.h"
-#endif
 
 namespace WebCore {
 
@@ -41,12 +34,17 @@ class HTMLButtonElement;
 class HTMLFormElement;
 class VisibleSelection;
 
+struct SRGBADescriptor;
+template<typename, typename> struct BoundedGammaEncoded;
+template<typename T> using SRGBA = BoundedGammaEncoded<T, SRGBADescriptor>;
+
 struct SimpleRange;
 struct TextRecognitionResult;
 
+enum class AutocapitalizeType : uint8_t;
 enum class EnterKeyHint : uint8_t;
+enum class InputMode : uint8_t;
 enum class PageIsEditable : bool;
-enum class PopoverVisibilityState : bool;
 enum class ToggleState : bool;
 
 #if PLATFORM(IOS_FAMILY)
@@ -55,11 +53,6 @@ enum class SelectionRenderingBehavior : bool;
 
 enum class FireEvents : bool { No, Yes };
 enum class FocusPreviousElement : bool { No, Yes };
-enum class PopoverState : uint8_t {
-    None,
-    Auto,
-    Manual,
-};
 
 class HTMLElement : public StyledElement {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLElement);
@@ -144,6 +137,9 @@ public:
     String enterKeyHint() const;
     void setEnterKeyHint(const AtomString& value);
 
+    std::optional<Variant<bool, double, String>> hidden() const;
+    void setHidden(const std::optional<Variant<bool, double, String>>&);
+
     WEBCORE_EXPORT static bool shouldExtendSelectionToTargetNode(const Node& targetNode, const VisibleSelection& selectionBeforeUpdate);
 
     WEBCORE_EXPORT ExceptionOr<Ref<ElementInternals>> attachInternals();
@@ -161,11 +157,10 @@ public:
     ExceptionOr<void> showPopoverInternal(HTMLElement* = nullptr);
     ExceptionOr<void> hidePopover();
     ExceptionOr<void> hidePopoverInternal(FocusPreviousElement, FireEvents);
-    ExceptionOr<bool> togglePopover(std::optional<std::variant<WebCore::HTMLElement::TogglePopoverOptions, bool>>);
+    ExceptionOr<bool> togglePopover(std::optional<Variant<WebCore::HTMLElement::TogglePopoverOptions, bool>>);
 
-    PopoverState popoverState() const;
     const AtomString& popover() const;
-    void setPopover(const AtomString& value) { setAttributeWithoutSynchronization(HTMLNames::popoverAttr, value); };
+    void setPopover(const AtomString& value);
     void popoverAttributeChanged(const AtomString& value);
 
     bool isValidCommandType(const CommandType) override;

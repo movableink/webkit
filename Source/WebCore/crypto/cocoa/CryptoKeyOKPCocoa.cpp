@@ -27,6 +27,7 @@
 #include "CryptoKeyOKP.h"
 
 #include "CommonCryptoDERUtilities.h"
+#include "ExceptionOr.h"
 #include "JsonWebKey.h"
 #include "Logging.h"
 #include <wtf/StdLibExtras.h>

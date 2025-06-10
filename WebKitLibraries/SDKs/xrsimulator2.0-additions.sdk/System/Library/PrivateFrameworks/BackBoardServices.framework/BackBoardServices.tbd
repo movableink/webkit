@@ -13,6 +13,6 @@ exports:
 tbd-version: 4
 targets: [x86_64-xros-simulator, arm64-xros-simulator]
 install-name: /System/Library/PrivateFrameworks/AssertionServices.framework/AssertionServices
-current-version: 945
+current-version: 961.100.17
 exports: []
 ...

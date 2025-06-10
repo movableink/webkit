@@ -116,10 +116,17 @@ SmallStrings::~SmallStrings() = default;
 
 Ref<AtomStringImpl> SmallStrings::singleCharacterStringRep(unsigned char character)
 {
-    if (LIKELY(m_isInitialized))
+    if (m_isInitialized) [[likely]]
         return *static_cast<AtomStringImpl*>(const_cast<StringImpl*>(m_singleCharacterStrings[character]->tryGetValueImpl()));
     std::array<const LChar, 1> string = { static_cast<LChar>(character) };
     return AtomStringImpl::add(string).releaseNonNull();
+}
+
+AtomStringImpl* SmallStrings::existingSingleCharacterStringRep(unsigned char character)
+{
+    if (!m_isInitialized) [[unlikely]]
+        return nullptr;
+    return static_cast<AtomStringImpl*>(const_cast<StringImpl*>(m_singleCharacterStrings[character]->tryGetValueImpl()));
 }
 
 void SmallStrings::initialize(VM* vm, JSString*& string, ASCIILiteral value)

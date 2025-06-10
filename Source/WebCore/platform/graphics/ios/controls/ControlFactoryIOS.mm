@@ -35,9 +35,9 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ControlFactoryIOS);
 
-RefPtr<ControlFactory> ControlFactory::create()
+Ref<ControlFactory> ControlFactory::create()
 {
-    return adoptRef(new ControlFactoryIOS());
+    return adoptRef(*new ControlFactoryIOS());
 }
 
 std::unique_ptr<PlatformControl> ControlFactoryIOS::createPlatformButton(ButtonPart&)

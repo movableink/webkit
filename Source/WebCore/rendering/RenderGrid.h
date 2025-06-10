@@ -30,8 +30,14 @@
 #include "Grid.h"
 #include "GridMasonryLayout.h"
 #include "GridTrackSizingAlgorithm.h"
+#include "LayoutRange.h"
 #include "RenderBlock.h"
 #include <wtf/TZoneMalloc.h>
+
+namespace WTF {
+template<typename T>
+class Range;
+}
 
 namespace WebCore {
 
@@ -88,9 +94,9 @@ public:
     std::optional<LayoutUnit> explicitIntrinsicInnerLogicalSize(GridTrackSizingDirection) const;
     void updateGridAreaLogicalSize(RenderBox&, std::optional<LayoutUnit> width, std::optional<LayoutUnit> height) const;
     bool isBaselineAlignmentForGridItem(const RenderBox&) const;
-    bool isBaselineAlignmentForGridItem(const RenderBox& gridItem, GridAxis, AllowedBaseLine = AllowedBaseLine::BothLines) const;
+    bool isBaselineAlignmentForGridItem(const RenderBox& gridItem, GridTrackSizingDirection alignmentContext) const;
 
-    StyleSelfAlignmentData selfAlignmentForGridItem(GridAxis, const RenderBox&, const RenderStyle* = nullptr) const;
+    StyleSelfAlignmentData selfAlignmentForGridItem(GridTrackSizingDirection alignmentContext, const RenderBox&, const RenderStyle* = nullptr) const;
 
     StyleContentAlignmentData contentAlignment(GridTrackSizingDirection) const;
 
@@ -139,17 +145,22 @@ public:
     LayoutUnit gridGap(GridTrackSizingDirection, std::optional<LayoutUnit> availableSize) const;
 
     LayoutUnit masonryContentSize() const;
-    Vector<LayoutRect> gridItemsLayoutRects();
 
     void updateIntrinsicLogicalHeightsForRowSizingFirstPassCacheAvailability();
     std::optional<GridItemSizeCache>& intrinsicLogicalHeightsForRowSizingFirstPass() const;
 
     bool shouldCheckExplicitIntrinsicInnerLogicalSize(GridTrackSizingDirection) const;
 
+    // Checks both the grid container and the grid since the grid container is sized
+    // according to the rules of the formatting context it lives in while the size of the
+    // grid is determined by the lines/grid areas which come from track sizing.
+    bool isExtrinsicallySized() const;
+
 private:
     friend class GridTrackSizingAlgorithm;
     friend class GridTrackSizingAlgorithmStrategy;
     friend class GridMasonryLayout;
+    friend class PositionedLayoutConstraints;
 
     void computeLayoutRequirementsForItemsBeforeLayout(GridLayoutState&) const;
     bool canSetColumnAxisStretchRequirementForItem(const RenderBox&) const;
@@ -163,8 +174,8 @@ private:
     ASCIILiteral renderName() const override;
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
 
-    bool selfAlignmentChangedToStretch(GridAxis, const RenderStyle& oldStyle, const RenderStyle& newStyle, const RenderBox&) const;
-    bool selfAlignmentChangedFromStretch(GridAxis, const RenderStyle& oldStyle, const RenderStyle& newStyle, const RenderBox&) const;
+    bool selfAlignmentChangedToStretch(GridTrackSizingDirection alignmentContext, const RenderStyle& oldStyle, const RenderStyle& newStyle, const RenderBox&) const;
+    bool selfAlignmentChangedFromStretch(GridTrackSizingDirection alignmentContext, const RenderStyle& oldStyle, const RenderStyle& newStyle, const RenderBox&) const;
 
     SubgridDidChange subgridDidChange(const RenderStyle& oldStyle) const;
     bool explicitGridDidResize(const RenderStyle&) const;
@@ -175,6 +186,7 @@ private:
 
     unsigned clampAutoRepeatTracks(GridTrackSizingDirection, unsigned autoRepeatTracks) const;
 
+    WTF::Range<size_t> autoRepeatTracksRange(GridTrackSizingDirection) const;
     std::unique_ptr<OrderedTrackIndexSet> computeEmptyTracksForAutoRepeat(GridTrackSizingDirection) const;
 
     enum class ShouldUpdateGridAreaLogicalSize : bool { No, Yes };
@@ -183,6 +195,7 @@ private:
     void placeItemsOnGrid(std::optional<LayoutUnit> availableLogicalWidth);
     void populateExplicitGridAndOrderIterator();
     GridArea createEmptyGridAreaAtSpecifiedPositionsOutsideGrid(const RenderBox&, GridTrackSizingDirection, const GridSpan&) const;
+    bool isPlacedWithinExtrinsicallySizedExplicitTracks(const RenderBox&) const;
     void placeSpecifiedMajorAxisItemsOnGrid(const Vector<RenderBox*>&);
     void placeAutoMajorAxisItemsOnGrid(const Vector<RenderBox*>&);
     void placeItemUsingMasonryPositioning(Grid&, RenderBox*) const;
@@ -200,7 +213,7 @@ private:
     bool canPerformSimplifiedLayout() const final;
     void prepareGridItemForPositionedLayout(RenderBox&);
     bool hasStaticPositionForGridItem(const RenderBox&, GridTrackSizingDirection) const;
-    void layoutPositionedObject(RenderBox&, RelayoutChildren, bool fixedPositionObjectsOnly) override;
+    void layoutOutOfFlowBox(RenderBox&, RelayoutChildren, bool fixedPositionObjectsOnly) override;
 
     void computeTrackSizesForDefiniteSize(GridTrackSizingDirection, LayoutUnit availableSpace, GridLayoutState&);
     void computeTrackSizesForIndefiniteSize(GridTrackSizingAlgorithm&, GridTrackSizingDirection, GridLayoutState&, LayoutUnit* minIntrinsicSize = nullptr, LayoutUnit* maxIntrinsicSize = nullptr) const;
@@ -217,6 +230,8 @@ private:
 
     LayoutUnit gridAreaBreadthForOutOfFlowGridItem(const RenderBox&, GridTrackSizingDirection);
     LayoutUnit logicalOffsetForOutOfFlowGridItem(const RenderBox&, GridTrackSizingDirection, LayoutUnit) const;
+    std::optional<LayoutRange> gridAreaRowRangeForOutOfFlow(const RenderBox& gridItem) const;
+    std::optional<LayoutRange> gridAreaColumnRangeForOutOfFlow(const RenderBox& gridItem) const;
     std::pair<LayoutUnit, LayoutUnit> gridAreaPositionForOutOfFlowGridItem(const RenderBox&, GridTrackSizingDirection) const;
     std::pair<LayoutUnit, LayoutUnit> gridAreaPositionForInFlowGridItem(const RenderBox&, GridTrackSizingDirection) const;
     std::pair<LayoutUnit, LayoutUnit> gridAreaPositionForGridItem(const RenderBox&, GridTrackSizingDirection) const;
@@ -278,6 +293,7 @@ private:
 
     AutoRepeatType autoRepeatColumnsType() const;
     AutoRepeatType autoRepeatRowsType() const;
+    AutoRepeatType autoRepeatType(GridTrackSizingDirection direction) const { return direction == GridTrackSizingDirection::ForColumns ? autoRepeatColumnsType() : autoRepeatRowsType(); }
 
     bool canCreateIntrinsicLogicalHeightsForRowSizingFirstPassCache() const;
 
@@ -300,12 +316,11 @@ private:
 
     mutable GridMasonryLayout m_masonryLayout;
 
-    using OutOfFlowPositionsMap = UncheckedKeyHashMap<SingleThreadWeakRef<const RenderBox>, std::optional<size_t>>;
+    using OutOfFlowPositionsMap = SingleThreadWeakHashMap<const RenderBox, std::optional<size_t>>;
     OutOfFlowPositionsMap m_outOfFlowItemColumn;
     OutOfFlowPositionsMap m_outOfFlowItemRow;
 
     bool m_baselineItemsCached {false};
-    bool m_hasAnyBaselineAlignmentItem { false };
 
     mutable std::optional<GridItemSizeCache> m_intrinsicLogicalHeightsForRowSizingFirstPass;
 };

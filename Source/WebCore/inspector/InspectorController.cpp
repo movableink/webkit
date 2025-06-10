@@ -35,6 +35,7 @@
 #include "CommandLineAPIHost.h"
 #include "CommonVM.h"
 #include "DOMWrapperWorld.h"
+#include "EventTargetInlines.h"
 #include "GraphicsContext.h"
 #include "InspectorAnimationAgent.h"
 #include "InspectorCPUProfilerAgent.h"
@@ -511,7 +512,7 @@ void InspectorController::frontendInitialized()
 
 #if ENABLE(REMOTE_INSPECTOR)
     if (m_isAutomaticInspection)
-        m_page->inspectorDebuggable().unpauseForInitializedInspector();
+        m_page->inspectorDebuggable().unpauseForResolvedAutomaticInspection();
 #endif
 }
 

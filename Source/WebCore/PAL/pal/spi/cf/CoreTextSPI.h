@@ -25,6 +25,8 @@
 
 #pragma once
 
+DECLARE_SYSTEM_HEADER
+
 #include <CoreText/CoreText.h>
 #include <pal/spi/cg/CoreGraphicsSPI.h>
 
@@ -239,6 +241,14 @@ CTFontRef CTFontCreateForCharacters(CTFontRef currentFont, const UTF16Char *char
 CGFloat CTFontGetSbixImageSizeForGlyphAndContentsScale(CTFontRef, const CGGlyph, CGFloat contentsScale);
 
 CTFontDescriptorOptions CTFontDescriptorGetOptions(CTFontDescriptorRef);
+
+#if HAVE(CTFONT_COPYCOLORGLYPHCOVERAGE)
+CFBitVectorRef CTFontCopyColorGlyphCoverage(CTFontRef);
+#endif
+
+#if HAVE(CTFONTMANAGER_CREATEMEMORYSAFEFONTDESCRIPTORFROMDATA)
+CTFontDescriptorRef CTFontManagerCreateMemorySafeFontDescriptorFromData(CFDataRef);
+#endif
 
 typedef const struct __FPFont* FPFontRef;
 CFArrayRef FPFontCreateFontsFromData(CFDataRef);

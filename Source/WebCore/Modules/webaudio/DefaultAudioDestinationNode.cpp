@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
- * Copyright (C) 2020-2021, Apple Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,8 @@
 #include "AudioWorklet.h"
 #include "AudioWorkletMessagingProxy.h"
 #include "Document.h"
+#include "Exception.h"
+#include "ExceptionOr.h"
 #include "Logging.h"
 #include "MediaStrategy.h"
 #include "PlatformStrategies.h"
@@ -260,16 +262,16 @@ MediaTime DefaultAudioDestinationNode::outputLatency() const
     return m_destination ? m_destination->outputLatency() : MediaTime::zeroTime();
 }
 
-void DefaultAudioDestinationNode::render(AudioBus*, AudioBus* destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
+void DefaultAudioDestinationNode::render(AudioBus& destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
 {
     renderQuantum(destinationBus, numberOfFrames, outputPosition);
 
-    setIsSilent(destinationBus->isSilent());
+    setIsSilent(destinationBus.isSilent());
 
     // The reason we are handling mute after the call to setIsSilent() is because the muted state does
     // not affect the audio destination node's effective playing state.
     if (m_muted)
-        destinationBus->zero();
+        destinationBus.zero();
 }
 
 void DefaultAudioDestinationNode::setIsSilent(bool isSilent)

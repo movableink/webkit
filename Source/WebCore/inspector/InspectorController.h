@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -138,12 +138,12 @@ private:
     void createLazyAgents();
 
     WeakRef<Page> m_page;
-    Ref<InstrumentingAgents> m_instrumentingAgents;
+    const Ref<InstrumentingAgents> m_instrumentingAgents;
     std::unique_ptr<WebInjectedScriptManager> m_injectedScriptManager;
-    Ref<Inspector::FrontendRouter> m_frontendRouter;
-    Ref<Inspector::BackendDispatcher> m_backendDispatcher;
+    const Ref<Inspector::FrontendRouter> m_frontendRouter;
+    const Ref<Inspector::BackendDispatcher> m_backendDispatcher;
     const UniqueRef<InspectorOverlay> m_overlay;
-    Ref<WTF::Stopwatch> m_executionStopwatch;
+    const Ref<WTF::Stopwatch> m_executionStopwatch;
     std::unique_ptr<PageDebugger> m_debugger;
     Inspector::AgentRegistry m_agents;
 

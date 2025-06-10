@@ -28,7 +28,9 @@
 #import "WKFoundation.h"
 
 #import <type_traits>
+#import <wtf/Forward.h>
 #import <wtf/ObjCRuntimeExtras.h>
+#import <wtf/Ref.h>
 #import <wtf/RefPtr.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>

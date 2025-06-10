@@ -29,6 +29,7 @@
 #import "APIContentWorld.h"
 #import "APISerializedScriptValue.h"
 #import "InjectUserScriptImmediately.h"
+#import "JavaScriptEvaluationResult.h"
 #import "WKContentRuleListInternal.h"
 #import "WKContentWorldInternal.h"
 #import "WKFrameInfoInternal.h"
@@ -153,7 +154,7 @@ public:
             if (!webView)
                 return;
             RetainPtr<WKFrameInfo> frameInfo = wrapper(API::FrameInfo::create(WTFMove(frameInfoData), &page));
-            auto message = adoptNS([[WKScriptMessage alloc] _initWithBody:jsMessage.toID().get() webView:webView.get() frameInfo:frameInfo.get() name:m_name.get() world:wrapper(world)]);
+            RetainPtr message = adoptNS([[WKScriptMessage alloc] _initWithBody:jsMessage.toID().get() webView:webView.get() frameInfo:frameInfo.get() name:m_name.get() world:wrapper(world)]);
             [(id<WKScriptMessageHandler>)m_handler.get() userContentController:m_controller.get() didReceiveScriptMessage:message.get()];
         }
     }
@@ -178,7 +179,7 @@ public:
 
         @autoreleasepool {
             RetainPtr<WKFrameInfo> frameInfo = wrapper(API::FrameInfo::create(WTFMove(frameInfoData), &page));
-            auto message = adoptNS([[WKScriptMessage alloc] _initWithBody:jsMessage.toID().get() webView:webView.get() frameInfo:frameInfo.get() name:m_name.get() world:wrapper(world)]);
+            RetainPtr message = adoptNS([[WKScriptMessage alloc] _initWithBody:jsMessage.toID().get() webView:webView.get() frameInfo:frameInfo.get() name:m_name.get() world:wrapper(world)]);
 
             [(id<WKScriptMessageHandlerWithReply>)m_handler.get() userContentController:m_controller.get() didReceiveScriptMessage:message.get() replyHandler:^(id result, NSString *errorMessage) {
                 if (!handler)
@@ -205,7 +206,7 @@ private:
 - (void)_addScriptMessageHandler:(WebKit::WebScriptMessageHandler&)scriptMessageHandler
 {
     if (!_userContentControllerProxy->addUserScriptMessageHandler(scriptMessageHandler))
-        [NSException raise:NSInvalidArgumentException format:@"Attempt to add script message handler with name '%@' when one already exists.", (NSString *)scriptMessageHandler.name()];
+        [NSException raise:NSInvalidArgumentException format:@"Attempt to add script message handler with name '%@' when one already exists.", scriptMessageHandler.name().createNSString().get()];
 }
 
 - (void)addScriptMessageHandler:(id <WKScriptMessageHandler>)scriptMessageHandler name:(NSString *)name

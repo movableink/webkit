@@ -27,6 +27,8 @@
 
 #if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
+#include "ExceptionCode.h"
+#include "ExceptionOr.h"
 #include "LibWebRTCMacros.h"
 #include "LibWebRTCProvider.h"
 #include "LibWebRTCUtils.h"

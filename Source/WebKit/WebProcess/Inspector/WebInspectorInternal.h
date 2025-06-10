@@ -102,12 +102,12 @@ private:
 
     void bringToFront();
 
-    void whenFrontendConnectionEstablished(Function<void()>&&);
+    void whenFrontendConnectionEstablished(Function<void(IPC::Connection&)>&&);
 
     WeakPtr<WebPage> m_page;
 
     RefPtr<IPC::Connection> m_frontendConnection;
-    Vector<Function<void()>> m_frontendConnectionActions;
+    Vector<Function<void(IPC::Connection&)>> m_frontendConnectionActions;
 
     bool m_attached { false };
     bool m_previousCanAttach { false };

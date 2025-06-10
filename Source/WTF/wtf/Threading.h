@@ -209,6 +209,8 @@ public:
     WTF_EXPORT_PRIVATE static void setCurrentThreadIsUserInteractive(int relativePriority = 0);
     WTF_EXPORT_PRIVATE static void setCurrentThreadIsUserInitiated(int relativePriority = 0);
     WTF_EXPORT_PRIVATE static QOS currentThreadQOS();
+    WTF_EXPORT_PRIVATE static bool currentThreadIsRealtime();
+    bool isRealtime() const { return m_isRealtime; }
 
 #if HAVE(QOS_CLASSES)
     WTF_EXPORT_PRIVATE static void setGlobalMaxQOSClass(qos_class_t);
@@ -379,6 +381,8 @@ protected:
     bool m_isJSThread : 1 { false };
     unsigned m_gcThreadType : 2 { static_cast<unsigned>(GCThreadType::None) };
 
+    bool m_isRealtime : 1 { false };
+
     // Lock & ParkingLot rely on ThreadSpecific. But Thread object can be destroyed even after ThreadSpecific things are destroyed.
     // Use WordLock since WordLock does not depend on ThreadSpecific and this "Thread".
     WordLock m_mutex;
@@ -436,10 +440,10 @@ inline Thread& Thread::currentSingleton()
     //    Thread::initializeTLSKey() is initially called from initialize(), ensuring
     //    this is initially called in a std::call_once locked context.
 #if !HAVE(FAST_TLS) && !OS(WINDOWS)
-    if (UNLIKELY(Thread::s_key == InvalidThreadSpecificKey))
+    if (Thread::s_key == InvalidThreadSpecificKey) [[unlikely]]
         WTF::initialize();
 #endif
-    if (SUPPRESS_UNCOUNTED_LOCAL auto* thread = currentMayBeNull(); LIKELY(thread))
+    if (SUPPRESS_UNCOUNTED_LOCAL auto* thread = currentMayBeNull(); thread) [[likely]]
         return *thread;
     return initializeCurrentTLS();
 }

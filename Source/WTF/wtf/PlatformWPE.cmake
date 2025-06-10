@@ -18,7 +18,9 @@ list(APPEND WTF_SOURCES
     linux/RealTimeThreads.cpp
 
     posix/CPUTimePOSIX.cpp
+    posix/FileHandlePOSIX.cpp
     posix/FileSystemPOSIX.cpp
+    posix/MappedFileDataPOSIX.cpp
     posix/OSAllocatorPOSIX.cpp
     posix/ThreadingPOSIX.cpp
 

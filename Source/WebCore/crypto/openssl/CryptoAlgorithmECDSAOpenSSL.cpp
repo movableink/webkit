@@ -28,6 +28,7 @@
 
 #include "CryptoAlgorithmEcdsaParams.h"
 #include "CryptoKeyEC.h"
+#include "ExceptionOr.h"
 #include "OpenSSLUtilities.h"
 
 namespace WebCore {

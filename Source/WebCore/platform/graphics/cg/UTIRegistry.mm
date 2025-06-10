@@ -32,27 +32,21 @@
 #import "UTIUtilities.h"
 #import <ImageIO/ImageIO.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
-#import <pal/cocoa/LockdownModeSoftLink.h>
 #import <wtf/HashSet.h>
 #import <wtf/NeverDestroyed.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/RobinHoodHashSet.h>
+#import <wtf/text/MakeString.h>
 
 #if PLATFORM(IOS_FAMILY)
 #import <MobileCoreServices/MobileCoreServices.h>
 #endif
 
-namespace WebCore {
-
 #if HAVE(LOCKDOWN_MODE_FRAMEWORK)
-static bool isLockdownModeEnabled()
-{
-    static std::optional<bool> isLockdownModeEnabled;
-    if (!isLockdownModeEnabled)
-        isLockdownModeEnabled = PAL::isLockdownModeEnabled();
-    return *isLockdownModeEnabled;
-}
+#import <pal/cocoa/LockdownModeCocoa.h>
 #endif
+
+namespace WebCore {
 
 template<std::size_t size>
 static MemoryCompactLookupOnlyRobinHoodHashSet<String> filterSupportedImageTypes(const std::array<ASCIILiteral, size>& imageTypes)
@@ -136,7 +130,7 @@ static const MemoryCompactLookupOnlyRobinHoodHashSet<String>& lockdownSupportedI
 const MemoryCompactLookupOnlyRobinHoodHashSet<String>& supportedImageTypes()
 {
 #if HAVE(LOCKDOWN_MODE_FRAMEWORK)
-    if (isLockdownModeEnabled())
+    if (PAL::isLockdownModeEnabledForCurrentProcess())
         return lockdownSupportedImageTypes();
 #endif
     return defaultSupportedImageTypes();
@@ -151,7 +145,7 @@ MemoryCompactRobinHoodHashSet<String>& additionalSupportedImageTypes()
 void setAdditionalSupportedImageTypes(const Vector<String>& imageTypes)
 {
 #if HAVE(LOCKDOWN_MODE_FRAMEWORK)
-    if (isLockdownModeEnabled())
+    if (PAL::isLockdownModeEnabledForCurrentProcess())
         return;
 #endif
     MIMETypeRegistry::additionalSupportedImageMIMETypes().clear();
@@ -186,21 +180,7 @@ String MIMETypeForImageType(const String& uti)
 
 String preferredExtensionForImageType(const String& uti)
 {
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    String oldExtension = adoptCF(UTTypeCopyPreferredTagWithClass(uti.createCFString().get(), kUTTagClassFilenameExtension)).get();
-    ALLOW_DEPRECATED_DECLARATIONS_END
-
-    auto *type = [UTType typeWithIdentifier:uti];
-    String extension = type.preferredFilenameExtension;
-    if (UNLIKELY(oldExtension != extension)) {
-        std::array<uint64_t, 6> values { 0, 0, 0, 0, 0, 0 };
-        auto utiInfo = makeString(uti, '~', oldExtension, '~', extension);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        strncpy(reinterpret_cast<char*>(values.data()), utiInfo.utf8().data(), sizeof(values));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-        CRASH_WITH_INFO(values[0], values[1], values[2], values[3], values[4], values[5]);
-    }
-    return extension;
+    return [[UTType typeWithIdentifier:uti.createNSString().get()] preferredFilenameExtension];
 }
 
 static Vector<String> allowableDefaultSupportedImageTypes()
@@ -228,7 +208,7 @@ static Vector<String> allowableLockdownSupportedImageTypes()
 static Vector<String> allowableSupportedImageTypes()
 {
 #if HAVE(LOCKDOWN_MODE_FRAMEWORK)
-    if (isLockdownModeEnabled())
+    if (PAL::isLockdownModeEnabledForCurrentProcess())
         return allowableLockdownSupportedImageTypes();
 #endif
     return allowableDefaultSupportedImageTypes();

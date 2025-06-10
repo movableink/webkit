@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, Google Inc. All rights reserved.
+ * Copyright (c) 2009 Google Inc. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,10 +31,14 @@
 #include "config.h"
 #include "LegacyRenderSVGModelObject.h"
 
+#include "ContainerNodeInlines.h"
 #include "LegacyRenderSVGResource.h"
+#include "NodeInlines.h"
 #include "NotImplemented.h"
+#include "RenderElementInlines.h"
 #include "RenderLayer.h"
 #include "RenderLayerModelObject.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "SVGElementInlines.h"
 #include "SVGNames.h"
@@ -79,16 +83,16 @@ void LegacyRenderSVGModelObject::mapLocalToContainer(const RenderLayerModelObjec
     SVGRenderSupport::mapLocalToContainer(*this, ancestorContainer, transformState, wasFixed);
 }
 
-const RenderObject* LegacyRenderSVGModelObject::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
+const RenderElement* LegacyRenderSVGModelObject::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
 {
     return SVGRenderSupport::pushMappingToContainer(*this, ancestorToStopAt, geometryMap);
 }
 
-static void adjustRectForOutlineAndShadow(const RenderObject& renderer, LayoutRect& rect)
+static void adjustRectForOutlineAndShadow(const LegacyRenderSVGModelObject& renderer, LayoutRect& rect)
 {
     auto shadowRect = rect;
-    if (auto* boxShadow = renderer.style().boxShadow())
-        boxShadow->adjustRectForShadow(shadowRect);
+    if (auto& boxShadow = renderer.style().boxShadow(); !boxShadow.isEmpty())
+        Style::adjustRectForShadow(shadowRect, boxShadow);
 
     auto outlineRect = rect;
     auto outlineSize = LayoutUnit { renderer.outlineStyleForRepaint().outlineSize() };

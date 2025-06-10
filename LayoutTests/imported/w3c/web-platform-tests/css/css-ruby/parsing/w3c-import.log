@@ -14,9 +14,12 @@ Property values requiring vendor prefixes:
 None
 ------------------------------------------------------------------------
 List of files:
+/LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/parsing/WEB_FEATURES.yml
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/parsing/ruby-align-invalid.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/parsing/ruby-align-valid.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/parsing/ruby-merge-invalid.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/parsing/ruby-merge-valid.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/parsing/ruby-overhang-invalid.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/parsing/ruby-overhang-valid.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/parsing/ruby-position-invalid.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/parsing/ruby-position-valid.html

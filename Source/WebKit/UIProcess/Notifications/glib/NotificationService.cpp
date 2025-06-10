@@ -28,6 +28,7 @@
 
 #include "WebNotification.h"
 #include <WebCore/Image.h>
+#include <WebCore/NativeImage.h>
 #include <WebCore/NotificationResources.h>
 #include <gio/gio.h>
 #include <glib/gi18n-lib.h>

@@ -27,7 +27,6 @@
 #include "EventInit.h"
 #include "EventInterfaces.h"
 #include "EventOptions.h"
-#include "ExceptionOr.h"
 #include "ScriptWrappable.h"
 #include <wtf/MonotonicTime.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
@@ -37,6 +36,10 @@
 
 namespace WTF {
 class TextStream;
+}
+
+namespace JSC {
+class JSGlobalObject;
 }
 
 namespace WebCore {
@@ -95,7 +98,7 @@ public:
     MonotonicTime timeStamp() const { return m_createTime; }
 
     void setEventPath(const EventPath&);
-    Vector<Ref<EventTarget>> composedPath() const;
+    Vector<Ref<EventTarget>> composedPath(JSC::JSGlobalObject&) const;
 
     void stopPropagation() { m_propagationStopped = true; }
     void stopImmediatePropagation() { m_immediatePropagationStopped = true; }

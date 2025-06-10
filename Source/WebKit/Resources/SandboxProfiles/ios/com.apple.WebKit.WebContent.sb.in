@@ -40,11 +40,6 @@
 (deny file-read-metadata
     (literal "/private/var/db/MobileIdentityData/Version.plist"))
 
-;;;
-;;; The following rules were originally contained in 'common.sb'. We are duplicating them here so we can
-;;; remove unneeded sandbox extensions.
-;;;
-
 (define-once (framebuffer-access)
     (deny iokit-open-user-client (with telemetry-backtrace)
         (iokit-user-client-class "IOMobileFramebufferUserClient"))
@@ -194,12 +189,8 @@
     )
 
     (allow sysctl-read (sysctl-name "kern.bootsessionuuid"))
-#if HAVE(SANDBOX_STATE_FLAGS)
     (with-filter (require-not (webcontent-process-launched))
         (allow sysctl-read (sysctl-name "kern.boottime")))
-#else
-    (allow sysctl-read (sysctl-name "kern.boottime"))
-#endif
 
     (mobile-preferences-read
         "com.apple.Metal" ;; <rdar://problem/25535471>
@@ -433,17 +424,23 @@
         (extension-class "com.apple.app-sandbox.read-write" "com.apple.app-sandbox.read")
         (extension "com.apple.fileprovider.read-write")))
 
-#if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
-#if !ENABLE(REMOVE_XPC_AND_MACH_SANDBOX_EXTENSIONS_IN_WEBCONTENT)
-(with-filter (require-not (lockdown-mode))
-    (allow mach-lookup (global-name
+(define (log-services)
+    (global-name
         "com.apple.logd"
-        "com.apple.logd.events")))
-#endif
+        "com.apple.logd.events"))
+
+#if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
+#if ENABLE(REMOVE_XPC_AND_MACH_SANDBOX_EXTENSIONS_IN_WEBCONTENT)
+(with-filter (logd-blocking)
+    (deny mach-lookup (with no-report) (log-services)))
+(with-filter (require-not (logd-blocking))
+    (allow mach-lookup (log-services)))
 #else
-(allow mach-lookup (global-name
-    "com.apple.logd"
-    "com.apple.logd.events"))
+(with-filter (require-not (lockdown-mode))
+    (allow mach-lookup (log-services)))
+#endif // ENABLE(REMOVE_XPC_AND_MACH_SANDBOX_EXTENSIONS_IN_WEBCONTENT)
+#else
+(allow mach-lookup (log-services))
 #endif
 
 (deny mach-lookup (with no-report)
@@ -490,7 +487,8 @@
             (allow mach-message-send (notifyd-message-numbers)))))
 
 #if ENABLE(NOTIFY_BLOCKING)
-(deny mach-lookup (global-name "com.apple.system.notification_center"))
+(with-filter (require-not (notify-blocking))
+    (allow-notifyd))
 #else
 (allow-notifyd)
 #endif
@@ -517,18 +515,9 @@
 (allow process-info-dirtycontrol (target self))
 (allow process-info-rusage (target self))
 
-;;;
-;;; End common.sb content
-;;;
-
 (deny mach-lookup (xpc-service-name-prefix ""))
 (deny iokit-get-properties)
 (deny lsopen)
-
-;;;
-;;; The following rules were originally contained in 'UIKit-apps.sb'. We are duplicating them here so we can
-;;; remove unneeded sandbox extensions.
-;;;
 
 ;; Any app can play audio & movies.
 (play-media)
@@ -613,10 +602,6 @@
 ;; <rdar://problem/34986314>
 (mobile-preferences-read "com.apple.indigo")
 
-;;;
-;;; End UIKit-apps.sb content
-;;;
-
 (mobile-preferences-read "com.apple.AdLib.plist")
 
 (deny file-read* (with no-report)
@@ -686,12 +671,8 @@
 (deny sysctl-read (with no-report)
     (sysctl-name "vm.task_no_footprint_for_debug"))
 
-#if HAVE(SANDBOX_STATE_FLAGS)
 (with-filter (require-not (webcontent-process-launched))
     (allow sysctl-read (sysctl-name "vm.malloc_ranges"))) ;; <rdar://problem/105161083>
-#else
-(allow sysctl-read (sysctl-name "vm.malloc_ranges")) ;; <rdar://problem/105161083>
-#endif
 
 (allow iokit-get-properties
     (iokit-property "AAPL,DisplayPipe")
@@ -830,7 +811,7 @@
 (deny mach-lookup
     (global-name "com.apple.mobilegestalt.xpc"))
 
-(with-filter (require-not (state-flag "BlockMobileGestaltInWebContentSandbox"))
+(with-filter (require-not (sandbox-version-2))
     (allow mach-lookup (with telemetry)
         (require-all
             (require-not (webcontent-process-launched))
@@ -862,7 +843,7 @@
 
 #if ENABLE(WEBCONTENT_GPU_SANDBOX_EXTENSIONS_BLOCKING)
 (deny iokit-open-service (with no-report))
-#elif HAVE(SANDBOX_STATE_FLAGS)
+#else
 (with-filter (state-flag "BlockIOKitInWebContentSandbox")
     (deny iokit-open-service)
     (deny iokit-open-user-client (with telemetry-backtrace)
@@ -879,18 +860,19 @@
             (xpc-service-name "com.apple.MTLCompilerService"))))
 #endif
 
+(log-streaming)
+
 (with-filter (system-attribute apple-internal)
     (allow mach-lookup
-        (global-name "com.apple.diagnosticd")
         (global-name "com.apple.osanalytics.osanalyticshelper")))
 
-(with-filter (require-not (state-flag "BlockMobileAssetInWebContentSandbox"))
+(with-filter (require-not (sandbox-version-2))
     (allow mach-lookup
         (require-all
             (extension "com.apple.webkit.extension.mach")
             (global-name "com.apple.mobileassetd.v2"))))
 
-(with-filter (require-not (state-flag "BlockWebInspectorInWebContentSandbox"))
+(with-filter (require-not (sandbox-version-2))
     (allow mach-lookup
         (require-all
             (extension "com.apple.webkit.extension.mach")
@@ -902,31 +884,6 @@
     (require-all
         (require-not (extension "com.apple.webkit.extension.mach"))
         (global-name "com.apple.audio.AudioComponentRegistrar")))
-
-#if HAVE(AGX_COMPILER_SERVICE)
-(allow iokit-open-user-client
-    (require-all
-        (extension "com.apple.webkit.extension.iokit")
-        (iokit-user-client-class
-            "AGXCommandQueue"
-            "AGXDevice"
-            "AGXSharedUserClient"
-            "IOAccelContext"
-            "IOAccelDevice"
-            "IOAccelSharedUserClient"
-            "IOAccelSubmitter2"
-            "IOAccelContext2"
-            "IOAccelDevice2"
-            "IOAccelSharedUserClient2"
-        )
-    )
-)
-
-(allow mach-lookup
-    (require-all
-        (extension "com.apple.webkit.extension.mach")
-        (xpc-service-name-prefix "com.apple.AGXCompilerService")))
-#endif // HAVE(AGX_COMPILER_SERVICE)
 
 ;; These services have been identified as unused during living-on.
 ;; This list overrides some definitions above and in common.sb.
@@ -1094,12 +1051,8 @@
     (syscall-unix-in-use-after-launch)
     (syscall-unix-in-use-after-launch-blocked-in-lockdown-mode))
 
-#if HAVE(SANDBOX_STATE_FLAGS)
 (with-filter (require-not (webcontent-process-launched))
     (allow syscall-unix (syscall-unix-only-in-use-during-launch)))
-#else
-(allow syscall-unix (syscall-unix-only-in-use-during-launch))
-#endif
 
 (allow syscall-unix
     (syscall-unix-rarely-in-use)
@@ -1209,14 +1162,6 @@
 (define-once (mach-bootstrap-message-numbers-post-launch)
     (message-number 206 207 711 712 800 804 904))
 
-(define (allow-mach-bootstrap-with-filter)
-    (allow mach-bootstrap
-        (apply-message-filter
-            (deny mach-message-send (with telemetry))
-            (allow mach-message-send
-                (mach-bootstrap-message-numbers)))))
-
-#if HAVE(SANDBOX_STATE_FLAGS)
 (allow mach-bootstrap
     (apply-message-filter
         (deny mach-message-send (with no-report))
@@ -1228,9 +1173,6 @@
 #endif
         (with-filter (require-not (webcontent-process-launched))
             (allow mach-message-send (mach-bootstrap-message-numbers)))))
-#else
-(allow-mach-bootstrap-with-filter)
-#endif
 
 (define (syscall-mach-only-in-use-during-launch)
     (machtrap-number
@@ -1293,7 +1235,6 @@
 (when (defined? 'MSC_mach_msg2_trap)
     (allow syscall-mach (machtrap-number MSC_mach_msg2_trap)))
 
-#if HAVE(SANDBOX_STATE_FLAGS)
 (with-filter (require-not (webcontent-process-launched))
     (allow syscall-mach
         (syscall-mach-only-in-use-during-launch)))
@@ -1302,7 +1243,6 @@
         (with telemetry)
         (with message "Mach syscall used after launch")
         (syscall-mach-only-in-use-during-launch)))
-#endif
 
 (with-filter (lockdown-mode)
     (deny syscall-mach (with telemetry) (with message "Lockdown mode")
@@ -1324,7 +1264,6 @@
         host_info
         io_server_version
         (when (defined? 'mach_vm_range_create) mach_vm_range_create) ;; <rdar://105161083>
-        mach_voucher_attr_command
         task_restartable_ranges_register
         task_set_special_port))
 
@@ -1344,6 +1283,7 @@
         mach_vm_copy
         mach_vm_map_external
         mach_vm_remap_external
+        mach_voucher_attr_command
         semaphore_create
         semaphore_destroy
         task_create_identity_token
@@ -1410,7 +1350,6 @@
     (kernel-mig-routine-in-use-watchos))
 #endif
 
-#if HAVE(SANDBOX_STATE_FLAGS)
 (with-filter (require-not (webcontent-process-launched))
     (allow syscall-mig
         (kernel-mig-routine-only-in-use-during-launch)))
@@ -1424,7 +1363,6 @@
 #else
 (with-filter (require-not (state-flag "BlockIOKitInWebContentSandbox"))
     (allow syscall-mig (kernel-mig-routines-iokit-service)))
-#endif
 #endif
 
 #if HAVE(HARDENED_MACH_EXCEPTIONS)

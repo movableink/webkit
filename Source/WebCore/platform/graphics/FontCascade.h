@@ -140,6 +140,7 @@ public:
     WEBCORE_EXPORT bool operator==(const FontCascade& other) const;
 
     const FontCascadeDescription& fontDescription() const { return m_fontDescription; }
+    FontCascadeDescription& mutableFontDescription() const { return m_fontDescription; }
 
     float size() const { return fontDescription().computedSize(); }
 
@@ -157,13 +158,15 @@ public:
 
     float widthOfTextRange(const TextRun&, unsigned from, unsigned to, SingleThreadWeakHashSet<const Font>* fallbackFonts = nullptr, float* outWidthBeforeRange = nullptr, float* outWidthAfterRange = nullptr) const;
     WEBCORE_EXPORT float width(const TextRun&, SingleThreadWeakHashSet<const Font>* fallbackFonts = nullptr, GlyphOverflow* = nullptr) const;
+    WEBCORE_EXPORT float width(StringView) const;
     float widthForTextUsingSimplifiedMeasuring(StringView text, TextDirection = TextDirection::LTR) const;
     WEBCORE_EXPORT float widthForSimpleTextWithFixedPitch(StringView text, bool whitespaceIsCollapsed) const;
+    float widthForCharacterInRun(const TextRun&, unsigned) const;
 
     std::unique_ptr<TextLayout, TextLayoutDeleter> createLayout(RenderText&, float xPos, bool collapseWhiteSpace) const;
     float widthOfSpaceString() const
     {
-        return width(TextRun { StringView(WTF::span(space)) });
+        return width(StringView(WTF::span(space)));
     }
 
     int offsetForPosition(const TextRun&, float position, bool includePartialGlyphs) const;
@@ -241,9 +244,9 @@ public:
 
     bool primaryFontIsSystemFont() const;
 
-    static float syntheticObliqueAngle() { return 14; }
+    static constexpr float syntheticObliqueAngle() { return 14; }
 
-    std::unique_ptr<DisplayList::DisplayList> displayListForTextRun(GraphicsContext&, const TextRun&, unsigned from = 0, std::optional<unsigned> to = { }, CustomFontNotReadyAction = CustomFontNotReadyAction::DoNotPaintIfFontNotReady) const;
+    RefPtr<const DisplayList::DisplayList> displayListForTextRun(GraphicsContext&, const TextRun&, unsigned from = 0, std::optional<unsigned> to = { }, CustomFontNotReadyAction = CustomFontNotReadyAction::DoNotPaintIfFontNotReady) const;
 
 #if PLATFORM(QT)
     QRawFont rawFont() const;
@@ -268,9 +271,9 @@ private:
     std::optional<GlyphData> getEmphasisMarkGlyphData(const AtomString&) const;
     const Font* fontForEmphasisMark(const AtomString&) const;
 
-    static bool canReturnFallbackFontsForComplexText();
-    static bool canExpandAroundIdeographsInComplexText();
-    
+    static constexpr bool canReturnFallbackFontsForComplexText();
+    static constexpr bool canExpandAroundIdeographsInComplexText();
+
 #if PLATFORM(QT)
     void drawComplexText(GraphicsContext&, const TextRun&, const FloatPoint&, int from, int to) const;
 #endif
@@ -356,7 +359,13 @@ public:
 
     static ResolvedEmojiPolicy resolveEmojiPolicy(FontVariantEmoji, char32_t);
 
+    void updateUseBackslashAsYenSymbol() { m_useBackslashAsYenSymbol = computeUseBackslashAsYenSymbol(); }
+    void updateEnableKerning() { m_enableKerning = computeEnableKerning(); }
+    void updateRequiresShaping() { m_requiresShaping = computeRequiresShaping(); }
+
 private:
+
+    bool computeUseBackslashAsYenSymbol() const;
 
     bool advancedTextRenderingMode() const
     {

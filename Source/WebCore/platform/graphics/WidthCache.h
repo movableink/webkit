@@ -75,7 +75,6 @@ private:
         bool isHashTableEmptyValue() const { return !m_hashAndLength; }
 
         friend bool operator==(const SmallStringKey&, const SmallStringKey&) = default;
-        friend bool operator!=(const SmallStringKey&, const SmallStringKey&) = default;
 
     private:
         static constexpr unsigned s_capacity = 16;
@@ -121,7 +120,7 @@ public:
         unsigned length = text.length();
 
         // Do not allow length = 0. This allows SmallStringKey empty-value-is-zero.
-        if (UNLIKELY(!length))
+        if (!length) [[unlikely]]
             return nullptr;
 
         if (length > SmallStringKey::capacity())

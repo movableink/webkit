@@ -23,6 +23,7 @@
 #if USE(GSTREAMER_WEBRTC)
 
 #include "CryptoAlgorithmAESCTR.h"
+#include "ExceptionOr.h"
 #include "OpenSSLCryptoUniquePtr.h"
 #include "SFrameUtils.h"
 #include <openssl/aes.h>

@@ -127,9 +127,11 @@ Ref<CommandEncoder> Device::createCommandEncoder(const WGPUCommandEncoderDescrip
     if (!commandBuffer)
         return CommandEncoder::createInvalid(*this);
 
-    commandBuffer.label = fromAPI(descriptor.label);
+    commandBuffer.label = fromAPI(descriptor.label).createNSString().get();
 
-    return CommandEncoder::create(commandBuffer, *this, m_commandEncoderId++);
+    auto commandEncoder = CommandEncoder::create(commandBuffer, *this, m_commandEncoderId++);
+    m_commandEncoderMap.set(commandEncoder->uniqueId(), commandEncoder.ptr());
+    return commandEncoder;
 }
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(CommandEncoder);
@@ -143,10 +145,34 @@ CommandEncoder::CommandEncoder(id<MTLCommandBuffer> commandBuffer, Device& devic
     m_managedTextures = [NSMutableSet set];
     m_managedBuffers = [NSMutableSet set];
 #endif
-    m_retainedBuffers = [NSMutableSet set];
-    m_retainedTextures = [NSMutableSet set];
-    m_retainedICBs = [NSMutableSet set];
+    if (device.isShaderValidationEnabled()) {
+        m_retainedBuffers = [NSMutableSet set];
+        m_retainedTextures = [NSMutableSet set];
+        m_retainedICBs = [NSMutableSet set];
+    }
     m_retainedTimestampBuffers = [NSMutableSet set];
+
+    addOnCommitHandler([](CommandBuffer& commandBuffer, CommandEncoder& commandEncoder) {
+        for (auto& [bufferIdentifier, skippedDrawIndexedValidationKeys] : commandEncoder.m_skippedDrawIndexedValidationKeys) {
+            RefPtr apiBuffer = commandBuffer.device().lookupBuffer(bufferIdentifier);
+            if (!apiBuffer)
+                continue;
+            apiBuffer->removeSkippedValidationCommandEncoder(commandEncoder.uniqueId());
+            if (apiBuffer->mustTakeSlowIndexValidationPath()) {
+                for (DrawIndexCacheContainerValue& key : skippedDrawIndexedValidationKeys) {
+                    apiBuffer->takeSlowIndexValidationPath(commandBuffer, key.firstIndex, key.indexCount, key.vertexCount, key.instanceCount, key.indexType(), key.firstInstance, key.baseVertex, key.minInstanceCount, key.primitiveOffset());
+                    commandBuffer.addPostCommitHandler([bufferIdentifier, device = Ref { commandBuffer.device() }](id<MTLCommandBuffer>) {
+                        if (RefPtr apiBuffer = device->lookupBuffer(bufferIdentifier))
+                            apiBuffer->clearMustTakeSlowIndexValidationPath();
+                    });
+                }
+            }
+        }
+        for (RefPtr group : commandEncoder.m_bindGroups)
+            group->rebindSamplersIfNeeded();
+
+        return true;
+    });
 }
 
 CommandEncoder::CommandEncoder(Device& device)
@@ -166,6 +192,7 @@ CommandEncoder::~CommandEncoder()
     m_device->protectedQueue()->removeMTLCommandBuffer(m_commandBuffer);
     retainTimestampsForOneUpdateLoop();
     m_commandBuffer = nil; // Do not remove, this is needed to workaround rdar://143905417
+    m_device->removeCommandEncoder(m_uniqueId);
 }
 
 id<MTLBlitCommandEncoder> CommandEncoder::ensureBlitCommandEncoder()
@@ -280,7 +307,7 @@ Ref<ComputePassEncoder> CommandEncoder::beginComputePass(const WGPUComputePassDe
 
     id<MTLComputeCommandEncoder> computeCommandEncoder = [m_commandBuffer computeCommandEncoderWithDescriptor:computePassDescriptor];
     setExistingEncoder(computeCommandEncoder);
-    computeCommandEncoder.label = fromAPI(descriptor.label);
+    computeCommandEncoder.label = fromAPI(descriptor.label).createNSString().get();
 
     return ComputePassEncoder::create(computeCommandEncoder, descriptor, *this, m_device);
 }
@@ -302,7 +329,7 @@ void CommandEncoder::discardCommandBuffer()
     }
 
     id<MTLCommandEncoder> existingEncoder = m_device->protectedQueue()->encoderForBuffer(m_commandBuffer);
-    auto queue = m_device->protectedQueue();
+    Ref queue = m_device->getQueue();
     queue->endEncoding(existingEncoder, m_commandBuffer);
     queue->removeMTLCommandBuffer(m_commandBuffer);
     retainTimestampsForOneUpdateLoop();
@@ -311,7 +338,7 @@ void CommandEncoder::discardCommandBuffer()
 
 void CommandEncoder::endEncoding(id<MTLCommandEncoder> encoder)
 {
-    auto queue = m_device->protectedQueue();
+    Ref queue = m_device->getQueue();
     id<MTLCommandEncoder> existingEncoder = queue->encoderForBuffer(m_commandBuffer);
     if (existingEncoder != encoder) {
         queue->endEncoding(existingEncoder, m_commandBuffer);
@@ -552,10 +579,8 @@ Ref<RenderPassEncoder> CommandEncoder::beginRenderPass(const WGPURenderPassDescr
         if (!attachment.view)
             continue;
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         // MTLRenderPassColorAttachmentDescriptorArray is bounds-checked internally.
         const auto& mtlAttachment = mtlDescriptor.colorAttachments[i];
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
         mtlAttachment.clearColor = MTLClearColorMake(attachment.clearValue.r,
             attachment.clearValue.g,
@@ -883,11 +908,6 @@ NSString* CommandEncoder::errorValidatingImageCopyBuffer(const WGPUImageCopyBuff
     Ref buffer = fromAPI(imageCopyBuffer.buffer);
     if (!isValidToUseWith(buffer, *this))
         return @"buffer is not valid";
-
-    if (!buffer->isDestroyed()) {
-        if (buffer->state() != Buffer::State::Unmapped)
-            return @"buffer state != Unmapped";
-    }
 
     if (imageCopyBuffer.layout.bytesPerRow != WGPU_COPY_STRIDE_UNDEFINED && (imageCopyBuffer.layout.bytesPerRow % 256))
         return @"imageCopyBuffer.layout.bytesPerRow is not a multiple of 256";
@@ -1393,8 +1413,7 @@ bool CommandEncoder::waitForCommandBufferCompletion()
 
 bool CommandEncoder::encoderIsCurrent(id<MTLCommandEncoder> commandEncoder) const
 {
-    id<MTLCommandEncoder> existingEncoder = m_device->protectedQueue()->encoderForBuffer(m_commandBuffer);
-    return existingEncoder == commandEncoder;
+    return m_device->isValid() && m_existingCommandEncoder == commandEncoder;
 }
 
 void CommandEncoder::makeInvalid(NSString* errorString)
@@ -2074,7 +2093,7 @@ Ref<CommandBuffer> CommandEncoder::finish(const WGPUCommandBufferDescriptor& des
     m_commandBuffer = nil;
     m_existingCommandEncoder = nil;
 
-    commandBuffer.label = fromAPI(descriptor.label);
+    commandBuffer.label = fromAPI(descriptor.label).createNSString().get();
 
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
     if (m_managedBuffers.count || m_managedTextures.count) {
@@ -2110,7 +2129,7 @@ void CommandEncoder::insertDebugMarker(String&& markerLabel)
     finalizeBlitCommandEncoder();
 
     // There's no direct way of doing this, so we just push/pop an empty debug group.
-    [m_commandBuffer pushDebugGroup:markerLabel];
+    [m_commandBuffer pushDebugGroup:markerLabel.createNSString().get()];
     [m_commandBuffer popDebugGroup];
 }
 
@@ -2154,7 +2173,7 @@ void CommandEncoder::pushDebugGroup(String&& groupLabel)
     finalizeBlitCommandEncoder();
 
     ++m_debugGroupStackSize;
-    [m_commandBuffer pushDebugGroup:groupLabel];
+    [m_commandBuffer pushDebugGroup:groupLabel.createNSString().get()];
 }
 
 #if !ENABLE(WEBGPU_SWIFT)
@@ -2254,7 +2273,7 @@ void CommandEncoder::writeTimestamp(QuerySet& querySet, uint32_t queryIndex)
 
 void CommandEncoder::setLabel(String&& label)
 {
-    m_commandBuffer.label = label;
+    m_commandBuffer.label = label.createNSString().get();
 }
 
 void CommandEncoder::lock(bool shouldLock)
@@ -2267,18 +2286,55 @@ void CommandEncoder::lock(bool shouldLock)
         setExistingEncoder(nil);
 }
 
-void CommandEncoder::trackEncoder(CommandEncoder& commandEncoder, WeakHashSet<CommandEncoder>& encoderHashSet)
+size_t CommandEncoder::computeSize(Vector<uint64_t>& container, const Device& device)
 {
-    encoderHashSet.add(commandEncoder);
+    container.removeAllMatching([&](auto commandEncoder) {
+        return !device.commandEncoderFromIdentifier(commandEncoder);
+    });
+    return container.size();
 }
 
-void CommandEncoder::addOnCommitHandler(Function<bool(CommandBuffer&)>&& onCommitHandler)
+void CommandEncoder::trackEncoder(CommandEncoder& commandEncoder, Vector<uint64_t>& encoderContainer)
+{
+    encoderContainer.append(commandEncoder.uniqueId());
+}
+
+void CommandEncoder::trackEncoder(CommandEncoder& commandEncoder, HashSet<uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>>& encoderContainer)
+{
+    encoderContainer.add(commandEncoder.uniqueId());
+}
+
+void CommandEncoder::addOnCommitHandler(Function<bool(CommandBuffer&, CommandEncoder&)>&& onCommitHandler)
 {
     ASSERT(m_commandBuffer);
     m_onCommitHandlers.append(WTFMove(onCommitHandler));
 }
 
+#if ENABLE(WEBGPU_BY_DEFAULT)
+bool CommandEncoder::useResidencySet(id<MTLResidencySet> residencySet)
+{
+    if (residencySet && m_currentResidencySetCount < 32) {
+        [m_commandBuffer useResidencySet:residencySet];
+        [residencySet requestResidency];
+        ++m_currentResidencySetCount;
+        return true;
+    }
+
+    return false;
+}
+#endif
+
 #undef GENERATE_INVALID_ENCODER_STATE_ERROR
+
+void CommandEncoder::skippedDrawIndexedValidation(uint64_t bufferIdentifier, DrawIndexCacheContainerIterator it)
+{
+    m_skippedDrawIndexedValidationKeys.add(bufferIdentifier, Vector<DrawIndexCacheContainerValue> { }).iterator->value.append(DrawIndexCacheContainerValue(it->key));
+}
+
+void CommandEncoder::rebindSamplersPreCommit(const BindGroup* group)
+{
+    m_bindGroups.append(group);
+}
 
 } // namespace WebGPU
 

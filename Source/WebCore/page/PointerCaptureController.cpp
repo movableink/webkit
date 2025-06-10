@@ -31,12 +31,14 @@
 #include "Element.h"
 #include "EventHandler.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "EventTarget.h"
 #include "HitTestResult.h"
 #include "MouseEventTypes.h"
 #include "Page.h"
 #include "PointerEvent.h"
 #include "Quirks.h"
+#include <algorithm>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -182,7 +184,7 @@ void PointerCaptureController::reset()
 
 void PointerCaptureController::updateHaveAnyCapturingElement()
 {
-    m_haveAnyCapturingElement = WTF::anyOf(m_activePointerIdsToCapturingData.values(), [&](auto& capturingData) {
+    m_haveAnyCapturingElement = std::ranges::any_of(m_activePointerIdsToCapturingData.values(), [&](auto& capturingData) {
         return capturingData->hasAnyElement();
     });
 }

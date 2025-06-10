@@ -36,6 +36,7 @@
 #include "IntRect.h"
 #include "IntSize.h"
 #include "Logging.h"
+#include "NativeImage.h"
 #include "NotImplemented.h"
 #include <algorithm>
 #include <cstring>
@@ -158,6 +159,17 @@ bool GraphicsContextGLANGLE::initialize()
     }
 
     GL_ClearColor(0, 0, 0, 0);
+
+    // Compute initial platform-independent max internal framebuffer size.
+    GCGLint maxTextureSize;
+    GCGLint maxRenderbufferSize;
+    std::array<GCGLint, 2> maxViewportDims { 0, 0 };
+    GL_GetIntegerv(GraphicsContextGL::MAX_TEXTURE_SIZE, &maxTextureSize);
+    GL_GetIntegerv(GraphicsContextGL::MAX_RENDERBUFFER_SIZE, &maxRenderbufferSize);
+    GL_GetIntegerv(GraphicsContextGL::MAX_VIEWPORT_DIMS, maxViewportDims.data());
+    m_maxInternalFramebufferSize = { maxViewportDims[0], maxViewportDims[1] };
+    m_maxInternalFramebufferSize.clampToMinimumSize({ maxTextureSize, maxTextureSize });
+    m_maxInternalFramebufferSize.clampToMinimumSize({ maxRenderbufferSize, maxRenderbufferSize });
 
     if (!platformInitialize())
         return false;
@@ -548,7 +560,7 @@ void GraphicsContextGLANGLE::readPixels(IntRect rect, GCGLenum format, GCGLenum 
         return;
     ScopedBufferBinding scopedPixelPackBufferReset(GL_PIXEL_PACK_BUFFER, 0, m_isForWebGL2);
     setPackParameters(alignment, rowLength, reverseRowOrder);
-    readPixelsImpl(rect, format, type, data.size(), data.data(), false);
+    readPixelsImpl(rect, format, type, data);
 }
 
 std::optional<IntSize> GraphicsContextGLANGLE::readPixelsWithStatus(IntRect rect, GCGLenum format, GCGLenum type, GCGLboolean reverseRowOrder, std::span<uint8_t> data)
@@ -557,7 +569,7 @@ std::optional<IntSize> GraphicsContextGLANGLE::readPixelsWithStatus(IntRect rect
         return std::nullopt;
     ScopedBufferBinding scopedPixelPackBufferReset(GL_PIXEL_PACK_BUFFER, 0, m_isForWebGL2);
     setPackParameters(1, 0, reverseRowOrder); // Used for tight packing read only.
-    return readPixelsImpl(rect, format, type, data.size(), data.data(), false);
+    return readPixelsImpl(rect, format, type, data);
 }
 
 void GraphicsContextGLANGLE::readPixelsBufferObject(IntRect rect, GCGLenum format, GCGLenum type, GCGLintptr offset, GCGLint alignment, GCGLint rowLength)
@@ -565,13 +577,12 @@ void GraphicsContextGLANGLE::readPixelsBufferObject(IntRect rect, GCGLenum forma
     if (!makeContextCurrent())
         return;
     setPackParameters(alignment, rowLength, false);
-    readPixelsImpl(rect, format, type, 0, reinterpret_cast<uint8_t*>(offset), true);
+    std::span<uint8_t> data(reinterpret_cast<uint8_t*>(offset), 0);
+    readPixelsImpl(rect, format, type, data);
 }
 
-std::optional<IntSize> GraphicsContextGLANGLE::readPixelsImpl(IntRect rect, GCGLenum format, GCGLenum type, GCGLsizei bufSize, uint8_t* rawData, bool readingToPixelBufferObject)
+std::optional<IntSize> GraphicsContextGLANGLE::readPixelsImpl(IntRect rect, GCGLenum format, GCGLenum type, std::span<uint8_t> data)
 {
-    auto data = unsafeMakeSpan(rawData, checkedProduct<size_t>(rect.width(), rect.height(), 4));
-
     // FIXME: remove the two glFlush calls when the driver bug is fixed, i.e.,
     // all previous rendering calls should be done before reading pixels.
     GL_Flush();
@@ -585,7 +596,7 @@ std::optional<IntSize> GraphicsContextGLANGLE::readPixelsImpl(IntRect rect, GCGL
     updateErrors();
     GLsizei rows = 0;
     GLsizei columns = 0;
-    GL_ReadnPixelsRobustANGLE(rect.x(), rect.y(), rect.width(), rect.height(), format, type, bufSize, nullptr, &rows, &columns, data.data());
+    GL_ReadnPixelsRobustANGLE(rect.x(), rect.y(), rect.width(), rect.height(), format, type, data.size(), nullptr, &rows, &columns, data.data());
     if (attrs.antialias && m_state.boundReadFBO == m_multisampleFBO)
         GL_BindFramebuffer(framebufferTarget, m_multisampleFBO);
 
@@ -595,10 +606,8 @@ std::optional<IntSize> GraphicsContextGLANGLE::readPixelsImpl(IntRect rect, GCGL
     }
 
 #if PLATFORM(MAC) || PLATFORM(IOS_FAMILY)
-    if (!readingToPixelBufferObject && !attrs.alpha && (format == GraphicsContextGL::RGBA || format == GraphicsContextGL::BGRA) && (type == GraphicsContextGL::UNSIGNED_BYTE) && (m_state.boundReadFBO == m_fbo || (attrs.antialias && m_state.boundReadFBO == m_multisampleFBO)))
+    if (!data.empty() && !attrs.alpha && (format == GraphicsContextGL::RGBA || format == GraphicsContextGL::BGRA) && (type == GraphicsContextGL::UNSIGNED_BYTE) && (m_state.boundReadFBO == m_fbo || (attrs.antialias && m_state.boundReadFBO == m_multisampleFBO)))
         wipeAlphaChannelFromPixels(data);
-#else
-    UNUSED_PARAM(readingToPixelBufferObject);
 #endif
     return IntSize { rows, columns };
 }
@@ -690,6 +699,9 @@ void GraphicsContextGLANGLE::reshape(int width, int height)
 
     ASSERT(width >= 0 && height >= 0);
     if (width < 0 || height < 0)
+        return;
+
+    if (width > m_maxInternalFramebufferSize.width() || height > m_maxInternalFramebufferSize.height())
         return;
 
     if (!makeContextCurrent())
@@ -1050,7 +1062,7 @@ Vector<GCGLint> GraphicsContextGLANGLE::getActiveUniforms(PlatformGLObject progr
     if (!makeContextCurrent())
         return result;
 
-    GL_GetActiveUniformsiv(program, uniformIndices.size(), uniformIndices.data(), pname, result.data());
+    GL_GetActiveUniformsiv(program, uniformIndices.size(), uniformIndices.span().data(), pname, result.mutableSpan().data());
     return result;
 }
 
@@ -1187,7 +1199,11 @@ void GraphicsContextGLANGLE::disable(GCGLenum cap)
 {
     if (!makeContextCurrent())
         return;
-
+    if (cap == PRIMITIVE_RESTART_FIXED_INDEX) {
+        if (m_isForWebGL2)
+            addError(GCGLErrorCode::InvalidOperation);
+        return;
+    }
     GL_Disable(cap);
 }
 
@@ -1221,7 +1237,11 @@ void GraphicsContextGLANGLE::enable(GCGLenum cap)
 {
     if (!makeContextCurrent())
         return;
-
+    if (cap == PRIMITIVE_RESTART_FIXED_INDEX) {
+        if (!m_isForWebGL2)
+            addError(GCGLErrorCode::InvalidOperation);
+        return;
+    }
     GL_Enable(cap);
 }
 
@@ -1297,7 +1317,7 @@ bool GraphicsContextGLANGLE::getActiveAttribImpl(PlatformGLObject program, GCGLu
     GLsizei nameLength = 0;
     GLint size = 0;
     GLenum type = 0;
-    GL_GetActiveAttrib(program, index, maxAttributeSize, &nameLength, &size, &type, name.data());
+    GL_GetActiveAttrib(program, index, maxAttributeSize, &nameLength, &size, &type, name.mutableSpan().data());
     if (!nameLength)
         return false;
 
@@ -1328,7 +1348,7 @@ bool GraphicsContextGLANGLE::getActiveUniformImpl(PlatformGLObject program, GCGL
     GLsizei nameLength = 0;
     GLint size = 0;
     GLenum type = 0;
-    GL_GetActiveUniform(program, index, maxUniformSize, &nameLength, &size, &type, name.data());
+    GL_GetActiveUniform(program, index, maxUniformSize, &nameLength, &size, &type, name.mutableSpan().data());
     if (!nameLength)
         return false;
 
@@ -2002,7 +2022,7 @@ String GraphicsContextGLANGLE::getProgramInfoLog(PlatformGLObject program)
 
     GLsizei size = 0;
     Vector<GLchar> info(length);
-    GL_GetProgramInfoLog(program, length, &size, info.data());
+    GL_GetProgramInfoLog(program, length, &size, info.mutableSpan().data());
     return info.subspan(0, static_cast<unsigned>(size));
 }
 
@@ -2039,7 +2059,7 @@ String GraphicsContextGLANGLE::getShaderInfoLog(PlatformGLObject shader)
 
     GLsizei size = 0;
     Vector<GLchar> info(length);
-    GL_GetShaderInfoLog(shader, length, &size, info.data());
+    GL_GetShaderInfoLog(shader, length, &size, info.mutableSpan().data());
     return info.subspan(0, static_cast<unsigned>(size));
 }
 
@@ -2289,7 +2309,7 @@ String GraphicsContextGLANGLE::getActiveUniformBlockName(PlatformGLObject progra
     }
     Vector<GLchar> buffer(maxLength);
     GLsizei length = 0;
-    GL_GetActiveUniformBlockName(program, uniformBlockIndex, buffer.size(), &length, buffer.data());
+    GL_GetActiveUniformBlockName(program, uniformBlockIndex, buffer.size(), &length, buffer.mutableSpan().data());
     if (!length)
         return String();
     return buffer.subspan(0, length);
@@ -2405,7 +2425,7 @@ void GraphicsContextGLANGLE::transformFeedbackVaryings(PlatformGLObject program,
         return varying.data();
     });
 
-    GL_TransformFeedbackVaryings(program, pointersToVaryings.size(), pointersToVaryings.data(), bufferMode);
+    GL_TransformFeedbackVaryings(program, pointersToVaryings.size(), pointersToVaryings.span().data(), bufferMode);
 }
 
 void GraphicsContextGLANGLE::getTransformFeedbackVarying(PlatformGLObject program, GCGLuint index, GraphicsContextGLActiveInfo& info)
@@ -2423,7 +2443,7 @@ void GraphicsContextGLANGLE::getTransformFeedbackVarying(PlatformGLObject progra
     GCGLenum type = 0;
     Vector<GCGLchar> name(bufSize);
 
-    GL_GetTransformFeedbackVarying(program, index, bufSize, &length, &size, &type, name.data());
+    GL_GetTransformFeedbackVarying(program, index, bufSize, &length, &size, &type, name.mutableSpan().data());
 
     info.name = name.subspan(0, length);
     info.size = size;
@@ -2443,7 +2463,10 @@ void GraphicsContextGLANGLE::blitFramebuffer(GCGLint srcX0, GCGLint srcY0, GCGLi
     if (!makeContextCurrent())
         return;
     prepareForDrawingBufferWriteIfBound();
-    GL_BlitFramebuffer(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter);
+    if (m_isForWebGL2)
+        GL_BlitFramebuffer(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter);
+    else
+        GL_BlitFramebufferNV(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter);
     checkGPUStatus();
 }
 
@@ -2894,7 +2917,7 @@ Vector<GCGLuint> GraphicsContextGLANGLE::getUniformIndices(PlatformGLObject prog
     Vector<CString> utf8 = uniformNames.map([](auto& x) { return x.utf8(); });
     Vector<const char*> cstr = utf8.map([](auto& x) { return x.data(); });
     Vector<GCGLuint> result(cstr.size(), 0);
-    GL_GetUniformIndices(program, cstr.size(), cstr.data(), result.data());
+    GL_GetUniformIndices(program, cstr.size(), cstr.span().data(), result.mutableSpan().data());
     return result;
 }
 
@@ -2919,16 +2942,16 @@ void GraphicsContextGLANGLE::bindExternalImage(GCGLenum, GCGLExternalImage)
 
 void GraphicsContextGLANGLE::deleteExternalImage(GCGLExternalImage image)
 {
-    if (UNLIKELY(!image))
+    if (!image) [[unlikely]]
         return;
     auto eglImage = m_eglImages.take(image);
-    if (UNLIKELY(!eglImage)) {
+    if (!eglImage) [[unlikely]] {
         addError(GCGLErrorCode::InvalidOperation);
         return;
     }
     bool result = EGL_DestroyImageKHR(platformDisplay(), eglImage);
     ASSERT(result);
-    if (UNLIKELY(!result))
+    if (!result) [[unlikely]]
         addError(GCGLErrorCode::InvalidOperation);
 }
 
@@ -2941,16 +2964,16 @@ GCGLExternalSync GraphicsContextGLANGLE::createExternalSync(ExternalSyncSource&&
 
 void GraphicsContextGLANGLE::deleteExternalSync(GCGLExternalSync sync)
 {
-    if (UNLIKELY(!sync))
+    if (!sync) [[unlikely]]
         return;
     EGLSync eglSync = m_eglSyncs.take(sync);
-    if (UNLIKELY(!eglSync)) {
+    if (!eglSync) [[unlikely]] {
         addError(GCGLErrorCode::InvalidOperation);
         return;
     }
     bool result = EGL_DestroySync(platformDisplay(), eglSync);
     ASSERT(result);
-    if (UNLIKELY(!result))
+    if (!result) [[unlikely]]
         addError(GCGLErrorCode::InvalidOperation);
 }
 
@@ -2978,7 +3001,7 @@ void GraphicsContextGLANGLE::multiDrawElementsANGLE(GCGLenum mode, GCGLSpanTuple
         return;
 
     prepareForDrawingBufferWriteIfBound();
-    GL_MultiDrawElementsANGLE(mode, countsAndOffsets.data<0>(), type, asPointers(countsAndOffsets.span<1>()).data(), countsAndOffsets.bufSize);
+    GL_MultiDrawElementsANGLE(mode, countsAndOffsets.data<0>(), type, asPointers(countsAndOffsets.span<1>()).span().data(), countsAndOffsets.bufSize);
     checkGPUStatus();
 }
 
@@ -2988,7 +3011,7 @@ void GraphicsContextGLANGLE::multiDrawElementsInstancedANGLE(GCGLenum mode, GCGL
         return;
 
     prepareForDrawingBufferWriteIfBound();
-    GL_MultiDrawElementsInstancedANGLE(mode, countsOffsetsAndInstanceCounts.data<0>(), type, asPointers(countsOffsetsAndInstanceCounts.span<1>()).data(), countsOffsetsAndInstanceCounts.data<2>(), countsOffsetsAndInstanceCounts.bufSize);
+    GL_MultiDrawElementsInstancedANGLE(mode, countsOffsetsAndInstanceCounts.data<0>(), type, asPointers(countsOffsetsAndInstanceCounts.span<1>()).span().data(), countsOffsetsAndInstanceCounts.data<2>(), countsOffsetsAndInstanceCounts.bufSize);
     checkGPUStatus();
 }
 
@@ -3023,7 +3046,7 @@ String GraphicsContextGLANGLE::getTranslatedShaderSourceANGLE(PlatformGLObject s
         return emptyString();
     Vector<GLchar> name(sourceLength); // GL_TRANSLATED_SHADER_SOURCE_LENGTH_ANGLE includes null termination.
     GCGLint returnedLength = 0;
-    GL_GetTranslatedShaderSourceANGLE(shader, sourceLength, &returnedLength, name.data());
+    GL_GetTranslatedShaderSourceANGLE(shader, sourceLength, &returnedLength, name.mutableSpan().data());
     if (!returnedLength)
         return emptyString();
     // returnedLength does not include the null terminator.
@@ -3218,7 +3241,7 @@ void GraphicsContextGLANGLE::multiDrawElementsInstancedBaseVertexBaseInstanceANG
         return;
 
     prepareForDrawingBufferWriteIfBound();
-    GL_MultiDrawElementsInstancedBaseVertexBaseInstanceANGLE(mode, countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.data<0>(), type, asPointers(countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.span<1>()).data(), countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.data<2>(), countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.data<3>(), countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.data<4>(), countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.bufSize);
+    GL_MultiDrawElementsInstancedBaseVertexBaseInstanceANGLE(mode, countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.data<0>(), type, asPointers(countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.span<1>()).span().data(), countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.data<2>(), countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.data<3>(), countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.data<4>(), countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.bufSize);
     checkGPUStatus();
 }
 

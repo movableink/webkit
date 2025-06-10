@@ -61,8 +61,8 @@ private:
 
     FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
-    const DestinationColorSpace& resultColorSpace(const FilterImageVector&) const override;
-    void transformInputsColorSpace(const FilterImageVector& inputs) const override;
+    const DestinationColorSpace& resultColorSpace(std::span<const Ref<FilterImage>>) const override;
+    void transformInputsColorSpace(std::span<const Ref<FilterImage>> inputs) const override;
 
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 

@@ -36,6 +36,7 @@
 #include "PasteboardWriterData.h"
 #include <wtf/RobinHoodHashSet.h>
 #include "ScrollView.h"
+#include "Text.h"
 #include "TextChecking.h"
 #include "TextEventInputType.h"
 #include "TextIteratorBehavior.h"
@@ -113,6 +114,8 @@ enum class MailBlockquoteHandling : bool {
     IgnoreBlockquote,
 };
 
+enum class AllowTextReplacement : bool { No, Yes };
+
 #if ENABLE(ATTACHMENT_ELEMENT)
 class AttachmentAssociatedElement;
 class HTMLAttachmentElement;
@@ -166,14 +169,10 @@ class IgnoreSelectionChangeForScope {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(IgnoreSelectionChangeForScope, WEBCORE_EXPORT);
     WTF_MAKE_NONCOPYABLE(IgnoreSelectionChangeForScope);
 public:
-    IgnoreSelectionChangeForScope(LocalFrame& frame)
-        : m_selectionChange(*frame.document(), std::nullopt, TemporarySelectionOption::IgnoreSelectionChanges)
-    {
-    }
+    WEBCORE_EXPORT IgnoreSelectionChangeForScope(LocalFrame&);
+    WEBCORE_EXPORT ~IgnoreSelectionChangeForScope();
 
     void invalidate() { m_selectionChange.invalidate(); }
-
-    ~IgnoreSelectionChangeForScope() = default;
 
 private:
     TemporarySelectionChange m_selectionChange;
@@ -363,7 +362,7 @@ public:
     TextCheckingGuesses guessesForMisspelledOrUngrammatical();
     bool isSpellCheckingEnabledInFocusedNode() const;
     bool isSpellCheckingEnabledFor(Node*) const;
-    WEBCORE_EXPORT void markMisspellingsAfterTypingToWord(const VisiblePosition& wordStart, const VisibleSelection& selectionAfterTyping, bool doReplacement);
+    WEBCORE_EXPORT void markMisspellingsAfterTypingToWord(const VisiblePosition& wordStart, const VisibleSelection& selectionAfterTyping, AllowTextReplacement);
     std::optional<SimpleRange> markMisspellings(const VisibleSelection&); // Returns first misspelling range.
     void markBadGrammar(const VisibleSelection&);
     void markMisspellingsAndBadGrammar(const VisibleSelection& spellingSelection, bool markGrammar, const VisibleSelection& grammarSelection);

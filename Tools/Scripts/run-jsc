@@ -61,7 +61,6 @@ if ($debugger) {
 }
 
 if (isWindows()) {
-    setupWindowsWebKitEnvironment();
     print STDERR "Running $count time(s): $jsc\n";
 } else {
     $ENV{"DYLD_FRAMEWORK_PATH"} = $dyld;

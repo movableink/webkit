@@ -25,6 +25,7 @@
 #include "config.h"
 #include "LegacyRenderSVGResource.h"
 
+#include "ContainerNodeInlines.h"
 #include "LegacyRenderSVGResourceClipper.h"
 #include "LegacyRenderSVGResourceFilter.h"
 #include "LegacyRenderSVGResourceMasker.h"
@@ -33,6 +34,8 @@
 #include "LegacyRenderSVGShape.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
+#include "RenderElementInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGRoot.h"
 #include "RenderSVGShape.h"
 #include "RenderView.h"
@@ -123,10 +126,10 @@ static inline LegacyRenderSVGResource* requestPaintingResource(RenderSVGResource
     return uriResource;
 }
 
-void LegacyRenderSVGResource::removeAllClientsFromCache(bool markForInvalidation)
+void LegacyRenderSVGResource::removeAllClientsFromCacheAndMarkForInvalidation(bool markForInvalidation)
 {
     SingleThreadWeakHashSet<RenderObject> visitedRenderers;
-    removeAllClientsFromCacheIfNeeded(markForInvalidation, &visitedRenderers);
+    removeAllClientsFromCacheAndMarkForInvalidationIfNeeded(markForInvalidation, &visitedRenderers);
 }
 
 LegacyRenderSVGResource* LegacyRenderSVGResource::fillPaintingResource(RenderElement& renderer, const RenderStyle& style, Color& fallbackColor)
@@ -151,13 +154,13 @@ static void removeFromCacheAndInvalidateDependencies(RenderElement& renderer, bo
 {
     if (auto* resources = SVGResourcesCache::cachedResourcesForRenderer(renderer)) {
         if (LegacyRenderSVGResourceFilter* filter = resources->filter())
-            filter->removeClientFromCache(renderer);
+            filter->removeClientFromCacheAndMarkForInvalidation(renderer);
 
         if (LegacyRenderSVGResourceMasker* masker = resources->masker())
-            masker->removeClientFromCache(renderer);
+            masker->removeClientFromCacheAndMarkForInvalidation(renderer);
 
         if (LegacyRenderSVGResourceClipper* clipper = resources->clipper())
-            clipper->removeClientFromCache(renderer);
+            clipper->removeClientFromCacheAndMarkForInvalidation(renderer);
     }
 
     auto svgElement = dynamicDowncast<SVGElement>(renderer.protectedElement());
@@ -169,7 +172,7 @@ static void removeFromCacheAndInvalidateDependencies(RenderElement& renderer, bo
             // We allow cycles in SVGDocumentExtensions reference sets in order to avoid expensive
             // reference graph adjustments on changes, so we need to break possible cycles here.
             static NeverDestroyed<WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>> invalidatingDependencies;
-            if (UNLIKELY(!invalidatingDependencies.get().add(element.get()).isNewEntry)) {
+            if (!invalidatingDependencies.get().add(element.get()).isNewEntry) [[unlikely]] {
                 // Reference cycle: we are in process of invalidating this dependant.
                 continue;
             }
@@ -238,7 +241,7 @@ void LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidationIfNeeded
         if (CheckedPtr container = dynamicDowncast<LegacyRenderSVGResourceContainer>(*current)) {
             // This will process the rest of the ancestors.
             bool markForInvalidation = true;
-            container->removeAllClientsFromCacheIfNeeded(markForInvalidation, visitedRenderers);
+            container->removeAllClientsFromCacheAndMarkForInvalidationIfNeeded(markForInvalidation, visitedRenderers);
             break;
         }
 

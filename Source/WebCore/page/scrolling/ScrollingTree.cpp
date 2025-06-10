@@ -271,18 +271,16 @@ OptionSet<EventListenerRegionType> ScrollingTree::eventListenerRegionTypesForPoi
 }
 #endif
 
-void ScrollingTree::traverseScrollingTree(VisitorFunction&& visitorFunction)
+void ScrollingTree::traverseScrollingTree(NOESCAPE const VisitorFunction& visitorFunction)
 {
     Locker locker { m_treeLock };
     RefPtr rootNode = m_rootNode;
     if (!rootNode)
         return;
-
-    auto function = WTFMove(visitorFunction);
-    traverseScrollingTreeRecursive(*rootNode, function);
+    traverseScrollingTreeRecursive(*rootNode, visitorFunction);
 }
 
-void ScrollingTree::traverseScrollingTreeRecursive(ScrollingTreeNode& node, const VisitorFunction& visitorFunction)
+void ScrollingTree::traverseScrollingTreeRecursive(ScrollingTreeNode& node, NOESCAPE const VisitorFunction& visitorFunction)
 {
     bool scrolledSinceLastCommit = false;
     std::optional<FloatPoint> scrollPosition;
@@ -1051,15 +1049,15 @@ String ScrollingTree::scrollingTreeAsText(OptionSet<ScrollingStateTreeAsTextBeha
 
     {
         TextStream::GroupScope scope(ts);
-        ts << "scrolling tree";
+        ts << "scrolling tree"_s;
 
         Locker locker { m_treeStateLock };
 
         if (auto latchedNodeID = m_latchingController.latchedNodeID())
-            ts.dumpProperty("latched node", latchedNodeID.value());
+            ts.dumpProperty("latched node"_s, latchedNodeID.value());
 
         if (!m_treeState.mainFrameScrollPosition.isZero())
-            ts.dumpProperty("main frame scroll position", m_treeState.mainFrameScrollPosition);
+            ts.dumpProperty("main frame scroll position"_s, m_treeState.mainFrameScrollPosition);
         
         if (RefPtr rootNode = m_rootNode) {
             TextStream::GroupScope scope(ts);
@@ -1069,32 +1067,32 @@ String ScrollingTree::scrollingTreeAsText(OptionSet<ScrollingStateTreeAsTextBeha
         if (behavior & ScrollingStateTreeAsTextBehavior::IncludeNodeIDs) {
             if (!m_overflowRelatedNodesMap.isEmpty()) {
                 TextStream::GroupScope scope(ts);
-                ts << "overflow related nodes";
+                ts << "overflow related nodes"_s;
                 {
                     TextStream::IndentScope indentScope(ts);
                     for (auto& it : m_overflowRelatedNodesMap)
-                        ts << "\n" << indent << it.key << " -> " << it.value;
+                        ts << '\n' << indent << it.key << " -> "_s << it.value;
                 }
             }
 
 #if ENABLE(SCROLLING_THREAD)
             if (!m_activeOverflowScrollProxyNodes.isEmpty()) {
                 TextStream::GroupScope scope(ts);
-                ts << "overflow scroll proxy nodes";
+                ts << "overflow scroll proxy nodes"_s;
                 {
                     TextStream::IndentScope indentScope(ts);
                     for (auto& node : m_activeOverflowScrollProxyNodes)
-                        ts << "\n" << indent << node->scrollingNodeID();
+                        ts << '\n' << indent << node->scrollingNodeID();
                 }
             }
 
             if (!m_activePositionedNodes.isEmpty()) {
                 TextStream::GroupScope scope(ts);
-                ts << "active positioned nodes";
+                ts << "active positioned nodes"_s;
                 {
                     TextStream::IndentScope indentScope(ts);
                     for (const auto& node : m_activePositionedNodes)
-                        ts << "\n" << indent << node->scrollingNodeID();
+                        ts << '\n' << indent << node->scrollingNodeID();
                 }
             }
 #endif // ENABLE(SCROLLING_THREAD)

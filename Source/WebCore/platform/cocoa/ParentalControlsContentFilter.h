@@ -34,18 +34,15 @@
 OBJC_CLASS NSData;
 OBJC_CLASS WebFilterEvaluator;
 
-#if HAVE(WEBCONTENTRESTRICTIONS)
-OBJC_CLASS WCRBrowserEngineClient;
-#endif
-
 namespace WebCore {
+
+class ParentalControlsURLFilter;
 
 class ParentalControlsContentFilter final : public PlatformContentFilter {
     WTF_MAKE_TZONE_ALLOCATED(ParentalControlsContentFilter);
-    friend UniqueRef<ParentalControlsContentFilter> WTF::makeUniqueRefWithoutFastMallocCheck<ParentalControlsContentFilter>();
 
 public:
-    static UniqueRef<ParentalControlsContentFilter> create();
+    static Ref<ParentalControlsContentFilter> create(const PlatformContentFilter::FilterParameters&);
 
     void willSendRequest(ResourceRequest&, const ResourceResponse&) override { }
     void responseReceived(const ResourceResponse&) override;
@@ -57,17 +54,13 @@ public:
 #endif
     
 private:
-#if HAVE(WEBCONTENTRESTRICTIONS)
-    static bool enabled(bool usesWebContentRestrictions);
-#else
-    static bool enabled();
-#endif
+    explicit ParentalControlsContentFilter(const PlatformContentFilter::FilterParameters&);
+    bool enabled() const;
 
-    ParentalControlsContentFilter() = default;
     void updateFilterState();
 #if HAVE(WEBCONTENTRESTRICTIONS)
-    void updateFilterState(bool shouldBlock, NSData *replacmentData);
-    void setUsesWebContentRestrictions(bool) final;
+    void didReceiveAllowDecisionOnQueue(bool isAllowed, NSData *);
+    void updateFilterStateOnMain();
 #endif
 
     RetainPtr<WebFilterEvaluator> m_webFilterEvaluator;
@@ -75,8 +68,14 @@ private:
 
 #if HAVE(WEBCONTENTRESTRICTIONS)
     bool m_usesWebContentRestrictions { false };
-    RetainPtr<WCRBrowserEngineClient> m_wcrBrowserEngineClient;
     std::optional<URL> m_evaluatedURL;
+    Lock m_resultLock;
+    Condition m_resultCondition;
+    std::optional<bool> m_isAllowdByWebContentRestrictions WTF_GUARDED_BY_LOCK(m_resultLock);
+    RetainPtr<NSData> m_webContentRestrictionsReplacementData WTF_GUARDED_BY_LOCK(m_resultLock);
+#endif
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    String m_webContentRestrictionsConfigurationPath;
 #endif
 };
     

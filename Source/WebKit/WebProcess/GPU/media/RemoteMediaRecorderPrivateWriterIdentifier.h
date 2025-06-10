@@ -31,7 +31,7 @@
 
 namespace WebKit {
 
-enum class RemoteMediaRecorderPrivateWriterIdentifierType { };
+struct RemoteMediaRecorderPrivateWriterIdentifierType;
 using RemoteMediaRecorderPrivateWriterIdentifier = ObjectIdentifier<RemoteMediaRecorderPrivateWriterIdentifierType>;
 
 } // namespace WebKit

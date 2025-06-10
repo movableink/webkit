@@ -415,7 +415,7 @@ static bool runFromFiles(GlobalObject* globalObject, const Vector<String>& files
         unsigned int lineNumber = 0;
         const char* regexpError = nullptr;
 
-        while ((linePtr = fgets(lineBuffer.data(), MaxLineLength, testCasesFile))) {
+        while ((linePtr = fgets(lineBuffer.mutableSpan().data(), MaxLineLength, testCasesFile))) {
             lineLength = strlen(linePtr);
             if (linePtr[lineLength - 1] == '\n') {
                 linePtr[lineLength - 1] = '\0';
@@ -472,7 +472,7 @@ static bool runFromFiles(GlobalObject* globalObject, const Vector<String>& files
 
 #define RUNNING_FROM_XCODE 0
 
-static NO_RETURN void printUsageStatement(bool help = false)
+[[noreturn]] static void printUsageStatement(bool help = false)
 {
     fprintf(stderr, "Usage: regexp_test [options] file\n");
     fprintf(stderr, "  -h|--help  Prints this help message\n");

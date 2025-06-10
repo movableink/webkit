@@ -268,7 +268,7 @@ bool HTMLDocumentParser::pumpTokenizerLoop(SynchronousMode mode, bool parsingFra
 {
     RefPtr parserScheduler = m_parserScheduler;
     do {
-        if (UNLIKELY(isWaitingForScripts())) {
+        if (isWaitingForScripts()) [[unlikely]] {
             if (mode == SynchronousMode::AllowYield && parserScheduler->shouldYieldBeforeExecutingScript(m_treeBuilder->protectedScriptToProcess().get(), session))
                 return true;
             
@@ -282,10 +282,10 @@ bool HTMLDocumentParser::pumpTokenizerLoop(SynchronousMode mode, bool parsingFra
         // how the parser has always handled stopping when the page assigns window.location. What should
         // happen instead is that assigning window.location causes the parser to stop parsing cleanly.
         // The problem is we're not prepared to do that at every point where we run JavaScript.
-        if (UNLIKELY(!parsingFragment && document()->frame() && document()->protectedFrame()->protectedNavigationScheduler()->locationChangePending()))
+        if (!parsingFragment && document()->frame() && document()->protectedFrame()->protectedNavigationScheduler()->locationChangePending()) [[unlikely]]
             return false;
 
-        if (UNLIKELY(mode == SynchronousMode::AllowYield && parserScheduler->shouldYieldBeforeToken(session)))
+        if (mode == SynchronousMode::AllowYield && parserScheduler->shouldYieldBeforeToken(session)) [[unlikely]]
             return true;
 
         auto token = m_tokenizer.nextToken(m_input.current());

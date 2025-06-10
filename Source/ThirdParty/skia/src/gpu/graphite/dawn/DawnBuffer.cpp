@@ -67,8 +67,8 @@ bool is_map_succeeded(wgpu::MapAsyncStatus status) {
 void log_map_error(wgpu::MapAsyncStatus status, wgpu::StringView message) {
     const char* statusStr;
     switch (status) {
-        case wgpu::MapAsyncStatus::InstanceDropped:
-            statusStr = "InstanceDropped";
+        case wgpu::MapAsyncStatus::CallbackCancelled:
+            statusStr = "CallbackCancelled";
             break;
         case wgpu::MapAsyncStatus::Error:
             statusStr = "Error";
@@ -147,6 +147,10 @@ sk_sp<DawnBuffer> DawnBuffer::Make(const DawnSharedContext* sharedContext,
             usage |= wgpu::BufferUsage::MapWrite;
             usage &= ~wgpu::BufferUsage::CopyDst;
         }
+    }
+
+    if (accessPattern == AccessPattern::kGpuOnlyCopySrc) {
+        usage |= wgpu::BufferUsage::CopySrc;
     }
 
     wgpu::BufferDescriptor desc;

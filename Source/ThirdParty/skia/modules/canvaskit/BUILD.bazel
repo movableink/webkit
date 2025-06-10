@@ -1,6 +1,9 @@
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@skia_user_config//:copts.bzl", "DEFAULT_COPTS")
 load("//bazel:macros.bzl", "bool_flag", "skia_filegroup", "wasm_cc_binary")
-load("//bazel/karma:karma_test.bzl", "karma_test")
+
+# TODO(b/417250857): need to update JS test harness
+#load("//bazel/karma:karma_test.bzl", "karma_test")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -136,6 +139,12 @@ CK_LINKOPTS = BASE_LINKOPTS + [
     ],
     ":enable_fonts_false": [],
 }) + select({
+    ":enable_bidi_true": [
+        "--pre-js",
+        "modules/canvaskit/bidi.js",
+    ],
+    ":enable_bidi_false": [],
+}) + select({
     ":enable_canvas_polyfill_true": [
         "--pre-js",
         "modules/canvaskit/htmlcanvas/preamble.js",
@@ -213,6 +222,7 @@ CK_LINKOPTS = BASE_LINKOPTS + [
 # All JS files that could possibly be included via --pre-js or --post-js.
 # Whether they actually will be or not will be controlled above in the construction of CK_LINKOPTS.
 JS_INTERFACE_FILES = [
+    "bidi.js",
     "color.js",
     "cpu.js",
     "debug.js",
@@ -265,6 +275,12 @@ CK_SRCS = [
 }) + select({
     ":enable_skottie_true": ["skottie_bindings.cpp"],
     ":enable_skottie_false": [],
+}) + select({
+    ":enable_bidi_true": [
+        "bidi_bindings.cpp",
+        "bidi_bindings_gen.cpp",
+    ],
+    ":enable_bidi_false": [],
 }) + select({
     ":build_for_debugger_true": ["debugger_bindings.cpp"],
     ":build_for_debugger_false": [],
@@ -346,6 +362,11 @@ wasm_cc_binary(
 )
 
 bool_flag(
+    name = "enable_bidi",
+    default = False,
+)
+
+bool_flag(
     name = "enable_canvas_polyfill",
     default = False,
 )
@@ -390,35 +411,35 @@ bool_flag(
     default = False,
 )
 
-karma_test(
-    name = "canvaskit_js_tests",
-    srcs = [
-        ":canvaskit/canvaskit.js",
-        # We want to make sure the CanvasKit JS is loaded before the loader script, so
-        # CanvasKitInit is defined. This loader script makes a promise...
-        "tests/init_with_gold_server.js",
-        "tests/util.js",
-        "tests/bazel_test_reporter.js",
-        # ...which is used by all of the tests
-        "tests/canvas_test.js",
-        "tests/canvas2d_test.js",
-        "tests/core_test.js",
-        "tests/font_test.js",
-        "tests/matrix_test.js",
-        "tests/paragraph_test.js",
-        "tests/path_test.js",
-        "tests/rtshader_test.js",
-        "tests/skottie_test.js",
-    ],
-    config_file = "karma.bazel.js",
-    # The tests need the Gold server to be up and running so they can make POST requests to
-    # exfiltrate the PNGs they create.
-    env = "//modules/canvaskit/go/gold_test_env:gold_test_env",
-    static_files = [
-        ":canvaskit/canvaskit.wasm",
-        "//modules/canvaskit/tests/assets:test_assets",
-    ],
-)
+# karma_test(
+#     name = "canvaskit_js_tests",
+#     srcs = [
+#         ":canvaskit/canvaskit.js",
+#         # We want to make sure the CanvasKit JS is loaded before the loader script, so
+#         # CanvasKitInit is defined. This loader script makes a promise...
+#         "tests/init_with_gold_server.js",
+#         "tests/util.js",
+#         "tests/bazel_test_reporter.js",
+#         # ...which is used by all of the tests
+#         "tests/canvas_test.js",
+#         "tests/canvas2d_test.js",
+#         "tests/core_test.js",
+#         "tests/font_test.js",
+#         "tests/matrix_test.js",
+#         "tests/paragraph_test.js",
+#         "tests/path_test.js",
+#         "tests/rtshader_test.js",
+#         "tests/skottie_test.js",
+#     ],
+#     config_file = "karma.bazel.js",
+#     # The tests need the Gold server to be up and running so they can make POST requests to
+#     # exfiltrate the PNGs they create.
+#     env = "//modules/canvaskit/go/gold_test_env:gold_test_env",
+#     static_files = [
+#         ":canvaskit/canvaskit.wasm",
+#         "//modules/canvaskit/tests/assets:test_assets",
+#     ],
+# )
 
 genrule(
     name = "make version file",

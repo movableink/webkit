@@ -10,29 +10,25 @@
 <div id="aria-list" role="list"></div>
 
 <script>
-    var testOutput = "This test ensures that lists that are initially empty but gain children later become part of the AX tree with the proper role.\n\n";
-    var ulList, ariaList;
+var output = "This test ensures that lists that are initially empty but gain children later become part of the AX tree with the proper role.\n\n";
+var ulList, ariaList;
 
-    function verifyLists() {
-        testOutput += `#ul-list: ${ulList.role}\n`;
-        testOutput += `#ul-list: childrenCount ${ulList.childrenCount}\n`;
-        testOutput += `#aria-list: ${ariaList.role}\n`;
-        testOutput += `#aria-list: childrenCount ${ariaList.childrenCount}\n`;
-    }
+async function verifyLists(expectedRole, expectedChildCount) {
+    output += await expectAsync(`ulList.role.toLowerCase().includes('${expectedRole}')`, "true");
+    output += await expectAsync("ulList.childrenCount", expectedChildCount);
+    output += await expectAsync(`ariaList.role.toLowerCase().includes('${expectedRole}')`, "true");
+    output += await expectAsync("ariaList.childrenCount", expectedChildCount);
+}
 
-    async function waitForChildrenCount(count) {
-        await waitFor(() => {
-            return ulList.childrenCount === count && ariaList.childrenCount === count;
-        });
-    }
+if (window.accessibilityController) {
+    window.jsTestIsAsync = true;
+    ulList = accessibilityController.accessibleElementById("ul-list");
+    ariaList = accessibilityController.accessibleElementById("aria-list");
 
-    if (window.accessibilityController) {
-        window.jsTestIsAsync = true;
-        ulList = accessibilityController.accessibleElementById("ul-list");
-        ariaList = accessibilityController.accessibleElementById("aria-list");
-        verifyLists();
+    setTimeout(async function() {
+        await verifyLists("group", /* expectedChildCount */ 0);
 
-        testOutput += `\nAdding listitems to both lists.\n\n`;
+        output += `\nAdding listitems to both lists.\n\n`;
         const li = document.createElement("li");
         li.textContent = "A dynamic list item";
         document.getElementById("ul-list").appendChild(li);
@@ -41,20 +37,17 @@
         ariaListItem.role = "listitem";
         document.getElementById("aria-list").appendChild(ariaListItem);
 
-        setTimeout(async function() {
-            await waitForChildrenCount(1);
-            verifyLists();
+        await verifyLists("list", /* expectedChildCount */ 1);
 
-            document.getElementById("ul-list").removeChild(li);
-            document.getElementById("aria-list").removeChild(ariaListItem);
-            testOutput += `\nClearing listitems from both lists.\n\n`;
-            await waitForChildrenCount(0);
-            verifyLists();
+        document.getElementById("ul-list").removeChild(li);
+        document.getElementById("aria-list").removeChild(ariaListItem);
+        output += `\nClearing listitems from both lists.\n\n`;
+        await verifyLists("group", /* expectedChildCount */ 0);
 
-            debug(testOutput);
-            finishJSTest();
-        }, 0);
-    }
+        debug(output);
+        finishJSTest();
+    }, 0);
+}
 </script>
 </body>
 </html>

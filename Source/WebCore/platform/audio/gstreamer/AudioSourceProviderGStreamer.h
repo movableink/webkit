@@ -57,7 +57,7 @@ public:
 
     void configureAudioBin(GstElement* audioBin, GstElement* audioSink);
 
-    void provideInput(AudioBus*, size_t framesToProcess) override;
+    void provideInput(AudioBus&, size_t framesToProcess) override;
     void setClient(WeakPtr<AudioSourceProviderClient>&&) override;
     const AudioSourceProviderClient* client() const { return m_client.get(); }
 

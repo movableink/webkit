@@ -173,10 +173,10 @@ WI.loaded = function()
 
     // Targets.
     WI.backendTarget = null;
-    WI._backendTargetAvailablePromise = new WI.WrappedPromise;
+    WI._backendTargetAvailablePromise = Promise.withResolvers();
 
     WI.pageTarget = null;
-    WI._pageTargetAvailablePromise = new WI.WrappedPromise;
+    WI._pageTargetAvailablePromise = Promise.withResolvers();
 
     // COMPATIBILITY (iOS 13.0): Target.exists was "replaced" by differentiating "web" debuggables
     // into "page" (direct) and "web-page" debuggables (multiplexing).
@@ -474,11 +474,6 @@ WI.contentLoaded = function()
         WI._dockedResizerElement = document.getElementById("docked-resizer");
         WI._dockedResizerElement.classList.add(WI.Popover.IgnoreAutoDismissClassName);
         WI._dockedResizerElement.addEventListener("mousedown", WI._handleDockedResizerMouseDown);
-    }
-
-    if (supportsUndocked) {
-        let undockedTitleAreaElement = document.getElementById("undocked-title-area");
-        undockedTitleAreaElement.addEventListener("mousedown", WI._handleUndockedTitleAreaMouseDown);
     }
 
     WI._dockingAvailable = false;
@@ -927,56 +922,27 @@ WI.resizeDockedFrameMouseDown = function(event)
 
     let isDockedBottom = WI.dockConfiguration === WI.DockConfiguration.Bottom;
 
-    let windowProperty = isDockedBottom ? "innerHeight" : "innerWidth";
-    let eventScreenProperty = isDockedBottom ? "screenY" : "screenX";
-    let eventClientProperty = isDockedBottom ? "clientY" : "clientX";
+    let windowDimensionProperty = isDockedBottom ? "innerHeight" : "innerWidth";
+    let cursorPositionProperty = isDockedBottom ? "screenY" : "screenX";
 
     let resizerElement = event.target;
-    let firstClientPosition = event[eventClientProperty];
-    let lastScreenPosition = event[eventScreenProperty];
+    let initialWindowDimension = window[windowDimensionProperty] * WI.getZoomFactor();
+    let initialCursorPosition = event[cursorPositionProperty];
 
     function dividerDrag(event)
     {
         if (event.button !== 0)
             return;
 
-        let position = event[eventScreenProperty];
-        let delta = position - lastScreenPosition;
-        let clientPosition = event[eventClientProperty];
-
-        lastScreenPosition = position;
-
-        if (WI.dockConfiguration === WI.DockConfiguration.Left) {
-            // If the mouse is travelling rightward but is positioned left of the resizer, ignore the event.
-            if (delta > 0 && clientPosition < firstClientPosition)
-                return;
-
-            // If the mouse is travelling leftward but is positioned to the right of the resizer, ignore the event.
-            if (delta < 0 && clientPosition > window[windowProperty])
-                return;
-
-            // We later subtract the delta from the current position, but since the inspected view and inspector view
-            // are flipped when docked to left, we want dragging to have the opposite effect from docked to right.
+        let delta = event[cursorPositionProperty] - initialCursorPosition;
+        if (WI.dockConfiguration === WI.DockConfiguration.Left)
             delta *= -1;
-        } else {
-            // If the mouse is travelling downward/rightward but is positioned above/left of the resizer, ignore the event.
-            if (delta > 0 && clientPosition < firstClientPosition)
-                return;
 
-            // If the mouse is travelling upward/leftward but is positioned below/right of the resizer, ignore the event.
-            if (delta < 0 && clientPosition > firstClientPosition)
-                return;
-        }
-
-        let dimension = Math.max(0, window[windowProperty] - delta);
-        // If zoomed in/out, there be greater/fewer document pixels shown, but the inspector's
-        // width or height should be the same in device pixels regardless of the document zoom.
-        dimension *= WI.getZoomFactor();
-
+        let newDimension = Math.max(0, Math.round(initialWindowDimension - delta));
         if (isDockedBottom)
-            InspectorFrontendHost.setAttachedWindowHeight(dimension);
+            InspectorFrontendHost.setAttachedWindowHeight(newDimension);
         else
-            InspectorFrontendHost.setAttachedWindowWidth(dimension);
+            InspectorFrontendHost.setAttachedWindowWidth(newDimension);
     }
 
     function elementDragEnd(event)
@@ -2068,17 +2034,11 @@ WI._handleDockedResizerMouseDown = function(event)
     WI.resizeDockedFrameMouseDown(event);
 };
 
-WI._handleUndockedTitleAreaMouseDown = function(event)
-{
-    WI.moveUndockedWindowMouseDown(event);
-};
-
 WI._domStorageWasInspected = function(event)
 {
     WI.showStorageTab({initiatorHint: WI.TabBrowser.TabNavigationInitiator.Inspect});
     WI.showRepresentedObject(event.data.domStorage, null, {ignoreSearchTab: true});
 };
-
 
 WI._domNodeWasInspected = function(event)
 {
@@ -2620,19 +2580,6 @@ WI.setLayoutDirection = function(value)
     WI.settings.debugLayoutDirection.value = value;
 
     InspectorFrontendHost.reopen();
-};
-
-WI.undockedTitleAreaHeight = function()
-{
-    if (WI.dockConfiguration !== WI.DockConfiguration.Undocked)
-        return 0;
-
-    if (WI.Platform.name === "mac") {
-        /* Keep in sync with `--undocked-title-area-height` CSS variable. */
-        return 27 / WI.getZoomFactor();
-    }
-
-    return 0;
 };
 
 WI._showTabAtIndexFromShortcut = function(i)

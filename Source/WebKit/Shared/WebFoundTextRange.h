@@ -26,7 +26,6 @@
 #pragma once
 
 #include "ArgumentCoders.h"
-#include <variant>
 #include <wtf/HashTraits.h>
 #include <wtf/text/WTFString.h>
 
@@ -49,7 +48,7 @@ struct WebFoundTextRange {
         bool operator==(const PDFData& other) const = default;
     };
 
-    std::variant<DOMData, PDFData> data { DOMData { } };
+    Variant<DOMData, PDFData> data { DOMData { } };
     AtomString frameIdentifier;
     uint64_t order { 0 };
 

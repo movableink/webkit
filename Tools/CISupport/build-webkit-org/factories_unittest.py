@@ -1304,7 +1304,6 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'delete-stale-build-files',
             'download-built-product',
             'extract-built-product',
-            'windows-requirements',
             'layout-test',
             'archive-test-results',
             'upload',
@@ -1339,7 +1338,6 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'delete-stale-build-files',
             'download-built-product',
             'extract-built-product',
-            'windows-requirements',
             'layout-test',
             'archive-test-results',
             'upload',
@@ -1712,6 +1710,26 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'download-built-product',
             'extract-built-product',
             'MVT-tests'
+        ],
+        'WPE-Linux-64-bit-Release-Legacy-API-Tests': [
+            'configure-build',
+            'configuration',
+            'clean-and-update-working-directory',
+            'checkout-specific-revision',
+            'show-identifier',
+            'kill-old-processes',
+            'delete-WebKitBuild-directory',
+            'delete-stale-build-files',
+            'jhbuild',
+            'download-built-product',
+            'extract-built-product',
+            'layout-test',
+            'dashboard-tests',
+            'archive-test-results',
+            'upload',
+            'extract-test-results',
+            'set-permissions',
+            'API-tests'
         ],
     }
 

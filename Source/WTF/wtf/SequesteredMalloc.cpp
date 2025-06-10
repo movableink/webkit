@@ -53,7 +53,7 @@ void sequesteredArenaSetMaxSingleAllocationSize(size_t size)
 #endif // ASSERT_ENABLED
 
 #define FAIL_IF_EXCEEDS_LIMIT(size) do { \
-        if (UNLIKELY((size) > maxSingleSequesteredArenaAllocationSize)) \
+        if ((size) > maxSingleSequesteredArenaAllocationSize) [[unlikely]] \
             return nullptr; \
     } while (false)
 #else // !ASSERT_ENABLED

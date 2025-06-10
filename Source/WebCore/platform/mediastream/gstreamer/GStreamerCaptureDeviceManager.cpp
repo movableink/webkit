@@ -27,6 +27,7 @@
 #include "GStreamerCommon.h"
 #include "GStreamerMockDeviceProvider.h"
 #include <wtf/glib/GSpanExtras.h>
+#include <wtf/glib/GUniquePtr.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
@@ -244,7 +245,7 @@ void GStreamerCaptureDeviceManager::addDevice(GRefPtr<GstDevice>&& device)
     if (!gstCaptureDevice)
         return;
 
-    GST_INFO("Registering %sdefault device %s", gstCaptureDevice->isDefault() ? "" : "non-", gstCaptureDevice->label().utf8().data());
+    GST_INFO_OBJECT(gstCaptureDevice->device(), "Registering %sdefault device %s", gstCaptureDevice->isDefault() ? "" : "non-", gstCaptureDevice->label().utf8().data());
     const auto type = gstCaptureDevice->type();
     m_gstreamerDevices.append(WTFMove(*gstCaptureDevice));
     if (type == CaptureDevice::DeviceType::Speaker)
@@ -362,17 +363,19 @@ void GStreamerCaptureDeviceManager::refreshCaptureDevices()
             gst_message_parse_device_added(message, &device.outPtr());
 #ifndef GST_DISABLE_GST_DEBUG
             name.reset(gst_device_get_display_name(device.get()));
-            GST_INFO("Device added: %s", name.get());
+            GST_INFO_OBJECT(GST_MESSAGE_SRC(message), "Device added: %s", name.get());
 #endif
             manager->addDevice(WTFMove(device));
+            manager->deviceChanged();
             break;
         case GST_MESSAGE_DEVICE_REMOVED:
             gst_message_parse_device_removed(message, &device.outPtr());
 #ifndef GST_DISABLE_GST_DEBUG
             name.reset(gst_device_get_display_name(device.get()));
-            GST_INFO("Device removed: %s", name.get());
+            GST_INFO_OBJECT(GST_MESSAGE_SRC(message), "Device removed: %s", name.get());
 #endif
             manager->removeDevice(WTFMove(device));
+            manager->deviceChanged();
             break;
         case GST_MESSAGE_DEVICE_CHANGED: {
             GRefPtr<GstDevice> oldDevice;
@@ -380,7 +383,7 @@ void GStreamerCaptureDeviceManager::refreshCaptureDevices()
             gst_message_parse_device_changed(message, &device.outPtr(), &oldDevice.outPtr());
 #ifndef GST_DISABLE_GST_DEBUG
             name.reset(gst_device_get_display_name(device.get()));
-            GST_INFO("Device changed: %s", name.get());
+            GST_INFO_OBJECT(GST_MESSAGE_SRC(message), "Device changed: %s", name.get());
 #endif
             manager->updateDevice(WTFMove(device), WTFMove(oldDevice));
             break;

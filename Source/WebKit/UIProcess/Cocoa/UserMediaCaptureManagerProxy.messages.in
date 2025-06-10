@@ -39,7 +39,7 @@ messages -> UserMediaCaptureManagerProxy {
     GetPhotoSettings(WebCore::RealtimeMediaSourceIdentifier sourceID) -> (Expected<WebCore::PhotoSettings, String> result) Async
     Clone(WebCore::RealtimeMediaSourceIdentifier clonedID, WebCore::RealtimeMediaSourceIdentifier cloneID, WebCore::PageIdentifier pageIdentifier)
     EndProducingData(WebCore::RealtimeMediaSourceIdentifier sourceID)
-    SetShouldApplyRotation(WebCore::RealtimeMediaSourceIdentifier sourceID, bool shouldApplyRotation)
+    SetShouldApplyRotation(WebCore::RealtimeMediaSourceIdentifier sourceID)
     SetIsInBackground(WebCore::RealtimeMediaSourceIdentifier sourceID, bool isInBackground)
     IsPowerEfficient(WebCore::RealtimeMediaSourceIdentifier sourceID) -> (bool isPowerEfficient) Synchronous
 }

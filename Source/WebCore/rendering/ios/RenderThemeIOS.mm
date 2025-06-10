@@ -65,6 +65,7 @@
 #import "LocalCurrentTraitCollection.h"
 #import "LocalFrame.h"
 #import "LocalFrameView.h"
+#import "NodeInlines.h"
 #import "NodeRenderStyle.h"
 #import "PaintInfo.h"
 #import "PathUtilities.h"
@@ -79,16 +80,19 @@
 #import "RenderStyleSetters.h"
 #import "RenderView.h"
 #import "Settings.h"
+#import "StylePadding.h"
 #import "Theme.h"
 #import "TypedElementDescendantIteratorInlines.h"
 #import "UTIUtilities.h"
 #import "WebCoreThreadRun.h"
 #import <CoreGraphics/CoreGraphics.h>
 #import <CoreImage/CoreImage.h>
+#import <numbers>
 #import <objc/runtime.h>
 #import <pal/spi/cf/CoreTextSPI.h>
 #import <pal/spi/ios/UIKitSPI.h>
 #import <pal/system/ios/UserInterfaceIdiom.h>
+#import <wtf/MathExtras.h>
 #import <wtf/NeverDestroyed.h>
 #import <wtf/ObjCRuntimeExtras.h>
 #import <wtf/StdLibExtras.h>
@@ -102,6 +106,7 @@
 
 namespace WebCore {
 
+using namespace CSS::Literals;
 using namespace HTMLNames;
 
 const float ControlBaseHeight = 20;
@@ -172,25 +177,25 @@ int RenderThemeIOS::baselinePosition(const RenderBox& box) const
     return baseline;
 }
 
-bool RenderThemeIOS::isControlStyled(const RenderStyle& style, const RenderStyle& userAgentStyle) const
+bool RenderThemeIOS::isControlStyled(const RenderStyle& style) const
 {
     // Buttons and MenulistButtons are styled if they contain a background image.
     if (style.usedAppearance() == StyleAppearance::PushButton || style.usedAppearance() == StyleAppearance::MenulistButton)
         return !style.visitedDependentColor(CSSPropertyBackgroundColor).isVisible() || style.backgroundLayers().hasImage();
 
     if (style.usedAppearance() == StyleAppearance::TextField || style.usedAppearance() == StyleAppearance::TextArea || style.usedAppearance() == StyleAppearance::SearchField)
-        return !style.borderAndBackgroundEqual(userAgentStyle);
+        return style.nativeAppearanceDisabled();
 
-    return RenderTheme::isControlStyled(style, userAgentStyle);
+    return RenderTheme::isControlStyled(style);
 }
 
 void RenderThemeIOS::adjustMinimumIntrinsicSizeForAppearance(StyleAppearance appearance, RenderStyle& style) const
 {
-    auto minControlSize = Theme::singleton().minimumControlSize(appearance, style.fontCascade(), { style.minWidth(), style.minHeight() }, { style.width(), style.height() }, style.usedZoom());
-    if (minControlSize.width.value() > style.minWidth().value())
-        style.setMinWidth(WTFMove(minControlSize.width));
-    if (minControlSize.height.value() > style.minHeight().value())
-        style.setMinHeight(WTFMove(minControlSize.height));
+    auto minimumControlSize = this->minimumControlSize(appearance, style.fontCascade(), { style.minWidth(), style.minHeight() }, { style.width(), style.height() }, style.usedZoom());
+    if (minimumControlSize.width.value() > style.minWidth().value())
+        style.setMinWidth(WTFMove(minimumControlSize.width));
+    if (minimumControlSize.height.value() > style.minHeight().value())
+        style.setMinHeight(WTFMove(minimumControlSize.height));
 }
 
 void RenderThemeIOS::adjustRadioStyle(RenderStyle& style, const Element* element) const
@@ -213,6 +218,15 @@ void RenderThemeIOS::adjustRadioStyle(RenderStyle& style, const Element* element
     style.setBorderRadius({ static_cast<int>(size / 2), static_cast<int>(size / 2) });
 }
 
+static void applyCommonNonCapsuleBorderRadiusToStyle(RenderStyle& style)
+{
+    if (style.hasExplicitlySetBorderRadius())
+        return;
+
+    constexpr int commonNonCapsuleBorderRadius = 5;
+    style.setBorderRadius({ { commonNonCapsuleBorderRadius, LengthType::Fixed }, { commonNonCapsuleBorderRadius, LengthType::Fixed } });
+}
+
 void RenderThemeIOS::adjustTextFieldStyle(RenderStyle& style, const Element* element) const
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
@@ -221,6 +235,8 @@ void RenderThemeIOS::adjustTextFieldStyle(RenderStyle& style, const Element* ele
         return;
     }
 #endif
+
+    applyCommonNonCapsuleBorderRadiusToStyle(style);
 
     if (!element)
         return;
@@ -316,10 +332,11 @@ void RenderThemeIOS::adjustTextAreaStyle(RenderStyle& style, const Element* elem
         RenderThemeCocoa::adjustTextAreaStyle(style, element);
         return;
     }
+#else
+    UNUSED_PARAM(element);
 #endif
 
-    if (!element)
-        return;
+    applyCommonNonCapsuleBorderRadiusToStyle(style);
 
     if (!PAL::currentUserInterfaceIdiomIsVision())
         return;
@@ -347,17 +364,23 @@ const int MenuListMinHeight = 15;
 const float MenuListBaseHeight = 20;
 const float MenuListBaseFontSize = 11;
 
-LengthBox RenderThemeIOS::popupInternalPaddingBox(const RenderStyle& style) const
+static Style::PaddingEdge toTruncatedPaddingEdge(auto value)
+{
+    return Style::Length<CSS::Nonnegative> { static_cast<float>(std::trunc(value)) };
+}
+
+Style::PaddingBox RenderThemeIOS::popupInternalPaddingBox(const RenderStyle& style) const
 {
     auto emSize = CSSPrimitiveValue::create(1.0, CSSUnitType::CSS_EM);
     auto padding = emSize->resolveAsLength<float>({ style, nullptr, nullptr, nullptr });
 
     if (style.usedAppearance() == StyleAppearance::MenulistButton) {
+        auto value = toTruncatedPaddingEdge(padding + style.borderTopWidth());
         if (style.writingMode().isBidiRTL())
-            return { 0, 0, 0, static_cast<int>(padding + style.borderTopWidth()) };
-        return { 0, static_cast<int>(padding + style.borderTopWidth()), 0, 0 };
+            return { 0_css_px, 0_css_px, 0_css_px, value };
+        return { 0_css_px, value, 0_css_px, 0_css_px };
     }
-    return { 0, 0, 0, 0 };
+    return { 0_css_px };
 }
 
 static inline bool canAdjustBorderRadiusForAppearance(StyleAppearance appearance, const RenderBox& box)
@@ -399,14 +422,14 @@ void RenderThemeIOS::adjustRoundBorderRadius(RenderStyle& style, RenderBox& box)
 
 static void applyCommonButtonPaddingToStyle(RenderStyle& style, const Element& element)
 {
-    Document& document = element.document();
+    Ref document = element.document();
     Ref emSize = CSSPrimitiveValue::create(0.5, CSSUnitType::CSS_EM);
     // We don't need this element's parent style to calculate `em` units, so it's okay to pass nullptr for it here.
-    int pixels = emSize->resolveAsLength<int>({ style, document.renderStyle(), nullptr, document.renderView() });
+    auto edge = toTruncatedPaddingEdge(emSize->resolveAsLength<int>({ style, document->renderStyle(), nullptr, document->renderView() }));
 
-    auto paddingBox = LengthBox(0, pixels, 0, pixels);
+    auto paddingBox = Style::PaddingBox { 0_css_px, edge, 0_css_px, edge };
     if (!style.writingMode().isHorizontal())
-        paddingBox = LengthBox(paddingBox.left().value(), paddingBox.top().value(), paddingBox.right().value(), paddingBox.bottom().value());
+        paddingBox = { paddingBox.left(), paddingBox.top(), paddingBox.right(), paddingBox.bottom() };
 
     style.setPaddingBox(WTFMove(paddingBox));
 }
@@ -442,6 +465,8 @@ static void adjustInputElementButtonStyle(RenderStyle& style, const HTMLInputEle
     // Always Enforce "padding: 0 0.5em".
     applyCommonButtonPaddingToStyle(style, inputElement);
 
+    applyCommonNonCapsuleBorderRadiusToStyle(style);
+
     // Don't adjust the style if the width is specified.
     if (style.logicalWidth().isFixed() && style.logicalWidth().value() > 0)
         return;
@@ -459,13 +484,13 @@ static void adjustInputElementButtonStyle(RenderStyle& style, const HTMLInputEle
     // Enforce the width and set the box-sizing to content-box to not conflict with the padding.
     FontCascade font = style.fontCascade();
 
-    float maximumWidth = localizedDateCache().maximumWidthForDateType(dateType, font, RenderThemeMeasureTextClient(font, style));
+    float maximumWidth = localizedDateCache().estimatedMaximumWidthForDateType(dateType, font, RenderThemeMeasureTextClient(font, style));
 
     ASSERT(maximumWidth >= 0);
 
     if (maximumWidth > 0) {
         int width = static_cast<int>(std::ceil(maximumWidth));
-        style.setLogicalWidth(Length(width, LengthType::Fixed));
+        style.setLogicalMinWidth(Length(width, LengthType::Fixed));
         style.setBoxSizing(BoxSizing::ContentBox);
     }
 }
@@ -574,9 +599,9 @@ void RenderThemeIOS::paintMenuListButtonDecorations(const RenderBox& box, const 
     FloatPoint glyphOrigin;
     glyphOrigin.setY(logicalRect.center().y() - glyphSize.height() / 2.0f);
     if (!style.writingMode().isInlineFlipped())
-        glyphOrigin.setX(logicalRect.maxX() - glyphSize.width() - box.style().borderEndWidth() - valueForLength(box.style().paddingEnd(), logicalRect.width()));
+        glyphOrigin.setX(logicalRect.maxX() - glyphSize.width() - box.style().borderEndWidth() - Style::evaluate(box.style().paddingEnd(), logicalRect.width()));
     else
-        glyphOrigin.setX(logicalRect.x() + box.style().borderEndWidth() + valueForLength(box.style().paddingEnd(), logicalRect.width()));
+        glyphOrigin.setX(logicalRect.x() + box.style().borderEndWidth() + Style::evaluate(box.style().paddingEnd(), logicalRect.width()));
 
     if (!isHorizontalWritingMode)
         glyphOrigin = glyphOrigin.transposedPoint();
@@ -616,7 +641,7 @@ void RenderThemeIOS::adjustSliderTrackStyle(RenderStyle& style, const Element* e
 
 constexpr auto nativeControlBorderInlineSize = 1.0f;
 
-bool RenderThemeIOS::paintSliderTrack(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeIOS::paintSliderTrack(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
     if (box.settings().macStyleControlsOnCatalyst())
@@ -722,7 +747,7 @@ void RenderThemeIOS::adjustSliderThumbSize(RenderStyle& style, const Element* el
 constexpr auto reducedMotionProgressAnimationMinOpacity = 0.3f;
 constexpr auto reducedMotionProgressAnimationMaxOpacity = 0.6f;
 
-bool RenderThemeIOS::paintProgressBar(const RenderObject& renderer, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeIOS::paintProgressBar(const RenderObject& renderer, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
     if (renderer.settings().macStyleControlsOnCatalyst())
@@ -840,6 +865,8 @@ void RenderThemeIOS::adjustSearchFieldStyle(RenderStyle& style, const Element* e
 
     RenderTheme::adjustSearchFieldStyle(style, element);
 
+    applyCommonNonCapsuleBorderRadiusToStyle(style);
+
     if (!element)
         return;
 
@@ -853,7 +880,7 @@ void RenderThemeIOS::adjustSearchFieldStyle(RenderStyle& style, const Element* e
     adjustRoundBorderRadius(style, *box);
 }
 
-void RenderThemeIOS::paintSearchFieldDecorations(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& rect)
+void RenderThemeIOS::paintSearchFieldDecorations(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
     if (paintSearchFieldDecorationsForCatalyst(box, paintInfo, rect))
@@ -888,9 +915,9 @@ void RenderThemeIOS::adjustButtonLikeControlStyle(RenderStyle& style, const Elem
     if (!style.hasAutoAccentColor()) {
         auto tintColor = style.usedAccentColor(element.document().styleColorOptions(&style));
         if (isSubmitStyleButton(element))
-            style.setBackgroundColor(tintColor);
+            style.setBackgroundColor(WTFMove(tintColor));
         else
-            style.setColor(tintColor);
+            style.setColor(WTFMove(tintColor));
     }
 
     if (!element.active())
@@ -933,11 +960,11 @@ void RenderThemeIOS::adjustButtonStyle(RenderStyle& style, const Element* elemen
     // Since the element might not be in a document, just pass nullptr for the root element style,
     // the parent element style, and the render view.
     auto emSize = CSSPrimitiveValue::create(1.0, CSSUnitType::CSS_EM);
-    int pixels = emSize->resolveAsLength<int>({ style, nullptr, nullptr, nullptr });
+    auto edge = toTruncatedPaddingEdge(emSize->resolveAsLength<int>({ style, nullptr, nullptr, nullptr }));
 
-    auto paddingBox = LengthBox(0, pixels, 0, pixels);
+    auto paddingBox = Style::PaddingBox { 0_css_px, edge, 0_css_px, edge };
     if (!style.writingMode().isHorizontal())
-        paddingBox = LengthBox(paddingBox.left().value(), paddingBox.top().value(), paddingBox.right().value(), paddingBox.bottom().value());
+        paddingBox = { paddingBox.left(), paddingBox.top(), paddingBox.right(), paddingBox.bottom() };
 
     style.setPaddingBox(WTFMove(paddingBox));
 
@@ -1232,13 +1259,13 @@ Color RenderThemeIOS::pictureFrameColor(const RenderObject& buttonRenderer)
 
 #if ENABLE(ATTACHMENT_ELEMENT)
 
-RenderThemeIOS::IconAndSize RenderThemeIOS::iconForAttachment(const String& fileName, const String& attachmentType, const String& title)
+RenderThemeCocoa::IconAndSize RenderThemeIOS::iconForAttachment(const String& fileName, const String& attachmentType, const String& title)
 {
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     auto documentInteractionController = adoptNS([PAL::allocUIDocumentInteractionControllerInstance() init]);
 ALLOW_DEPRECATED_DECLARATIONS_END
 
-    [documentInteractionController setName:fileName.isEmpty() ? title : fileName];
+    [documentInteractionController setName:fileName.isEmpty() ? title.createNSString().get() : fileName.createNSString().get()];
 
     if (!attachmentType.isEmpty()) {
         String UTI;
@@ -1248,7 +1275,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
             UTI = UTIFromMIMEType(attachmentType);
 
 #if PLATFORM(IOS) || PLATFORM(VISION)
-        [documentInteractionController setUTI:static_cast<NSString *>(UTI)];
+        [documentInteractionController setUTI:UTI.createNSString().get()];
 #endif
     }
 
@@ -1312,7 +1339,7 @@ static void paintAttachmentProgress(GraphicsContext& context, AttachmentLayout& 
     Path progressPath;
     progressPath.moveTo(center);
     progressPath.addLineTo(FloatPoint(center.x(), info.progressRect.y()));
-    progressPath.addArc(center, info.progressRect.width() / 2, -M_PI_2, info.progress * 2 * M_PI - M_PI_2, RotationDirection::Counterclockwise);
+    progressPath.addArc(center, info.progressRect.width() / 2, -piOverTwoDouble, info.progress * 2 * std::numbers::pi - piOverTwoDouble, RotationDirection::Counterclockwise);
     progressPath.closeSubpath();
     context.fillPath(progressPath);
 }
@@ -1651,7 +1678,7 @@ bool RenderThemeIOS::supportsMeter(StyleAppearance appearance) const
     return appearance == StyleAppearance::Meter;
 }
 
-bool RenderThemeIOS::paintMeter(const RenderObject& renderer, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeIOS::paintMeter(const RenderObject& renderer, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
     if (renderer.settings().macStyleControlsOnCatalyst())
@@ -1722,10 +1749,10 @@ bool RenderThemeIOS::paintListButton(const RenderObject& box, const PaintInfo& p
     auto& context = paintInfo.context();
     GraphicsContextStateSaver stateSaver(context);
 
-    float paddingTop = floatValueForLength(style.paddingTop(), rect.height());
-    float paddingRight = floatValueForLength(style.paddingRight(), rect.width());
-    float paddingBottom = floatValueForLength(style.paddingBottom(), rect.height());
-    float paddingLeft = floatValueForLength(style.paddingLeft(), rect.width());
+    float paddingTop = Style::evaluate(style.paddingTop(), rect.height());
+    float paddingRight = Style::evaluate(style.paddingRight(), rect.width());
+    float paddingBottom = Style::evaluate(style.paddingBottom(), rect.height());
+    float paddingLeft = Style::evaluate(style.paddingLeft(), rect.width());
 
     FloatRect indicatorRect = rect;
     indicatorRect.move(paddingLeft, paddingTop);
@@ -1870,7 +1897,7 @@ void RenderThemeIOS::adjustSearchFieldDecorationPartStyle(RenderStyle& style, co
         return;
 
     constexpr int searchFieldDecorationEmSize = 1;
-    constexpr int searchFieldDecorationMargin = 4;
+    constexpr float searchFieldDecorationMargin = 4;
 
     CSSToLengthConversionData conversionData(style, nullptr, nullptr, nullptr);
 
@@ -1879,10 +1906,10 @@ void RenderThemeIOS::adjustSearchFieldDecorationPartStyle(RenderStyle& style, co
 
     style.setWidth({ size, LengthType::Fixed });
     style.setHeight({ size, LengthType::Fixed });
-    style.setMarginEnd({ searchFieldDecorationMargin, LengthType::Fixed });
+    style.setMarginEnd(Style::Length<> { searchFieldDecorationMargin });
 }
 
-bool RenderThemeIOS::paintSearchFieldDecorationPart(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeIOS::paintSearchFieldDecorationPart(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
     if (box.settings().macStyleControlsOnCatalyst())
@@ -1931,7 +1958,7 @@ void RenderThemeIOS::adjustSearchFieldResultsDecorationPartStyle(RenderStyle& st
     adjustSearchFieldDecorationPartStyle(style, element);
 }
 
-bool RenderThemeIOS::paintSearchFieldResultsDecorationPart(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeIOS::paintSearchFieldResultsDecorationPart(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
     return paintSearchFieldDecorationPart(box, paintInfo, rect);
 }
@@ -1941,7 +1968,7 @@ void RenderThemeIOS::adjustSearchFieldResultsButtonStyle(RenderStyle& style, con
     adjustSearchFieldDecorationPartStyle(style, element);
 }
 
-bool RenderThemeIOS::paintSearchFieldResultsButton(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeIOS::paintSearchFieldResultsButton(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
     return paintSearchFieldDecorationPart(box, paintInfo, rect);
 }

@@ -44,9 +44,12 @@
 #import "AccessibilityTableCell.h"
 #import "AccessibilityTableColumn.h"
 #import "AccessibilityTableRow.h"
+#import "BoundaryPointInlines.h"
 #import "ColorMac.h"
 #import "ContextMenuController.h"
 #import "Editing.h"
+#import "FrameDestructionObserverInlines.h"
+#import "FrameInlines.h"
 #import "FrameSelection.h"
 #import "LayoutRect.h"
 #import "LocalizedStrings.h"
@@ -297,10 +300,11 @@ NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector& c
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 - (void)attachIsolatedObject:(AXIsolatedObject*)isolatedObject
 {
+    ASSERT(!isMainThread());
     ASSERT(isolatedObject && (!_identifier || *_identifier == isolatedObject->objectID()));
+
     m_isolatedObject = isolatedObject;
-    if (isMainThread())
-        m_isolatedObjectInitialized = true;
+    m_isolatedObjectInitialized = !!isolatedObject;
 
     if (!_identifier)
         _identifier = m_isolatedObject.get()->objectID();
@@ -308,7 +312,7 @@ NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector& c
 
 - (BOOL)hasIsolatedObject
 {
-    return !!m_isolatedObject.get();
+    return m_isolatedObjectInitialized.load();
 }
 #endif
 
@@ -323,6 +327,7 @@ NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector& c
 - (void)detachIsolatedObject:(AccessibilityDetachmentType)detachmentType
 {
     m_isolatedObject = nullptr;
+    m_isolatedObjectInitialized = false;
 }
 #endif
 
@@ -334,11 +339,17 @@ NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector& c
     retainPtr(self).autorelease();
 
     auto* backingObject = self.axBackingObject;
-    if (!backingObject)
+    if (!backingObject) {
+        if (!isMainThread()) {
+            // It's possible our backing object just hasn't been attached yet.
+            // Try again after making sure all isolated trees are up-to-date, which could
+            // attach an object to this wrapper.
+            AXTreeStore<AXIsolatedTree>::applyPendingChangesForAllIsolatedTrees();
+            return m_isolatedObject.get();
+        }
         return nil;
-
+    }
     backingObject->updateBackingStore();
-
     return self.axBackingObject;
 }
 #else
@@ -374,7 +385,7 @@ NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector& c
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     ASSERT(AXObjectCache::isIsolatedTreeEnabled());
-    return m_isolatedObject.get().get();
+    return m_isolatedObject.get();
 #else
     ASSERT_NOT_REACHED();
     return nullptr;
@@ -393,7 +404,7 @@ NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector& c
 
 - (NSArray<NSString *> *)baseAccessibilitySpeechHint
 {
-    return [(NSString *)self.axBackingObject->speechHintAttributeValue() componentsSeparatedByString:@" "];
+    return [self.axBackingObject->speechHint().createNSString() componentsSeparatedByString:@" "];
 }
 
 #if HAVE(ACCESSIBILITY_FRAMEWORK)
@@ -407,7 +418,7 @@ NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector& c
     auto extendedDescription = backingObject->extendedDescription();
     if (extendedDescription.length()) {
         accessibilityCustomContent = adoptNS([[NSMutableArray alloc] init]);
-        AXCustomContent *contentItem = [PAL::getAXCustomContentClass() customContentWithLabel:WEB_UI_STRING("description", "description detail") value:extendedDescription];
+        AXCustomContent *contentItem = [PAL::getAXCustomContentClass() customContentWithLabel:WEB_UI_STRING("description", "description detail").createNSString().get() value:extendedDescription.createNSString().get()];
         // Set this to high, so that it's always spoken.
         [contentItem setImportance:AXCustomContentImportanceHigh];
         [accessibilityCustomContent addObject:contentItem];
@@ -419,7 +430,7 @@ NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector& c
 
 - (NSString *)baseAccessibilityHelpText
 {
-    return self.axBackingObject->helpTextAttributeValue();
+    return self.axBackingObject->helpTextAttributeValue().createNSString().autorelease();
 }
 
 struct PathConversionInfo {
@@ -620,29 +631,28 @@ std::optional<SimpleRange> makeDOMRange(Document* document, NSRange range)
                 if (!object)
                     continue;
 
-                NSString *label;
-                switch (object->roleValue()) {
+                RetainPtr<NSString> label;
+                switch (object->role()) {
                 case AccessibilityRole::StaticText:
-                    label = object->stringValue();
+                    label = object->stringValue().createNSString();
                     break;
                 case AccessibilityRole::Image: {
                     String name = object->titleAttributeValue();
                     if (name.isEmpty())
                         name = object->descriptionAttributeValue();
-                    label = name;
+                    label = name.createNSString();
                     break;
                 }
                 default:
-                    label = nil;
                     break;
                 }
 #else
-                NSString *label = static_cast<WebAccessibilityObjectWrapper *>(item).accessibilityLabel;
+                RetainPtr<NSString> label = static_cast<WebAccessibilityObjectWrapper *>(item).accessibilityLabel;
 #endif
                 if (!label)
                     continue;
 
-                auto attributedLabel = adoptNS([[NSAttributedString alloc] initWithString:label]);
+                auto attributedLabel = adoptNS([[NSAttributedString alloc] initWithString:label.get()]);
                 [text appendAttributedString:attributedLabel.get()];
             }
         }
@@ -674,7 +684,7 @@ std::optional<SimpleRange> makeDOMRange(Document* document, NSRange range)
 
 - (NSString *)ariaLandmarkRoleDescription
 {
-    return self.axBackingObject->ariaLandmarkRoleDescription();
+    return self.axBackingObject->ariaLandmarkRoleDescription().createNSString().autorelease();
 }
 
 - (NSString *)accessibilityPlatformMathSubscriptKey
@@ -717,13 +727,13 @@ std::optional<SimpleRange> makeDOMRange(Document* document, NSRange range)
     auto editingStyles = axObject->resolvedEditingStyles();
     for (String& key : editingStyles.keys()) {
         auto value = editingStyles.get(key);
-        id result = WTF::switchOn(value,
-            [] (String& typedValue) -> id { return (NSString *)typedValue; },
-            [] (bool& typedValue) -> id { return @(typedValue); },
-            [] (int& typedValue) -> id { return @(typedValue); },
+        RetainPtr result = WTF::switchOn(value,
+            [] (String& typedValue) -> RetainPtr<id> { return typedValue.createNSString(); },
+            [] (bool& typedValue) -> RetainPtr<id> { return @(typedValue); },
+            [] (int& typedValue) -> RetainPtr<id> { return @(typedValue); },
             [] (auto&) { return nil; }
         );
-        results[(NSString *)key] = result;
+        results[key.createNSString().get()] = result.get();
     }
     return results;
 }
@@ -804,20 +814,20 @@ static NSDictionary *dictionaryRemovingNonSupportedTypes(NSDictionary *dictionar
 - (NSString *)innerHTML
 {
     if (RefPtr<AXCoreObject> backingObject = self.axBackingObject)
-        return backingObject->innerHTML();
+        return backingObject->innerHTML().createNSString().autorelease();
     return nil;
 }
 
 - (NSString *)outerHTML
 {
     if (RefPtr<AXCoreObject> backingObject = self.axBackingObject)
-        return backingObject->outerHTML();
+        return backingObject->outerHTML().createNSString().autorelease();
     return nil;
 }
 
 #pragma mark Search helpers
 
-typedef UncheckedKeyHashMap<String, AccessibilitySearchKey> AccessibilitySearchKeyMap;
+using AccessibilitySearchKeyMap = HashMap<String, AccessibilitySearchKey>;
 
 struct SearchKeyEntry {
     String key;

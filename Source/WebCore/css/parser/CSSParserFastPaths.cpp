@@ -38,7 +38,10 @@
 #include "CSSPrimitiveNumericTypes.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSProperty.h"
+#include "CSSPropertyNames.h"
 #include "CSSPropertyParser.h"
+#include "CSSPropertyParserConsumer+Color.h"
+#include "CSSPropertyParserState.h"
 #include "CSSPropertyParsing.h"
 #include "CSSTransformListValue.h"
 #include "CSSValueList.h"
@@ -50,7 +53,7 @@
 
 namespace WebCore {
 
-bool CSSParserFastPaths::isSimpleLengthPropertyID(CSSPropertyID propertyId, CSS::Range& range)
+std::optional<CSS::Range> CSSParserFastPaths::lengthValueRangeForPropertiesSupportingSimpleLengths(CSSPropertyID propertyId)
 {
     switch (propertyId) {
     case CSSPropertyFontSize:
@@ -74,8 +77,7 @@ bool CSSParserFastPaths::isSimpleLengthPropertyID(CSSPropertyID propertyId, CSS:
     case CSSPropertyRx:
     case CSSPropertyRy:
     case CSSPropertyShapeMargin:
-        range = CSS::Nonnegative;
-        return true;
+        return CSS::Nonnegative;
     case CSSPropertyBottom:
     case CSSPropertyCx:
     case CSSPropertyCy:
@@ -96,10 +98,9 @@ bool CSSParserFastPaths::isSimpleLengthPropertyID(CSSPropertyID propertyId, CSS:
     case CSSPropertyMarginInlineStart:
     case CSSPropertyX:
     case CSSPropertyY:
-        range = CSS::All;
-        return true;
+        return CSS::All;
     default:
-        return false;
+        return { };
     }
 }
 
@@ -459,27 +460,22 @@ static inline bool mightBeHSL(std::span<const CharacterType> characters)
 static std::optional<SRGBA<uint8_t>> finishParsingHexColor(uint32_t value, unsigned length)
 {
     switch (length) {
-    case 3:
-        // #abc converts to #aabbcc
-        // FIXME: Replace conversion to PackedColor::ARGB with simpler bit math to construct
-        // the SRGBA<uint8_t> directly.
-        return asSRGBA(PackedColor::ARGB {
-               0xFF000000
-            | (value & 0xF00) << 12 | (value & 0xF00) << 8
-            | (value & 0xF0) << 8 | (value & 0xF0) << 4
-            | (value & 0xF) << 4 | (value & 0xF) });
-    case 4:
-        // #abcd converts to ddaabbcc since alpha bytes are the high bytes.
-        // FIXME: Replace conversion to PackedColor::ARGB with simpler bit math to construct
-        // the SRGBA<uint8_t> directly.
-        return asSRGBA(PackedColor::ARGB {
-              (value & 0xF) << 28 | (value & 0xF) << 24
-            | (value & 0xF000) << 8 | (value & 0xF000) << 4
-            | (value & 0xF00) << 4 | (value & 0xF00)
-            | (value & 0xF0) | (value & 0xF0) >> 4 });
+    case 3: {
+        // #234 converts to #223344.
+        uint8_t r = (value & 0x0F00) >> 8;
+        uint8_t g = (value & 0x00F0) >> 4;
+        uint8_t b = (value & 0x000F);
+        return SRGBA<uint8_t>(r << 4 | r, g << 4 | g, b << 4 | b);
+    }
+    case 4: {
+        // #234a converts to #223344aa.
+        uint8_t r = (value & 0xF000) >> 12;
+        uint8_t g = (value & 0x0F00) >> 8;
+        uint8_t b = (value & 0x00F0) >> 4;
+        uint8_t a = (value & 0x000F);
+        return SRGBA<uint8_t>(r << 4 | r, g << 4 | g, b << 4 | b, a << 4 | a);
+    }
     case 6:
-        // FIXME: Replace conversion to PackedColor::ARGB with simpler bit math to construct
-        // the SRGBA<uint8_t> directly.
         return asSRGBA(PackedColor::ARGB { 0xFF000000 | value });
     case 8:
         return asSRGBA(PackedColor::RGBA { value });
@@ -599,14 +595,14 @@ template<typename CharacterType> static std::optional<SRGBA<uint8_t>> parseLegac
 }
 
 template<typename CharacterType>
-static std::optional<SRGBA<uint8_t>> parseNumericColor(std::span<const CharacterType> characters, bool strict)
+static std::optional<SRGBA<uint8_t>> parseNumericColor(std::span<const CharacterType> characters, const CSSParserContext& context)
 {
     if (characters.size() >= 4 && characters.front() == '#') {
         if (auto hexColor = parseHexColorInternal(characters.subspan(1)))
             return *hexColor;
     }
 
-    if (!strict && (characters.size() == 3 || characters.size() == 6)) {
+    if (isQuirksModeBehavior(context.mode) && (characters.size() == 3 || characters.size() == 6)) {
         if (auto hexColor = parseHexColorInternal(characters))
             return *hexColor;
     }
@@ -664,10 +660,9 @@ static std::optional<SRGBA<uint8_t>> parseNumericColor(std::span<const Character
 
 static std::optional<SRGBA<uint8_t>> parseNumericColor(StringView string, const CSSParserContext& context)
 {
-    bool strict = !isQuirksModeBehavior(context.mode);
     if (string.is8Bit())
-        return parseNumericColor(string.span8(), strict);
-    return parseNumericColor(string.span16(), strict);
+        return parseNumericColor(string.span8(), context);
+    return parseNumericColor(string.span16(), context);
 }
 
 static RefPtr<CSSValue> parseColor(StringView string, const CSSParserContext& context)
@@ -675,7 +670,7 @@ static RefPtr<CSSValue> parseColor(StringView string, const CSSParserContext& co
     ASSERT(!string.isEmpty());
     auto valueID = cssValueKeywordID(string);
     if (CSS::isColorKeyword(valueID)) {
-        if (!isColorKeywordAllowedInMode(valueID, context.mode))
+        if (!CSSPropertyParserHelpers::isColorKeywordAllowed(valueID, context))
             return nullptr;
         return CSSPrimitiveValue::create(valueID);
     }
@@ -707,18 +702,18 @@ template<typename CharacterType> static std::optional<SRGBA<uint8_t>> parseNamed
     return finishParsingNamedColor(std::span { buffer }.first(characters.size() + 1));
 }
 
-template<typename CharacterType> static std::optional<SRGBA<uint8_t>> parseSimpleColorInternal(std::span<const CharacterType> characters, bool strict)
+template<typename CharacterType> static std::optional<SRGBA<uint8_t>> parseSimpleColorInternal(std::span<const CharacterType> characters, const CSSParserContext& context)
 {
-    if (auto color = parseNumericColor(characters, strict))
+    if (auto color = parseNumericColor(characters, context))
         return color;
     return parseNamedColorInternal(characters);
 }
 
-std::optional<SRGBA<uint8_t>> CSSParserFastPaths::parseSimpleColor(StringView string, bool strict)
+std::optional<SRGBA<uint8_t>> CSSParserFastPaths::parseSimpleColor(StringView string, const CSSParserContext& context)
 {
     if (string.is8Bit())
-        return parseSimpleColorInternal(string.span8(), strict);
-    return parseSimpleColorInternal(string.span16(), strict);
+        return parseSimpleColorInternal(string.span8(), context);
+    return parseSimpleColorInternal(string.span16(), context);
 }
 
 std::optional<SRGBA<uint8_t>> CSSParserFastPaths::parseHexColor(StringView string)
@@ -735,16 +730,6 @@ std::optional<SRGBA<uint8_t>> CSSParserFastPaths::parseNamedColor(StringView str
     return parseNamedColorInternal(string.span16());
 }
 
-bool CSSParserFastPaths::isKeywordValidForStyleProperty(CSSPropertyID property, CSSValueID value, const CSSParserContext& context)
-{
-    return CSSPropertyParsing::isKeywordValidForStyleProperty(property, value, context);
-}
-
-bool CSSParserFastPaths::isKeywordFastPathEligibleStyleProperty(CSSPropertyID property)
-{
-    return CSSPropertyParsing::isKeywordFastPathEligibleStyleProperty(property);
-}
-
 static bool isUniversalKeyword(StringView string)
 {
     // These keywords can be used for all properties.
@@ -755,37 +740,28 @@ static bool isUniversalKeyword(StringView string)
         || equalLettersIgnoringASCIICase(string, "revert-layer"_s);
 }
 
-static RefPtr<CSSValue> parseKeywordValue(CSSPropertyID propertyId, StringView string, const CSSParserContext& context)
+static RefPtr<CSSValue> parseKeywordValue(CSSPropertyID property, StringView string, CSS::PropertyParserState& state)
 {
     ASSERT(!string.isEmpty());
 
-    bool parsingDescriptor = context.enclosingRuleType && *context.enclosingRuleType != StyleRuleType::Style;
-    // FIXME: The "!context.enclosingRuleType" is suspicious.
-    ASSERT(!CSSProperty::isDescriptorOnly(propertyId) || parsingDescriptor || !context.enclosingRuleType);
-
-    // Fast path keyword parsing is currently only supported for style properties.
-    if (parsingDescriptor)
-        return nullptr;
-
-    if (!CSSParserFastPaths::isKeywordFastPathEligibleStyleProperty(propertyId)) {
+    if (!CSSPropertyParsing::isKeywordFastPathEligibleStyleProperty(property)) {
         // All properties, including non-keyword properties, accept the CSS-wide keywords.
         if (!isUniversalKeyword(string))
             return nullptr;
 
         // Leave shorthands to parse CSS-wide keywords using CSSPropertyParser.
-        if (shorthandForProperty(propertyId).length())
+        if (shorthandForProperty(property).length())
             return nullptr;
     }
 
-    CSSValueID valueID = cssValueKeywordID(string);
-
+    auto valueID = cssValueKeywordID(string);
     if (!valueID)
         return nullptr;
 
     if (isCSSWideKeyword(valueID))
         return CSSPrimitiveValue::create(valueID);
 
-    if (CSSParserFastPaths::isKeywordValidForStyleProperty(propertyId, valueID, context))
+    if (CSSPropertyParsing::isKeywordValidForStyleProperty(property, valueID, state))
         return CSSPrimitiveValue::create(valueID);
     return nullptr;
 }
@@ -850,12 +826,12 @@ static bool parseTransformNumberArguments(CharType*& pos, CharType* end, unsigne
     return true;
 }
 
-static constexpr int kShortestValidTransformStringLength = 9; // "rotate(0)"
-
 template <typename CharType>
 static RefPtr<CSSFunctionValue> parseSimpleTransformValue(CharType*& pos, CharType* end)
 {
-    if (end - pos < kShortestValidTransformStringLength)
+    // Also guarantees indexes up to pos[8] are safe to access below.
+    constexpr auto shortestValidTransformStringLength = 9; // "rotate(0)"
+    if (end - pos < shortestValidTransformStringLength)
         return nullptr;
 
     bool isTranslate = toASCIILower(pos[0]) == 't'
@@ -869,6 +845,11 @@ static RefPtr<CSSFunctionValue> parseSimpleTransformValue(CharType*& pos, CharTy
         && toASCIILower(pos[8]) == 'e';
 
     if (isTranslate) {
+        // Also guarantees indexes up to pos[11] are safe to access below.
+        constexpr auto shortestValidTranslateStringLength = 12; // "translate(0)"
+        if (end - pos < shortestValidTranslateStringLength)
+            return nullptr;
+
         CSSValueID transformType;
         unsigned expectedArgumentCount = 1;
         unsigned argumentStart = 11;
@@ -1057,9 +1038,15 @@ static RefPtr<CSSValue> parseColorWithAuto(StringView string, const CSSParserCon
     return parseColor(string, context);
 }
 
-RefPtr<CSSValue> CSSParserFastPaths::maybeParseValue(CSSPropertyID propertyID, StringView string, const CSSParserContext& context)
+RefPtr<CSSValue> CSSParserFastPaths::maybeParseValue(CSSPropertyID property, StringView string, CSS::PropertyParserState& state)
 {
-    switch (propertyID) {
+    // Some at-rules like @keyframes, @position-try restrict which properties
+    // are allowed inside the rule. Fallback to slow path for at-rules since
+    // the restriction logic is in the slow-path parser (CSSPropertyParser).
+    if (state.currentRule != StyleRuleType::Style)
+        return nullptr;
+
+    switch (property) {
     case CSSPropertyDisplay:
         return parseDisplay(string);
     case CSSPropertyOpacity:
@@ -1068,24 +1055,22 @@ RefPtr<CSSValue> CSSParserFastPaths::maybeParseValue(CSSPropertyID propertyID, S
         return parseSimpleTransform(string);
     case CSSPropertyCaretColor:
     case CSSPropertyAccentColor:
-        if (isExposed(propertyID, &context.propertySettings))
-            return parseColorWithAuto(string, context);
+        if (isExposed(property, &state.context.propertySettings))
+            return parseColorWithAuto(string, state.context);
         break;
     default:
         break;
     }
 
-    if (CSSProperty::isColorProperty(propertyID))
-        return parseColor(string, context);
+    if (CSSProperty::isColorProperty(property))
+        return parseColor(string, state.context);
 
-    auto valueRange = CSS::All;
-    if (CSSParserFastPaths::isSimpleLengthPropertyID(propertyID, valueRange)) {
-        auto result = parseSimpleLengthValue(string, context.mode, valueRange);
-        if (result)
+    if (auto valueRange = lengthValueRangeForPropertiesSupportingSimpleLengths(property)) {
+        if (auto result = parseSimpleLengthValue(string, state.context.mode, *valueRange))
             return result;
     }
 
-    return parseKeywordValue(propertyID, string, context);
+    return parseKeywordValue(property, string, state);
 }
 
 } // namespace WebCore

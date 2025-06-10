@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc.  All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,7 +47,7 @@ MetadataType BitmapImageDescriptor::imageMetadata(MetadataType& cachedValue, con
     if (!decoder)
         return defaultValue;
 
-    if (!decoder->isSizeAvailable())
+    if (!isSizeAvailable())
         return defaultValue;
 
     cachedValue = (*decoder.*functor)();
@@ -90,7 +90,20 @@ MetadataType BitmapImageDescriptor::primaryNativeImageMetadata(MetadataType& cac
 
 EncodedDataStatus BitmapImageDescriptor::encodedDataStatus() const
 {
-    return imageMetadata(m_encodedDataStatus, EncodedDataStatus::Unknown, CachedFlag::EncodedDataStatus, &ImageDecoder::encodedDataStatus);
+    if (m_cachedFlags.contains(CachedFlag::EncodedDataStatus))
+        return m_encodedDataStatus;
+
+    RefPtr decoder = m_source->decoderIfExists();
+    if (!decoder)
+        return EncodedDataStatus::Unknown;
+
+    m_encodedDataStatus = decoder->encodedDataStatus();
+    m_cachedFlags.add(CachedFlag::EncodedDataStatus);
+
+    if (m_encodedDataStatus >= EncodedDataStatus::SizeAvailable)
+        m_source->didDecodeProperties(decoder->bytesDecodedToDetermineProperties());
+
+    return m_encodedDataStatus;
 }
 
 IntSize BitmapImageDescriptor::size(ImageOrientation orientation) const
@@ -163,9 +176,25 @@ std::optional<Color> BitmapImageDescriptor::singlePixelSolidColor() const
     return primaryNativeImageMetadata(m_singlePixelSolidColor, std::optional<Color>(), CachedFlag::SinglePixelSolidColor, &NativeImage::singlePixelSolidColor);
 }
 
-Headroom BitmapImageDescriptor::headroom() const
+bool BitmapImageDescriptor::hasHDRGainMap() const
 {
-    return primaryImageFrameMetadata(m_headroom, CachedFlag::Headroom, &ImageFrame::headroom);
+    return imageMetadata(m_hasHDRGainMap, false, CachedFlag::HasHDRGainMap, &ImageDecoder::hasHDRGainMap);
+}
+
+bool BitmapImageDescriptor::hasHDRColorSpace() const
+{
+    if (m_cachedFlags.contains(CachedFlag::ColorSpace))
+        return m_colorSpace.usesITUR_2100TF();
+
+    if (m_source->primaryNativeImageIfExists())
+        return colorSpace().usesITUR_2100TF();
+
+    bool hasHDRColorSpace = colorSpace().usesITUR_2100TF();
+
+    // FIXME: This frame may not be destroyed. It can be reused for sync image decoding.
+    // Async image decoding should destroy this frame and treat it as if it did not exist.
+    m_source->destroyNativeImageAtIndex(m_source->primaryFrameIndex());
+    return hasHDRColorSpace;
 }
 
 String BitmapImageDescriptor::uti() const
@@ -201,7 +230,7 @@ SubsamplingLevel BitmapImageDescriptor::maximumSubsamplingLevel() const
     if (!decoder)
         return SubsamplingLevel::Default;
 
-    if (!decoder->isSizeAvailable())
+    if (!isSizeAvailable())
         return SubsamplingLevel::Default;
 
     // FIXME: this value was chosen to be appropriate for Apple ports since the image
@@ -265,15 +294,15 @@ bool BitmapImageDescriptor::isSpatial() const
 
 void BitmapImageDescriptor::dump(TextStream& ts) const
 {
-    ts.dumpProperty("size", size());
-    ts.dumpProperty("density-corrected-size", densityCorrectedSize());
-    ts.dumpProperty("primary-frame-index", primaryFrameIndex());
-    ts.dumpProperty("frame-count", frameCount());
-    ts.dumpProperty("repetition-count", repetitionCount());
+    ts.dumpProperty("size"_s, size());
+    ts.dumpProperty("density-corrected-size"_s, densityCorrectedSize());
+    ts.dumpProperty("primary-frame-index"_s, primaryFrameIndex());
+    ts.dumpProperty("frame-count"_s, frameCount());
+    ts.dumpProperty("repetition-count"_s, repetitionCount());
 
-    ts.dumpProperty("uti", uti());
-    ts.dumpProperty("filename-extension", filenameExtension());
-    ts.dumpProperty("accessibility-description", accessibilityDescription());
+    ts.dumpProperty("uti"_s, uti());
+    ts.dumpProperty("filename-extension"_s, filenameExtension());
+    ts.dumpProperty("accessibility-description"_s, accessibilityDescription());
 }
 
 } // namespace WebCore

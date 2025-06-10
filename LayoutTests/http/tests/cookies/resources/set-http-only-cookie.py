@@ -2,11 +2,11 @@
 
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs
 
 cookie_name = parse_qs(os.environ.get('QUERY_STRING', ''), keep_blank_values=True).get('cookieName', [''])[0]
-expires = datetime.utcnow() + timedelta(seconds=86400)
+expires = datetime.now(timezone.utc) + timedelta(seconds=86400)
 
 sys.stdout.write('Content-Type: text/html\r\n')
 

@@ -40,6 +40,7 @@
 #import "DOMNodeInternal.h"
 #import "DOMRangeInternal.h"
 #import <WebCore/CachedImage.h>
+#import <WebCore/ContainerNodeInlines.h>
 #import <WebCore/Editing.h>
 #import <WebCore/FloatPoint.h>
 #import <WebCore/FontCascade.h>
@@ -393,7 +394,7 @@ static WebCore::Node* firstNodeAfter(const WebCore::BoundaryPoint& point)
     auto* cachedImage = core(self)->cachedImage();
     if (!cachedImage || !cachedImage->image())
         return nil;
-    return cachedImage->response().mimeType();
+    return cachedImage->response().mimeType().createNSString().autorelease();
 }
 
 @end

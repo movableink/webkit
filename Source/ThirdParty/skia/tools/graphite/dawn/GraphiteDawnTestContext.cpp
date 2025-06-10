@@ -9,8 +9,8 @@
 
 #include "include/gpu/graphite/Context.h"
 #include "include/gpu/graphite/ContextOptions.h"
-#include "include/gpu/graphite/dawn/DawnTypes.h"
-#include "include/gpu/graphite/dawn/DawnUtils.h"
+#include "include/gpu/graphite/dawn/DawnBackendContext.h"
+#include "include/gpu/graphite/dawn/DawnGraphiteTypes.h"
 #include "include/private/base/SkOnce.h"
 #include "src/gpu/graphite/ContextOptionsPriv.h"
 #include "tools/gpu/ContextType.h"
@@ -36,17 +36,19 @@ std::unique_ptr<GraphiteTestContext> DawnTestContext::Make(wgpu::BackendType bac
     static SkOnce sOnce;
 
     static constexpr const char* kToggles[] = {
-#if !defined(SK_DEBUG)
-        "skip_validation",
+#if defined(SK_DEBUG)
+            // Setting labels on backend objects has performance overhead.
+            "use_user_defined_labels_in_backend",
+#else
+            "skip_validation",
 #endif
-        "disable_lazy_clear_for_mapped_at_creation_buffer", // matches Chromes toggles
-        "allow_unsafe_apis",  // Needed for dual-source blending.
-        "use_user_defined_labels_in_backend",
-        // Robustness impacts performance and is always disabled when running Graphite in Chrome,
-        // so this keeps Skia's tests operating closer to real-use behavior.
-        "disable_robustness",
-        // Must be last to correctly respond to `useTintIR` parameter.
-        "use_tint_ir",
+            "disable_lazy_clear_for_mapped_at_creation_buffer",  // matches Chromes toggles
+            "allow_unsafe_apis",                                 // Needed for dual-source blending.
+            // Robustness impacts performance and is always disabled when running Graphite in
+            // Chrome, so this keeps Skia's tests operating closer to real-use behavior.
+            "disable_robustness",
+            // Must be last to correctly respond to `useTintIR` parameter.
+            "use_tint_ir",
     };
     wgpu::DawnTogglesDescriptor togglesDesc;
     togglesDesc.enabledToggleCount  = std::size(kToggles) - (useTintIR ? 0 : 1);
@@ -58,9 +60,9 @@ std::unique_ptr<GraphiteTestContext> DawnTestContext::Make(wgpu::BackendType bac
     sOnce([&]{
         DawnProcTable backendProcs = dawn::native::GetProcs();
         dawnProcSetProcs(&backendProcs);
-        WGPUInstanceDescriptor desc{};
+        wgpu::InstanceDescriptor desc{};
         // need for WaitAny with timeout > 0
-        desc.features.timedWaitAnyEnable = true;
+        desc.capabilities.timedWaitAnyEnable = true;
         sInstance = std::make_unique<dawn::native::Instance>(&desc);
     });
 
@@ -103,9 +105,12 @@ std::unique_ptr<GraphiteTestContext> DawnTestContext::Make(wgpu::BackendType bac
     }
 
 #if LOG_ADAPTER
-    wgpu::AdapterInfo info;
-    sAdapter.GetInfo(&info);
-    SkDebugf("GPU: %s\nDriver: %s\n", info.device, info.description);
+{
+    wgpu::AdapterInfo debugInfo;
+    wgpu::Adapter debugAdapter = matchedAdaptor.Get();
+    debugAdapter.GetInfo(&debugInfo);
+    SkDebugf("GPU: %s\nDriver: %s\n", debugInfo.device.data, debugInfo.description.data);
+}
 #endif
 
     std::vector<wgpu::FeatureName> features;
@@ -148,6 +153,9 @@ std::unique_ptr<GraphiteTestContext> DawnTestContext::Make(wgpu::BackendType bac
     }
     if (adapter.HasFeature(wgpu::FeatureName::DawnTexelCopyBufferRowAlignment)) {
         features.push_back(wgpu::FeatureName::DawnTexelCopyBufferRowAlignment);
+    }
+    if (adapter.HasFeature(wgpu::FeatureName::ImplicitDeviceSynchronization)) {
+        features.push_back(wgpu::FeatureName::ImplicitDeviceSynchronization);
     }
 
     wgpu::DeviceDescriptor desc;

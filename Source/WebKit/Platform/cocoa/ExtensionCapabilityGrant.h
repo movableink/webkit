@@ -36,7 +36,7 @@ OBJC_PROTOCOL(_SEGrant);
 namespace WebKit {
 
 #if USE(LEGACY_EXTENSIONKIT_SPI)
-using PlatformGrant = std::variant<RetainPtr<BEProcessCapabilityGrant>, RetainPtr<_SEGrant>>;
+using PlatformGrant = Variant<RetainPtr<BEProcessCapabilityGrant>, RetainPtr<_SEGrant>>;
 #else
 using PlatformGrant = RetainPtr<BEProcessCapabilityGrant>;
 #endif

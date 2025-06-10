@@ -47,13 +47,13 @@ public:
     static Ref<AccessibilityTextMarker> create(const AccessibilityTextMarker&);
 
     ~AccessibilityTextMarker();
-    
+
     PlatformTextMarker platformTextMarker() const;
     virtual JSClassRef wrapperClass();
 
     static JSObjectRef makeJSAccessibilityTextMarker(JSContextRef, const AccessibilityTextMarker&);
     bool isEqual(AccessibilityTextMarker*);
-    
+
 private:
     AccessibilityTextMarker(PlatformTextMarker);
     AccessibilityTextMarker(const AccessibilityTextMarker&);

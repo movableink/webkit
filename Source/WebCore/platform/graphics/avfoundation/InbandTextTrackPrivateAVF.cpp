@@ -122,7 +122,7 @@ Ref<InbandGenericCue> InbandTextTrackPrivateAVF::processCueAttributes(CFAttribut
         CFIndex attributeCount = CFDictionaryGetCount(attributes);
         Vector<const void*> keys(attributeCount);
         Vector<const void*> values(attributeCount);
-        CFDictionaryGetKeysAndValues(attributes, keys.data(), values.data());
+        CFDictionaryGetKeysAndValues(attributes, keys.mutableSpan().data(), values.mutableSpan().data());
 
         for (CFIndex i = 0; i < attributeCount; ++i) {
             auto key = dynamic_cf_cast<CFStringRef>(keys[i]);
@@ -313,12 +313,12 @@ Ref<InbandGenericCue> InbandTextTrackPrivateAVF::processCueAttributes(CFAttribut
         switch (cueData->align()) {
         case GenericCueData::Alignment::None:
             // By default, VTT cues alignment align as "start"
-            FALLTHROUGH;
+            [[fallthrough]];
         case GenericCueData::Alignment::Middle:
             // AVFoundation generates "middle" alignment cues for single line cues
             // and cues multi-line cues with lines of equal length, so just treat
             // "middle" alignment the same as "start"
-            FALLTHROUGH;
+            [[fallthrough]];
         case GenericCueData::Alignment::Start:
             cueData->setPositionAlign(GenericCueData::Alignment::Start);
             cueData->setPosition(cueData->position() - cueData->size() / 2);
@@ -569,7 +569,7 @@ void InbandTextTrackPrivateAVF::processVTTSample(CMSampleBufferRef sampleBuffer,
             });
         }
 
-        m_sampleInputBuffer.remove(0, (size_t)boxLength);
+        m_sampleInputBuffer.removeAt(0, (size_t)boxLength);
     }
 }
 

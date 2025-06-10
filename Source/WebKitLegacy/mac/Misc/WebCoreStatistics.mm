@@ -139,17 +139,17 @@ static RetainPtr<NSCountedSet> createNSCountedSet(const HashCountedSet<ASCIILite
 
 + (size_t)cachedFontDataCount
 {
-    return FontCache::forCurrentThread().fontCount();
+    return FontCache::forCurrentThread()->fontCount();
 }
 
 + (size_t)cachedFontDataInactiveCount
 {
-    return FontCache::forCurrentThread().inactiveFontCount();
+    return FontCache::forCurrentThread()->inactiveFontCount();
 }
 
 + (void)purgeInactiveFontData
 {
-    FontCache::forCurrentThread().purgeInactiveFontData();
+    FontCache::forCurrentThread()->purgeInactiveFontData();
 }
 
 + (size_t)glyphPageCount
@@ -261,7 +261,7 @@ static RetainPtr<NSCountedSet> createNSCountedSet(const HashCountedSet<ASCIILite
 
 - (NSString *)renderTreeAsExternalRepresentationForPrinting
 {
-    return externalRepresentation(_private->coreFrame, { RenderAsTextFlag::PrintingMode });
+    return externalRepresentation(_private->coreFrame, { RenderAsTextFlag::PrintingMode }).createNSString().autorelease();
 }
 
 static OptionSet<RenderAsTextFlag> toRenderAsTextFlags(WebRenderTreeAsTextOptions options)
@@ -286,7 +286,7 @@ static OptionSet<RenderAsTextFlag> toRenderAsTextFlags(WebRenderTreeAsTextOption
 
 - (NSString *)renderTreeAsExternalRepresentationWithOptions:(WebRenderTreeAsTextOptions)options
 {
-    return externalRepresentation(_private->coreFrame, toRenderAsTextFlags(options));
+    return externalRepresentation(_private->coreFrame, toRenderAsTextFlags(options)).createNSString().autorelease();
 }
 
 - (int)numberOfPagesWithPageWidth:(float)pageWidthInPixels pageHeight:(float)pageHeightInPixels

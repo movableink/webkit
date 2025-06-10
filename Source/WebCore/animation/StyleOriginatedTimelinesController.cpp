@@ -314,7 +314,7 @@ void StyleOriginatedTimelinesController::unregisterNamedTimeline(const AtomStrin
     // Make sure to remove the named timeline from our name-to-timelines map first,
     // such that re-syncing any CSS Animation previously registered with it resolves
     // their `animation-timeline` properly.
-    timelines.remove(i);
+    timelines.removeAt(i);
 
     for (Ref animation : timeline->relevantAnimations()) {
         if (RefPtr cssAnimation = dynamicDowncast<CSSAnimation>(animation)) {
@@ -486,8 +486,7 @@ void StyleOriginatedTimelinesController::unregisterNamedTimelinesAssociatedWithE
             auto& timeline = timelines[i];
             if (originatingElement(timeline) == styleable) {
                 m_removedTimelines.add(timeline.get());
-                timelines.remove(i);
-                i--;
+                timelines.removeAt(i--);
             }
         }
         if (timelines.isEmpty())

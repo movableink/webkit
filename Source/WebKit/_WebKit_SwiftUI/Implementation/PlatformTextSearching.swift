@@ -63,7 +63,7 @@ struct NSTextFinderAdapter: PlatformFindInteraction {
 @MainActor
 struct UIFindInteractionAdapter: PlatformFindInteraction {
     let wrapped: UIFindInteraction
-    
+
     func presentFindNavigator(showingReplace: Bool) {
         wrapped.presentFindNavigator(showingReplace: showingReplace)
     }

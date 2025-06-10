@@ -29,6 +29,7 @@
 #if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY)
 
 #import "EventNames.h"
+#import "EventTargetInlines.h"
 #import "MouseEventTypes.h"
 
 namespace WebCore {

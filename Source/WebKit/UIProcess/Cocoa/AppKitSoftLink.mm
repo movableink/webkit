@@ -30,7 +30,3 @@
 SOFT_LINK_FRAMEWORK_FOR_SOURCE(WebKit, AppKit)
 SOFT_LINK_CLASS_FOR_SOURCE(WebKit, AppKit, NSAccessibilityRemoteUIElement)
 #endif
-
-#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/AppKitSoftLinkAdditions.mm>)
-#import <WebKitAdditions/AppKitSoftLinkAdditions.mm>
-#endif

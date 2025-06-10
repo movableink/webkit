@@ -113,7 +113,7 @@ egl::Error DisplayMtl::initialize(egl::Display *display)
     if (result != angle::Result::Continue)
     {
         terminate();
-        return egl::EglNotInitialized();
+        return egl::Error(EGL_NOT_INITIALIZED);
     }
     return egl::NoError();
 }
@@ -179,7 +179,7 @@ bool DisplayMtl::testDeviceLost()
 #if ANGLE_METAL_LOSE_CONTEXT_ON_ERROR == ANGLE_ENABLED
     return mCmdQueue.isDeviceLost();
 #else
-     return false;
+    return false;
 #endif
 }
 
@@ -188,7 +188,7 @@ egl::Error DisplayMtl::restoreLostDevice(const egl::Display *display)
 #if ANGLE_METAL_LOSE_CONTEXT_ON_ERROR == ANGLE_ENABLED
     // A Metal device cannot be restored, the entire context would have to be
     // re-created along with any other EGL objects that reference it.
-    return egl::EglBadDisplay();
+    return egl::Error(EGL_BAD_DISPLAY);
 #else
     return egl::NoError();
 #endif
@@ -326,7 +326,7 @@ egl::Error DisplayMtl::waitClient(const gl::Context *context)
 
     if (result != angle::Result::Continue)
     {
-        return egl::EglBadAccess();
+        return egl::Error(EGL_BAD_ACCESS);
     }
     return egl::NoError();
 }
@@ -653,12 +653,12 @@ egl::Error DisplayMtl::validateClientBuffer(const egl::Config *configuration,
         case EGL_IOSURFACE_ANGLE:
             if (!IOSurfaceSurfaceMtl::ValidateAttributes(clientBuffer, attribs))
             {
-                return egl::EglBadAttribute();
+                return egl::Error(EGL_BAD_ATTRIBUTE);
             }
             break;
         default:
             UNREACHABLE();
-            return egl::EglBadAttribute();
+            return egl::Error(EGL_BAD_ATTRIBUTE);
     }
     return egl::NoError();
 }
@@ -674,7 +674,7 @@ egl::Error DisplayMtl::validateImageClientBuffer(const gl::Context *context,
             return TextureImageSiblingMtl::ValidateClientBuffer(this, clientBuffer, attribs);
         default:
             UNREACHABLE();
-            return egl::EglBadAttribute();
+            return egl::Error(EGL_BAD_ATTRIBUTE);
     }
 }
 
@@ -1061,9 +1061,6 @@ void DisplayMtl::initializeExtensions() const
 
         // GL_OES_EGL_sync
         mNativeExtensions.EGLSyncOES = true;
-
-        // GL_ARB_sync
-        mNativeExtensions.syncARB = true;
     }
 
     // GL_KHR_parallel_shader_compile
@@ -1073,6 +1070,9 @@ void DisplayMtl::initializeExtensions() const
     mNativeExtensions.baseVertexBaseInstanceANGLE = mFeatures.hasBaseVertexInstancedDraw.enabled;
     mNativeExtensions.baseVertexBaseInstanceShaderBuiltinANGLE =
         mFeatures.hasBaseVertexInstancedDraw.enabled;
+
+    mNativeExtensions.drawElementsBaseVertexEXT = mFeatures.hasBaseVertexInstancedDraw.enabled;
+    mNativeExtensions.drawElementsBaseVertexOES = mFeatures.hasBaseVertexInstancedDraw.enabled;
 
     // Metal uses the opposite provoking vertex as GLES so emulation is required to use the GLES
     // behaviour. Allow users to change the provoking vertex for improved performance.
@@ -1136,8 +1136,6 @@ void DisplayMtl::initializeExtensions() const
                           gl::IMPLEMENTATION_MAX_PIXEL_LOCAL_STORAGE_PLANES);
             mNativeCaps.maxPixelLocalStoragePlanes =
                 gl::IMPLEMENTATION_MAX_PIXEL_LOCAL_STORAGE_PLANES;
-            mNativeCaps.maxColorAttachmentsWithActivePixelLocalStorage =
-                gl::IMPLEMENTATION_MAX_DRAW_BUFFERS;
             mNativeCaps.maxCombinedDrawBuffersAndPixelLocalStoragePlanes =
                 gl::IMPLEMENTATION_MAX_PIXEL_LOCAL_STORAGE_PLANES +
                 gl::IMPLEMENTATION_MAX_DRAW_BUFFERS;
@@ -1148,7 +1146,8 @@ void DisplayMtl::initializeExtensions() const
     }
 
     // GL_ANGLE_variable_rasterization_rate_metal
-    mNativeExtensions.variableRasterizationRateMetalANGLE = mFeatures.hasVariableRasterizationRate.enabled;
+    mNativeExtensions.variableRasterizationRateMetalANGLE =
+        mFeatures.hasVariableRasterizationRate.enabled;
 #if ANGLE_WEBKIT_EXPLICIT_RESOLVE_TARGET_ENABLED
     // GL_WEBKIT_explicit_resolve_target
     mNativeExtensions.explicitResolveTargetWEBKIT = true;
@@ -1340,9 +1339,15 @@ void DisplayMtl::initializeFeatures()
 
     // Metal compiler optimizations may remove infinite loops causing crashes later in shader
     // execution. http://crbug.com/1513738
-    // Disabled on Mac11 due to test failures. http://crbug.com/1522730
+    ANGLE_FEATURE_CONDITION((&mFeatures), ensureLoopForwardProgress, false);
+
+    // Once not used, injectAsmStatementIntoLoopBodies should be removed and
+    // ensureLoopForwardProgress should default to true. Disabled on Mac11 due to test failures.
+    // http://crbug.com/1522730
+    bool shouldUseInjectAsmIntoLoopBodies = !mFeatures.ensureLoopForwardProgress.enabled &&
+                                            (!isOSX || GetMacOSVersion() >= OSVersion(12, 0, 0));
     ANGLE_FEATURE_CONDITION((&mFeatures), injectAsmStatementIntoLoopBodies,
-                            !isOSX || GetMacOSVersion() >= OSVersion(12, 0, 0));
+                            shouldUseInjectAsmIntoLoopBodies);
 }
 
 angle::Result DisplayMtl::initializeShaderLibrary()

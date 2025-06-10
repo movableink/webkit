@@ -16,8 +16,8 @@ None
 List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/adjust-transform-with-scale.tentative-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/adjust-transform-with-scale.tentative.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/adjust-transform.tenative-expected.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/adjust-transform.tenative.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/adjust-transform.tentative-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/adjust-transform.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/compute-explicit-name-direct.tentative-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/compute-explicit-name-direct.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/compute-explicit-name-nested-vt-names.tentative-expected.html
@@ -36,10 +36,14 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/contain-nested.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/contain-on-self.tentative-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/contain-on-self.tentative.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/custom-ident-implies-contain-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/custom-ident-implies-contain.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/nearest-direct.tentative-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/nearest-direct.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/nearest-ignores-nearest-name.tentative-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/nearest-ignores-nearest-name.tentative.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/nearest-implies-contain-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/nearest-implies-contain.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/nearest-nested.tentative-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/nearest-nested.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/nested-exit.tentative-expected.html
@@ -48,9 +52,16 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/nested-group-display-none.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/nested-group-in-pseudo-basic.tentative-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/nested-group-in-pseudo-basic.tentative.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/nested-opacity-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/nested-ref-100.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/nested-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/nested-root-capture-with-clip-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/nested-root-capture-with-clip-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/nested-root-capture-with-clip.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/normal-goes-up.tentative-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/normal-goes-up.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/render-element.tentative-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/render-element.tentative.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/rounded-border-clipper-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/rounded-border-clipper-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-view-transitions/nested/rounded-border-clipper.html

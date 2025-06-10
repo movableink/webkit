@@ -33,7 +33,7 @@ template<typename T, typename Converter>
 unsigned StringHasher::computeHashAndMaskTop8Bits(std::span<const T> data)
 {
 #if ENABLE(WYHASH_STRING_HASHER)
-    if (LIKELY(data.size() <= smallStringThreshold))
+    if (data.size() <= smallStringThreshold) [[likely]]
         return SuperFastHash::computeHashAndMaskTop8Bits<T, Converter>(data);
     return WYHash::computeHashAndMaskTop8Bits<T, Converter>(data);
 #else
@@ -46,7 +46,7 @@ constexpr unsigned StringHasher::computeLiteralHashAndMaskTop8Bits(const T (&cha
 {
     constexpr unsigned characterCountWithoutNull = characterCount - 1;
 #if ENABLE(WYHASH_STRING_HASHER)
-    if constexpr (LIKELY(characterCountWithoutNull <= smallStringThreshold))
+    if constexpr (characterCountWithoutNull <= smallStringThreshold)
         return SuperFastHash::computeHashAndMaskTop8Bits<T>(std::span { characters, characterCountWithoutNull });
     return WYHash::computeHashAndMaskTop8Bits<T>(std::span { characters, characterCountWithoutNull });
 #else

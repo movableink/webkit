@@ -50,7 +50,7 @@ def filter_jsc_tests(log_file_name):
             f.write(line)
             if print_line:
                 print(line, end='')
-            elif line.startswith('**') or line.startswith('Results'):
+            elif line.startswith('** The following JSC') or line.startswith('Results'):
                 print_line = True
                 print(line, end='')
 

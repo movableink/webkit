@@ -5,5 +5,5 @@ PASS lang("en"): <root><match xml:lang="en-us"/></root>
 PASS lang("en"): <root><unmatch/></root>
 PASS lang("ja"): <root xml:lang="ja"><match/></root>
 PASS lang("ja"): <root xml:lang="ja-jp"><unmatch xml:lang="ja_JP"/></root>
-FAIL lang("ko"): <root><match xml:lang="Ko"/></root> assert_equals: <match xml:lang="Ko"/> expected true but got false
+PASS lang("ko"): <root><unmatch xml:lang="Ko"/></root>
 

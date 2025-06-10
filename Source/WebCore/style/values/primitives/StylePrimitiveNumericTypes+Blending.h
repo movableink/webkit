@@ -36,11 +36,6 @@ using namespace CSS::Literals;
 // MARK: Interpolation of base numeric types
 // https://drafts.csswg.org/css-values/#combining-values
 template<Numeric StyleType> struct Blending<StyleType> {
-    constexpr auto canBlend(const StyleType&, const StyleType&) -> bool
-    {
-        return true;
-    }
-
     auto blend(const StyleType& from, const StyleType& to, const BlendingContext& context) -> StyleType
     {
         if (!context.progress && context.isReplace())
@@ -63,11 +58,6 @@ template<Numeric StyleType> struct Blending<StyleType> {
 // MARK: Interpolation of mixed numeric types
 // https://drafts.csswg.org/css-values/#combine-mixed
 template<auto R, typename V> struct Blending<LengthPercentage<R, V>> {
-    constexpr auto canBlend(const LengthPercentage<R, V>&, const LengthPercentage<R, V>&) -> bool
-    {
-        return true;
-    }
-
     auto blend(const LengthPercentage<R, V>& from, const LengthPercentage<R, V>& to, const BlendingContext& context) -> LengthPercentage<R, V>
     {
         using Length = typename LengthPercentage<R, V>::Dimension;

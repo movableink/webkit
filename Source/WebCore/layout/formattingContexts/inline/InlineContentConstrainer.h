@@ -30,6 +30,7 @@
 #include "InlineFormattingUtils.h"
 #include "InlineItem.h"
 #include "InlineLineBuilder.h"
+#include "InlineLineTypes.h"
 #include "InlineTextItem.h"
 #include <optional>
 
@@ -38,7 +39,7 @@ namespace Layout {
 
 class InlineContentConstrainer {
 public:
-    InlineContentConstrainer(InlineFormattingContext&, const InlineItemList&, const HorizontalConstraints&);
+    InlineContentConstrainer(InlineFormattingContext&, const InlineItemList&, HorizontalConstraints);
     std::optional<Vector<LayoutUnit>> computeParagraphLevelConstraints(TextWrapStyle);
 
 private:
@@ -72,11 +73,12 @@ private:
     bool shouldTrimTrailing(size_t inlineItemIndex, bool useFirstLineStyle) const;
     Vector<size_t> computeBreakOpportunities(InlineItemRange) const;
     Vector<LayoutUnit> computeLineWidthsFromBreaks(InlineItemRange, const Vector<size_t>& breaks, bool isFirstChunk) const;
-    InlineLayoutUnit computeTextIndent(std::optional<bool> previousLineEndsWithLineBreak) const;
+    InlineLayoutUnit computeMaxTextIndent() const;
+    InlineLayoutUnit computeTextIndent(PreviousLineState) const;
 
     InlineFormattingContext& m_inlineFormattingContext;
     const InlineItemList& m_inlineItemList;
-    const HorizontalConstraints& m_horizontalConstraints;
+    const HorizontalConstraints m_horizontalConstraints;
 
     Vector<InlineItemRange> m_originalLineInlineItemRanges;
     Vector<LayoutUnit> m_originalLineConstraints;
@@ -102,7 +104,9 @@ struct SlidingWidth {
 
 private:
     const InlineContentConstrainer& m_inlineContentConstrainer;
+#if ASSERT_ENABLED
     const InlineItemList& m_inlineItemList;
+#endif
     size_t m_start { 0 };
     size_t m_end { 0 };
     bool m_useFirstLineStyle { false };

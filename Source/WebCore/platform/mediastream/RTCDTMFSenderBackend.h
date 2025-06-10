@@ -26,7 +26,6 @@
 
 #if ENABLE(WEB_RTC)
 
-#include "ExceptionOr.h"
 #include <wtf/Function.h>
 #include <wtf/text/WTFString.h>
 

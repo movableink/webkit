@@ -231,7 +231,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
     [coder encodeBool:self.suppressesIncrementalRendering forKey:@"suppressesIncrementalRendering"];
 
     if (auto& applicationNameForUserAgent = _pageConfiguration->applicationNameForUserAgent())
-        [coder encodeObject:*applicationNameForUserAgent forKey:@"applicationNameForUserAgent"];
+        [coder encodeObject:applicationNameForUserAgent->createNSString().get() forKey:@"applicationNameForUserAgent"];
 
     [coder encodeBool:self.allowsAirPlayForMediaPlayback forKey:@"allowsAirPlayForMediaPlayback"];
 
@@ -378,7 +378,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 - (NSURL *)_requiredWebExtensionBaseURL
 {
 #if ENABLE(WK_WEB_EXTENSIONS)
-    return self._protectedPageConfiguration->requiredWebExtensionBaseURL();
+    return self._protectedPageConfiguration->requiredWebExtensionBaseURL().createNSURL().autorelease();
 #else
     return nil;
 #endif
@@ -498,6 +498,16 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     self._protectedPageConfiguration->setWebsiteDataStore(websiteDataStore ? websiteDataStore->_websiteDataStore.get() : nullptr);
 }
 
+- (BOOL)showsSystemScreenTimeBlockingView
+{
+    return _pageConfiguration->showsSystemScreenTimeBlockingView();
+}
+
+- (void)setShowsSystemScreenTimeBlockingView:(BOOL)shows
+{
+    _pageConfiguration->setShowsSystemScreenTimeBlockingView(shows);
+}
+
 - (WKWebpagePreferences *)defaultWebpagePreferences
 {
     return wrapper(self._protectedPageConfiguration->protectedDefaultWebsitePolicies().get());
@@ -606,14 +616,14 @@ static NSString *defaultApplicationNameForUserAgent()
     return [self _multiRepresentationHEICInsertionEnabled];
 }
 
-- (void)setWritingToolsBehavior:(PlatformWritingToolsBehavior)writingToolsBehavior
+- (void)setWritingToolsBehavior:(CocoaWritingToolsBehavior)writingToolsBehavior
 {
     _pageConfiguration->setWritingToolsBehavior(WebKit::convertToWebWritingToolsBehavior(writingToolsBehavior));
 }
 
-- (PlatformWritingToolsBehavior)writingToolsBehavior
+- (CocoaWritingToolsBehavior)writingToolsBehavior
 {
-    return WebKit::convertToPlatformWritingToolsBehavior(_pageConfiguration->writingToolsBehavior());
+    return WebKit::convertToCocoaWritingToolsBehavior(_pageConfiguration->writingToolsBehavior());
 }
 
 #endif // ENABLE(WRITING_TOOLS)
@@ -737,12 +747,12 @@ static NSString *defaultApplicationNameForUserAgent()
 
 - (BOOL)_showsSystemScreenTimeBlockingView
 {
-    return _pageConfiguration->showsSystemScreenTimeBlockingView();
+    return [self showsSystemScreenTimeBlockingView];
 }
 
 - (void)_setShowsSystemScreenTimeBlockingView:(BOOL)shows
 {
-    _pageConfiguration->setShowsSystemScreenTimeBlockingView(shows);
+    [self setShowsSystemScreenTimeBlockingView:shows];
 }
 
 - (BOOL)_allowTopNavigationToDataURLs
@@ -1040,7 +1050,7 @@ static WebKit::AttributionOverrideTesting toAttributionOverrideTesting(_WKAttrib
     const auto& schemes = self._protectedPageConfiguration->maskedURLSchemes();
     NSMutableSet<NSString *> *set = [NSMutableSet setWithCapacity:schemes.size()];
     for (const auto& scheme : schemes)
-        [set addObject:scheme];
+        [set addObject:scheme.createNSString().get()];
     return set;
 }
 
@@ -1079,7 +1089,7 @@ static WebKit::AttributionOverrideTesting toAttributionOverrideTesting(_WKAttrib
         return nil;
     NSMutableSet<NSString *> *set = [NSMutableSet setWithCapacity:hosts->size()];
     for (const auto& host : *hosts)
-        [set addObject:host];
+        [set addObject:host.createNSString().get()];
     return set;
 }
 
@@ -1309,7 +1319,7 @@ static WebKit::AttributionOverrideTesting toAttributionOverrideTesting(_WKAttrib
 
 - (NSString *)_overrideContentSecurityPolicy
 {
-    return _pageConfiguration->overrideContentSecurityPolicy();
+    return _pageConfiguration->overrideContentSecurityPolicy().createNSString().autorelease();
 }
 
 - (void)_setOverrideContentSecurityPolicy:(NSString *)overrideContentSecurityPolicy
@@ -1319,7 +1329,7 @@ static WebKit::AttributionOverrideTesting toAttributionOverrideTesting(_WKAttrib
 
 - (NSString *)_mediaContentTypesRequiringHardwareSupport
 {
-    return _pageConfiguration->mediaContentTypesRequiringHardwareSupport();
+    return _pageConfiguration->mediaContentTypesRequiringHardwareSupport().createNSString().autorelease();
 }
 
 - (void)_setMediaContentTypesRequiringHardwareSupport:(NSString *)mediaContentTypesRequiringHardwareSupport
@@ -1444,7 +1454,7 @@ static WebKit::AttributionOverrideTesting toAttributionOverrideTesting(_WKAttrib
 
 - (NSString *)_processDisplayName
 {
-    return _pageConfiguration->processDisplayName();
+    return _pageConfiguration->processDisplayName().createNSString().autorelease();
 }
 
 - (void)_setProcessDisplayName:(NSString *)lsDisplayName
@@ -1482,7 +1492,7 @@ static WebKit::AttributionOverrideTesting toAttributionOverrideTesting(_WKAttrib
     auto& identifier = _pageConfiguration->attributedBundleIdentifier();
     if (!identifier)
         return nil;
-    return identifier;
+    return identifier.createNSString().autorelease();
 }
 
 - (void)_setContentSecurityPolicyModeForExtension:(_WKContentSecurityPolicyModeForExtension)mode

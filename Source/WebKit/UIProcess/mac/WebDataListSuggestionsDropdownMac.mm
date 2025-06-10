@@ -88,27 +88,29 @@ void WebDataListSuggestionsDropdownMac::show(WebCore::DataListSuggestionInformat
         return;
     }
 
-    m_dropdownUI = adoptNS([[WKDataListSuggestionsController alloc] initWithInformation:WTFMove(information) inView:m_view]);
+    m_dropdownUI = adoptNS([[WKDataListSuggestionsController alloc] initWithInformation:WTFMove(information) inView:m_view.get().get()]);
     [m_dropdownUI showSuggestionsDropdown:*this];
 }
 
 void WebDataListSuggestionsDropdownMac::didSelectOption(const String& selectedOption)
 {
-    if (!m_page)
+    RefPtr page = m_page.get();
+    if (!page)
         return;
 
-    m_page->didSelectOption(selectedOption);
+    page->didSelectOption(selectedOption);
     close();
 }
 
 void WebDataListSuggestionsDropdownMac::selectOption()
 {
-    if (!m_page)
+    RefPtr page = m_page.get();
+    if (!page)
         return;
 
     String selectedOption = [m_dropdownUI currentSelectedString];
     if (!selectedOption.isNull())
-        m_page->didSelectOption(selectedOption);
+        page->didSelectOption(selectedOption);
 
     close();
 }
@@ -168,6 +170,14 @@ void WebDataListSuggestionsDropdownMac::close()
     return NSWindowShadowSecondaryWindow;
 }
 
+#if ENABLE(WINDOW_ADJUSTMENT_FOR_DATALIST_DROPDOWN)
+#import <WebKitAdditions/WebDataListSuggestionsDropdownMacAdditions.mm>
+#else
+- (void)adjustWindowIfNeeded
+{
+}
+#endif
+
 @end
 
 @implementation WKDataListSuggestionView {
@@ -189,12 +199,12 @@ void WebDataListSuggestionsDropdownMac::close()
     [_bottomDivider layer].backgroundColor = NSColor.separatorColor.CGColor;
     [self addSubview:_bottomDivider.get()];
 
-    auto setUpTextField = [&](NSTextField *textField) {
+    auto setUpTextField = [strongSelf = retainPtr(self)](NSTextField *textField) {
         textField.editable = NO;
         textField.bezeled = NO;
         textField.font = [NSFont menuFontOfSize:0];
         textField.drawsBackground = NO;
-        [self addSubview:textField];
+        [strongSelf addSubview:textField];
     };
 
     setUpTextField(_valueField.get());
@@ -341,6 +351,7 @@ static BOOL shouldShowDividersBetweenCells(const Vector<WebCore::DataListSuggest
     [_enclosingWindow setMovable:NO];
     [_enclosingWindow setBackgroundColor:[NSColor clearColor]];
     [_enclosingWindow setOpaque:NO];
+    [_enclosingWindow adjustWindowIfNeeded];
 
     _scrollView = adoptNS([[NSScrollView alloc] initWithFrame:[_enclosingWindow contentView].bounds]);
     [_scrollView setHasVerticalScroller:YES];
@@ -414,8 +425,8 @@ static BOOL shouldShowDividersBetweenCells(const Vector<WebCore::DataListSuggest
     [_table scrollRowToVisible:newSelection];
 
     // Notify accessibility clients of new selection.
-    NSString *currentSelectedString = [self currentSelectedString];
-    [self notifyAccessibilityClients:currentSelectedString];
+    RetainPtr currentSelectedString = [self currentSelectedString].createNSString();
+    [self notifyAccessibilityClients:currentSelectedString.get()];
 }
 
 - (void)invalidate
@@ -435,14 +446,14 @@ static BOOL shouldShowDividersBetweenCells(const Vector<WebCore::DataListSuggest
     _enclosingWindow = nil;
 
     // Notify accessibility clients that datalist went away.
-    NSString *info = WEB_UI_STRING("Suggestions list hidden.", "Accessibility announcement for the data list suggestions dropdown going away.");
-    [self notifyAccessibilityClients:info];
+    RetainPtr info = WEB_UI_STRING("Suggestions list hidden.", "Accessibility announcement for the data list suggestions dropdown going away.").createNSString();
+    [self notifyAccessibilityClients:info.get()];
 }
 
 - (NSRect)dropdownRectForElementRect:(const WebCore::IntRect&)rect
 {
-    NSWindow *presentingWindow = [_presentingView window];
-    NSRect screenRect = presentingWindow.screen.visibleFrame;
+    RetainPtr presentingWindow = [_presentingView window];
+    NSRect screenRect = presentingWindow.get().screen.visibleFrame;
     NSRect windowRect = [presentingWindow convertRectToScreen:[_presentingView convertRect:rect toView:nil]];
 
     windowRect = CGRectIntersection(windowRect, screenRect);
@@ -474,9 +485,9 @@ static BOOL shouldShowDividersBetweenCells(const Vector<WebCore::DataListSuggest
     [_scrollView flashScrollers];
 
     // Notify accessibility clients of datalist becoming visible.
-    NSString *currentSelectedString = [self currentSelectedString];
-    NSString *info = [NSString stringWithFormat:WEB_UI_NSSTRING(@"Suggestions list visible, %@", "Accessibility announcement that the suggestions list became visible. The format argument is for the first option in the list."), currentSelectedString];
-    [self notifyAccessibilityClients:info];
+    RetainPtr currentSelectedString = [self currentSelectedString].createNSString();
+    RetainPtr info = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"Suggestions list visible, %@", "Accessibility announcement that the suggestions list became visible. The format argument is for the first option in the list."), currentSelectedString.get()]);
+    [self notifyAccessibilityClients:info.get()];
 }
 
 - (void)selectedRow:(NSTableView *)sender
@@ -485,7 +496,7 @@ static BOOL shouldShowDividersBetweenCells(const Vector<WebCore::DataListSuggest
     if (!selectedString)
         return;
 
-    _dropdown->didSelectOption(selectedString);
+    Ref { *_dropdown }->didSelectOption(selectedString);
 }
 
 - (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView
@@ -520,7 +531,7 @@ static BOOL shouldShowDividersBetweenCells(const Vector<WebCore::DataListSuggest
 
     auto& suggestion = _suggestions.at(row);
     [result setShouldShowBottomDivider:_showDividersBetweenCells && row < static_cast<NSInteger>(_suggestions.size() - 1)];
-    [result setValue:suggestion.value label:suggestion.label];
+    [result setValue:suggestion.value.createNSString().get() label:suggestion.label.createNSString().get()];
 
     return result.autorelease();
 }

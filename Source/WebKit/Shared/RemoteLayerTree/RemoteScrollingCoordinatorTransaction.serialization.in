@@ -229,6 +229,7 @@ header: <WebCore/ScrollingStatePositionedNode.h>
     [OptionalTupleBits] OptionSet<WebCore::ScrollingStateNodeProperty> changedProperties()
     [OptionalTupleBit=WebCore::ScrollingStateNode::Property::Layer] std::optional<WebCore::PlatformLayerIdentifier> layer().layerID()
     [OptionalTupleBit=WebCore::ScrollingStateNode::Property::ViewportConstraints] WebCore::StickyPositionViewportConstraints viewportConstraints()
+    [OptionalTupleBit=WebCore::ScrollingStateNode::Property::ViewportAnchorLayer] std::optional<WebCore::PlatformLayerIdentifier> viewportAnchorLayer().layerID();
 }
 
 [RefCounted] class WebCore::ScrollingStatePositionedNode {

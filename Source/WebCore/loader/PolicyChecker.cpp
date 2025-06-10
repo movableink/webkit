@@ -53,6 +53,7 @@
 #include "Logging.h"
 #include "Navigation.h"
 #include "PlatformStrategies.h"
+#include "ResourceLoadInfo.h"
 #include "ThreadableBlobRegistry.h"
 #include "URLKeepingBlobAlive.h"
 #include <wtf/CompletionHandler.h>
@@ -62,7 +63,7 @@
 #endif
 
 #define PAGE_ID (m_frame->pageID() ? m_frame->pageID()->toUInt64() : 0)
-#define FRAME_ID (m_frame->loader().frameID().object().toUInt64())
+#define FRAME_ID (m_frame->loader().frameID().toUInt64())
 #define POLICYCHECKER_RELEASE_LOG(fmt, ...) RELEASE_LOG(Loading, "%p - [pageID=%" PRIu64 ", frameID=%" PRIu64 "] PolicyChecker::" fmt, this, PAGE_ID, FRAME_ID, ##__VA_ARGS__)
 #define POLICYCHECKER_RELEASE_LOG_FORWARDABLE(fmt, ...) RELEASE_LOG_FORWARDABLE(Loading, fmt, PAGE_ID, FRAME_ID, ##__VA_ARGS__)
 
@@ -120,6 +121,7 @@ void PolicyChecker::checkNavigationPolicy(ResourceRequest&& request, const Resou
     Ref frame = m_frame.get();
     if (action.isEmpty()) {
         action = NavigationAction { frame->protectedDocument().releaseNonNull(), request, InitiatedByMainFrame::Unknown, loader->isRequestFromClientOrUserInput(), NavigationType::Other, loader->shouldOpenExternalURLsPolicyToPropagate() };
+        action.setIsContentExtensionRedirect(loader->isContentExtensionRedirect());
         loader->setTriggeringAction(NavigationAction { action });
     }
 
@@ -246,7 +248,7 @@ void PolicyChecker::checkNavigationPolicy(ResourceRequest&& request, const Resou
                 frameLoader->client().startDownload(request, suggestedFilename, fromDownloadAttribute);
             } else if (RefPtr document = frame->document())
                 document->addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Not allowed to download due to sandboxing"_s);
-            FALLTHROUGH;
+            [[fallthrough]];
         case PolicyAction::Ignore:
             POLICYCHECKER_RELEASE_LOG("checkNavigationPolicy: ignoring because policyAction from dispatchDecidePolicyForNavigationAction is Ignore");
             return function({ }, nullptr, NavigationPolicyDecision::IgnoreLoad);
@@ -296,6 +298,16 @@ void PolicyChecker::checkNavigationPolicy(ResourceRequest&& request, const Resou
     auto sandboxFlags = frame->effectiveSandboxFlags();
     auto isPerformingHTTPFallback = frameLoader->isHTTPFallbackInProgress() ? IsPerformingHTTPFallback::Yes : IsPerformingHTTPFallback::No;
 
+#if ENABLE(CONTENT_EXTENSIONS)
+    if (frame->loader().documentLoader() && frame->loader().documentLoader()->hasActiveContentRuleListActions()) {
+        if (RefPtr page = frame->page()) {
+            auto resourceType = frame->isMainFrame() ? ContentExtensions::ResourceType::TopDocument : ContentExtensions::ResourceType::ChildDocument;
+            auto results = page->protectedUserContentProvider()->processContentRuleListsForLoad(*page, request.url(), resourceType, *frame->loader().documentLoader());
+            ContentExtensions::applyResultsToRequest(WTFMove(results), page.get(), request);
+        }
+    }
+#endif
+
     if (isInitialEmptyDocumentLoad) {
         // We ignore the response from the client for initial empty document loads and proceed with the load synchronously.
         frameLoader->client().dispatchDecidePolicyForNavigationAction(action, request, redirectResponse, formState.get(), clientRedirectSourceForHistory, navigationID, hitTestResult(action), hasOpener, isPerformingHTTPFallback, sandboxFlags, policyDecisionMode, [](PolicyAction) { });
@@ -338,7 +350,7 @@ void PolicyChecker::checkNewWindowPolicy(NavigationAction&& navigationAction, Re
                 frame->protectedLoader()->client().startDownload(request);
             else if (RefPtr document = frame->document())
                 document->addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Not allowed to download due to sandboxing"_s);
-            FALLTHROUGH;
+            [[fallthrough]];
         case PolicyAction::Ignore:
             function({ }, nullptr, { }, { }, ShouldContinuePolicyCheck::No);
             return;
@@ -347,7 +359,7 @@ void PolicyChecker::checkNewWindowPolicy(NavigationAction&& navigationAction, Re
             function({ }, nullptr, { }, { }, ShouldContinuePolicyCheck::No);
             return;
         case PolicyAction::Use:
-            function(request, formState, frameName, navigationAction, ShouldContinuePolicyCheck::Yes);
+            function(WTFMove(request), formState, frameName, navigationAction, ShouldContinuePolicyCheck::Yes);
             return;
         }
         ASSERT_NOT_REACHED();

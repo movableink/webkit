@@ -22,23 +22,31 @@
 
 import re
 
-from webkitcorepy.string_utils import unicode
-
 
 class Version(object):
     MATCHES_RE = re.compile(r'(?P<operator>==|!=|>|<|>=|<=)? *(?P<version>\d+(\.\d+)?(\.\d+)?(\.\*)?)')
 
-    @staticmethod
-    def from_string(string):
-        assert isinstance(string, str) or isinstance(string, unicode)
-        return Version.from_iterable(string.split('.'))
+    @classmethod
+    def from_string(cls, string):
+        if not isinstance(string, str):
+            raise TypeError('Version.from_string requires a str')
 
-    @staticmethod
-    def from_iterable(val):
-        result = Version()
-        for i in range(len(val)):
-            result[i] = int(val[i])
-        return result
+        # We want this outside of the try statement so it can raise its own TypeError.
+        split = string.split('.')
+
+        try:
+            return cls(*split)
+        except TypeError:
+            # This occurs when we have too many arguments.
+            raise ValueError("Invalid version string") from None
+
+    @classmethod
+    def from_iterable(cls, val):
+        try:
+            return cls(*val)
+        except TypeError:
+            # This occurs when we have too many arguments.
+            raise ValueError("Too many iterable items") from None
 
     @staticmethod
     def from_name(name):
@@ -67,12 +75,12 @@ class Version(object):
                 return self.micro
             elif key == 4:
                 return self.nano
-            raise ValueError('Version key must be between 0 and 4')
+            raise IndexError('Version key must be between 0 and 4')
         elif isinstance(key, str):
-            if hasattr(self, key):
+            if key in ('major', 'minor', 'tiny', 'micro', 'nano'):
                 return getattr(self, key)
-            raise ValueError('Version key must be major, minor, tiny, micro or nano')
-        raise ValueError('Expected version key to be string or integer')
+            raise KeyError('Version key must be major, minor, tiny, micro or nano')
+        raise TypeError('Expected version key to be string or integer')
 
     def __setitem__(self, key, value):
         if isinstance(key, int):
@@ -91,12 +99,12 @@ class Version(object):
             elif key == 4:
                 self.nano = int(value)
                 return self.nano
-            raise ValueError('Version key must be between 0 and 4')
+            raise IndexError('Version key must be between 0 and 4')
         elif isinstance(key, str):
-            if hasattr(self, key):
+            if key in ('major', 'minor', 'tiny', 'micro', 'nano'):
                 return setattr(self, key, value)
-            raise ValueError('Version key must be major, minor, tiny, micro or nano')
-        raise ValueError('Expected version key to be string or integer')
+            raise KeyError('Version key must be major, minor, tiny, micro or nano')
+        raise TypeError('Expected version key to be string or integer')
 
     def matches(self, expressions):
         does_match = None
@@ -131,57 +139,53 @@ class Version(object):
 
         return True if does_match is None else does_match
 
+    def _strip_zeros(self):
+        parts = list(self)
+        for i, part in enumerate(reversed(parts)):
+            if part != 0:
+                break
+        return parts[:-i]
+
     # 11.2 is in 11, but 11 is not in 11.2
     def __contains__(self, version):
-        assert isinstance(version, Version)
-        does_match = True
-        for i in range(len(version)):
-            if self[i] != version[i]:
-                does_match = False
-            if not does_match and self[i] != 0:
-                return False
-        return True
+        if not isinstance(version, Version):
+            raise TypeError('__contains__ requires a Version')
+        stripped = tuple(self._strip_zeros())
+        other = tuple(version)[:len(stripped)]
+        return stripped == other
+
+    def __str__(self):
+        parts = self._strip_zeros()
+        return '.'.join(map(str, parts))
 
     def __repr__(self):
-        len_to_print = 1
-        for i in range(len(self)):
-            if self[i]:
-                len_to_print = i + 1
-        result = str(self.major)
-        for i in range(len_to_print - 1):
-            result += '.{}'.format(self[i + 1])
-        return result
+        parts = self._strip_zeros()
+        return f'Version({", ".join(map(str, parts))})'
 
     def __hash__(self):
-        result = 0
-        for index in range(len(self)):
-            result *= 1000
-            result += self[index]
-        return result
-
-    def __cmp__(self, other):
-        if other is None:
-            return 1
-        for i in range(len(self)):
-            diff = self[i] - other[i]
-            if diff:
-                return diff
-        return 0
+        return hash(tuple(self))
 
     def __eq__(self, other):
-        return self.__cmp__(other) == 0
-
-    def __ne__(self, other):
-        return self.__cmp__(other) != 0
+        if other is None:
+            return False
+        return tuple(self) == tuple(other)
 
     def __lt__(self, other):
-        return self.__cmp__(other) < 0
+        if other is None:
+            return False
+        return tuple(self) < tuple(other)
 
     def __le__(self, other):
-        return self.__cmp__(other) <= 0
+        if other is None:
+            return False
+        return tuple(self) <= tuple(other)
 
     def __gt__(self, other):
-        return self.__cmp__(other) > 0
+        if other is None:
+            return True
+        return tuple(self) > tuple(other)
 
     def __ge__(self, other):
-        return self.__cmp__(other) >= 0
+        if other is None:
+            return True
+        return tuple(self) >= tuple(other)

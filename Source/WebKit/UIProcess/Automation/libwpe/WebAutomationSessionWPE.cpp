@@ -222,11 +222,7 @@ static void doKeyStrokeEvent(WebPageProxy &page, bool pressed, uint32_t keyVal, 
     auto* view = page.wpeView();
     auto* display = wpe_view_get_display(view);
     GUniqueOutPtr<GError> error;
-    auto* keymap = WPE_KEYMAP(wpe_display_get_keymap(display, &error.outPtr()));
-    if (error) {
-        LOG(Automation, "WebAutomationSession::doKeyStrokeEvent: Failed to get keymap: %s. Ignoring event.", error->message);
-        return;
-    }
+    auto* keymap = WPE_KEYMAP(wpe_display_get_keymap(display));
 
     GUniqueOutPtr<WPEKeymapEntry> entries;
     guint entriesCount;

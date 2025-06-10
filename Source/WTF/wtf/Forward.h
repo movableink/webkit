@@ -21,6 +21,7 @@
 #pragma once
 
 #include <stddef.h>
+#include <stdint.h>
 #include <wtf/Platform.h>
 
 #if defined(__has_feature)
@@ -80,20 +81,25 @@ using SequesteredArenaMalloc = FastMalloc;
 namespace JSONImpl {
 class Array;
 class Object;
+class Value;
 template<typename> class ArrayOf;
 }
 
 #if ENABLE(MALLOC_HEAP_BREAKDOWN)
 struct VectorBufferMalloc;
 struct EmbeddedFixedVectorMalloc;
+struct SegmentedVectorMalloc;
+struct HashTableMalloc;
 #else
 using VectorBufferMalloc = FastMalloc;
 using EmbeddedFixedVectorMalloc = FastMalloc;
-#endif
 using SegmentedVectorMalloc = FastMalloc;
+using HashTableMalloc = FastMalloc;
+#endif
 
 template<typename> struct DefaultRefDerefTraits;
 
+template<typename> class Awaitable;
 template<typename> class CompactPtr;
 template<typename> class CompletionHandler;
 template<typename, size_t = 0> class Deque;
@@ -161,11 +167,11 @@ template<typename T> struct KeyValuePairKeyExtractor;
 template<typename KeyTraits, typename MappedTraits> struct KeyValuePairTraits;
 template<typename KeyTypeArg, typename ValueTypeArg> struct KeyValuePair;
 enum class ShouldValidateKey : bool { No, Yes };
-template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, ShouldValidateKey shouldValidateKey = ShouldValidateKey::Yes> class HashTable;
+template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, typename Malloc = HashTableMalloc> class HashTable;
 template<typename Value, typename = DefaultHash<Value>, typename = HashTraits<Value>> class HashCountedSet;
-template<typename KeyArg, typename MappedArg, typename = DefaultHash<KeyArg>, typename = HashTraits<KeyArg>, typename = HashTraits<MappedArg>, typename = HashTableTraits, ShouldValidateKey = ShouldValidateKey::Yes> class HashMap;
-template<typename KeyArg, typename MappedArg, typename KeyHash = DefaultHash<KeyArg>, typename KeyTraits = HashTraits<KeyArg>, typename MappedTraits = HashTraits<MappedArg>, typename HashTraits = HashTableTraits>
-using UncheckedKeyHashMap = HashMap<KeyArg, MappedArg, KeyHash, KeyTraits, MappedTraits, HashTraits, ShouldValidateKey::No>;
+template<typename KeyArg, typename MappedArg, typename = DefaultHash<KeyArg>, typename = HashTraits<KeyArg>, typename = HashTraits<MappedArg>, typename = HashTableTraits, ShouldValidateKey = ShouldValidateKey::Yes, typename = HashTableMalloc> class HashMap;
+template<typename KeyArg, typename MappedArg, typename KeyHash = DefaultHash<KeyArg>, typename KeyTraits = HashTraits<KeyArg>, typename MappedTraits = HashTraits<MappedArg>, typename HashTraits = HashTableTraits, typename Malloc = HashTableMalloc>
+using UncheckedKeyHashMap = HashMap<KeyArg, MappedArg, KeyHash, KeyTraits, MappedTraits, HashTraits, ShouldValidateKey::No, Malloc>;
 template<typename ValueArg, typename = DefaultHash<ValueArg>, typename = HashTraits<ValueArg>, typename = HashTableTraits, ShouldValidateKey = ShouldValidateKey::Yes> class HashSet;
 template<typename ValueArg, typename = DefaultHash<ValueArg>> class ListHashSet;
 template<typename ValueArg, typename HashArg = DefaultHash<ValueArg>, typename TraitsArg = HashTraits<ValueArg>, typename TableTraitsArg = HashTableTraits>
@@ -196,6 +202,7 @@ using WTF::AbstractLocker;
 using WTF::AtomString;
 using WTF::AtomStringImpl;
 using WTF::AtomicObjectIdentifier;
+using WTF::Awaitable;
 using WTF::BinarySemaphore;
 using WTF::CString;
 using WTF::CompletionHandler;
@@ -250,6 +257,7 @@ using WTF::UncheckedKeyHashMap;
 using WTF::UncheckedKeyHashSet;
 using WTF::UniqueRef;
 using WTF::Vector;
+using WTF::WallTime;
 using WTF::WeakPtr;
 using WTF::WeakRef;
 

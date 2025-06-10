@@ -20,7 +20,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import mock
+from unittest import mock
 
 from resultsdbpy.model.docker import Docker
 from resultsdbpy.model.wait_for_docker_test_case import WaitForDockerTestCase

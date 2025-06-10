@@ -106,6 +106,10 @@ void AccessibilityTableColumn::addChildren()
 
         addChild(*cell);
     }
+
+#ifndef NDEBUG
+    verifyChildrenIndexInParent();
+#endif
 }
     
 } // namespace WebCore

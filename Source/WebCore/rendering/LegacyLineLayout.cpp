@@ -44,6 +44,7 @@
 #include "RenderFragmentedFlow.h"
 #include "RenderLayoutState.h"
 #include "RenderLineBreak.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGText.h"
 #include "RenderView.h"
 #include "SVGElementTypeHelpers.h"
@@ -91,9 +92,21 @@ inline std::unique_ptr<BidiRun> createRun(int start, int end, RenderObject& obj,
     return makeUnique<BidiRun>(start, end, obj, resolver.context(), resolver.dir());
 }
 
+bool LegacyLineLayout::shouldSkipCreatingRunsForObject(RenderObject& object)
+{
+    if (is<RenderText>(object))
+        return false;
+    auto& renderElement = downcast<RenderElement>(object);
+    if (renderElement.isFloating())
+        return true;
+    if (renderElement.isOutOfFlowPositioned() && !renderElement.style().isOriginalDisplayInlineType() && !renderElement.container()->isRenderInline())
+        return true;
+    return false;
+}
+
 void LegacyLineLayout::appendRunsForObject(BidiRunList<BidiRun>* runs, int start, int end, RenderObject& obj, InlineBidiResolver& resolver)
 {
-    if (start > end || RenderBlock::shouldSkipCreatingRunsForObject(obj))
+    if (start > end || shouldSkipCreatingRunsForObject(obj))
         return;
 
     LineWhitespaceCollapsingState& lineWhitespaceCollapsingState = resolver.whitespaceCollapsingState();
@@ -147,7 +160,7 @@ std::unique_ptr<LegacyRootInlineBox> LegacyLineLayout::createRootInlineBox()
 LegacyRootInlineBox* LegacyLineLayout::createAndAppendRootInlineBox()
 {
     m_legacyRootInlineBox = createRootInlineBox();
-    if (UNLIKELY(AXObjectCache::accessibilityEnabled())) {
+    if (AXObjectCache::accessibilityEnabled()) [[unlikely]] {
         if (AXObjectCache* cache = m_flow.document().existingAXObjectCache())
             cache->deferRecomputeIsIgnored(m_flow.element());
     }
@@ -334,7 +347,7 @@ void LegacyLineLayout::removeEmptyTextBoxesAndUpdateVisualReordering(LegacyRootI
     }
 }
 
-static inline void notifyResolverToResumeInIsolate(InlineBidiResolver& resolver, RenderObject* root, RenderObject* startObject)
+static inline void notifyResolverToResumeInIsolate(InlineBidiResolver& resolver, const RenderInline* root, RenderObject* startObject)
 {
     if (root != startObject) {
         RenderObject* parent = startObject->parent();
@@ -343,7 +356,7 @@ static inline void notifyResolverToResumeInIsolate(InlineBidiResolver& resolver,
     }
 }
 
-static inline void setUpResolverToResumeInIsolate(InlineBidiResolver& resolver, InlineBidiResolver& topResolver, BidiRun& isolatedRun, RenderObject* root, RenderObject* startObject)
+static inline void setUpResolverToResumeInIsolate(InlineBidiResolver& resolver, InlineBidiResolver& topResolver, BidiRun& isolatedRun, const RenderInline* root, RenderObject* startObject)
 {
     // Set up m_whitespaceCollapsingState
     resolver.whitespaceCollapsingState() = topResolver.whitespaceCollapsingState();
@@ -495,7 +508,6 @@ void LegacyLineLayout::layoutRunsAndFloatsInRange(InlineBidiResolver& resolver)
         lineInfo.resetRunsFromLeadingWhitespace();
 
         end = lineBreaker.nextLineBreak(resolver, lineInfo, renderTextInfo);
-        m_flow.cachePriorCharactersIfNeeded(renderTextInfo.lineBreakIteratorFactory);
         renderTextInfo.lineBreakIteratorFactory.priorContext().reset();
         if (resolver.position().atEnd()) {
             // FIXME: We shouldn't be creating any runs in nextLineBreak to begin with!

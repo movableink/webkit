@@ -30,6 +30,7 @@
 #include <WebCore/SQLiteDatabase.h>
 #include <algorithm>
 #include <iterator>
+#include <ranges>
 #include <wtf/FileSystem.h>
 #include <wtf/text/MakeString.h>
 
@@ -79,10 +80,10 @@ static bool operator==(PushTopics a, PushTopics b)
         return codePointCompare(lhs, rhs) < 0;
     };
 
-    std::sort(a.enabledTopics.begin(), a.enabledTopics.end(), lessThan);
-    std::sort(a.ignoredTopics.begin(), a.ignoredTopics.end(), lessThan);
-    std::sort(b.enabledTopics.begin(), b.enabledTopics.end(), lessThan);
-    std::sort(b.ignoredTopics.begin(), b.ignoredTopics.end(), lessThan);
+    std::ranges::sort(a.enabledTopics, lessThan);
+    std::ranges::sort(a.ignoredTopics, lessThan);
+    std::ranges::sort(b.enabledTopics, lessThan);
+    std::ranges::sort(b.ignoredTopics, lessThan);
 
     return a.enabledTopics == b.enabledTopics
         && a.ignoredTopics == b.ignoredTopics;

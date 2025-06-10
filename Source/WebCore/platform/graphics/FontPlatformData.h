@@ -186,7 +186,7 @@ struct FontPlatformSerializedTraits {
 struct FontPlatformOpticalSize {
     static std::optional<FontPlatformOpticalSize> fromCF(CFTypeRef);
     RetainPtr<CFTypeRef> toCF() const;
-    std::variant<RetainPtr<CFNumberRef>, String> opticalSize;
+    Variant<RetainPtr<CFNumberRef>, String> opticalSize;
 };
 
 struct FontPlatformSerializedAttributes {
@@ -361,7 +361,7 @@ public:
     HFONT hfont() const { return m_hfont ? m_hfont->get() : 0; }
 #endif
 
-    using IPCData = std::variant<FontPlatformSerializedData, FontPlatformSerializedCreationData>;
+    using IPCData = Variant<FontPlatformSerializedData, FontPlatformSerializedCreationData>;
 #if USE(CORE_TEXT)
     WEBCORE_EXPORT FontPlatformData(float size, FontOrientation&&, FontWidthVariant&&, TextRenderingMode&&, bool syntheticBold, bool syntheticOblique, RetainPtr<CTFontRef>&&, RefPtr<FontCustomPlatformData>&&);
 #elif USE(SKIA)
@@ -563,12 +563,12 @@ public:
         : m_context(context)
         , m_textMatrix(CGContextGetTextMatrix(context))
     {
-        CGContextSetTextMatrix(m_context, newMatrix);
+        CGContextSetTextMatrix(m_context.get(), newMatrix);
     }
 
     ~ScopedTextMatrix()
     {
-        CGContextSetTextMatrix(m_context, m_textMatrix);
+        CGContextSetTextMatrix(m_context.get(), m_textMatrix);
     }
 
     CGAffineTransform savedMatrix() const
@@ -577,7 +577,7 @@ public:
     }
 
 private:
-    CGContextRef m_context;
+    RetainPtr<CGContextRef> m_context;
     CGAffineTransform m_textMatrix;
 };
 

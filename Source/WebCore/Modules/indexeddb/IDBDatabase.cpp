@@ -28,6 +28,7 @@
 
 #include "DOMStringList.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "IDBConnectionProxy.h"
 #include "IDBConnectionToServer.h"
 #include "IDBIndex.h"
@@ -40,6 +41,7 @@
 #include "Node.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/HeapInlines.h>
+#include <ranges>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -48,7 +50,7 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(IDBDatabase);
 
 static Vector<String> sortAndRemoveDuplicates(Vector<String>&& vector)
 {
-    std::sort(vector.begin(), vector.end(), WTF::codePointCompareLessThan);
+    std::ranges::sort(vector, WTF::codePointCompareLessThan);
     removeRepeatedElements(vector);
     return WTFMove(vector);
 }

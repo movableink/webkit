@@ -34,6 +34,7 @@ from datetime import datetime
 from webkitbugspy import User, log
 
 from html.parser import HTMLParser
+from itertools import chain
 
 requests = webkitcorepy.CallByNeed(lambda: __import__('requests'))
 
@@ -282,24 +283,15 @@ class Tracker(GenericTracker):
             else:
                 sys.stderr.write("Failed to fetch comments for '{}'\n".format(issue.link))
 
-        if member in ('duplicates', 'references'):
+        if member in ('duplicates', 'references', 'see_also'):
             issue._references = []
+            issue._related_links = []
             refs = set()
 
-            # Attempt to match radar importer first
-            if self.radar_importer:
-                for comment in (issue.comments or []):
-                    if not comment:
-                        continue
-                    if comment.user != self.radar_importer:
-                        continue
-                    candidate = GenericTracker.from_string(comment.content)
-                    if not candidate or candidate.link in refs or (isinstance(type(candidate.tracker), type(issue.tracker)) and candidate.id == issue.id):
-                        continue
-                    issue._references.append(candidate)
-                    refs.add(candidate.link)
-
-            for text in [issue.description] + [comment.content for comment in (issue.comments or []) if comment]:
+            for text in chain(
+                (comment.content for comment in (reversed(issue.comments) or ()) if comment),
+                (issue.description,),
+            ):
                 if not text:
                     continue
                 for match in self.REFERENCE_RE.findall(text):
@@ -320,6 +312,7 @@ class Tracker(GenericTracker):
             response = response.json().get('bugs', []) if response.status_code == 200 else None
             if response:
                 for link in response[0].get('see_also', []):
+                    issue._related_links.append(link)
                     candidate = GenericTracker.from_string(link) or self.from_string(link)
                     if not candidate or candidate.link in refs or candidate.id == issue.id:
                         continue
@@ -348,7 +341,7 @@ class Tracker(GenericTracker):
 
         return issue
 
-    def set(self, issue, assignee=None, opened=None, why=None, project=None, component=None, version=None, original=None, keywords=None, source_changes=None, state=None, **properties):
+    def set(self, issue, assignee=None, opened=None, why=None, project=None, component=None, version=None, original=None, keywords=None, source_changes=None, state=None, substate=None, see_also=None, **properties):
         update_dict = dict()
 
         if properties:
@@ -410,6 +403,9 @@ class Tracker(GenericTracker):
         if keywords is not None:
             update_dict['keywords'] = dict(set=keywords)
 
+        if see_also is not None:
+            update_dict['see_also'] = dict(add=see_also)
+
         if update_dict:
             update_dict['ids'] = [issue.id]
             response = None
@@ -442,7 +438,7 @@ class Tracker(GenericTracker):
             sys.stderr.write('Bugzilla does not support source changes at this time\n')
             return None
 
-        if state:
+        if state or substate:
             sys.stderr.write('Bugzilla does not support state at this time\n')
             return None
 

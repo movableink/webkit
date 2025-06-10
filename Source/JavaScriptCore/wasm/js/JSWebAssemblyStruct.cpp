@@ -40,27 +40,31 @@ namespace JSC {
 
 const ClassInfo JSWebAssemblyStruct::s_info = { "WebAssembly.Struct"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyStruct) };
 
-Structure* JSWebAssemblyStruct::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+JSWebAssemblyStruct::JSWebAssemblyStruct(VM& vm, WebAssemblyGCStructure* structure)
+    : Base(vm, structure)
+    , TrailingArrayType(structure->typeDefinition().as<Wasm::StructType>()->instancePayloadSize())
 {
-    return Structure::create(vm, globalObject, prototype, TypeInfo(WebAssemblyGCObjectType, StructureFlags), info());
-}
-
-JSWebAssemblyStruct::JSWebAssemblyStruct(VM& vm, Structure* structure, Ref<const Wasm::TypeDefinition>&& type, RefPtr<const Wasm::RTT>&& rtt)
-    : Base(vm, structure, WTFMove(rtt))
-    , TrailingArrayType(type->as<Wasm::StructType>()->instancePayloadSize())
-    , m_type(WTFMove(type))
-{
-    // FIXME: It would be nice to not do this but we need to zero the memory otherwise we would have to be extremely careful to avoid visiting this object before the mutator initializes all the fields.
+    // Make sure if another object is allocated while initializing the struct we don't crash the GC. It's *VERY* important this happens before finishCreation since that executes our mutator fence.
     memsetSpan(span(), 0);
 }
 
-JSWebAssemblyStruct* JSWebAssemblyStruct::create(VM& vm, Structure* structure, JSWebAssemblyInstance* instance, uint32_t typeIndex, RefPtr<const Wasm::RTT>&& rtt)
+JSWebAssemblyStruct* JSWebAssemblyStruct::tryCreate(VM& vm, WebAssemblyGCStructure* structure)
 {
-    Ref type = instance->module().moduleInformation().typeSignatures[typeIndex]->expand();
-    auto* structType = type->as<Wasm::StructType>();
-    auto* structValue = new (NotNull, allocateCell<JSWebAssemblyStruct>(vm, TrailingArrayType::allocationSize(structType->instancePayloadSize()))) JSWebAssemblyStruct(vm, structure, WTFMove(type), WTFMove(rtt));
+    auto* structType = structure->typeDefinition().as<Wasm::StructType>();
+    auto* cell = tryAllocateCell<JSWebAssemblyStruct>(vm, TrailingArrayType::allocationSize(structType->instancePayloadSize()));
+    if (!cell) [[unlikely]]
+        return nullptr;
+
+    auto* structValue = new (NotNull, cell) JSWebAssemblyStruct(vm, structure);
     structValue->finishCreation(vm);
     return structValue;
+}
+
+JSWebAssemblyStruct* JSWebAssemblyStruct::create(VM& vm, WebAssemblyGCStructure* structure)
+{
+    auto* result = JSWebAssemblyStruct::tryCreate(vm, structure);
+    RELEASE_ASSERT(result);
+    return result;
 }
 
 uint64_t JSWebAssemblyStruct::get(uint32_t fieldIndex) const
@@ -194,11 +198,6 @@ void JSWebAssemblyStruct::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 }
 
 DEFINE_VISIT_CHILDREN(JSWebAssemblyStruct);
-
-void JSWebAssemblyStruct::destroy(JSCell* cell)
-{
-    static_cast<JSWebAssemblyStruct*>(cell)->JSWebAssemblyStruct::~JSWebAssemblyStruct();
-}
 
 } // namespace JSC
 

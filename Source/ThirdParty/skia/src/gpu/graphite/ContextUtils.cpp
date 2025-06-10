@@ -7,10 +7,23 @@
 
 #include "src/gpu/graphite/ContextUtils.h"
 
+#include "include/core/SkBlendMode.h"
+#include "include/core/SkM44.h"
+#include "include/core/SkRect.h"
+#include "include/core/SkString.h"
+#include "include/gpu/GpuTypes.h"
+#include "include/gpu/graphite/Recorder.h"
+#include "include/private/base/SkAssert.h"
+#include "include/private/base/SkDebug.h"
+#include "include/private/base/SkSpan_impl.h"
+#include "src/base/SkEnumBitMask.h"
 #include "src/gpu/BlendFormula.h"
 #include "src/gpu/graphite/Caps.h"
+#include "src/gpu/graphite/ComputeTypes.h"
 #include "src/gpu/graphite/KeyContext.h"
 #include "src/gpu/graphite/PaintParams.h"
+#include "src/gpu/graphite/PaintParamsKey.h"
+#include "src/gpu/graphite/PipelineData.h"
 #include "src/gpu/graphite/RecorderPriv.h"
 #include "src/gpu/graphite/RenderPassDesc.h"
 #include "src/gpu/graphite/Renderer.h"
@@ -42,36 +55,54 @@ UniquePaintParamsID ExtractPaintData(Recorder* recorder,
                           local2Dev,
                           targetColorInfo,
                           geometry.isShape() || geometry.isEdgeAAQuad()
-                                  ? KeyContext::OptimizeSampling::kYes
-                                  : KeyContext::OptimizeSampling::kNo,
+                                  ? KeyGenFlags::kDefault
+                                  : KeyGenFlags::kDisableSamplingOptimization,
                           p.color());
     p.toKey(keyContext, builder, gatherer);
 
     return recorder->priv().shaderCodeDictionary()->findOrCreate(builder);
 }
 
-bool IsDstReadRequired(const Caps* caps, std::optional<SkBlendMode> blendMode, Coverage coverage) {
+bool CanUseHardwareBlending(const Caps* caps,
+                            std::optional<SkBlendMode> blendMode,
+                            Coverage coverage) {
     // If the blend mode is absent, this is assumed to be for a runtime blender, for which we always
     // do a dst read.
-    // If the blend mode is plus, always do in-shader blending since we may be drawing to an
-    // unsaturated surface (e.g. F16) and we don't want to let the hardware clamp the color output
-    // in that case. We could check the draw dst properties to only do in-shader blending with plus
-    // when necessary, but we can't detect that during shader precompilation.
-    if (!blendMode || *blendMode > SkBlendMode::kLastCoeffMode ||
-        *blendMode == SkBlendMode::kPlus) {
-        return true;
+    if (!blendMode.has_value()) {
+        return false;
     }
 
-    const bool isLCD = coverage == Coverage::kLCD;
+    // Check for special cases that would prevent the usage of direct hardware blending and
+    // require us to fall back to using shader-based blending.
+    const SkBlendMode bm = blendMode.value();
     const bool hasCoverage = coverage != Coverage::kNone;
-    BlendFormula blendFormula = isLCD ? skgpu::GetLCDBlendFormula(*blendMode)
-                                      : skgpu::GetBlendFormula(false, hasCoverage, *blendMode);
-    if ((blendFormula.hasSecondaryOutput() && !caps->shaderCaps()->fDualSourceBlendingSupport) ||
-        (coverage == Coverage::kLCD && blendMode != SkBlendMode::kSrcOver)) {
-        return true;
+    if (// Using LCD coverage (which must be applied after the blend equation) with any blend mode
+        // besides SkBlendMode::kSrcOver
+        // TODO(b/414597217): Add support to use dual-source blending with LCD coverage.
+        (coverage == Coverage::kLCD && bm != SkBlendMode::kSrcOver) ||
+
+        // SkBlendMode::kPlus always clamps its output to [0,1], but we can't rely on hardware
+        // blending to do that for all texture formats.
+        // NOTE: We could check the draw dst properties to only do in-shader blending with plus when
+        // necessary, but we can't detect that during shader precompilation.
+        bm == SkBlendMode::kPlus ||
+
+        // Using an advanced blend mode but the hardware does not support them
+        (bm > SkBlendMode::kLastCoeffMode && !caps->supportsHardwareAdvancedBlending()) ||
+
+        // The blend formula requires dual-source blending, but it is not supported by hardware
+        (bm <= SkBlendMode::kLastCoeffMode &&
+         (coverage == Coverage::kLCD ? skgpu::GetLCDBlendFormula(bm).hasSecondaryOutput()
+                                     : skgpu::GetBlendFormula(/*isOpaque=*/false,
+                                                              hasCoverage,
+                                                              bm).hasSecondaryOutput()) &&
+         !caps->shaderCaps()->fDualSourceBlendingSupport)) {
+        return false;
     }
 
-    return false;
+    // In all other cases (which are more commonly encountered; e.g. using a simple blend mode),
+    // we can use direct HW blending.
+    return true;
 }
 
 void CollectIntrinsicUniforms(const Caps* caps,
@@ -116,22 +147,17 @@ void CollectIntrinsicUniforms(const Caps* caps,
 std::string EmitSamplerLayout(const ResourceBindingRequirements& bindingReqs, int* binding) {
     std::string result;
 
-    // If fDistinctIndexRanges is false, then texture and sampler indices may clash with other
-    // resource indices. Graphite assumes that they will be placed in descriptor set (Vulkan) and
-    // bind group (Dawn) index 1.
-    const char* distinctIndexRange = bindingReqs.fDistinctIndexRanges ? "" : "set=1, ";
-
     if (bindingReqs.fSeparateTextureAndSamplerBinding) {
         int samplerIndex = (*binding)++;
         int textureIndex = (*binding)++;
-        result = SkSL::String::printf("layout(webgpu, %ssampler=%d, texture=%d)",
-                                      distinctIndexRange,
+        result = SkSL::String::printf("layout(webgpu, set=%d, sampler=%d, texture=%d)",
+                                      bindingReqs.fTextureSamplerSetIdx,
                                       samplerIndex,
                                       textureIndex);
     } else {
         int samplerIndex = (*binding)++;
-        result = SkSL::String::printf("layout(%sbinding=%d)",
-                                      distinctIndexRange,
+        result = SkSL::String::printf("layout(set=%d, binding=%d)",
+                                      bindingReqs.fTextureSamplerSetIdx,
                                       samplerIndex);
     }
     return result;
@@ -145,11 +171,12 @@ std::string GetPipelineLabel(const ShaderCodeDictionary* dict,
     label += " + ";
     label += renderStep->name();
     label += " + ";
-    label += dict->idToString(paintID).c_str(); // will be "(empty)" for depth-only draws
+    // the shader portion will be "(empty)" for depth-only draws
+    label += dict->idToString(paintID).c_str();
     return label;
 }
 
-std::string BuildComputeSkSL(const Caps* caps, const ComputeStep* step) {
+std::string BuildComputeSkSL(const Caps* caps, const ComputeStep* step, BackendApi backend) {
     std::string sksl =
             SkSL::String::printf("layout(local_size_x=%u, local_size_y=%u, local_size_z=%u) in;\n",
                                  step->localDispatchSize().fWidth,
@@ -157,17 +184,14 @@ std::string BuildComputeSkSL(const Caps* caps, const ComputeStep* step) {
                                  step->localDispatchSize().fDepth);
 
     const auto& bindingReqs = caps->resourceBindingRequirements();
-    bool distinctRanges = bindingReqs.fDistinctIndexRanges;
-    bool separateSampler = bindingReqs.fSeparateTextureAndSamplerBinding;
-
+    const bool texturesUseDistinctIdxRanges = bindingReqs.fComputeUsesDistinctIdxRangesForTextures;
     int index = 0;
-    int texIdx = 0;
     // NOTE: SkSL Metal codegen always assigns the same binding index to a texture and its sampler.
     // TODO: This could cause sampler indices to not be tightly packed if the sampler2D declaration
     // comes after 1 or more storage texture declarations (which don't have samplers). An optional
     // "layout(msl, sampler=T, texture=T)" syntax to count them separately (like we do for WGSL)
     // could come in handy here but it's not supported in MSL codegen yet.
-
+    int texIdx = 0;
     for (const ComputeStep::ResourceDesc& r : step->resources()) {
         using Type = ComputeStep::ResourceType;
         switch (r.fType) {
@@ -186,22 +210,37 @@ std::string BuildComputeSkSL(const Caps* caps, const ComputeStep* step) {
                 break;
             case Type::kWriteOnlyStorageTexture:
                 SkSL::String::appendf(&sksl, "layout(binding=%d, rgba8) writeonly texture2D ",
-                                      distinctRanges ? texIdx++ : index++);
+                                      texturesUseDistinctIdxRanges ? texIdx++ : index++);
                 sksl += r.fSkSL;
                 break;
             case Type::kReadOnlyTexture:
                 SkSL::String::appendf(&sksl, "layout(binding=%d, rgba8) readonly texture2D ",
-                                      distinctRanges ? texIdx++ : index++);
+                                      texturesUseDistinctIdxRanges ? texIdx++ : index++);
                 sksl += r.fSkSL;
                 break;
             case Type::kSampledTexture:
-                if (distinctRanges) {
-                    SkSL::String::appendf(&sksl, "layout(metal, binding=%d) ", texIdx++);
-                } else if (separateSampler) {
+                // The following SkSL expects specific backends to have certain resource binding
+                // requirements. Before appending the SkSL, assert that these assumptions hold true.
+                // TODO(b/396420770): Have this method be more backend-agnostic.
+                if (backend == BackendApi::kMetal) {
+                     // Metal is expected to use combined texture/samplers.
+                    SkASSERT(!bindingReqs.fSeparateTextureAndSamplerBinding);
+                    SkSL::String::appendf(&sksl,
+                                          "layout(metal, binding=%d) ",
+                                          texturesUseDistinctIdxRanges ? texIdx++ : index++);
+                } else if (backend == BackendApi::kDawn) {
+                    // Dawn is expected to use separate texture/samplers and not use distinct
+                    // index ranges for texture resources.
+                    SkASSERT(bindingReqs.fSeparateTextureAndSamplerBinding &&
+                             !texturesUseDistinctIdxRanges);
                     SkSL::String::appendf(
-                            &sksl, "layout(webgpu, sampler=%d, texture=%d) ", index, index + 1);
+                        &sksl, "layout(webgpu, sampler=%d, texture=%d) ", index, index + 1);
                     index += 2;
                 } else {
+                    // This SkSL depends upon the assumption that we are using combined texture/
+                    // samplers and that we are not using separate resource indices for textures.
+                    SkASSERT(!bindingReqs.fSeparateTextureAndSamplerBinding &&
+                             !texturesUseDistinctIdxRanges);
                     SkSL::String::appendf(&sksl, "layout(binding=%d) ", index++);
                 }
                 sksl += "sampler2D ";

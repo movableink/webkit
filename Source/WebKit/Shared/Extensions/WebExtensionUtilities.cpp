@@ -139,7 +139,7 @@ ALLOW_NONLITERAL_FORMAT_BEGIN
     Vector<char, 256> buffer;
     buffer.grow(result + 1);
 
-    vsnprintf(buffer.data(), buffer.size(), format, args);
+    vsnprintf(buffer.mutableSpan().data(), buffer.size(), format, args);
     va_end(args);
 
     return StringImpl::create(buffer.subspan(0, buffer.size() - 1));
@@ -189,7 +189,7 @@ ALLOW_NONLITERAL_FORMAT_END
 
     String source = sourceKey;
 
-    if (UNLIKELY(!callingAPIName.isEmpty() && !sourceKey.isEmpty() && formattedUnderlyingErrorString.contains("value is invalid"_s))) {
+    if (!callingAPIName.isEmpty() && !sourceKey.isEmpty() && formattedUnderlyingErrorString.contains("value is invalid"_s)) [[unlikely]] {
         ASSERT_NOT_REACHED_WITH_MESSAGE("Overly nested error string, use a `nullString()` sourceKey for this call instead.");
         source = nullString();
     }

@@ -24,13 +24,15 @@ import json
 import logging
 import os
 import unittest
+from datetime import datetime, timezone
+from unittest.mock import patch
 
-from mock import patch
-from datetime import datetime
-from webkitbugspy import bugzilla, mocks as bmocks, Tracker, radar
+from webkitbugspy import Tracker, bugzilla, radar
+from webkitbugspy import mocks as bmocks
 from webkitcorepy import OutputCapture, testing
 from webkitcorepy.mocks import Environment
-from webkitscmpy import Contributor, Commit, program, mocks
+
+from webkitscmpy import Commit, Contributor, mocks, program
 
 
 class TestCommit(unittest.TestCase):
@@ -125,7 +127,7 @@ class TestCommit(unittest.TestCase):
     SVN revision: r123 on trunk
     identifier: 123 on trunk
     by Jonathan Bedard <jbedard@apple.com> @ {}
-'''.format(datetime.utcfromtimestamp(1000)),
+'''.format(datetime.fromtimestamp(1000, timezone.utc)),
         )
 
         self.assertEqual(
@@ -140,7 +142,7 @@ class TestCommit(unittest.TestCase):
     SVN revision: r124 on branch-a
     identifier: 1 on branch-a branched from 123
     by Jonathan Bedard <jbedard@apple.com> @ {}
-'''.format(datetime.utcfromtimestamp(1000)),
+'''.format(datetime.fromtimestamp(1000, timezone.utc)),
         )
 
         self.assertEqual(
@@ -157,7 +159,7 @@ class TestCommit(unittest.TestCase):
     by Jonathan Bedard <jbedard@apple.com> @ {}
 
 PRINTED
-'''.format(datetime.utcfromtimestamp(1000)),
+'''.format(datetime.fromtimestamp(1000, timezone.utc)),
         )
 
     def test_repr(self):
@@ -216,6 +218,12 @@ PRINTED
 
         commit = Commit(revision=1, identifier=1, author=Contributor.Encoder().default(contributor))
         self.assertEqual(commit.author, contributor)
+
+    def test_contributor_emails(self):
+        commit = Commit(revision=1, identifier=1, author={"name": "Banana Apple", "email": "banana@apple.com", "username": "banana"})
+        self.assertEqual(commit.author.name, "Banana Apple")
+        self.assertEqual(commit.author.emails, ['banana@apple.com'])
+        self.assertEqual(commit.author.email, 'banana@apple.com')
 
     def test_invalid_contributor(self):
         with self.assertRaises(TypeError):

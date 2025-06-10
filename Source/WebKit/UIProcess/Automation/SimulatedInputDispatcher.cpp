@@ -34,7 +34,6 @@
 #include "WebAutomationSessionMacros.h"
 #include "WebPageProxy.h"
 #include <WebCore/PointerEventTypeNames.h>
-#include <variant>
 
 #if ENABLE(WEBDRIVER_KEYBOARD_GRAPHEME_CLUSTERS)
 #include <wtf/text/TextBreakIterator.h>
@@ -51,7 +50,7 @@ SimulatedInputSourceState SimulatedInputSourceState::emptyStateForSourceType(Sim
         break;
     case SimulatedInputSourceType::Wheel:
         result.scrollDelta = WebCore::IntSize();
-        FALLTHROUGH;
+        [[fallthrough]];
     case SimulatedInputSourceType::Mouse:
     case SimulatedInputSourceType::Touch:
     case SimulatedInputSourceType::Pen:

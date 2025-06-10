@@ -28,6 +28,7 @@
 
 #if PLATFORM(MAC)
 
+#import "AppKitSPI.h"
 #import "AudioSessionRoutingArbitratorProxy.h"
 #import "WKNSData.h"
 #import "WKWebViewMac.h"
@@ -109,15 +110,15 @@
 
 - (NSSet<NSView *> *)_pdfHUDs
 {
-    return _impl->pdfHUDs();
+    return _impl->pdfHUDs().autorelease();
 }
 
 - (NSMenu *)_activeMenu
 {
-    if (NSMenu *contextMenu = _page->activeContextMenu())
-        return contextMenu;
-    if (NSMenu *domPasteMenu = _impl->domPasteMenu())
-        return domPasteMenu;
+    if (RetainPtr contextMenu = _page->activeContextMenu())
+        return contextMenu.autorelease();
+    if (RetainPtr domPasteMenu = _impl->domPasteMenu())
+        return domPasteMenu.autorelease();
     return nil;
 }
 
@@ -133,6 +134,11 @@
     return _impl->inSecureInputState();
 }
 
+- (NSRect)_windowRelativeBoundsForCustomSwipeViewsForTesting
+{
+    return _impl->windowRelativeBoundsForCustomSwipeViews();
+}
+
 - (void)_setSelectedColorForColorPicker:(NSColor *)color
 {
     _page->colorPickerClient().didChooseColor(WebCore::colorFromCocoaColor(color));
@@ -146,6 +152,15 @@
 - (BOOL)_hasFlagsChangedEventMonitorForTesting
 {
     return _impl->hasFlagsChangedEventMonitor();
+}
+
+- (NSView *)_contentInsetFillViewForTesting
+{
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    return _impl->topContentInsetFillView();
+#else
+    return nil;
+#endif
 }
 
 @end

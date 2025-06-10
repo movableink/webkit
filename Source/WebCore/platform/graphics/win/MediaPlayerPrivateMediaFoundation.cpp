@@ -30,6 +30,7 @@
 #if ENABLE(VIDEO) && USE(MEDIA_FOUNDATION)
 
 #include "CachedResourceLoader.h"
+#include "DocumentInlines.h"
 #include "GraphicsContext.h"
 #include "HWndDC.h"
 #include "HostWindow.h"

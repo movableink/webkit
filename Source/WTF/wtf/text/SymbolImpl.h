@@ -33,7 +33,7 @@ class RegisteredSymbolImpl;
 
 // SymbolImpl is used to represent the symbol string impl.
 // It is uniqued string impl, but is not registered in Atomic String tables, so it's not atomic.
-class SUPPRESS_REFCOUNTED_WITHOUT_VIRTUAL_DESTRUCTOR SymbolImpl : public UniquedStringImpl {
+class SymbolImpl : public UniquedStringImpl {
 public:
     using Flags = unsigned;
     static constexpr Flags s_flagDefault = 0u;
@@ -62,7 +62,7 @@ public:
         template<unsigned characterCount>
         inline constexpr StaticSymbolImpl(const char16_t (&characters)[characterCount], Flags = s_flagDefault);
 
-        operator SymbolImpl&() { return *reinterpret_cast<SymbolImpl*>(this); }
+        operator SymbolImpl&() { SUPPRESS_MEMORY_UNSAFE_CAST return *reinterpret_cast<SymbolImpl*>(this); }
 
         SUPPRESS_UNCOUNTED_MEMBER StringImpl* m_owner { nullptr }; // We do not make StaticSymbolImpl BufferSubstring. Thus we can make this nullptr.
         unsigned m_hashForSymbolShiftedWithFlagCount;

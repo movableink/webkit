@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -69,6 +69,7 @@ public:
     void addSource(Ref<RemoteRealtimeAudioSource>&&);
     void addSource(Ref<RemoteRealtimeVideoSource>&&);
     void removeSource(WebCore::RealtimeMediaSourceIdentifier);
+    void audioSourceWillBeStopped(WebCore::RealtimeMediaSourceIdentifier);
 
     void didUpdateSourceConnection(IPC::Connection&);
     void setVideoFrameObjectHeapProxy(RefPtr<RemoteVideoFrameObjectHeapProxy>&&);
@@ -93,12 +94,13 @@ private:
         ~RemoteAudio();
 
         void setStorage(ConsumerSharedCARingBuffer::Handle&&, const WebCore::CAAudioStreamDescription&, IPC::Semaphore&&, const MediaTime&, size_t frameChunkSize);
+        void willBeStopped() { stopThread(); }
 
     private:
         void stopThread();
         void startThread();
 
-        Ref<RemoteRealtimeAudioSource> m_source;
+        const Ref<RemoteRealtimeAudioSource> m_source;
         std::optional<WebCore::CAAudioStreamDescription> m_description;
         std::unique_ptr<WebCore::WebAudioBufferList> m_buffer;
         std::unique_ptr<ConsumerSharedCARingBuffer> m_ringBuffer;
@@ -111,9 +113,9 @@ private:
         std::atomic<bool> m_shouldStopThread { false };
     };
 
-    CheckedRef<UserMediaCaptureManager> m_manager;
+    const CheckedRef<UserMediaCaptureManager> m_manager;
     bool m_isRegisteredToParentProcessConnection { false };
-    Ref<WorkQueue> m_queue;
+    const Ref<WorkQueue> m_queue;
     RefPtr<IPC::Connection> m_connection;
     // background thread member
     HashMap<WebCore::RealtimeMediaSourceIdentifier, std::unique_ptr<RemoteAudio>> m_audioSources;

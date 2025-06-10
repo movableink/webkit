@@ -2,7 +2,7 @@
 
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs
 
 file = __file__.split(':/cygwin')[-1]
@@ -15,7 +15,7 @@ cookies = get_cookies()
 
 
 def delete_cookie(name):
-    expires = datetime.utcnow() - timedelta(seconds=86400)
+    expires = datetime.now(timezone.utc) - timedelta(seconds=86400)
     sys.stdout.write('Set-Cookie: {}=deleted; expires={} GMT; Max-Age=0; path=/\r\n'.format(name, expires.strftime('%a, %d-%b-%Y %H:%M:%S')))
 
 

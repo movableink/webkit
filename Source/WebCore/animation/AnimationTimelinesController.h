@@ -38,6 +38,7 @@ namespace WebCore {
 
 class AnimationTimeline;
 class Document;
+class ScrollTimeline;
 class WeakPtrImplWithEventTargetData;
 class WebAnimation;
 
@@ -57,6 +58,8 @@ public:
     void removeTimeline(AnimationTimeline&);
     void detachFromDocument();
     void updateAnimationsAndSendEvents(ReducedResolutionSeconds);
+    void updateStaleScrollTimelines();
+    void addPendingAnimation(WebAnimation&);
 
     std::optional<Seconds> currentTime();
     std::optional<FramesPerSecond> maximumAnimationFrameRate() const { return m_frameRateAligner.maximumFrameRate(); }
@@ -75,7 +78,7 @@ private:
 
     ReducedResolutionSeconds liveCurrentTime() const;
     void cacheCurrentTime(ReducedResolutionSeconds);
-    void maybeClearCachedCurrentTime();
+    void processPendingAnimations();
     bool isPendingTimelineAttachment(const WebAnimation&) const;
 
     Ref<Document> protectedDocument() const { return m_document.get(); }
@@ -84,14 +87,15 @@ private:
     std::unique_ptr<AcceleratedEffectStackUpdater> m_acceleratedEffectStackUpdater;
 #endif
 
+    Vector<Ref<ScrollTimeline>> m_updatedScrollTimelines;
     UncheckedKeyHashMap<FramesPerSecond, ReducedResolutionSeconds> m_animationFrameRateToLastTickTimeMap;
     WeakHashSet<AnimationTimeline> m_timelines;
-    TaskCancellationGroup m_currentTimeClearingTaskCancellationGroup;
+    WeakHashSet<WebAnimation, WeakPtrImplWithEventTargetData> m_pendingAnimations;
+    TaskCancellationGroup m_pendingAnimationsProcessingTaskCancellationGroup;
     WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
     FrameRateAligner m_frameRateAligner;
     Markable<Seconds, Seconds::MarkableTraits> m_cachedCurrentTime;
     bool m_isSuspended { false };
-    bool m_waitingOnVMIdle { false };
 };
 
 } // namespace WebCore

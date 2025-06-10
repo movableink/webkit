@@ -98,7 +98,7 @@ Font::Font(const FontPlatformData& platformData, Origin origin, IsInterstitial i
     platformCharWidthInit();
 #if ENABLE(OPENTYPE_VERTICAL)
     if (platformData.orientation() == FontOrientation::Vertical && orientationFallback == IsOrientationFallback::No) {
-        m_verticalData = FontCache::forCurrentThread().verticalData(platformData);
+        m_verticalData = FontCache::forCurrentThread()->verticalData(platformData);
         m_hasVerticalGlyphs = m_verticalData.get() && m_verticalData->hasVerticalMetrics();
     }
 #endif
@@ -682,6 +682,28 @@ ColorGlyphType Font::colorGlyphType(Glyph glyph) const
 TextStream& operator<<(TextStream& ts, const Font& font)
 {
     ts << font.description();
+    return ts;
+}
+
+WTF::TextStream& operator<<(WTF::TextStream& ts, const GlyphBuffer& glyphBuffer)
+{
+    ts << "glyphBuffer: " << &glyphBuffer;
+    auto initialAdvance = glyphBuffer.initialAdvance();
+    ts << ", initial advance: width:" <<  width(initialAdvance) << " height:" << height(initialAdvance);
+    for (size_t index = 0; index < glyphBuffer.size(); ++index) {
+        auto advance = glyphBuffer.advanceAt(index);
+        auto& font = glyphBuffer.fontAt(index);
+        auto glyph =  glyphBuffer.glyphAt(index);
+        auto bounds = font.boundsForGlyph(glyph);
+        ts << "\n"_s;
+        ts << "glyph index: " << index;
+        ts << ", glyph: " << glyph;
+        ts << ", font: " <<  &font;
+        ts << ", advance: width:" <<  width(advance) << " height:" << height(advance);
+        ts << ", string index: "  << glyphBuffer.uncheckedStringOffsetAt(index);
+        ts << ", origin: " << glyphBuffer.originAt(index);
+        ts << ", glyph bounds: " << bounds;
+    }
     return ts;
 }
 #endif

@@ -37,9 +37,9 @@ class ParseState(Enum):
 
 MODIFIED_FILE_PATTERN = re.compile('^(\\*.*:)(.*)$')
 MODIFIED_FILE_ADDED_PATTERN = re.compile('^\\*.*: Added.$')
-MODIFIED_FILE_DELETED_PATTERN = re.compile('^\\*.*: Removed.$')
+MODIFIED_FILE_REMOVED_PATTERN = re.compile('^\\*.*: Removed.$')
 MODIFIED_FUNCTION_PATTERN = re.compile('^(\\(.*\\):)(.*)$')
-MODIFIED_FUNCTION_REMOVED_PATTERN = re.compile('^\\(.*\\): Deleted.$')
+MODIFIED_FUNCTION_DELETED_PATTERN = re.compile('^\\(.*\\): Deleted.$')
 TEST_PATTERN = re.compile('^Tests?: .*$')
 NO_TEST_PATTERN = re.compile('^No new tests \\(OOPS!\\)\\.$')
 TEST_CONTENT_PATTERN = re.compile('^ +.*$')
@@ -182,7 +182,7 @@ class CommitMessageParser:
         files_to_functions = {}
 
         for line in self.modified_files_lines:
-            if MODIFIED_FILE_DELETED_PATTERN.match(line):
+            if MODIFIED_FILE_REMOVED_PATTERN.match(line):
                 current_file = line
                 current_function = None
                 current_comments = ['']
@@ -208,7 +208,7 @@ class CommitMessageParser:
                     files_to_comments[current_file] = current_comments
                     files_to_functions[current_file] = {}
 
-                elif MODIFIED_FUNCTION_REMOVED_PATTERN.match(line):
+                elif MODIFIED_FUNCTION_DELETED_PATTERN.match(line):
                     if not current_file:
                         logging.warning("Ignoring a function outside of a context of a file: " + line)
                         continue
@@ -235,7 +235,7 @@ class CommitMessageParser:
         self.files_to_comments = files_to_comments
         self.files_to_functions = files_to_functions
 
-    def apply_comments_to_modified_files_lines(self, modified_files_lines):
+    def apply_comments_to_modified_files_lines(self, modified_files_lines, return_deleted=False):
         """Apply the comments given via files_to_comments & files_to_functions to the list of modified files & functions
         passed as modified_files_lines.
 
@@ -248,6 +248,7 @@ class CommitMessageParser:
         modified files & functions.
         """
         result = []
+        deleted_result = []
         for line in modified_files_lines:
             if line == '':
                 result.append(line)
@@ -258,22 +259,34 @@ class CommitMessageParser:
             elif TEST_CONTENT_PATTERN.match(line):
                 result.append(line)
 
-            elif MODIFIED_FILE_DELETED_PATTERN.match(line):
+            elif MODIFIED_FILE_REMOVED_PATTERN.match(line):
                 current_file = line
                 current_function = None
                 lines = self.files_to_comments.get(current_file)
+                if not lines:
+                    current_file = current_file.removesuffix(' Removed.')
+                    lines = self.files_to_comments.get(current_file)
+                if not lines:
+                    current_file += ' Added.'
+                    lines = self.files_to_comments.get(current_file)
                 if lines:
                     if len(lines) > 0:
                         line = current_file + lines[0]
                         result.append(line)
                         result += lines[1:]
+                        deleted_result.append(line)
+                        deleted_result += lines[1:]
                 else:
                     result.append(line)
+                    deleted_result.append(line)
 
             elif MODIFIED_FILE_ADDED_PATTERN.match(line):
                 current_file = line
                 current_function = None
                 lines = self.files_to_comments.get(current_file)
+                if not lines:
+                    current_file = current_file.removesuffix(' Added.')
+                    lines = self.files_to_comments.get(current_file)
                 if lines:
                     if len(lines) > 0:
                         line = current_file + lines[0]
@@ -296,7 +309,7 @@ class CommitMessageParser:
                     else:
                         result.append(line)
 
-                elif MODIFIED_FUNCTION_REMOVED_PATTERN.match(line):
+                elif MODIFIED_FUNCTION_DELETED_PATTERN.match(line):
                     if not current_file:
                         logging.warning("Ignoring a function outside of a context of a file: " + line)
                         continue
@@ -306,22 +319,28 @@ class CommitMessageParser:
                     current_functions = self.files_to_functions.get(current_file)
                     if current_functions:
                         lines = current_functions.get(current_function)
+                        if not lines:
+                            current_function = current_function.removesuffix(' Deleted.')
+                            lines = current_functions.get(current_function)
                         if lines:
                             if len(lines) > 0:
                                 line = current_function + lines[0]
                                 result.append(line)
                                 result += lines[1:]
+                                deleted_result.append(line)
+                                deleted_result += lines[1:]
                         else:
                             result.append(line)
+                            deleted_result.append(line)
                     else:
                         result.append(line)
+                        deleted_result.append(line)
 
                 else:
                     m = MODIFIED_FUNCTION_PATTERN.match(line)
                     if m:
                         current_function = m.group(1)
                         comment = m.group(2)
-
                         current_functions = self.files_to_functions.get(current_file)
                         if current_functions:
                             lines = current_functions.get(current_function)
@@ -337,9 +356,11 @@ class CommitMessageParser:
                     else:
                         logging.warning("Ignoring an unexpected line: " + line)
 
+        if return_deleted:
+            return deleted_result
         return result
 
-    def delete_trailing_blank_lines(lines):
+    def delete_trailing_blank_lines(self, lines):
         chomp_at = 0
         for line in reversed(lines):
             if line != '':

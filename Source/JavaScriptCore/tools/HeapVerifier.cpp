@@ -327,7 +327,7 @@ bool HeapVerifier::validateJSCell(VM* expectedVM, JSCell* cell, CellProfile* pro
         }
         
         CodeBlock* codeBlock = jsDynamicCast<CodeBlock*>(cell);
-        if (UNLIKELY(codeBlock)) {
+        if (codeBlock) [[unlikely]] {
             bool success = true;
             codeBlock->forEachValueProfile([&](auto& valueProfile, bool) {
                 for (unsigned i = 0; i < std::remove_reference_t<decltype(valueProfile)>::totalNumberOfBuckets; ++i) {

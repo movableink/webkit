@@ -186,10 +186,10 @@ enum FeatureToAnimate {
 static TextStream& operator<<(TextStream& ts, FeatureToAnimate feature)
 {
     switch (feature) {
-    case ThumbAlpha: ts << "ThumbAlpha" ; break;
-    case TrackAlpha: ts << "TrackAlpha" ; break;
-    case UIStateTransition: ts << "UIStateTransition" ; break;
-    case ExpansionTransition: ts << "ExpansionTransition" ; break;
+    case ThumbAlpha: ts << "ThumbAlpha"_s ; break;
+    case TrackAlpha: ts << "TrackAlpha"_s ; break;
+    case UIStateTransition: ts << "UIStateTransition"_s ; break;
+    case ExpansionTransition: ts << "ExpansionTransition"_s ; break;
     }
     return ts;
 }

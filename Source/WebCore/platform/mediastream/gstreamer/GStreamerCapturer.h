@@ -26,6 +26,7 @@
 
 #include "GStreamerCaptureDevice.h"
 #include "GStreamerCommon.h"
+#include "PipeWireCaptureDevice.h"
 
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/WeakHashSet.h>
@@ -53,7 +54,7 @@ public:
 class GStreamerCapturer : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<GStreamerCapturer> {
 public:
     GStreamerCapturer(GStreamerCaptureDevice&&, GRefPtr<GstCaps>&&);
-    GStreamerCapturer(const char* sourceFactory, GRefPtr<GstCaps>&&, CaptureDevice::DeviceType);
+    GStreamerCapturer(const PipeWireCaptureDevice&);
     virtual ~GStreamerCapturer();
 
     void tearDown(bool disconnectSignals = true);
@@ -64,7 +65,7 @@ public:
     void removeObserver(GStreamerCapturerObserver&);
     void forEachObserver(NOESCAPE const Function<void(GStreamerCapturerObserver&)>&);
 
-    void setupPipeline();
+    virtual void setupPipeline();
     void start();
     void stop();
     bool isStopped() const;
@@ -72,7 +73,7 @@ public:
 
     std::pair<GstClockTime, GstClockTime> queryLatency();
 
-    GstElement* makeElement(const char* factoryName);
+    GstElement* makeElement(ASCIILiteral factoryName);
     virtual GstElement* createSource();
     GstElement* source() { return m_src.get();  }
     virtual const char* name() = 0;
@@ -96,9 +97,9 @@ protected:
     GRefPtr<GstElement> m_valve;
     GRefPtr<GstElement> m_capsfilter;
     std::optional<GStreamerCaptureDevice> m_device { };
+    std::optional<PipeWireCaptureDevice> m_pipewireDevice { };
     GRefPtr<GstCaps> m_caps;
     GRefPtr<GstElement> m_pipeline;
-    const char* m_sourceFactory;
 
 private:
     CaptureDevice::DeviceType m_deviceType;

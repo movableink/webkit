@@ -71,14 +71,18 @@
 #include <WebCore/ScrollingStateFrameHostingNode.h>
 #include <WebCore/ScrollingStateFrameHostingNodeWithStuffAfterTuple.h>
 #include <WebCore/TimingFunction.h>
+#include <wtf/CreateUsingClass.h>
+#include <wtf/EnumTraits.h>
+#include <wtf/Seconds.h>
+#include <wtf/StdLibExtras.h>
+
 #if USE(AVFOUNDATION)
 #include <pal/cocoa/AVFoundationSoftLink.h>
 #endif
+
 #if ENABLE(DATA_DETECTION)
 #include <pal/cocoa/DataDetectorsCoreSoftLink.h>
 #endif
-#include <wtf/CreateUsingClass.h>
-#include <wtf/Seconds.h>
 
 static_assert(std::is_same_v<WebCore::SharedStringHash,
     uint32_t
@@ -97,7 +101,7 @@ static_assert(std::is_same_v<WTF::ProcessID,
 >);
 #endif
 static_assert(std::is_same_v<WebCore::ConditionalVariant,
-    std::variant<
+    Variant<
         int,
 #if USE(CHAR)
         char,
@@ -106,7 +110,7 @@ static_assert(std::is_same_v<WebCore::ConditionalVariant,
     >
 >);
 static_assert(std::is_same_v<WebCore::NonConditionalVariant,
-    std::variant<int, double>
+    Variant<int, double>
 >);
 
 #if ENABLE(IPC_TESTING_API)
@@ -115,7 +119,7 @@ namespace WebKit {
 
 template<typename E> uint64_t enumValueForIPCTestAPI(E e)
 {
-    return static_cast<std::make_unsigned_t<std::underlying_type_t<E>>>(e);
+    return unsignedCast(e);
 }
 
 Vector<SerializedTypeInfo> allSerializedTypes()
@@ -274,7 +278,7 @@ Vector<SerializedTypeInfo> allSerializedTypes()
             },
         } },
         { "WebCore::TimingFunction"_s, {
-            { "std::variant<"
+            { "Variant<"
                 "WebCore::LinearTimingFunction"
                 ", WebCore::CubicBezierTimingFunction"
 #if CONDITION
@@ -304,7 +308,7 @@ Vector<SerializedTypeInfo> allSerializedTypes()
             },
         } },
         { "WebCore::MoveOnlyBaseClass"_s, {
-            { "std::variant<"
+            { "Variant<"
                 "WebCore::MoveOnlyDerivedClass"
             ">"_s, "subclasses"_s }
         } },
@@ -590,7 +594,7 @@ Vector<SerializedTypeInfo> allSerializedTypes()
 #endif
         { "WebCore::ConditionalVariant"_s, {
         {
-            "std::variant<"
+            "Variant<"
             "int, "
 #if USE(CHAR)
             "char, "
@@ -601,7 +605,7 @@ Vector<SerializedTypeInfo> allSerializedTypes()
         } },
         { "WebCore::NonConditionalVariant"_s, {
         {
-            "std::variant<int, double>"_s
+            "Variant<int, double>"_s
             , "alias"_s }
         } },
     };

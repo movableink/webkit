@@ -70,7 +70,7 @@ TEST(IndexedDB, IndexedDBTempFileSize)
     TestWebKitAPI::Util::run(&readyToContinue);
     RetainPtr databaseRootDirectory = [NSURL fileURLWithPath:databaseRootDirectoryString.get() isDirectory:YES];
     String hash = WebCore::SQLiteFileSystem::computeHashForFileName("IndexedDBTempFileSize"_s);
-    RetainPtr databaseDirectory = [databaseRootDirectory URLByAppendingPathComponent:hash];
+    RetainPtr databaseDirectory = [databaseRootDirectory URLByAppendingPathComponent:hash.createNSString().get()];
     RetainPtr walFilePath = [databaseDirectory URLByAppendingPathComponent:@"IndexedDB.sqlite3-wal"];
 
     RetainPtr types = adoptNS([[NSSet alloc] initWithObjects:WKWebsiteDataTypeIndexedDBDatabases, nil]);

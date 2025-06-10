@@ -109,6 +109,10 @@ imported/w3c/web-platform-tests/webxr/hit-test [ Skip ]
 imported/w3c/web-platform-tests/webxr/layers [ Skip ]
 imported/w3c/web-platform-tests/webxr/light-estimation [ Skip ]
 
+# The Digital Credentials API is not supported on visionOS.
+http/wpt/identity/ [ Skip ]
+imported/w3c/web-platform-tests/digital-credentials/ [ Skip ]
+
 ### END OF Legitimate failures
 ###################################################################################################
 
@@ -144,6 +148,7 @@ interaction-region/interaction-layers-culling-layer-type-change.html [ Failure ]
 interaction-region/interaction-layers-culling.html [ Failure ]
 interaction-region/layer-tree-shape-reset.html [ Failure ]
 interaction-region/layer-tree.html [ Failure ]
+platform/visionos/transforms/separated-image-animated.html [ Failure ]
 platform/visionos/transforms/separated-image-downgrade-content.html [ Failure ]
 platform/visionos/transforms/separated-image-downgrade-tiled.html [ Failure ]
 platform/visionos/transforms/separated-image-downgrade.html [ Failure ]

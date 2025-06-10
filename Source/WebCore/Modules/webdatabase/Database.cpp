@@ -39,6 +39,7 @@
 #include "DatabaseThread.h"
 #include "DatabaseTracker.h"
 #include "Document.h"
+#include "ExceptionOr.h"
 #include "LocalDOMWindow.h"
 #include "Logging.h"
 #include "SQLError.h"
@@ -52,6 +53,7 @@
 #include "SecurityOrigin.h"
 #include "VoidCallback.h"
 #include "WindowEventLoop.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RefPtr.h>
@@ -684,7 +686,7 @@ void Database::runTransaction(RefPtr<SQLTransactionCallback>&& callback, RefPtr<
     if (!m_isTransactionQueueEnabled) {
         if (errorCallback) {
             m_document->eventLoop().queueTask(TaskSource::Networking, [errorCallback = Ref { *errorCallback }]() {
-                errorCallback->handleEvent(SQLError::create(SQLError::UNKNOWN_ERR, "database has been closed"_s));
+                errorCallback->invoke(SQLError::create(SQLError::UNKNOWN_ERR, "database has been closed"_s));
             });
         }
         return;

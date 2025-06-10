@@ -22,6 +22,7 @@
 #if ENABLE(WEB_RTC) && USE(GSTREAMER_WEBRTC)
 
 #include "GRefPtrGStreamer.h"
+#include "GUniquePtrGStreamer.h"
 #include "RTCStatsReport.h"
 
 #include <wtf/CompletionHandler.h>
@@ -30,7 +31,6 @@
 #include <wtf/RefPtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/glib/GRefPtr.h>
-#include <wtf/glib/GUniquePtr.h>
 
 namespace WebCore {
 

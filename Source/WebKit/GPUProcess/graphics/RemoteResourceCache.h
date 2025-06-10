@@ -54,7 +54,7 @@ public:
     bool releaseNativeImage(WebCore::RenderingResourceIdentifier);
     RefPtr<WebCore::NativeImage> cachedNativeImage(WebCore::RenderingResourceIdentifier) const;
 
-    void cacheGradient(Ref<WebCore::Gradient>&&);
+    bool cacheGradient(WebCore::RenderingResourceIdentifier, Ref<WebCore::Gradient>&&);
     bool releaseGradient(WebCore::RenderingResourceIdentifier);
     RefPtr<WebCore::Gradient> cachedGradient(WebCore::RenderingResourceIdentifier) const;
 
@@ -75,8 +75,8 @@ public:
     RefPtr<WebCore::FontCustomPlatformData> cachedFontCustomPlatformData(WebCore::RenderingResourceIdentifier) const;
 
     void releaseAllResources();
-    void releaseAllDrawingResources();
-    void releaseAllImageResources();
+    void releaseMemory();
+    void releaseNativeImages();
 
 private:
     UncheckedKeyHashMap<WebCore::RenderingResourceIdentifier, Ref<WebCore::ImageBuffer>> m_imageBuffers;

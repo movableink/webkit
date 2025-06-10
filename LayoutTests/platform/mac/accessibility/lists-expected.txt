@@ -11,8 +11,6 @@ meaning 2
 
 
 
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXList
 AXSubrole: AXContentList
 AXRoleDescription: content list
@@ -50,8 +48,6 @@ AXOrientation: AXVerticalOrientation
 AXActiveElement: (null)
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXList
 AXSubrole: AXContentList
 AXRoleDescription: content list
@@ -89,8 +85,6 @@ AXOrientation: AXVerticalOrientation
 AXActiveElement: (null)
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXList
 AXSubrole: AXDescriptionList
 AXRoleDescription: description list
@@ -129,8 +123,6 @@ AXOrientation: AXVerticalOrientation
 ------------
 
 
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: (null)
 AXRoleDescription: group
@@ -164,8 +156,6 @@ AXElementBusy: 0
 AXInlineText: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: (null)
 AXRoleDescription: group
@@ -201,8 +191,6 @@ AXInlineText: 0
 ------------
 
 
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: (null)
 AXRoleDescription: group
@@ -236,8 +224,6 @@ AXElementBusy: 0
 AXInlineText: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: (null)
 AXRoleDescription: group
@@ -273,8 +259,6 @@ AXInlineText: 0
 ------------
 
 
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: AXTerm
 AXRoleDescription: term
@@ -307,8 +291,6 @@ AXVisibleCharacterRange: NSRange: {0, 6}
 AXElementBusy: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: AXDescription
 AXRoleDescription: description
@@ -341,8 +323,6 @@ AXVisibleCharacterRange: NSRange: {0, 9}
 AXElementBusy: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: AXTerm
 AXRoleDescription: term
@@ -375,8 +355,6 @@ AXVisibleCharacterRange: NSRange: {0, 6}
 AXElementBusy: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: AXDescription
 AXRoleDescription: description
@@ -409,8 +387,6 @@ AXVisibleCharacterRange: NSRange: {0, 9}
 AXElementBusy: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: AXDescription
 AXRoleDescription: description

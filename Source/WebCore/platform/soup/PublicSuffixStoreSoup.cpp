@@ -75,11 +75,8 @@ String PublicSuffixStore::platformTopPrivatelyControlledDomain(StringView domain
     if (const char* baseDomain = soup_tld_get_base_domain(tldCString.data(), &error.outPtr()))
         return String::fromUTF8(baseDomain);
 
-    if (g_error_matches(error.get(), SOUP_TLD_ERROR, SOUP_TLD_ERROR_NO_BASE_DOMAIN)) {
-        if (domain.endsWithIgnoringASCIICase("web-platform.test"_s))
-            return permissiveTopPrivateDomain(tldView);
-        return String();
-    }
+    if (g_error_matches(error.get(), SOUP_TLD_ERROR, SOUP_TLD_ERROR_NO_BASE_DOMAIN))
+        return permissiveTopPrivateDomain(tldView);
 
     if (g_error_matches(error.get(), SOUP_TLD_ERROR, SOUP_TLD_ERROR_INVALID_HOSTNAME) || g_error_matches(error.get(), SOUP_TLD_ERROR, SOUP_TLD_ERROR_NOT_ENOUGH_DOMAINS))
         return String();

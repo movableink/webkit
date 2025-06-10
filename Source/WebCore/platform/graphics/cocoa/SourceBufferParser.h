@@ -31,7 +31,6 @@
 #include "SourceBufferPrivateClient.h"
 #include <JavaScriptCore/Forward.h>
 #include <pal/spi/cocoa/MediaToolboxSPI.h>
-#include <variant>
 #include <wtf/Expected.h>
 #include <wtf/RefCounted.h>
 #include <wtf/ThreadSafeWeakPtr.h>

@@ -29,9 +29,9 @@
 #include "CSSCustomPropertyValue.h"
 #include "CSSParser.h"
 #include "CSSSerializationContext.h"
+#include "CSSStyleProperties.h"
 #include "CSSValuePool.h"
 #include "ImmutableStyleProperties.h"
-#include "PropertySetCSSStyleDeclaration.h"
 #include "StylePropertiesInlines.h"
 #include "StylePropertyShorthand.h"
 
@@ -117,7 +117,7 @@ bool MutableStyleProperties::removePropertyAtIndex(int index, String* returnText
 
     // A more efficient removal strategy would involve marking entries as empty
     // and sweeping them when the vector grows too big.
-    m_propertyVector.remove(index);
+    m_propertyVector.removeAt(index);
     return true;
 }
 
@@ -226,7 +226,7 @@ bool MutableStyleProperties::setProperty(const CSSProperty& property, CSSPropert
             *toReplace = property;
             return true;
         }
-        m_propertyVector.remove(toReplace - m_propertyVector.begin());
+        m_propertyVector.removeAt(toReplace - m_propertyVector.begin());
     }
     m_propertyVector.append(property);
     return true;
@@ -244,7 +244,7 @@ bool MutableStyleProperties::parseDeclaration(const String& styleDeclaration, CS
     m_propertyVector.clear();
 
     context.mode = cssParserMode();
-    CSSParser(context).parseDeclaration(*this, styleDeclaration);
+    CSSParser::parseDeclarationList(*this, styleDeclaration, context);
 
     // We could do better. Just changing property order does not require style invalidation.
     return oldProperties != m_propertyVector;
@@ -342,10 +342,10 @@ CSSProperty* MutableStyleProperties::findCustomCSSPropertyWithName(const String&
     return &m_propertyVector.at(foundPropertyIndex);
 }
 
-CSSStyleDeclaration& MutableStyleProperties::ensureInlineCSSStyleDeclaration(StyledElement& parentElement)
+CSSStyleProperties& MutableStyleProperties::ensureInlineCSSStyleProperties(StyledElement& parentElement)
 {
     if (!m_cssomWrapper)
-        m_cssomWrapper = makeUniqueWithoutRefCountedCheck<InlineCSSStyleDeclaration>(*this, parentElement);
+        lazyInitialize(m_cssomWrapper, makeUniqueWithoutRefCountedCheck<InlineCSSStyleProperties>(*this, parentElement));
     ASSERT(m_cssomWrapper->parentElement() == &parentElement);
     return *m_cssomWrapper;
 }

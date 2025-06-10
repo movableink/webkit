@@ -39,6 +39,10 @@
 #include <wtf/glib/GRefPtr.h>
 #include <wtf/glib/WTFGType.h>
 
+#if USE(ATK)
+#include "WPEViewAccessibleAtk.h"
+#endif
+
 /**
  * WPEView:
  *
@@ -63,6 +67,10 @@ struct _WPEViewPrivate {
         guint32 time { 0 };
     } lastButtonPress;
     std::optional<GRefPtr<WPEGestureController>> gestureController;
+
+#if USE(ATK)
+    GRefPtr<WPEViewAccessible> accessible;
+#endif
 };
 
 WEBKIT_DEFINE_ABSTRACT_TYPE(WPEView, wpe_view, G_TYPE_OBJECT)
@@ -168,17 +176,6 @@ static void wpeViewGetProperty(GObject* object, guint propId, GValue* value, GPa
     }
 }
 
-static void wpeViewConstructed(GObject* object)
-{
-    G_OBJECT_CLASS(wpe_view_parent_class)->constructed(object);
-    auto* view = WPE_VIEW(object);
-    auto* priv = view->priv;
-    auto settings = wpe_display_get_settings(priv->display.get());
-
-    GVariant* toplevelSize = wpe_settings_get_value(settings, WPE_SETTING_TOPLEVEL_DEFAULT_SIZE, nullptr);
-    g_variant_get(toplevelSize, "(uu)", &priv->width, &priv->height);
-}
-
 static void wpeViewDispose(GObject* object)
 {
     wpe_view_set_toplevel(WPE_VIEW(object), nullptr);
@@ -186,13 +183,25 @@ static void wpeViewDispose(GObject* object)
     G_OBJECT_CLASS(wpe_view_parent_class)->dispose(object);
 }
 
+#if USE(ATK)
+static WPEViewAccessible* wpeViewGetAccessible(WPEView* view)
+{
+    if (!view->priv->accessible)
+        view->priv->accessible = adoptGRef(wpeViewAccessibleAtkNew(view));
+    return view->priv->accessible.get();
+}
+#endif
+
 static void wpe_view_class_init(WPEViewClass* viewClass)
 {
     GObjectClass* objectClass = G_OBJECT_CLASS(viewClass);
     objectClass->set_property = wpeViewSetProperty;
     objectClass->get_property = wpeViewGetProperty;
-    objectClass->constructed = wpeViewConstructed;
     objectClass->dispose = wpeViewDispose;
+
+#if USE(ATK)
+    viewClass->get_accessible = wpeViewGetAccessible;
+#endif
 
     /**
      * WPEView:display:
@@ -540,8 +549,11 @@ void wpe_view_set_toplevel(WPEView* view, WPEToplevel* toplevel)
     if (priv->toplevel == toplevel)
         return;
 
-    if (toplevel && wpe_toplevel_get_n_views(toplevel) == wpe_toplevel_get_max_views(toplevel))
-        return;
+    if (toplevel) {
+        auto maxViews = wpe_toplevel_get_max_views(toplevel);
+        if (maxViews && wpe_toplevel_get_n_views(toplevel) == maxViews)
+            return;
+    }
 
     if (priv->toplevel)
         wpeToplevelRemoveView(priv->toplevel.get(), view);
@@ -942,6 +954,16 @@ void wpe_view_event(WPEView* view, WPEEvent* event)
 
     gboolean handled;
     g_signal_emit(view, signals[EVENT], 0, event, &handled);
+
+    auto* priv = view->priv;
+    if (priv->lastButtonPress.pressCount && wpe_event_get_event_type(event) == WPE_EVENT_POINTER_MOVE) {
+        auto* settings = wpe_display_get_settings(priv->display.get());
+        int doubleClickDistance = wpe_settings_get_uint32(settings, WPE_SETTING_DOUBLE_CLICK_DISTANCE, nullptr);
+        double x, y;
+        wpe_event_get_position(event, &x, &y);
+        if (std::abs(x - priv->lastButtonPress.x) >= doubleClickDistance || std::abs(y - priv->lastButtonPress.y) >= doubleClickDistance)
+            priv->lastButtonPress.pressCount = 0;
+    }
 }
 
 /**
@@ -962,15 +984,11 @@ guint wpe_view_compute_press_count(WPEView* view, gdouble x, gdouble y, guint bu
 
     auto* priv = view->priv;
     unsigned pressCount = 1;
-    if (priv->lastButtonPress.pressCount) {
+    if (priv->lastButtonPress.pressCount && button == priv->lastButtonPress.button) {
         auto* settings = wpe_display_get_settings(priv->display.get());
-        int doubleClickDistance = wpe_settings_get_uint32(settings, WPE_SETTING_DOUBLE_CLICK_DISTANCE, nullptr);
         unsigned doubleClickTime = wpe_settings_get_uint32(settings, WPE_SETTING_DOUBLE_CLICK_TIME, nullptr);
 
-        if (std::abs(x - priv->lastButtonPress.x) < doubleClickDistance
-            && std::abs(y - priv->lastButtonPress.y) < doubleClickDistance
-            && button == priv->lastButtonPress.button
-            && time - priv->lastButtonPress.time < doubleClickTime)
+        if (time - priv->lastButtonPress.time < doubleClickTime)
             pressCount = priv->lastButtonPress.pressCount + 1;
     }
 

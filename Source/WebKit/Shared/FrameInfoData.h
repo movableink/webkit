@@ -38,13 +38,14 @@ namespace WebKit {
 enum class FrameType : bool { Local, Remote };
 
 struct FrameInfoData {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
     bool isMainFrame { false };
     FrameType frameType { FrameType::Local };
     WebCore::ResourceRequest request;
     WebCore::SecurityOriginData securityOrigin;
     String frameName;
-    // FIXME: Make this no longer Markable. That requires fixes in WebAuthN code.
-    Markable<WebCore::FrameIdentifier> frameID;
+    WebCore::FrameIdentifier frameID;
     Markable<WebCore::FrameIdentifier> parentFrameID;
     Markable<WebCore::ScriptExecutionContextIdentifier> documentID;
     WebCore::CertificateInfo certificateInfo;
@@ -53,5 +54,7 @@ struct FrameInfoData {
     bool errorOccurred { false };
     WebFrameMetrics frameMetrics { };
 };
+
+FrameInfoData legacyEmptyFrameInfo(WebCore::ResourceRequest&&);
 
 }

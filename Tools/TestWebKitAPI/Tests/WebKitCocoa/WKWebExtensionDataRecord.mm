@@ -94,7 +94,12 @@ TEST(WKWebExtensionDataRecord, GetDataRecords)
     TestWebKitAPI::Util::run(&fetchComplete);
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionDataRecord, DISABLED_GetDataRecordsForMultipleContexts)
+#else
 TEST(WKWebExtensionDataRecord, GetDataRecordsForMultipleContexts)
+#endif
 {
     auto *backgroundScriptOne = Util::constructScript(@[
         @"const data = { 'string': 'string', 'number': 1, 'boolean': true, 'dictionary': {'key': 'value'}, 'array': [1, true, 'string'] }",

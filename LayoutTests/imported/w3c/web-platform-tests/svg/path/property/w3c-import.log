@@ -17,6 +17,8 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/svg/path/property/d-interpolation-discrete.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/path/property/d-interpolation-relative-absolute.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/path/property/d-interpolation-single.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/path/property/d-interpolation-within-document-referenced-via-background-image-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/path/property/d-interpolation-within-document-referenced-via-background-image.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/path/property/d-none-expected.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/path/property/d-none-expected.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/path/property/d-none-ref.svg

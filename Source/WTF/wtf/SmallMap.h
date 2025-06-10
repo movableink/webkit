@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include <variant>
 #include <wtf/HashMap.h>
 #include <wtf/ScopedLambda.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/Variant.h>
 
 namespace WTF {
 
@@ -38,11 +38,11 @@ class SmallMap {
 public:
     using Pair = KeyValuePair<Key, Value>;
     using Map = UncheckedKeyHashMap<Key, Value>;
-    using Storage = std::variant<std::monostate, Pair, Map>;
+    using Storage = Variant<std::monostate, Pair, Map>;
 
     static_assert(sizeof(Pair) <= 4 * sizeof(uint64_t), "Don't use SmallMap with large types. It probably wastes memory.");
 
-    Value& ensure(const Key& key, const auto& functor)
+    Value& ensure(const Key& key, NOESCAPE const auto& functor)
     {
         ASSERT(Map::isValidKey(key));
         if (std::holds_alternative<std::monostate>(m_storage)) {
@@ -83,7 +83,7 @@ public:
         return nullptr;
     }
 
-    void forEach(const auto& callback) const
+    void forEach(NOESCAPE const auto& callback) const
     {
         switchOn(m_storage, [&] (const std::monostate&) {
         }, [&] (const Pair& pair) {

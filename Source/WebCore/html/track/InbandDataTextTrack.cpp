@@ -30,6 +30,7 @@
 #if ENABLE(VIDEO)
 
 #include "DataCue.h"
+#include "ExceptionOr.h"
 #include "InbandTextTrackPrivate.h"
 #include "TextTrackList.h"
 #include <wtf/TZoneMallocInlines.h>

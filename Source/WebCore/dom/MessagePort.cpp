@@ -29,6 +29,7 @@
 
 #include "Document.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "Logging.h"
 #include "MessageEvent.h"
 #include "MessagePortChannelProvider.h"
@@ -249,12 +250,12 @@ void MessagePort::dispatchMessages()
     if (!context || context->activeDOMObjectsAreSuspended() || !isEntangled())
         return;
 
-    auto messagesTakenHandler = [this, protectedThis = makePendingActivity(*this)](Vector<MessageWithMessagePorts>&& messages, CompletionHandler<void()>&& completionCallback) mutable {
+    auto messagesTakenHandler = [pendingActivity = makePendingActivity(*this)](Vector<MessageWithMessagePorts>&& messages, CompletionHandler<void()>&& completionCallback) mutable {
         auto scopeExit = makeScopeExit(WTFMove(completionCallback));
 
-        LOG(MessagePorts, "MessagePort %s (%p) dispatching %zu messages", m_identifier.logString().utf8().data(), this, messages.size());
+        LOG(MessagePorts, "MessagePort %s (%p) dispatching %zu messages", pendingActivity->object().m_identifier.logString().utf8().data(), &pendingActivity->object(), messages.size());
 
-        RefPtr<ScriptExecutionContext> context = scriptExecutionContext();
+        RefPtr context = pendingActivity->object().scriptExecutionContext();
         if (!context || !context->globalObject())
             return;
 
@@ -271,14 +272,14 @@ void MessagePort::dispatchMessages()
 
             auto ports = MessagePort::entanglePorts(*context, WTFMove(message.transferredPorts));
             auto event = MessageEvent::create(*globalObject, message.message.releaseNonNull(), { }, { }, { }, WTFMove(ports));
-            if (UNLIKELY(scope.exception())) {
+            if (scope.exception()) [[unlikely]] {
                 // Currently, we assume that the only way we can get here is if we have a termination.
                 RELEASE_ASSERT(vm->hasPendingTerminationException());
                 return;
             }
 
             // Per specification, each MessagePort object has a task source called the port message queue.
-            queueTaskKeepingObjectAlive(*this, TaskSource::PostedMessageQueue, [event = WTFMove(event)](auto& port) {
+            queueTaskKeepingObjectAlive(pendingActivity->object(), TaskSource::PostedMessageQueue, [event = WTFMove(event)](auto& port) {
                 port.dispatchEvent(event.event);
             });
         }

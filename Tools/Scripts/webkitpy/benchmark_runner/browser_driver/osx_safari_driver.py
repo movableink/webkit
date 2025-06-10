@@ -72,6 +72,16 @@ class OSXSafariDriver(OSXBrowserDriver):
             self._safari_process = subprocess.Popen(args, env=env)
         except Exception as error:
             _log.error('Popen failed: {error}'.format(error=error))
+
+        max_wait_iteration = 60
+        for _ in range(max_wait_iteration):
+            if not subprocess.call(['/usr/bin/pgrep', 'WebContent(.Development)?$'], stdout=subprocess.DEVNULL):
+                _log.info('WebContent process has been launched')
+                break
+            time.sleep(1)
+        else:
+            _log.warning(f'WebContent process is not launched within expected time, proceed anyway but test may fail.')
+
         # Stop for initialization of the safari process, otherwise, open
         # command may use the system safari.
         time.sleep(3)
@@ -112,5 +122,5 @@ class OSXSafariDriver(OSXBrowserDriver):
             _log.error('Reset safari window size failed - Error: {}'.format(error))
 
     @property
-    def pgo_profile_output_directory(self):
-        return '/private/tmp/WebKitPGO'
+    def pgo_profile_output_directories(self):
+        return ['/private/tmp/WebKitPGO']

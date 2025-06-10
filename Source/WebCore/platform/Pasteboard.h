@@ -94,13 +94,12 @@ struct PasteboardWebContent {
     String dataInStringFormat;
     Vector<std::pair<String, RefPtr<WebCore::SharedBuffer>>> clientTypesAndData;
 #endif
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(WPE)
     String contentOrigin;
     bool canSmartCopyOrDelete;
     String text;
     String markup;
-#endif
-#if USE(LIBWPE)
+#elif USE(LIBWPE)
     String text;
     String markup;
 #endif
@@ -112,7 +111,7 @@ struct PasteboardURL {
 #if PLATFORM(MAC)
     String userVisibleForm;
 #endif
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(WPE)
     String markup;
 #endif
 };
@@ -126,7 +125,7 @@ struct PasteboardImage {
 #if !PLATFORM(WIN) && !PLATFORM(QT)
     PasteboardURL url;
 #endif
-#if !(PLATFORM(GTK) || PLATFORM(WIN))
+#if !(PLATFORM(GTK) || PLATFORM(WPE) || PLATFORM(WIN))
     RefPtr<SharedBuffer> resourceData;
     String resourceMIMEType;
     Vector<std::pair<String, RefPtr<WebCore::SharedBuffer>>> clientTypesAndData;
@@ -149,7 +148,7 @@ class PasteboardWebContentReader {
 public:
     virtual ~PasteboardWebContentReader() = default;
 
-#if PLATFORM(COCOA) || PLATFORM(GTK)
+#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
     virtual bool readFilePath(const String&, PresentationSize preferredPresentationSize = { }, const String& contentType = { }) = 0;
     virtual bool readFilePaths(const Vector<String>&) = 0;
     virtual bool readHTML(const String&) = 0;
@@ -199,6 +198,10 @@ public:
 #if ENABLE(DRAG_SUPPORT)
     explicit Pasteboard(std::unique_ptr<PasteboardContext>&&, SelectionData&&);
 #endif
+#endif
+
+#if PLATFORM(WPE)
+    explicit Pasteboard(std::unique_ptr<PasteboardContext>&&, const String& name);
 #endif
 
 #if PLATFORM(WIN)
@@ -269,7 +272,6 @@ public:
 #if PLATFORM(GTK)
     const SelectionData& selectionData() const;
     static std::unique_ptr<Pasteboard> createForGlobalSelection(std::unique_ptr<PasteboardContext>&&);
-    int64_t changeCount() const;
 #endif
 
 #if PLATFORM(QT)
@@ -294,15 +296,18 @@ public:
 #endif
     static bool shouldTreatCocoaTypeAsFile(const String&);
     WEBCORE_EXPORT static NSArray *supportedFileUploadPasteboardTypes();
-    int64_t changeCount() const;
     const PasteboardCustomData& readCustomData();
-#elif !PLATFORM(GTK)
+#endif
+
+#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
+    int64_t changeCount() const;
+#else
     int64_t changeCount() const { return 0; }
 #endif
 
 #if PLATFORM(COCOA)
     const String& name() const { return m_pasteboardName; }
-#elif PLATFORM(GTK)
+#elif PLATFORM(GTK) || PLATFORM(WPE)
     const String& name() const { return m_name; }
 #else
     const String& name() const { return emptyString(); }
@@ -382,6 +387,9 @@ private:
 
 #if PLATFORM(GTK)
     std::optional<SelectionData> m_selectionData;
+#endif
+
+#if PLATFORM(GTK) || PLATFORM(WPE)
     String m_name;
     int64_t m_changeCount { 0 };
 #endif

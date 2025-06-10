@@ -65,7 +65,7 @@ void OpenXRDevice::initialize(CompletionHandler<void()>&& callback)
 #if !LOG_DISABLED
         else
             LOG(XR, "xrGetSystemProperties(): error %s\n", resultToString(result, m_instance).utf8().data());
-        LOG(XR, "Found XRSystem %lu: \"%s\", vendor ID %d\n", systemProperties.systemId, systemProperties.systemName, systemProperties.vendorId);
+        LOG(XR, "Found XRSystem %" PRIu64 ": \"%s\", vendor ID %d\n", systemProperties.systemId, systemProperties.systemName, systemProperties.vendorId);
 #endif
 
         collectSupportedSessionModes();

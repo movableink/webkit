@@ -55,7 +55,7 @@ public:
 private:
     WebAuthenticationAssertionResponse(Ref<WebCore::AuthenticatorAssertionResponse>&&);
 
-    Ref<WebCore::AuthenticatorAssertionResponse> m_response;
+    const Ref<WebCore::AuthenticatorAssertionResponse> m_response;
 };
 
 } // namespace API

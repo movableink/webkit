@@ -137,15 +137,15 @@ public:
     LayoutUnit minContentSize() const { return m_minContentSize; };
     LayoutUnit maxContentSize() const { return m_maxContentSize; };
 
-    LayoutUnit baselineOffsetForGridItem(const RenderBox&, GridAxis) const;
+    LayoutUnit baselineOffsetForGridItem(const RenderBox&, GridTrackSizingDirection alignmentContextType) const;
 
     // The estimated grid area should be use pre-layout versus the grid area, which should be used once
     // layout is complete.
     std::optional<LayoutUnit> gridAreaBreadthForGridItem(const RenderBox&, GridTrackSizingDirection) const;
     std::optional<LayoutUnit> estimatedGridAreaBreadthForGridItem(const RenderBox&, GridTrackSizingDirection) const;
 
-    void cacheBaselineAlignedItem(const RenderBox&, GridAxis, bool cachingRowSubgridsForRootGrid);
-    void copyBaselineItemsCache(const GridTrackSizingAlgorithm&, GridAxis);
+    void cacheBaselineAlignedItem(const RenderBox&, GridTrackSizingDirection alignmentContextType, bool cachingRowSubgridsForRootGrid);
+    void copyBaselineItemsCache(const GridTrackSizingAlgorithm&, GridTrackSizingDirection alignmentContextType);
     void clearBaselineItemsCache();
 
     Vector<GridTrack>& tracks(GridTrackSizingDirection direction) { return direction == GridTrackSizingDirection::ForColumns ? m_columns : m_rows; }
@@ -161,7 +161,7 @@ public:
 
     bool hasAnyPercentSizedRowsIndefiniteHeight() const { return m_hasPercentSizedRowsIndefiniteHeight; }
     bool hasAnyFlexibleMaxTrackBreadth() const { return m_hasFlexibleMaxTrackBreadth; }
-    bool hasAnyBaselineAlignmentItem() const { return !m_columnBaselineItemsMap.isEmpty() || !m_rowBaselineItemsMap.isEmpty(); }
+    bool hasAnyBaselineAlignmentItem() const { return !m_baselineAlignmentItemsForRows.isEmpty() || !m_baselineAlignmentItemsForColumns.isEmpty(); }
 
 #if ASSERT_ENABLED
     bool tracksAreWiderThanMinTrackBreadth() const;
@@ -242,11 +242,11 @@ private:
     template <TrackSizeComputationVariant variant, TrackSizeComputationPhase phase> void distributeSpaceToTracks(Vector<WeakPtr<GridTrack>>& tracks, Vector<WeakPtr<GridTrack>>* growBeyondGrowthLimitsTracks, LayoutUnit& freeSpace) const;
 
     void computeBaselineAlignmentContext();
-    void updateBaselineAlignmentContext(const RenderBox&, GridAxis);
-    bool canParticipateInBaselineAlignment(const RenderBox&, GridAxis) const;
-    bool participateInBaselineAlignment(const RenderBox&, GridAxis) const;
+    void updateBaselineAlignmentContext(const RenderBox&, GridTrackSizingDirection alignmentContextType);
+    bool canParticipateInBaselineAlignment(const RenderBox&, GridTrackSizingDirection alignmentContextType) const;
+    bool participateInBaselineAlignment(const RenderBox&, GridTrackSizingDirection alignmentContextType) const;
 
-    bool isIntrinsicSizedGridArea(const RenderBox&, GridAxis) const;
+    bool isIntrinsicSizedGridArea(const RenderBox&, GridTrackSizingDirection gridAreaDirection) const;
     void computeGridContainerIntrinsicSizes();
 
     // Helper methods for step 4. Stretch flexible tracks.
@@ -336,8 +336,10 @@ private:
 
     GridBaselineAlignment m_baselineAlignment;
     using BaselineItemsCache = UncheckedKeyHashMap<SingleThreadWeakRef<const RenderBox>, bool>;
-    BaselineItemsCache m_columnBaselineItemsMap;
-    BaselineItemsCache m_rowBaselineItemsMap;
+
+    // Rows/columns here indicate the alignment context.
+    BaselineItemsCache m_baselineAlignmentItemsForRows;
+    BaselineItemsCache m_baselineAlignmentItemsForColumns;
 
     SingleThreadWeakHashSet<RenderGrid> m_rowSubgridsWithBaselineAlignedItems;
 

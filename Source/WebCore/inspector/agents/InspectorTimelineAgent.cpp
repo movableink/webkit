@@ -247,7 +247,7 @@ void InspectorTimelineAgent::stopFromConsole(const String& title)
         auto recordTitle = record.data->getString("title"_s);
         if (title.isEmpty() || recordTitle == title) {
             didCompleteRecordEntry(record);
-            m_pendingConsoleProfileRecords.remove(i);
+            m_pendingConsoleProfileRecords.removeAt(i);
 
             if (!m_trackingFromFrontend && m_pendingConsoleProfileRecords.isEmpty())
                 stopProgrammaticCapture();

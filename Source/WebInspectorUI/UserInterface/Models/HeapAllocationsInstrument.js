@@ -45,11 +45,8 @@ WI.HeapAllocationsInstrument = class HeapAllocationsInstrument extends WI.Instru
         // FIXME: Include a periodic snapshot interval option for this instrument.
 
         if (!initiatedByBackend) {
-            for (let target of WI.targets) {
-                if (target.type === WI.TargetType.Worker && !WI.settings.experimentalEnableWorkerTimelineRecording.value)
-                    continue;
+            for (let target of WI.targets)
                 target.HeapAgent.startTracking();
-            }
         }
 
         // Periodic snapshots.
@@ -60,11 +57,8 @@ WI.HeapAllocationsInstrument = class HeapAllocationsInstrument extends WI.Instru
     stopInstrumentation(initiatedByBackend)
     {
         if (!initiatedByBackend) {
-            for (let target of WI.targets) {
-                if (target.type === WI.TargetType.Worker && !WI.settings.experimentalEnableWorkerTimelineRecording.value)
-                    continue;
+            for (let target of WI.targets)
                 target.HeapAgent.stopTracking();
-            }
         }
 
         window.clearInterval(this._snapshotIntervalIdentifier);

@@ -151,7 +151,7 @@ void MockHidConnection::parseRequest()
             auto payload = m_requestMessage->getMessagePayload();
             ASSERT(payload.size());
             auto cmd = static_cast<CtapRequestCommand>(payload[0]);
-            payload.remove(0);
+            payload.removeAt(0);
             auto requestMap = CBORReader::read(payload);
             ASSERT(requestMap || cmd == CtapRequestCommand::kAuthenticatorGetNextAssertion);
 
@@ -230,6 +230,8 @@ void MockHidConnection::feedReports()
             if (m_configuration.hid->supportInternalUV)
                 options.setUserVerificationAvailability(AuthenticatorSupportedOptions::UserVerificationAvailability::kSupportedAndConfigured);
             infoResponse.setOptions(WTFMove(options));
+            infoResponse.setMaxCredentialCountInList(m_configuration.hid->maxCredentialCountInList);
+            infoResponse.setMaxCredentialIDLength(m_configuration.hid->maxCredentialIdLength);
             infoData = encodeAsCBOR(infoResponse);
         }
         infoData.insert(0, static_cast<uint8_t>(CtapDeviceResponseCode::kSuccess)); // Prepend status code.
@@ -258,7 +260,7 @@ void MockHidConnection::feedReports()
         else {
             ASSERT(!m_configuration.hid->payloadBase64.isEmpty());
             auto payload = base64Decode(m_configuration.hid->payloadBase64[0]);
-            m_configuration.hid->payloadBase64.remove(0);
+            m_configuration.hid->payloadBase64.removeAt(0);
             if (!m_configuration.hid->isU2f)
                 message = FidoHidMessage::create(m_currentChannel, FidoHidDeviceCommand::kCbor, WTFMove(*payload));
             else

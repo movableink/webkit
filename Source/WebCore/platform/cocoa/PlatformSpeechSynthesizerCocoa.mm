@@ -134,23 +134,23 @@ static float getAVSpeechUtteranceMaximumSpeechRate()
     // Choose the best voice, by first looking at the utterance voice, then the utterance language,
     // then choose the default language.
     RefPtr utteranceVoice = utterance->voice();
-    NSString *voiceLanguage = nil;
+    RetainPtr<NSString> voiceLanguage;
     if (!utteranceVoice || utteranceVoice->voiceURI().isEmpty()) {
         if (utterance->lang().isEmpty())
             voiceLanguage = [PAL::getAVSpeechSynthesisVoiceClass() currentLanguageCode];
         else
-            voiceLanguage = utterance->lang();
+            voiceLanguage = utterance->lang().createNSString();
     } else
-        voiceLanguage = utterance->voice()->lang();
+        voiceLanguage = utterance->voice()->lang().createNSString();
 
     AVSpeechSynthesisVoice *avVoice = nil;
     if (utteranceVoice)
-        avVoice = [PAL::getAVSpeechSynthesisVoiceClass() voiceWithIdentifier:utteranceVoice->voiceURI()];
+        avVoice = [PAL::getAVSpeechSynthesisVoiceClass() voiceWithIdentifier:utteranceVoice->voiceURI().createNSString().get()];
 
     if (!avVoice)
-        avVoice = [PAL::getAVSpeechSynthesisVoiceClass() voiceWithLanguage:voiceLanguage];
+        avVoice = [PAL::getAVSpeechSynthesisVoiceClass() voiceWithLanguage:voiceLanguage.get()];
 
-    AVSpeechUtterance *avUtterance = [PAL::getAVSpeechUtteranceClass() speechUtteranceWithString:utterance->text()];
+    AVSpeechUtterance *avUtterance = [PAL::getAVSpeechUtteranceClass() speechUtteranceWithString:utterance->text().createNSString().get()];
 
     [avUtterance setRate:[self mapSpeechRateToPlatformRate:utterance->rate()]];
     [avUtterance setVolume:utterance->volume()];

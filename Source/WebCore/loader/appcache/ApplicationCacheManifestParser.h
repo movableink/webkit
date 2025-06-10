@@ -36,7 +36,7 @@ using FallbackURLVector = Vector<std::pair<URL, URL>>;
 
 struct ApplicationCacheManifest {
     Vector<URL> onlineAllowedURLs;
-    UncheckedKeyHashSet<String> explicitURLs;
+    HashSet<String> explicitURLs;
     FallbackURLVector fallbackURLs;
     bool allowAllNetworkRequests { false }; // Wildcard found in NETWORK section.
 };

@@ -33,6 +33,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 #ifdef __OBJC__
 #include <objc/objc.h>
+#include <wtf/RetainPtr.h>
 #endif
 
 #if OS(WINDOWS)
@@ -57,7 +58,7 @@ template<bool isSpecialCharacter(UChar), typename CharacterType, std::size_t Ext
 enum class TrailingZerosPolicy : bool { Keep, Truncate };
 
 class String final {
-    WTF_MAKE_FAST_COMPACT_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     // Construct a null string, distinguishable from an empty string.
     String() = default;
@@ -122,7 +123,7 @@ public:
     WTF_EXPORT_PRIVATE CString utf8(ConversionMode = LenientConversion) const;
 
     template<typename Func>
-    Expected<std::invoke_result_t<Func, std::span<const char8_t>>, UTF8ConversionError> tryGetUTF8(const Func&, ConversionMode = LenientConversion) const;
+    Expected<std::invoke_result_t<Func, std::span<const char8_t>>, UTF8ConversionError> tryGetUTF8(NOESCAPE const Func&, ConversionMode = LenientConversion) const;
     WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUTF8(ConversionMode) const;
     WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUTF8() const;
 
@@ -216,11 +217,11 @@ public:
 
     using SplitFunctor = WTF::Function<void(StringView)>;
 
-    WTF_EXPORT_PRIVATE void split(UChar separator, const SplitFunctor&) const;
+    WTF_EXPORT_PRIVATE void split(UChar separator, NOESCAPE const SplitFunctor&) const;
     WTF_EXPORT_PRIVATE Vector<String> WARN_UNUSED_RETURN split(UChar separator) const;
     WTF_EXPORT_PRIVATE Vector<String> WARN_UNUSED_RETURN split(StringView separator) const;
 
-    WTF_EXPORT_PRIVATE void splitAllowingEmptyEntries(UChar separator, const SplitFunctor&) const;
+    WTF_EXPORT_PRIVATE void splitAllowingEmptyEntries(UChar separator, NOESCAPE const SplitFunctor&) const;
     WTF_EXPORT_PRIVATE Vector<String> WARN_UNUSED_RETURN splitAllowingEmptyEntries(UChar separator) const;
     WTF_EXPORT_PRIVATE Vector<String> WARN_UNUSED_RETURN splitAllowingEmptyEntries(StringView separator) const;
 
@@ -251,7 +252,7 @@ public:
     // This conversion converts the null string to an empty NSString rather than to nil.
     // Given Cocoa idioms, this is a more useful default. Clients that need to preserve the
     // null string can check isNull explicitly.
-    operator NSString *() const;
+    RetainPtr<NSString> createNSString() const;
 #endif
 
 #if PLATFORM(QT)
@@ -290,9 +291,9 @@ public:
     // Determines the writing direction using the Unicode Bidi Algorithm rules P2 and P3.
     std::optional<UCharDirection> defaultWritingDirection() const;
 
-    bool containsOnlyASCII() const { return !m_impl || m_impl->containsOnlyASCII(); }
-    bool containsOnlyLatin1() const { return !m_impl || m_impl->containsOnlyLatin1(); }
-    template<bool isSpecialCharacter(UChar)> bool containsOnly() const { return !m_impl || m_impl->containsOnly<isSpecialCharacter>(); }
+    bool containsOnlyASCII() const { SUPPRESS_UNCOUNTED_ARG return !m_impl || m_impl->containsOnlyASCII(); }
+    bool containsOnlyLatin1() const { SUPPRESS_UNCOUNTED_ARG return !m_impl || m_impl->containsOnlyLatin1(); }
+    template<bool isSpecialCharacter(UChar)> bool containsOnly() const { SUPPRESS_UNCOUNTED_ARG return !m_impl || m_impl->containsOnly<isSpecialCharacter>(); }
 
     // Hash table deleted values, which are only constructed and never copied or destroyed.
     String(WTF::HashTableDeletedValueType) : m_impl(WTF::HashTableDeletedValue) { }
@@ -312,7 +313,7 @@ public:
     static constexpr unsigned MaxLength = StringImpl::MaxLength;
 
 private:
-    template<bool allowEmptyEntries> void splitInternal(UChar separator, const SplitFunctor&) const;
+    template<bool allowEmptyEntries> void splitInternal(UChar separator, NOESCAPE const SplitFunctor&) const;
     template<bool allowEmptyEntries> Vector<String> splitInternal(UChar separator) const;
     template<bool allowEmptyEntries> Vector<String> splitInternal(StringView separator) const;
 
@@ -326,8 +327,6 @@ static_assert(sizeof(String) == sizeof(void*), "String should effectively be a p
 
 inline bool operator==(const String& a, const String& b) { return equal(a.impl(), b.impl()); }
 inline bool operator==(const String& a, ASCIILiteral b) { return equal(a.impl(), b); }
-inline bool operator==(ASCIILiteral a, const String& b) { return equal(b.impl(), a); }
-template<size_t inlineCapacity> inline bool operator==(const Vector<char, inlineCapacity>& a, const String& b) { return equal(b.impl(), a.data(), a.size()); }
 template<size_t inlineCapacity> inline bool operator==(const String& a, const Vector<char, inlineCapacity>& b) { return b == a; }
 
 bool equalIgnoringASCIICase(const String&, const String&);
@@ -353,7 +352,7 @@ NSString * nsStringNilIfNull(const String&);
 
 #endif
 
-WTF_EXPORT_PRIVATE int codePointCompare(const String&, const String&);
+WTF_EXPORT_PRIVATE std::strong_ordering codePointCompare(const String&, const String&);
 bool codePointCompareLessThan(const String&, const String&);
 
 // Shared global empty and null string.
@@ -502,7 +501,7 @@ inline String String::substring(unsigned position, unsigned length) const
 }
 
 template<typename Func>
-inline Expected<std::invoke_result_t<Func, std::span<const char8_t>>, UTF8ConversionError> String::tryGetUTF8(const Func& function, ConversionMode mode) const
+inline Expected<std::invoke_result_t<Func, std::span<const char8_t>>, UTF8ConversionError> String::tryGetUTF8(NOESCAPE const Func& function, ConversionMode mode) const
 {
     if (!m_impl)
         return function(nonNullEmptyUTF8Span());
@@ -511,11 +510,11 @@ inline Expected<std::invoke_result_t<Func, std::span<const char8_t>>, UTF8Conver
 
 #if USE(FOUNDATION) && defined(__OBJC__)
 
-inline String::operator NSString *() const
+inline RetainPtr<NSString> String::createNSString() const
 {
-    if (!m_impl)
-        return @"";
-    SUPPRESS_UNCOUNTED_ARG return *m_impl;
+    if (RefPtr impl = m_impl)
+        return impl->createNSString();
+    return @"";
 }
 
 inline NSString * nsStringNilIfEmpty(const String& string)

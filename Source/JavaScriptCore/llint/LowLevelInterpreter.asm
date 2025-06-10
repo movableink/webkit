@@ -145,6 +145,8 @@ end
 if ARMv7s
 end
 
+nop
+
 # First come the common protocols that both interpreters use. Note that each
 # of these must have an ASSERT() in LLIntData.cpp
 
@@ -1795,7 +1797,6 @@ else
     _vmEntryToNative:
 end
     doVMEntry(makeHostFunctionCall)
-
 if ARM64E
     global _vmEntryToYarrJITAfter
 end
@@ -2211,7 +2212,7 @@ llintSlowPathOp(new_func_exp)
 llintSlowPathOp(new_generator_func)
 llintSlowPathOp(new_generator_func_exp)
 llintSlowPathOp(new_object)
-llintSlowPathOp(new_regexp)
+llintSlowPathOp(new_reg_exp)
 llintSlowPathOp(put_getter_by_id)
 llintSlowPathOp(put_getter_by_val)
 llintSlowPathOp(put_getter_setter_by_id)

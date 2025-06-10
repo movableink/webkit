@@ -140,7 +140,7 @@ bool HTMLParserScheduler::shouldYieldBeforeExecutingScript(const ScriptElement* 
     if (!document->haveStylesheetsLoaded())
         return false;
 
-    if (UNLIKELY(m_documentHasActiveParserYieldTokens))
+    if (m_documentHasActiveParserYieldTokens) [[unlikely]]
         return true;
 
     // Yield if we have never painted and there is meaningful content

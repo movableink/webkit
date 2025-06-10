@@ -36,6 +36,7 @@
 #import <WebKit/WKWebViewPrivateForTesting.h>
 #import <WebKit/_WKTextInputContext.h>
 #import <pal/spi/ios/BrowserEngineKitSPI.h>
+#import <ranges>
 #import <wtf/RetainPtr.h>
 #import <wtf/Vector.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
@@ -128,7 +129,7 @@ static UIWKDocumentRequest *makeRequest(UIWKDocumentRequestFlags flags, UITextGr
         rangesAndRects.append(std::make_pair(characterRange, layoutRect));
     }];
 
-    std::sort(rangesAndRects.begin(), rangesAndRects.end(), [](auto& a, auto& b) {
+    std::ranges::sort(rangesAndRects, [](auto& a, auto& b) {
         return a.first.location < b.first.location;
     });
 
@@ -897,7 +898,7 @@ TEST(DocumentEditingContext, SpatialAndCurrentSelectionRequest_LimitContextToEdi
             "  <p style='font-size:500px;'>hello world</p>"
             "  <input style='position: absolute; top: 100px; left: 100px;' value='foo' />"
             "</body>"_s
-        })];
+        }.createNSString().get())];
         [webView stringByEvaluatingJavaScript:@"document.querySelector('input').focus()"];
         [webView stringByEvaluatingJavaScript:@"document.querySelector('input').select()"];
 
@@ -924,7 +925,7 @@ TEST(DocumentEditingContext, SpatialAndCurrentSelectionRequest_LimitContextToVis
         "        getSelection().selectAllChildren(document.getElementById('target'));"
         "    </script>"
         "</body>"_s
-    })];
+    }.createNSString().get())];
 
     auto trimmedComponentsSeparatedByNewlines = [](const String& string) {
         auto components = string.split('\n');
@@ -1572,7 +1573,7 @@ TEST(DocumentEditingContext, CharacterRectsInEditableWebView)
 {
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 320, 568)]);
     [webView _setEditable:YES];
-    [webView synchronouslyLoadHTMLString:makeString("<meta name='viewport' content='width=device-width, initial-scale=1'><body>"_s, longTextString, "</body>"_s)];
+    [webView synchronouslyLoadHTMLString:makeString("<meta name='viewport' content='width=device-width, initial-scale=1'><body>"_s, longTextString, "</body>"_s).createNSString().get()];
     [webView objectByEvaluatingJavaScript:@"getSelection().setPosition(document.body, 0)"];
     [webView waitForNextPresentationUpdate];
 
@@ -1665,7 +1666,7 @@ TEST(DocumentEditingContext, RequestAnnotationsForTextChecking)
 {
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
     auto loadWebViewAndGetContext = [&] {
-        [webView synchronouslyLoadHTMLString:makeString("<body>"_s, longTextString, "</body>"_s)];
+        [webView synchronouslyLoadHTMLString:makeString("<body>"_s, longTextString, "</body>"_s).createNSString().get()];
         [webView objectByEvaluatingJavaScript:@"(() => {"
             "    let text = document.body.childNodes[0];"
             "    getSelection().setBaseAndExtent(text, 90, text, 94);"

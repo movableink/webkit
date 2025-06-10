@@ -289,7 +289,7 @@ inline JSArray* constructEmptyArray(JSGlobalObject* globalObject, ArrayAllocatio
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     JSArray* result = JSArray::tryCreate(vm, structure, initialLength);
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -322,7 +322,7 @@ inline JSArray* constructArrayNegativeIndexed(JSGlobalObject* globalObject, Arra
     RETURN_IF_EXCEPTION(scope, nullptr);
     scope.release();
     JSArray* array = constructArrayNegativeIndexed(globalObject, structure, values, length);
-    if (UNLIKELY(!array))
+    if (!array) [[unlikely]]
         return nullptr;
     return ArrayAllocationProfile::updateLastAllocationFor(profile, array);
 }
@@ -334,7 +334,7 @@ ALWAYS_INLINE JSArray* tryCreateContiguousArrayWithPattern(JSGlobalObject* globa
 
     VM& vm = globalObject->vm();
     Structure* structure = globalObject->originalArrayStructureForIndexingType(ArrayWithContiguous);
-    if (UNLIKELY(!hasContiguous(structure->indexingType())))
+    if (!hasContiguous(structure->indexingType())) [[unlikely]]
         return nullptr;
 
     unsigned vectorLength = Butterfly::optimalContiguousVectorLength(structure, initialLength);
@@ -342,7 +342,7 @@ ALWAYS_INLINE JSArray* tryCreateContiguousArrayWithPattern(JSGlobalObject* globa
         vm,
         Butterfly::totalSize(0, 0, true, vectorLength * sizeof(EncodedJSValue)),
         nullptr, AllocationFailureMode::ReturnNull);
-    if (UNLIKELY(!temp))
+    if (!temp) [[unlikely]]
         return nullptr;
     Butterfly* butterfly = Butterfly::fromBase(temp, 0, 0);
     butterfly->setVectorLength(vectorLength);
@@ -369,7 +369,7 @@ ALWAYS_INLINE JSArray* createPatternFilledArray(JSGlobalObject* globalObject, JS
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (JSArray* array = tryCreateContiguousArrayWithPattern(globalObject, pattern, count); LIKELY(array))
+    if (JSArray* array = tryCreateContiguousArrayWithPattern(globalObject, pattern, count); array) [[likely]]
         return array;
 
     JSArray* array = constructEmptyArray(globalObject, nullptr, count);
@@ -439,6 +439,18 @@ inline Structure* JSGlobalObject::arrayBufferStructure(ArrayBufferSharingMode sh
         return m_arrayBufferStructure.get(this);
     case ArrayBufferSharingMode::Shared:
         return m_sharedArrayBufferStructure.get(this);
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
+}
+
+inline Structure* JSGlobalObject::arrayBufferStructureConcurrently(ArrayBufferSharingMode sharingMode) const
+{
+    switch (sharingMode) {
+    case ArrayBufferSharingMode::Default:
+        return m_arrayBufferStructure.getConcurrently();
+    case ArrayBufferSharingMode::Shared:
+        return m_sharedArrayBufferStructure.getConcurrently();
     }
     RELEASE_ASSERT_NOT_REACHED();
     return nullptr;
@@ -519,6 +531,8 @@ inline Structure* JSGlobalObject::errorStructure(ErrorType errorType) const
         return m_URIErrorStructure.get(this);
     case ErrorType::AggregateError:
         return m_aggregateErrorStructure.get(this);
+    case ErrorType::SuppressedError:
+        return m_suppressedErrorStructure.get(this);
     }
     ASSERT_NOT_REACHED();
     return nullptr;
@@ -532,7 +546,7 @@ inline JSScope* JSGlobalObject::globalScope()
 // https://tc39.es/ecma262/#sec-candeclareglobalvar
 inline bool JSGlobalObject::canDeclareGlobalVar(const Identifier& ident)
 {
-    if (LIKELY(isStructureExtensible()))
+    if (isStructureExtensible()) [[likely]]
         return true;
 
     PropertySlot slot(this, PropertySlot::InternalMethodType::GetOwnProperty);
@@ -549,7 +563,7 @@ inline void JSGlobalObject::createGlobalVarBinding(const Identifier& ident)
     PropertySlot slot(this, PropertySlot::InternalMethodType::GetOwnProperty);
     bool hasProperty = getOwnPropertySlot(this, this, ident, slot);
     scope.assertNoExceptionExceptTermination();
-    if (UNLIKELY(hasProperty))
+    if (hasProperty) [[unlikely]]
         return;
 
     ASSERT(isStructureExtensible());

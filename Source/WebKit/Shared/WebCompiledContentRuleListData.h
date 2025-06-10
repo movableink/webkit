@@ -29,7 +29,6 @@
 
 #include <WebCore/SharedBuffer.h>
 #include <WebCore/SharedMemory.h>
-#include <variant>
 #include <wtf/RefPtr.h>
 
 namespace WebKit {

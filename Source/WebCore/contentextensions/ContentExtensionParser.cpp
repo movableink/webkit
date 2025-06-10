@@ -28,8 +28,7 @@
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
-#include "CSSParser.h"
-#include "CSSSelectorList.h"
+#include "CSSSelectorParser.h"
 #include "CommonAtomStrings.h"
 #include "ContentExtensionError.h"
 #include "ContentExtensionRule.h"
@@ -166,6 +165,15 @@ static Expected<Trigger, std::error_code> loadTrigger(const JSON::Object& ruleOb
             return makeUnexpected(error);
     }
 
+    if (auto requestMethodValue = triggerObject->getValue("request-method"_s)) {
+        auto requestMethod = readRequestMethod(requestMethodValue->asString());
+
+        if (!requestMethod.has_value())
+            return makeUnexpected(ContentExtensionError::JSONInvalidRequestMethod);
+
+        trigger.flags |= static_cast<ResourceFlags>(requestMethod.value());
+    }
+
     auto checkCondition = [&] (ASCIILiteral key, Expected<Vector<String>, std::error_code> (*listReader)(const JSON::Array&), ActionCondition actionCondition) -> std::error_code {
         if (auto value = triggerObject->getValue(key)) {
             if (trigger.flags & ActionConditionMask)
@@ -215,8 +223,7 @@ bool isValidCSSSelector(const String& selector)
     // we want to use quirks mode in parsing, but automatic mode when actually applying the content blocker styles.
     // FIXME: rdar://105733691 (Parse/apply content blocker style sheets in both standards and quirks mode lazily).
     WebCore::CSSParserContext context(HTMLQuirksMode);
-    CSSParser parser(context);
-    return !!parser.parseSelectorList(selector);
+    return !!CSSSelectorParser::parseSelectorList(selector, context);
 }
 
 WebCore::CSSParserContext contentExtensionCSSParserContext()
@@ -237,6 +244,8 @@ static std::optional<Expected<Action, std::error_code>> loadAction(const JSON::O
         return Action { BlockLoadAction() };
     if (actionType == "ignore-previous-rules"_s)
         return Action { IgnorePreviousRulesAction() };
+    if (actionType == "ignore-following-rules"_s)
+        return Action { IgnoreFollowingRulesAction() };
     if (actionType == "block-cookies"_s)
         return Action { BlockCookiesAction() };
     if (actionType == "css-display-none"_s) {

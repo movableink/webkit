@@ -82,6 +82,6 @@ extension WebGPU.Buffer {
             return SpanUInt8()
         }
 
-        return getBufferContents().subspan(offset, stdDynamicExtent)
+        return getBufferContents().subspan(offset, rangeSize)
     }
 }

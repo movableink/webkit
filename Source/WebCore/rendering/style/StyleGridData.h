@@ -29,7 +29,7 @@
 #include "GridTrackSize.h"
 #include "RenderStyleConstants.h"
 #include "StyleContentAlignmentData.h"
-#include <variant>
+#include <wtf/FixedVector.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
@@ -48,7 +48,7 @@ struct OrderedNamedGridLinesMap {
     UncheckedKeyHashMap<unsigned, Vector<String>, IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> map;
 };
 
-typedef std::variant<GridTrackSize, Vector<String>> RepeatEntry;
+typedef Variant<GridTrackSize, Vector<String>> RepeatEntry;
 typedef Vector<RepeatEntry> RepeatTrackList;
 
 struct GridTrackEntrySubgrid {
@@ -73,14 +73,7 @@ struct GridTrackEntryAutoRepeat {
     RepeatTrackList list;
 };
 
-struct MasonryAutoFlow {
-    friend bool operator==(const MasonryAutoFlow&, const MasonryAutoFlow&) = default;
-
-    MasonryAutoFlowPlacementAlgorithm placementAlgorithm;
-    MasonryAutoFlowPlacementOrder placementOrder;
-};
-
-using GridTrackEntry = std::variant<GridTrackSize, Vector<String>, GridTrackEntryRepeat, GridTrackEntryAutoRepeat, GridTrackEntrySubgrid, GridTrackEntryMasonry>;
+using GridTrackEntry = Variant<GridTrackSize, Vector<String>, GridTrackEntryRepeat, GridTrackEntryAutoRepeat, GridTrackEntrySubgrid, GridTrackEntryMasonry>;
 struct GridTrackList {
     Vector<GridTrackEntry> list;
     friend bool operator==(const GridTrackList&, const GridTrackList&) = default;
@@ -89,6 +82,7 @@ inline WTF::TextStream& operator<<(WTF::TextStream& stream, const GridTrackList&
 
 WTF::TextStream& operator<<(WTF::TextStream&, const RepeatEntry&);
 WTF::TextStream& operator<<(WTF::TextStream&, const GridTrackEntry&);
+WTF::TextStream& operator<<(WTF::TextStream&, const NamedGridLinesMap&);
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleGridData);
 class StyleGridData : public RefCounted<StyleGridData> {
@@ -142,7 +136,6 @@ public:
     NamedGridLinesMap implicitNamedGridRowLines;
 
     unsigned gridAutoFlow : GridAutoFlowBits;
-    MasonryAutoFlow masonryAutoFlow;
 
     Vector<GridTrackSize> gridAutoRows;
     Vector<GridTrackSize> gridAutoColumns;

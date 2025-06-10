@@ -118,6 +118,13 @@ void RemoteRealtimeMediaSource::applyConstraintsSucceeded(WebCore::RealtimeMedia
     m_proxy.applyConstraintsSucceeded();
 }
 
+void RemoteRealtimeMediaSource::stopProducingData()
+{
+    if (isAudio())
+        m_manager->remoteCaptureSampleManager().audioSourceWillBeStopped(identifier());
+    m_proxy.stopProducingData();
+}
+
 void RemoteRealtimeMediaSource::didEnd()
 {
     if (m_proxy.isEnded())
@@ -161,7 +168,11 @@ void RemoteRealtimeMediaSource::gpuProcessConnectionDidClose(GPUProcessConnectio
 
     if (isProducingData())
         startProducingData();
-
+    else if (isAudio() && !interrupted()) {
+        // To be able to reenable voice detection, we have to restart the source.
+        startProducingData();
+        stopProducingData();
+    }
 }
 #endif
 

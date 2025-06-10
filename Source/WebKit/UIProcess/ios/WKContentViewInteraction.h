@@ -50,6 +50,7 @@
 #import "WKSTextAnimationManager.h"
 #import "WKSTextAnimationSourceDelegate.h"
 #import "WKTextAnimationType.h"
+#import "WKTextSelectionRect.h"
 #import <WebKit/WKActionSheetAssistant.h>
 #import <WebKit/WKAirPlayRoutePicker.h>
 #import <WebKit/WKContactPicker.h>
@@ -110,7 +111,7 @@ struct TextRecognitionResult;
 enum class DOMPasteAccessCategory : uint8_t;
 enum class DOMPasteAccessResponse : uint8_t;
 enum class DOMPasteRequiresInteraction : bool;
-enum class ElementIdentifierType;
+struct ElementIdentifierType;
 enum class MouseEventPolicy : uint8_t;
 enum class RouteSharingPolicy : uint8_t;
 enum class TextIndicatorDismissalAnimation : uint8_t;
@@ -123,7 +124,7 @@ using ElementIdentifier = ObjectIdentifier<ElementIdentifierType>;
 }
 
 namespace WebKit {
-class NativeWebTouchEvent;
+class WebTouchEvent;
 class SmartMagnificationController;
 class WebOpenPanelResultListenerProxy;
 class WebPageProxy;
@@ -225,13 +226,13 @@ typedef std::pair<WebKit::InteractionInformationRequest, InteractionInformationC
     M(pasteAndMatchStyle) \
     M(makeTextWritingDirectionNatural) \
     M(makeTextWritingDirectionLeftToRight) \
-    M(makeTextWritingDirectionRightToLeft)
+    M(makeTextWritingDirectionRightToLeft) \
+    M(alignCenter) \
+    M(alignJustified) \
+    M(alignLeft) \
+    M(alignRight)
 
 #define FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(M) \
-    M(_alignCenter) \
-    M(_alignJustified) \
-    M(_alignLeft) \
-    M(_alignRight) \
     M(_indent) \
     M(_outdent) \
     M(_toggleStrikeThrough) \
@@ -345,7 +346,7 @@ struct ImageAnalysisContextMenuActionData {
 #if ENABLE(IMAGE_ANALYSIS)
     RetainPtr<WKDeferringGestureRecognizer> _imageAnalysisDeferringGestureRecognizer;
 #endif
-    std::unique_ptr<WebKit::GestureRecognizerConsistencyEnforcer> _gestureRecognizerConsistencyEnforcer;
+    const std::unique_ptr<WebKit::GestureRecognizerConsistencyEnforcer> _gestureRecognizerConsistencyEnforcer;
     RetainPtr<WKTouchEventsGestureRecognizer> _touchEventGestureRecognizer;
 
     BOOL _touchEventsCanPreventNativeGestures;
@@ -411,7 +412,7 @@ struct ImageAnalysisContextMenuActionData {
 #endif
     RetainPtr<WKFormInputSession> _formInputSession;
     RetainPtr<WKFileUploadPanel> _fileUploadPanel;
-    WebKit::FrameInfoData _frameInfoForFileUploadPanel;
+    std::optional<WebKit::FrameInfoData> _frameInfoForFileUploadPanel;
 #if HAVE(SHARE_SHEET_UI)
     RetainPtr<WKShareSheet> _shareSheet;
 #endif
@@ -512,6 +513,8 @@ struct ImageAnalysisContextMenuActionData {
     CGPoint _lastInteractionLocation;
     std::optional<WebKit::TransactionID> _layerTreeTransactionIdAtLastInteractionStart;
 
+    __weak UIView *_cachedSelectionContainerView;
+    __weak UIView *_lastSiblingBeforeSelectionHighlight;
     WebKit::WKSelectionDrawingInfo _lastSelectionDrawingInfo;
     RetainPtr<WKTextRange> _cachedSelectedTextRange;
 
@@ -585,6 +588,9 @@ struct ImageAnalysisContextMenuActionData {
     BOOL _waitingForEditDragSnapshot;
     std::optional<BOOL> _cachedRequiresLegacyTextInputTraits;
     NSInteger _dropAnimationCount;
+
+    BOOL _waitingForEditorStateAfterScrollingSelectionContainer;
+    std::optional<WebCore::IntPoint> _lastSelectionChildScrollViewContentOffset;
 
     BOOL _hasSetUpInteractions;
     std::optional<BOOL> _cachedHasCustomTintColor;
@@ -671,7 +677,7 @@ struct ImageAnalysisContextMenuActionData {
 
 @end
 
-@interface WKContentView (WKInteraction) <UIGestureRecognizerDelegate, UITextInput, WKFormAccessoryViewDelegate, WKActionSheetAssistantDelegate, WKFileUploadPanelDelegate, WKKeyboardScrollViewAnimatorDelegate, WKDeferringGestureRecognizerDelegate
+@interface WKContentView (WKInteraction) <UIGestureRecognizerDelegate, UITextInput, WKFormAccessoryViewDelegate, WKActionSheetAssistantDelegate, WKFileUploadPanelDelegate, WKKeyboardScrollViewAnimatorDelegate, WKDeferringGestureRecognizerDelegate, WKTextSelectionRectDelegate
 #if HAVE(CONTACTSUI)
     , WKContactPickerDelegate
 #endif
@@ -770,7 +776,7 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW)
 - (void)_setTextColorForWebView:(UIColor *)color sender:(id)sender;
 
 #if ENABLE(TOUCH_EVENTS)
-- (void)_touchEvent:(const WebKit::NativeWebTouchEvent&)touchEvent preventsNativeGestures:(BOOL)preventsDefault;
+- (void)_touchEvent:(const WebKit::WebTouchEvent&)touchEvent preventsNativeGestures:(BOOL)preventsDefault;
 #endif
 #if ENABLE(IOS_TOUCH_EVENTS)
 - (void)_doneDeferringTouchStart:(BOOL)preventNativeGestures;
@@ -872,7 +878,7 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW)
 - (void)_didPerformDragOperation:(BOOL)handled;
 - (void)_didHandleDragStartRequest:(BOOL)started;
 - (void)_didHandleAdditionalDragItemsRequest:(BOOL)added;
-- (void)_startDrag:(RetainPtr<CGImageRef>)image item:(const WebCore::DragItem&)item;
+- (void)_startDrag:(RetainPtr<CGImageRef>)image item:(const WebCore::DragItem&)item elementID:(std::optional<WebCore::ElementIdentifier>)elementID;
 - (void)_willReceiveEditDragSnapshot;
 - (void)_didReceiveEditDragSnapshot:(std::optional<WebCore::TextIndicatorData>)data;
 - (void)_didChangeDragCaretRect:(CGRect)previousRect currentRect:(CGRect)rect;
@@ -904,8 +910,10 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW)
 - (void)_didCommitLoadForMainFrame;
 
 - (void)setUpTextIndicator:(Ref<WebCore::TextIndicator>)textIndicator;
+- (void)updateTextIndicator:(Ref<WebCore::TextIndicator>)textIndicator;
 - (void)setTextIndicatorAnimationProgress:(float)NSAnimationProgress;
 - (void)clearTextIndicator:(WebCore::TextIndicatorDismissalAnimation)animation;
+- (CALayer *)textIndicatorInstallationLayer;
 
 #if ENABLE(WRITING_TOOLS)
 - (void)addTextAnimationForAnimationID:(NSUUID *)uuid withData:(const WebCore::TextAnimationData&)data;
@@ -988,6 +996,11 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW)
 - (void)_updateDoubleTapGestureRecognizerEnablement;
 
 @property (nonatomic, readonly) BOOL shouldUseAsyncInteractions;
+@property (nonatomic, readonly) NSArray<UIView *> *allViewsIntersectingSelectionRange;
+
+#if HAVE(UI_CONVERSATION_CONTEXT)
+@property (strong, nonatomic, setter=_setConversationContext:) UIConversationContext *_conversationContext;
+#endif
 
 #if ENABLE(MODEL_PROCESS)
 - (void)_willInvalidateDraggedModelWithContainerView:(UIView *)containerView;

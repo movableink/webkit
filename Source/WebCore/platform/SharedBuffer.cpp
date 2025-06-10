@@ -546,10 +546,8 @@ SharedBuffer::SharedBuffer(FileSystem::MappedFileData&& data)
 RefPtr<SharedBuffer> SharedBuffer::createWithContentsOfFile(const String& filePath, FileSystem::MappedFileMode mappedFileMode, MayUseFileMapping mayUseFileMapping)
 {
     if (mayUseFileMapping == MayUseFileMapping::Yes) {
-        bool mappingSuccess;
-        FileSystem::MappedFileData mappedFileData(filePath, mappedFileMode, mappingSuccess);
-        if (mappingSuccess)
-            return adoptRef(new SharedBuffer(WTFMove(mappedFileData)));
+        if (auto mappedFileData = FileSystem::mapFile(filePath, mappedFileMode))
+            return adoptRef(new SharedBuffer(WTFMove(*mappedFileData)));
     }
 
     auto buffer = FileSystem::readEntireFile(filePath);
@@ -640,7 +638,7 @@ std::span<const uint8_t> DataSegment::span() const
         [](const FileSystem::MappedFileData& data) { return data.span(); },
         [](const Provider& provider) { return provider.span(); }
     );
-    return std::visit(visitor, m_immutableData);
+    return WTF::visit(visitor, m_immutableData);
 }
 
 bool DataSegment::containsMappedFileData() const

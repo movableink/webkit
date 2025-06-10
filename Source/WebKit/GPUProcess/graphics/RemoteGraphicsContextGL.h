@@ -108,10 +108,7 @@ protected:
     template<typename T>
     IPC::Error send(T&& message) const
     {
-        // FIXME: Remove this suppression once https://github.com/llvm/llvm-project/pull/119336 is merged.
-IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_BEGIN("alpha.webkit.UncountedCallArgsChecker")
         return Ref { *m_streamConnection }->send(std::forward<T>(message), m_graphicsContextGLIdentifier);
-IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_END
     }
 
     // GraphicsContextGL::Client overrides.

@@ -113,9 +113,6 @@ public:
     bool cellWidthChanged() const { return m_cellWidthChanged; }
     void setCellWidthChanged(bool b = true) { m_cellWidthChanged = b; }
 
-    static RenderPtr<RenderTableCell> createAnonymousWithParentRenderer(const RenderTableRow&);
-    RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override;
-
     // Table layout always uses the table's writing mode.
     const WritingMode tableWritingMode() const { return table()->writingMode(); }
 
@@ -142,7 +139,7 @@ private:
 
     static RenderPtr<RenderTableCell> createTableCellWithStyle(Document&, const RenderStyle&);
 
-    ASCIILiteral renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableCell (anonymous)"_s : "RenderTableCell"_s; }
+    ASCIILiteral renderName() const override;
 
     void willBeRemovedFromTree() override;
 
@@ -237,7 +234,7 @@ inline unsigned RenderTableCell::rowSpan() const
 
 inline void RenderTableCell::setCol(unsigned column)
 {
-    if (UNLIKELY(column > maxColumnIndex))
+    if (column > maxColumnIndex) [[unlikely]]
         column = maxColumnIndex;
     m_column = column;
 }
@@ -311,11 +308,6 @@ inline void RenderTableCell::invalidateHasEmptyCollapsedBorders()
     m_hasEmptyCollapsedAfterBorder = false;
     m_hasEmptyCollapsedStartBorder = false;
     m_hasEmptyCollapsedEndBorder = false;
-}
-
-inline RenderPtr<RenderBox> RenderTableCell::createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const
-{
-    return RenderTableCell::createTableCellWithStyle(renderer.document(), renderer.style());
 }
 
 } // namespace WebCore

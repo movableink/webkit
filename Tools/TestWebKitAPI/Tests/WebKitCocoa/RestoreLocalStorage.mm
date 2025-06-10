@@ -35,7 +35,6 @@
 #import <WebKit/WKScriptMessageHandler.h>
 #import <WebKit/WKWebsiteDataRecord.h>
 #import <WebKit/WKWebsiteDataStore.h>
-#import <WebKit/WKWebsiteDataStorePrivate.h>
 #import <wtf/RetainPtr.h>
 
 static void testRestoreLocalStorage(RetainPtr<WKWebsiteDataStore> websiteDataStore)
@@ -71,8 +70,9 @@ static void testRestoreLocalStorage(RetainPtr<WKWebsiteDataStore> websiteDataSto
     // Fetch the local storage data.
     RetainPtr set = [NSSet setWithObject:WKWebsiteDataTypeLocalStorage];
     __block RetainPtr<NSData> localStorageData;
-    [[[webView configuration] websiteDataStore] _fetchDataOfTypes:set.get() completionHandler:^(NSData *data) {
+    [[[webView configuration] websiteDataStore] fetchDataOfTypes:set.get() completionHandler:^(NSData *data, NSError *error) {
         EXPECT_NOT_NULL(data);
+        EXPECT_NULL(error);
         localStorageData = data;
         done = true;
     }];
@@ -93,8 +93,8 @@ static void testRestoreLocalStorage(RetainPtr<WKWebsiteDataStore> websiteDataSto
     [newWebView setNavigationDelegate:navigationDelegate.get()];
 
     // Restore the local storage data.
-    [[[newWebView configuration] websiteDataStore] _restoreData:localStorageData.get() completionHandler:^(BOOL succeeded) {
-        EXPECT_TRUE(succeeded);
+    [[[newWebView configuration] websiteDataStore] restoreData:localStorageData.get() completionHandler:^(NSError *error) {
+        EXPECT_NULL(error);
         done = true;
     }];
     TestWebKitAPI::Util::run(&done);
@@ -208,8 +208,9 @@ static void testRestoreLocalStorageThirdPartyIFrame(RetainPtr<WKWebsiteDataStore
     // Fetch the local storage data.
     RetainPtr set = [NSSet setWithObject:WKWebsiteDataTypeLocalStorage];
     __block RetainPtr<NSData> localStorageData;
-    [[[webView configuration] websiteDataStore] _fetchDataOfTypes:set.get() completionHandler:^(NSData *data) {
+    [[[webView configuration] websiteDataStore] fetchDataOfTypes:set.get() completionHandler:^(NSData *data, NSError *error) {
         EXPECT_NOT_NULL(data);
+        EXPECT_NULL(error);
         localStorageData = data;
         done = true;
     }];
@@ -230,8 +231,8 @@ static void testRestoreLocalStorageThirdPartyIFrame(RetainPtr<WKWebsiteDataStore
     [newWebView setNavigationDelegate:navigationDelegate.get()];
 
     // Restore the local storage data.
-    [[[newWebView configuration] websiteDataStore] _restoreData:localStorageData.get() completionHandler:^(BOOL succeeded) {
-        EXPECT_TRUE(succeeded);
+    [[[newWebView configuration] websiteDataStore] restoreData:localStorageData.get() completionHandler:^(NSError *error) {
+        EXPECT_NULL(error);
         done = true;
     }];
     TestWebKitAPI::Util::run(&done);

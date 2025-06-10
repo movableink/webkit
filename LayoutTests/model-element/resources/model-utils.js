@@ -95,3 +95,17 @@ const assert_3d_matrix_not_equals = (actual, expected) => {
     }
     assert_false(allEqual, "matrix arrays should not match");
 };
+
+const assert_3d_matrix_approx_equals = (actual, expected) => {
+    assert_true(actual instanceof DOMMatrixReadOnly);
+    assert_true(expected instanceof DOMMatrixReadOnly);
+
+    assert_false(actual.is2D, "is2D");
+    assert_false(expected.is2D, "is2D");
+    let actualArray = actual.toFloat64Array();
+    let expectedArray = expected.toFloat64Array();
+    assert_equals(actualArray.length, expectedArray.length);
+    for (var i = 0; i < actualArray.length; i++) {
+        assert_approx_equals(actualArray[i], expectedArray[i], epsilon, "matrix array should match at index " + i);
+    }
+};

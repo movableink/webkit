@@ -98,7 +98,7 @@ void WebPageInspectorController::connectFrontend(Inspector::FrontendChannel& fro
     if (connectingFirstFrontend)
         m_agents.didCreateFrontendAndBackend(&m_frontendRouter.get(), &m_backendDispatcher.get());
 
-    auto inspectedPage = protectedInspectedPage();
+    Ref inspectedPage = m_inspectedPage.get();
     inspectedPage->didChangeInspectorFrontendCount(m_frontendRouter->frontendCount());
 
 #if ENABLE(REMOTE_INSPECTOR)
@@ -115,7 +115,7 @@ void WebPageInspectorController::disconnectFrontend(FrontendChannel& frontendCha
     if (disconnectingLastFrontend)
         m_agents.willDestroyFrontendAndBackend(DisconnectReason::InspectorDestroyed);
 
-    auto inspectedPage = protectedInspectedPage();
+    Ref inspectedPage = m_inspectedPage.get();
     inspectedPage->didChangeInspectorFrontendCount(m_frontendRouter->frontendCount());
 
 #if ENABLE(REMOTE_INSPECTOR)
@@ -137,7 +137,7 @@ void WebPageInspectorController::disconnectAllFrontends()
     // Disconnect any remaining remote frontends.
     m_frontendRouter->disconnectAllFrontends();
 
-    auto inspectedPage = protectedInspectedPage();
+    Ref inspectedPage = m_inspectedPage.get();
     inspectedPage->didChangeInspectorFrontendCount(m_frontendRouter->frontendCount());
 
 #if ENABLE(REMOTE_INSPECTOR)
@@ -153,7 +153,7 @@ void WebPageInspectorController::dispatchMessageFromFrontend(const String& messa
 #if ENABLE(REMOTE_INSPECTOR)
 void WebPageInspectorController::setIndicating(bool indicating)
 {
-    auto inspectedPage = protectedInspectedPage();
+    Ref inspectedPage = m_inspectedPage.get();
 #if !PLATFORM(IOS_FAMILY)
     inspectedPage->setIndicating(indicating);
 #else
@@ -268,7 +268,7 @@ void WebPageInspectorController::setEnabledBrowserAgent(InspectorBrowserAgent* a
 
     m_enabledBrowserAgent = agent;
 
-    auto inspectedPage = protectedInspectedPage();
+    Ref inspectedPage = m_inspectedPage.get();
     if (m_enabledBrowserAgent)
         inspectedPage->uiClient().didEnableInspectorBrowserDomain(inspectedPage);
     else

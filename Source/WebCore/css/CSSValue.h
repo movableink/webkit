@@ -21,6 +21,7 @@
 #pragma once
 
 #include <wtf/IterationStatus.h>
+#include <wtf/NoVirtualDestructorBase.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TypeCasts.h>
@@ -42,7 +43,6 @@ class Quad;
 class Rect;
 
 struct ComputedStyleDependencies;
-struct Counter;
 
 enum CSSPropertyID : uint16_t;
 enum CSSValueID : uint16_t;
@@ -52,7 +52,7 @@ struct SerializationContext;
 }
 
 DECLARE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSValue);
-class CSSValue {
+class CSSValue : public NoVirtualDestructorBase {
     WTF_MAKE_NONCOPYABLE(CSSValue);
     WTF_MAKE_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(CSSValue);
 public:
@@ -68,7 +68,6 @@ public:
 
     bool isAppleColorFilterPropertyValue() const { return m_classType == ClassType::AppleColorFilterProperty; }
     bool isAttrValue() const { return m_classType == ClassType::Attr; }
-    bool isAspectRatioValue() const { return m_classType == ClassType::AspectRatio; }
     bool isBackgroundRepeatValue() const { return m_classType == ClassType::BackgroundRepeat; }
     bool isBasicShape() const { return m_classType == ClassType::BasicShape; }
     bool isBorderImageSliceValue() const { return m_classType == ClassType::BorderImageSlice; }
@@ -92,11 +91,9 @@ public:
     bool isFontFaceSrcLocalValue() const { return m_classType == ClassType::FontFaceSrcLocal; }
     bool isFontFaceSrcResourceValue() const { return m_classType == ClassType::FontFaceSrcResource; }
     bool isFontFeatureValue() const { return m_classType == ClassType::FontFeature; }
-    bool isFontPaletteValuesOverrideColorsValue() const { return m_classType == ClassType::FontPaletteValuesOverrideColors; }
     bool isFontStyleRangeValue() const { return m_classType == ClassType::FontStyleRange; }
     bool isFontStyleWithAngleValue() const { return m_classType == ClassType::FontStyleWithAngle; }
     bool isFontValue() const { return m_classType == ClassType::Font; }
-    bool isFontVariantAlternatesValue() const { return m_classType == ClassType::FontVariantAlternates; }
     bool isFontVariationValue() const { return m_classType == ClassType::FontVariation; }
     bool isFunctionValue() const { return m_classType == ClassType::Function; }
     bool isGradientValue() const { return m_classType == ClassType::Gradient; }
@@ -108,14 +105,17 @@ public:
     bool isImageSetOptionValue() const { return m_classType == ClassType::ImageSetOption; }
     bool isImageSetValue() const { return m_classType == ClassType::ImageSet; }
     bool isImageValue() const { return m_classType == ClassType::Image; }
-    bool isLineBoxContainValue() const { return m_classType == ClassType::LineBoxContain; }
     bool isNamedImageValue() const { return m_classType == ClassType::NamedImage; }
     bool isOffsetRotateValue() const { return m_classType == ClassType::OffsetRotate; }
     bool isPair() const { return m_classType == ClassType::ValuePair; }
     bool isPath() const { return m_classType == ClassType::Path; }
     bool isPendingSubstitutionValue() const { return m_classType == ClassType::PendingSubstitutionValue; }
+    bool isPositionValue() const { return m_classType == ClassType::Position; }
+    bool isPositionXValue() const { return m_classType == ClassType::PositionX; }
+    bool isPositionYValue() const { return m_classType == ClassType::PositionY; }
     bool isPrimitiveValue() const { return m_classType == ClassType::Primitive; }
     bool isQuad() const { return m_classType == ClassType::Quad; }
+    bool isRatioValue() const { return m_classType == ClassType::Ratio; }
     bool isRayValue() const { return m_classType == ClassType::Ray; }
     bool isRect() const { return m_classType == ClassType::Rect; }
     bool isReflectValue() const { return m_classType == ClassType::Reflect; }
@@ -123,6 +123,7 @@ public:
     bool isSubgridValue() const { return m_classType == ClassType::Subgrid; }
     bool isTextShadowPropertyValue() const { return m_classType == ClassType::TextShadowProperty; }
     bool isTransformListValue() const { return m_classType == ClassType::TransformList; }
+    bool isURL() const { return m_classType == ClassType::URL; }
     bool isUnicodeRangeValue() const { return m_classType == ClassType::UnicodeRange; }
     bool isValueList() const { return m_classType == ClassType::ValueList; }
     bool isVariableReferenceValue() const { return m_classType == ClassType::VariableReference; }
@@ -177,9 +178,7 @@ public:
     inline int integerDeprecated() const;
 
     inline const CSSValue& first() const; // CSSValuePair
-    Ref<CSSValue> protectedFirst() const; // CSSValuePair
     inline const CSSValue& second() const; // CSSValuePair
-    Ref<CSSValue> protectedSecond() const; // CSSValuePair
     inline const Quad& quad() const; // CSSValueQuad
     inline const Rect& rect() const; // CSSSValueRect
 
@@ -210,7 +209,6 @@ protected:
 
         // Other non-list classes.
         AppleColorFilterProperty,
-        AspectRatio,
         Attr,
         BackgroundRepeat,
         BasicShape,
@@ -232,24 +230,26 @@ protected:
         FontFaceSrcLocal,
         FontFaceSrcResource,
         FontFeature,
-        FontPaletteValuesOverrideColors,
         FontStyleRange,
         FontStyleWithAngle,
-        FontVariantAlternates,
         FontVariation,
         GridLineNames,
         GridLineValue,
         GridTemplateAreas,
-        LineBoxContain,
         OffsetRotate,
         Path,
         PendingSubstitutionValue,
+        Position,
+        PositionX,
+        PositionY,
         Quad,
+        Ratio,
         Ray,
         Rect,
         Reflect,
         Scroll,
         TextShadowProperty,
+        URL,
         UnicodeRange,
         ValuePair,
         VariableReference,

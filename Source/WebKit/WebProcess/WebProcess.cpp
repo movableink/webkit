@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -59,6 +59,7 @@
 #include "WebCookieJar.h"
 #include "WebFileSystemStorageConnection.h"
 #include "WebFrame.h"
+#include "WebFrameMessages.h"
 #include "WebGamepadProvider.h"
 #include "WebGeolocationManager.h"
 #include "WebIDBConnectionToServer.h"
@@ -88,6 +89,7 @@
 #include "WebSharedWorkerContextManagerConnection.h"
 #include "WebSharedWorkerContextManagerConnectionMessages.h"
 #include "WebSharedWorkerProvider.h"
+#include "WebTransportSession.h"
 #include "WebsiteData.h"
 #include "WebsiteDataStoreParameters.h"
 #include "WebsiteDataType.h"
@@ -142,8 +144,8 @@
 #include <WebCore/SharedWorkerContextManager.h>
 #include <WebCore/SharedWorkerThreadProxy.h>
 #include <WebCore/UserGestureIndicator.h>
+#include <algorithm>
 #include <pal/Logging.h>
-#include <wtf/Algorithms.h>
 #include <wtf/CallbackAggregator.h>
 #include <wtf/DateMath.h>
 #include <wtf/Language.h>
@@ -242,6 +244,10 @@
 #include "LaunchServicesDatabaseManager.h"
 #endif
 
+#if HAVE(LOCKDOWN_MODE_FRAMEWORK)
+#import <pal/cocoa/LockdownModeCocoa.h>
+#endif
+
 #if PLATFORM(MAC)
 #import <wtf/spi/darwin/SandboxSPI.h>
 #endif
@@ -274,7 +280,7 @@ using namespace WebCore;
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WebProcess);
 
 #if !PLATFORM(GTK) && !PLATFORM(WPE)
-NO_RETURN static void callExit(IPC::Connection*)
+[[noreturn]] static void callExit(IPC::Connection*)
 {
     terminateProcess(EXIT_SUCCESS);
 }
@@ -335,7 +341,7 @@ WebProcess::WebProcess()
     addSupplementWithoutRefCountedCheck<WebGeolocationManager>();
 
 #if ENABLE(NOTIFICATIONS)
-    addSupplement<WebNotificationManager>();
+    addSupplementWithoutRefCountedCheck<WebNotificationManager>();
 #endif
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
@@ -343,7 +349,7 @@ WebProcess::WebProcess()
 #endif
 
 #if PLATFORM(COCOA) && ENABLE(MEDIA_STREAM)
-    addSupplement<UserMediaCaptureManager>();
+    addSupplementWithoutRefCountedCheck<UserMediaCaptureManager>();
 #endif
 
 #if ENABLE(GPU_PROCESS) && ENABLE(ENCRYPTED_MEDIA)
@@ -355,7 +361,7 @@ WebProcess::WebProcess()
 #endif
 
 #if ENABLE(GPU_PROCESS)
-    addSupplement<RemoteMediaEngineConfigurationFactory>();
+    addSupplementWithoutRefCountedCheck<RemoteMediaEngineConfigurationFactory>();
 #endif
 
     Gigacage::forbidDisablingPrimitiveGigacage();
@@ -462,7 +468,7 @@ void WebProcess::initializeWebProcess(WebProcessCreationParameters&& parameters,
             if (m_pagesInWindows.isEmpty() && critical == Critical::No)
                 critical = Critical::Yes;
 
-            if (UNLIKELY(Options::dumpHeapOnLowMemory()))
+            if (Options::dumpHeapOnLowMemory()) [[unlikely]]
                 GCController::singleton().dumpHeap();
 
 #if PLATFORM(COCOA)
@@ -639,6 +645,10 @@ void WebProcess::initializeWebProcess(WebProcessCreationParameters&& parameters,
 
     ScriptExecutionContext::setCrossOriginMode(parameters.crossOriginMode);
     DeprecatedGlobalSettings::setArePDFImagesEnabled(!isLockdownModeEnabled());
+
+#if HAVE(LOCKDOWN_MODE_FRAMEWORK)
+    PAL::setLockdownModeEnabledForCurrentProcess(isLockdownModeEnabled());
+#endif
 
 #if ENABLE(SERVICE_CONTROLS)
     setEnabledServices(parameters.hasImageServices, parameters.hasSelectionServices, parameters.hasRichContentServices);
@@ -841,7 +851,7 @@ void WebProcess::registerURLSchemeAsDisplayIsolated(const String& urlScheme) con
 void WebProcess::registerURLSchemeAsCORSEnabled(const String& urlScheme)
 {
     LegacySchemeRegistry::registerURLSchemeAsCORSEnabled(urlScheme);
-    ensureNetworkProcessConnection().protectedConnection()->send(Messages::NetworkConnectionToWebProcess::RegisterURLSchemesAsCORSEnabled({ urlScheme }), 0);
+    ensureNetworkProcessConnection().connection().send(Messages::NetworkConnectionToWebProcess::RegisterURLSchemesAsCORSEnabled({ urlScheme }), 0);
 }
 
 void WebProcess::registerURLSchemeAsAlwaysRevalidated(const String& urlScheme) const
@@ -965,9 +975,6 @@ void WebProcess::createWebPage(PageIdentifier pageID, WebPageCreationParameters&
         accessibilityRelayProcessSuspended(false);
     }
     ASSERT(result.iterator->value);
-
-    if (m_shouldSuppressHDR)
-        RefPtr { result.iterator->value }->setShouldSuppressHDR(m_shouldSuppressHDR);
 }
 
 void WebProcess::removeWebPage(PageIdentifier pageID)
@@ -1013,6 +1020,13 @@ void WebProcess::terminate()
 
 bool WebProcess::dispatchMessage(IPC::Connection& connection, IPC::Decoder& decoder)
 {
+    if (decoder.messageReceiverName() == Messages::WebFrame::messageReceiverName()) {
+        if (RefPtr frame = FrameIdentifier::isValidIdentifier(decoder.destinationID()) ? webFrame(FrameIdentifier(decoder.destinationID())) : nullptr)
+            frame->didReceiveMessage(connection, decoder);
+        else
+            WebFrame::sendCancelReply(connection, decoder);
+        return true;
+    }
     if (decoder.messageReceiverName() == Messages::WebSWContextManagerConnection::messageReceiverName()) {
         ASSERT(SWContextManager::singleton().connection());
         if (RefPtr contextManagerConnection = SWContextManager::singleton().connection())
@@ -1064,7 +1078,7 @@ void WebProcess::removeWebFrame(FrameIdentifier frameID, WebPage* page)
     if (!frame)
         return;
     if (frame->coreLocalFrame() && m_networkProcessConnection)
-        m_networkProcessConnection->protectedConnection()->send(Messages::NetworkConnectionToWebProcess::ClearFrameLoadRecordsForStorageAccess(frameID), 0);
+        m_networkProcessConnection->connection().send(Messages::NetworkConnectionToWebProcess::ClearFrameLoadRecordsForStorageAccess(frameID), 0);
 
     // We can end up here after our connection has closed when WebCore's frame life-support timer
     // fires when the application is shutting down. There's no need (and no way) to update the UI
@@ -1081,12 +1095,12 @@ void WebProcess::removeWebFrame(FrameIdentifier frameID, WebPage* page)
     page->send(Messages::WebPageProxy::DidDestroyFrame(frameID));
 }
 
-WebPageGroupProxy* WebProcess::webPageGroup(const WebPageGroupData& pageGroupData)
+WebPageGroupProxy* WebProcess::webPageGroup(WebPageGroupData&& pageGroupData)
 {
     auto result = m_pageGroupMap.add(pageGroupData.pageGroupID, nullptr);
     if (result.isNewEntry) {
         ASSERT(!result.iterator->value);
-        result.iterator->value = WebPageGroupProxy::create(pageGroupData);
+        result.iterator->value = WebPageGroupProxy::create(WTFMove(pageGroupData));
     }
 
     return result.iterator->value.get();
@@ -1217,7 +1231,7 @@ void WebProcess::setInjectedBundleParameters(std::span<const uint8_t> value)
     injectedBundle->setBundleParameters(value);
 }
 
-NO_RETURN inline void failedToGetNetworkProcessConnection()
+[[noreturn]] inline void failedToGetNetworkProcessConnection()
 {
 #if PLATFORM(GTK) || PLATFORM(WPE)
     // GTK and WPE ports don't exit on send sync message failure.
@@ -1273,7 +1287,7 @@ NetworkProcessConnection& WebProcess::ensureNetworkProcessConnection()
 #if HAVE(AUDIT_TOKEN)
         m_networkProcessConnection->setNetworkProcessAuditToken(connectionInfo.auditToken ? std::optional(connectionInfo.auditToken->auditToken()) : std::nullopt);
 #endif
-        m_networkProcessConnection->protectedConnection()->send(Messages::NetworkConnectionToWebProcess::RegisterURLSchemesAsCORSEnabled(WebCore::LegacySchemeRegistry::allURLSchemesRegisteredAsCORSEnabled()), 0);
+        m_networkProcessConnection->connection().send(Messages::NetworkConnectionToWebProcess::RegisterURLSchemesAsCORSEnabled(WebCore::LegacySchemeRegistry::allURLSchemesRegisteredAsCORSEnabled()), 0);
 
         if (!Document::allDocuments().isEmpty() || SharedWorkerThreadProxy::hasInstances())
             protectedNetworkProcessConnection()->protectedServiceWorkerConnection()->registerServiceWorkerClients();
@@ -1285,9 +1299,9 @@ NetworkProcessConnection& WebProcess::ensureNetworkProcessConnection()
 #endif
 #if ENABLE(LAUNCHSERVICES_SANDBOX_EXTENSION_BLOCKING)
         if (auto auditToken = auditTokenForSelf()) {
-            m_networkProcessConnection->protectedConnection()->send(Messages::NetworkConnectionToWebProcess::CheckInWebProcess(*auditToken), 0);
+            m_networkProcessConnection->connection().send(Messages::NetworkConnectionToWebProcess::CheckInWebProcess(*auditToken), 0);
             if (!m_pendingDisplayName.isNull())
-                m_networkProcessConnection->protectedConnection()->send(Messages::NetworkConnectionToWebProcess::UpdateActivePages(std::exchange(m_pendingDisplayName, String()), { }, *auditToken), 0);
+                m_networkProcessConnection->connection().send(Messages::NetworkConnectionToWebProcess::UpdateActivePages(std::exchange(m_pendingDisplayName, String()), { }, *auditToken), 0);
         }
 #endif
         // This can be called during a WebPage's constructor, so wait until after the constructor returns to touch the WebPage.
@@ -1333,7 +1347,7 @@ void WebProcess::logDiagnosticMessageForNetworkProcessCrash()
 void WebProcess::networkProcessConnectionClosed(NetworkProcessConnection* connection)
 {
 #if OS(DARWIN)
-    WEBPROCESS_RELEASE_LOG(Loading, "networkProcessConnectionClosed: NetworkProcess (%d) closed its connection (Crashed)", connection ? connection->protectedConnection()->remoteProcessID() : 0);
+    WEBPROCESS_RELEASE_LOG(Loading, "networkProcessConnectionClosed: NetworkProcess (%d) closed its connection (Crashed)", connection ? connection->connection().remoteProcessID() : 0);
 #else
     WEBPROCESS_RELEASE_LOG(Loading, "networkProcessConnectionClosed: NetworkProcess closed its connection (Crashed)");
 #endif
@@ -1400,6 +1414,11 @@ WebFileSystemStorageConnection& WebProcess::fileSystemStorageConnection()
         m_fileSystemStorageConnection = WebFileSystemStorageConnection::create(Ref { ensureNetworkProcessConnection().connection() });
 
     return *m_fileSystemStorageConnection;
+}
+
+Ref<WebFileSystemStorageConnection> WebProcess::protectedFileSystemStorageConnection()
+{
+    return fileSystemStorageConnection();
 }
 
 WebLoaderStrategy& WebProcess::webLoaderStrategy()
@@ -1567,16 +1586,6 @@ void WebProcess::setTextCheckerState(OptionSet<TextCheckerState> textCheckerStat
         if (grammarCheckingTurnedOff)
             page->unmarkAllBadGrammar();
     }
-}
-
-void WebProcess::setShouldSuppressHDR(bool shouldSuppressHDR)
-{
-    m_shouldSuppressHDR = shouldSuppressHDR;
-
-#if ENABLE(VIDEO)
-    for (auto& page : m_pageMap.values())
-        page->setShouldSuppressHDR(shouldSuppressHDR);
-#endif // ENABLE(VIDEO)
 }
 
 void WebProcess::fetchWebsiteData(OptionSet<WebsiteDataType> websiteDataTypes, CompletionHandler<void(WebsiteData&&)>&& completionHandler)
@@ -2090,7 +2099,7 @@ void WebProcess::prefetchDNS(const String& hostname)
         return;
 
     if (m_dnsPrefetchedHosts.add(hostname).isNewEntry)
-        ensureNetworkProcessConnection().protectedConnection()->send(Messages::NetworkConnectionToWebProcess::PrefetchDNS(hostname), 0);
+        ensureNetworkProcessConnection().connection().send(Messages::NetworkConnectionToWebProcess::PrefetchDNS(hostname), 0);
     // The DNS prefetched hosts cache is only to avoid asking for the same hosts too many times
     // in a very short period of time, producing a lot of IPC traffic. So we clear this cache after
     // some time of no DNS requests.
@@ -2149,7 +2158,7 @@ void WebProcess::establishRemoteWorkerContextConnectionToNetworkProcess(RemoteWo
 
 void WebProcess::registerServiceWorkerClients(CompletionHandler<void(bool)>&& completionHandler)
 {
-    ensureNetworkProcessConnection().protectedConnection()->sendWithAsyncReply(Messages::NetworkConnectionToWebProcess::PingPongForServiceWorkers { }, WTFMove(completionHandler));
+    ensureNetworkProcessConnection().connection().sendWithAsyncReply(Messages::NetworkConnectionToWebProcess::PingPongForServiceWorkers { }, WTFMove(completionHandler));
 }
 
 void WebProcess::addServiceWorkerRegistration(WebCore::ServiceWorkerRegistrationIdentifier identifier)
@@ -2206,11 +2215,11 @@ void WebProcess::grantUserMediaDeviceSandboxExtensions(MediaDeviceSandboxExtensi
 static inline void checkDocumentsCaptureStateConsistency(const Vector<String>& extensionIDs)
 {
 #if ASSERT_ENABLED
-    bool isCapturingAudio = WTF::anyOf(Document::allDocumentsMap().values(), [](auto& document) {
-        return document->mediaState() & MediaProducer::MicrophoneCaptureMask;
+    bool isCapturingAudio = std::ranges::any_of(Document::allDocumentsMap().values(), [](auto& document) {
+        return static_cast<bool>(document->mediaState() & MediaProducer::MicrophoneCaptureMask);
     });
-    bool isCapturingVideo = WTF::anyOf(Document::allDocumentsMap().values(), [](auto& document) {
-        return document->mediaState() & MediaProducer::VideoCaptureMask;
+    bool isCapturingVideo = std::ranges::any_of(Document::allDocumentsMap().values(), [](auto& document) {
+        return static_cast<bool>(document->mediaState() & MediaProducer::VideoCaptureMask);
     });
 
     if (isCapturingAudio)
@@ -2260,27 +2269,27 @@ void WebProcess::clearCurrentModifierStateForTesting()
 
 bool WebProcess::areAllPagesThrottleable() const
 {
-    return WTF::allOf(m_pageMap.values(), [](auto& page) {
+    return std::ranges::all_of(m_pageMap.values(), [](auto& page) {
         return page->isThrottleable();
     });
 }
 
-void WebProcess::setAppBadge(std::optional<WebPageProxyIdentifier> pageIdentifier, const WebCore::SecurityOriginData& origin, std::optional<uint64_t> badge)
+void WebProcess::setAppBadge(WebCore::Frame* frame, const WebCore::SecurityOriginData& origin, std::optional<uint64_t> badge)
 {
 #if ENABLE(WEB_PUSH_NOTIFICATIONS)
     if (DeprecatedGlobalSettings::builtInNotificationsEnabled()) {
         if (m_sessionID)
-            ensureNetworkProcessConnection().protectedConnection()->send(Messages::NotificationManagerMessageHandler::SetAppBadge({ origin, badge }), m_sessionID->toUInt64());
+            ensureNetworkProcessConnection().connection().send(Messages::NotificationManagerMessageHandler::SetAppBadge({ origin, badge }), m_sessionID->toUInt64());
         return;
     }
 #endif
 
-    protectedParentProcessConnection()->send(Messages::WebProcessProxy::SetAppBadge(pageIdentifier, origin, badge), 0);
-}
-
-void WebProcess::setClientBadge(WebPageProxyIdentifier pageIdentifier, const WebCore::SecurityOriginData& origin, std::optional<uint64_t> badge)
-{
-    protectedParentProcessConnection()->send(Messages::WebProcessProxy::SetClientBadge(pageIdentifier, origin, badge), 0);
+    RefPtr protectedFrame = frame;
+    if (frame) {
+        if (auto webFrame = WebFrame::fromCoreFrame(*frame))
+            webFrame->setAppBadge(origin, badge);
+    } else
+        protectedParentProcessConnection()->send(Messages::WebProcessProxy::SetAppBadgeFromWorker(origin, badge), 0);
 }
 
 #if HAVE(DISPLAY_LINK)
@@ -2471,7 +2480,7 @@ bool WebProcess::shouldUseRemoteRenderingForWebGL() const
 SpeechRecognitionRealtimeMediaSourceManager& WebProcess::ensureSpeechRecognitionRealtimeMediaSourceManager()
 {
     if (!m_speechRecognitionRealtimeMediaSourceManager)
-        m_speechRecognitionRealtimeMediaSourceManager = makeUniqueWithoutRefCountedCheck<SpeechRecognitionRealtimeMediaSourceManager>(*this);
+        lazyInitialize(m_speechRecognitionRealtimeMediaSourceManager, makeUniqueWithoutRefCountedCheck<SpeechRecognitionRealtimeMediaSourceManager>(*this));
 
     return *m_speechRecognitionRealtimeMediaSourceManager;
 }
@@ -2573,9 +2582,11 @@ Ref<WebCookieJar> WebProcess::protectedCookieJar()
 #if ENABLE(CONTENT_EXTENSIONS)
 void WebProcess::setResourceMonitorContentRuleList(WebCompiledContentRuleListData&& ruleListData)
 {
+    WEBPROCESS_RELEASE_LOG(ResourceMonitoring, "setResourceMonitorContentRuleList");
+
     RefPtr compiledContentRuleList = WebCompiledContentRuleList::create(WTFMove(ruleListData));
     if (!compiledContentRuleList) {
-        WEBPROCESS_RELEASE_LOG_ERROR(ResourceLoadStatistics, "setResourceMonitorContentRuleList: Failed to create rule list");
+        WEBPROCESS_RELEASE_LOG_ERROR(ResourceMonitoring, "setResourceMonitorContentRuleList: Failed to create rule list");
         return;
     }
 
@@ -2588,6 +2599,7 @@ void WebProcess::setResourceMonitorContentRuleList(WebCompiledContentRuleListDat
 
 void WebProcess::setResourceMonitorContentRuleListAsync(WebCompiledContentRuleListData&& ruleListData, CompletionHandler<void()>&& completionHandler)
 {
+    WEBPROCESS_RELEASE_LOG(ResourceMonitoring, "setResourceMonitorContentRuleListAsync");
     setResourceMonitorContentRuleList(WTFMove(ruleListData));
     completionHandler();
 }

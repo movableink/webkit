@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,6 @@
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
 
-#include "ExceptionOr.h"
 #include "LegacyCDM.h"
 #include <JavaScriptCore/Forward.h>
 #include <wtf/Vector.h>
@@ -39,6 +38,7 @@ class Document;
 class WeakPtrImplWithEventTargetData;
 class HTMLMediaElement;
 class WebKitMediaKeySession;
+template<typename> class ExceptionOr;
 
 class WebKitMediaKeys final : public RefCounted<WebKitMediaKeys>, private LegacyCDMClient {
     WTF_MAKE_FAST_ALLOCATED;
@@ -66,7 +66,7 @@ private:
     Vector<Ref<WebKitMediaKeySession>> m_sessions;
     WeakPtr<HTMLMediaElement> m_mediaElement;
     String m_keySystem;
-    Ref<LegacyCDM> m_cdm;
+    const Ref<LegacyCDM> m_cdm;
 };
 
 }

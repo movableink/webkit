@@ -27,8 +27,8 @@ function test()
                 ProtocolTest.Blackbox.evaluate(`createScripts("ExactCaseSensitive_StepOver")`),
             ]);
 
-            await ProtocolTest.Blackbox.setBlackbox(innerSourceURL.toLowerCase(), {caseSensitive: true});
-            await ProtocolTest.Blackbox.setBlackbox(middleSourceURL, {caseSensitive: true});
+            await ProtocolTest.Blackbox.setBlackbox(innerSourceURL.toLowerCase());
+            await ProtocolTest.Blackbox.setBlackbox(middleSourceURL);
             await ProtocolTest.Blackbox.setBreakpoint(innerSourceURL, 3); // last line of function, so it only pauses once
             await ProtocolTest.Blackbox.evaluate(`ExactCaseSensitive_StepOver_Outer(10)`);
 
@@ -57,8 +57,8 @@ function test()
                 ProtocolTest.Blackbox.evaluate(`createScripts("ExactCaseSensitive_PauseInCaller")`),
             ]);
 
-            await ProtocolTest.Blackbox.setBlackbox(innerSourceURL, {caseSensitive: true});
-            await ProtocolTest.Blackbox.setBlackbox(middleSourceURL.toLowerCase(), {caseSensitive: true});
+            await ProtocolTest.Blackbox.setBlackbox(innerSourceURL);
+            await ProtocolTest.Blackbox.setBlackbox(middleSourceURL.toLowerCase());
             await ProtocolTest.Blackbox.setBreakpoint(innerSourceURL, 2);
             await ProtocolTest.Blackbox.evaluate(`ExactCaseSensitive_PauseInCaller_Outer(10)`);
 
@@ -87,8 +87,8 @@ function test()
                 ProtocolTest.Blackbox.evaluate(`createScripts("ExactCaseSensitive_PauseInCallee")`),
             ]);
 
-            await ProtocolTest.Blackbox.setBlackbox(middleSourceURL.toLowerCase(), {caseSensitive: true});
-            await ProtocolTest.Blackbox.setBlackbox(outerSourceURL, {caseSensitive: true});
+            await ProtocolTest.Blackbox.setBlackbox(middleSourceURL.toLowerCase());
+            await ProtocolTest.Blackbox.setBlackbox(outerSourceURL);
             await ProtocolTest.Blackbox.setBreakpoint(outerSourceURL, 2);
             await ProtocolTest.Blackbox.evaluate(`ExactCaseSensitive_PauseInCallee_Outer(10)`);
 
@@ -114,9 +114,7 @@ function test()
                 ProtocolTest.Blackbox.evaluate(`createScripts("ExactCaseSensitive_Range")`),
             ]);
 
-            await ProtocolTest.Blackbox.setBlackbox(multipleSourceURL.toLowerCase(), {caseSensitive: true, isRegex: true});
             await ProtocolTest.Blackbox.setBlackbox(multipleSourceURL, {
-                caseSensitive: true,
                 sourceRanges: [
                     3, 0, 4,  0, // whole line
                     4, 5, 4, 18, // after pause position

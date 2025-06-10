@@ -118,7 +118,7 @@ private:
     void applyConstraints(WebCore::RealtimeMediaSourceIdentifier, WebCore::MediaConstraints&&);
     void clone(WebCore::RealtimeMediaSourceIdentifier clonedID, WebCore::RealtimeMediaSourceIdentifier cloneID, WebCore::PageIdentifier);
     void endProducingData(WebCore::RealtimeMediaSourceIdentifier);
-    void setShouldApplyRotation(WebCore::RealtimeMediaSourceIdentifier, bool shouldApplyRotation);
+    void setShouldApplyRotation(WebCore::RealtimeMediaSourceIdentifier);
     void setIsInBackground(WebCore::RealtimeMediaSourceIdentifier, bool);
     void isPowerEfficient(WebCore::RealtimeMediaSourceIdentifier, CompletionHandler<void(bool)>&&);
 

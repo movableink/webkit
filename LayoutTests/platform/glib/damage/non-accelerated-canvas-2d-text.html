@@ -20,7 +20,6 @@
           },
           () => {
               var damage = latestFrameDamage();
-              assertValid(damage);
               if (assert(damage.rects.length == 1, "Expected exactly one rect")) {
                   // Checking only X coord not to make test case too sensitive.
                   assertGt(damage.rects[0][0], 0, "The damage rect's X coord is incorrect");

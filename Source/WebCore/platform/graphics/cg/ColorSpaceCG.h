@@ -36,89 +36,154 @@ namespace WebCore {
 
 template<ColorSpace> struct CGColorSpaceMapping;
 
-WEBCORE_EXPORT CGColorSpaceRef sRGBColorSpaceRef();
-template<> struct CGColorSpaceMapping<ColorSpace::SRGB> { static CGColorSpaceRef colorSpace() { return sRGBColorSpaceRef(); } };
+WEBCORE_EXPORT CGColorSpaceRef sRGBColorSpaceSingleton();
+template<> struct CGColorSpaceMapping<ColorSpace::SRGB> {
+    static CGColorSpaceRef colorSpace()
+    {
+        return sRGBColorSpaceSingleton();
+    }
+};
 
 #if HAVE(CORE_GRAPHICS_ADOBE_RGB_1998_COLOR_SPACE)
-WEBCORE_EXPORT CGColorSpaceRef adobeRGB1998ColorSpaceRef();
-template<> struct CGColorSpaceMapping<ColorSpace::A98RGB> { static CGColorSpaceRef colorSpace() { return adobeRGB1998ColorSpaceRef(); } };
+WEBCORE_EXPORT CGColorSpaceRef adobeRGB1998ColorSpaceSingleton();
+template<> struct CGColorSpaceMapping<ColorSpace::A98RGB> {
+    static CGColorSpaceRef colorSpace()
+    {
+        return adobeRGB1998ColorSpaceSingleton();
+    }
+};
 #else
 template<> struct CGColorSpaceMapping<ColorSpace::A98RGB> { };
 #endif
 
 #if HAVE(CORE_GRAPHICS_DISPLAY_P3_COLOR_SPACE)
-WEBCORE_EXPORT CGColorSpaceRef displayP3ColorSpaceRef();
-template<> struct CGColorSpaceMapping<ColorSpace::DisplayP3> { static CGColorSpaceRef colorSpace() { return displayP3ColorSpaceRef(); } };
+WEBCORE_EXPORT CGColorSpaceRef displayP3ColorSpaceSingleton();
+template<> struct CGColorSpaceMapping<ColorSpace::DisplayP3> {
+    static CGColorSpaceRef colorSpace()
+    {
+        return displayP3ColorSpaceSingleton();
+    }
+};
 #else
 template<> struct CGColorSpaceMapping<ColorSpace::DisplayP3> { };
 #endif
 
 #if HAVE(CORE_GRAPHICS_EXTENDED_ADOBE_RGB_1998_COLOR_SPACE)
-WEBCORE_EXPORT CGColorSpaceRef extendedAdobeRGB1998ColorSpaceRef();
-template<> struct CGColorSpaceMapping<ColorSpace::ExtendedA98RGB> { static CGColorSpaceRef colorSpace() { return extendedAdobeRGB1998ColorSpaceRef(); } };
+WEBCORE_EXPORT CGColorSpaceRef extendedAdobeRGB1998ColorSpaceSingleton();
+template<> struct CGColorSpaceMapping<ColorSpace::ExtendedA98RGB> {
+    static CGColorSpaceRef colorSpace()
+    {
+        return extendedAdobeRGB1998ColorSpaceSingleton();
+    }
+};
 #else
 template<> struct CGColorSpaceMapping<ColorSpace::ExtendedA98RGB> { };
 #endif
 
 #if HAVE(CORE_GRAPHICS_EXTENDED_DISPLAY_P3_COLOR_SPACE)
-WEBCORE_EXPORT CGColorSpaceRef extendedDisplayP3ColorSpaceRef();
-template<> struct CGColorSpaceMapping<ColorSpace::ExtendedDisplayP3> { static CGColorSpaceRef colorSpace() { return extendedDisplayP3ColorSpaceRef(); } };
+WEBCORE_EXPORT CGColorSpaceRef extendedDisplayP3ColorSpaceSingleton();
+template<> struct CGColorSpaceMapping<ColorSpace::ExtendedDisplayP3> {
+    static CGColorSpaceRef colorSpace()
+    {
+        return extendedDisplayP3ColorSpaceSingleton();
+    }
+};
 #else
 template<> struct CGColorSpaceMapping<ColorSpace::ExtendedDisplayP3> { };
 #endif
 
 #if HAVE(CORE_GRAPHICS_EXTENDED_ITUR_2020_COLOR_SPACE)
-WEBCORE_EXPORT CGColorSpaceRef extendedITUR_2020ColorSpaceRef();
-template<> struct CGColorSpaceMapping<ColorSpace::ExtendedRec2020> { static CGColorSpaceRef colorSpace() { return extendedITUR_2020ColorSpaceRef(); } };
+WEBCORE_EXPORT CGColorSpaceRef extendedITUR_2020ColorSpaceSingleton();
+template<> struct CGColorSpaceMapping<ColorSpace::ExtendedRec2020> {
+    static CGColorSpaceRef colorSpace()
+    {
+        return extendedITUR_2020ColorSpaceSingleton();
+    }
+};
 #else
 template<> struct CGColorSpaceMapping<ColorSpace::ExtendedRec2020> { };
 #endif
 
 #if HAVE(CORE_GRAPHICS_EXTENDED_LINEAR_SRGB_COLOR_SPACE)
-WEBCORE_EXPORT CGColorSpaceRef extendedLinearSRGBColorSpaceRef();
-template<> struct CGColorSpaceMapping<ColorSpace::ExtendedLinearSRGB> { static CGColorSpaceRef colorSpace() { return extendedLinearSRGBColorSpaceRef(); } };
+WEBCORE_EXPORT CGColorSpaceRef extendedLinearSRGBColorSpaceSingleton();
+template<> struct CGColorSpaceMapping<ColorSpace::ExtendedLinearSRGB> {
+    static CGColorSpaceRef colorSpace()
+    {
+        return extendedLinearSRGBColorSpaceSingleton();
+    }
+};
 #else
 template<> struct CGColorSpaceMapping<ColorSpace::ExtendedLinearSRGB> { };
 #endif
 
 #if HAVE(CORE_GRAPHICS_EXTENDED_ROMMRGB_COLOR_SPACE)
-WEBCORE_EXPORT CGColorSpaceRef extendedROMMRGBColorSpaceRef();
-template<> struct CGColorSpaceMapping<ColorSpace::ExtendedProPhotoRGB> { static CGColorSpaceRef colorSpace() { return extendedROMMRGBColorSpaceRef(); } };
+WEBCORE_EXPORT CGColorSpaceRef extendedROMMRGBColorSpaceSingleton();
+template<> struct CGColorSpaceMapping<ColorSpace::ExtendedProPhotoRGB> {
+    static CGColorSpaceRef colorSpace()
+    {
+        return extendedROMMRGBColorSpaceSingleton();
+    }
+};
 #else
 template<> struct CGColorSpaceMapping<ColorSpace::ExtendedProPhotoRGB> { };
 #endif
 
 #if HAVE(CORE_GRAPHICS_EXTENDED_SRGB_COLOR_SPACE)
-WEBCORE_EXPORT CGColorSpaceRef extendedSRGBColorSpaceRef();
-template<> struct CGColorSpaceMapping<ColorSpace::ExtendedSRGB> { static CGColorSpaceRef colorSpace() { return extendedSRGBColorSpaceRef(); } };
+WEBCORE_EXPORT CGColorSpaceRef extendedSRGBColorSpaceSingleton();
+template<> struct CGColorSpaceMapping<ColorSpace::ExtendedSRGB> {
+    static CGColorSpaceRef colorSpace()
+    {
+        return extendedSRGBColorSpaceSingleton();
+    }
+};
 #else
 template<> struct CGColorSpaceMapping<ColorSpace::ExtendedSRGB> { };
 #endif
 
 #if HAVE(CORE_GRAPHICS_ITUR_2020_COLOR_SPACE)
-WEBCORE_EXPORT CGColorSpaceRef ITUR_2020ColorSpaceRef();
-template<> struct CGColorSpaceMapping<ColorSpace::Rec2020> { static CGColorSpaceRef colorSpace() { return ITUR_2020ColorSpaceRef(); } };
+WEBCORE_EXPORT CGColorSpaceRef ITUR_2020ColorSpaceSingleton();
+template<> struct CGColorSpaceMapping<ColorSpace::Rec2020> {
+    static CGColorSpaceRef colorSpace()
+    {
+        return ITUR_2020ColorSpaceSingleton();
+    }
+};
 #else
 template<> struct CGColorSpaceMapping<ColorSpace::Rec2020> { };
 #endif
 
 #if HAVE(CORE_GRAPHICS_LINEAR_SRGB_COLOR_SPACE)
-WEBCORE_EXPORT CGColorSpaceRef linearSRGBColorSpaceRef();
-template<> struct CGColorSpaceMapping<ColorSpace::LinearSRGB> { static CGColorSpaceRef colorSpace() { return linearSRGBColorSpaceRef(); } };
+WEBCORE_EXPORT CGColorSpaceRef linearSRGBColorSpaceSingleton();
+template<> struct CGColorSpaceMapping<ColorSpace::LinearSRGB> {
+    static CGColorSpaceRef colorSpace()
+    {
+        return linearSRGBColorSpaceSingleton();
+    }
+};
 #else
 template<> struct CGColorSpaceMapping<ColorSpace::LinearSRGB> { };
 #endif
 
 #if HAVE(CORE_GRAPHICS_ROMMRGB_COLOR_SPACE)
-WEBCORE_EXPORT CGColorSpaceRef ROMMRGBColorSpaceRef();
-template<> struct CGColorSpaceMapping<ColorSpace::ProPhotoRGB> { static CGColorSpaceRef colorSpace() { return ROMMRGBColorSpaceRef(); } };
+WEBCORE_EXPORT CGColorSpaceRef ROMMRGBColorSpaceSingleton();
+template<> struct CGColorSpaceMapping<ColorSpace::ProPhotoRGB> {
+    static CGColorSpaceRef colorSpace()
+    {
+        return ROMMRGBColorSpaceSingleton();
+    }
+};
 #else
 template<> struct CGColorSpaceMapping<ColorSpace::ProPhotoRGB> { };
 #endif
 
 #if HAVE(CORE_GRAPHICS_XYZ_D50_COLOR_SPACE)
-WEBCORE_EXPORT CGColorSpaceRef xyzD50ColorSpaceRef();
-template<> struct CGColorSpaceMapping<ColorSpace::XYZ_D50> { static CGColorSpaceRef colorSpace() { return xyzD50ColorSpaceRef(); } };
+WEBCORE_EXPORT CGColorSpaceRef xyzD50ColorSpaceSingleton();
+template<> struct CGColorSpaceMapping<ColorSpace::XYZ_D50> {
+    static CGColorSpaceRef colorSpace()
+    {
+        return xyzD50ColorSpaceSingleton();
+    }
+};
 #else
 template<> struct CGColorSpaceMapping<ColorSpace::XYZ_D50> { };
 #endif

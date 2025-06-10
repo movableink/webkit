@@ -411,12 +411,24 @@ DrawPass::DrawPass(sk_sp<TextureProxy> target,
 
 DrawPass::~DrawPass() = default;
 
+namespace {
+bool paint_uses_advanced_blend_equation(std::optional<PaintParams> drawPaintParams) {
+    if (!drawPaintParams.has_value() || !drawPaintParams.value().asFinalBlendMode().has_value()) {
+        return false;
+    }
+
+    return (int)drawPaintParams.value().asFinalBlendMode().value() >
+           (int)SkBlendMode::kLastCoeffMode;
+}
+} // anonymous
+
 std::unique_ptr<DrawPass> DrawPass::Make(Recorder* recorder,
                                          std::unique_ptr<DrawList> draws,
                                          sk_sp<TextureProxy> target,
                                          const SkImageInfo& targetInfo,
                                          std::pair<LoadOp, StoreOp> ops,
-                                         std::array<float, 4> clearColor) {
+                                         std::array<float, 4> clearColor,
+                                         const DstReadStrategy dstReadStrategy) {
     // NOTE: This assert is here to ensure SortKey is as tightly packed as possible. Any change to
     // its size should be done with care and good reason. The performance of sorting the keys is
     // heavily tied to the total size.
@@ -454,9 +466,9 @@ std::unique_ptr<DrawPass> DrawPass::Make(Recorder* recorder,
     GraphicsPipelineCache pipelineCache;
 
     // Geometry uniforms are currently always UBO-backed.
-    const bool useStorageBuffers = recorder->priv().caps()->storageBufferSupport();
-    const ResourceBindingRequirements& bindingReqs =
-            recorder->priv().caps()->resourceBindingRequirements();
+    const Caps* caps = recorder->priv().caps();
+    const bool useStorageBuffers = caps->storageBufferSupport();
+    const ResourceBindingRequirements& bindingReqs = caps->resourceBindingRequirements();
     Layout uniformLayout =
             useStorageBuffers ? bindingReqs.fStorageBufferLayout : bindingReqs.fUniformBufferLayout;
 
@@ -510,7 +522,7 @@ std::unique_ptr<DrawPass> DrawPass::Make(Recorder* recorder,
 
             GraphicsPipelineCache::Index pipelineIndex = pipelineCache.insert(
                     { step->renderStepID(),
-                      performsShading ? shaderID : UniquePaintParamsID::InvalidID() });
+                      performsShading ? shaderID : UniquePaintParamsID::Invalid() });
 
             gatherer.resetWithNewLayout(uniformLayout);
             step->writeUniformsAndTextures(draw.fDrawParams, &gatherer);
@@ -531,8 +543,6 @@ std::unique_ptr<DrawPass> DrawPass::Make(Recorder* recorder,
         }
 
         passBounds.join(draw.fDrawParams.clip().drawBounds());
-        drawPass->fDepthStencilFlags |= draw.fRenderer->depthStencilFlags();
-        drawPass->fRequiresMSAA |= draw.fRenderer->requiresMSAA();
     }
 
     if (!gradientBufferTracker.writeData(gatherer.gradientBufferData(), bufferMgr)) {
@@ -549,8 +559,6 @@ std::unique_ptr<DrawPass> DrawPass::Make(Recorder* recorder,
     // TODO: It's not strictly necessary, but would a stable sort be useful or just end up hiding
     // bugs in the DrawOrder determination code?
     std::sort(keys.begin(), keys.end());
-
-    // Used to record vertex/instance data, buffer binds, and draw calls
     DrawWriter drawWriter(&drawPass->fCommandList, bufferMgr);
     GraphicsPipelineCache::Index lastPipeline = GraphicsPipelineCache::kInvalidIndex;
     SkIRect lastScissor = SkIRect::MakeSize(targetInfo.dimensions());
@@ -562,14 +570,22 @@ std::unique_ptr<DrawPass> DrawPass::Make(Recorder* recorder,
     // All large gradients pack their data into a single buffer throughout the draw pass,
     // therefore the gradient buffer only needs to be bound once.
     gradientBufferTracker.bindIfNeeded(&drawPass->fCommandList);
-
     UniformTracker geometryUniformTracker(useStorageBuffers);
     UniformTracker shadingUniformTracker(useStorageBuffers);
 
     // TODO(b/372953722): Remove this forced binding command behavior once dst copies are always
     // bound separately from the rest of the textures.
-    const bool rebindTexturesOnPipelineChange =
-            recorder->priv().caps()->getDstReadStrategy() == DstReadStrategy::kTextureCopy;
+    const bool rebindTexturesOnPipelineChange = dstReadStrategy == DstReadStrategy::kTextureCopy;
+    // Keep track of the prior draw's PaintOrder. If the current draw requires barriers and there
+    // is no pipeline or state change, then we must compare the current and prior draw's PaintOrders
+    // to determine if the draws overlap. If they do, we must inject a flush between them such that
+    // the barrier addition and draw commands are ordered correctly.
+    CompressedPaintersOrder priorDrawPaintOrder {};
+
+    // If a draw uses an advanced blend mode and the device supports this via noncoherent blending,
+    // then we must insert the appropriate barrier and ensure that the draws do not overlap.
+    const bool advancedBlendsRequireBarrier =
+            caps->blendEquationSupport() == Caps::BlendEquationSupport::kAdvancedNoncoherent;
 
     for (const SortKey& key : keys) {
         const DrawList::Draw& draw = key.draw();
@@ -596,6 +612,24 @@ std::unique_ptr<DrawPass> DrawPass::Make(Recorder* recorder,
         const SkIRect* newScissor        = draw.fDrawParams.clip().scissor() != lastScissor ?
                 &draw.fDrawParams.clip().scissor() : nullptr;
 
+        // Determine + analyze draw properties to inform whether we need to issue barriers before
+        // issuing draw calls.
+        bool drawsOverlap = priorDrawPaintOrder != draw.fDrawParams.order().paintOrder();
+        bool drawUsesAdvancedBlendMode = paint_uses_advanced_blend_equation(draw.fPaintParams);
+
+        std::optional<BarrierType> barrierToAddBeforeDraws = std::nullopt;
+        if (dstReadStrategy == DstReadStrategy::kReadFromInput && draw.readsFromDst()) {
+            barrierToAddBeforeDraws = BarrierType::kReadDstFromInput;
+        }
+        if (drawUsesAdvancedBlendMode &&
+            caps->supportsHardwareAdvancedBlending() &&
+            advancedBlendsRequireBarrier) {
+            // A draw should only read from the dst OR use hardware for advanced blend modes.
+            SkASSERT(!draw.readsFromDst());
+
+            barrierToAddBeforeDraws = BarrierType::kAdvancedNoncoherentBlend;
+        }
+
         const bool stateChange = geomBindingChange ||
                                  shadingBindingChange ||
                                  textureBindingsChange ||
@@ -605,10 +639,19 @@ std::unique_ptr<DrawPass> DrawPass::Make(Recorder* recorder,
         // the previous state use the proper state.
         if (pipelineChange) {
             drawWriter.newPipelineState(renderStep.primitiveType(),
-                                        renderStep.vertexStride(),
-                                        renderStep.instanceStride());
+                                        renderStep.staticDataStride(),
+                                        renderStep.appendDataStride(),
+                                        renderStep.getRenderStateFlags(),
+                                        barrierToAddBeforeDraws);
         } else if (stateChange) {
             drawWriter.newDynamicState();
+        } else if (barrierToAddBeforeDraws.has_value() && drawsOverlap) {
+            // Even if there is no pipeline or state change, we must consider whether a
+            // DrawPassCommand to add barriers must be inserted before any draw commands. If so,
+            // then determine if the current and prior draws overlap (ie, their PaintOrders are
+            // unequal). If so, perform a flush() to make sure the draw and add barrier commands are
+            // appended to the command list in the proper order.
+            drawWriter.flush();
         }
 
         // Make state changes before accumulating new draw data
@@ -642,8 +685,11 @@ std::unique_ptr<DrawPass> DrawPass::Make(Recorder* recorder,
             SKGPU_LOG_W("Failed to write necessary vertex/instance data for DrawPass, dropping!");
             return nullptr;
         }
+
+        // Update priorDrawPaintOrder value before iterating to analyze the next draw.
+        priorDrawPaintOrder = draw.fDrawParams.order().paintOrder();
     }
-    // Finish recording draw calls for any collected data at the end of the loop
+    // Finish recording draw calls for any collected data still pending at end of the loop
     drawWriter.flush();
 
     drawPass->fBounds = passBounds.roundOut().asSkIRect();
@@ -679,17 +725,22 @@ bool DrawPass::prepareResources(ResourceProvider* resourceProvider,
     // once we've created pipelines, so we drop the storage for them here.
     fPipelineDescs.clear();
 
-#if defined(SK_DEBUG)
     for (int i = 0; i < fSampledTextures.size(); ++i) {
         // It should not have been possible to draw an Image that has an invalid texture info
         SkASSERT(fSampledTextures[i]->textureInfo().isValid());
         // Tasks should have been ordered to instantiate any scratch textures already, or any
-        // client-owned image will have been instantiated at creation.
-        SkASSERTF(fSampledTextures[i]->isInstantiated() ||
-                  fSampledTextures[i]->isLazy(),
-                  "proxy label = %s", fSampledTextures[i]->label());
+        // client-owned image will have been instantiated at creation. However, if a TextureProxy
+        // was cached for reuse across Recordings, it's possible that the initializing Recording
+        // failed, leaving the TextureProxy in a bad state (and currently with no way to reconstruct
+        // the tasks required to initialize it).
+        // TODO(b/409888039): Once TextureProxies track their dependendent tasks to include in all
+        // Recordings, this "should" be able to changed to asserts.
+        if (!fSampledTextures[i]->isInstantiated() && !fSampledTextures[i]->isLazy()) {
+            SKGPU_LOG_W("Cannot sample from an uninstantiated TextureProxy, label %s",
+                        fSampledTextures[i]->label());
+            return false;
+        }
     }
-#endif
 
     fSamplers.reserve(fSamplers.size() + fSamplerDescs.size());
     for (int i = 0; i < fSamplerDescs.size(); ++i) {

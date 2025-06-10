@@ -2764,6 +2764,11 @@ header .search-input:not([value=""]) {
 }
 
 @media only screen and (max-width: 415px) {
+    header,
+    .home header {
+        padding-top: env(safe-area-inset-top);
+    }
+
     .nextrouter-copy {
         font-size: 1.7rem;
         letter-spacing: -0.016rem;

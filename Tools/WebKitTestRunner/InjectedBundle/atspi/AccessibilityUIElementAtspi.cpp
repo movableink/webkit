@@ -747,8 +747,6 @@ static String roleValueToString(WebCore::Atspi::Role roleValue)
         return "AXEmbedded"_s;
     case WebCore::Atspi::Role::Entry:
         return "AXTextField"_s;
-    case WebCore::Atspi::Role::Footer:
-        return "AXFooter"_s;
     case WebCore::Atspi::Role::Footnote:
         return "AXFootnote"_s;
     case WebCore::Atspi::Role::Form:
@@ -815,6 +813,10 @@ static String roleValueToString(WebCore::Atspi::Role roleValue)
         return "AXRowHeader"_s;
     case WebCore::Atspi::Role::Ruler:
         return "AXRuler"_s;
+    case WebCore::Atspi::Role::SectionFooter:
+        return "AXSectionFooter"_s;
+    case WebCore::Atspi::Role::SectionHeader:
+        return "AXSectionHeader"_s;
     case WebCore::Atspi::Role::ScrollBar:
         return "AXScrollBar"_s;
     case WebCore::Atspi::Role::ScrollPane:
@@ -995,6 +997,16 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::helpText() const
     }
 
     return OpaqueJSString::tryCreate(builder.toString()).leakRef();
+}
+
+double AccessibilityUIElement::pageX()
+{
+    return 0;
+}
+
+double AccessibilityUIElement::pageY()
+{
+    return 0;
 }
 
 double AccessibilityUIElement::x()
@@ -1714,6 +1726,11 @@ RefPtr<AccessibilityUIElement> AccessibilityUIElement::accessibilityElementForTe
 }
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::attributedStringForTextMarkerRange(AccessibilityTextMarkerRange*)
+{
+    return nullptr;
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::attributedStringForTextMarkerRangeWithDidSpellCheck(AccessibilityTextMarkerRange*)
 {
     return nullptr;
 }

@@ -41,6 +41,7 @@
 #include "RenderTable.h"
 #include "RenderTextControl.h"
 #include "RenderView.h"
+#include "Settings.h"
 #include "StyleContentAlignmentData.h"
 #include "StyleSelfAlignmentData.h"
 #include <pal/Logging.h>
@@ -192,7 +193,7 @@ static OptionSet<AvoidanceReason> canUseForFlexLayoutWithReason(const RenderFlex
         if (mayHaveScrollbarOrScrollableOverflow(flexItemStyle))
             ADD_REASON_AND_RETURN_IF_NEEDED(FlexItemHasUnsupportedOverflow, reasons, includeReasons);
 
-        if (flexItem.hasIntrinsicAspectRatio() || flexItemStyle.hasAspectRatio())
+        if ((is<RenderBox>(flexItem) && downcast<RenderBox>(flexItem).hasIntrinsicAspectRatio()) || flexItemStyle.hasAspectRatio())
             ADD_REASON_AND_RETURN_IF_NEEDED(FlexItemHasAspectRatio, reasons, includeReasons);
 
         auto alignValue = flexItemStyle.alignSelf().position() != ItemPosition::Auto ? flexItemStyle.alignSelf().position() : flexBoxStyle.alignItems().position();
@@ -357,7 +358,8 @@ bool canUseForPreferredWidthComputation(const RenderBlockFlow& blockContainer)
         if (isFullySupportedInFlowRenderer)
             continue;
 
-        if (!renderer.writingMode().isHorizontal() || !renderer.style().logicalWidth().isFixed())
+        auto& unsupportedRenderElement = downcast<RenderElement>(renderer);
+        if (!unsupportedRenderElement.writingMode().isHorizontal() || !unsupportedRenderElement.style().logicalWidth().isFixed())
             return false;
 
         auto isNonSupportedFixedWidthContent = [&] {
@@ -366,10 +368,12 @@ bool canUseForPreferredWidthComputation(const RenderBlockFlow& blockContainer)
             if (!allowImagesToBreak)
                 return true;
             // FIXME: See RenderReplaced::computePreferredLogicalWidths where m_minPreferredLogicalWidth is set to 0.
-            auto isReplacedWithSpecialIntrinsicWidth = is<RenderReplaced>(renderer) && renderer.style().logicalMaxWidth().isPercentOrCalculated();
-            if (isReplacedWithSpecialIntrinsicWidth)
-                return true;
-            return false;
+            auto isReplacedWithSpecialIntrinsicWidth = [&] {
+                if (CheckedPtr renderReplaced = dynamicDowncast<RenderReplaced>(unsupportedRenderElement))
+                    return renderReplaced->style().logicalMaxWidth().isPercentOrCalculated();
+                return false;
+            };
+            return isReplacedWithSpecialIntrinsicWidth();
         };
         if (isNonSupportedFixedWidthContent())
             return false;

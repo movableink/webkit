@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2024 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc.  All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) 2011 University of Szeged. All rights reserved.
  *
@@ -109,7 +109,7 @@ ALLOW_NONLITERAL_FORMAT_BEGIN
     buffer.grow(result + 1);
 
     // Now do the formatting again, guaranteed to fit.
-    vsnprintf(buffer.data(), buffer.size(), format, argsCopy);
+    vsnprintf(buffer.mutableSpan().data(), buffer.size(), format, argsCopy);
     va_end(argsCopy);
 
 ALLOW_NONLITERAL_FORMAT_END
@@ -162,9 +162,9 @@ ALLOW_NONLITERAL_FORMAT_END
         constexpr unsigned InitialBufferSize { 256 };
         Vector<char, InitialBufferSize> buffer(length + 1);
 
-        CFStringGetCString(str.get(), buffer.data(), length, kCFStringEncodingUTF8);
+        CFStringGetCString(str.get(), buffer.mutableSpan().data(), length, kCFStringEncodingUTF8);
 
-        logToStderr(channel, buffer.data());
+        logToStderr(channel, buffer.span().data());
         return;
     }
 
@@ -208,7 +208,7 @@ static void vprintf_stderr_with_prefix(const char* rawPrefix, const char* rawFor
     formatWithPrefix[prefix.size() + format.size()] = 0;
 
 ALLOW_NONLITERAL_FORMAT_BEGIN
-    vprintf_stderr_common(nullptr, formatWithPrefix.data(), args);
+    vprintf_stderr_common(nullptr, formatWithPrefix.span().data(), args);
 ALLOW_NONLITERAL_FORMAT_END
 }
 
@@ -227,7 +227,7 @@ static void vprintf_stderr_with_trailing_newline(WTFLogChannel* channel, const c
     formatWithNewline[format.size() + 1] = 0;
 
 ALLOW_NONLITERAL_FORMAT_BEGIN
-    vprintf_stderr_common(channel, formatWithNewline.data(), args);
+    vprintf_stderr_common(channel, formatWithNewline.span().data(), args);
 ALLOW_NONLITERAL_FORMAT_END
 }
 
@@ -312,7 +312,7 @@ void WTFReportBacktraceWithPrefixAndStackDepth(const char* prefix, int framesToS
     Vector<void*> samples;
     samples.resize(frames);
 
-    WTFGetBacktrace(samples.data(), &frames);
+    WTFGetBacktrace(samples.mutableSpan().data(), &frames);
     CrashLogPrintStream out;
     if (frames > kDefaultFramesToSkip)
         WTFPrintBacktraceWithPrefixAndPrintStream(out, samples.subspan(kDefaultFramesToSkip, framesToShow), prefix);
@@ -645,7 +645,7 @@ void WTFInitializeLogChannelStatesFromString(WTFLogChannel* channels[], size_t c
 
 } // extern "C"
 
-#if (OS(DARWIN) || PLATFORM(PLAYSTATION)) && (CPU(X86_64) || CPU(ARM64))
+#if !ASAN_ENABLED && (OS(DARWIN) || PLATFORM(PLAYSTATION)) && (CPU(X86_64) || CPU(ARM64))
 
 void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t reason, uint64_t misc1, uint64_t misc2, uint64_t misc3, uint64_t misc4, uint64_t misc5, uint64_t misc6)
 {

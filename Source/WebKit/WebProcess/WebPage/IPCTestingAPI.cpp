@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -165,7 +165,7 @@ public:
     JSObjectRef createJSWrapper(JSContextRef);
     static JSIPCConnection* toWrapped(JSContextRef, JSValueRef);
 
-    Ref<IPC::Connection> connection() const { return m_testedConnection; }
+    const Ref<IPC::Connection> connection() const { return m_testedConnection; }
 private:
     JSIPCConnection(Ref<IPC::Connection> connection)
         : m_testedConnection { WTFMove(connection) }
@@ -362,7 +362,7 @@ private:
     static JSValueRef readBytes(JSContextRef, JSObjectRef, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception);
     static JSValueRef writeBytes(JSContextRef, JSObjectRef, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception);
 
-    Ref<SharedMemory> m_sharedMemory;
+    const Ref<SharedMemory> m_sharedMemory;
 };
 
 class JSMessageListener final : public IPC::MessageObserver, public RefCounted<JSMessageListener> {
@@ -452,7 +452,7 @@ private:
     WeakPtr<WebPage> m_webPage;
     WeakPtr<WebFrame> m_webFrame;
     Vector<Ref<JSMessageListener>> m_messageListeners;
-    Ref<IPCTesterReceiver> m_testerProxy;
+    const Ref<IPCTesterReceiver> m_testerProxy;
     RefPtr<JSIPCConnection> m_uiConnection;
     RefPtr<JSIPCConnection> m_networkConnection;
     RefPtr<JSIPCConnection> m_gpuConnection;
@@ -549,7 +549,7 @@ static JSValueRef jsSendWithAsyncReply(IPC::Connection& connection, uint64_t des
     JSGlobalContextRetain(JSContextGetGlobalContext(context));
     JSValueProtect(context, callback);
     IPC::Connection::AsyncReplyHandler handler = {
-        [messageName, context, callback](IPC::Decoder* replyDecoder) {
+        [messageName, context, callback](IPC::Connection*, IPC::Decoder* replyDecoder) {
             auto* globalObject = toJS(context);
             auto& vm = globalObject->vm();
             JSC::JSLockHolder lock(vm);
@@ -629,9 +629,10 @@ static JSValueRef jsWaitForAsyncReplyAndDispatchImmediately(IPC::Connection& con
     auto decoderOrError = connection.waitForMessageForTesting(messageName, destinationID, timeout, { });
     if (!decoderOrError.has_value()) {
         *exception = createErrorFromIPCError(context, decoderOrError.error());
+        handler(nullptr, nullptr);
         return JSValueMakeUndefined(context);
     }
-    handler(&decoderOrError.value().get());
+    handler(&connection, &decoderOrError.value().get());
     return JSValueMakeUndefined(context);
 }
 
@@ -1955,14 +1956,14 @@ RefPtr<JSIPCConnection> JSIPC::processTargetFromArgument(JSC::JSGlobalObject* gl
     }
 #if ENABLE(GPU_PROCESS)
     if (name == processTargetNameGPU) {
-        RefPtr connection = &WebProcess::singleton().ensureGPUProcessConnection().connection();
+        RefPtr connection = WebProcess::singleton().ensureGPUProcessConnection().connection();
         if (!m_gpuConnection || m_gpuConnection->connection().ptr() != connection)
             m_gpuConnection = JSIPCConnection::create(connection.releaseNonNull());
         return m_gpuConnection;
     }
 #endif
     if (name == processTargetNameNetworking) {
-        RefPtr connection = &WebProcess::singleton().ensureNetworkProcessConnection().connection();
+        RefPtr connection = WebProcess::singleton().ensureNetworkProcessConnection().connection();
         if (!m_networkConnection || m_networkConnection->connection().ptr() != connection)
             m_networkConnection = JSIPCConnection::create(connection.releaseNonNull());
         return m_networkConnection;
@@ -2418,13 +2419,9 @@ static bool encodeArgument(IPC::Encoder& encoder, JSContextRef context, JSValueR
 
     if (type == "FrameID"_s) {
         uint64_t frameIdentifier = jsValue.get(globalObject, 0u).toBigUInt64(globalObject);
-        uint64_t processIdentifier = jsValue.get(globalObject, 1u).toBigUInt64(globalObject);
-        if (!ObjectIdentifier<WebCore::FrameIdentifierType>::isValidIdentifier(frameIdentifier) || !ObjectIdentifier<WebCore::ProcessIdentifierType>::isValidIdentifier(processIdentifier))
+        if (!ObjectIdentifier<WebCore::FrameIdentifierType>::isValidIdentifier(frameIdentifier))
             return false;
-        encoder << WebCore::FrameIdentifier {
-            ObjectIdentifier<WebCore::FrameIdentifierType>(frameIdentifier),
-            ObjectIdentifier<WebCore::ProcessIdentifierType>(processIdentifier)
-        };
+        encoder << WebCore::FrameIdentifier(frameIdentifier);
         return true;
     }
 
@@ -2800,7 +2797,7 @@ JSValueRef JSIPC::serializedEnumInfo(JSContextRef context, JSObjectRef thisObjec
         auto validValuesArray = WTF::map(enumeration.validValues, [&](auto& validValue) -> JSValueRef {
             return JSValueMakeNumber(context, validValue);
         });
-        JSObjectRef jsValidValues = JSObjectMakeArray(context, enumeration.validValues.size(), validValuesArray.data(), exception);
+        JSObjectRef jsValidValues = JSObjectMakeArray(context, enumeration.validValues.size(), validValuesArray.span().data(), exception);
         if (*exception)
             return JSValueMakeUndefined(context);
 
@@ -2877,8 +2874,7 @@ JSValueRef JSIPC::frameID(JSContextRef context, JSObjectRef thisObject, JSString
     }
 
     auto frameID = wrapped->m_webFrame->frameID();
-    array->putDirectIndex(globalObject, 0, JSC::JSBigInt::createFrom(globalObject, frameID.object().toUInt64()));
-    array->putDirectIndex(globalObject, 1, JSC::JSBigInt::createFrom(globalObject, frameID.processIdentifier().toUInt64()));
+    array->putDirectIndex(globalObject, 0, JSC::JSBigInt::createFrom(globalObject, frameID.toUInt64()));
     return toRef(vm, array);
 }
 

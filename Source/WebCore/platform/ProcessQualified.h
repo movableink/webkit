@@ -26,8 +26,10 @@
 #pragma once
 
 #include "ProcessIdentifier.h"
+#include <wtf/GetPtr.h>
 #include <wtf/Hasher.h>
 #include <wtf/Markable.h>
+#include <wtf/text/IntegerToStringConversion.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
 
@@ -137,7 +139,7 @@ bool operator<=(const ProcessQualified<T>&, const ProcessQualified<T>&) = delete
 template <typename T>
 inline TextStream& operator<<(TextStream& ts, const ProcessQualified<T>& processQualified)
 {
-    ts << "ProcessQualified(" << processQualified.object() << ", " << processQualified.processIdentifier() << ')';
+    ts << "ProcessQualified("_s << processQualified.object() << ", "_s << processQualified.processIdentifier() << ')';
     return ts;
 }
 

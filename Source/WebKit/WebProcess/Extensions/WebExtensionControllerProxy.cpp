@@ -43,7 +43,7 @@ using namespace WebCore;
 
 static HashMap<WebExtensionControllerIdentifier, WeakPtr<WebExtensionControllerProxy>>& webExtensionControllerProxies()
 {
-    static MainThreadNeverDestroyed<HashMap<WebExtensionControllerIdentifier, WeakPtr<WebExtensionControllerProxy>>> controllers;
+    static MainRunLoopNeverDestroyed<HashMap<WebExtensionControllerIdentifier, WeakPtr<WebExtensionControllerProxy>>> controllers;
     return controllers;
 }
 
@@ -106,11 +106,11 @@ void WebExtensionControllerProxy::load(const WebExtensionContextParameters& cont
 void WebExtensionControllerProxy::unload(WebExtensionContextIdentifier contextIdentifier)
 {
     m_extensionContextBaseURLMap.removeIf([&](auto& entry) {
-        return entry.value->identifier() == contextIdentifier;
+        return entry.value->unprivilegedIdentifier() == contextIdentifier;
     });
 
     m_extensionContexts.removeIf([&](auto& entry) {
-        return entry->identifier() == contextIdentifier;
+        return entry->unprivilegedIdentifier() == contextIdentifier;
     });
 }
 

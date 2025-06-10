@@ -94,11 +94,6 @@ WI.Timeline = class Timeline extends WI.Object
         cookie[WI.Timeline.TimelineTypeCookieKey] = this._type;
     }
 
-    refresh()
-    {
-        this.dispatchEventToListeners(WI.Timeline.Event.Refreshed);
-    }
-
     closestRecordTo(timestamp)
     {
         let lowerIndex = this._records.lowerBound(timestamp, (time, record) => time - record.endTime);
@@ -199,7 +194,6 @@ WI.Timeline.Event = {
     Reset: "timeline-reset",
     RecordAdded: "timeline-record-added",
     TimesUpdated: "timeline-times-updated",
-    Refreshed: "timeline-refreshed",
 };
 
 WI.Timeline.TimelineTypeCookieKey = "timeline-type";

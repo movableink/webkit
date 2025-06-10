@@ -54,6 +54,7 @@
 #include "XLinkNames.h"
 #include "XMLNSNames.h"
 #include "XMLNames.h"
+#include <algorithm>
 #include <memory>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/URL.h>
@@ -164,34 +165,33 @@ static bool shouldSelfClose(const Element& element, SerializationSyntax syntax)
 }
 
 template<typename CharacterType>
-static inline void appendCharactersReplacingEntitiesInternal(StringBuilder& result, const String& source, unsigned offset, unsigned length, OptionSet<EntityMask> entityMask)
+static inline void appendCharactersReplacingEntitiesInternal(StringBuilder& result, const String& source, OptionSet<EntityMask> entityMask)
 {
-    auto text = source.span<CharacterType>().subspan(offset);
-
+    unsigned length = source.length();
     size_t positionAfterLastEntity = 0;
     for (size_t i = 0; i < length; ++i) {
-        CharacterType character = text[i];
+        CharacterType character = source[i];
         uint8_t substitution = character < std::size(entityMap) ? entityMap[character] : static_cast<uint8_t>(EntitySubstitutionIndex::Null);
-        if (UNLIKELY(substitution != EntitySubstitutionIndex::Null) && entityMask.contains(*entitySubstitutionList[substitution].mask)) {
-            result.appendSubstring(source, offset + positionAfterLastEntity, i - positionAfterLastEntity);
-            result.append(entitySubstitutionList[substitution].characters);
-            positionAfterLastEntity = i + 1;
+        if (substitution != EntitySubstitutionIndex::Null) [[unlikely]] {
+            if (entityMask.contains(*entitySubstitutionList[substitution].mask)) {
+                result.appendSubstring(source, positionAfterLastEntity, i - positionAfterLastEntity);
+                result.append(entitySubstitutionList[substitution].characters);
+                positionAfterLastEntity = i + 1;
+            }
         }
     }
-    result.appendSubstring(source, offset + positionAfterLastEntity, length - positionAfterLastEntity);
+    result.appendSubstring(source, positionAfterLastEntity, length - positionAfterLastEntity);
 }
 
-void MarkupAccumulator::appendCharactersReplacingEntities(StringBuilder& result, const String& source, unsigned offset, unsigned length, OptionSet<EntityMask> entityMask)
+void MarkupAccumulator::appendCharactersReplacingEntities(StringBuilder& result, const String& source, OptionSet<EntityMask> entityMask)
 {
-    ASSERT(offset + length <= source.length());
-
-    if (!length)
+    if (!source.length())
         return;
 
     if (source.is8Bit())
-        appendCharactersReplacingEntitiesInternal<LChar>(result, source, offset, length, entityMask);
+        appendCharactersReplacingEntitiesInternal<LChar>(result, source, entityMask);
     else
-        appendCharactersReplacingEntitiesInternal<UChar>(result, source, offset, length, entityMask);
+        appendCharactersReplacingEntitiesInternal<UChar>(result, source, entityMask);
 }
 
 MarkupAccumulator::MarkupAccumulator(Vector<Ref<Node>>* nodes, ResolveURLs resolveURLs, SerializationSyntax serializationSyntax, SerializeShadowRoots serializeShadowRoots, Vector<Ref<ShadowRoot>>&& explicitShadowRoots, const Vector<MarkupExclusionRule>& exclusionRules)
@@ -207,7 +207,7 @@ MarkupAccumulator::MarkupAccumulator(Vector<Ref<Node>>* nodes, ResolveURLs resol
 
 MarkupAccumulator::~MarkupAccumulator() = default;
 
-void MarkupAccumulator::enableURLReplacement(UncheckedKeyHashMap<String, String>&& replacementURLStrings, UncheckedKeyHashMap<Ref<CSSStyleSheet>, String>&& replacementURLStringsForCSSStyleSheet)
+void MarkupAccumulator::enableURLReplacement(HashMap<String, String>&& replacementURLStrings, HashMap<Ref<CSSStyleSheet>, String>&& replacementURLStringsForCSSStyleSheet)
 {
     m_serializationContext = CSS::SerializationContext {
         WTFMove(replacementURLStrings),
@@ -365,7 +365,7 @@ std::pair<String, MarkupAccumulator::IsCreatedByURLReplacement> MarkupAccumulato
 
     if (m_serializationContext) {
         if (RefPtr frame = frameForAttributeReplacement(element)) {
-            auto replacementURLString = m_serializationContext->replacementURLStrings.get(frame->frameID().toString());
+            auto replacementURLString = m_serializationContext->replacementURLStrings.get(makeString(frame->frameID().toUInt64()));
             if (!replacementURLString.isEmpty())
                 return { replacementURLString, IsCreatedByURLReplacement::Yes };
         }
@@ -443,10 +443,22 @@ StringBuilder MarkupAccumulator::takeMarkup()
     return std::exchange(m_markup, { });
 }
 
-void MarkupAccumulator::appendAttributeValue(StringBuilder& result, const String& attribute, bool isSerializingHTML)
+void MarkupAccumulator::appendAttributeValue(StringBuilder& result, const String& attribute)
 {
-    appendCharactersReplacingEntities(result, attribute, 0, attribute.length(),
-        isSerializingHTML ? EntityMaskInHTMLAttributeValue : EntityMaskInAttributeValue);
+    auto entityMask = [&] -> OptionSet<EntityMask> {
+        switch (m_serializationSyntax) {
+        case SerializationSyntax::XML:
+            return EntityMaskInAttributeValue;
+        case SerializationSyntax::HTML:
+            return EntityMaskInHTMLAttributeValue;
+        case SerializationSyntax::HTMLLegacyAttributeValue:
+            return EntityMaskInHTMLLegacyAttributeValue;
+        default:
+            ASSERT_NOT_REACHED();
+            return EntityMaskInAttributeValue;
+        }
+    }();
+    appendCharactersReplacingEntities(result, attribute, entityMask);
 }
 
 void MarkupAccumulator::appendCustomAttributes(StringBuilder&, const Element&, Namespaces*)
@@ -510,7 +522,7 @@ void MarkupAccumulator::appendNamespace(StringBuilder& result, const AtomString&
         return;
 
     result.append(' ', xmlnsAtom(), prefix.isEmpty() ? ""_s : ":"_s, prefix, "=\""_s);
-    appendAttributeValue(result, namespaceURI, false);
+    appendAttributeValue(result, namespaceURI);
     result.append('"');
 }
 
@@ -532,7 +544,7 @@ OptionSet<EntityMask> MarkupAccumulator::entityMaskForText(const Text& text) con
         case HTML::noscript:
             if (!isScriptEnabled(*element))
                 break;
-            FALLTHROUGH;
+            [[fallthrough]];
         case HTML::iframe:
         case HTML::noembed:
         case HTML::noframes:
@@ -550,7 +562,7 @@ OptionSet<EntityMask> MarkupAccumulator::entityMaskForText(const Text& text) con
 
 void MarkupAccumulator::appendText(StringBuilder& result, const Text& text)
 {
-    appendCharactersReplacingEntities(result, text.data(), 0, text.length(), entityMaskForText(text));
+    appendCharactersReplacingEntities(result, text.data(), entityMaskForText(text));
 }
 
 static void appendXMLDeclaration(StringBuilder& result, const Document& document)
@@ -748,7 +760,7 @@ Attribute MarkupAccumulator::replaceAttributeIfNecessary(const Element& element,
         if (!frame || !frame->loader().documentLoader()->response().url().isAboutSrcDoc())
             return attribute;
 
-        auto replacementURLString = m_serializationContext->replacementURLStrings.get(frame->frameID().toString());
+        auto replacementURLString = m_serializationContext->replacementURLStrings.get(makeString(frame->frameID().toUInt64()));
         if (replacementURLString.isEmpty())
             return attribute;
 
@@ -767,7 +779,7 @@ bool MarkupAccumulator::appendURLAttributeForReplacementIfNecessary(StringBuilde
     if (!frame)
         return false;
 
-    auto replacementURLString = m_serializationContext->replacementURLStrings.get(frame->frameID().toString());
+    auto replacementURLString = m_serializationContext->replacementURLStrings.get(makeString(frame->frameID().toUInt64()));
     if (replacementURLString.isEmpty())
         return false;
 
@@ -803,10 +815,10 @@ bool MarkupAccumulator::appendAttribute(StringBuilder& result, const Element& el
         // FIXME: This does not fully match other browsers. Firefox percent-escapes
         // non-ASCII characters for innerHTML.
         auto [resolvedURL, isCreatedByURLReplacement] = resolveURLIfNeeded(element, attribute.value());
-        appendAttributeValue(result, resolvedURL, isSerializingHTML);
+        appendAttributeValue(result, resolvedURL);
         isURLAttributeValueReplaced = isCreatedByURLReplacement == IsCreatedByURLReplacement::Yes;
     } else
-        appendAttributeValue(result, attribute.value(), isSerializingHTML);
+        appendAttributeValue(result, attribute.value());
     result.append('"');
 
     return isURLAttributeValueReplaced;
@@ -843,12 +855,14 @@ void MarkupAccumulator::appendNonElementNode(StringBuilder& result, const Node& 
         ASSERT_NOT_REACHED();
         break;
     case Node::CDATA_SECTION_NODE:
-        // FIXME: CDATA content is not escaped, but XMLSerializer (and possibly other callers) should raise an exception if it includes "]]>".
-        result.append("<![CDATA["_s, uncheckedDowncast<CDATASection>(node).data(), "]]>"_s);
+        if (inXMLFragmentSerialization()) {
+            // FIXME: CDATA content is not escaped, but XMLSerializer (and possibly other callers) should raise an exception if it includes "]]>".
+            result.append("<![CDATA["_s, uncheckedDowncast<CDATASection>(node).data(), "]]>"_s);
+        } else
+            appendText(result, uncheckedDowncast<Text>(node));
         break;
     case Node::ATTRIBUTE_NODE:
-        // Only XMLSerializer can pass an Attr. So, |documentIsHTML| flag is false.
-        appendAttributeValue(result, uncheckedDowncast<Attr>(node).value(), false);
+        appendAttributeValue(result, uncheckedDowncast<Attr>(node).value());
         break;
     }
 }
@@ -882,9 +896,14 @@ static bool isElementExcludedByRule(const MarkupExclusionRule& rule, const Eleme
 
 bool MarkupAccumulator::shouldExcludeElement(const Element& element)
 {
-    return WTF::anyOf(m_exclusionRules, [&](auto& rule) {
-        return isElementExcludedByRule(rule, element);
-    });
+    return std::ranges::any_of(m_exclusionRules, std::bind(isElementExcludedByRule, std::placeholders::_1, std::ref(element)));
+}
+
+SerializationSyntax MarkupAccumulator::serializationSyntax(Document& document)
+{
+    if (!document.isHTMLDocument())
+        return SerializationSyntax::XML;
+    return document.settings().htmlLegacyAttributeValueSerializationEnabled() ? SerializationSyntax::HTMLLegacyAttributeValue : SerializationSyntax::HTML;
 }
 
 }

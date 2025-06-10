@@ -36,6 +36,7 @@
 #include "ImageBuffer.h"
 #include "PixelBuffer.h"
 #include "Timer.h"
+#include <numbers>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Lock.h>
 #include <wtf/MathExtras.h>
@@ -255,7 +256,7 @@ static void calculateLobes(std::array<std::array<int, 2>, 3>& lobes, float blurR
         // However, shadows rendered according to that spec will extend a little further than m_blurRadius,
         // so we apply a fudge factor to bring the radius down slightly.
         float stdDev = blurRadius / 2;
-        const float gaussianKernelFactor = 3 / 4.f * sqrtf(2 * piFloat);
+        const float gaussianKernelFactor = 3 / 4.f * sqrtf(2 * std::numbers::pi_v<float>);
         const float fudgeFactor = 0.88f;
         diameter = std::max(2, static_cast<int>(floorf(stdDev * gaussianKernelFactor * fudgeFactor + 0.5f)));
     }

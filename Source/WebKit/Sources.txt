@@ -91,7 +91,6 @@ GPUProcess/media/RemoteRemoteCommandListenerProxy.cpp
 GPUProcess/media/RemoteSourceBufferProxy.cpp
 GPUProcess/media/RemoteTextTrackProxy.cpp
 GPUProcess/media/RemoteVideoTrackProxy.cpp
-GPUProcess/webrtc/RemoteSampleBufferDisplayLayer.cpp
 GPUProcess/webrtc/RemoteSampleBufferDisplayLayerManager.cpp
 
 ModelProcess/ModelProcess.cpp
@@ -220,6 +219,7 @@ Shared/ContextMenuContextData.cpp
 Shared/DebuggableInfoData.cpp
 Shared/EditingRange.cpp
 Shared/EditorState.cpp
+Shared/FrameInfoData.cpp
 Shared/InspectorExtensionTypes.cpp
 Shared/IPCConnectionTester.cpp
 Shared/IPCStreamTester.cpp
@@ -267,6 +267,7 @@ Shared/WebPushMessage.cpp
 Shared/WebTouchEvent.cpp
 Shared/WebWheelEventCoalescer.cpp
 Shared/WebWheelEvent.cpp
+Shared/WebsiteAutoplayPolicy.cpp
 Shared/WebsitePoliciesData.cpp
 
 Shared/API/APIArray.cpp
@@ -387,6 +388,7 @@ Shared/WebsiteData/WebsiteData.cpp
 
 Shared/XR/XRDeviceProxy.cpp
 
+UIProcess/AboutSchemeHandler.cpp
 UIProcess/AuxiliaryProcessProxy.cpp
 UIProcess/BackgroundProcessResponsivenessTimer.cpp
 UIProcess/BrowsingContextGroup.cpp
@@ -482,6 +484,7 @@ UIProcess/API/APIInspectorConfiguration.cpp
 UIProcess/API/APIInspectorExtension.cpp
 UIProcess/API/APINavigation.cpp
 UIProcess/API/APINavigationData.cpp
+UIProcess/API/APINavigationResponse.cpp
 UIProcess/API/APIPageConfiguration.cpp
 UIProcess/API/APIProcessPoolConfiguration.cpp
 UIProcess/API/APIOpenPanelParameters.cpp
@@ -559,6 +562,11 @@ UIProcess/Authentication/WebCredential.cpp
 UIProcess/Authentication/WebProtectionSpace.cpp
 
 // FIXME(206266): AutomationProtocolObjects.h's "namespace Protocol" conflicts with objc/runtime.h's "typedef struct objc_object Protocol"
+UIProcess/Automation/BidiBrowserAgent.cpp @no-unify
+UIProcess/Automation/BidiBrowsingContextAgent.cpp @no-unify
+UIProcess/Automation/BidiScriptAgent.cpp @no-unify
+UIProcess/Automation/BidiStorageAgent.cpp @no-unify
+UIProcess/Automation/BidiUserContext.cpp @no-unify
 UIProcess/Automation/SimulatedInputDispatcher.cpp @no-unify
 UIProcess/Automation/WebAutomationSession.cpp @no-unify
 UIProcess/Automation/WebDriverBidiProcessor.cpp @no-unify
@@ -713,6 +721,7 @@ WebProcess/Model/WebModelPlayerProvider.cpp
 WebProcess/Model/ModelProcessConnection.cpp
 WebProcess/Model/ModelProcessModelPlayer.cpp
 WebProcess/Model/ModelProcessModelPlayerManager.cpp
+WebProcess/Model/ModelProcessModelPlayerTransformState.cpp
 
 WebProcess/GPU/GPUProcessConnection.cpp
 WebProcess/GPU/RemoteSharedResourceCacheProxy.cpp
@@ -958,6 +967,8 @@ RemoteXRViewMessageReceiver.cpp
 RemoteWebLockRegistryMessageReceiver.cpp
 ServiceWorkerDownloadTaskMessageReceiver.cpp
 WebBroadcastChannelRegistryMessageReceiver.cpp
+WebFrameMessageReceiver.cpp
+WebFrameProxyMessageReceiver.cpp
 WebLockRegistryProxyMessageReceiver.cpp
 WebPermissionControllerMessageReceiver.cpp
 WebPermissionControllerProxyMessageReceiver.cpp

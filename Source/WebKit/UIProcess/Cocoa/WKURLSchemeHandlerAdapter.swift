@@ -40,10 +40,10 @@ final class WKURLSchemeHandlerAdapter: NSObject, WKURLSchemeHandler {
             do {
                 for try await result in wrapped.reply(for: urlSchemeTask.request) {
                     switch result {
-                    case let .response(response):
+                    case .response(let response):
                         urlSchemeTask.didReceive(response)
 
-                    case let .data(data):
+                    case .data(let data):
                         urlSchemeTask.didReceive(data)
                     }
                 }

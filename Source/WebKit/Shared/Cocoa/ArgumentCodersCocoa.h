@@ -59,6 +59,7 @@ OBJC_CLASS PKContact;
 OBJC_CLASS PKDateComponentsRange;
 OBJC_CLASS PKPayment;
 OBJC_CLASS PKPaymentMerchantSession;
+OBJC_CLASS PKPaymentSetupFeature;
 OBJC_CLASS PKPaymentMethod;
 OBJC_CLASS PKPaymentToken;
 OBJC_CLASS PKShippingMethod;
@@ -77,6 +78,7 @@ enum class NSType : uint8_t {
 #if USE(PASSKIT)
     PKPaymentMethod,
     PKPaymentMerchantSession,
+    PKPaymentSetupFeature,
     PKContact,
     PKSecureElementPass,
     PKPayment,
@@ -152,6 +154,7 @@ template<> Class getClass<CNPhoneNumber>();
 template<> Class getClass<CNPostalAddress>();
 template<> Class getClass<PKContact>();
 template<> Class getClass<PKPaymentMerchantSession>();
+template<> Class getClass<PKPaymentSetupFeature>();
 template<> Class getClass<PKPayment>();
 template<> Class getClass<PKPaymentToken>();
 template<> Class getClass<PKShippingMethod>();
@@ -187,13 +190,15 @@ static inline bool isObjectClassAllowed(id object, const AllowedClassHashSet& al
 template<typename T, typename>
 std::optional<RetainPtr<T>> decodeRequiringAllowedClasses(Decoder& decoder)
 {
-#if ASSERT_ENABLED
+#if ASSERT_ENABLED && !HAVE(WK_SECURE_CODING_NSURLREQUEST)
     auto allowedClasses = decoder.allowedClasses();
 #endif
     auto result = decodeObjectDirectlyRequiringAllowedClasses<T>(decoder);
     if (!result)
         return std::nullopt;
+#if !HAVE(WK_SECURE_CODING_NSURLREQUEST)
     ASSERT(!*result || isObjectClassAllowed((*result).get(), allowedClasses));
+#endif
     return { *result };
 }
 
@@ -203,7 +208,9 @@ std::optional<T> decodeRequiringAllowedClasses(Decoder& decoder)
     auto result = decodeObjectDirectlyRequiringAllowedClasses<T>(decoder);
     if (!result)
         return std::nullopt;
+#if !HAVE(WK_SECURE_CODING_NSURLREQUEST)
     ASSERT(!*result || isObjectClassAllowed((*result).get(), decoder.allowedClasses()));
+#endif
     return { *result };
 }
 

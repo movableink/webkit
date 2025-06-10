@@ -31,6 +31,7 @@
 
 #if ENABLE(MATHML)
 
+#include "ContainerNodeInlines.h"
 #include "ElementInlines.h"
 #include "EventHandler.h"
 #include "FrameLoader.h"

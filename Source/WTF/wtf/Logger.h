@@ -355,7 +355,7 @@ private:
 #if RELEASE_LOG_DISABLED
         WTFLog(&channel, "%s", logMessage.utf8().data());
 #elif USE(OS_LOG)
-        os_log(channel.osLogChannel, "%{public}s", logMessage.utf8().data());
+        SUPPRESS_UNRETAINED_LOCAL os_log(channel.osLogChannel, "%{public}s", logMessage.utf8().data());
 #elif ENABLE(JOURNALD_LOG)
         sd_journal_send("WEBKIT_SUBSYSTEM=%s", channel.subsystem, "WEBKIT_CHANNEL=%s", channel.name, "MESSAGE=%s", logMessage.utf8().data(), nullptr);
 #else
@@ -381,7 +381,7 @@ private:
 #if RELEASE_LOG_DISABLED
         WTFLogVerbose(file, line, function, &channel, "%s", logMessage.utf8().data());
 #elif USE(OS_LOG)
-        os_log(channel.osLogChannel, "%{public}s", logMessage.utf8().data());
+        SUPPRESS_UNRETAINED_LOCAL os_log(channel.osLogChannel, "%{public}s", logMessage.utf8().data());
         UNUSED_PARAM(file);
         UNUSED_PARAM(line);
         UNUSED_PARAM(function);
@@ -422,11 +422,20 @@ private:
     const void* m_owner;
 };
 
+WTF_EXPORT_PRIVATE const Logger& emptyLogger();
+
 template<> struct LogArgument<Logger::LogSiteIdentifier> {
     static String toString(const Logger::LogSiteIdentifier& value) { return value.toString(); }
 };
 template<> struct LogArgument<const void*> {
     WTF_EXPORT_PRIVATE static String toString(const void*);
+};
+template<typename T>
+struct LogArgument<std::optional<T>> {
+    static String toString(const std::optional<T>& value)
+    {
+        return value ? LogArgument<T>::toString(value.value()) : "nullopt"_s;
+    }
 };
 
 #ifdef __OBJC__
@@ -444,3 +453,4 @@ template<> struct LogArgument<id> {
 
 using WTF::Logger;
 using WTF::JSONLogValue;
+using WTF::emptyLogger;

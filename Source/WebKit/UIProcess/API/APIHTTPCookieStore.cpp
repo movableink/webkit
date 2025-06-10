@@ -101,8 +101,8 @@ void HTTPCookieStore::cookiesForURL(WTF::URL&& url, CompletionHandler<void(Vecto
 void HTTPCookieStore::setCookies(Vector<WebCore::Cookie>&& cookies, CompletionHandler<void()>&& completionHandler)
 {
     filterAppBoundCookies(WTFMove(cookies), [this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)] (auto&& appBoundCookies) mutable {
-        if (RefPtr networkProcess = networkProcessLaunchingIfNecessary())
-            networkProcess->sendWithAsyncReply(Messages::WebCookieManager::SetCookie(m_sessionID, appBoundCookies), WTFMove(completionHandler));
+        if (RefPtr dataStore = m_owningDataStore.get())
+            dataStore->setCookies(WTFMove(appBoundCookies), WTFMove(completionHandler));
         else
             completionHandler();
     });

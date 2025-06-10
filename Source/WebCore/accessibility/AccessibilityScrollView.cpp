@@ -182,7 +182,8 @@ void AccessibilityScrollView::removeChildScrollbar(AccessibilityObject* scrollba
     });
     if (position != notFound) {
         m_children[position]->detachFromParent();
-        m_children.remove(position);
+        m_children.removeAt(position);
+        resetChildrenIndexInParent();
 
         if (CheckedPtr cache = axObjectCache())
             cache->remove(scrollbar->objectID());
@@ -268,6 +269,10 @@ void AccessibilityScrollView::addChildren()
     addRemoteFrameChild();
     addChild(webAreaObject());
     updateScrollbars();
+
+#ifndef NDEBUG
+    verifyChildrenIndexInParent();
+#endif
 }
 
 AccessibilityObject* AccessibilityScrollView::webAreaObject() const

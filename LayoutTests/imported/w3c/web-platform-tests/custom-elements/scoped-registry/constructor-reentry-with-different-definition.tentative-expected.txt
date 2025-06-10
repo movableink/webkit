@@ -1,6 +1,0 @@
-
-FAIL Re-entry via upgrade before calling super() assert_true: expected true got false
-FAIL Re-entry via upgrade after calling super() assert_true: expected true got false
-FAIL Re-entry via direct constructor call before calling super() assert_true: expected true got false
-FAIL Re-entry via direct constructor call after calling super() assert_true: expected true got false
-

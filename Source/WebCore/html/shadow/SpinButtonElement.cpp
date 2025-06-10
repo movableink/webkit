@@ -33,6 +33,7 @@
 #include "HTMLNames.h"
 #include "LocalFrame.h"
 #include "MouseEvent.h"
+#include "NodeInlines.h"
 #include "Page.h"
 #include "RenderBox.h"
 #include "RenderTheme.h"
@@ -69,6 +70,12 @@ Ref<SpinButtonElement> SpinButtonElement::create(Document& document, SpinButtonO
 void SpinButtonElement::willDetachRenderers()
 {
     releaseCapture();
+}
+
+bool SpinButtonElement::isDisabledFormControl() const
+{
+    RefPtr host = shadowHost();
+    return host && host->isDisabledFormControl();
 }
 
 void SpinButtonElement::defaultEventHandler(Event& event)
@@ -123,7 +130,7 @@ void SpinButtonElement::defaultEventHandler(Event& event)
                 if (RefPtr frame = document().frame()) {
                     frame->eventHandler().setCapturingMouseEventsElement(this);
                     m_capturing = true;
-                    if (Page* page = document().page())
+                    if (RefPtr page = document().page())
                         page->chrome().registerPopupOpeningObserver(*this);
                 }
             }
@@ -191,7 +198,7 @@ void SpinButtonElement::releaseCapture()
         if (RefPtr frame = document().frame()) {
             frame->eventHandler().setCapturingMouseEventsElement(nullptr);
             m_capturing = false;
-            if (Page* page = document().page())
+            if (RefPtr page = document().page())
                 page->chrome().unregisterPopupOpeningObserver(*this);
         }
     }
@@ -199,7 +206,7 @@ void SpinButtonElement::releaseCapture()
 
 bool SpinButtonElement::matchesReadWritePseudoClass() const
 {
-    return shadowHost()->matchesReadWritePseudoClass();
+    return protectedShadowHost()->matchesReadWritePseudoClass();
 }
 
 void SpinButtonElement::startRepeatingTimer()

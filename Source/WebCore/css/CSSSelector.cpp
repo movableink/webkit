@@ -165,7 +165,7 @@ SelectorSpecificity simpleSelectorSpecificity(const CSSSelector& simpleSelector,
 {
     ASSERT_WITH_MESSAGE(!simpleSelector.isForPage(), "At the time of this writing, page selectors are not treated as real selectors that are matched. The value computed here only account for real selectors.");
 
-    if (UNLIKELY(simpleSelector.isImplicit()))
+    if (simpleSelector.isImplicit()) [[unlikely]]
         return 0;
 
     switch (simpleSelector.match()) {

@@ -88,7 +88,7 @@ JSC_DEFINE_HOST_FUNCTION(boundFunctionCall, (JSGlobalObject* globalObject, CallF
         }
         for (unsigned i = 0; i < callFrame->argumentCount(); ++i)
             args.append(callFrame->uncheckedArgument(i));
-        if (UNLIKELY(args.hasOverflowed())) {
+        if (args.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return encodedJSValue();
         }
@@ -108,7 +108,7 @@ JSC_DEFINE_HOST_FUNCTION(boundFunctionConstruct, (JSGlobalObject* globalObject, 
 
     JSObject* targetFunction = boundFunction->targetFunction();
     auto constructData = JSC::getConstructData(targetFunction);
-    if (UNLIKELY(constructData.type == CallData::Type::None))
+    if (constructData.type == CallData::Type::None) [[unlikely]]
         return throwVMError(globalObject, scope, createNotAConstructorError(globalObject, boundFunction));
 
     MarkedArgumentBuffer args;
@@ -124,7 +124,7 @@ JSC_DEFINE_HOST_FUNCTION(boundFunctionConstruct, (JSGlobalObject* globalObject, 
         }
         for (unsigned i = 0; i < callFrame->argumentCount(); ++i)
             args.append(callFrame->uncheckedArgument(i));
-        if (UNLIKELY(args.hasOverflowed())) {
+        if (args.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return encodedJSValue();
         }
@@ -152,7 +152,7 @@ inline Structure* getBoundFunctionStructure(VM& vm, JSGlobalObject* globalObject
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSFunction* targetJSFunction = jsDynamicCast<JSFunction*>(targetFunction);
-    if (LIKELY(targetJSFunction && targetJSFunction->getPrototypeDirect() == globalObject->functionPrototype()))
+    if (targetJSFunction && targetJSFunction->getPrototypeDirect() == globalObject->functionPrototype()) [[likely]]
         return globalObject->boundFunctionStructure();
 
     JSValue prototype = targetFunction->getPrototype(vm, globalObject);
@@ -199,7 +199,7 @@ JSBoundFunction* JSBoundFunction::create(VM& vm, JSGlobalObject* globalObject, J
                 boundArgs[index] = args.at(index);
         } else {
             JSImmutableButterfly* butterfly = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), args.size());
-            if (UNLIKELY(!butterfly)) {
+            if (!butterfly) [[unlikely]] {
                 throwOutOfMemoryError(globalObject, scope);
                 return nullptr;
             }
@@ -274,7 +274,7 @@ JSString* JSBoundFunction::nameSlow(VM& vm)
         ASSERT(cursor->inherits<JSFunction>()); // If this is not JSFunction, we eagerly materialized the name.
         if (!cursor->inherits<JSBoundFunction>()) {
             terminal = jsCast<JSFunction*>(cursor)->originalName(globalObject);
-            if (UNLIKELY(scope.exception())) {
+            if (scope.exception()) [[unlikely]] {
                 scope.clearException();
                 terminal = jsEmptyString(vm);
             }
@@ -293,7 +293,7 @@ JSString* JSBoundFunction::nameSlow(VM& vm)
         for (unsigned i = 0; i < nestingCount; ++i)
             builder.append("bound "_s);
         auto terminalString = terminal->value(globalObject); // Resolving rope.
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             scope.clearException();
             terminal = jsEmptyString(vm);
         } else {
@@ -307,7 +307,7 @@ JSString* JSBoundFunction::nameSlow(VM& vm)
 
     if (terminal) {
         terminal->value(globalObject); // Resolving rope.
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             scope.clearException();
             terminal = jsEmptyString(vm);
         }

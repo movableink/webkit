@@ -26,7 +26,6 @@
 #import "config.h"
 
 #import "DaemonTestUtilities.h"
-#import "Encoder.h"
 #import "HTTPServer.h"
 #import "MessageSenderInlines.h"
 #import "PlatformUtilities.h"
@@ -56,13 +55,14 @@
 #import <WebKit/_WKWebsiteDataStoreDelegate.h>
 #import <mach/mach_init.h>
 #import <mach/task.h>
+#import <ranges>
 #import <wtf/BlockPtr.h>
 #import <wtf/OSObjectPtr.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/UUID.h>
 #import <wtf/UniqueRef.h>
 #import <wtf/cocoa/SpanCocoa.h>
-#import <wtf/spi/darwin/XPCSPI.h>
+#import <wtf/darwin/XPCExtras.h>
 #import <wtf/text/Base64.h>
 #import <wtf/text/MakeString.h>
 
@@ -130,6 +130,13 @@ static bool alertReceived = false;
 }
 
 @end
+
+#if ASSERT_ENABLED
+namespace WTF {
+template<> bool isValidEnum<WebKit::WebPushD::PushMessageDisposition>(std::underlying_type_t<WebKit::WebPushD::PushMessageDisposition>) { return true; }
+template<> bool isValidEnum<WebCore::NotificationDirection>(std::underlying_type_t<WebCore::NotificationDirection>) { return true; }
+}
+#endif
 
 namespace TestWebKitAPI {
 
@@ -219,30 +226,212 @@ static void cleanUpTestWebPushD(NSURL *tempDir)
     EXPECT_NULL(error);
 }
 
-class WebPushXPCConnectionMessageSender final : public IPC::MessageSender {
+template<typename T, typename = void> struct TestArgumentCoder;
+template<typename T> struct TestArgumentCoder<T, typename std::enable_if_t<std::is_enum_v<T>>> : public IPC::ArgumentCoder<T> { };
+template<typename T> struct TestArgumentCoder<Vector<T>> : public IPC::ArgumentCoder<Vector<T>> { };
+template<typename T> struct TestArgumentCoder<std::span<T>> : public IPC::ArgumentCoder<std::span<T>> { };
+template<typename T> struct TestArgumentCoder<std::optional<T>> : public IPC::ArgumentCoder<std::optional<T>> { };
+template<typename... Elements> struct TestArgumentCoder<std::tuple<Elements...>> : public IPC::ArgumentCoder<std::tuple<Elements...>> { };
+
+template<typename T> struct TestArgumentCoder<T, typename std::enable_if_t<std::is_arithmetic_v<T>>> {
+    template<typename Encoder> static void encode(Encoder& encoder, T value) { encoder.encodeInteger(value); }
+    template<typename Decoder> static std::optional<T> decode(Decoder& decoder) { return decoder.template decodeInteger<T>(); }
+};
+
+template<> struct TestArgumentCoder<String> {
+    template<typename Encoder>
+    static void encode(Encoder& encoder, const String& string)
+    {
+        if (string.isNull()) {
+            encoder << std::numeric_limits<uint32_t>::max();
+            return;
+        }
+        bool is8Bit = string.is8Bit();
+        encoder << string.length();
+        encoder << is8Bit;
+
+        if (is8Bit)
+            encoder.encodeSpan(string.span8());
+        else
+            encoder.encodeSpan(string.span16());
+    }
+
+    template<typename CharacterType, typename Decoder>
+    static std::optional<String> decodeStringText(Decoder& decoder, uint32_t length)
+    {
+        Vector<CharacterType> characters;
+        for (size_t i = 0; i < length; i++) {
+            auto character = decoder.template decodeInteger<CharacterType>();
+            if (!character)
+                return std::nullopt;
+            characters.append(*character);
+        }
+        return String(characters.span());
+    }
+
+    template<typename Decoder>
+    static std::optional<String> decode(Decoder& decoder)
+    {
+        auto length = decoder.template decode<uint32_t>();
+        if (!length)
+            return std::nullopt;
+        if (*length == std::numeric_limits<uint32_t>::max())
+            return String();
+        auto is8Bit = decoder.template decode<bool>();
+        if (!is8Bit)
+            return std::nullopt;
+        if (*is8Bit)
+            return decodeStringText<LChar>(decoder, *length);
+        return decodeStringText<UChar>(decoder, *length);
+    }
+};
+
+template<> struct TestArgumentCoder<WTF::UUID> {
+    template<typename Encoder> static void encode(Encoder& encoder, const WTF::UUID& uuid)
+    {
+        encoder << uuid.high();
+        encoder << uuid.low();
+    }
+};
+
+template<> struct TestArgumentCoder<URL> {
+    template<typename Encoder> static void encode(Encoder& encoder, const URL& url) { encoder << url.string(); }
+    template<typename Decoder> static std::optional<URL> decode(Decoder& decoder)
+    {
+        auto string = decoder.template decode<String>();
+        if (!string)
+            return std::nullopt;
+        return { URL(WTFMove(*string)) };
+    }
+};
+
+class TestEncoder {
+public:
+    template<typename T> void encodeHeader()
+    {
+        *this << uint8_t();
+        *this << T::name();
+        *this << uint64_t();
+    }
+    Vector<uint8_t> takeBytes() { return std::exchange(m_bytes, { }); }
+    template<typename T> TestEncoder& operator<<(T&& t)
+    {
+        TestArgumentCoder<std::remove_cvref_t<T>, void>::encode(*this, std::forward<T>(t));
+        return *this;
+    }
+    template<typename T, size_t Extent> void encodeSpan(std::span<T, Extent> span)
+    {
+        while (m_bytes.size() % alignof(T))
+            m_bytes.append(0);
+        for (auto byte : asBytes(span))
+            m_bytes.append(byte);
+    }
+    template<typename T> void encodeInteger(T object)
+    {
+        encodeSpan(singleElementSpan(object));
+    }
+private:
+    Vector<uint8_t> m_bytes;
+};
+
+class TestDecoder {
+public:
+    TestDecoder(std::span<const uint8_t> buffer)
+        : m_buffer(buffer)
+        , m_bufferPosition(m_buffer.begin()) { }
+
+    template<typename T> void ignoreHeader()
+    {
+        decode<uint8_t>();
+        RELEASE_ASSERT(decode<IPC::MessageName>() == T::asyncMessageReplyName());
+        decode<uint64_t>();
+    }
+    template<typename T> std::optional<T> decode() { return TestArgumentCoder<std::remove_cvref_t<T>, void>::decode(*this); }
+    template<typename T> std::optional<T> decodeInteger()
+    {
+        while (m_bufferPosition != m_buffer.end() && bufferOffset() % alignof(T))
+            m_bufferPosition++;
+        if (bufferOffset() + sizeof(T) > m_buffer.size())
+            return std::nullopt;
+        T value = *reinterpret_cast<const T*>(m_buffer.data() + bufferOffset());
+        m_bufferPosition += sizeof(T);
+        return value;
+    }
+private:
+    size_t bufferOffset() const { return std::distance(m_buffer.begin(), m_bufferPosition); }
+    std::span<const uint8_t> m_buffer;
+    std::span<const uint8_t>::iterator m_bufferPosition;
+};
+
+template<> struct TestArgumentCoder<WebKit::WebPushD::WebPushDaemonConnectionConfiguration> {
+    static void encode(TestEncoder& encoder, const WebKit::WebPushD::WebPushDaemonConnectionConfiguration& configuration)
+    {
+        encoder << configuration.hostAppAuditTokenData;
+        encoder << configuration.bundleIdentifierOverride;
+        encoder << configuration.pushPartitionString;
+        encoder << configuration.dataStoreIdentifier;
+        encoder << configuration.declarativeWebPushEnabled;
+    }
+};
+
+template<> struct TestArgumentCoder<WebKit::WebPushD::PushMessageForTesting> {
+    static void encode(TestEncoder& encoder, const WebKit::WebPushD::PushMessageForTesting& message)
+    {
+        encoder << message.targetAppCodeSigningIdentifier;
+        encoder << message.pushPartitionString;
+        encoder << message.registrationURL;
+        encoder << message.payload;
+        encoder << message.disposition;
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+        encoder << message.parsedPayload;
+#endif
+    }
+};
+
+template<> struct TestArgumentCoder<WebCore::NotificationPayload> {
+    static void encode(TestEncoder& encoder, const WebCore::NotificationPayload& payload)
+    {
+        encoder << payload.defaultActionURL;
+        encoder << payload.title;
+        encoder << payload.appBadge;
+        encoder << payload.options;
+        encoder << payload.isMutable;
+    }
+};
+
+template<> struct TestArgumentCoder<WebCore::NotificationOptionsPayload> {
+    static void encode(TestEncoder& encoder, const WebCore::NotificationOptionsPayload& payload)
+    {
+        encoder << payload.dir;
+        encoder << payload.lang;
+        encoder << payload.body;
+        encoder << payload.tag;
+        encoder << payload.icon;
+        encoder << payload.dataJSONString;
+        encoder << payload.silent;
+    }
+};
+
+class WebPushXPCConnectionMessageSender {
 public:
     WebPushXPCConnectionMessageSender(xpc_connection_t connection)
-        : m_connection(connection)
-    {
-    }
-    ~WebPushXPCConnectionMessageSender() final { };
+        : m_connection(connection) { }
 
     void setShouldIncrementProtocolVersionForTesting() { m_shouldIncrementProtocolVersionForTesting = true; }
 
+    template<typename M>
+    void sendWithoutUsingIPCConnection(M&&) const;
+    template<typename M, typename CH>
+    void sendWithAsyncReplyWithoutUsingIPCConnection(M&&, CH&&) const;
+
 private:
-    bool performSendWithoutUsingIPCConnection(UniqueRef<IPC::Encoder>&&) const final;
-    bool performSendWithAsyncReplyWithoutUsingIPCConnection(UniqueRef<IPC::Encoder>&&, CompletionHandler<void(IPC::Decoder*)>&&) const final;
-
-    OSObjectPtr<xpc_object_t> messageDictionaryFromEncoder(UniqueRef<IPC::Encoder>&&) const;
-
-    IPC::Connection* messageSenderConnection() const final { return nullptr; }
-    uint64_t messageSenderDestinationID() const final { return 0; }
+    OSObjectPtr<xpc_object_t> messageDictionaryFromEncoder(TestEncoder&&) const;
 
     OSObjectPtr<xpc_connection_t> m_connection;
     bool m_shouldIncrementProtocolVersionForTesting { false };
 };
 
-OSObjectPtr<xpc_object_t> WebPushXPCConnectionMessageSender::messageDictionaryFromEncoder(UniqueRef<IPC::Encoder>&& encoder) const
+OSObjectPtr<xpc_object_t> WebPushXPCConnectionMessageSender::messageDictionaryFromEncoder(TestEncoder&& encoder) const
 {
     auto dictionary = adoptOSObject(xpc_dictionary_create(nullptr, nullptr, 0));
 
@@ -251,11 +440,10 @@ OSObjectPtr<xpc_object_t> WebPushXPCConnectionMessageSender::messageDictionaryFr
         ++protocolVersion;
     xpc_dictionary_set_uint64(dictionary.get(), WebKit::WebPushD::protocolVersionKey, protocolVersion);
 
-    __block auto blockEncoder = WTFMove(encoder);
-    auto buffer = blockEncoder->span();
+    __block auto blockBytes = encoder.takeBytes();
+    auto buffer = blockBytes.span();
     auto dispatchData = adoptNS(dispatch_data_create(buffer.data(), buffer.size(), dispatch_get_main_queue(), ^{
-        // Explicitly clear out the encoder, destroying it.
-        blockEncoder.moveToUniquePtr();
+        blockBytes.clear();
     }));
     auto encoderData = adoptOSObject(xpc_data_create_with_dispatch_data(dispatchData.get()));
 
@@ -264,42 +452,40 @@ OSObjectPtr<xpc_object_t> WebPushXPCConnectionMessageSender::messageDictionaryFr
     return dictionary;
 }
 
-bool WebPushXPCConnectionMessageSender::performSendWithoutUsingIPCConnection(UniqueRef<IPC::Encoder>&& encoder) const
+template<typename M>
+void WebPushXPCConnectionMessageSender::sendWithoutUsingIPCConnection(M&& message) const
 {
+    TestEncoder encoder;
+    encoder.encodeHeader<M>();
+    message.encode(encoder);
     auto dictionary = messageDictionaryFromEncoder(WTFMove(encoder));
     xpc_connection_send_message(m_connection.get(), dictionary.get());
-
-    return true;
 }
 
-bool WebPushXPCConnectionMessageSender::performSendWithAsyncReplyWithoutUsingIPCConnection(UniqueRef<IPC::Encoder>&& encoder, CompletionHandler<void(IPC::Decoder*)>&& completionHandler) const
+template<typename M, typename CH>
+void WebPushXPCConnectionMessageSender::sendWithAsyncReplyWithoutUsingIPCConnection(M&& message, CH&& completionHandler) const
 {
+    TestEncoder encoder;
+    encoder.encodeHeader<M>();
+    message.encode(encoder);
     auto dictionary = messageDictionaryFromEncoder(WTFMove(encoder));
-
     xpc_connection_send_message_with_reply(m_connection.get(), dictionary.get(), dispatch_get_main_queue(), makeBlockPtr([this, completionHandler = WTFMove(completionHandler)] (xpc_object_t reply) mutable {
         if (xpc_get_type(reply) == XPC_TYPE_ERROR) {
             // We only expect an error if we were purposefully testing the wrong protocol version.
             RELEASE_ASSERT(m_shouldIncrementProtocolVersionForTesting);
-            return completionHandler(nullptr);
+            return IPC::cancelReplyWithoutUsingConnection<M>(WTFMove(completionHandler));
         }
 
-        if (xpc_get_type(reply) != XPC_TYPE_DICTIONARY) {
+        if (xpc_get_type(reply) != XPC_TYPE_DICTIONARY)
             RELEASE_ASSERT_NOT_REACHED();
-            return completionHandler(nullptr);
-        }
-        if (xpc_dictionary_get_uint64(reply, WebKit::WebPushD::protocolVersionKey) != WebKit::WebPushD::protocolVersionValue) {
+        if (xpc_dictionary_get_uint64(reply, WebKit::WebPushD::protocolVersionKey) != WebKit::WebPushD::protocolVersionValue)
             RELEASE_ASSERT_NOT_REACHED();
-            return completionHandler(nullptr);
-        }
 
-        auto data = xpc_dictionary_get_data_span(reply, WebKit::WebPushD::protocolEncodedMessageKey);
-        auto decoder = IPC::Decoder::create(data, { });
-        ASSERT(decoder);
-
-        completionHandler(decoder.get());
+        auto data = xpcDictionaryGetData(reply, WebKit::WebPushD::protocolEncodedMessageKey);
+        TestDecoder decoder(data);
+        decoder.ignoreHeader<M>();
+        IPC::callReplyWithoutUsingConnection<M>(decoder, WTFMove(completionHandler));
     }).get());
-
-    return true;
 }
 
 static audit_token_t getSelfAuditToken()
@@ -736,10 +922,10 @@ public:
 
         RetainPtr<_WKWebsiteDataStoreConfiguration> dataStoreConfiguration;
         if (dataStoreIdentifier)
-            dataStoreConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] initWithIdentifier:*dataStoreIdentifier]);
+            dataStoreConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] initWithIdentifier:dataStoreIdentifier->createNSUUID().get()]);
         else
             dataStoreConfiguration = adoptNS([_WKWebsiteDataStoreConfiguration new]);
-        [dataStoreConfiguration setWebPushPartitionString:pushPartition];
+        [dataStoreConfiguration setWebPushPartitionString:pushPartition.createNSString().get()];
         [dataStoreConfiguration setProxyConfiguration:@{
             (NSString *)kCFStreamPropertyHTTPSProxyHost: @"127.0.0.1",
             (NSString *)kCFStreamPropertyHTTPSProxyPort: @(m_server->port())
@@ -825,7 +1011,7 @@ public:
     {
         NSError *error = nil;
         auto script = makeString("return await subscribe('"_s, key, "')"_s);
-        id obj = [m_webView objectByCallingAsyncFunction:script withArguments:@{ } error:&error];
+        id obj = [m_webView objectByCallingAsyncFunction:script.createNSString().get() withArguments:@{ } error:&error];
         return error ?: obj;
     }
 
@@ -1016,7 +1202,7 @@ public:
         };
         auto topic = WebCore::makePushTopic(subscriptionSetIdentifier, scope);
         id obj = @{
-            @"topic": (NSString *)topic,
+            @"topic": topic.createNSString().get(),
             @"userInfo": apsUserInfo
         };
 
@@ -1279,7 +1465,7 @@ TEST_F(WebPushDTest, SubscribeTest)
     };
     auto topics = getPushTopics();
     auto& subscribed = topics.first;
-    std::sort(subscribed.begin(), subscribed.end(), lessThan);
+    std::ranges::sort(subscribed, lessThan);
 
     Vector<String> expected {
         "com.apple.WebKit.TestWebKitAPI ds:0bf5053b-164c-4b7d-8179-832e6bf158df https://example.com/"_s,
@@ -1336,7 +1522,7 @@ TEST_F(WebPushDNavigatorTest, SubscribeTest)
     };
     auto topics = getPushTopics();
     auto& subscribed = topics.first;
-    std::sort(subscribed.begin(), subscribed.end(), lessThan);
+    std::ranges::sort(subscribed, lessThan);
 
     Vector<String> expected {
         "com.apple.WebKit.TestWebKitAPI ds:0bf5053b-164c-4b7d-8179-832e6bf158df https://example.com/"_s,
@@ -1491,10 +1677,11 @@ TEST_F(WebPushDTest, UnsubscribesOnClearingWebsiteDataForOrigin)
         }];
         TestWebKitAPI::Util::run(&fetchedRecords);
 
+        RetainPtr vOrigin = v->origin().createNSString();
         WKWebsiteDataRecord *filteredRecord = nil;
         for (WKWebsiteDataRecord *record in records.get()) {
             for (NSString *originString in record._originsStrings) {
-                if ([originString isEqualToString:v->origin()]) {
+                if ([originString isEqualToString:vOrigin.get()]) {
                     filteredRecord = record;
                     break;
                 }
@@ -1915,7 +2102,7 @@ TEST_F(WebPushDInjectedPushTest, HandleInjectedAES128GCMPush)
 
     runTest(@"When I grow up, I want to be a watermelon", @{
         @"content_encoding": @"aes128gcm",
-        @"payload": (NSString *)payloadBase64
+        @"payload": payloadBase64.createNSString().get()
     });
 }
 
@@ -1988,40 +2175,40 @@ static constexpr ASCIILiteral json8 = R"JSONRESOURCE(
 static constexpr ASCIILiteral json9 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "",
     "notification": {
         "navigate": "https://example.com/",
-        "title": "Hello world!",
-        "app_badge": ""
+        "title": "Hello world!"
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json10 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": -1,
     "notification": {
         "navigate": "https://example.com/",
-        "title": "Hello world!",
-        "app_badge": -1
+        "title": "Hello world!"
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json11 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": { },
     "notification": {
         "navigate": "https://example.com/",
-        "title": "Hello world!",
-        "app_badge": { }
+        "title": "Hello world!"
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json12 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": 10,
     "notification": {
         "navigate": "https://example.com/",
-        "title": "Hello world!",
-        "app_badge": 10
+        "title": "Hello world!"
     }
 }
 )JSONRESOURCE"_s;
@@ -2218,30 +2405,30 @@ static constexpr ASCIILiteral json31 = R"JSONRESOURCE(
 static constexpr ASCIILiteral json32 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "20",
     "notification": {
         "navigate": "https://example.com/",
-        "title": "Hello world!",
-        "app_badge": "20"
+        "title": "Hello world!"
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json33 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "8031",
     "notification": {
         "navigate": "https://example.com/",
-        "title": "Hello world!",
-        "app_badge": "8031"
+        "title": "Hello world!"
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json34 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "18446744073709551616",
     "notification": {
         "navigate": "https://example.com/",
-        "title": "Hello world!",
-        "app_badge": "18446744073709551616"
+        "title": "Hello world!"
     }
 }
 )JSONRESOURCE"_s;
@@ -2288,97 +2475,97 @@ static constexpr ASCIILiteral json38 = R"JSONRESOURCE(
 static constexpr ASCIILiteral json39 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "12",
     "notification": {
         "navigate": "https://example.com/",
         "title": "Hello world!",
-        "mutable": true,
-        "app_badge": "12"
+        "mutable": true
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json40 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "12",
     "notification": {
         "navigate": "https://example.com/",
         "title": "Hello world!",
         "mutable": true,
-        "tag": "title Gotcha!",
-        "app_badge": "12"
+        "tag": "title Gotcha!"
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json41 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "12",
     "notification": {
         "navigate": "https://example.com/",
         "title": "Hello world!",
         "mutable": true,
-        "tag": "badge 1024",
-        "app_badge": "12"
+        "tag": "badge 1024"
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json42 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "12",
     "notification": {
         "navigate": "https://example.com/",
         "title": "Hello world!",
         "mutable": true,
-        "tag": "titleandbadge ThisRules 4096",
-        "app_badge": "12"
+        "tag": "titleandbadge ThisRules 4096"
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json43 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "12",
     "notification": {
         "navigate": "https://example.com/",
         "title": "Test the data object",
         "mutable": true,
         "tag": "datatotitle",
-        "data": "Raw string",
-        "app_badge": "12"
+        "data": "Raw string"
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json44 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "12",
     "notification": {
         "navigate": "https://example.com/",
         "title": "Test the data object",
         "mutable": true,
         "tag": "datatotitle",
-        "data": { "key": "value" },
-        "app_badge": "12"
+        "data": { "key": "value" }
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json45 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "12",
     "notification": {
         "navigate": "https://example.com/",
         "title": "Test a default action URL override",
         "mutable": true,
-        "tag": "defaultactionurl https://webkit.org/",
-        "app_badge": "12"
+        "tag": "defaultactionurl https://webkit.org/"
     }
 }
 )JSONRESOURCE"_s;
 static constexpr ASCIILiteral json46 = R"JSONRESOURCE(
 {
     "web_push": 8030,
+    "app_badge": "12",
     "notification": {
         "navigate": "https://example.com/",
         "title": "Test a missing default action URL override",
         "mutable": true,
-        "tag": "emptydefaultactionurl",
-        "app_badge": "12"
+        "tag": "emptydefaultactionurl"
     }
 }
 )JSONRESOURCE"_s;
@@ -2504,11 +2691,8 @@ TEST(WebPushD, DeclarativeParsing)
     [dataStore _getPendingPushMessages:^(NSArray<NSDictionary *> *messages) {
         EXPECT_EQ(messages.count, expectedSuccessfulMessages());
 
-        for (NSDictionary *message in messages) {
-            auto webPushMessage = WebKit::WebPushMessage::fromDictionary(message);
-            EXPECT_TRUE(webPushMessage.has_value());
-            EXPECT_TRUE(!!webPushMessage->notificationPayload);
-        }
+        for (NSDictionary *message in messages)
+            EXPECT_TRUE(message[@"WebKitNotificationPayload"]);
 
         done = true;
     }];
@@ -2564,7 +2748,7 @@ TEST(WebPushD, DeclarativeWebPushHandling)
 
     done = false;
 
-    [connection getNotifications:(NSURL *)message.registrationURL tag:@"" completionHandler:^(NSArray<_WKNotificationData *> *notifications, NSError *error) {
+    [connection getNotifications:message.registrationURL.createNSURL().get() tag:@"" completionHandler:^(NSArray<_WKNotificationData *> *notifications, NSError *error) {
         EXPECT_NULL(error);
         EXPECT_NOT_NULL(notifications);
         EXPECT_EQ(notifications.count, 1u);
@@ -2840,7 +3024,7 @@ public:
         while (webViews().first()->mostRecentMessage().isEmpty())
             TestWebKitAPI::Util::runFor(0.05_s);
 
-        EXPECT_TRUE([(NSString *)webViews().first()->mostRecentMessage() isEqualToString:message]);
+        EXPECT_TRUE([webViews().first()->mostRecentMessage().createNSString() isEqualToString:message]);
     }
 
     void checkLastNotificationTitle(NSString *title)

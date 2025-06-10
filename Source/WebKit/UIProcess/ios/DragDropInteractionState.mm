@@ -33,6 +33,7 @@
 #import <WebCore/DragItem.h>
 #import <WebCore/Image.h>
 #import <WebCore/LocalCurrentTraitCollection.h>
+#import <WebCore/NativeImage.h>
 #import <wtf/cocoa/VectorCocoa.h>
 
 namespace WebKit {
@@ -207,12 +208,6 @@ UITargetedDragPreview *DragDropInteractionState::finalDropPreview(UIDragItem *it
     return m_finalDropPreviews.get(item).get();
 }
 
-inline static bool dragItemSupportsAsynchronousUpdates()
-{
-    static bool hasSupport = [UIDragItem instancesRespondToSelector:@selector(_setNeedsDropPreviewUpdate)];
-    return hasSupport;
-}
-
 void DragDropInteractionState::deliverDelayedDropPreview(UIView *contentView, UIView *previewContainer, const WebCore::TextIndicatorData& indicator)
 {
     auto textIndicatorImage = uiImageForImage(indicator.contentImage.get());
@@ -222,8 +217,7 @@ void DragDropInteractionState::deliverDelayedDropPreview(UIView *contentView, UI
 
     for (auto item : m_defaultDropPreviews.keys()) {
         m_finalDropPreviews.add(item, preview.get());
-        if (dragItemSupportsAsynchronousUpdates())
-            [item _setNeedsDropPreviewUpdate];
+        [item setNeedsDropPreviewUpdate];
     }
 }
 
@@ -248,8 +242,7 @@ void DragDropInteractionState::deliverDelayedDropPreview(UIView *contentView, CG
             // simply retarget the default preview.
             auto target = adoptNS([[UIDragPreviewTarget alloc] initWithContainer:contentView center:placeholderRect.center()]);
             m_finalDropPreviews.add(item, [defaultPreview retargetedPreviewWithTarget:target.get()]);
-            if (dragItemSupportsAsynchronousUpdates())
-                [item _setNeedsDropPreviewUpdate];
+            [item setNeedsDropPreviewUpdate];
             continue;
         }
 
@@ -271,8 +264,7 @@ void DragDropInteractionState::deliverDelayedDropPreview(UIView *contentView, CG
         auto target = adoptNS([[UIDragPreviewTarget alloc] initWithContainer:contentView center:previewIntersectionRect.center() transform:transform]);
         [defaultPreview parameters].visiblePath = [UIBezierPath bezierPathWithRect:insetPreviewBounds];
         m_finalDropPreviews.add(item, adoptNS([[UITargetedDragPreview alloc] initWithView:[defaultPreview view] parameters:[defaultPreview parameters] target:target.get()]));
-        if (dragItemSupportsAsynchronousUpdates())
-            [item _setNeedsDropPreviewUpdate];
+        [item setNeedsDropPreviewUpdate];
     }
 }
 
@@ -356,10 +348,10 @@ void DragDropInteractionState::stageDragItem(const DragItem& item, DragSourceSta
         item.sourceAction,
         item.dragPreviewFrameInRootViewCoordinates,
         dragPreviewContent,
-        item.image.indicatorData(),
+        item.image.textIndicator() ? std::optional { item.image.textIndicator()->data() } : std::nullopt,
         item.image.visiblePath(),
-        item.title.isEmpty() ? nil : (NSString *)item.title,
-        item.url.isEmpty() ? nil : (NSURL *)item.url,
+        item.title.isEmpty() ? nil : item.title.createNSString().get(),
+        item.url.isEmpty() ? nil : item.url.createNSURL().get(),
         true, // We assume here that drag previews need to be updated until proven otherwise in updatePreviewsForActiveDragSources().
         item.containsSelection,
         ++currentDragSourceItemIdentifier
@@ -376,6 +368,11 @@ void DragDropInteractionState::clearStagedDragSource(DidBecomeActive didBecomeAc
     if (didBecomeActive == DidBecomeActive::Yes)
         m_activeDragSources.append(stagedDragSource());
     m_stagedDragSource = std::nullopt;
+}
+
+void DragDropInteractionState::setElementIdentifier(const std::optional<ElementIdentifier>& elementID)
+{
+    m_elementIdentifier = elementID;
 }
 
 void DragDropInteractionState::dragAndDropSessionsDidBecomeInactive()
@@ -404,7 +401,7 @@ void DragDropInteractionState::updatePreviewsForActiveDragSources()
             continue;
 
         if (source.action.contains(DragSourceAction::Link)) {
-            dragItem.previewProvider = [title = retainPtr((NSString *)source.linkTitle), url = retainPtr((NSURL *)source.linkURL)] () -> UIDragPreview * {
+            dragItem.previewProvider = [title = source.linkTitle.createNSString(), url = source.linkURL.createNSURL()] () -> UIDragPreview * {
                 RetainPtr preview = [UIDragPreview previewForURL:url.get() title:title.get()];
 #if PLATFORM(VISION)
                 // FIXME: This is a slightly unfortunate since we end up copying the preview parameters,

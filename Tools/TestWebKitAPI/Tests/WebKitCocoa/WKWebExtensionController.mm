@@ -787,6 +787,123 @@ TEST(WKWebExtensionController, WebAccessibleResources)
     [manager run];
 }
 
+TEST(WKWebExtensionController, WebAccessibleResourcesWithLeadingSlash)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } }
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    auto *contentScript = Util::constructScript(@[
+        @"var img = document.createElement('img')",
+        @"img.src = browser.runtime.getURL('img.svg')",
+
+        @"img.onload = () => {",
+        @"  browser.test.notifyPass()",
+        @"}",
+
+        @"img.onerror = () => {",
+        @"  browser.test.notifyFail('The image should load')",
+        @"}",
+
+        @"document.body.appendChild(img)"
+    ]);
+
+    auto *manifest = @{
+        @"manifest_version": @3,
+        @"name": @"Test",
+        @"description": @"Test",
+        @"version": @"1.0",
+
+        @"content_scripts": @[ @{
+            @"js": @[ @"content.js" ],
+            @"matches": @[ @"*://localhost/*" ],
+        } ],
+
+        @"web_accessible_resources": @[ @{
+            @"resources": @[ @"/img.svg" ],
+            @"matches": @[ @"*://localhost/*" ]
+        } ]
+    };
+
+    auto *resources = @{
+        @"content.js": contentScript,
+        @"img.svg": @"<svg xmlns='http://www.w3.org/2000/svg'></svg>"
+    };
+
+    auto manager = Util::loadExtension(manifest, resources);
+
+    auto *urlRequest = server.requestWithLocalhost();
+    [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequest.URL];
+    [manager.get().defaultTab.webView loadRequest:urlRequest];
+
+    [manager run];
+}
+
+TEST(WKWebExtensionController, WebAccessibleResourceInSubframeFromAboutBlank)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    auto *extensionManifest = @{
+        @"manifest_version": @3,
+
+        @"name": @"Runtime Test",
+        @"description": @"Runtime Test",
+        @"version": @"1",
+
+        @"background": @{
+            @"scripts": @[ @"background.js" ],
+            @"type": @"module",
+            @"persistent": @NO,
+        },
+
+        @"content_scripts": @[ @{
+            @"js": @[ @"content.js" ],
+            @"matches": @[ @"*://localhost/*" ],
+        } ],
+
+        @"web_accessible_resources": @[ @{
+            @"resources": @[ @"*.html" ],
+            @"matches": @[ @"*://localhost/*" ]
+        } ],
+    };
+
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.sendMessage('Load Tab')",
+    ]);
+
+    auto *iframeScript = Util::constructScript(@[
+        @"browser.test.notifyPass()",
+    ]);
+
+    auto *contentScript = Util::constructScript(@[
+        @"(function() {",
+        @"  const iframe = document.createElement('iframe')",
+        @"  document.documentElement.appendChild(iframe)",
+        @"  iframe.contentWindow.location = new URL(browser.runtime.getURL('extension-frame.html')).href",
+        @"})()",
+    ]);
+
+    auto *resources = @{
+        @"background.js": backgroundScript,
+        @"content.js": contentScript,
+        @"extension-frame.js": iframeScript,
+        @"extension-frame.html": @"<script type='module' src='extension-frame.js'></script>",
+    };
+
+    auto manager = Util::loadExtension(extensionManifest, resources);
+
+    auto *urlRequest = server.requestWithLocalhost();
+    [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequest.URL];
+
+    [manager runUntilTestMessage:@"Load Tab"];
+
+    [manager.get().defaultTab.webView loadRequest:urlRequest];
+
+    [manager run];
+}
+
 TEST(WKWebExtensionController, WebAccessibleResourcesV2)
 {
     TestWebKitAPI::HTTPServer server({

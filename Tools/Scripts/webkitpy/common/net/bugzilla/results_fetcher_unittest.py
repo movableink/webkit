@@ -27,8 +27,8 @@
 
 import json
 import unittest
+from unittest import mock
 
-from mock import mock
 from webkitcorepy.testing import PathTestCase
 from webkitscmpy import PullRequest, local, mocks, remote
 

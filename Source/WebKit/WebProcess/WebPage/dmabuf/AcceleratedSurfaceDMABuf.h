@@ -91,7 +91,7 @@ private:
     void didRenderFrame() override;
 
 #if ENABLE(DAMAGE_TRACKING)
-    const WebCore::Damage& addDamage(const WebCore::Damage&) override;
+    const std::optional<WebCore::Damage>& frameDamageSinceLastUse() override;
 #endif
 
     void didCreateCompositingRunLoop(WTF::RunLoop&) override;
@@ -120,12 +120,13 @@ private:
 
         uint64_t id() const { return m_id; }
 #if ENABLE(DAMAGE_TRACKING)
-        const WebCore::Damage& damage() { return m_damage; }
-        void addDamage(const WebCore::Damage&);
+        void setDamage(WebCore::Damage&& damage) { m_damage = WTFMove(damage); }
+        const std::optional<WebCore::Damage>& damage() { return m_damage; }
+        void addDamage(const std::optional<WebCore::Damage>&);
 #endif
 
         virtual void willRenderFrame();
-        virtual void didRenderFrame();
+        virtual void didRenderFrame() { };
 
         std::unique_ptr<WebCore::GLFence> createRenderingFence(bool) const;
         void setReleaseFenceFD(UnixFileDescriptor&&);
@@ -141,7 +142,7 @@ private:
         unsigned m_depthStencilBuffer { 0 };
         UnixFileDescriptor m_releaseFenceFD;
 #if ENABLE(DAMAGE_TRACKING)
-        WebCore::Damage m_damage { WebCore::Damage::invalid() };
+        std::optional<WebCore::Damage> m_damage;
 #endif
     };
 
@@ -202,7 +203,7 @@ private:
         void didRenderFrame() override;
 
         unsigned m_colorBuffer { 0 };
-        Ref<WebCore::ShareableBitmap> m_bitmap;
+        const Ref<WebCore::ShareableBitmap> m_bitmap;
     };
 
     class RenderTargetTexture final : public RenderTarget {
@@ -240,7 +241,7 @@ private:
         void releaseUnusedBuffers();
 
 #if ENABLE(DAMAGE_TRACKING)
-        void addDamage(const WebCore::Damage&);
+        void addDamage(const std::optional<WebCore::Damage>&);
 #endif
 
         unsigned size() const { return m_freeTargets.size() + m_lockedTargets.size(); }
@@ -266,15 +267,12 @@ private:
 #endif
     };
 
-    CheckedRef<ThreadedCompositor> m_compositor;
+    const CheckedRef<ThreadedCompositor> m_compositor;
     uint64_t m_id { 0 };
     SwapChain m_swapChain;
     RenderTarget* m_target { nullptr };
     bool m_isVisible { false };
     bool m_useExplicitSync { false };
-#if ENABLE(DAMAGE_TRACKING)
-    WebCore::Damage m_frameDamage;
-#endif
     std::unique_ptr<RunLoop::Timer> m_releaseUnusedBuffersTimer;
 };
 

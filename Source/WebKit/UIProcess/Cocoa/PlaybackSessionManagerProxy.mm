@@ -46,6 +46,9 @@
 #if HAVE(PIP_SKIP_PREROLL)
 #import <WebCore/VideoPresentationInterfaceMac.h>
 #endif
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+#import <WebCore/VideoPresentationInterfaceIOS.h>
+#endif
 #import <wtf/LoggerHelper.h>
 #import <wtf/TZoneMallocInlines.h>
 
@@ -375,9 +378,9 @@ void PlaybackSessionModelContext::rateChanged(OptionSet<WebCore::PlaybackSession
         client->rateChanged(m_playbackState, m_playbackRate, m_defaultPlaybackRate);
 }
 
-void PlaybackSessionModelContext::seekableRangesChanged(WebCore::TimeRanges& seekableRanges, double lastModifiedTime, double liveUpdateInterval)
+void PlaybackSessionModelContext::seekableRangesChanged(const WebCore::PlatformTimeRanges& seekableRanges, double lastModifiedTime, double liveUpdateInterval)
 {
-    INFO_LOG_IF_POSSIBLE(LOGIDENTIFIER, seekableRanges.ranges());
+    INFO_LOG_IF_POSSIBLE(LOGIDENTIFIER, seekableRanges);
     m_seekableRanges = seekableRanges;
     m_seekableTimeRangesLastModifiedTime = lastModifiedTime;
     m_liveUpdateInterval = liveUpdateInterval;
@@ -500,30 +503,29 @@ void PlaybackSessionModelContext::supportsLinearMediaPlayerChanged(bool supports
     if (RefPtr manager = m_manager.get())
         manager->updateVideoControlsManager(m_contextId);
 }
+#endif
 
 void PlaybackSessionModelContext::spatialVideoMetadataChanged(const std::optional<WebCore::SpatialVideoMetadata>& metadata)
 {
     if (m_spatialVideoMetadata == metadata)
         return;
-    if (metadata)
-        ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER, *metadata);
+    ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER, metadata);
     m_spatialVideoMetadata = metadata;
 
     for (CheckedRef client : m_clients)
         client->spatialVideoMetadataChanged(m_spatialVideoMetadata);
 }
 
-void PlaybackSessionModelContext::isImmersiveVideoChanged(bool value)
+void PlaybackSessionModelContext::videoProjectionMetadataChanged(const std::optional<VideoProjectionMetadata>& metadata)
 {
-    if (m_isImmersiveVideo == value)
+    if (m_videoProjectionMetadata == metadata)
         return;
-    ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER, value);
-    m_isImmersiveVideo = value;
+    ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER, metadata);
+    m_videoProjectionMetadata = metadata;
 
     for (CheckedRef client : m_clients)
-        client->isImmersiveVideoChanged(m_isImmersiveVideo);
+        client->videoProjectionMetadataChanged(m_videoProjectionMetadata);
 }
-#endif
 
 void PlaybackSessionModelContext::invalidate()
 {
@@ -681,6 +683,15 @@ void PlaybackSessionManagerProxy::clearPlaybackControlsManager()
     if (!m_controlsManagerContextId)
         return;
 
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    if (RefPtr page = m_page.get()) {
+        if (RefPtr videoPresentationManager = page->videoPresentationManager()) {
+            if (RefPtr controlsManagerInterface = videoPresentationManager->controlsManagerInterface())
+                controlsManagerInterface->cleanupExternalPlayback();
+        }
+    }
+#endif
+
     removeClientForContext(*m_controlsManagerContextId);
     m_controlsManagerContextId = std::nullopt;
     m_controlsManagerContextIsVideo = false;
@@ -727,15 +738,8 @@ void PlaybackSessionManagerProxy::bufferedTimeChanged(PlaybackSessionContextIden
     ensureModel(contextId)->bufferedTimeChanged(bufferedTime);
 }
 
-void PlaybackSessionManagerProxy::seekableRangesVectorChanged(PlaybackSessionContextIdentifier contextId, Vector<std::pair<double, double>> ranges, double lastModifiedTime, double liveUpdateInterval)
+void PlaybackSessionManagerProxy::seekableRangesVectorChanged(PlaybackSessionContextIdentifier contextId, const WebCore::PlatformTimeRanges& timeRanges, double lastModifiedTime, double liveUpdateInterval)
 {
-    Ref<TimeRanges> timeRanges = TimeRanges::create();
-    for (const auto& range : ranges) {
-        ASSERT(isfinite(range.first));
-        ASSERT(!isfinite(range.second) || range.second >= range.first);
-        timeRanges->add(range.first, range.second);
-    }
-
     ensureModel(contextId)->seekableRangesChanged(timeRanges, lastModifiedTime, liveUpdateInterval);
 }
 
@@ -838,18 +842,17 @@ void PlaybackSessionManagerProxy::supportsLinearMediaPlayerChanged(PlaybackSessi
 {
     ensureModel(contextId)->supportsLinearMediaPlayerChanged(supportsLinearMediaPlayer);
 }
+#endif
 
 void PlaybackSessionManagerProxy::spatialVideoMetadataChanged(PlaybackSessionContextIdentifier contextId, const std::optional<WebCore::SpatialVideoMetadata>& metadata)
 {
     ensureModel(contextId)->spatialVideoMetadataChanged(metadata);
 }
 
-void PlaybackSessionManagerProxy::isImmersiveVideoChanged(PlaybackSessionContextIdentifier contextId, bool value)
+void PlaybackSessionManagerProxy::videoProjectionMetadataChanged(PlaybackSessionContextIdentifier contextId, const std::optional<WebCore::VideoProjectionMetadata>& metadata)
 {
-    ensureModel(contextId)->isImmersiveVideoChanged(value);
+    ensureModel(contextId)->videoProjectionMetadataChanged(metadata);
 }
-
-#endif
 
 void PlaybackSessionManagerProxy::handleControlledElementIDResponse(PlaybackSessionContextIdentifier contextId, String identifier) const
 {
@@ -1047,20 +1050,27 @@ void PlaybackSessionManagerProxy::setVideoReceiverEndpoint(PlaybackSessionContex
         return;
     }
 
-    Ref process = page->protectedLegacyMainFrameProcess();
+    Ref process = page->legacyMainFrameProcess();
     WebCore::ProcessIdentifier processIdentifier = process->coreProcessIdentifier();
 
     Ref gpuProcess = process->processPool().ensureProtectedGPUProcess();
-    RefPtr connection = gpuProcess->protectedConnection();
-    if (!connection)
-        return;
-
+    Ref connection = gpuProcess->connection();
     OSObjectPtr xpcConnection = connection->xpcConnection();
     if (!xpcConnection)
         return;
 
     VideoReceiverEndpointMessage endpointMessage(WTFMove(processIdentifier), contextId, WTFMove(playerIdentifier), endpoint, endpointIdentifier);
-    xpc_connection_send_message(xpcConnection.get(), endpointMessage.encode().get());
+    xpc_connection_send_message_with_reply(xpcConnection.get(), endpointMessage.encode().get(), dispatch_get_main_queue(), ^(xpc_object_t reply) {
+        RefPtr videoPresentationManager = page->videoPresentationManager();
+        if (!videoPresentationManager)
+            return;
+
+        RefPtr controlsManagerInterface = videoPresentationManager->controlsManagerInterface();
+        if (!controlsManagerInterface)
+            return;
+
+        controlsManagerInterface->didSetVideoReceiverEndpoint();
+    });
 #else
     UNUSED_PARAM(contextId);
     UNUSED_PARAM(endpoint);
@@ -1076,14 +1086,11 @@ void PlaybackSessionManagerProxy::swapVideoReceiverEndpoints(PlaybackSessionCont
         return;
     }
 
-    Ref process = page->protectedLegacyMainFrameProcess();
+    Ref process = page->legacyMainFrameProcess();
     WebCore::ProcessIdentifier processIdentifier = process->coreProcessIdentifier();
 
     Ref gpuProcess = process->processPool().ensureProtectedGPUProcess();
-    RefPtr connection = gpuProcess->protectedConnection();
-    if (!connection)
-        return;
-
+    Ref connection = gpuProcess->connection();
     OSObjectPtr xpcConnection = connection->xpcConnection();
     if (!xpcConnection)
         return;
@@ -1172,12 +1179,9 @@ void PlaybackSessionManagerProxy::updateVideoControlsManager(PlaybackSessionCont
         page->videoControlsManagerDidChange();
 }
 
-std::optional<SharedPreferencesForWebProcess> PlaybackSessionManagerProxy::sharedPreferencesForWebProcess() const
+std::optional<SharedPreferencesForWebProcess> PlaybackSessionManagerProxy::sharedPreferencesForWebProcess(IPC::Connection& connection) const
 {
-    if (!m_page)
-        return std::nullopt;
-
-    return m_page->legacyMainFrameProcess().sharedPreferencesForWebProcess();
+    return WebProcessProxy::fromConnection(connection)->sharedPreferencesForWebProcess();
 }
 
 #if !RELEASE_LOG_DISABLED

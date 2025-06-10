@@ -2,7 +2,7 @@
 tbd-version: 4
 targets: [arm64-xros, arm64e-xros]
 install-name: /System/Library/PrivateFrameworks/RunningBoardServices.framework/RunningBoardServices
-current-version: 945
+current-version: 961.100.17
 exports:
 -       targets: [arm64-xros, arm64e-xros]
         symbols: [_RBSProcessTimeLimitationNone]

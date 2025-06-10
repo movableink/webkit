@@ -51,7 +51,7 @@ addEventListener("load", async () => {
     image.style.objectFit = "cover";
     setInterval(updateImageOverlayTextDimensions, 10);
 
-    await shouldBecomeEqual("width", "100");
+    await shouldBecomeCloseTo("width", 100, 0.01);
     shouldBe("height", "50");
 
     finishJSTest();

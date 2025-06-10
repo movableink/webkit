@@ -1,10 +1,6 @@
  (repaint rects
   (rect 124 24 270 270)
   (rect 124 24 270 270)
-  (rect 124 24 270 270)
-  (rect 8 8 502 302)
-  (rect 0 0 800 600)
-  (rect 0 0 800 327)
 )
 (GraphicsLayer
   (anchor 0.00 0.00)

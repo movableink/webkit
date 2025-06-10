@@ -58,7 +58,7 @@ auto SWContextManager::connection() const -> Connection*
     return m_connection.get();
 }
 
-void SWContextManager::registerServiceWorkerThreadForInstall(Ref<ServiceWorkerThreadProxy>&& serviceWorkerThreadProxy)
+void SWContextManager::registerServiceWorkerThreadForInstall(Ref<ServiceWorkerThreadProxy>&& serviceWorkerThreadProxy, Function<void()>&& debuggerTasksStartedCallback)
 {
     ASSERT(isMainThread());
 
@@ -70,6 +70,12 @@ void SWContextManager::registerServiceWorkerThreadForInstall(Ref<ServiceWorkerTh
         Locker locker { m_workerMapLock };
         auto result = m_workerMap.add(serviceWorkerIdentifier, WTFMove(serviceWorkerThreadProxy));
         ASSERT_UNUSED(result, result.isNewEntry);
+    }
+
+    if (debuggerTasksStartedCallback) {
+        threadProxy->thread().runLoop().postDebuggerTask([debuggerTasksStartedCallback = WTFMove(debuggerTasksStartedCallback)](auto&) {
+            debuggerTasksStartedCallback();
+        });
     }
 
     threadProxy->thread().start([jobDataIdentifier, serviceWorkerIdentifier](const String& exceptionMessage, bool doesHandleFetch) {
@@ -239,6 +245,20 @@ bool SWContextManager::postTaskToServiceWorker(ServiceWorkerIdentifier identifie
 
     serviceWorker->thread().runLoop().postTask([task = WTFMove(task)] (auto& context) {
         task(downcast<ServiceWorkerGlobalScope>(context));
+    });
+    return true;
+}
+
+bool SWContextManager::stopRunningDebuggerTasksOnServiceWorker(ServiceWorkerIdentifier identifier)
+{
+    RefPtr serviceWorker = serviceWorkerThreadProxyFromBackgroundThread(identifier);
+    if (!serviceWorker)
+        return false;
+
+    serviceWorker->thread().runLoop().postDebuggerTask([serviceWorker](auto&) {
+        // In case the worker is paused running debugger tasks, ensure we break out of
+        // the pause since this will be the last debugger task we send to the worker.
+        serviceWorker->thread().stopRunningDebuggerTasks();
     });
     return true;
 }

@@ -116,8 +116,6 @@ class ProgramPrelude : public TIntermTraverser
     void div();
     void imod();
     void imul();
-    void iadd();
-    void isub();
     void ilshift();
     void ulshift();
     void rshift();
@@ -136,8 +134,6 @@ class ProgramPrelude : public TIntermTraverser
     void addScalarMatrix();
     void subMatrixScalar();
     void subScalarMatrix();
-    void divMatrixScalar();
-    void divMatrixScalarAssign();
     void divScalarMatrix();
     void componentWiseDivide();
     void componentWiseDivideAssign();
@@ -288,6 +284,15 @@ class ProgramPrelude : public TIntermTraverser
     void interpolateAtCentroid();
     void interpolateAtSample();
     void interpolateAtOffset();
+    void postIncrementInt();
+    void preIncrementInt();
+    void postDecrementInt();
+    void preDecrementInt();
+    void addInt();
+    void addAssignInt();
+    void subInt();
+    void subAssignInt();
+    void loopForwardProgress();
 
   private:
     TInfoSinkBase &mOut;
@@ -515,26 +520,6 @@ ANGLE_ALWAYS_INLINE Z ANGLE_imul(X x, Y y)
 }
 )")
 
-// Avoid undefined behavior due to integer overflow
-PROGRAM_PRELUDE_DECLARE(iadd,
-                        R"(
-template<typename X, typename Y, typename Z = metal::conditional_t<metal::is_scalar_v<Y>, X, Y>>
-ANGLE_ALWAYS_INLINE Z ANGLE_iadd(X x, Y y)
-{
-    return as_type<Z>(metal::make_unsigned_t<Z>(x) + metal::make_unsigned_t<Z>(y));
-}
-)")
-
-// Avoid undefined behavior due to integer underflow
-PROGRAM_PRELUDE_DECLARE(isub,
-                        R"(
-template<typename X, typename Y, typename Z = metal::conditional_t<metal::is_scalar_v<Y>, X, Y>>
-ANGLE_ALWAYS_INLINE Z ANGLE_isub(X x, Y y)
-{
-    return as_type<Z>(metal::make_unsigned_t<Z>(x) - metal::make_unsigned_t<Z>(y));
-}
-)")
-
 // Avoid undefined behavior in e1 << e2 when:
 // 1) e2 is larger than the bit width of the type
 // 2) e2 is a negative value.
@@ -738,32 +723,6 @@ ANGLE_ALWAYS_INLINE metal::matrix<T, Cols, Rows> operator-(T x, metal::matrix<T,
     return m;
 }
 )")
-
-PROGRAM_PRELUDE_DECLARE(divMatrixScalarAssign,
-                        R"(
-template <typename T, int Cols, int Rows>
-ANGLE_ALWAYS_INLINE thread metal::matrix<T, Cols, Rows> &operator/=(thread metal::matrix<T, Cols, Rows> &m, T x)
-{
-    for (size_t col = 0; col < Cols; ++col)
-    {
-        m[col] /= x;
-    }
-    return m;
-}
-)")
-
-PROGRAM_PRELUDE_DECLARE(divMatrixScalar,
-                        R"(
-#if __METAL_VERSION__ <= 220
-template <typename T, int Cols, int Rows>
-ANGLE_ALWAYS_INLINE metal::matrix<T, Cols, Rows> operator/(metal::matrix<T, Cols, Rows> m, T x)
-{
-    m /= x;
-    return m;
-}
-#endif
-)",
-                        divMatrixScalarAssign())
 
 PROGRAM_PRELUDE_DECLARE(divScalarMatrix,
                         R"(
@@ -2935,6 +2894,98 @@ template <typename T>
 ANGLE_ALWAYS_INLINE T ANGLE_interpolateAtOffset(T value, float2) { return value; }
 )")
 
+PROGRAM_PRELUDE_DECLARE(preIncrementInt,
+                        R"(
+template <typename T>
+ANGLE_ALWAYS_INLINE thread T &ANGLE_preIncrementInt(thread T &a)
+{
+    a = as_type<T>(metal::make_unsigned_t<T>(a) + 1);
+    return a;
+}
+)")
+
+PROGRAM_PRELUDE_DECLARE(postIncrementInt,
+                        R"(
+template <typename T>
+ANGLE_ALWAYS_INLINE T ANGLE_postIncrementInt(thread T &a)
+{
+    T r = a;
+    a = as_type<T>(metal::make_unsigned_t<T>(a) + 1);
+    return r;
+}
+)")
+
+PROGRAM_PRELUDE_DECLARE(preDecrementInt,
+                        R"(
+template <typename T>
+ANGLE_ALWAYS_INLINE thread T &ANGLE_preDecrementInt(thread T &a)
+{
+    a = as_type<T>(metal::make_unsigned_t<T>(a) - 1);
+    return a;
+}
+)")
+
+PROGRAM_PRELUDE_DECLARE(postDecrementInt,
+                        R"(
+template <typename T>
+ANGLE_ALWAYS_INLINE T ANGLE_postDecrementInt(thread T &a)
+{
+    T r = a;
+    a = as_type<T>(metal::make_unsigned_t<T>(a) - 1);
+    return r;
+}
+)")
+
+// Avoid undefined behavior due to integer overflow.
+PROGRAM_PRELUDE_DECLARE(addInt,
+                        R"(
+template<typename X, typename Y, typename Z = metal::conditional_t<metal::is_scalar_v<Y>, X, Y>>
+ANGLE_ALWAYS_INLINE Z ANGLE_addInt(X x, Y y)
+{
+    return as_type<Z>(metal::make_unsigned_t<Z>(x) + metal::make_unsigned_t<Z>(y));
+}
+)")
+
+// Avoid undefined behavior due to integer overflow.
+PROGRAM_PRELUDE_DECLARE(addAssignInt,
+                        R"(
+template<typename X, typename Y>
+ANGLE_ALWAYS_INLINE thread X &ANGLE_addAssignInt(thread X &x, Y y)
+{
+    x = as_type<X>(metal::make_unsigned_t<X>(x) + metal::make_unsigned_t<Y>(y));
+    return x;
+}
+)")
+
+// Avoid undefined behavior due to integer underflow.
+PROGRAM_PRELUDE_DECLARE(subInt,
+                        R"(
+template<typename X, typename Y, typename Z = metal::conditional_t<metal::is_scalar_v<Y>, X, Y>>
+ANGLE_ALWAYS_INLINE Z ANGLE_subInt(X x, Y y)
+{
+    return as_type<Z>(metal::make_unsigned_t<Z>(x) - metal::make_unsigned_t<Z>(y));
+}
+)")
+
+// Avoid undefined behavior due to integer underflow.
+PROGRAM_PRELUDE_DECLARE(subAssignInt,
+                        R"(
+template<typename X, typename Y>
+ANGLE_ALWAYS_INLINE thread X &ANGLE_subAssignInt(thread X &x, Y y)
+{
+    x = as_type<X>(metal::make_unsigned_t<X>(x) - metal::make_unsigned_t<Y>(y));
+    return x;
+}
+)")
+
+PROGRAM_PRELUDE_DECLARE(loopForwardProgress,
+                        R"(
+ANGLE_ALWAYS_INLINE void ANGLE_loopForwardProgress()
+{
+    volatile bool p = true;
+}
+)")
+
 ////////////////////////////////////////////////////////////////////////////////
 
 // Returned Name is valid for as long as `buffer` is still alive.
@@ -3593,7 +3644,6 @@ void ProgramPrelude::visitOperator(TOperator op,
             break;
 
         case TOperator::EOpAdd:
-        case TOperator::EOpAddAssign:
             if (argType0->isMatrix() && argType1->isScalar())
             {
                 addMatrixScalar();
@@ -3604,12 +3654,22 @@ void ProgramPrelude::visitOperator(TOperator op,
             }
             if (argType0->isSignedInt())
             {
-                iadd();
+                addInt();
+            }
+            break;
+
+        case TOperator::EOpAddAssign:
+            if (argType0->isMatrix() && argType1->isScalar())
+            {
+                addMatrixScalarAssign();
+            }
+            if (argType0->isSignedInt())
+            {
+                addAssignInt();
             }
             break;
 
         case TOperator::EOpSub:
-        case TOperator::EOpSubAssign:
             if (argType0->isMatrix() && argType1->isScalar())
             {
                 subMatrixScalar();
@@ -3620,7 +3680,18 @@ void ProgramPrelude::visitOperator(TOperator op,
             }
             if (argType0->isSignedInt())
             {
-                isub();
+                subInt();
+            }
+            break;
+
+        case TOperator::EOpSubAssign:
+            if (argType0->isMatrix() && argType1->isScalar())
+            {
+                subMatrixScalarAssign();
+            }
+            if (argType0->isSignedInt())
+            {
+                subAssignInt();
             }
             break;
 
@@ -3632,24 +3703,24 @@ void ProgramPrelude::visitOperator(TOperator op,
             {
                 imul();
             }
+            if (argType0->isSignedInt())
+            {
+                subAssignInt();
+            }
             break;
 
         case TOperator::EOpDiv:
         case TOperator::EOpDivAssign:
-            if (argType0->isMatrix())
+            if (argType1->isMatrix())
             {
-                if (argType1->isMatrix())
+                if (argType0->isMatrix())
                 {
                     componentWiseDivide();
                 }
-                else if (argType1->isScalar())
+                else if (argType0->isScalar())
                 {
-                    divMatrixScalar();
+                    divScalarMatrix();
                 }
-            }
-            else if (op == TOperator::EOpDiv && argType0->isScalar() && argType1->isMatrix())
-            {
-                divScalarMatrix();
             }
             else
             {
@@ -3694,12 +3765,20 @@ void ProgramPrelude::visitOperator(TOperator op,
             {
                 preIncrementMatrix();
             }
+            if (argType0->isSignedInt())
+            {
+                preIncrementInt();
+            }
             break;
 
         case TOperator::EOpPostIncrement:
             if (argType0->isMatrix())
             {
                 postIncrementMatrix();
+            }
+            if (argType0->isSignedInt())
+            {
+                postIncrementInt();
             }
             break;
 
@@ -3708,12 +3787,20 @@ void ProgramPrelude::visitOperator(TOperator op,
             {
                 preDecrementMatrix();
             }
+            if (argType0->isSignedInt())
+            {
+                preDecrementInt();
+            }
             break;
 
         case TOperator::EOpPostDecrement:
             if (argType0->isMatrix())
             {
                 postDecrementMatrix();
+            }
+            if (argType0->isSignedInt())
+            {
+                postDecrementInt();
             }
             break;
 
@@ -3837,6 +3924,10 @@ void ProgramPrelude::visitOperator(TOperator op,
 
         case TOperator::EOpConstruct:
             ASSERT(!func);
+            break;
+
+        case TOperator::EOpLoopForwardProgress:
+            loopForwardProgress();
             break;
 
         case TOperator::EOpCallFunctionInAST:

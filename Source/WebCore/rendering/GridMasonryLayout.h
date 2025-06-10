@@ -29,6 +29,7 @@
 #include "GridTrackSizingAlgorithm.h"
 #include "LayoutUnit.h"
 #include "RenderBox.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -55,8 +56,6 @@ public:
     LayoutUnit gridGap() const { return m_masonryAxisGridGap; };
 
 private:
-    GridSpan gridAxisPositionUsingPackAutoFlow(const RenderBox& item) const;
-    GridSpan gridAxisPositionUsingNextAutoFlow(const RenderBox& item);
     GridArea gridAreaForIndefiniteGridAxisItem(const RenderBox& item);
     GridArea gridAreaForDefiniteGridAxisItem(const RenderBox&) const;
 
@@ -80,7 +79,7 @@ private:
 
     Vector<LayoutUnit> m_runningPositions;
     UncheckedKeyHashMap<SingleThreadWeakRef<const RenderBox>, LayoutUnit> m_itemOffsets;
-    RenderGrid& m_renderGrid;
+    const CheckedRef<RenderGrid> m_renderGrid;
     LayoutUnit m_masonryAxisGridGap;
     LayoutUnit m_gridContentSize;
 

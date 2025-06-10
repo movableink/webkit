@@ -28,6 +28,7 @@
 #if ENABLE(ASYNC_SCROLLING)
 #include "AsyncScrollingCoordinator.h"
 
+#include "ContainerNodeInlines.h"
 #include "DebugPageOverlays.h"
 #include "DeprecatedGlobalSettings.h"
 #include "Document.h"
@@ -56,6 +57,7 @@
 #include "WheelEventTestMonitor.h"
 #include "pal/HysteresisActivity.h"
 #include <wtf/ProcessID.h>
+#include <wtf/SystemTracing.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
@@ -408,6 +410,8 @@ bool AsyncScrollingCoordinator::requestScrollToPosition(ScrollableArea& scrollab
     auto stateNode = dynamicDowncast<ScrollingStateScrollingNode>(stateNodeForScrollableArea(scrollableArea));
     if (!stateNode)
         return false;
+
+    tracePoint(ProgrammaticScroll, scrollPosition.y(), frameView->frame().isMainFrame());
 
     if (options.originalScrollDelta)
         stateNode->setRequestedScrollData({ ScrollRequestType::DeltaUpdate, *options.originalScrollDelta, options.type, options.clamping, options.animated });
@@ -988,6 +992,9 @@ void AsyncScrollingCoordinator::setNodeLayers(ScrollingNodeID nodeID, const Node
             frameScrollingNode->setRootContentsLayer(nodeLayers.rootContentsLayer);
         }
     }
+
+    if (RefPtr stickyNode = dynamicDowncast<ScrollingStateStickyNode>(*node))
+        stickyNode->setViewportAnchorLayer(nodeLayers.viewportAnchorLayer);
 }
 
 void AsyncScrollingCoordinator::setFrameScrollingNodeState(ScrollingNodeID nodeID, const LocalFrameView& frameView)
@@ -1082,12 +1089,12 @@ void AsyncScrollingCoordinator::setViewportConstraintedNodeConstraints(Scrolling
     switch (constraints.constraintType()) {
     case ViewportConstraints::FixedPositionConstraint: {
         if (RefPtr fixedNode = dynamicDowncast<ScrollingStateFixedNode>(node))
-            fixedNode->updateConstraints((const FixedPositionViewportConstraints&)constraints);
+            fixedNode->updateConstraints(downcast<FixedPositionViewportConstraints>(constraints));
         break;
     }
     case ViewportConstraints::StickyPositionConstraint: {
         if (RefPtr stickyNode = dynamicDowncast<ScrollingStateStickyNode>(node))
-            stickyNode->updateConstraints((const StickyPositionViewportConstraints&)constraints);
+            stickyNode->updateConstraints(downcast<StickyPositionViewportConstraints>(constraints));
         break;
     }
     }
@@ -1212,12 +1219,12 @@ std::optional<ScrollingNodeID> AsyncScrollingCoordinator::scrollableContainerNod
 String AsyncScrollingCoordinator::scrollingStateTreeAsText(OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     StringBuilder stateTree;
-    m_scrollingStateTrees.forEach([&] (auto& key, auto& tree) {
+    m_scrollingStateTrees.forEach([&](auto& key, auto& tree) {
         if (tree->rootStateNode()) {
             if (m_eventTrackingRegionsDirty)
                 tree->rootStateNode()->setEventTrackingRegions(absoluteEventTrackingRegions());
             if (m_scrollingStateTrees.size() > 1)
-                stateTree.append(makeString("Tree-for-root-frameID: "_s, key.toString()));
+                stateTree.append(makeString("Tree-for-root-frameID: "_s, key.toUInt64()));
             stateTree.append(tree->scrollingStateTreeAsText(behavior));
         }
     });

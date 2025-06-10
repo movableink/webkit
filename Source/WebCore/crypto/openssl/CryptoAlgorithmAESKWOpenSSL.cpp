@@ -27,6 +27,7 @@
 #include "CryptoAlgorithmAESKW.h"
 
 #include "CryptoKeyAES.h"
+#include "ExceptionOr.h"
 #include "OpenSSLUtilities.h"
 
 namespace WebCore {

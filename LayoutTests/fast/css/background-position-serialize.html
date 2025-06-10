@@ -149,21 +149,21 @@ shouldBe("t.style.cssText", "background-position: 10px 15px, 20px 25px, 30px 35p
 
 run("t.setAttribute('style', 'background-position: bottom 10px right 20px');");
 shouldBe("t.style.backgroundPosition", "right 20px bottom 10px");
-shouldBe("window.getComputedStyle(t).backgroundPosition", "right 20px bottom 10px");
+shouldBe("window.getComputedStyle(t).backgroundPosition", "calc(100% - 20px) calc(100% - 10px)");
 
 run("t.setAttribute('style', 'background-position: top 10px right 20px');");
 shouldBe("t.style.backgroundPosition", "right 20px top 10px");
-shouldBe("window.getComputedStyle(t).backgroundPosition", "right 20px 10px");
+shouldBe("window.getComputedStyle(t).backgroundPosition", "calc(100% - 20px) 10px");
 
 run("t.setAttribute('style', 'background-position: 50% left');"); // Invalid per spec.
 shouldBe("t.style.backgroundPosition", "");
 
 run("t.setAttribute('style', 'background-position-x: right 20px');");
-shouldBe("window.getComputedStyle(t).backgroundPositionX", "right 20px");
+shouldBe("window.getComputedStyle(t).backgroundPositionX", "calc(100% - 20px)");
 
 run("t.setAttribute('style', 'background-position: right 20px bottom 10px');");
-shouldBe("window.getComputedStyle(t).backgroundPosition", "right 20px bottom 10px");
-shouldBe("window.getComputedStyle(t).backgroundPositionX", "right 20px");
+shouldBe("window.getComputedStyle(t).backgroundPosition", "calc(100% - 20px) calc(100% - 10px)");
+shouldBe("window.getComputedStyle(t).backgroundPositionX", "calc(100% - 20px)");
 
 run("t.setAttribute('style', 'background: url(about:blank) 80% 80%;');");
 run("t.style.backgroundPositionY = '50px'");

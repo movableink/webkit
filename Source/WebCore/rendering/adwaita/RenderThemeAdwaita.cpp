@@ -41,6 +41,7 @@
 #include "RenderObject.h"
 #include "RenderProgress.h"
 #include "RenderStyleSetters.h"
+#include "StylePadding.h"
 #include "ThemeAdwaita.h"
 #include "TimeRanges.h"
 #include "UserAgentScripts.h"
@@ -61,6 +62,7 @@
 #endif
 
 namespace WebCore {
+using namespace CSS::Literals;
 using namespace WebCore::Adwaita;
 
 RenderTheme& RenderTheme::singleton()
@@ -287,13 +289,13 @@ Color RenderThemeAdwaita::systemColor(CSSValueID cssValueID, OptionSet<StyleColo
     }
 }
 
-bool RenderThemeAdwaita::isControlStyled(const RenderStyle& style, const RenderStyle& userAgentStyle) const
+bool RenderThemeAdwaita::isControlStyled(const RenderStyle& style) const
 {
     auto appearance = style.usedAppearance();
     if (appearance == StyleAppearance::TextField || appearance == StyleAppearance::TextArea || appearance == StyleAppearance::SearchField || appearance == StyleAppearance::Listbox)
-        return style.border() != userAgentStyle.border();
+        return style.nativeAppearanceDisabled();
 
-    return RenderTheme::isControlStyled(style, userAgentStyle);
+    return RenderTheme::isControlStyled(style);
 }
 
 void RenderThemeAdwaita::adjustTextFieldStyle(RenderStyle& style, const Element*) const
@@ -323,16 +325,21 @@ void RenderThemeAdwaita::adjustMenuListButtonStyle(RenderStyle& style, const Ele
     adjustMenuListStyle(style, element);
 }
 
-LengthBox RenderThemeAdwaita::popupInternalPaddingBox(const RenderStyle& style) const
+Style::PaddingBox RenderThemeAdwaita::popupInternalPaddingBox(const RenderStyle& style) const
 {
     if (style.usedAppearance() == StyleAppearance::None)
-        return { };
+        return { 0_css_px };
 
     auto zoomedArrowSize = menuListButtonArrowSize * style.usedZoom();
     int leftPadding = menuListButtonPadding + (style.writingMode().isBidiRTL() ? zoomedArrowSize : 0);
     int rightPadding = menuListButtonPadding + (style.writingMode().isBidiLTR() ? zoomedArrowSize : 0);
 
-    return { menuListButtonPadding, rightPadding, menuListButtonPadding, leftPadding };
+    return {
+        Style::Length<CSS::Nonnegative> { static_cast<float>(menuListButtonPadding) },
+        Style::Length<CSS::Nonnegative> { static_cast<float>(rightPadding) },
+        Style::Length<CSS::Nonnegative> { static_cast<float>(menuListButtonPadding) },
+        Style::Length<CSS::Nonnegative> { static_cast<float>(leftPadding) },
+    };
 }
 
 Seconds RenderThemeAdwaita::animationRepeatIntervalForProgressBar(const RenderProgress& renderer) const
@@ -340,9 +347,10 @@ Seconds RenderThemeAdwaita::animationRepeatIntervalForProgressBar(const RenderPr
     return renderer.page().preferredRenderingUpdateInterval();
 }
 
-IntRect RenderThemeAdwaita::progressBarRectForBounds(const RenderProgress&, const IntRect& bounds) const
+IntRect RenderThemeAdwaita::progressBarRectForBounds(const RenderProgress& renderer, const IntRect& bounds) const
 {
-    return { bounds.x(), bounds.y(), bounds.width(), progressBarSize };
+    bool isHorizontal = renderer.isHorizontalWritingMode();
+    return { bounds.x(), bounds.y(), isHorizontal ? bounds.width() : progressBarSize, isHorizontal ? progressBarSize : bounds.height() };
 }
 
 void RenderThemeAdwaita::adjustSliderThumbSize(RenderStyle& style, const Element*) const
@@ -369,9 +377,67 @@ void RenderThemeAdwaita::adjustListButtonStyle(RenderStyle& style, const Element
 {
     // Add a margin to place the button at end of the input field.
     if (style.isLeftToRightDirection())
-        style.setMarginRight(Length(-2, LengthType::Fixed));
+        style.setMarginRight(-2_css_px);
     else
-        style.setMarginLeft(Length(-2, LengthType::Fixed));
+        style.setMarginLeft(-2_css_px);
+}
+
+LengthSize RenderThemeAdwaita::controlSize(StyleAppearance appearance, const FontCascade& fontCascade, const LengthSize& zoomedSize, float zoomFactor) const
+{
+    if (!zoomedSize.width.isIntrinsicOrAuto() && !zoomedSize.height.isIntrinsicOrAuto())
+        return RenderTheme::controlSize(appearance, fontCascade, zoomedSize, zoomFactor);
+
+    switch (appearance) {
+    case StyleAppearance::Checkbox:
+    case StyleAppearance::Radio: {
+        auto buttonSize = zoomedSize;
+        if (buttonSize.width.isIntrinsicOrAuto())
+            buttonSize.width = Length(12 * zoomFactor, LengthType::Fixed);
+        if (buttonSize.height.isIntrinsicOrAuto())
+            buttonSize.height = Length(12 * zoomFactor, LengthType::Fixed);
+        return buttonSize;
+    }
+    case StyleAppearance::InnerSpinButton: {
+        auto spinButtonSize = zoomedSize;
+        if (spinButtonSize.width.isIntrinsicOrAuto())
+            spinButtonSize.width = Length(static_cast<int>(arrowSize * zoomFactor), LengthType::Fixed);
+        if (spinButtonSize.height.isIntrinsicOrAuto() || fontCascade.size() > arrowSize)
+            spinButtonSize.height = Length(fontCascade.size(), LengthType::Fixed);
+        return spinButtonSize;
+    }
+    default:
+        break;
+    }
+
+    return RenderTheme::controlSize(appearance, fontCascade, zoomedSize, zoomFactor);
+}
+
+LengthSize RenderThemeAdwaita::minimumControlSize(StyleAppearance, const FontCascade&, const LengthSize& zoomedSize, float) const
+{
+    if (!zoomedSize.width.isIntrinsicOrAuto() && !zoomedSize.height.isIntrinsicOrAuto())
+        return zoomedSize;
+
+    auto minSize = zoomedSize;
+    if (minSize.width.isIntrinsicOrAuto())
+        minSize.width = Length(0, LengthType::Fixed);
+    if (minSize.height.isIntrinsicOrAuto())
+        minSize.height = Length(0, LengthType::Fixed);
+    return minSize;
+}
+
+LengthBox RenderThemeAdwaita::controlBorder(StyleAppearance appearance, const FontCascade& font, const LengthBox& zoomedBox, float zoomFactor) const
+{
+    switch (appearance) {
+    case StyleAppearance::PushButton:
+    case StyleAppearance::DefaultButton:
+    case StyleAppearance::Button:
+    case StyleAppearance::SquareButton:
+        return zoomedBox;
+    default:
+        break;
+    }
+
+    return RenderTheme::controlBorder(appearance, font, zoomedBox, zoomFactor);
 }
 
 #if PLATFORM(GTK) || PLATFORM(WPE)

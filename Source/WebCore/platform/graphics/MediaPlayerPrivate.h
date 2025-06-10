@@ -42,6 +42,7 @@
 
 namespace WebCore {
 
+class MessageClientForTesting;
 class VideoFrame;
 
 // MediaPlayerPrivateInterface subclasses should be ref-counted, but each subclass may choose whether
@@ -315,7 +316,6 @@ public:
 
 #if USE(AVFOUNDATION)
     virtual AVPlayer *objCAVFoundationAVPlayer() const { return nullptr; }
-    virtual void setDecompressionSessionPreferences(bool, bool) { }
 #endif
 
     virtual bool performTaskAtTime(Function<void()>&&, const MediaTime&) { return false; }
@@ -377,6 +377,8 @@ public:
 #endif
 
     virtual void soundStageSizeDidChange() { }
+
+    virtual void setMessageClientForTesting(WeakPtr<MessageClientForTesting>) { }
 
 protected:
     mutable PlatformTimeRanges m_seekable;

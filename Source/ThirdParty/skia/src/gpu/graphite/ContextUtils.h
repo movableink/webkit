@@ -8,30 +8,39 @@
 #ifndef skgpu_graphite_ContextUtils_DEFINED
 #define skgpu_graphite_ContextUtils_DEFINED
 
-#include "include/core/SkBlendMode.h"
-#include "src/gpu/graphite/PipelineData.h"
+#include "src/core/SkSLTypeShared.h"
+#include "src/gpu/graphite/Uniform.h"
 
+#include <cstdint>
 #include <optional>
+#include <string>
 
 class SkColorInfo;
 class SkM44;
+enum class SkBlendMode;
+struct SkIRect;
 
-namespace skgpu::graphite {
+namespace skgpu {
+enum class BackendApi : unsigned int;
 
+namespace graphite {
+class Caps;
 class ComputeStep;
 enum class Coverage;
-enum class DstReadStrategy;
 class Geometry;
 class PaintParams;
+class PaintParamsKeyBuilder;
 class PipelineDataGatherer;
 class Recorder;
 struct RenderPassDesc;
 class RenderStep;
+struct ResourceBindingRequirements;
 class ShaderCodeDictionary;
 class UniformManager;
 class UniquePaintParamsID;
 
-struct ResourceBindingRequirements;
+
+enum class Layout : uint8_t;
 
 UniquePaintParamsID ExtractPaintData(Recorder*,
                                      PipelineDataGatherer* gatherer,
@@ -62,17 +71,23 @@ void CollectIntrinsicUniforms(const Caps* caps,
                               SkIRect dstReadBounds,
                               UniformManager*);
 
-bool IsDstReadRequired(const Caps*, std::optional<SkBlendMode>, Coverage);
+// Returns whether or not hardware blending can be used. If not, we must perform a dst read within
+// the shader.
+bool CanUseHardwareBlending(const Caps*, std::optional<SkBlendMode>, Coverage);
 
 std::string GetPipelineLabel(const ShaderCodeDictionary*,
                              const RenderPassDesc& renderPassDesc,
                              const RenderStep* renderStep,
                              UniquePaintParamsID paintID);
 
-std::string BuildComputeSkSL(const Caps*, const ComputeStep*);
+// TODO(b/396420770): Right now, BuildComputeSkSL must consider the backend in order to make certain
+// decisions. It would be ideal if we could make this more backend-agnostic, perhaps by having a
+// compute-specific equivalent to ResourceBindingRequirements.
+std::string BuildComputeSkSL(const Caps*, const ComputeStep*, BackendApi);
 
 std::string EmitSamplerLayout(const ResourceBindingRequirements&, int* binding);
 
-} // namespace skgpu::graphite
+} // namespace graphite
+} // namespace skgpu
 
 #endif // skgpu_graphite_ContextUtils_DEFINED

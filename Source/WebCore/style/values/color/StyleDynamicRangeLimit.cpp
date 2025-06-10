@@ -29,6 +29,7 @@
 #include "AnimationUtilities.h"
 #include "CSSDynamicRangeLimit.h"
 #include "CSSDynamicRangeLimitMix.h"
+#include "CSSDynamicRangeLimitValue.h"
 #include "PlatformDynamicRangeLimit.h"
 #include "StyleDynamicRangeLimitMix.h"
 
@@ -47,8 +48,8 @@ static DynamicRangeLimit resolve(DynamicRangeLimitMixFunction&& mix)
 
     if (mix->standard == 100_css_percentage)
         return DynamicRangeLimit(CSS::Keyword::Standard { });
-    if (mix->constrainedHigh == 100_css_percentage)
-        return DynamicRangeLimit(CSS::Keyword::ConstrainedHigh { });
+    if (mix->constrained == 100_css_percentage)
+        return DynamicRangeLimit(CSS::Keyword::Constrained { });
     if (mix->noLimit == 100_css_percentage)
         return DynamicRangeLimit(CSS::Keyword::NoLimit { });
     return DynamicRangeLimit(WTFMove(mix));
@@ -75,6 +76,16 @@ auto ToStyle<CSS::DynamicRangeLimit>::operator()(const CSS::DynamicRangeLimit& l
             return resolve(toStyle(mix, state));
         }
     );
+}
+
+Ref<CSSValue> CSSValueCreation<DynamicRangeLimit>::operator()(CSSValuePool&, const RenderStyle& style, const DynamicRangeLimit& value)
+{
+    return CSSDynamicRangeLimitValue::create(toCSS(value, style));
+}
+
+void Serialize<DynamicRangeLimit>::operator()(StringBuilder& builder, const CSS::SerializationContext& context, const RenderStyle& style, const DynamicRangeLimit& value)
+{
+    CSS::serializationForCSS(builder, context, toCSS(value, style));
 }
 
 // MARK: - Blending
@@ -107,12 +118,12 @@ PlatformDynamicRangeLimit DynamicRangeLimit::toPlatformDynamicRangeLimit() const
     return WTF::switchOn(*this, [&]<typename Kind>(const Kind& kind) -> PlatformDynamicRangeLimit {
         if constexpr (std::is_same_v<Kind, CSS::Keyword::Standard>)
             return PlatformDynamicRangeLimit::standard();
-        else if constexpr (std::is_same_v<Kind, CSS::Keyword::ConstrainedHigh>)
-            return PlatformDynamicRangeLimit::constrainedHigh();
+        else if constexpr (std::is_same_v<Kind, CSS::Keyword::Constrained>)
+            return PlatformDynamicRangeLimit::constrained();
         else if constexpr (std::is_same_v<Kind, CSS::Keyword::NoLimit>)
             return PlatformDynamicRangeLimit::noLimit();
         else if constexpr (std::is_same_v<Kind, Style::DynamicRangeLimitMixFunction>)
-            return PlatformDynamicRangeLimit(float(kind->standard.value), float(kind->constrainedHigh.value), float(kind->noLimit.value));
+            return PlatformDynamicRangeLimit(float(kind->standard.value), float(kind->constrained.value), float(kind->noLimit.value));
     });
 }
 

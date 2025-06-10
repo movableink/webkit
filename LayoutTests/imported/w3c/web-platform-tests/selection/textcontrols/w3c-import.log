@@ -17,4 +17,5 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/selection/textcontrols/focus.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/textcontrols/onselectionchange-content-attribute.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/textcontrols/selectionchange-bubble.html
+/LayoutTests/imported/w3c/web-platform-tests/selection/textcontrols/selectionchange-on-shadow-dom.html
 /LayoutTests/imported/w3c/web-platform-tests/selection/textcontrols/selectionchange.html

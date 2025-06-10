@@ -52,8 +52,8 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(TileGrid);
 static TextStream& operator<<(TextStream& ts, TileGrid::ValidationPolicyFlag flag)
 {
     switch (flag) {
-    case TileGrid::ValidationPolicyFlag::PruneSecondaryTiles: ts << "prune secondary"; break;
-    case TileGrid::ValidationPolicyFlag::UnparentAllTiles: ts << "unparent all"; break;
+    case TileGrid::ValidationPolicyFlag::PruneSecondaryTiles: ts << "prune secondary"_s; break;
+    case TileGrid::ValidationPolicyFlag::UnparentAllTiles: ts << "unparent all"_s; break;
     }
     return ts;
 }
@@ -599,7 +599,7 @@ IntRect TileGrid::ensureTilesForRect(const FloatRect& rect, HashSet<TileIndex>& 
 
             UncheckedKeyHashMap<TileIndex, TileInfo>::iterator it;
             constexpr size_t kMaxTileCountPerGrid = 6 * 1024;
-            if (UNLIKELY(m_tiles.size() >= kMaxTileCountPerGrid)) {
+            if (m_tiles.size() >= kMaxTileCountPerGrid) [[unlikely]] {
                 it = m_tiles.find(tileIndex);
                 if (it == m_tiles.end())
                     continue;

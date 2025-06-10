@@ -35,6 +35,7 @@
 #import "WebFrame.h"
 #import "WebPage.h"
 #import "WebProcess.h"
+#import <WebCore/AXIsolatedObject.h>
 #import <WebCore/AXObjectCache.h>
 #import <WebCore/Document.h>
 #import <WebCore/FrameTree.h>
@@ -78,16 +79,14 @@ namespace ax = WebCore::Accessibility;
 - (id)accessibilityPluginObject
 {
     ASSERT(isMainRunLoop());
-    auto retrieveBlock = [&self]() -> id {
-        id axPlugin = nil;
-        callOnMainRunLoopAndWait([&axPlugin, &self] {
-            if (self->m_page)
-                axPlugin = self->m_page->accessibilityObjectForMainFramePlugin();
-        });
-        return axPlugin;
-    };
-    
-    return retrieveBlock();
+    RetainPtr<id> axPlugin;
+    callOnMainRunLoopAndWait([&axPlugin, &self] {
+        if (RefPtr page = self->m_page.get()) {
+            // FIXME: This is a static analysis false positive.
+            SUPPRESS_UNRETAINED_ARG axPlugin = page->accessibilityObjectForMainFramePlugin();
+        }
+    });
+    return axPlugin.autorelease();
 }
 
 // Called directly by Accessibility framework.
@@ -100,12 +99,15 @@ namespace ax = WebCore::Accessibility;
 {
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     if (!isMainRunLoop()) {
-        if (RefPtr root = m_isolatedTreeRoot.get())
-            return root->wrapper();
+        if (RefPtr tree = m_isolatedTree.get()) {
+            tree->applyPendingChanges();
+            if (RefPtr root = tree->rootNode())
+                return root->wrapper();
+        }
     }
-#endif
+#endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 
-    return ax::retrieveAutoreleasedValueFromMainThread<id>([protectedSelf = retainPtr(self), frame = RefPtr { frame }] () -> RetainPtr<id> {
+    return ax::retrieveAutoreleasedValueFromMainThread<id>([protectedSelf = retainPtr(self), protectedFrame = RefPtr { frame }] () -> RetainPtr<id> {
         if (!WebCore::AXObjectCache::accessibilityEnabled())
             [protectedSelf enableAccessibilityForAllProcesses];
 
@@ -116,12 +118,17 @@ namespace ax = WebCore::Accessibility;
             // isolated objects are able to be attached to those text annotation object wrappers.
             // If they aren't, we never have a backing object to serve any requests from.
             if (auto cache = protectedSelf.get().axObjectCache)
-                cache->buildAccessibilityTreeIfNeeded();
-#endif
+                cache->buildIsolatedTreeIfNeeded();
+#endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
             return protectedSelf.get().accessibilityPluginObject;
         }
 
         if (auto cache = protectedSelf.get().axObjectCache) {
+            // It's possible we were given a null frame (this is explicitly expected when off the main-thread, since
+            // we can't access the webpage off the main-thread to get a frame). Now that we are actually on the main-thread,
+            // try again if necessary.
+            RefPtr frame = protectedFrame ? WTFMove(protectedFrame) : [protectedSelf focusedLocalFrame];
+
             if (auto* root = frame ? cache->rootObjectForFrame(*frame) : nullptr)
                 return root->wrapper();
         }
@@ -165,7 +172,7 @@ namespace ax = WebCore::Accessibility;
     m_size = size;
 }
 
-- (void)setIsolatedTreeRoot:(NakedPtr<WebCore::AXCoreObject>)root
+- (void)setIsolatedTree:(Ref<WebCore::AXIsolatedTree>&&)tree
 {
     ASSERT(isMainRunLoop());
 
@@ -174,18 +181,24 @@ namespace ax = WebCore::Accessibility;
         // of the plugin accessiblity tree.
         return;
     }
-    m_isolatedTreeRoot = root.get();
+    m_isolatedTree = tree.get();
 }
 
 - (void)setWindow:(id)window
 {
     ASSERT(isMainRunLoop());
-#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     Locker lock { m_windowLock };
-#endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     m_window = window;
 }
-#endif
+
+- (void)_buildIsolatedTreeIfNeeded
+{
+    ensureOnMainThread([protectedSelf = RetainPtr { self }] {
+        if (auto cache = protectedSelf.get().axObjectCache)
+            cache->buildIsolatedTreeIfNeeded();
+    });
+}
+#endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 
 - (void)setHasMainFramePlugin:(bool)hasPlugin
 {

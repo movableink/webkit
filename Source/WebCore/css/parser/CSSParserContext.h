@@ -27,6 +27,7 @@
 
 #include "CSSParserMode.h"
 #include "CSSPropertyNames.h"
+#include "LoadedFromOpaqueSource.h"
 #include "StyleRuleType.h"
 #include <pal/text/TextEncoding.h>
 #include <wtf/HashFunctions.h>
@@ -36,26 +37,6 @@
 namespace WebCore {
 
 class Document;
-
-struct ResolvedURL {
-    String specifiedURLString;
-    URL resolvedURL;
-
-    bool isLocalURL() const;
-};
-
-inline ResolvedURL makeResolvedURL(URL&& resolvedURL)
-{
-    auto string = resolvedURL.string();
-    return { WTFMove(string), WTFMove(resolvedURL) };
-}
-
-inline bool operator==(const ResolvedURL& a, const ResolvedURL& b)
-{
-    return a.specifiedURLString == b.specifiedURLString && a.resolvedURL == b.resolvedURL;
-}
-
-bool mayDependOnBaseURL(const ResolvedURL&);
 
 struct CSSParserContext {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
@@ -69,7 +50,7 @@ struct CSSParserContext {
     // This is only needed to support getMatchedCSSRules.
     bool hasDocumentSecurityOrigin : 1 { false };
 
-    bool isContentOpaque : 1 { false };
+    LoadedFromOpaqueSource loadedFromOpaqueSource : 1 { LoadedFromOpaqueSource::No };
     bool useSystemAppearance : 1 { false };
     bool shouldIgnoreImportRules : 1 { false };
 
@@ -82,10 +63,7 @@ struct CSSParserContext {
     bool masonryEnabled : 1 { false };
     bool cssAppearanceBaseEnabled : 1 { false };
     bool cssPaintingAPIEnabled : 1 { false };
-    bool cssScopeAtRuleEnabled : 1 { false };
     bool cssShapeFunctionEnabled : 1 { false };
-    bool cssStartingStyleAtRuleEnabled : 1 { false };
-    bool cssStyleQueriesEnabled : 1 { false };
     bool cssTextUnderlinePositionLeftRightEnabled : 1 { false };
     bool cssBackgroundClipBorderAreaEnabled : 1 { false };
     bool cssWordBreakAutoPhraseEnabled : 1 { false };
@@ -97,7 +75,6 @@ struct CSSParserContext {
     bool imageControlsEnabled : 1 { false };
 #endif
     bool colorLayersEnabled : 1 { false };
-    bool lightDarkColorEnabled : 1 { false };
     bool contrastColorEnabled : 1 { false };
     bool targetTextPseudoElementEnabled : 1 { false };
     bool viewTransitionTypesEnabled : 1 { false };
@@ -105,6 +82,12 @@ struct CSSParserContext {
     bool cssMediaProgressFunctionEnabled : 1 { false };
     bool cssContainerProgressFunctionEnabled : 1 { false };
     bool cssRandomFunctionEnabled : 1 { false };
+    bool cssTreeCountingFunctionsEnabled : 1 { false };
+    bool cssURLModifiersEnabled : 1 { false };
+    bool cssAxisRelativePositionKeywordsEnabled : 1 { false };
+    bool cssDynamicRangeLimitMixEnabled : 1 { false };
+    bool cssConstrainedDynamicRangeLimitEnabled : 1 { false };
+    bool webkitMediaTextTrackDisplayQuirkEnabled : 1 { false };
 
     // Settings, those affecting properties.
     CSSPropertySettings propertySettings;
@@ -112,8 +95,6 @@ struct CSSParserContext {
     CSSParserContext(CSSParserMode, const URL& baseURL = URL());
     WEBCORE_EXPORT CSSParserContext(const Document&);
     CSSParserContext(const Document&, const URL& baseURL, ASCIILiteral charset = ""_s);
-
-    ResolvedURL completeURL(const String&) const;
 
     void setUASheetMode();
 

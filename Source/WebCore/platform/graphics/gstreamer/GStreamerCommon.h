@@ -20,23 +20,29 @@
 #pragma once
 
 #if USE(GSTREAMER)
-#include "FloatSize.h"
 #include "GRefPtrGStreamer.h"
-#include "GUniquePtrGStreamer.h"
-#include "PlatformVideoColorSpace.h"
+
+#include <gst/audio/audio-buffer.h>
+#include <gst/audio/audio-info.h>
 #include <gst/gst.h>
 #include <gst/video/video-format.h>
 #include <gst/video/video-info.h>
 #include <wtf/Logger.h>
-#include <wtf/MediaTime.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
+namespace WTF {
+class MediaTime;
+}
+
 namespace WebCore {
 
+class FloatSize;
 class IntSize;
 class SharedBuffer;
+
+struct PlatformVideoColorSpace;
 
 using TrackID = uint64_t;
 
@@ -64,11 +70,11 @@ inline bool webkitGstCheckVersion(guint major, guint minor, guint micro)
     return true;
 }
 
-#define GST_VIDEO_CAPS_TYPE_PREFIX  "video/"
-#define GST_AUDIO_CAPS_TYPE_PREFIX  "audio/"
-#define GST_TEXT_CAPS_TYPE_PREFIX   "text/"
+#define GST_VIDEO_CAPS_TYPE_PREFIX  "video/"_s
+#define GST_AUDIO_CAPS_TYPE_PREFIX  "audio/"_s
+#define GST_TEXT_CAPS_TYPE_PREFIX   "text/"_s
 
-GstPad* webkitGstGhostPadFromStaticTemplate(GstStaticPadTemplate*, const gchar* name, GstPad* target);
+WARN_UNUSED_RETURN GstPad* webkitGstGhostPadFromStaticTemplate(GstStaticPadTemplate*, ASCIILiteral name, GstPad* target);
 #if ENABLE(VIDEO)
 bool getVideoSizeAndFormatFromCaps(const GstCaps*, WebCore::IntSize&, GstVideoFormat&, int& pixelAspectRatioNumerator, int& pixelAspectRatioDenominator, int& stride, double& frameRate, PlatformVideoColorSpace&);
 std::optional<FloatSize> getVideoResolutionFromCaps(const GstCaps*);
@@ -78,7 +84,7 @@ StringView capsMediaType(const GstCaps*);
 std::optional<TrackID> getStreamIdFromPad(const GRefPtr<GstPad>&);
 std::optional<TrackID> getStreamIdFromStream(const GRefPtr<GstStream>&);
 std::optional<TrackID> parseStreamId(StringView stringId);
-bool doCapsHaveType(const GstCaps*, const char*);
+bool doCapsHaveType(const GstCaps*, ASCIILiteral);
 bool areEncryptedCaps(const GstCaps*);
 Vector<String> extractGStreamerOptionsFromCommandLine();
 void setGStreamerOptionsFromUIProcess(Vector<String>&&);
@@ -88,25 +94,15 @@ void registerWebKitGStreamerVideoEncoder();
 void deinitializeGStreamer();
 
 unsigned getGstPlayFlag(const char* nick);
-uint64_t toGstUnsigned64Time(const MediaTime&);
+uint64_t toGstUnsigned64Time(const WTF::MediaTime&);
 
-inline GstClockTime toGstClockTime(const MediaTime& mediaTime)
+inline GstClockTime toGstClockTime(const WTF::MediaTime& mediaTime)
 {
     return static_cast<GstClockTime>(toGstUnsigned64Time(mediaTime));
 }
 
-inline GstClockTime toGstClockTime(const Seconds& seconds)
-{
-    return toGstClockTime(MediaTime::createWithDouble(seconds.seconds()));
-}
-
-inline MediaTime fromGstClockTime(GstClockTime time)
-{
-    if (!GST_CLOCK_TIME_IS_VALID(time))
-        return MediaTime::invalidTime();
-
-    return MediaTime(GST_TIME_AS_USECONDS(time), G_USEC_PER_SEC);
-}
+GstClockTime toGstClockTime(const Seconds&);
+WTF::MediaTime fromGstClockTime(GstClockTime);
 
 template<typename MapType, gboolean(mapFunction)(GstBuffer*, MapType*, GstMapFlags), void(unmapFunction)(GstBuffer*, MapType*)>
 class GstBufferMapper {
@@ -179,8 +175,6 @@ private:
         return a.isValid() && GST_IS_BUFFER(b) && a.size() == gst_buffer_get_size(nonConstB) && !gst_buffer_memcmp(nonConstB, 0, a.data(), a.size());
     }
 
-    friend bool operator==(const GstBuffer* a, const GstBufferMapper& b) { return operator==(b, a); }
-
     GstBuffer* m_buffer { nullptr };
     MapType m_info;
     bool m_isValid { false };
@@ -217,7 +211,7 @@ class GstMappedFrame {
     WTF_MAKE_TZONE_ALLOCATED(GstMappedFrame);
     WTF_MAKE_NONCOPYABLE(GstMappedFrame);
 public:
-    GstMappedFrame(GstBuffer*, GstVideoInfo*, GstMapFlags);
+    GstMappedFrame(GstBuffer*, const GstVideoInfo*, GstMapFlags);
     GstMappedFrame(const GRefPtr<GstSample>&, GstMapFlags);
 
     ~GstMappedFrame();
@@ -270,7 +264,7 @@ void disconnectSimpleBusMessageCallback(GstElement*);
 
 enum class GstVideoDecoderPlatform { ImxVPU, Video4Linux, OpenMAX };
 
-bool isGStreamerPluginAvailable(const char* name);
+bool isGStreamerPluginAvailable(ASCIILiteral name);
 bool gstElementFactoryEquals(GstElement*, ASCIILiteral name);
 
 GstElement* createAutoAudioSink(const String& role);
@@ -283,8 +277,7 @@ bool webkitGstSetElementStateSynchronously(GstElement*, GstState, Function<bool(
 GstBuffer* gstBufferNewWrappedFast(void* data, size_t length);
 
 // These functions should be used for elements not provided by WebKit itself and not provided by GStreamer -core.
-GstElement* makeGStreamerElement(const char* factoryName, const char* name);
-GstElement* makeGStreamerBin(const char* description, bool ghostUnlinkedPads);
+GstElement* makeGStreamerElement(ASCIILiteral factoryName, const String& name = emptyString());
 
 template<typename T>
 std::optional<T> gstStructureGet(const GstStructure*, ASCIILiteral key);
@@ -299,6 +292,9 @@ StringView gstStructureGetName(const GstStructure*);
 template<typename T>
 Vector<T> gstStructureGetArray(const GstStructure*, ASCIILiteral key);
 
+template<typename T>
+Vector<T> gstStructureGetList(const GstStructure*, ASCIILiteral key);
+
 String gstStructureToJSONString(const GstStructure*);
 
 GstClockTime webkitGstInitTime();
@@ -310,12 +306,14 @@ void fillVideoInfoColorimetryFromColorSpace(GstVideoInfo*, const PlatformVideoCo
 void configureAudioDecoderForHarnessing(const GRefPtr<GstElement>&);
 void configureVideoDecoderForHarnessing(const GRefPtr<GstElement>&);
 
+void configureMediaStreamAudioDecoder(GstElement*);
+
 void configureMediaStreamVideoDecoder(GstElement*);
 void configureVideoRTPDepayloader(GstElement*);
 
-bool gstObjectHasProperty(GstObject*, const char* name);
-bool gstObjectHasProperty(GstElement*, const char* name);
-bool gstObjectHasProperty(GstPad*, const char* name);
+bool gstObjectHasProperty(GstObject*, ASCIILiteral name);
+bool gstObjectHasProperty(GstElement*, ASCIILiteral name);
+bool gstObjectHasProperty(GstPad*, ASCIILiteral name);
 
 bool gstElementMatchesFactoryAndHasProperty(GstElement*, ASCIILiteral factoryNamePattern, ASCIILiteral propertyName);
 
@@ -344,7 +342,7 @@ private:
     Atomic<uint64_t> m_totalObservers;
 };
 
-#if GST_CHECK_VERSION(1, 25, 0)
+#if GST_CHECK_VERSION(1, 26, 0)
 using GstId = const GstIdStr*;
 #else
 using GstId = GQuark;
@@ -361,8 +359,11 @@ WARN_UNUSED_RETURN GRefPtr<GstCaps> buildDMABufCaps();
 #endif
 
 #if USE(GSTREAMER_GL)
-bool setGstElementGLContext(GstElement*, const char* contextType);
+bool setGstElementGLContext(GstElement*, ASCIILiteral contextType);
 #endif
+
+GstStateChangeReturn gstElementLockAndSetState(GstElement*, GstState);
+
 } // namespace WebCore
 
 #ifndef GST_BUFFER_DTS_OR_PTS
@@ -398,9 +399,14 @@ using GstStateLocker = ExternalLocker<void, gstStateLock, gstStateUnlock>;
 template <typename T>
 class GstIteratorAdaptor {
 public:
-    GstIteratorAdaptor(GUniquePtr<GstIterator>&& iter)
-        : m_iter(WTFMove(iter))
+    GstIteratorAdaptor(GstIterator* /* transfer full */ iter)
+        : m_iter(iter)
     { }
+
+    ~GstIteratorAdaptor()
+    {
+        gst_iterator_free(m_iter);
+    }
 
     class iterator {
     public:
@@ -447,17 +453,17 @@ public:
     {
         ASSERT(!m_started);
         m_started = true;
-        iterator iter { m_iter.get() };
+        iterator iter { m_iter };
         return ++iter;
     }
 
     iterator end()
     {
-        return { m_iter.get(), TRUE };
+        return { m_iter, TRUE };
     }
 
 private:
-    GUniquePtr<GstIterator> m_iter;
+    GstIterator* m_iter;
     bool m_started { false };
 };
 

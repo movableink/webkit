@@ -9,8 +9,14 @@ class AudioVideoRTCRtpTransformer {
                 this.trySendKeyFrameRequest = true;
             else if (event.data === "tryGenerateKeyFramePromiseHandling")
                 this.tryGenerateKeyFramePromiseHandling = true;
+            else if (event.data === "checkDataAfterWrite")
+                this.checkDataAfterWrite = true;
+            else if (event.data === "checkModifiedDataAfterWrite")
+                this.checkModifiedDataAfterWrite = true;
             else if (event.data === "tryAccessingDataTwice")
                 this.tryAccessingDataTwice = true;
+            else if (event.data === "tryAccessingMetadata")
+                this.tryAccessingMetadata = true;
         };
         this.start();
     }
@@ -34,7 +40,27 @@ class AudioVideoRTCRtpTransformer {
                 this.context.options.port.postMessage(data1 === data2 ? "PASS" : "FAIL, data objects are different");
             }
 
+            if (this.tryAccessingMetadata) {
+                this.tryAccessingMetadata = false;
+                this.context.options.port.postMessage(chunk.value.getMetadata());
+            }
+
+           let valueData = null;
+           if (this.checkModifiedDataAfterWrite)
+               valueData = structuredClone(chunk.value.data);
+
             this.writer.write(chunk.value);
+
+            if (this.checkDataAfterWrite) {
+                this.checkDataAfterWrite = false;
+                this.context.options.port.postMessage(!chunk.value.length ? "PASS" : "FAIL");
+            }
+
+            if (this.checkModifiedDataAfterWrite) {
+                this.checkModifiedDataAfterWrite = false;
+                this.context.options.port.postMessage((!chunk.value.length && !valueData.length) ? "PASS" : "FAIL");
+            }
+
 
             if (this.tryGenerateKeyFrame) {
                 this.tryGenerateKeyFrame = false;

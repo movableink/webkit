@@ -49,12 +49,12 @@ WI.ScriptTimelineRecord = class ScriptTimelineRecord extends WI.TimelineRecord
 
     static async fromJSON(json)
     {
-        let {eventType, startTime, endTime, stackTrace, sourceCodeLocation, details, profilePayload, target, extraDetails} = json;
+        let {target, eventType, startTime, endTime, stackTrace, sourceCodeLocation, details, profilePayload, extraDetails} = json;
 
         if (typeof details === "object" && details.__type === "GarbageCollection")
             details = WI.GarbageCollection.fromJSON(details);
 
-        return new WI.ScriptTimelineRecord(eventType, startTime, endTime, {stackTrace, sourceCodeLocation, details, profilePayload, target, extraDetails});
+        return new WI.ScriptTimelineRecord(target ? WI.ImportedTarget.import(target) : WI.assumingMainTarget(), eventType, startTime, endTime, {stackTrace, sourceCodeLocation, details, profilePayload, extraDetails});
     }
 
     toJSON()
@@ -62,9 +62,9 @@ WI.ScriptTimelineRecord = class ScriptTimelineRecord extends WI.TimelineRecord
         // FIXME: stackTrace
         // FIXME: sourceCodeLocation
         // FIXME: profilePayload
-        // FIXME: target
 
         return {
+            target: this._target.exportData(),
             type: this.type,
             eventType: this._eventType,
             startTime: this.startTime,

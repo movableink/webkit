@@ -22,6 +22,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/accname/name/comp_labelledby.html
 /LayoutTests/imported/w3c/web-platform-tests/accname/name/comp_labelledby_hidden_nodes.html
 /LayoutTests/imported/w3c/web-platform-tests/accname/name/comp_name_from_content.html
-/LayoutTests/imported/w3c/web-platform-tests/accname/name/comp_name_from_content.tentative.html
+/LayoutTests/imported/w3c/web-platform-tests/accname/name/comp_name_from_heading.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/accname/name/comp_text_node.html
 /LayoutTests/imported/w3c/web-platform-tests/accname/name/comp_tooltip.html
+/LayoutTests/imported/w3c/web-platform-tests/accname/name/comp_tooltip.tentative.html

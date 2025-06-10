@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -69,7 +69,7 @@ void WebLockRegistryProxy::requestLock(WebCore::ClientOrigin&& clientOrigin, Web
         return;
     }
 
-    dataStore->protectedWebLockRegistry()->requestLock(process->sessionID(), WTFMove(clientOrigin), lockIdentifier, clientID, WTFMove(name), lockMode, steal, ifAvailable, [weakThis = WeakPtr { *this }, lockIdentifier, clientID](bool success) {
+    dataStore->webLockRegistry().requestLock(process->sessionID(), WTFMove(clientOrigin), lockIdentifier, clientID, WTFMove(name), lockMode, steal, ifAvailable, [weakThis = WeakPtr { *this }, lockIdentifier, clientID](bool success) {
         if (weakThis)
             weakThis->protectedProcess()->send(Messages::RemoteWebLockRegistry::DidCompleteLockRequest(lockIdentifier, clientID, success), 0);
     }, [weakThis = WeakPtr { *this }, lockIdentifier, clientID] {
@@ -84,7 +84,7 @@ void WebLockRegistryProxy::releaseLock(WebCore::ClientOrigin&& clientOrigin, Web
     MESSAGE_CHECK(clientID.processIdentifier() == m_process->coreProcessIdentifier());
     Ref process = m_process.get();
     if (RefPtr dataStore = process->websiteDataStore())
-        dataStore->protectedWebLockRegistry()->releaseLock(process->sessionID(), WTFMove(clientOrigin), lockIdentifier, clientID, WTFMove(name));
+        dataStore->webLockRegistry().releaseLock(process->sessionID(), WTFMove(clientOrigin), lockIdentifier, clientID, WTFMove(name));
 }
 
 void WebLockRegistryProxy::abortLockRequest(WebCore::ClientOrigin&& clientOrigin, WebCore::WebLockIdentifier lockIdentifier, WebCore::ScriptExecutionContextIdentifier clientID, String&& name, CompletionHandler<void(bool)>&& completionHandler)
@@ -97,7 +97,7 @@ void WebLockRegistryProxy::abortLockRequest(WebCore::ClientOrigin&& clientOrigin
         return;
     }
 
-    dataStore->protectedWebLockRegistry()->abortLockRequest(protectedProcess()->sessionID(), WTFMove(clientOrigin), lockIdentifier, clientID, WTFMove(name), WTFMove(completionHandler));
+    dataStore->webLockRegistry().abortLockRequest(protectedProcess()->sessionID(), WTFMove(clientOrigin), lockIdentifier, clientID, WTFMove(name), WTFMove(completionHandler));
 }
 
 void WebLockRegistryProxy::snapshot(WebCore::ClientOrigin&& clientOrigin, CompletionHandler<void(WebCore::WebLockManagerSnapshot&&)>&& completionHandler)
@@ -108,7 +108,7 @@ void WebLockRegistryProxy::snapshot(WebCore::ClientOrigin&& clientOrigin, Comple
         return;
     }
 
-    dataStore->protectedWebLockRegistry()->snapshot(protectedProcess()->sessionID(), WTFMove(clientOrigin), WTFMove(completionHandler));
+    dataStore->webLockRegistry().snapshot(protectedProcess()->sessionID(), WTFMove(clientOrigin), WTFMove(completionHandler));
 }
 
 void WebLockRegistryProxy::clientIsGoingAway(WebCore::ClientOrigin&& clientOrigin, WebCore::ScriptExecutionContextIdentifier clientID)
@@ -116,7 +116,7 @@ void WebLockRegistryProxy::clientIsGoingAway(WebCore::ClientOrigin&& clientOrigi
     Ref process = m_process.get();
     MESSAGE_CHECK(clientID.processIdentifier() == process->coreProcessIdentifier());
     if (RefPtr dataStore = WebsiteDataStore::existingDataStoreForSessionID(process->sessionID()))
-        dataStore->protectedWebLockRegistry()->clientIsGoingAway(process->sessionID(), WTFMove(clientOrigin), clientID);
+        dataStore->webLockRegistry().clientIsGoingAway(process->sessionID(), WTFMove(clientOrigin), clientID);
 }
 
 void WebLockRegistryProxy::processDidExit()
@@ -126,7 +126,7 @@ void WebLockRegistryProxy::processDidExit()
 
     Ref process = m_process.get();
     if (RefPtr dataStore = WebsiteDataStore::existingDataStoreForSessionID(process->sessionID()))
-        dataStore->protectedWebLockRegistry()->clientsAreGoingAway(process->coreProcessIdentifier());
+        dataStore->webLockRegistry().clientsAreGoingAway(process->coreProcessIdentifier());
 }
 
 #undef MESSAGE_CHECK

@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include "Color.h"
 #include "FontCascade.h"
 #include "RenderElement.h"
 #include "RenderTextLineBoxes.h"
@@ -62,6 +63,8 @@ public:
     RefPtr<Text> protectedTextNode() const { return textNode(); }
 
     const RenderStyle& style() const;
+    // FIXME: Remove checkedStyle once https://github.com/llvm/llvm-project/pull/142485 lands. This is a false positive.
+    const CheckedRef<const RenderStyle> checkedStyle() const { return style(); }
     const RenderStyle& firstLineStyle() const;
     const RenderStyle* getCachedPseudoStyle(const Style::PseudoElementIdentifier&, const RenderStyle* parentStyle = nullptr) const;
 
@@ -96,7 +99,7 @@ public:
     bool hasEmptyText() const { return m_text.isEmpty(); }
 
     UChar characterAt(unsigned) const;
-    unsigned length() const final { return text().length(); }
+    size_t length() const { return text().length(); }
 
     float width(unsigned from, unsigned length, const FontCascade&, float xPos, SingleThreadWeakHashSet<const Font>* fallbackFonts = nullptr, GlyphOverflow* = nullptr) const;
     float width(unsigned from, unsigned length, float xPos, bool firstLine = false, SingleThreadWeakHashSet<const Font>* fallbackFonts = nullptr, GlyphOverflow* = nullptr) const;

@@ -40,6 +40,7 @@
 #import <WebCore/Event.h>
 #import <WebCore/EventLoop.h>
 #import <WebCore/EventNames.h>
+#import <WebCore/ExceptionOr.h>
 #import <WebCore/HTMLInputElement.h>
 #import <WebCore/HTMLNames.h>
 #import <WebCore/HTMLOptionElement.h>
@@ -58,10 +59,8 @@ RefPtr<PDFPluginAnnotation> PDFPluginAnnotation::create(PDFAnnotation *annotatio
 {
     if (annotationIsWidgetOfType(annotation, WidgetType::Text))
         return PDFPluginTextAnnotation::create(annotation, plugin);
-#if PLATFORM(MAC)
     if (annotationIsWidgetOfType(annotation, WidgetType::Choice))
         return PDFPluginChoiceAnnotation::create(annotation, plugin);
-#endif
 
     return nullptr;
 }

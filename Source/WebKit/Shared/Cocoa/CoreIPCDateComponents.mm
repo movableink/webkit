@@ -66,9 +66,9 @@ RetainPtr<id> CoreIPCDateComponents::toID() const
         [components setValue:m_componentValues[i] forComponent:calendarUnitForComponentIndex[i]];
 
     if (!m_calendarIdentifier.isEmpty())
-        components.get().calendar = [NSCalendar calendarWithIdentifier:(NSString *)m_calendarIdentifier];
+        components.get().calendar = [NSCalendar calendarWithIdentifier:m_calendarIdentifier.createNSString().get()];
     if (!m_timeZoneName.isEmpty())
-        components.get().timeZone = [NSTimeZone timeZoneWithName:(NSString *)m_timeZoneName];
+        components.get().timeZone = [NSTimeZone timeZoneWithName:m_timeZoneName.createNSString().get()];
 
     return components;
 }

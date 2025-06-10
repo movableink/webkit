@@ -2,7 +2,7 @@
 
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from report_file_path import report_filepath
 
 file = __file__.split(':/cygwin')[-1]
@@ -14,7 +14,7 @@ from resources.portabilityLayer import get_cookies
 
 def not_being_called():
     cookies = get_cookies()
-    expires = datetime.utcnow() - timedelta(seconds=60)
+    expires = datetime.now(timezone.utc) - timedelta(seconds=60)
     for cookie in cookies.keys():
         sys.stdout.write('Set-Cookie: {}=deleted; expires={} GMT; Max-Age=0; path=/\r\n'.format(cookie, expires.strftime('%a, %d-%b-%Y %H:%M:%S')))
 

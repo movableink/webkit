@@ -94,6 +94,8 @@ add_library(Skia STATIC
     src/core/SkBlurEngine.cpp
     src/core/SkBlurMask.cpp
     src/core/SkBlurMaskFilterImpl.cpp
+    src/core/SkCPUContext.cpp
+    src/core/SkCPURecorder.cpp
     src/core/SkCachedData.cpp
     src/core/SkCanvas.cpp
     src/core/SkCanvasPriv.cpp
@@ -208,10 +210,10 @@ add_library(Skia STATIC
     src/core/SkReadBuffer.cpp
     src/core/SkReadPixelsRec.cpp
     src/core/SkRecord.cpp
+    src/core/SkRecordCanvas.cpp
     src/core/SkRecordDraw.cpp
     src/core/SkRecordOpts.cpp
     src/core/SkRecordedDrawable.cpp
-    src/core/SkRecorder.cpp
     src/core/SkRecords.cpp
     src/core/SkRect.cpp
     src/core/SkRegion.cpp
@@ -242,6 +244,7 @@ add_library(Skia STATIC
     src/core/SkSwizzle.cpp
     src/core/SkSwizzler_opts.cpp
     src/core/SkSwizzler_opts_hsw.cpp
+    src/core/SkSynchronizedResourceCache.cpp
     src/core/SkSwizzler_opts_ssse3.cpp
     src/core/SkTaskGroup.cpp
     src/core/SkTextBlob.cpp
@@ -500,6 +503,7 @@ add_library(Skia STATIC
     src/gpu/ganesh/tessellate/GrTessellationShader.cpp
     src/gpu/ganesh/tessellate/PathTessellator.cpp
     src/gpu/ganesh/tessellate/StrokeTessellator.cpp
+    src/gpu/ganesh/text/GaneshVertexFiller.cpp
     src/gpu/ganesh/text/GrAtlasManager.cpp
 
     src/gpu/tessellate/FixedCountBufferUtils.cpp
@@ -528,6 +532,7 @@ add_library(Skia STATIC
     src/effects/SkEmbossMask.cpp
     src/effects/SkEmbossMaskFilter.cpp
     src/effects/SkShaderMaskFilterImpl.cpp
+    src/effects/SkTableMaskFilter.cpp
     src/effects/SkTrimPathEffect.cpp
     src/effects/colorfilters/SkBlendModeColorFilter.cpp
     src/effects/colorfilters/SkColorFilterBase.cpp
@@ -789,16 +794,7 @@ add_library(Skia STATIC
     modules/skcms/src/skcms_TransformSkx.cc
 )
 
-if (ANDROID)
-    target_sources(Skia PRIVATE
-        src/ports/SkDebug_android.cpp
-        src/ports/SkFontMgr_android.cpp
-        src/ports/SkFontMgr_android_parser.cpp
-    )
-    target_link_libraries(Skia PRIVATE
-        EXPAT::EXPAT
-    )
-elseif (WIN32)
+if (WIN32)
     target_sources(Skia PRIVATE
         src/ports/SkDebug_win.cpp
         src/ports/SkFontHost_win.cpp
@@ -813,19 +809,30 @@ elseif (WIN32)
 else ()
     target_sources(Skia PRIVATE
         src/ports/SkDebug_stdio.cpp
-        src/ports/SkFontConfigInterface.cpp
-        src/ports/SkFontConfigInterface_direct.cpp
-        src/ports/SkFontConfigInterface_direct_factory.cpp
         src/ports/SkFontHost_FreeType.cpp
         src/ports/SkFontHost_FreeType_common.cpp
-        src/ports/SkFontMgr_fontconfig.cpp
         src/ports/SkOSFile_posix.cpp
         src/ports/SkTypeface_proxy.cpp
     )
-    target_link_libraries(Skia PRIVATE
-        Fontconfig::Fontconfig
-        Freetype::Freetype
-    )
+    target_link_libraries(Skia PRIVATE Freetype::Freetype)
+
+    if (ANDROID)
+        target_sources(Skia PRIVATE
+            src/ports/SkDebug_android.cpp
+            src/ports/SkFontMgr_android.cpp
+            src/ports/SkFontMgr_android_parser.cpp
+        )
+        target_link_libraries(Skia PRIVATE EXPAT::EXPAT android log)
+    else ()
+        target_sources(Skia PRIVATE
+            src/ports/SkFontConfigInterface.cpp
+            src/ports/SkFontConfigInterface_direct.cpp
+            src/ports/SkFontConfigInterface_direct_factory.cpp
+            src/ports/SkFontMgr_fontconfig.cpp
+            src/ports/SkFontMgr_fontconfig_freetype.cpp
+        )
+        target_link_libraries(Skia PRIVATE Fontconfig::Fontconfig)
+    endif ()
 endif ()
 
 if (USE_LIBEPOXY)
@@ -960,6 +967,7 @@ WEBKIT_ADD_TARGET_CXX_FLAGS(Skia
     -Wno-psabi
     -Wno-redundant-move
     -Wno-suggest-attribute=format
+    -Wno-nontrivial-memcall
     -Wno-undef
     -Wno-uninitialized
     -Wno-unused-parameter

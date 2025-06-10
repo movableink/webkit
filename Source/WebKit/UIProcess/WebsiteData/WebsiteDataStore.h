@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -193,7 +193,6 @@ public:
 
 #if PLATFORM(IOS_FAMILY)
     String resolvedCookieStorageDirectory();
-    String resolvedContainerCachesWebContentDirectory();
     String resolvedContainerTemporaryDirectory();
     static String defaultResolvedContainerTemporaryDirectory();
     static String cacheDirectoryInContainerOrHomeDirectory(const String& subpath);
@@ -352,7 +351,6 @@ public:
     API::HTTPCookieStore& cookieStore();
     Ref<API::HTTPCookieStore> protectedCookieStore();
     WebCore::LocalWebLockRegistry& webLockRegistry() { return m_webLockRegistry.get(); }
-    Ref<WebCore::LocalWebLockRegistry> protectedWebLockRegistry();
 
     void renameOriginInWebsiteData(WebCore::SecurityOriginData&&, WebCore::SecurityOriginData&&, OptionSet<WebsiteDataType>, CompletionHandler<void()>&&);
     void originDirectoryForTesting(WebCore::ClientOrigin&&, OptionSet<WebsiteDataType>, CompletionHandler<void(const String&)>&&);
@@ -371,6 +369,7 @@ public:
 #if PLATFORM(COCOA)
     static void fetchAllDataStoreIdentifiers(CompletionHandler<void(Vector<WTF::UUID>&&)>&&);
     static void removeDataStoreWithIdentifier(const WTF::UUID& identifier, CompletionHandler<void(const String&)>&&);
+    static void removeDataStoreWithIdentifierImpl(const WTF::UUID& identifier, CompletionHandler<void(const String&)>&&);
     static String defaultWebsiteDataStoreDirectory(const WTF::UUID& identifier);
     static String defaultCookieStorageFile(const String& baseDataDirectory = nullString());
     static String defaultSearchFieldHistoryDirectory(const String& baseDataDirectory = nullString());
@@ -484,7 +483,7 @@ public:
 
 #if HAVE(NW_PROXY_CONFIG)
     void clearProxyConfigData();
-    void setProxyConfigData(Vector<std::pair<Vector<uint8_t>, WTF::UUID>>&&);
+    void setProxyConfigData(Vector<std::pair<Vector<uint8_t>, std::optional<WTF::UUID>>>&&);
 #endif
     void setCompletionHandlerForRemovalFromNetworkProcess(CompletionHandler<void(String&&)>&&);
 
@@ -503,7 +502,7 @@ public:
 
     void getAppBadgeForTesting(CompletionHandler<void(std::optional<uint64_t>)>&&);
 
-    void fetchLocalStorage(CompletionHandler<void(HashMap<WebCore::ClientOrigin, HashMap<String, String>>&&)>&&);
+    void fetchLocalStorage(CompletionHandler<void(std::optional<HashMap<WebCore::ClientOrigin, HashMap<String, String>>>&&)>&&);
     void restoreLocalStorage(HashMap<WebCore::ClientOrigin, HashMap<String, String>>&&, CompletionHandler<void(bool)>&&);
 
 #if ENABLE(WEB_PUSH_NOTIFICATIONS)
@@ -515,6 +514,8 @@ public:
 #endif
 
     bool isRemovingData() const { return!!m_removeDataTaskCounter.value(); }
+    uint64_t cookiesVersion() const { return m_cookiesVersion; }
+    void setCookies(Vector<WebCore::Cookie>&&, CompletionHandler<void()>&&);
 
 private:
     enum class ForceReinitialization : bool { No, Yes };
@@ -575,8 +576,7 @@ private:
 
     void handleResolvedDirectoriesAsynchronously(const WebsiteDataStoreConfiguration::Directories&, bool);
 
-    enum class ServiceWorkerProcessCanBeActive : bool { No, Yes };
-    HashSet<WebCore::ProcessIdentifier> activeWebProcesses(ServiceWorkerProcessCanBeActive) const;
+    HashSet<WebCore::ProcessIdentifier> activeWebProcesses() const;
     void removeDataInNetworkProcess(WebsiteDataStore::ProcessAccessType, OptionSet<WebsiteDataType>, WallTime, CompletionHandler<void()>&&);
 
     const PAL::SessionID m_sessionID;
@@ -647,7 +647,7 @@ private:
     std::unique_ptr<SOAuthorizationCoordinator> m_soAuthorizationCoordinator;
 #endif
     mutable std::optional<WebCore::ThirdPartyCookieBlockingMode> m_thirdPartyCookieBlockingMode; // Lazily computed.
-    Ref<WebCore::LocalWebLockRegistry> m_webLockRegistry;
+    const Ref<WebCore::LocalWebLockRegistry> m_webLockRegistry;
 
     RefPtr<WebPreferences> m_serviceWorkerOverridePreferences;
     CompletionHandler<void(String&&)> m_completionHandlerForRemovalFromNetworkProcess;
@@ -659,12 +659,17 @@ private:
     HashMap<WebCore::RegistrableDomain, RestrictedOpenerType> m_restrictedOpenerTypesForTesting;
 
 #if HAVE(NW_PROXY_CONFIG)
-    std::optional<Vector<std::pair<Vector<uint8_t>, WTF::UUID>>> m_proxyConfigData;
+    std::optional<Vector<std::pair<Vector<uint8_t>, std::optional<WTF::UUID>>>> m_proxyConfigData;
 #endif
     bool m_storageSiteValidationEnabled { false };
     HashSet<URL> m_persistedSiteURLs;
 
     RemoveDataTaskCounter m_removeDataTaskCounter;
+    uint64_t m_cookiesVersion { 0 };
 };
 
 }
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebsiteDataStore)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::WebsiteDataStore; }
+SPECIALIZE_TYPE_TRAITS_END()

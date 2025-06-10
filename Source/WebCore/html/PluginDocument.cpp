@@ -25,6 +25,7 @@
 #include "config.h"
 #include "PluginDocument.h"
 
+#include "ContainerNodeInlines.h"
 #include "DocumentLoader.h"
 #include "FrameLoader.h"
 #include "HTMLBodyElement.h"
@@ -41,6 +42,7 @@
 #include "RawDataDocumentParser.h"
 #include "RenderEmbeddedObject.h"
 #include "StyleSheetContents.h"
+#include "UserScriptTypes.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>

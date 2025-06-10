@@ -131,6 +131,38 @@ RefPtr<TextIndicator> TextIndicator::createWithSelectionInFrame(LocalFrame& fram
     return TextIndicator::create(data);
 }
 
+bool TextIndicator::wantsBounce() const
+{
+    switch (m_data.presentationTransition) {
+    case WebCore::TextIndicatorPresentationTransition::BounceAndCrossfade:
+    case WebCore::TextIndicatorPresentationTransition::Bounce:
+        return true;
+
+    case WebCore::TextIndicatorPresentationTransition::FadeIn:
+    case WebCore::TextIndicatorPresentationTransition::None:
+        return false;
+    }
+
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
+bool TextIndicator::wantsManualAnimation() const
+{
+    switch (m_data.presentationTransition) {
+    case WebCore::TextIndicatorPresentationTransition::FadeIn:
+        return true;
+
+    case WebCore::TextIndicatorPresentationTransition::Bounce:
+    case WebCore::TextIndicatorPresentationTransition::BounceAndCrossfade:
+    case WebCore::TextIndicatorPresentationTransition::None:
+        return false;
+    }
+
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
 static bool hasNonInlineOrReplacedElements(const SimpleRange& range)
 {
     for (auto& node : intersectingNodes(range)) {
@@ -155,7 +187,7 @@ static SnapshotOptions snapshotOptionsForTextIndicatorOptions(OptionSet<TextIndi
                 snapshotOptions.flags.add(SnapshotFlags::ForceBlackText);
         }
         if (options.contains(TextIndicatorOption::SkipReplacedContent))
-            snapshotOptions.flags.add(SnapshotFlags::ExcludeReplacedContent);
+            snapshotOptions.flags.add(SnapshotFlags::ExcludeReplacedContentExceptForIFrames);
     } else
         snapshotOptions.flags.add(SnapshotFlags::ExcludeSelectionHighlighting);
 
@@ -211,9 +243,8 @@ static UncheckedKeyHashSet<Color> estimatedTextColorsForRange(const SimpleRange&
         auto node = iterator.node();
         if (!node)
             continue;
-        auto renderer = node->renderer();
-        if (is<RenderText>(renderer))
-            colors.add(renderer->style().color());
+        if (CheckedPtr renderText = dynamicDowncast<RenderText>(node->renderer()))
+            colors.add(renderText->style().color());
     }
     return colors;
 }
@@ -289,7 +320,7 @@ static bool initializeIndicator(TextIndicatorData& data, LocalFrame& frame, cons
         data.options.add(TextIndicatorOption::PaintAllContent);
 #if PLATFORM(IOS_FAMILY)
     else if (data.options.contains(TextIndicatorOption::UseSelectionRectForSizing)) {
-        textRects = RenderObject::collectSelectionGeometries(range).map([&](auto& geometry) -> FloatRect {
+        textRects = RenderObject::collectSelectionGeometries(range).geometries.map([&](auto& geometry) -> FloatRect {
             return geometry.rect();
         });
     }

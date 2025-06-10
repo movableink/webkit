@@ -23,8 +23,8 @@
 #include <WebCore/FrameDestructionObserver.h>
 #include <WebCore/FrameDestructionObserverInlines.h>
 #include <WebCore/LocalDOMWindow.h>
-#include <WebCore/LocalFrame.h>
-#include <WebCore/Node.h>
+#include <WebCore/LocalFrameInlines.h>
+#include <WebCore/NodeInlines.h>
 #include <glib-object.h>
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>

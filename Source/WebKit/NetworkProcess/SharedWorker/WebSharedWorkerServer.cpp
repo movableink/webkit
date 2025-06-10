@@ -83,14 +83,17 @@ void WebSharedWorkerServer::requestSharedWorker(WebCore::SharedWorkerKey&& share
             RefPtr contextConnection = sharedWorker->contextConnection();
             ASSERT(contextConnection);
             if (contextConnection) {
-                contextConnection->postConnectEvent(sharedWorker.get(), port, [this, weakThis = WeakPtr { *this }, sharedWorkerKey, sharedWorkerObjectIdentifier, sharedWorkerIdentifier = sharedWorker->identifier(), port, workerOptions](bool success) mutable {
-                    if (success || !weakThis)
+                contextConnection->postConnectEvent(sharedWorker.get(), port, [weakThis = WeakPtr { *this }, sharedWorkerKey, sharedWorkerObjectIdentifier, sharedWorkerIdentifier = sharedWorker->identifier(), port, workerOptions](bool success) mutable {
+                    if (success)
+                        return;
+                    CheckedPtr checkedThis = weakThis.get();
+                    if (!checkedThis)
                         return;
                     // We failed to connect to the existing shared worker, likely because it just terminated.
                     RELEASE_LOG_ERROR(SharedWorker, "WebSharedWorkerServer::requestSharedWorker: Failed to connect to existing shared worker %" PRIu64 ", will create a new one instead.", sharedWorkerIdentifier.toUInt64());
-                    if (auto it = m_sharedWorkers.find(sharedWorkerKey); it != m_sharedWorkers.end() && it->value->identifier() == sharedWorkerIdentifier)
-                        m_sharedWorkers.remove(it);
-                    requestSharedWorker(WTFMove(sharedWorkerKey), sharedWorkerObjectIdentifier, WTFMove(port), WTFMove(workerOptions));
+                    if (auto it = checkedThis->m_sharedWorkers.find(sharedWorkerKey); it != checkedThis->m_sharedWorkers.end() && it->value->identifier() == sharedWorkerIdentifier)
+                        checkedThis->m_sharedWorkers.remove(it);
+                    checkedThis->requestSharedWorker(WTFMove(sharedWorkerKey), sharedWorkerObjectIdentifier, WTFMove(port), WTFMove(workerOptions));
                 });
             }
         }
@@ -155,19 +158,20 @@ void WebSharedWorkerServer::createContextConnection(const WebCore::Site& site, s
     RELEASE_LOG(SharedWorker, "WebSharedWorkerServer::createContextConnection will create a connection");
 
     m_pendingContextConnectionDomains.add(site.domain());
-    m_session->networkProcess().protectedParentProcessConnection()->sendWithAsyncReply(Messages::NetworkProcessProxy::EstablishRemoteWorkerContextConnectionToNetworkProcess { RemoteWorkerType::SharedWorker, site, requestingProcessIdentifier, std::nullopt, m_session->sessionID() }, [this, weakThis = WeakPtr { *this }, site] (auto remoteProcessIdentifier) {
-        if (!weakThis)
+    m_session->networkProcess().protectedParentProcessConnection()->sendWithAsyncReply(Messages::NetworkProcessProxy::EstablishRemoteWorkerContextConnectionToNetworkProcess { RemoteWorkerType::SharedWorker, site, requestingProcessIdentifier, std::nullopt, m_session->sessionID() }, [weakThis = WeakPtr { *this }, site] (auto remoteProcessIdentifier) {
+        CheckedPtr checkedThis = weakThis.get();
+        if (!checkedThis)
             return;
 
         RELEASE_LOG(SharedWorker, "WebSharedWorkerServer::createContextConnection should now have created a connection");
 
-        ASSERT(m_pendingContextConnectionDomains.contains(site.domain()));
-        m_pendingContextConnectionDomains.remove(site.domain());
-        if (m_contextConnections.contains(site.domain()))
+        ASSERT(checkedThis->m_pendingContextConnectionDomains.contains(site.domain()));
+        checkedThis->m_pendingContextConnectionDomains.remove(site.domain());
+        if (checkedThis->m_contextConnections.contains(site.domain()))
             return;
 
-        if (needsContextConnectionForRegistrableDomain(site.domain()))
-            createContextConnection(site, { });
+        if (checkedThis->needsContextConnectionForRegistrableDomain(site.domain()))
+            checkedThis->createContextConnection(site, { });
     }, 0);
 }
 

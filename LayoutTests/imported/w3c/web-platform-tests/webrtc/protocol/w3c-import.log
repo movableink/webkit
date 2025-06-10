@@ -16,13 +16,18 @@ None
 List of files:
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/README.txt
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/RTCPeerConnection-payloadTypes.html
+/LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/additional-codecs.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/bundle.https.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/candidate-exchange.https.html
+/LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/codecs-filtered-by-direction.https.html
+/LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/codecs-subsequent-offer.https.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/crypto-suite.https.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/dtls-certificates.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/dtls-fingerprint-validation.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/dtls-setup.https.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/h264-profile-levels.https.html
+/LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/h264-unidirectional-codec-offer.https.html
+/LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/h265-level-id.https.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/handover-datachannel.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/handover.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/ice-state.https.html
@@ -31,6 +36,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/missing-fields.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/msid-generate.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/msid-parse.html
+/LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/pt-no-bundle.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/rtp-clockrate.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/rtp-demuxing.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/rtp-extension-support.html
@@ -42,6 +48,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/simulcast-answer.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/simulcast-offer.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/split.https.html
+/LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/transceiver-mline-recycling.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/unknown-mediatypes.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/video-codecs.https.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/protocol/vp8-fmtp.html

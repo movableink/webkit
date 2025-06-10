@@ -362,15 +362,6 @@ enum AV1ConfigurationRange {
 
 [
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
-    Conditional=ATTACHMENT_ELEMENT,
-    JSGenerateToJSObject,
-] dictionary AttachmentThumbnailInfo {
-    unsigned long width;
-    unsigned long height;
-};
-
-[
-    ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
 ] dictionary TextIndicatorOptions {
     boolean useBoundingRectAndPaintAllContentForComplexRanges = false;
     boolean computeEstimatedBackgroundColor = false;
@@ -479,19 +470,12 @@ enum ContentsFormat {
 #endif
 };
 
-[Conditional=DAMAGE_TRACKING] enum DamagePropagation {
-    "None",
-    "Region",
-    "Unified"
-};
-
 [
     Conditional=DAMAGE_TRACKING,
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
     JSGenerateToJSObject,
 ] dictionary FrameDamage {
     unsigned long sequenceId;
-    boolean isValid = false;
     DOMRectReadOnly bounds;
     sequence<DOMRectReadOnly> rects;
 };
@@ -750,7 +734,7 @@ enum ContentsFormat {
     unsigned long remoteImagesCountForTesting();
     undefined setAsyncDecodingEnabledForTesting(HTMLImageElement element, boolean enabled);
     undefined setForceUpdateImageDataEnabledForTesting(HTMLImageElement element, boolean enabled);
-    undefined setHeadroomForTesting(HTMLImageElement element, float headroom);
+    undefined setHasHDRContentForTesting(HTMLImageElement element);
 
     [Conditional=WEB_CODECS] boolean hasPendingActivity(WebCodecsVideoDecoder decoder);
 
@@ -766,8 +750,8 @@ enum ContentsFormat {
     boolean testProcessIncomingSyncMessagesWhenWaitingForSyncReply();
 
     undefined setResourceCachingDisabledByWebInspector(boolean disabled);
+    undefined lowerAllFrameMemoryMonitorLimits();
 
-    [Conditional=DAMAGE_TRACKING] DamagePropagation? getCurrentDamagePropagation();
     [Conditional=DAMAGE_TRACKING] sequence<FrameDamage> getFrameDamageHistory();
 
     // Flags for layerTreeAsText.
@@ -1351,6 +1335,11 @@ enum ContentsFormat {
     boolean hasSandboxIOKitOpenAccessToClass(DOMString process, DOMString ioKitClass);
     boolean hasSandboxUnixSyscallAccess(DOMString process, unsigned long syscall);
 
+#if defined(ENABLE_LOGD_BLOCKING_IN_WEBCONTENT) && ENABLE_LOGD_BLOCKING_IN_WEBCONTENT
+    boolean emitWebCoreLogs(unsigned long logCount, boolean useMainThread);
+    boolean emitLogs(DOMString logString, unsigned long logCount, boolean useMainThread);
+#endif
+
     DOMString systemColorForCSSValue(DOMString cssValue, boolean useDarkModeAppearance, boolean useElevatedUserInterfaceLevel);
     DOMString focusRingColor();
 
@@ -1385,12 +1374,11 @@ enum ContentsFormat {
 
     undefined setContentSizeCategory(ContentSizeCategory category);
 
-    [Conditional=ATTACHMENT_ELEMENT] AttachmentThumbnailInfo attachmentThumbnailInfo(HTMLAttachmentElement element);
     [Conditional=ATTACHMENT_ELEMENT, Conditional=SERVICE_CONTROLS] boolean hasImageControls(HTMLImageElement element);
 
     [Conditional=MEDIA_SESSION] double currentMediaSessionPosition(MediaSession session);
     [Conditional=MEDIA_SESSION] undefined sendMediaSessionAction(MediaSession session, MediaSessionActionDetails actionDetails);
-    [Conditional=MEDIA_SESSION] Promise<ImageData> loadArtworkImage(DOMString url);
+    [Conditional=MEDIA_SESSION&WEB_CODECS] Promise<WebCodecsVideoFrame> loadArtworkImage(DOMString url);
     [Conditional=MEDIA_SESSION] sequence<DOMString> platformSupportedCommands();
 
     [Conditional=MEDIA_SESSION_COORDINATOR, CallWith=CurrentScriptExecutionContext] undefined registerMockMediaSessionCoordinator(StringCallback callback);
@@ -1448,6 +1436,7 @@ enum ContentsFormat {
     readonly attribute DOMString defaultSpatialTrackingLabel;
 
     [Conditional=VIDEO] boolean isEffectivelyMuted(HTMLMediaElement element);
+    [Conditional=VIDEO] EventTarget addInternalEventTarget(HTMLMediaElement element);
 
     RenderingMode? getEffectiveRenderingModeOfNewlyCreatedAcceleratedImageBuffer();
     Promise<ImageBufferResourceLimits> getImageBufferResourceLimits();
@@ -1458,4 +1447,6 @@ enum ContentsFormat {
     undefined setResourceMonitorNetworkUsageThreshold(unsigned long threshold, double randomness);
     attribute boolean shouldSkipResourceMonitorThrottling;
 #endif
+
+    [Conditional=MODEL_ELEMENT] undefined disableModelLoadDelaysForTesting();
 };

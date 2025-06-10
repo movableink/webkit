@@ -49,7 +49,7 @@ public:
     void currentTimeChanged(double, double) final;
     void bufferedTimeChanged(double) final { }
     void rateChanged(OptionSet<WebCore::PlaybackSessionModel::PlaybackState>, double, double) final;
-    void seekableRangesChanged(const WebCore::TimeRanges&, double, double) final;
+    void seekableRangesChanged(const WebCore::PlatformTimeRanges&, double, double) final;
     void canPlayFastReverseChanged(bool) final;
     void audioMediaSelectionOptionsChanged(const Vector<WebCore::MediaSelectionOption>&, uint64_t) final;
     void legibleMediaSelectionOptionsChanged(const Vector<WebCore::MediaSelectionOption>&, uint64_t) final;
@@ -61,7 +61,7 @@ public:
     void volumeChanged(double) final;
     void supportsLinearMediaPlayerChanged(bool) final;
     void spatialVideoMetadataChanged(const std::optional<WebCore::SpatialVideoMetadata>&) final;
-    void isImmersiveVideoChanged(bool) final;
+    void videoProjectionMetadataChanged(const std::optional<WebCore::VideoProjectionMetadata>&) final;
     void startObservingNowPlayingMetadata() final;
     void stopObservingNowPlayingMetadata() final;
 #if !RELEASE_LOG_DISABLED

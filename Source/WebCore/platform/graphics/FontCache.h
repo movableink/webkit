@@ -120,7 +120,7 @@ class FontCache : public CanMakeCheckedPtr<FontCache> {
     WTF_MAKE_NONCOPYABLE(FontCache);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FontCache);
 public:
-    WEBCORE_EXPORT static FontCache& forCurrentThread();
+    WEBCORE_EXPORT static CheckedRef<FontCache> forCurrentThread();
     static FontCache* forCurrentThreadIfExists();
     static FontCache* forCurrentThreadIfNotDestroyed();
 
@@ -266,7 +266,7 @@ private:
 
     ListHashSet<String> m_seenFamiliesForPrewarming;
     ListHashSet<String> m_fontNamesRequiringSystemFallbackForPrewarming;
-    RefPtr<WorkQueue> m_prewarmQueue;
+    const RefPtr<WorkQueue> m_prewarmQueue;
 
     FontFamilySpecificationCoreTextCache m_fontFamilySpecificationCoreTextCache;
     SystemFontDatabaseCoreText m_systemFontDatabaseCoreText;

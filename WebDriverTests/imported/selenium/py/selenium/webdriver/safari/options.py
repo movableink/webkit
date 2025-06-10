@@ -70,43 +70,43 @@ class Options(ArgOptions):
     automatic_inspection = _SafariOptionsDescriptor(AUTOMATIC_INSPECTION, bool)
     """Get or Set Automatic Inspection value:
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.automatic_inspection`
     - Set
         - `self.automatic_inspection` = `value`
 
-    Parameters
-    ----------
+    Parameters:
+    -----------
     `value`: `bool`
     """
     automatic_profiling = _SafariOptionsDescriptor(AUTOMATIC_PROFILING, bool)
     """Get or Set Automatic Profiling value:
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.automatic_profiling`
     - Set
         - `self.automatic_profiling` = `value`
 
-    Parameters
-    ----------
+    Parameters:
+    -----------
     `value`: `bool`
     """
     use_technology_preview = _SafariOptionsDescriptor(SAFARI_TECH_PREVIEW, bool)
     """Get and Set Technology Preview:
 
-    Usage
-    -----
+    Usage:
+    ------
     - Get
         - `self.use_technology_preview`
     - Set
         - `self.use_technology_preview` = `value`
 
-    Parameters
-    ----------
+    Parameters:
+    -----------
     `value`: `bool`
     """
 

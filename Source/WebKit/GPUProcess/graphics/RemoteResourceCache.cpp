@@ -75,10 +75,9 @@ RefPtr<DecomposedGlyphs> RemoteResourceCache::cachedDecomposedGlyphs(RenderingRe
     return m_decomposedGlyphs.get(identifier);
 }
 
-void RemoteResourceCache::cacheGradient(Ref<Gradient>&& gradient)
+bool RemoteResourceCache::cacheGradient(RenderingResourceIdentifier identifier, Ref<Gradient>&& gradient)
 {
-    auto identifier = gradient->renderingResourceIdentifier();
-    m_gradients.add(identifier, WTFMove(gradient));
+    return m_gradients.add(identifier, WTFMove(gradient)).isNewEntry;
 }
 
 bool RemoteResourceCache::releaseGradient(RenderingResourceIdentifier identifier)
@@ -142,10 +141,10 @@ RefPtr<FontCustomPlatformData> RemoteResourceCache::cachedFontCustomPlatformData
 void RemoteResourceCache::releaseAllResources()
 {
     m_imageBuffers.clear();
-    releaseAllDrawingResources();
+    releaseMemory();
 }
 
-void RemoteResourceCache::releaseAllDrawingResources()
+void RemoteResourceCache::releaseMemory()
 {
     m_nativeImages.clear();
     m_gradients.clear();
@@ -155,7 +154,7 @@ void RemoteResourceCache::releaseAllDrawingResources()
     m_fontCustomPlatformDatas.clear();
 }
 
-void RemoteResourceCache::releaseAllImageResources()
+void RemoteResourceCache::releaseNativeImages()
 {
     m_nativeImages.clear();
 }

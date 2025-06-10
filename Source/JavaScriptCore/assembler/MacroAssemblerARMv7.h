@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(ASSEMBLER) && CPU(ARM_THUMB2)
 
 #include <initializer_list>
@@ -606,6 +608,14 @@ public:
         rshift32(dest, imm, dest);
     }
 
+    void rshift32(TrustedImm32 imm, RegisterID shiftAmount, RegisterID dest)
+    {
+        // Clamp the shift to the range 0..31
+        m_assembler.ARM_and(dest, shiftAmount, ARMThumbImmediate::makeEncodedImm(0x1f));
+        move(imm, getCachedDataTempRegisterIDAndInvalidate());
+        m_assembler.asr(dest, dataTempRegister, dest);
+    }
+
     void urshift32(RegisterID src, RegisterID shiftAmount, RegisterID dest)
     {
         RegisterID scratch = getCachedDataTempRegisterIDAndInvalidate();
@@ -633,6 +643,14 @@ public:
     void urshift32(TrustedImm32 imm, RegisterID dest)
     {
         urshift32(dest, imm, dest);
+    }
+
+    void urshift32(TrustedImm32 imm, RegisterID shiftAmount, RegisterID dest)
+    {
+        // Clamp the shift to the range 0..31
+        m_assembler.ARM_and(dest, shiftAmount, ARMThumbImmediate::makeEncodedImm(0x1f));
+        move(imm, getCachedDataTempRegisterIDAndInvalidate());
+        m_assembler.lsr(dest, dataTempRegister, dest);
     }
 
     void addUnsignedRightShift32(RegisterID src1, RegisterID src2, TrustedImm32 amount, RegisterID dest)
@@ -1394,6 +1412,17 @@ public:
             return;
         load32(src, dataTempRegister);
         store32(dataTempRegister, dest);
+    }
+
+    // Warning: not atomic.
+    void transfer64(Address src, Address dest)
+    {
+        if (src == dest)
+            return;
+        load32(src, dataTempRegister);
+        store32(dataTempRegister, dest);
+        load32(src.withOffset(sizeof(int)), dataTempRegister);
+        store32(dataTempRegister, dest.withOffset(sizeof(int)));
     }
 
     void transferPtr(Address src, Address dest)
@@ -2556,10 +2585,24 @@ public:
 
     Jump branch32(RelationalCondition cond, RegisterID left, RegisterID right)
     {
-        if (left == ARMRegisters::sp) {
+        if (left == ARMRegisters::sp && right == addressTempRegister && cond == Equal) {
+            m_assembler.sub_S(addressTempRegister, left, addressTempRegister);
+            return Jump(makeBranch(Zero));
+        } else if (left == ARMRegisters::sp && right == addressTempRegister && cond == NotEqual) {
+            m_assembler.sub_S(addressTempRegister, left, addressTempRegister);
+            return Jump(makeBranch(NonZero));
+        } else if (right == ARMRegisters::sp && left == addressTempRegister && cond == Equal) {
+            m_assembler.sub_S(addressTempRegister, right, addressTempRegister);
+            return Jump(makeBranch(Zero));
+        } else if (right == ARMRegisters::sp && left == addressTempRegister && cond == NotEqual) {
+            m_assembler.sub_S(addressTempRegister, right, addressTempRegister);
+            return Jump(makeBranch(NonZero));
+        } else if (left == ARMRegisters::sp) {
+            ASSERT(right != addressTempRegister);
             move(left, addressTempRegister);
             m_assembler.cmp(addressTempRegister, right);
         } else if (right == ARMRegisters::sp) {
+            ASSERT(left != addressTempRegister);
             move(right, addressTempRegister);
             m_assembler.cmp(left, addressTempRegister);
         } else

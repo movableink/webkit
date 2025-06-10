@@ -9,7 +9,6 @@
 
 #include "test_utils/gl_raii.h"
 #include "util/EGLWindow.h"
-#include "util/gles_loader_autogen.h"
 
 namespace angle
 {

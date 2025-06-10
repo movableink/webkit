@@ -35,6 +35,7 @@
                               (children 1
                                 (GraphicsLayer
                                   (anchor 0.00 0.00)
+                                  (bounds 485.00 1016.00)
                                 )
                               )
                             )

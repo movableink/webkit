@@ -14,6 +14,12 @@ Property values requiring vendor prefixes:
 None
 ------------------------------------------------------------------------
 List of files:
+/LayoutTests/imported/w3c/web-platform-tests/html/rendering/replaced-elements/the-option-element/option-label-whitespace-2-expected-mismatch.html
+/LayoutTests/imported/w3c/web-platform-tests/html/rendering/replaced-elements/the-option-element/option-label-whitespace-2-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/html/rendering/replaced-elements/the-option-element/option-label-whitespace-2.html
+/LayoutTests/imported/w3c/web-platform-tests/html/rendering/replaced-elements/the-option-element/option-label-whitespace-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/html/rendering/replaced-elements/the-option-element/option-label-whitespace-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/html/rendering/replaced-elements/the-option-element/option-label-whitespace.html
 /LayoutTests/imported/w3c/web-platform-tests/html/rendering/replaced-elements/the-option-element/option-with-br-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/html/rendering/replaced-elements/the-option-element/option-with-br-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/html/rendering/replaced-elements/the-option-element/option-with-br.html

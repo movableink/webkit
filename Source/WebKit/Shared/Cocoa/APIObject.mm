@@ -28,7 +28,6 @@
 
 #import "WKBackForwardListInternal.h"
 #import "WKBackForwardListItemInternal.h"
-#import "WKBrowsingContextControllerInternal.h"
 #import "WKContentRuleListInternal.h"
 #import "WKContentRuleListStoreInternal.h"
 #import "WKContentWorldInternal.h"
@@ -152,7 +151,7 @@ API::Object& Object::fromWKObjectExtraSpace(id <WKObject> obj)
 
 void* Object::newObject(size_t size, Type type)
 {
-    id <WKObject> wrapper;
+    SUPPRESS_UNRETAINED_LOCAL id<WKObject> wrapper;
 
     // Wrappers that inherit from WKObject store the API::Object in their extra bytes, so they are
     // allocated using NSAllocatedObject. The other wrapper classes contain inline storage for the
@@ -522,11 +521,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         break;
     }
 
-    Object& object = wrapper._apiObject;
-
-    apiObjectsUnderConstruction().add(&object, (__bridge CFTypeRef)wrapper);
-
-    return &object;
+    apiObjectsUnderConstruction().add(&wrapper._apiObject, (__bridge CFTypeRef)wrapper);
+    return &wrapper._apiObject;
 }
 
 void* Object::wrap(API::Object* object)
@@ -552,8 +548,8 @@ RetainPtr<NSObject<NSSecureCoding>> Object::toNSObject()
         auto& dictionary = downcast<API::Dictionary>(*this);
         auto result = adoptNS([[NSMutableDictionary alloc] initWithCapacity:dictionary.size()]);
         for (auto& pair : dictionary.map()) {
-            if (auto nsObject = pair.value ? pair.value->toNSObject() : RetainPtr<NSObject<NSSecureCoding>>())
-                [result setObject:nsObject.get() forKey:(NSString *)pair.key];
+            if (auto nsObject = pair.value ? Ref { *pair.value }->toNSObject() : RetainPtr<NSObject<NSSecureCoding>>())
+                [result setObject:nsObject.get() forKey:pair.key.createNSString().get()];
         }
         return result;
     }
@@ -577,7 +573,7 @@ RetainPtr<NSObject<NSSecureCoding>> Object::toNSObject()
     case Object::Type::Data:
         return API::wrapper(downcast<API::Data>(*this));
     case Object::Type::String:
-        return (NSString *)downcast<API::String>(*this).string();
+        return downcast<API::String>(*this).string().createNSString();
     default:
         // Other API::Object::Types are intentionally not supported.
         break;

@@ -45,7 +45,10 @@ inline Expected<String, WGSL::FailedCheck> translate(const String& wgsl, const S
     if (auto* maybeError = std::get_if<WGSL::Error>(&prepareResult))
         return makeUnexpected(WGSL::FailedCheck { { *maybeError }, { } });
     HashMap<String, WGSL::ConstantValue> constantValues;
-    auto generationResult = WGSL::generate(ast, std::get<WGSL::PrepareResult>(prepareResult), constantValues);
+    auto generationResult = WGSL::generate(ast, std::get<WGSL::PrepareResult>(prepareResult), constantValues, WGSL::DeviceState {
+        .appleGPUFamily = 4,
+        .shaderValidationEnabled = false
+    });
     if (auto* maybeError = std::get_if<WGSL::Error>(&generationResult))
         return makeUnexpected(WGSL::FailedCheck { { *maybeError }, { } });
     return { WTFMove(std::get<String>(generationResult)) };
@@ -63,6 +66,18 @@ fn main() -> @location(0) vec4<f32> {
 #include <metal_types>
 
 using namespace metal;
+
+template<typename T>
+struct __UnpackedTypeImpl;
+
+template<typename T>
+struct __PackedTypeImpl;
+
+template<typename T>
+using __UnpackedType = typename __UnpackedTypeImpl<T>::Type;
+
+template<typename T>
+using __PackedType = typename __PackedTypeImpl<T>::Type;
 
 [[fragment]] vec<float, 4> function0()
 {
@@ -88,7 +103,19 @@ fn main(@builtin(position) position : vec4<f32>,
 
 using namespace metal;
 
-[[fragment]] void function0(vec<float, 4> parameter0 [[position]], unsigned parameter1 [[sample_id]], unsigned parameter2 [[sample_mask]])
+template<typename T>
+struct __UnpackedTypeImpl;
+
+template<typename T>
+struct __PackedTypeImpl;
+
+template<typename T>
+using __UnpackedType = typename __UnpackedTypeImpl<T>::Type;
+
+template<typename T>
+using __PackedType = typename __PackedTypeImpl<T>::Type;
+
+[[fragment]] void function0(vec<float, 4> parameter0 [[position]], unsigned parameter1 [[sample_id]], unsigned parameter2 [[sample_mask]], const constant unsigned* __DynamicOffsets [[buffer(8)]])
 {
     vec<float, 4> local0 = parameter0;
     unsigned local1 = (parameter1 + parameter2);

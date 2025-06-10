@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -119,6 +119,9 @@ public:
     virtual std::optional<WebCore::PlatformLayerIdentifier> contentsLayerIdentifier() const { return std::nullopt; }
 
     float scaleForPagePreviews() const;
+
+    virtual void setSelectionLayerEnabled(bool) { }
+
 protected:
     RefPtr<WebCore::GraphicsLayer> createGraphicsLayer(const String&, WebCore::GraphicsLayer::Type);
     RefPtr<WebCore::GraphicsLayer> makePageContainerLayer(PDFDocumentLayout::PageIndex);
@@ -138,7 +141,7 @@ protected:
     bool shouldUseInProcessBackingStore() const;
     bool shouldAddPageBackgroundLayerShadow() const;
 
-    Ref<UnifiedPDFPlugin> m_plugin;
+    const Ref<UnifiedPDFPlugin> m_plugin;
     RefPtr<AsyncPDFRenderer> m_asyncRenderer;
 };
 

@@ -52,6 +52,7 @@
 #import "RenderText.h"
 #import "Theme.h"
 #import "TypedElementDescendantIteratorInlines.h"
+#import "UserAgentParts.h"
 #import "UserAgentScripts.h"
 #import "UserAgentStyleSheets.h"
 #import <CoreGraphics/CoreGraphics.h>
@@ -138,6 +139,16 @@ RenderThemeCocoa& RenderThemeCocoa::singleton()
     return static_cast<RenderThemeCocoa&>(RenderTheme::singleton());
 }
 
+void RenderThemeCocoa::inflateRectForControlRenderer(const RenderObject& renderer, FloatRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (inflateRectForControlRendererForVectorBasedControls(renderer, rect))
+        return;
+#endif
+
+    RenderTheme::inflateRectForControlRenderer(renderer, rect);
+}
+
 void RenderThemeCocoa::purgeCaches()
 {
 #if ENABLE(VIDEO)
@@ -159,7 +170,7 @@ Color RenderThemeCocoa::pictureFrameColor(const RenderObject& buttonRenderer)
     return systemColor(CSSValueAppleSystemControlBackground, buttonRenderer.styleColorOptions());
 }
 
-void RenderThemeCocoa::paintFileUploadIconDecorations(const RenderObject&, const RenderObject& buttonRenderer, const PaintInfo& paintInfo, const IntRect& rect, Icon* icon, FileUploadDecorations fileUploadDecorations)
+void RenderThemeCocoa::paintFileUploadIconDecorations(const RenderObject&, const RenderObject& buttonRenderer, const PaintInfo& paintInfo, const FloatRect& rect, Icon* icon, FileUploadDecorations fileUploadDecorations)
 {
     GraphicsContextStateSaver stateSaver(paintInfo.context());
 
@@ -254,7 +265,7 @@ String RenderThemeCocoa::mediaControlsBase64StringForIconNameAndType(const Strin
 {
     NSString *directory = @"modern-media-controls/images";
     NSBundle *bundle = [NSBundle bundleForClass:[WebCoreRenderThemeBundle class]];
-    return [[NSData dataWithContentsOfFile:[bundle pathForResource:iconName ofType:iconType inDirectory:directory]] base64EncodedStringWithOptions:0];
+    return [[NSData dataWithContentsOfFile:[bundle pathForResource:iconName.createNSString().get() ofType:iconType.createNSString().get() inDirectory:directory]] base64EncodedStringWithOptions:0];
 }
 
 String RenderThemeCocoa::mediaControlsFormattedStringForDuration(const double durationInSeconds)
@@ -305,7 +316,7 @@ int RenderThemeCocoa::attachmentBaseline(const RenderAttachment& attachment) con
 
 void RenderThemeCocoa::paintAttachmentText(GraphicsContext& context, AttachmentLayout* layout)
 {
-    DrawGlyphsRecorder recorder(context, 1, DrawGlyphsRecorder::DeriveFontFromContext::Yes);
+    DrawGlyphsRecorder recorder(context, 1, DrawGlyphsRecorder::DeriveFontFromContext::Yes, DrawGlyphsRecorder::DrawDecomposedGlyphs::No);
 
     for (const auto& line : layout->lines)
         recorder.drawNativeText(line.font.get(), CTFontGetSize(line.font.get()), line.line.get(), line.rect);
@@ -346,7 +357,12 @@ Color RenderThemeCocoa::controlTintColor(const RenderStyle& style, OptionSet<Sty
     if (!style.hasAutoAccentColor())
         return style.usedAccentColor(options);
 
-    return systemColor(CSSValueAppleSystemBlue, options);
+#if PLATFORM(MAC)
+    auto cssColorValue = CSSValueAppleSystemControlAccent;
+#else
+    auto cssColorValue = CSSValueAppleSystemBlue;
+#endif
+    return systemColor(cssColorValue, options | StyleColorOptions::UseSystemAppearance);
 }
 
 #if USE(APPLE_INTERNAL_SDK)
@@ -403,7 +419,7 @@ void RenderThemeCocoa::adjustButtonStyle(RenderStyle& style, const Element* elem
     RenderTheme::adjustButtonStyle(style, element);
 }
 
-bool RenderThemeCocoa::paintButton(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeCocoa::paintButton(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
     if (paintButtonForVectorBasedControls(box, paintInfo, rect))
@@ -423,7 +439,47 @@ void RenderThemeCocoa::adjustColorWellStyle(RenderStyle& style, const Element* e
     RenderTheme::adjustColorWellStyle(style, element);
 }
 
-bool RenderThemeCocoa::paintColorWell(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+void RenderThemeCocoa::adjustColorWellSwatchStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustColorWellSwatchStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustColorWellSwatchStyle(style, element);
+}
+
+void RenderThemeCocoa::adjustColorWellSwatchOverlayStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustColorWellSwatchOverlayStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustColorWellSwatchOverlayStyle(style, element);
+}
+
+void RenderThemeCocoa::adjustColorWellSwatchWrapperStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustColorWellSwatchWrapperStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustColorWellSwatchWrapperStyle(style, element);
+}
+
+bool RenderThemeCocoa::paintColorWellSwatch(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintColorWellSwatchForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintColorWellSwatch(box, paintInfo, rect);
+}
+
+bool RenderThemeCocoa::paintColorWell(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
     if (paintColorWellForVectorBasedControls(box, paintInfo, rect))
@@ -543,7 +599,7 @@ bool RenderThemeCocoa::paintMenuList(const RenderObject& box, const PaintInfo& p
     return RenderTheme::paintMenuList(box, paintInfo, rect);
 }
 
-void RenderThemeCocoa::paintMenuListDecorations(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+void RenderThemeCocoa::paintMenuListDecorations(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
     if (paintMenuListDecorationsForVectorBasedControls(box, paintInfo, rect))
@@ -573,7 +629,7 @@ void RenderThemeCocoa::paintMenuListButtonDecorations(const RenderBox& box, cons
     RenderTheme::paintMenuListButtonDecorations(box, paintInfo, rect);
 }
 
-bool RenderThemeCocoa::paintMenuListButton(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeCocoa::paintMenuListButton(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
     if (paintMenuListButtonForVectorBasedControls(box, paintInfo, rect))
@@ -593,7 +649,7 @@ void RenderThemeCocoa::adjustMeterStyle(RenderStyle& style, const Element* eleme
     RenderTheme::adjustMeterStyle(style, element);
 }
 
-bool RenderThemeCocoa::paintMeter(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeCocoa::paintMeter(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
     if (paintMeterForVectorBasedControls(box, paintInfo, rect))
@@ -633,7 +689,7 @@ void RenderThemeCocoa::adjustProgressBarStyle(RenderStyle& style, const Element*
     RenderTheme::adjustProgressBarStyle(style, element);
 }
 
-bool RenderThemeCocoa::paintProgressBar(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeCocoa::paintProgressBar(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
     if (paintProgressBarForVectorBasedControls(box, paintInfo, rect))
@@ -653,7 +709,7 @@ void RenderThemeCocoa::adjustSliderTrackStyle(RenderStyle& style, const Element*
     RenderTheme::adjustSliderTrackStyle(style, element);
 }
 
-bool RenderThemeCocoa::paintSliderTrack(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeCocoa::paintSliderTrack(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
     if (paintSliderTrackForVectorBasedControls(box, paintInfo, rect))
@@ -683,7 +739,7 @@ void RenderThemeCocoa::adjustSliderThumbStyle(RenderStyle& style, const Element*
     RenderTheme::adjustSliderThumbStyle(style, element);
 }
 
-bool RenderThemeCocoa::paintSliderThumb(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeCocoa::paintSliderThumb(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
     if (paintSliderThumbForVectorBasedControls(box, paintInfo, rect))
@@ -713,7 +769,7 @@ bool RenderThemeCocoa::paintSearchField(const RenderObject& box, const PaintInfo
     return RenderTheme::paintSearchField(box, paintInfo, rect);
 }
 
-void RenderThemeCocoa::paintSearchFieldDecorations(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& rect)
+void RenderThemeCocoa::paintSearchFieldDecorations(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
     if (paintSearchFieldDecorationsForVectorBasedControls(box, paintInfo, rect))
@@ -733,7 +789,7 @@ void RenderThemeCocoa::adjustSearchFieldCancelButtonStyle(RenderStyle& style, co
     RenderTheme::adjustSearchFieldCancelButtonStyle(style, element);
 }
 
-bool RenderThemeCocoa::paintSearchFieldCancelButton(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeCocoa::paintSearchFieldCancelButton(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
     if (paintSearchFieldCancelButtonForVectorBasedControls(box, paintInfo, rect))
@@ -753,7 +809,7 @@ void RenderThemeCocoa::adjustSearchFieldDecorationPartStyle(RenderStyle& style, 
     RenderTheme::adjustSearchFieldDecorationPartStyle(style, element);
 }
 
-bool RenderThemeCocoa::paintSearchFieldDecorationPart(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeCocoa::paintSearchFieldDecorationPart(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
     if (paintSearchFieldDecorationPartForVectorBasedControls(box, paintInfo, rect))
@@ -773,7 +829,7 @@ void RenderThemeCocoa::adjustSearchFieldResultsDecorationPartStyle(RenderStyle& 
     RenderTheme::adjustSearchFieldResultsDecorationPartStyle(style, element);
 }
 
-bool RenderThemeCocoa::paintSearchFieldResultsDecorationPart(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeCocoa::paintSearchFieldResultsDecorationPart(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
     if (paintSearchFieldResultsDecorationPartForVectorBasedControls(box, paintInfo, rect))
@@ -793,7 +849,7 @@ void RenderThemeCocoa::adjustSearchFieldResultsButtonStyle(RenderStyle& style, c
     RenderTheme::adjustSearchFieldResultsButtonStyle(style, element);
 }
 
-bool RenderThemeCocoa::paintSearchFieldResultsButton(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeCocoa::paintSearchFieldResultsButton(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
     if (paintSearchFieldResultsButtonForVectorBasedControls(box, paintInfo, rect))
@@ -823,7 +879,7 @@ void RenderThemeCocoa::adjustSwitchStyle(RenderStyle& style, const Element* elem
 
     adjustSwitchStyleDisplay(style);
 
-    if (style.outlineStyleIsAuto() == OutlineIsAuto::On)
+    if (style.hasAutoOutlineStyle())
         style.setOutlineStyle(BorderStyle::None);
 #endif
 }
@@ -858,6 +914,24 @@ bool RenderThemeCocoa::paintSwitchTrack(const RenderObject& renderer, const Pain
     return renderThemePaintSwitchTrack(extractControlStyleStatesForRenderer(renderer), renderer, paintInfo, rect);
 }
 
+void RenderThemeCocoa::paintPlatformResizer(const RenderLayerModelObject& renderer, GraphicsContext& context, const LayoutRect& resizerCornerRect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintPlatformResizerForVectorBasedControls(renderer, context, resizerCornerRect))
+        return;
+#endif
+    RenderTheme::paintPlatformResizer(renderer, context, resizerCornerRect);
+}
+
+void RenderThemeCocoa::paintPlatformResizerFrame(const RenderLayerModelObject& renderer, GraphicsContext& context, const LayoutRect& resizerCornerRect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintPlatformResizerFrameForVectorBasedControls(renderer, context, resizerCornerRect))
+        return;
+#endif
+    RenderTheme::paintPlatformResizerFrame(renderer, context, resizerCornerRect);
+}
+
 bool RenderThemeCocoa::supportsFocusRing(const RenderObject& renderer, const RenderStyle& style) const
 {
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
@@ -873,6 +947,36 @@ bool RenderThemeCocoa::supportsFocusRing(const RenderObject& renderer, const Ren
 #endif
 
     return RenderTheme::supportsFocusRing(renderer, style);
+}
+
+void RenderThemeCocoa::adjustTextControlInnerContainerStyle(RenderStyle& style, const RenderStyle& shadowHostStyle, const Element* shadowHost) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustTextControlInnerContainerStyleForVectorBasedControls(style, shadowHostStyle, shadowHost))
+        return;
+#endif
+
+    RenderTheme::adjustTextControlInnerContainerStyle(style, shadowHostStyle, shadowHost);
+}
+
+void RenderThemeCocoa::adjustTextControlInnerPlaceholderStyle(RenderStyle& style, const RenderStyle& shadowHostStyle, const Element* shadowHost) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustTextControlInnerPlaceholderStyleForVectorBasedControls(style, shadowHostStyle, shadowHost))
+        return;
+#endif
+
+    RenderTheme::adjustTextControlInnerPlaceholderStyle(style, shadowHostStyle, shadowHost);
+}
+
+void RenderThemeCocoa::adjustTextControlInnerTextStyle(RenderStyle& style, const RenderStyle& shadowHostStyle, const Element* shadowHost) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustTextControlInnerTextStyleForVectorBasedControls(style, shadowHostStyle, shadowHost))
+        return;
+#endif
+
+    RenderTheme::adjustTextControlInnerTextStyle(style, shadowHostStyle, shadowHost);
 }
 
 }

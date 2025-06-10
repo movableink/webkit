@@ -202,7 +202,7 @@ public:
 private:
     Page* pageFor(void* address)
     {
-        if (LIKELY(Page::baseAddressFor(address) == m_lastAccessedPageBaseAddress))
+        if (Page::baseAddressFor(address) == m_lastAccessedPageBaseAddress) [[likely]]
             return m_lastAccessedPage;
         return ensurePageFor(address);
     }

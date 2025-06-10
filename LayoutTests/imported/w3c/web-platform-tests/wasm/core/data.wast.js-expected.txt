@@ -1,0 +1,107 @@
+
+PASS #1 Reinitialize the default imports
+FAIL #2 Test that WebAssembly compilation fails assert_equals: expected true but got false
+FAIL #3 Test that WebAssembly compilation fails assert_equals: expected true but got false
+PASS #4 Test that WebAssembly compilation fails
+PASS #5 Test that WebAssembly compilation fails
+PASS #6 Test that WebAssembly compilation fails
+PASS #7 Test that WebAssembly compilation fails
+PASS #8 Test that WebAssembly compilation fails
+PASS #9 Test that WebAssembly compilation fails
+PASS #10 Test that WebAssembly compilation fails
+PASS #11 Test that WebAssembly compilation fails
+PASS #12 Test that WebAssembly compilation fails
+PASS #13 Test that WebAssembly compilation fails
+PASS #14 Test that WebAssembly compilation fails
+PASS #15 Test that WebAssembly compilation fails
+PASS #16 Test that WebAssembly compilation fails
+PASS #17 Test that WebAssembly compilation fails
+PASS #18 Test that WebAssembly compilation fails
+PASS #19 Test that WebAssembly compilation fails
+PASS #20 Test that WebAssembly compilation fails
+PASS #21 Test that WebAssembly compilation fails
+PASS #22 Test that WebAssembly compilation fails
+PASS #23 Test that WebAssembly compilation fails
+PASS #24 Reinitialize the default imports
+PASS #25 Test that WebAssembly instantiation succeeds
+PASS #26 Test that WebAssembly instantiation succeeds
+PASS #27 Test that WebAssembly instantiation succeeds
+PASS #28 Test that WebAssembly instantiation succeeds
+PASS #29 Test that WebAssembly instantiation succeeds
+PASS #30 Test that WebAssembly instantiation succeeds
+PASS #31 Test that WebAssembly instantiation succeeds
+PASS #32 Test that WebAssembly instantiation succeeds
+PASS #33 Test that WebAssembly instantiation succeeds
+FAIL #34 Test that WebAssembly compilation fails assert_true: module@http://localhost:8800/wasm/core/js/harness/async_index.js:146:24
+assert_invalid@http://localhost:8800/wasm/core/js/harness/async_index.js:174:9
+data_wast_js@http://localhost:8800/wasm/core/js/data.wast.js:31:15
+global code@http://localhost:8800/wasm/core/js/data.wast.js:186:3 expected true got false
+FAIL #35 Test that WebAssembly compilation fails assert_true: module@http://localhost:8800/wasm/core/js/harness/async_index.js:146:24
+assert_invalid@http://localhost:8800/wasm/core/js/harness/async_index.js:174:9
+data_wast_js@http://localhost:8800/wasm/core/js/data.wast.js:34:15
+global code@http://localhost:8800/wasm/core/js/data.wast.js:186:3 expected true got false
+PASS #36 Test that WebAssembly instantiation succeeds
+PASS #37 Test that WebAssembly instantiation succeeds
+PASS #38 Test that WebAssembly instantiation succeeds
+PASS #39 Test that WebAssembly instantiation succeeds
+PASS #40 Test that WebAssembly instantiation succeeds
+PASS #41 Test that WebAssembly instantiation succeeds
+PASS #42 Test that WebAssembly instantiation succeeds
+PASS #43 Test that WebAssembly instantiation succeeds
+PASS #44 Test that WebAssembly instantiation succeeds
+PASS #45 Test that WebAssembly instantiation succeeds
+PASS #46 Test that WebAssembly instantiation succeeds
+PASS #47 Test that WebAssembly instantiation succeeds
+PASS #48 Test that WebAssembly instantiation succeeds
+PASS #49 Test that WebAssembly instantiation succeeds
+PASS #50 Test that WebAssembly instantiation succeeds
+PASS #51 Test that WebAssembly instantiation succeeds
+PASS #52 Test that WebAssembly instantiation fails
+PASS #53 Test that a WebAssembly module is uninstantiable
+PASS #54 Test that WebAssembly instantiation fails
+PASS #55 Test that a WebAssembly module is uninstantiable
+PASS #56 Test that WebAssembly instantiation fails
+PASS #57 Test that a WebAssembly module is uninstantiable
+PASS #58 Test that WebAssembly instantiation fails
+PASS #59 Test that a WebAssembly module is uninstantiable
+PASS #60 Test that WebAssembly instantiation fails
+PASS #61 Test that a WebAssembly module is uninstantiable
+PASS #62 Test that WebAssembly instantiation fails
+PASS #63 Test that a WebAssembly module is uninstantiable
+PASS #64 Test that WebAssembly instantiation fails
+PASS #65 Test that a WebAssembly module is uninstantiable
+PASS #66 Test that WebAssembly instantiation fails
+PASS #67 Test that a WebAssembly module is uninstantiable
+PASS #68 Test that WebAssembly instantiation fails
+PASS #69 Test that a WebAssembly module is uninstantiable
+PASS #70 Test that WebAssembly instantiation fails
+PASS #71 Test that a WebAssembly module is uninstantiable
+PASS #72 Test that WebAssembly instantiation fails
+PASS #73 Test that a WebAssembly module is uninstantiable
+PASS #74 Test that WebAssembly instantiation fails
+PASS #75 Test that a WebAssembly module is uninstantiable
+PASS #76 Test that WebAssembly instantiation fails
+PASS #77 Test that a WebAssembly module is uninstantiable
+PASS #78 Test that WebAssembly instantiation fails
+PASS #79 Test that a WebAssembly module is uninstantiable
+PASS #80 Test that WebAssembly compilation fails
+PASS #81 Test that WebAssembly compilation fails
+PASS #82 Test that WebAssembly compilation fails
+PASS #83 Test that WebAssembly compilation fails
+PASS #84 Test that WebAssembly compilation fails
+PASS #85 Test that WebAssembly compilation fails
+PASS #86 Test that WebAssembly compilation fails
+PASS #87 Test that WebAssembly compilation fails
+PASS #88 Test that WebAssembly compilation fails
+PASS #89 Test that WebAssembly compilation fails
+PASS #90 Test that WebAssembly compilation fails
+PASS #91 Test that WebAssembly compilation fails
+PASS #92 Test that WebAssembly compilation fails
+PASS #93 Test that WebAssembly compilation fails
+PASS #94 Test that WebAssembly compilation fails
+PASS #95 Test that WebAssembly compilation fails
+PASS #96 Test that WebAssembly compilation fails
+PASS #97 Test that WebAssembly compilation fails
+PASS #98 Test that WebAssembly compilation fails
+PASS #99 Test that WebAssembly compilation fails
+

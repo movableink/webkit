@@ -134,6 +134,7 @@ ItemPosition PositionArea::defaultAlignmentForAxis(BoxAxis physicalAxis, Writing
         alignment = ItemPosition::Start;
         break;
     case PositionAreaTrack::Center:
+        return ItemPosition::Center;
     case PositionAreaTrack::SpanAll:
         return ItemPosition::AnchorCenter;
     }
@@ -164,42 +165,53 @@ ItemPosition PositionArea::defaultAlignmentForAxis(BoxAxis physicalAxis, Writing
     return containerWritingMode.isBlockFlipped() ? flip(alignment) : alignment;
 }
 
-WTF::TextStream& operator<<(WTF::TextStream& ts, const PositionAreaSpan& span)
+WTF::TextStream& operator<<(WTF::TextStream& ts, PositionAreaAxis axis)
 {
-    ts << "{ axis: ";
-    switch (span.axis()) {
-    case PositionAreaAxis::Horizontal: ts << "horizontal"; break;
-    case PositionAreaAxis::Vertical:   ts << "vertical"; break;
-    case PositionAreaAxis::X:          ts << "x"; break;
-    case PositionAreaAxis::Y:          ts << "y"; break;
-    case PositionAreaAxis::Block:      ts << "block"; break;
-    case PositionAreaAxis::Inline:     ts << "inline"; break;
+    switch (axis) {
+    case PositionAreaAxis::Horizontal: ts << "horizontal"_s; break;
+    case PositionAreaAxis::Vertical:   ts << "vertical"_s; break;
+    case PositionAreaAxis::X:          ts << 'x'; break;
+    case PositionAreaAxis::Y:          ts << 'y'; break;
+    case PositionAreaAxis::Block:      ts << "block"_s; break;
+    case PositionAreaAxis::Inline:     ts << "inline"_s; break;
     }
-
-    ts << ", track: ";
-    switch (span.track()) {
-    case PositionAreaTrack::Start:     ts << "start"; break;
-    case PositionAreaTrack::SpanStart: ts << "span-start"; break;
-    case PositionAreaTrack::End:       ts << "end"; break;
-    case PositionAreaTrack::SpanEnd:   ts << "span-end"; break;
-    case PositionAreaTrack::Center:    ts << "center"; break;
-    case PositionAreaTrack::SpanAll:   ts << "span-all"; break;
-    }
-
-    ts << ", self: ";
-    switch (span.self()) {
-    case PositionAreaSelf::No:  ts << "no"; break;
-    case PositionAreaSelf::Yes: ts << "yes"; break;
-    }
-
-    ts << " }";
 
     return ts;
 }
 
-WTF::TextStream& operator<<(WTF::TextStream& ts, const PositionArea& positionArea)
+WTF::TextStream& operator<<(WTF::TextStream& ts, PositionAreaTrack track)
 {
-    ts << "{ span1: " << positionArea.blockOrXAxis() << ", span2: " << positionArea.inlineOrYAxis() << " }";
+    switch (track) {
+    case PositionAreaTrack::Start:     ts << "start"_s; break;
+    case PositionAreaTrack::SpanStart: ts << "span-start"_s; break;
+    case PositionAreaTrack::End:       ts << "end"_s; break;
+    case PositionAreaTrack::SpanEnd:   ts << "span-end"_s; break;
+    case PositionAreaTrack::Center:    ts << "center"_s; break;
+    case PositionAreaTrack::SpanAll:   ts << "span-all"_s; break;
+    }
+
+    return ts;
+}
+
+WTF::TextStream& operator<<(WTF::TextStream& ts, PositionAreaSelf self)
+{
+    switch (self) {
+    case PositionAreaSelf::No:  ts << "no"_s; break;
+    case PositionAreaSelf::Yes: ts << "yes"_s; break;
+    }
+
+    return ts;
+}
+
+WTF::TextStream& operator<<(WTF::TextStream& ts, PositionAreaSpan span)
+{
+    ts << "{ axis: "_s << span.axis() << ", track: "_s << span.track() << ", self: "_s << span.self() << " }"_s;
+    return ts;
+}
+
+WTF::TextStream& operator<<(WTF::TextStream& ts, PositionArea positionArea)
+{
+    ts << "{ span1: "_s << positionArea.blockOrXAxis() << ", span2: "_s << positionArea.inlineOrYAxis() << " }"_s;
     return ts;
 }
 

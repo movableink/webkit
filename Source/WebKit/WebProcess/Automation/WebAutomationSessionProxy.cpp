@@ -44,6 +44,8 @@
 #include <JavaScriptCore/OpaqueJSString.h>
 #include <WebCore/AXObjectCache.h>
 #include <WebCore/AccessibilityObject.h>
+#include <WebCore/ContainerNodeInlines.h>
+#include <WebCore/Cookie.h>
 #include <WebCore/CookieJar.h>
 #include <WebCore/DOMRect.h>
 #include <WebCore/DOMRectList.h>
@@ -90,7 +92,7 @@ static JSObjectRef toJSArray(JSContextRef context, const Vector<T>& data, JSValu
         return convertedValue;
     });
 
-    JSObjectRef array = JSObjectMakeArray(context, convertedData.size(), convertedData.data(), exception);
+    JSObjectRef array = JSObjectMakeArray(context, convertedData.size(), convertedData.span().data(), exception);
 
     for (auto& convertedValue : convertedData)
         JSValueUnprotect(context, convertedValue);
@@ -207,11 +209,10 @@ static JSValueRef evaluateJavaScriptCallback(JSContextRef context, JSObjectRef f
     // This is using the JSC C API so we cannot take a std::span in argument directly.
     auto arguments = unsafeMakeSpan(rawArguments, rawArgumentCount);
 
-    ASSERT(arguments.size() == 4);
+    ASSERT(arguments.size() == 3);
     ASSERT(JSValueIsNumber(context, arguments[0]));
     ASSERT(JSValueIsNumber(context, arguments[1]));
-    ASSERT(JSValueIsNumber(context, arguments[2]));
-    ASSERT(JSValueIsObject(context, arguments[3]) || JSValueIsString(context, arguments[3]));
+    ASSERT(JSValueIsObject(context, arguments[2]) || JSValueIsString(context, arguments[2]));
 
     auto automationSessionProxy = WebProcess::singleton().automationSessionProxy();
     if (!automationSessionProxy)
@@ -221,24 +222,17 @@ static JSValueRef evaluateJavaScriptCallback(JSContextRef context, JSObjectRef f
     if (!ObjectIdentifier<WebCore::FrameIdentifierType>::isValidIdentifier(rawFrameID))
         return JSValueMakeUndefined(context);
 
-    auto rawProcessID = JSValueToNumber(context, arguments[1], exception);
-    if (!ObjectIdentifier<WebCore::ProcessIdentifierType>::isValidIdentifier(rawProcessID))
-        return JSValueMakeUndefined(context);
-
-    WebCore::FrameIdentifier frameID {
-        ObjectIdentifier<WebCore::FrameIdentifierType>(rawFrameID),
-        ObjectIdentifier<WebCore::ProcessIdentifierType>(rawProcessID)
-    };
-    uint64_t rawCallbackID = JSValueToNumber(context, arguments[2], exception);
+    WebCore::FrameIdentifier frameID(rawFrameID);
+    uint64_t rawCallbackID = JSValueToNumber(context, arguments[1], exception);
     if (!WebAutomationSessionProxy::JSCallbackIdentifier::isValidIdentifier(rawCallbackID))
         return JSValueMakeUndefined(context);
     WebAutomationSessionProxy::JSCallbackIdentifier callbackID(rawCallbackID);
 
-    if (JSValueIsString(context, arguments[3])) {
-        auto result = adoptRef(JSValueToStringCopy(context, arguments[3], exception));
+    if (JSValueIsString(context, arguments[2])) {
+        auto result = adoptRef(JSValueToStringCopy(context, arguments[2], exception));
         automationSessionProxy->didEvaluateJavaScriptFunction(frameID, callbackID, result->string(), { });
-    } else if (JSValueIsObject(context, arguments[3])) {
-        JSObjectRef error = JSValueToObject(context, arguments[3], exception);
+    } else if (JSValueIsObject(context, arguments[2])) {
+        JSObjectRef error = JSValueToObject(context, arguments[2], exception);
         JSValueRef nameValue = JSObjectGetProperty(context, error, OpaqueJSString::tryCreate("name"_s).get(), exception);
         String exceptionName = adoptRef(JSValueToStringCopy(context, nameValue, nullptr))->string();
         String errorType = Inspector::Protocol::AutomationHelpers::getEnumConstantValue(Inspector::Protocol::Automation::ErrorMessage::JavaScriptError);
@@ -448,8 +442,7 @@ void WebAutomationSessionProxy::evaluateJavaScriptFunction(WebCore::PageIdentifi
         toJSArray(context, arguments, toJSValue, &exception),
         JSValueMakeBoolean(context, expectsImplicitCallbackArgument),
         JSValueMakeBoolean(context, forceUserGesture),
-        JSValueMakeNumber(context, frameID.object().toUInt64()),
-        JSValueMakeNumber(context, frameID.processIdentifier().toUInt64()),
+        JSValueMakeNumber(context, frameID.toUInt64()),
         JSValueMakeNumber(context, callbackID.toUInt64()),
         JSObjectMakeFunctionWithCallback(context, nullptr, evaluateJavaScriptCallback),
         JSValueMakeNumber(context, callbackTimeout.value_or(-1))
@@ -795,7 +788,7 @@ void WebAutomationSessionProxy::computeElementLayout(WebCore::PageIdentifier pag
     // Check the case where a non-descendant element hit tests before the target element. For example, a child <option>
     // of a <select> does not obscure the <select>, but two sibling <div> that overlap at the IVCP will obscure each other.
     // Node::isDescendantOf() is not self-inclusive, so that is explicitly checked here.
-    isObscured = elementList[0] != containerElement && !RefPtr { elementList[0] }->isDescendantOrShadowDescendantOf(containerElement.get());
+    isObscured = elementList[0] != containerElement && !RefPtr { elementList[0] }->isShadowIncludingDescendantOf(containerElement.get());
 
     switch (coordinateSystem) {
     case CoordinateSystem::Page:

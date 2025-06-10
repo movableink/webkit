@@ -31,6 +31,7 @@
 #include "WebPushMessage.h"
 #include <WebCore/ExceptionData.h>
 #include <WebCore/NotificationData.h>
+#include <WebCore/NotificationResources.h>
 #include <WebCore/PushPermissionState.h>
 #include <WebCore/PushSubscriptionData.h>
 #include <WebCore/SecurityOriginData.h>

@@ -33,24 +33,23 @@
 #include <wtf/CheckedRef.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 namespace IDBServer {
 
+class MemoryCursor;
 class MemoryIDBBackingStore;
 class MemoryIndex;
 class MemoryObjectStore;
 
 typedef HashMap<IDBKeyData, ThreadSafeDataBuffer, IDBKeyDataHash, IDBKeyDataHashTraits> KeyValueMap;
 
-class MemoryBackingStoreTransaction final : public CanMakeThreadSafeCheckedPtr<MemoryBackingStoreTransaction> {
-    WTF_MAKE_TZONE_ALLOCATED(MemoryBackingStoreTransaction);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MemoryBackingStoreTransaction);
+class MemoryBackingStoreTransaction final : public RefCountedAndCanMakeWeakPtr<MemoryBackingStoreTransaction> {
 public:
-    static std::unique_ptr<MemoryBackingStoreTransaction> create(MemoryIDBBackingStore&, const IDBTransactionInfo&);
+    static Ref<MemoryBackingStoreTransaction> create(MemoryIDBBackingStore&, const IDBTransactionInfo&);
 
-    MemoryBackingStoreTransaction(MemoryIDBBackingStore&, const IDBTransactionInfo&);
     ~MemoryBackingStoreTransaction();
 
     bool isVersionChange() const { return m_info.mode() == IDBTransactionMode::Versionchange; }
@@ -77,7 +76,11 @@ public:
 
     IDBTransactionInfo info() const { return m_info; }
 
+    MemoryCursor* cursor(const IDBResourceIdentifier&) const;
+    void addCursor(MemoryCursor&);
+
 private:
+    MemoryBackingStoreTransaction(MemoryIDBBackingStore&, const IDBTransactionInfo&);
     void finish();
 
     CheckedRef<MemoryIDBBackingStore> m_backingStore;
@@ -94,9 +97,11 @@ private:
     HashSet<RefPtr<MemoryIndex>> m_versionChangeAddedIndexes;
 
     HashMap<String, RefPtr<MemoryObjectStore>> m_deletedObjectStores;
-    HashMap<String, RefPtr<MemoryIndex>> m_deletedIndexes;
+    HashSet<RefPtr<MemoryIndex>> m_deletedIndexes;
     HashMap<MemoryObjectStore*, String> m_originalObjectStoreNames;
     HashMap<MemoryIndex*, String> m_originalIndexNames;
+
+    HashMap<IDBResourceIdentifier, WeakPtr<MemoryCursor>> m_cursors;
 };
 
 } // namespace IDBServer

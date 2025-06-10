@@ -67,12 +67,20 @@ ExceptionOr<Ref<GPUComputePassEncoder>> GPUCommandEncoder::beginComputePass(cons
 
 void GPUCommandEncoder::copyBufferToBuffer(
     const GPUBuffer& source,
+    const GPUBuffer& destination,
+    std::optional<GPUSize64> size)
+{
+    return copyBufferToBuffer(source, 0u, destination, 0u, size);
+}
+
+void GPUCommandEncoder::copyBufferToBuffer(
+    const GPUBuffer& source,
     GPUSize64 sourceOffset,
     const GPUBuffer& destination,
     GPUSize64 destinationOffset,
-    GPUSize64 size)
+    std::optional<GPUSize64> size)
 {
-    m_backing->copyBufferToBuffer(source.backing(), sourceOffset, destination.backing(), destinationOffset, size);
+    m_backing->copyBufferToBuffer(source.backing(), sourceOffset, destination.backing(), destinationOffset, size.value_or(sourceOffset < source.size() ? source.size() - sourceOffset : 0u));
 }
 
 void GPUCommandEncoder::copyBufferToTexture(

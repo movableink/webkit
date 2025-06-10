@@ -94,8 +94,6 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 - (NSString *)accessibilityTextualContext;
 - (BOOL)accessibilityHasPopup;
 - (NSString *)accessibilityPopupValue;
-- (BOOL)accessibilityHasDocumentRoleAncestor;
-- (BOOL)accessibilityHasWebApplicationAncestor;
 - (BOOL)accessibilityIsInDescriptionListDefinition;
 - (BOOL)accessibilityIsInDescriptionListTerm;
 - (BOOL)_accessibilityIsInTableCell;
@@ -128,6 +126,7 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 
 @interface NSObject (WebAccessibilityObjectWrapperPrivate)
 - (CGPathRef)_accessibilityPath;
+- (CGPoint)_accessibilityPageRelativeLocation;
 @end
 
 AccessibilityUIElement::AccessibilityUIElement(id element)
@@ -138,15 +137,15 @@ AccessibilityUIElement::AccessibilityUIElement(id element)
 static JSRetainPtr<JSStringRef> concatenateAttributeAndValue(NSString *attribute, NSString *value)
 {
     Vector<UniChar> buffer([attribute length]);
-    [attribute getCharacters:buffer.data()];
+    [attribute getCharacters:buffer.mutableSpan().data()];
     buffer.append(':');
     buffer.append(' ');
     
     Vector<UniChar> valueBuffer([value length]);
-    [value getCharacters:valueBuffer.data()];
+    [value getCharacters:valueBuffer.mutableSpan().data()];
     buffer.appendVector(valueBuffer);
 
-    return adopt(JSStringCreateWithCharacters(buffer.data(), buffer.size()));
+    return adopt(JSStringCreateWithCharacters(buffer.span().data(), buffer.size()));
 }
 
 bool AccessibilityUIElement::isEqual(AccessibilityUIElement* otherElement)
@@ -209,6 +208,18 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::url()
 {
     NSURL *url = [m_element accessibilityURL];
     return [[url absoluteString] createJSStringRef];
+}
+
+double AccessibilityUIElement::pageX()
+{
+    CGPoint point = [m_element _accessibilityPageRelativeLocation];
+    return point.x;
+}
+
+double AccessibilityUIElement::pageY()
+{
+    CGPoint point = [m_element _accessibilityPageRelativeLocation];
+    return point.y;
 }
 
 double AccessibilityUIElement::x()
@@ -1191,16 +1202,6 @@ bool AccessibilityUIElement::hasPopup() const
 JSRetainPtr<JSStringRef> AccessibilityUIElement::popupValue() const
 {
     return [[m_element accessibilityPopupValue] createJSStringRef];
-}
-
-bool AccessibilityUIElement::hasDocumentRoleAncestor() const
-{
-    return [m_element accessibilityHasDocumentRoleAncestor];
-}
-
-bool AccessibilityUIElement::hasWebApplicationAncestor() const
-{
-    return [m_element accessibilityHasWebApplicationAncestor];
 }
 
 bool AccessibilityUIElement::isInDescriptionListDetail() const

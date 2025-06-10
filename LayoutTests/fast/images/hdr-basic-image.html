@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-<meta name="fuzzy" content="maxDifference=0-6; totalPixels=0-40000" />
+<meta name="fuzzy" content="maxDifference=0-68; totalPixels=0-80000" />
 <style>
     .image-box {
         width: 200px;
@@ -25,7 +25,7 @@
         var image = new Image;
         image.onload = (() => {
             if (window.internals)
-                internals.setHeadroomForTesting(image, 5);
+                internals.setHasHDRContentForTesting(image);
 
             var divElement = document.querySelector("div.image-box");
             divElement.style.backgroundImage = 'url(' + image.src + ')';

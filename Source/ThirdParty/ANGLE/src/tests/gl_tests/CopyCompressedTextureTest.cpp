@@ -66,12 +66,13 @@ class CopyCompressedTextureTest : public ANGLETest<>
             return false;
         }
 
+#if !defined(GL_GLEXT_PROTOTYPES) || !GL_GLEXT_PROTOTYPES
         EXPECT_NE(nullptr, glCompressedCopyTextureCHROMIUM);
         if (glCompressedCopyTextureCHROMIUM == nullptr)
         {
             return false;
         }
-
+#endif
         return true;
     }
 

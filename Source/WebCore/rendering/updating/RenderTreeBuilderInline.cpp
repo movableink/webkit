@@ -31,7 +31,9 @@
 #include "RenderBoxInlines.h"
 #include "RenderChildIterator.h"
 #include "RenderInline.h"
+#include "RenderObjectInlines.h"
 #include "RenderTable.h"
+#include "RenderTreeBuilderBlock.h"
 #include "RenderTreeBuilderMultiColumn.h"
 #include "RenderTreeBuilderTable.h"
 #include <wtf/SetForScope.h>
@@ -155,8 +157,9 @@ void RenderTreeBuilder::Inline::insertChildToContinuation(RenderInline& parent, 
         ASSERT_NOT_REACHED();
 
     if (child->isFloatingOrOutOfFlowPositioned()) {
-        auto beforeChildIsFirstChild = beforeChild == beforeChild->parent()->firstChild();
-        if (!beforeChildIsFirstChild)
+        auto& beforeChildParent = *beforeChild->parent();
+        auto beforeChildIsFirstChildInContinuation = beforeChild == beforeChildParent.firstChild() && beforeChildParent.isAnonymousBlock() && beforeChildParent.isContinuation();
+        if (!beforeChildIsFirstChildInContinuation)
             return m_builder.attachIgnoringContinuation(*beforeChildContinuationAncestor, WTFMove(child), beforeChild);
         return m_builder.attachIgnoringContinuation(parentCandidateInContinuation(parent, beforeChild), WTFMove(child));
     }
@@ -178,7 +181,7 @@ void RenderTreeBuilder::Inline::insertChildToContinuation(RenderInline& parent, 
 void RenderTreeBuilder::Inline::attachIgnoringContinuation(RenderInline& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild)
 {
     // Make sure we don't append things after :after-generated content if we have it.
-    if (!beforeChild && parent.isAfterContent(parent.lastChild()))
+    if (!beforeChild && RenderElement::isAfterContent(dynamicDowncast<RenderElement>(parent.lastChild())))
         beforeChild = parent.lastChild();
 
     bool childInline = newChildIsInline(parent, *child);
@@ -214,6 +217,7 @@ void RenderTreeBuilder::Inline::attachIgnoringContinuation(RenderInline& parent,
 
 void RenderTreeBuilder::Inline::splitFlow(RenderInline& parent, RenderObject* beforeChild, RenderPtr<RenderBlock> newBlockBox, RenderPtr<RenderObject> child, RenderBoxModelObject* oldCont)
 {
+    ASSERT(newBlockBox);
     auto& addedBlockBox = *newBlockBox;
     RenderBlock* pre = nullptr;
     RenderBlock* block = parent.containingBlock();
@@ -223,17 +227,17 @@ void RenderTreeBuilder::Inline::splitFlow(RenderInline& parent, RenderObject* be
 
     RenderPtr<RenderBlock> createdPre;
     bool madeNewBeforeBlock = false;
-    auto canResueContainingBlockAsPreBlock = [&] {
+    auto canReuseContainingBlockAsPreBlock = [&] {
         if (!block->isAnonymousBlock())
             return false;
         if (auto* containingBlockParent = block->parent())
             return !containingBlockParent->createsAnonymousWrapper() && !containingBlockParent->isRenderDeprecatedFlexibleBox();
         return false;
     };
-    if (canResueContainingBlockAsPreBlock()) {
+    if (canReuseContainingBlockAsPreBlock()) {
         // We can reuse this block and make it the preBlock of the next continuation.
         pre = block;
-        pre->removePositionedObjects(nullptr);
+        pre->removeOutOfFlowBoxes({ });
         // FIXME-BLOCKFLOW: The enclosing method should likely be switched over
         // to only work on RenderBlockFlow, in which case this conversion can be
         // removed.
@@ -242,12 +246,12 @@ void RenderTreeBuilder::Inline::splitFlow(RenderInline& parent, RenderObject* be
         block = block->containingBlock();
     } else {
         // No anonymous block available for use. Make one.
-        createdPre = block->createAnonymousBlock();
+        createdPre = Block::createAnonymousBlockWithStyle(block->protectedDocument(), block->style());
         pre = createdPre.get();
         madeNewBeforeBlock = true;
     }
 
-    auto createdPost = pre->createAnonymousBoxWithSameTypeAs(*block);
+    auto createdPost = createAnonymousBoxWithSameTypeAndWithStyle(*pre, block->style());
     auto& post = downcast<RenderBlock>(*createdPost);
 
     RenderObject* boxFirst = madeNewBeforeBlock ? block->firstChild() : pre->nextSibling();
@@ -406,7 +410,7 @@ bool RenderTreeBuilder::Inline::newChildIsInline(const RenderInline& parent, con
 void RenderTreeBuilder::Inline::childBecameNonInline(RenderInline& parent, RenderElement& child)
 {
     // We have to split the parent flow.
-    auto newBox = parent.containingBlock()->createAnonymousBlock();
+    auto newBox = Block::createAnonymousBlockWithStyle(parent.containingBlock()->protectedDocument(), parent.containingBlock()->style());
     newBox->setIsContinuation();
     auto* oldContinuation = parent.continuation();
     if (oldContinuation)

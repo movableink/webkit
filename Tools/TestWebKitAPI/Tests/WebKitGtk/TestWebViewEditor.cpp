@@ -130,7 +130,7 @@ public:
         loadURI("about:blank");
         waitUntilLoadFinished();
 
-        g_signal_connect(m_webView, "permission-request", G_CALLBACK(+[](WebKitWebView*, WebKitPermissionRequest* request, gpointer userData) -> gboolean {
+        g_signal_connect(m_webView.get(), "permission-request", G_CALLBACK(+[](WebKitWebView*, WebKitPermissionRequest* request, gpointer userData) -> gboolean {
             if (!WEBKIT_IS_CLIPBOARD_PERMISSION_REQUEST(request))
                 return FALSE;
 
@@ -142,7 +142,7 @@ public:
     ~EditorTest()
     {
         m_clipboard.clear();
-        g_signal_handlers_disconnect_by_data(m_webView, this);
+        g_signal_handlers_disconnect_by_data(m_webView.get(), this);
     }
 
     gboolean clipboardPermissionRequested(WebKitPermissionRequest* request)
@@ -182,25 +182,25 @@ public:
     void flushEditorState()
     {
 #if USE(GTK4)
-        auto* surface = gtk_native_get_surface(gtk_widget_get_native(GTK_WIDGET(m_webView)));
+        auto* surface = gtk_native_get_surface(gtk_widget_get_native(GTK_WIDGET(m_webView.get())));
         auto* clock = gdk_surface_get_frame_clock(surface);
         auto signalID = g_signal_connect_swapped(clock, "paint", G_CALLBACK(webViewDrawCallback), m_mainLoop);
 #else
-        auto signalID = g_signal_connect_swapped(m_webView, "draw", G_CALLBACK(webViewDrawCallback), m_mainLoop);
+        auto signalID = g_signal_connect_swapped(m_webView.get(), "draw", G_CALLBACK(webViewDrawCallback), m_mainLoop);
 #endif
-        gtk_widget_queue_draw(GTK_WIDGET(m_webView));
+        gtk_widget_queue_draw(GTK_WIDGET(m_webView.get()));
         g_main_loop_run(m_mainLoop);
 #if USE(GTK4)
         g_signal_handler_disconnect(clock, signalID);
 #else
-        g_signal_handler_disconnect(m_webView, signalID);
+        g_signal_handler_disconnect(m_webView.get(), signalID);
 #endif
     }
 
     static void canExecuteEditingCommandReadyCallback(GObject*, GAsyncResult* result, EditorTest* test)
     {
         GUniqueOutPtr<GError> error;
-        test->m_canExecuteEditingCommand = webkit_web_view_can_execute_editing_command_finish(test->m_webView, result, &error.outPtr());
+        test->m_canExecuteEditingCommand = webkit_web_view_can_execute_editing_command_finish(test->webView(), result, &error.outPtr());
         g_assert_no_error(error.get());
         g_main_loop_quit(test->m_mainLoop);
     }
@@ -208,7 +208,7 @@ public:
     bool canExecuteEditingCommand(const char* command)
     {
         m_canExecuteEditingCommand = false;
-        webkit_web_view_can_execute_editing_command(m_webView, command, 0, reinterpret_cast<GAsyncReadyCallback>(canExecuteEditingCommandReadyCallback), this);
+        webkit_web_view_can_execute_editing_command(m_webView.get(), command, 0, reinterpret_cast<GAsyncReadyCallback>(canExecuteEditingCommandReadyCallback), this);
         g_main_loop_run(m_mainLoop);
 
         if (!strcmp(command, WEBKIT_EDITING_COMMAND_CUT))
@@ -229,7 +229,7 @@ public:
 
     const char* copyClipboard()
     {
-        webkit_web_view_execute_editing_command(m_webView, WEBKIT_EDITING_COMMAND_COPY);
+        webkit_web_view_execute_editing_command(m_webView.get(), WEBKIT_EDITING_COMMAND_COPY);
         return m_clipboard.readText();
     }
 
@@ -239,7 +239,7 @@ public:
         g_assert_true(canExecuteEditingCommand(WEBKIT_EDITING_COMMAND_PASTE));
         g_assert_true(canExecuteEditingCommand(WEBKIT_EDITING_COMMAND_PASTE_AS_PLAIN_TEXT));
 
-        webkit_web_view_execute_editing_command(m_webView, WEBKIT_EDITING_COMMAND_CUT);
+        webkit_web_view_execute_editing_command(m_webView.get(), WEBKIT_EDITING_COMMAND_CUT);
         return m_clipboard.readText();
     }
 
@@ -248,7 +248,7 @@ public:
         if (m_editorState)
             return m_editorState;
 
-        m_editorState = webkit_web_view_get_editor_state(m_webView);
+        m_editorState = webkit_web_view_get_editor_state(m_webView.get());
         assertObjectIsDeletedWhenTestFinishes(G_OBJECT(m_editorState));
         return m_editorState;
     }
@@ -365,7 +365,7 @@ static void testWebViewEditorSelectAllNonEditable(EditorTest* test, gconstpointe
     // Initially only the subspan is selected.
     g_assert_cmpstr(test->copyClipboard(), ==, "make Jack a dull");
 
-    webkit_web_view_execute_editing_command(test->m_webView, WEBKIT_EDITING_COMMAND_SELECT_ALL);
+    webkit_web_view_execute_editing_command(test->webView(), WEBKIT_EDITING_COMMAND_SELECT_ALL);
     // The mainspan should be selected after calling SELECT_ALL.
     g_assert_cmpstr(test->copyClipboard(), ==, "All work and no play make Jack a dull boy.");
 }
@@ -388,7 +388,7 @@ static void testWebViewEditorSelectAllEditable(EditorTest* test, gconstpointer)
     // Initially only the subspan is selected.
     g_assert_cmpstr(test->copyClipboard(), ==, "make Jack a dull");
 
-    webkit_web_view_execute_editing_command(test->m_webView, WEBKIT_EDITING_COMMAND_SELECT_ALL);
+    webkit_web_view_execute_editing_command(test->webView(), WEBKIT_EDITING_COMMAND_SELECT_ALL);
     // The mainspan should be selected after calling SELECT_ALL.
     g_assert_cmpstr(test->copyClipboard(), ==, "All work and no play make Jack a dull boy.");
 }
@@ -467,45 +467,45 @@ static void testWebViewEditorEditorStateTypingAttributes(EditorTest* test, gcons
     unsigned typingAttributes = test->typingAttributes();
     g_assert_cmpuint(typingAttributes, ==, WEBKIT_EDITOR_TYPING_ATTRIBUTE_NONE);
 
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveWordForward");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveForward");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveWordForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveForward");
     typingAttributes = test->waitUntilTypingAttributesChanged();
     g_assert_true(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_BOLD);
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_ITALIC);
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_UNDERLINE);
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_STRIKETHROUGH);
 
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveWordForward");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveForward");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveWordForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveForward");
     typingAttributes = test->waitUntilTypingAttributesChanged();
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_BOLD);
     g_assert_true(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_ITALIC);
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_UNDERLINE);
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_STRIKETHROUGH);
 
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveWordForward");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveForward");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveWordForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveForward");
     typingAttributes = test->waitUntilTypingAttributesChanged();
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_BOLD);
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_ITALIC);
     g_assert_true(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_UNDERLINE);
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_STRIKETHROUGH);
 
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveWordForward");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveForward");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveWordForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveForward");
     typingAttributes = test->waitUntilTypingAttributesChanged();
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_BOLD);
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_ITALIC);
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_UNDERLINE);
     g_assert_true(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_STRIKETHROUGH);
 
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveWordForward");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveForward");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveWordForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveForward");
     typingAttributes = test->waitUntilTypingAttributesChanged();
     g_assert_true(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_BOLD);
     g_assert_true(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_ITALIC);
@@ -513,57 +513,57 @@ static void testWebViewEditorEditorStateTypingAttributes(EditorTest* test, gcons
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_STRIKETHROUGH);
 
     // Selections.
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveToBeginningOfDocument");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveWordForwardAndModifySelection");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveToBeginningOfDocument");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveWordForwardAndModifySelection");
     typingAttributes = test->waitUntilTypingAttributesChanged();
     g_assert_cmpuint(typingAttributes, ==, WEBKIT_EDITOR_TYPING_ATTRIBUTE_NONE);
 
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveForward");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveForward");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveWordForwardAndModifySelection");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveWordForwardAndModifySelection");
     typingAttributes = test->waitUntilTypingAttributesChanged();
     g_assert_true(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_BOLD);
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_ITALIC);
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_UNDERLINE);
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_STRIKETHROUGH);
 
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveForward");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveForward");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveWordForwardAndModifySelection");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveWordForwardAndModifySelection");
     typingAttributes = test->waitUntilTypingAttributesChanged();
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_BOLD);
     g_assert_true(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_ITALIC);
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_UNDERLINE);
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_STRIKETHROUGH);
 
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveForward");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveForward");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveWordForwardAndModifySelection");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveWordForwardAndModifySelection");
     typingAttributes = test->waitUntilTypingAttributesChanged();
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_BOLD);
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_ITALIC);
     g_assert_true(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_UNDERLINE);
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_STRIKETHROUGH);
 
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveForward");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveForward");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveWordForwardAndModifySelection");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveWordForwardAndModifySelection");
     typingAttributes = test->waitUntilTypingAttributesChanged();
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_BOLD);
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_ITALIC);
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_UNDERLINE);
     g_assert_true(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_STRIKETHROUGH);
 
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveForward");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveForward");
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveWordForwardAndModifySelection");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveForward");
+    webkit_web_view_execute_editing_command(test->webView(), "MoveWordForwardAndModifySelection");
     typingAttributes = test->waitUntilTypingAttributesChanged();
     g_assert_true(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_BOLD);
     g_assert_true(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_ITALIC);
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_UNDERLINE);
     g_assert_false(typingAttributes & WEBKIT_EDITOR_TYPING_ATTRIBUTE_STRIKETHROUGH);
 
-    webkit_web_view_execute_editing_command(test->m_webView, "SelectAll");
+    webkit_web_view_execute_editing_command(test->webView(), "SelectAll");
     typingAttributes = test->waitUntilTypingAttributesChanged();
     g_assert_cmpuint(typingAttributes, ==, WEBKIT_EDITOR_TYPING_ATTRIBUTE_NONE);
 }
@@ -577,7 +577,7 @@ static void testWebViewEditorInsertImage(EditorTest* test, gconstpointer)
 
     GUniquePtr<char> imagePath(g_build_filename(Test::getResourcesDir().data(), "blank.ico", nullptr));
     GUniquePtr<char> imageURI(g_filename_to_uri(imagePath.get(), nullptr, nullptr));
-    webkit_web_view_execute_editing_command_with_argument(test->m_webView, WEBKIT_EDITING_COMMAND_INSERT_IMAGE, imageURI.get());
+    webkit_web_view_execute_editing_command_with_argument(test->webView(), WEBKIT_EDITING_COMMAND_INSERT_IMAGE, imageURI.get());
     GUniqueOutPtr<GError> error;
     JSCValue* value = test->runJavaScriptAndWaitUntilFinished("document.getElementsByTagName('IMG')[0].src", &error.outPtr());
     g_assert_nonnull(value);
@@ -594,7 +594,7 @@ static void testWebViewEditorCreateLink(EditorTest* test, gconstpointer)
     test->setEditable(true);
 
     static const char* webkitGTKURL = "http://www.webkitgtk.org/";
-    webkit_web_view_execute_editing_command_with_argument(test->m_webView, WEBKIT_EDITING_COMMAND_CREATE_LINK, webkitGTKURL);
+    webkit_web_view_execute_editing_command_with_argument(test->webView(), WEBKIT_EDITING_COMMAND_CREATE_LINK, webkitGTKURL);
     GUniqueOutPtr<GError> error;
     JSCValue* value = test->runJavaScriptAndWaitUntilFinished("document.getElementsByTagName('A')[0].href;", &error.outPtr());
     g_assert_nonnull(value);
@@ -608,8 +608,8 @@ static void testWebViewEditorCreateLink(EditorTest* test, gconstpointer)
     g_assert_cmpstr(resultString.get(), ==, "webkitgtk.org");
 
     // When there isn't text selected, the URL is used as link text.
-    webkit_web_view_execute_editing_command(test->m_webView, "MoveToEndOfLine");
-    webkit_web_view_execute_editing_command_with_argument(test->m_webView, WEBKIT_EDITING_COMMAND_CREATE_LINK, webkitGTKURL);
+    webkit_web_view_execute_editing_command(test->webView(), "MoveToEndOfLine");
+    webkit_web_view_execute_editing_command_with_argument(test->webView(), WEBKIT_EDITING_COMMAND_CREATE_LINK, webkitGTKURL);
     value = test->runJavaScriptAndWaitUntilFinished("document.getElementsByTagName('A')[1].href;", &error.outPtr());
     g_assert_nonnull(value);
     g_assert_no_error(error.get());

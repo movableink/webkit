@@ -58,7 +58,7 @@ private:
 
     bool operator==(const FilterEffect& other) const override { return areEqual<FEColorMatrix>(*this, other); }
 
-    bool resultIsAlphaImage(const FilterImageVector& inputs) const override;
+    bool resultIsAlphaImage(std::span<const Ref<FilterImage>> inputs) const override;
 
     OptionSet<FilterRenderingMode> supportedFilterRenderingModes() const override;
 

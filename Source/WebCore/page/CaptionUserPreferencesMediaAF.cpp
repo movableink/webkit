@@ -40,6 +40,7 @@
 #include "UserAgentParts.h"
 #include "UserStyleSheetTypes.h"
 #include <algorithm>
+#include <ranges>
 #include <wtf/Language.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RetainPtr.h>
@@ -735,7 +736,7 @@ static String trackDisplayName(const TrackBase& track)
 
     String result;
 
-    String label = track.label();
+    String label = track.label().string().trim(isASCIIWhitespace);
     String trackLanguageIdentifier = track.validBCP47Language();
 
     auto preferredLanguages = userPreferredLanguages(ShouldMinimizeLanguages::No);
@@ -761,8 +762,12 @@ static String trackDisplayName(const TrackBase& track)
 
         result = addTrackKindDisplayNameIfNeeded(track, result);
 
-        if (!label.isEmpty() && !result.contains(label))
-            result = addTrackLabelAsSuffix(result, label);
+        if (!label.isEmpty()) {
+            if (result.isEmpty())
+                result = label;
+            else if (!result.contains(label))
+                result = addTrackLabelAsSuffix(result, label);
+        }
     }
 
     if (result.isEmpty())
@@ -839,7 +844,7 @@ Vector<RefPtr<AudioTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu
 
     Collator collator;
 
-    std::sort(tracksForMenu.begin(), tracksForMenu.end(), [&] (auto& a, auto& b) {
+    std::ranges::sort(tracksForMenu, [&] (auto& a, auto& b) {
         if (auto trackDisplayComparison = collator.collate(trackDisplayName(*a), trackDisplayName(*b)))
             return trackDisplayComparison < 0;
 
@@ -955,7 +960,7 @@ Vector<RefPtr<TextTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(
     if (tracksForMenu.isEmpty())
         return tracksForMenu;
 
-    std::sort(tracksForMenu.begin(), tracksForMenu.end(), textTrackCompare);
+    std::ranges::sort(tracksForMenu, textTrackCompare);
 
     if (requestingCaptionsOrDescriptionsOrSubtitles) {
         tracksForMenu.insert(0, &TextTrack::captionMenuOffItem());

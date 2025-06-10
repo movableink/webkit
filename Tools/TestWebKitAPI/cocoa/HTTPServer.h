@@ -50,7 +50,7 @@ public:
     HTTPServer(std::initializer_list<std::pair<String, HTTPResponse>>, Protocol = Protocol::Http, CertificateVerifier&& = nullptr, SecIdentityRef = nullptr, std::optional<uint16_t> port = { });
     HTTPServer(Function<void(Connection)>&&, Protocol = Protocol::Http);
     enum class UseCoroutines : bool { Yes };
-    HTTPServer(UseCoroutines, Function<Task(Connection)>&&, Protocol = Protocol::Http);
+    HTTPServer(UseCoroutines, Function<ConnectionTask(Connection)>&&, Protocol = Protocol::Http);
     ~HTTPServer();
     uint16_t port() const;
     String origin() const;
@@ -59,6 +59,7 @@ public:
     WKWebViewConfiguration *httpsProxyConfiguration() const;
     size_t totalConnections() const;
     size_t totalRequests() const;
+    String lastRequestCookies() const;
     void cancel();
     void terminateAllConnections(CompletionHandler<void()>&&);
 
@@ -67,6 +68,7 @@ public:
 
     static void respondWithOK(Connection);
     static void respondWithChallengeThenOK(Connection);
+    static String parseCookies(const Vector<char>& request);
     static String parsePath(const Vector<char>& request);
     static String parseBody(const Vector<char>&);
     static Vector<uint8_t> testPrivateKey();
@@ -85,7 +87,7 @@ private:
 struct HTTPResponse {
     enum class Behavior : uint8_t {
         SendResponseNormally,
-        TerminateConnectionAfterReceivingResponse,
+        TerminateConnectionAfterReceivingRequest,
         NeverSendResponse
     };
 

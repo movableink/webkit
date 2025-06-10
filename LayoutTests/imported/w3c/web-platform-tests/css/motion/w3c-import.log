@@ -15,6 +15,7 @@ None
 ------------------------------------------------------------------------
 List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/META.yml
+/LayoutTests/imported/w3c/web-platform-tests/css/motion/WEB_FEATURES.yml
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/change-offset-path-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/change-offset-path.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/inheritance.html
@@ -151,6 +152,10 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-circle-005.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-circle-006-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-circle-006.html
+/LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-circle-007-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-circle-007.html
+/LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-circle-008-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-circle-008.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-ellipse-001-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-ellipse-001-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-ellipse-001.html
@@ -166,6 +171,10 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-ellipse-005-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-ellipse-005-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-ellipse-005.html
+/LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-ellipse-006-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-ellipse-006.html
+/LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-ellipse-007-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-ellipse-007.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-inset-001-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-inset-001-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-inset-001.html
@@ -190,6 +199,13 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-rect-003-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-rect-003-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-rect-003.html
+/LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-shape-001-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-shape-001-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-shape-001.html
+/LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-shape-002-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-shape-002.html
+/LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-shape-003-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-shape-003.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-xywh-001-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-xywh-001-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-shape-xywh-001.html
@@ -203,6 +219,8 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-string-001.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-string-002-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-string-002.html
+/LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-string-003-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-string-003.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-string-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-url-001-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/motion/offset-path-url-001-ref.html

@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "GPUIntegralTypes.h"
 #include "WebGPUComputePassEncoder.h"
 #include <JavaScriptCore/Uint32Array.h>
@@ -41,6 +40,7 @@ class GPUBindGroup;
 class GPUBuffer;
 class GPUComputePipeline;
 class GPUQuerySet;
+template<typename> class ExceptionOr;
 
 namespace WebGPU {
 class Device;
@@ -62,10 +62,10 @@ public:
 
     void end();
 
-    void setBindGroup(GPUIndex32, const GPUBindGroup&,
+    void setBindGroup(GPUIndex32, const GPUBindGroup*,
         std::optional<Vector<GPUBufferDynamicOffset>>&&);
 
-    ExceptionOr<void> setBindGroup(GPUIndex32, const GPUBindGroup&,
+    ExceptionOr<void> setBindGroup(GPUIndex32, const GPUBindGroup*,
         const JSC::Uint32Array& dynamicOffsetsData,
         GPUSize64 dynamicOffsetsDataStart,
         GPUSize32 dynamicOffsetsDataLength);

@@ -2,23 +2,23 @@
 reset  submit  type=button  invalid  invalid with command only  invalid with commandfor only missing  missing with command only  missing with commandfor only
 reset submit type=button invalid invalid with command only invalid with commandfor only missing missing with command only missing with commandfor only  reset submit type=button invalid missing
 
-FAIL Button type=reset in form should trigger form reset and not toggle popover assert_true: type=reset should trigger form reset event expected true got false
-FAIL Button type=submit in form should trigger form submit and not toggle popover assert_true: type=submit should trigger form submit event expected true got false
+PASS Button type=reset in form should trigger form reset and not toggle popover
+PASS Button type=submit in form should trigger form submit and not toggle popover
 PASS Button type=button in form should not toggle popover
 PASS Button type=invalid in form should not trigger form submit and not toggle popover
-FAIL Button type=invalid in form with only command should not trigger form submit and not toggle popover assert_false: type=invalid should not trigger form submit event expected false got true
+PASS Button type=invalid in form with only command should not trigger form submit and not toggle popover
 PASS Button type=invalid in form with only commandfor should not trigger form submit and not toggle popover
 PASS Button missing type in form should not trigger form submit and not toggle popover
-FAIL Button missing type in form with only command should not trigger form submit and not toggle popover assert_false: missing type should not trigger form submit event expected false got true
+PASS Button missing type in form with only command should not trigger form submit and not toggle popover
 PASS Button missing type in form with only commandfor should not trigger form submit and not toggle popover
-FAIL Button type=reset with form attr should trigger form reset and not toggle popover assert_true: type=reset should trigger form reset event expected true got false
-FAIL Button type=submit with form attr should trigger form submit and not toggle popover assert_true: type=submit should trigger form submit event expected true got false
+PASS Button type=reset with form attr should trigger form reset and not toggle popover
+PASS Button type=submit with form attr should trigger form submit and not toggle popover
 PASS Button type=button with form attr should toggle popover
 PASS Button type=invalid with form attr should not trigger form submit and not toggle popover
-FAIL Button type=invalid with form attr and only command should not trigger form submit and not toggle popover assert_false: type=invalid should not trigger form submit event expected false got true
+PASS Button type=invalid with form attr and only command should not trigger form submit and not toggle popover
 PASS Button type=invalid with form attr and only commandfor should not trigger form submit and not toggle popover
 PASS Button missing type with form attr should not trigger form submit and not toggle popover
-FAIL Button missing type with form attr and only command should not trigger form submit and not toggle popover assert_false: missing type should not trigger form submit event expected false got true
+PASS Button missing type with form attr and only command should not trigger form submit and not toggle popover
 PASS Button missing type with form attr and only commandfor should not trigger form submit and not toggle popover
 PASS Button type=reset outside form should toggle popover
 PASS Button type=submit outside form should toggle popover

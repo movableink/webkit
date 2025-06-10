@@ -1,0 +1,4 @@
+NetworkProcess/cocoa/NetworkSessionCocoa.mm
+Platform/IPC/StreamClientConnection.h
+Shared/Cocoa/AuxiliaryProcessCocoa.mm
+UIProcess/WebProcessCache.cpp

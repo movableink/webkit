@@ -23,7 +23,6 @@
 
 import Foundation
 public import SwiftUI
-@_spi(Private) @_spi(CrossImportOverlay) import WebKit
 
 extension EnvironmentValues {
     @Entry
@@ -39,10 +38,7 @@ extension EnvironmentValues {
     var webViewTextSelection = true
 
     @Entry
-    var webViewAllowsElementFullscreen = false
-
-    @Entry
-    var webViewFindContext: FindContext = .init()
+    var webViewElementFullscreenBehavior = WebView.ElementFullscreenBehavior.automatic
 
     @Entry
     var webViewContextMenuContext: ContextMenuContext? = nil
@@ -55,4 +51,7 @@ extension EnvironmentValues {
 
     @Entry
     var webViewScrollPositionContext = ScrollPositionContext()
+
+    @Entry
+    var webViewScrollInputBehaviorContext: ScrollInputBehaviorContext? = nil
 }

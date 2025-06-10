@@ -103,6 +103,10 @@ void AccessibilityMenuListPopup::addChildren()
             addChild(*menuListOptionObject, DescendIfIgnored::No);
         }
     }
+
+#ifndef NDEBUG
+    verifyChildrenIndexInParent();
+#endif
 }
 
 void AccessibilityMenuListPopup::handleChildrenChanged()

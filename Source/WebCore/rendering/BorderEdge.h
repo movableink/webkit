@@ -73,7 +73,7 @@ using BorderEdges = RectEdges<BorderEdge>;
 BorderEdges borderEdges(const RenderStyle&, float deviceScaleFactor, RectEdges<bool> closedEdges = { true }, LayoutSize inflation = { }, bool setColorsToBlack = false);
 BorderEdges borderEdgesForOutline(const RenderStyle&, float deviceScaleFactor);
 
-inline bool edgesShareColor(const BorderEdge& firstEdge, const BorderEdge& secondEdge) { return firstEdge.color() == secondEdge.color(); }
+inline bool edgesShareColor(const BorderEdge& firstEdge, const BorderEdge& secondEdge) { return equalIgnoringSemanticColor(firstEdge.color(), secondEdge.color()); }
 inline BoxSideFlag edgeFlagForSide(BoxSide side) { return static_cast<BoxSideFlag>(1 << static_cast<unsigned>(side)); }
 inline bool includesEdge(OptionSet<BoxSideFlag> flags, BoxSide side) { return flags.contains(edgeFlagForSide(side)); }
 

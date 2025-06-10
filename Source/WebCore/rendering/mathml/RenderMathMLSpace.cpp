@@ -47,7 +47,7 @@ RenderMathMLSpace::~RenderMathMLSpace() = default;
 
 void RenderMathMLSpace::computePreferredLogicalWidths()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
 
     m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = spaceWidth();
 
@@ -56,7 +56,7 @@ void RenderMathMLSpace::computePreferredLogicalWidths()
 
     adjustPreferredLogicalWidthsForBorderAndPadding();
 
-    setPreferredLogicalWidthsDirty(false);
+    clearNeedsPreferredWidthsUpdate();
 }
 
 LayoutUnit RenderMathMLSpace::spaceWidth() const

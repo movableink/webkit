@@ -135,7 +135,7 @@ void WebBackForwardList::addItem(Ref<WebBackForwardListItem>&& newItem)
         if (m_entries.size() >= DefaultCapacity && (*m_currentIndex)) {
             didRemoveItem(m_entries[0]);
             removedItems.append(WTFMove(m_entries[0]));
-            m_entries.remove(0);
+            m_entries.removeAt(0);
 
             if (m_entries.isEmpty())
                 m_currentIndex = std::nullopt;
@@ -241,7 +241,7 @@ void WebBackForwardList::goToItem(WebBackForwardListItem& item)
     Vector<Ref<WebBackForwardListItem>> removedItems;
     if (!shouldKeepCurrentItem) {
         removedItems.append(currentItem.copyRef());
-        m_entries.remove(*m_currentIndex);
+        m_entries.removeAt(*m_currentIndex);
         targetIndex = notFound;
         for (size_t i = 0; i < m_entries.size(); ++i) {
             if (m_entries[i].ptr() == &item) {
@@ -277,11 +277,21 @@ WebBackForwardListItem* WebBackForwardList::backItem() const
     return m_page && m_currentIndex && *m_currentIndex ? m_entries[*m_currentIndex - 1].ptr() : nullptr;
 }
 
+RefPtr<WebBackForwardListItem> WebBackForwardList::protectedBackItem() const
+{
+    return backItem();
+}
+
 WebBackForwardListItem* WebBackForwardList::forwardItem() const
 {
     ASSERT(!m_currentIndex || *m_currentIndex < m_entries.size());
 
     return m_page && m_currentIndex && m_entries.size() && *m_currentIndex < m_entries.size() - 1 ? m_entries[*m_currentIndex + 1].ptr() : nullptr;
+}
+
+RefPtr<WebBackForwardListItem> WebBackForwardList::protectedForwardItem() const
+{
+    return forwardItem();
 }
 
 WebBackForwardListItem* WebBackForwardList::itemAtIndex(int index) const
@@ -299,6 +309,11 @@ WebBackForwardListItem* WebBackForwardList::itemAtIndex(int index) const
         return nullptr;
 
     return m_entries[index + *m_currentIndex].ptr();
+}
+
+RefPtr<WebBackForwardListItem> WebBackForwardList::protectedItemAtIndex(int index) const
+{
+    return itemAtIndex(index);
 }
 
 unsigned WebBackForwardList::backListCount() const
@@ -624,15 +639,11 @@ String WebBackForwardList::loggingString()
 {
     StringBuilder builder;
 
-    builder.append("\nWebBackForwardList 0x"_s, hex(reinterpret_cast<uintptr_t>(this)), " - "_s, m_entries.size(), " entries, has current index "_s, m_currentIndex ? "YES"_s : "NO"_s, " ("_s, m_currentIndex ? *m_currentIndex : 0, ')');
+    builder.append("\nWebBackForwardList 0x"_s, hex(reinterpret_cast<uintptr_t>(this)), " - "_s, m_entries.size(), " entries, has current index "_s, m_currentIndex ? "YES"_s : "NO"_s, " ("_s, m_currentIndex ? *m_currentIndex : 0, ")\n"_s);
 
     for (size_t i = 0; i < m_entries.size(); ++i) {
-        ASCIILiteral prefix;
-        if (m_currentIndex && *m_currentIndex == i)
-            prefix = " * "_s;
-        else
-            prefix = " - "_s;
-        builder.append('\n', prefix, m_entries[i]->loggingString());
+        ASCIILiteral prefix = (m_currentIndex && *m_currentIndex == i) ? " * "_s : " - "_s;
+        builder.append(prefix, m_entries[i]->loggingString());
     }
 
     return builder.toString();

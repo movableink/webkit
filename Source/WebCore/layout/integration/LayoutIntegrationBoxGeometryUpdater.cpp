@@ -56,15 +56,26 @@
 namespace WebCore {
 namespace LayoutIntegration {
 
-static LayoutUnit usedValueOrZero(const Length& length, std::optional<LayoutUnit> availableWidth)
+static LayoutUnit usedValueOrZero(const Style::MarginEdge& marginEdge, std::optional<LayoutUnit> availableWidth)
 {
-    if (length.isFixed())
-        return LayoutUnit { length.value() };
+    if (auto fixed = marginEdge.tryFixed())
+        return LayoutUnit { fixed->value };
 
-    if (length.isAuto() || !availableWidth)
+    if (marginEdge.isAuto() || !availableWidth)
         return { };
 
-    return minimumValueForLength(length, *availableWidth);
+    return Style::evaluateMinimum(marginEdge, *availableWidth);
+}
+
+static LayoutUnit usedValueOrZero(const Style::PaddingEdge& paddingEdge, std::optional<LayoutUnit> availableWidth)
+{
+    if (auto fixed = paddingEdge.tryFixed())
+        return LayoutUnit { fixed->value };
+
+    if (!availableWidth)
+        return { };
+
+    return Style::evaluateMinimum(paddingEdge, *availableWidth);
 }
 
 static inline void adjustBorderForTableAndFieldset(const RenderBoxModelObject& renderer, LayoutUnit& borderLeft, LayoutUnit& borderRight, LayoutUnit& borderTop, LayoutUnit& borderBottom)

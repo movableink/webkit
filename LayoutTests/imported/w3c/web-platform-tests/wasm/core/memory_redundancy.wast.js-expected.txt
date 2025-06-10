@@ -1,0 +1,13 @@
+
+PASS #1 Reinitialize the default imports
+PASS #2 Reinitialize the default imports
+PASS #3 Test that WebAssembly instantiation succeeds
+PASS #4 Test that a WebAssembly code returns a specific result
+PASS #5 Run a WebAssembly test without special assertions
+PASS #6 Test that a WebAssembly code returns a specific result
+PASS #7 Run a WebAssembly test without special assertions
+PASS #8 Test that WebAssembly instantiation succeeds
+PASS #9 Run a WebAssembly test without special assertions
+PASS #10 Run a WebAssembly test without special assertions
+PASS #11 Test that a WebAssembly code returns a specific result
+

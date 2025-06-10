@@ -177,7 +177,7 @@ bool SQLiteDatabase::open(const String& filename, OpenMode openMode, OptionSet<O
 
     overrideUnauthorizedFunctions();
 
-    m_openingThread = &Thread::currentSingleton();
+    m_openingThread = Thread::currentSingleton();
     if (sqlite3_extended_result_codes(m_db, 1) != SQLITE_OK)
         return false;
 
@@ -670,7 +670,7 @@ void SQLiteDatabase::setAuthorizer(DatabaseAuthorizer& authorizer)
 
     Locker locker { m_authorizerLock };
 
-    m_authorizer = &authorizer;
+    m_authorizer = authorizer;
     
     enableAuthorizer(true);
 }

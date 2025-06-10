@@ -21,18 +21,14 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import time
+from unittest.mock import Mock
 
-from mock import Mock
-
-from webkitcorepy import Version
+from webkitcorepy import OutputCapture, Version
 
 from webkitpy.common.system.executive_mock import MockExecutive2, ScriptError
+from webkitpy.port import ios_testcase, port_testcase
 from webkitpy.port.ios_device import IOSDevicePort
-from webkitpy.port import ios_testcase
-from webkitpy.port import port_testcase
 from webkitpy.xcode.device_type import DeviceType
-
-from webkitcorepy import OutputCapture
 
 
 class IOSDeviceTest(ios_testcase.IOSTest):

@@ -41,6 +41,7 @@
 #include "MouseEvent.h"
 #include "NodeName.h"
 #include "RenderFrameSet.h"
+#include "RenderObjectInlines.h"
 #include "Text.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -191,7 +192,7 @@ void HTMLFrameSetElement::defaultEventHandler(Event& event)
     HTMLElement::defaultEventHandler(event);
 }
 
-void HTMLFrameSetElement::willRecalcStyle(Style::Change)
+void HTMLFrameSetElement::willRecalcStyle(OptionSet<Style::Change>)
 {
     if (needsStyleRecalc() && renderer())
         renderer()->setNeedsLayout();

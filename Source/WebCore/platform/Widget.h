@@ -83,7 +83,7 @@ class PlatformMouseEvent;
 class RegionContext;
 class ScrollView;
 
-enum WidgetNotification { WillPaintFlattened, DidPaintFlattened };
+enum class WidgetNotification : uint8_t { WillPaintFlattened, DidPaintFlattened };
 
 // The Widget class serves as a base class for three kinds of objects:
 // (1) Scrollable areas (ScrollView)

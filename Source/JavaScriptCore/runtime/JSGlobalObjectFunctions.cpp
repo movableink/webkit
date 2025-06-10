@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2002 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2024 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Cameron Zwarich (cwzwarich@uwaterloo.ca)
  *  Copyright (C) 2007 Maks Orlovich
  *
@@ -41,6 +41,7 @@
 #include "LiteralParser.h"
 #include "ObjectConstructorInlines.h"
 #include "ParseInt.h"
+#include "SourceProfiler.h"
 #include <stdio.h>
 #include <wtf/ASCIICType.h>
 #include <wtf/Assertions.h>
@@ -134,7 +135,7 @@ static JSValue encode(JSGlobalObject* globalObject, const WTF::BitSet<256>& doNo
         }
     }
 
-    if (UNLIKELY(builder.hasOverflowed()))
+    if (builder.hasOverflowed()) [[unlikely]]
         return throwOutOfMemoryError(globalObject, scope);
     return jsString(vm, builder.toString());
 }
@@ -218,7 +219,7 @@ static JSValue decode(JSGlobalObject* globalObject, std::span<const CharType> ch
         ++k;
         builder.append(c);
     }
-    if (UNLIKELY(builder.hasOverflowed()))
+    if (builder.hasOverflowed()) [[unlikely]]
         return throwOutOfMemoryError(globalObject, scope);
     RELEASE_AND_RETURN(scope, jsString(vm, builder.toString()));
 }
@@ -458,7 +459,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEval, (JSGlobalObject* globalObject, CallFram
     JSValue x = callFrame->argument(0);
     String programSource;
     bool isTrusted = false;
-    if (LIKELY(x.isString())) {
+    if (x.isString()) [[likely]] {
         programSource = x.toWTFString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
     } else if (Options::useTrustedTypes() && x.isObject()) {
@@ -480,7 +481,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEval, (JSGlobalObject* globalObject, CallFram
     if (programSource.isNull())
         return JSValue::encode(x);
 
-    if (Options::useTrustedTypes() && globalObject->requiresTrustedTypes() && !isTrusted) {
+    if (globalObject->trustedTypesEnforcement() != TrustedTypesEnforcement::None && !isTrusted) {
         bool canCompileStrings = globalObject->globalObjectMethodTable()->canCompileStrings(globalObject, CompilationType::IndirectEval, programSource, *vm.emptyList);
         RETURN_IF_EXCEPTION(scope, { });
         if (!canCompileStrings) {
@@ -489,10 +490,17 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEval, (JSGlobalObject* globalObject, CallFram
         }
     }
 
-    if (!globalObject->evalEnabled()) {
+    if (!globalObject->evalEnabled() && globalObject->trustedTypesEnforcement() != TrustedTypesEnforcement::EnforcedWithEvalEnabled) {
         globalObject->globalObjectMethodTable()->reportViolationForUnsafeEval(globalObject, programSource);
         throwException(globalObject, scope, createEvalError(globalObject, globalObject->evalDisabledErrorMessage()));
         return JSValue::encode(jsUndefined());
+    }
+
+    if (SourceProfiler::g_profilerHook) [[unlikely]] {
+        SourceOrigin sourceOrigin = callFrame->callerSourceOrigin(vm);
+        SourceTaintedOrigin sourceTaintedOrigin = computeNewSourceTaintedOriginFromStack(vm, callFrame);
+        auto source = makeSource(programSource, sourceOrigin, sourceTaintedOrigin);
+        SourceProfiler::profile(SourceProfiler::Type::Eval, source);
     }
 
     JSValue parsedValue;
@@ -628,7 +636,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEscape, (JSGlobalObject* globalObject, CallFr
             }
         }
 
-        if (UNLIKELY(builder.hasOverflowed())) {
+        if (builder.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return { };
         }
@@ -691,7 +699,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncUnescape, (JSGlobalObject* globalObject, Call
             }
         }
 
-        if (UNLIKELY(builder.hasOverflowed())) {
+        if (builder.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return { };
         }
@@ -927,8 +935,10 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
         RETURN_IF_EXCEPTION(scope, { });
     }
 
-    if (LIKELY(canPerformFastPropertyEnumerationForCopyDataProperties(source->structure()))) {
-        Vector<RefPtr<UniquedStringImpl>, 8> properties;
+    auto sourceStructure = source->structure();
+    if (canPerformFastPropertyEnumerationForCopyDataProperties(sourceStructure)) [[likely]] {
+        EnsureStillAliveScope sourceStructureScope(sourceStructure);
+        Vector<UniquedStringImpl*, 8> properties; // sourceStructure ensures the lifetimes of these strings.
         MarkedArgumentBuffer values;
 
         // FIXME: It doesn't seem like we should have to do this in two phases, but
@@ -938,7 +948,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
         // that ends up transitioning the structure underneath us.
         // https://bugs.webkit.org/show_bug.cgi?id=187837
 
-        source->structure()->forEachProperty(vm, [&](const PropertyTableEntry& entry) ALWAYS_INLINE_LAMBDA {
+        sourceStructure->forEachProperty(vm, [&](const PropertyTableEntry& entry) ALWAYS_INLINE_LAMBDA {
             PropertyName propertyName(entry.key());
             if (propertyName.isPrivateName())
                 return true;
@@ -958,12 +968,13 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
         // excludedSet is no longer used.
         ensureStillAliveHere(unlinkedCodeBlock);
 
-        if (LIKELY(target->inherits<JSFinalObject>() && target->canPerformFastPutInlineExcludingProto() && target->isStructureExtensible()))
-            target->putOwnDataPropertyBatching(vm, properties.data(), values.data(), properties.size());
+        if (target->inherits<JSFinalObject>() && target->canPerformFastPutInlineExcludingProto() && target->isStructureExtensible()) [[likely]]
+            target->putOwnDataPropertyBatching(vm, properties.mutableSpan().data(), values.data(), properties.size());
         else {
             for (size_t i = 0; i < properties.size(); ++i)
-                target->putDirect(vm, properties[i].get(), values.at(i));
+                target->putDirect(vm, properties[i], values.at(i));
         }
+
         return JSValue::encode(target);
     }
 
@@ -984,7 +995,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
             continue;
 
         JSValue value;
-        if (LIKELY(!slot.isTaintedByOpaqueObject()))
+        if (!slot.isTaintedByOpaqueObject()) [[likely]]
             value = slot.getValue(globalObject, propertyName);
         else
             value = source->get(globalObject, propertyName);
@@ -1015,7 +1026,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCloneObject, (JSGlobalObject* globalObject, C
     }
 
     Structure* sourceStructure = source->structure();
-    if (LIKELY(sourceStructure->canPerformFastPropertyEnumerationCommon())) {
+    if (sourceStructure->canPerformFastPropertyEnumerationCommon()) [[likely]] {
         if (auto* cloned = tryCreateObjectViaCloning(vm, globalObject, source))
             return JSValue::encode(cloned);
     }
@@ -1023,8 +1034,9 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCloneObject, (JSGlobalObject* globalObject, C
     JSObject* target = constructEmptyObject(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (LIKELY(canPerformFastPropertyEnumerationForCopyDataProperties(sourceStructure))) {
-        Vector<RefPtr<UniquedStringImpl>, 8> properties;
+    if (canPerformFastPropertyEnumerationForCopyDataProperties(sourceStructure)) [[likely]] {
+        EnsureStillAliveScope sourceStructureScope(sourceStructure);
+        Vector<UniquedStringImpl*, 8> properties; // sourceStructure ensures the lifetimes of these strings.
         MarkedArgumentBuffer values;
 
         // FIXME: It doesn't seem like we should have to do this in two phases, but
@@ -1048,7 +1060,8 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCloneObject, (JSGlobalObject* globalObject, C
         });
         RETURN_IF_EXCEPTION(scope, { });
 
-        target->putOwnDataPropertyBatching(vm, properties.data(), values.data(), properties.size());
+        target->putOwnDataPropertyBatching(vm, properties.mutableSpan().data(), values.data(), properties.size());
+
         return JSValue::encode(target);
     }
 
@@ -1066,7 +1079,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCloneObject, (JSGlobalObject* globalObject, C
             continue;
 
         JSValue value;
-        if (LIKELY(!slot.isTaintedByOpaqueObject()))
+        if (!slot.isTaintedByOpaqueObject()) [[likely]]
             value = slot.getValue(globalObject, propertyName);
         else
             value = source->get(globalObject, propertyName);
@@ -1127,6 +1140,12 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncHandlePositiveProxySetTrapResult, (JSGlobalOb
     ProxyObject::validatePositiveSetTrapResult(globalObject, target, propertyName, putValue);
 
     return JSValue::encode(jsUndefined());
+}
+
+JSC_DEFINE_HOST_FUNCTION(globalFuncIsFinite, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    JSValue argument = callFrame->argument(0);
+    return JSValue::encode(jsBoolean(std::isfinite(argument.toNumber(globalObject))));
 }
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncIsNaN, (JSGlobalObject* globalObject, CallFrame* callFrame))

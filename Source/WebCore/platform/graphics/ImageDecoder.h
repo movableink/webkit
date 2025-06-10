@@ -82,6 +82,7 @@ public:
     virtual EncodedDataStatus encodedDataStatus() const = 0;
     virtual void setEncodedDataStatusChangeCallback(Function<void(EncodedDataStatus)>&&) { }
     virtual bool isSizeAvailable() const { return encodedDataStatus() >= EncodedDataStatus::SizeAvailable; }
+    virtual bool hasHDRGainMap() const { return false; }
     virtual IntSize size() const = 0;
     virtual size_t frameCount() const = 0;
     virtual size_t primaryFrameIndex() const { return 0; }

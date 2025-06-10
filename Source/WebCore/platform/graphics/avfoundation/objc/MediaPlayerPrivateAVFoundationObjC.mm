@@ -53,6 +53,8 @@
 #import "MediaPlaybackTargetMock.h"
 #import "MediaSelectionGroupAVFObjC.h"
 #import "MediaSessionManagerCocoa.h"
+#import "MessageClientForTesting.h"
+#import "MessageForTesting.h"
 #import "OutOfBandTextTrackPrivateAVF.h"
 #import "PixelBufferConformerCV.h"
 #import "PlatformDynamicRangeLimitCocoa.h"
@@ -260,12 +262,6 @@ static dispatch_queue_t globalLoaderDelegateQueue()
 
 class MediaPlayerPrivateAVFoundationObjC::Factory final : public MediaPlayerFactory {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(Factory);
-public:
-    Factory()
-    {
-        MediaSessionManagerCocoa::ensureCodecsRegistered();
-    }
-
 private:
     MediaPlayerEnums::MediaEngineIdentifier identifier() const final { return MediaPlayerEnums::MediaEngineIdentifier::AVFoundation; };
 
@@ -320,7 +316,7 @@ static AVAssetCache *assetCacheForPath(const String& path)
     if (path.isEmpty())
         return nil;
 
-    return [PAL::getAVAssetCacheClass() assetCacheWithURL:[NSURL fileURLWithPath:path isDirectory:YES]];
+    return [PAL::getAVAssetCacheClass() assetCacheWithURL:[NSURL fileURLWithPath:path.createNSString().get() isDirectory:YES]];
 }
 
 static AVAssetCache *ensureAssetCacheExistsForPath(const String& path)
@@ -781,13 +777,12 @@ void MediaPlayerPrivateAVFoundationObjC::synchronizeTextTrackState()
     }
 }
 
-static NSURL *canonicalURL(const URL& url)
+static RetainPtr<NSURL> canonicalURL(const URL& url)
 {
-    NSURL *cocoaURL = url;
     if (url.isEmpty())
-        return cocoaURL;
+        return URL::emptyNSURL();
 
-    return URLByCanonicalizingURL(cocoaURL);
+    return URLByCanonicalizingURL(url.createNSURL().get());
 }
 
 void MediaPlayerPrivateAVFoundationObjC::createAVAssetForURL(const URL& url)
@@ -902,9 +897,9 @@ void MediaPlayerPrivateAVFoundationObjC::createAVAssetForURL(const URL& url, Ret
     // FIXME: rdar://problem/20354688
     String identifier = player->sourceApplicationIdentifier();
     if (!identifier.isEmpty())
-        [options setObject:identifier forKey:AVURLAssetClientBundleIdentifierKey];
+        [options setObject:identifier.createNSString().get() forKey:AVURLAssetClientBundleIdentifierKey];
 #endif
-    if (player->prefersSandboxedParsing() && PAL::canLoad_AVFoundation_AVAssetPrefersSandboxedParsingOptionKey())
+    if (PAL::canLoad_AVFoundation_AVAssetPrefersSandboxedParsingOptionKey())
         [options setObject:@YES forKey:AVAssetPrefersSandboxedParsingOptionKey];
 
     if (player->inPrivateBrowsingMode() && PAL::canLoad_AVFoundation_AVURLAssetDoNotLogURLsKey())
@@ -915,21 +910,21 @@ void MediaPlayerPrivateAVFoundationObjC::createAVAssetForURL(const URL& url, Ret
     if (PAL::canLoad_AVFoundation_AVURLAssetOutOfBandMIMETypeKey() && !type.isEmpty() && !player->contentMIMETypeWasInferredFromExtension()) {
         auto codecs = player->contentTypeCodecs();
         if (!codecs.isEmpty()) {
-            NSString *typeString = [NSString stringWithFormat:@"%@; codecs=\"%@\"", (NSString *)type, (NSString *)codecs];
-            [options setObject:typeString forKey:AVURLAssetOutOfBandMIMETypeKey];
+            RetainPtr typeString = adoptNS([[NSString alloc] initWithFormat:@"%@; codecs=\"%@\"", type.createNSString().get(), codecs.createNSString().get()]);
+            [options setObject:typeString.get() forKey:AVURLAssetOutOfBandMIMETypeKey];
         } else
-            [options setObject:(NSString *)type forKey:AVURLAssetOutOfBandMIMETypeKey];
+            [options setObject:type.createNSString().get() forKey:AVURLAssetOutOfBandMIMETypeKey];
     }
 
     auto outOfBandTrackSources = player->outOfBandTrackSources();
     if (!outOfBandTrackSources.isEmpty()) {
         auto outOfBandTracks = createNSArray(outOfBandTrackSources, [] (auto& trackSource) {
             return @{
-                AVOutOfBandAlternateTrackDisplayNameKey: trackSource->label(),
-                AVOutOfBandAlternateTrackExtendedLanguageTagKey: trackSource->language(),
+                AVOutOfBandAlternateTrackDisplayNameKey: trackSource->label().createNSString().get(),
+                AVOutOfBandAlternateTrackExtendedLanguageTagKey: trackSource->language().createNSString().get(),
                 AVOutOfBandAlternateTrackIsDefaultKey: trackSource->isDefault() ? @YES : @NO,
-                AVOutOfBandAlternateTrackIdentifierKey: String::number(trackSource->uniqueId()),
-                AVOutOfBandAlternateTrackSourceKey: trackSource->url(),
+                AVOutOfBandAlternateTrackIdentifierKey: String::number(trackSource->uniqueId()).createNSString().get(),
+                AVOutOfBandAlternateTrackSourceKey: trackSource->url().createNSString().get(),
                 AVOutOfBandAlternateTrackMediaCharactersticsKey: mediaDescriptionForKind(trackSource->kind()),
             };
         });
@@ -940,7 +935,7 @@ void MediaPlayerPrivateAVFoundationObjC::createAVAssetForURL(const URL& url, Ret
 #if PLATFORM(IOS_FAMILY)
     String networkInterfaceName = player->mediaPlayerNetworkInterfaceName();
     if (!networkInterfaceName.isEmpty())
-        [options setObject:networkInterfaceName forKey:AVURLAssetBoundNetworkInterfaceName];
+        [options setObject:networkInterfaceName.createNSString().get() forKey:AVURLAssetBoundNetworkInterfaceName];
 #endif
 
     bool usePersistentCache = player->shouldUsePersistentCache();
@@ -957,7 +952,7 @@ void MediaPlayerPrivateAVFoundationObjC::createAVAssetForURL(const URL& url, Ret
     if (allowedMediaContainerTypes && PAL::canLoad_AVFoundation_AVURLAssetAllowableTypeCategoriesKey()) {
         auto nsTypes = adoptNS([[NSMutableArray alloc] init]);
         for (auto type : *allowedMediaContainerTypes)
-            [nsTypes addObject:(NSString *)UTIFromMIMEType(type)];
+            [nsTypes addObject:UTIFromMIMEType(type).createNSString().get()];
         [options setObject:nsTypes.get() forKey:AVURLAssetAllowableTypeCategoriesKey];
     }
 
@@ -990,19 +985,19 @@ void MediaPlayerPrivateAVFoundationObjC::createAVAssetForURL(const URL& url, Ret
         [options setObject:@YES forKey:AVURLAssetShouldEnableLegacyWebKitCompatibilityModeForContentKeyRequests];
 #endif
 
-    NSURL *cocoaURL = canonicalURL(url);
+    RetainPtr nsURL = canonicalURL(url);
 
     @try {
-        m_avAsset = adoptNS([PAL::allocAVURLAssetInstance() initWithURL:cocoaURL options:options.get()]);
+        m_avAsset = adoptNS([PAL::allocAVURLAssetInstance() initWithURL:nsURL.get() options:options.get()]);
     } @catch(NSException *exception) {
-        ERROR_LOG(LOGIDENTIFIER, "-[AVURLAssetInstance initWithURL:cocoaURL options:] threw an exception: ", exception.name, ", reason : ", exception.reason);
-        cocoaURL = canonicalURL(conformFragmentIdentifierForURL(url));
+        ERROR_LOG(LOGIDENTIFIER, "-[AVURLAssetInstance initWithURL:nsURL.get() options:] threw an exception: ", exception.name, ", reason : ", exception.reason);
+        nsURL = canonicalURL(conformFragmentIdentifierForURL(url));
 
         @try {
-            m_avAsset = adoptNS([PAL::allocAVURLAssetInstance() initWithURL:cocoaURL options:options.get()]);
+            m_avAsset = adoptNS([PAL::allocAVURLAssetInstance() initWithURL:nsURL.get() options:options.get()]);
         } @catch(NSException *exception) {
             ASSERT_NOT_REACHED();
-            ERROR_LOG(LOGIDENTIFIER, "-[AVURLAssetInstance initWithURL:cocoaURL options:] threw a second exception, bailing: ", exception.name, ", reason : ", exception.reason);
+            ERROR_LOG(LOGIDENTIFIER, "-[AVURLAssetInstance initWithURL:nsURL.get() options:] threw a second exception, bailing: ", exception.name, ", reason : ", exception.reason);
             setNetworkState(MediaPlayer::NetworkState::FormatError);
             return;
         }
@@ -1118,7 +1113,7 @@ void MediaPlayerPrivateAVFoundationObjC::createAVPlayer()
     }
 
 #if HAVE(SPATIAL_TRACKING_LABEL)
-    [m_avPlayer _setSTSLabel:nsStringNilIfNull(m_spatialTrackingLabel)];
+    updateSpatialTrackingLabel();
 #endif
 
     if (m_avPlayerItem)
@@ -1130,12 +1125,8 @@ void MediaPlayerPrivateAVFoundationObjC::createAVPlayer()
         if (audioOutputDeviceId.isEmpty())
             m_avPlayer.get().audioOutputDeviceUniqueID = nil;
         else
-            m_avPlayer.get().audioOutputDeviceUniqueID = audioOutputDeviceId;
+            m_avPlayer.get().audioOutputDeviceUniqueID = audioOutputDeviceId.createNSString().get();
     }
-#endif
-
-#if HAVE(SPATIAL_TRACKING_LABEL)
-    updateSpatialTrackingLabel();
 #endif
 
     ASSERT(!m_currentTimeObserver);
@@ -1195,7 +1186,7 @@ void MediaPlayerPrivateAVFoundationObjC::createAVPlayerItem()
         [m_avPlayerItem addObserver:m_objcObserver.get() forKeyPath:keyName options:options context:(void *)MediaPlayerAVFoundationObservationContextPlayerItem];
     }
 
-    [m_avPlayerItem setAudioTimePitchAlgorithm:MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(player->pitchCorrectionAlgorithm(), player->preservesPitch(), m_requestedRate)];
+    [m_avPlayerItem setAudioTimePitchAlgorithm:MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(player->pitchCorrectionAlgorithm(), player->preservesPitch(), m_requestedRate).createNSString().get()];
 
 #if HAVE(AVFOUNDATION_INTERSTITIAL_EVENTS)
 ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN
@@ -1683,7 +1674,7 @@ void MediaPlayerPrivateAVFoundationObjC::setRateDouble(double rate)
 void MediaPlayerPrivateAVFoundationObjC::setPlayerRate(double rate, std::optional<MonotonicTime>&& hostTime)
 {
     if (auto player = this->player())
-        [m_avPlayerItem setAudioTimePitchAlgorithm:MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(player->pitchCorrectionAlgorithm(), player->preservesPitch(), m_requestedRate)];
+        [m_avPlayerItem setAudioTimePitchAlgorithm:MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(player->pitchCorrectionAlgorithm(), player->preservesPitch(), m_requestedRate).createNSString().get()];
 
     setShouldObserveTimeControlStatus(false);
 
@@ -1751,14 +1742,14 @@ void MediaPlayerPrivateAVFoundationObjC::setPreservesPitch(bool preservesPitch)
 {
     auto player = this->player();
     if (m_avPlayerItem && player)
-        [m_avPlayerItem setAudioTimePitchAlgorithm:MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(player->pitchCorrectionAlgorithm(), preservesPitch, m_requestedRate)];
+        [m_avPlayerItem setAudioTimePitchAlgorithm:MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(player->pitchCorrectionAlgorithm(), preservesPitch, m_requestedRate).createNSString().get()];
 }
 
 void MediaPlayerPrivateAVFoundationObjC::setPitchCorrectionAlgorithm(MediaPlayer::PitchCorrectionAlgorithm pitchCorrectionAlgorithm)
 {
     auto player = this->player();
     if (m_avPlayerItem && player)
-        [m_avPlayerItem setAudioTimePitchAlgorithm:MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(pitchCorrectionAlgorithm, player->preservesPitch(), m_requestedRate)];
+        [m_avPlayerItem setAudioTimePitchAlgorithm:MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(pitchCorrectionAlgorithm, player->preservesPitch(), m_requestedRate).createNSString().get()];
 }
 
 const PlatformTimeRanges& MediaPlayerPrivateAVFoundationObjC::platformBufferedTimeRanges() const
@@ -2042,8 +2033,8 @@ RetainPtr<CGImageRef> MediaPlayerPrivateAVFoundationObjC::createImageForTimeInRe
 
     [m_imageGenerator setMaximumSize:CGSize(rect.size())];
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    RetainPtr<CGImageRef> rawImage = adoptCF([m_imageGenerator copyCGImageAtTime:PAL::CMTimeMakeWithSeconds(time, 600) actualTime:nil error:nil]);
-    RetainPtr<CGImageRef> image = adoptCF(CGImageCreateCopyWithColorSpace(rawImage.get(), sRGBColorSpaceRef()));
+    RetainPtr rawImage = adoptCF([m_imageGenerator copyCGImageAtTime:PAL::CMTimeMakeWithSeconds(time, 600) actualTime:nil error:nil]);
+    RetainPtr image = adoptCF(CGImageCreateCopyWithColorSpace(rawImage.get(), sRGBColorSpaceSingleton()));
 ALLOW_DEPRECATED_DECLARATIONS_END
 
     INFO_LOG(LOGIDENTIFIER, "creating image took ", (MonotonicTime::now() - start).seconds());
@@ -2132,7 +2123,7 @@ static void fulfillRequestWithKeyData(AVAssetResourceLoadingRequest *request, Ar
         ASSERT(start <= std::numeric_limits<int>::max());
         ASSERT(end <= std::numeric_limits<int>::max());
         auto requestedKeyData = keyData->slice(static_cast<int>(start), static_cast<int>(end));
-        RetainPtr nsData = toNSData(requestedKeyData->span());
+        RetainPtr nsData = WTF::toNSData(requestedKeyData->span());
         [dataRequest respondWithData:nsData.get()];
     }
 
@@ -2179,7 +2170,7 @@ bool MediaPlayerPrivateAVFoundationObjC::shouldWaitForLoadingOfResource(AVAssetR
             return true;
         }
 
-        RetainPtr<NSData> keyURIData = [keyURI dataUsingEncoding:NSUTF8StringEncoding allowLossyConversion:YES];
+        RetainPtr keyURIData = [keyURI.createNSString() dataUsingEncoding:NSUTF8StringEncoding allowLossyConversion:YES];
         m_keyID = SharedBuffer::create(keyURIData.get());
         player->initializationDataEncountered("skd"_s, protectedKeyID()->tryCreateArrayBuffer());
         setWaitingForKey(true);
@@ -3161,7 +3152,7 @@ void MediaPlayerPrivateAVFoundationObjC::processMediaSelectionOptions()
             }
 
             if ([currentOption isEqual:option]) {
-                removedTextTracks.remove(i - 1);
+                removedTextTracks.removeAt(i - 1);
                 newTrack = false;
                 break;
             }
@@ -3202,21 +3193,21 @@ void MediaPlayerPrivateAVFoundationObjC::processCue(NSArray *attributedStrings, 
 {
     ASSERT(time >= MediaTime::zeroTime());
 
-    RefPtr currentTextTrack = m_currentTextTrack.get();
-    if (!currentTextTrack) {
+    RefPtr track = currentTextTrack().get();
+    if (!track) {
         ALWAYS_LOG(LOGIDENTIFIER, "no current text track");
         return;
     }
 
-    currentTextTrack->processCue((__bridge CFArrayRef)attributedStrings, (__bridge CFArrayRef)nativeSamples, time);
+    track->processCue((__bridge CFArrayRef)attributedStrings, (__bridge CFArrayRef)nativeSamples, time);
 }
 
 void MediaPlayerPrivateAVFoundationObjC::flushCues()
 {
     INFO_LOG(LOGIDENTIFIER);
 
-    if (RefPtr currentTextTrack = m_currentTextTrack.get())
-        currentTextTrack->resetCueValues();
+    if (RefPtr track = currentTextTrack().get())
+        track->resetCueValues();
 }
 
 void MediaPlayerPrivateAVFoundationObjC::setCurrentTextTrack(InbandTextTrackPrivateAVF *track)
@@ -3226,9 +3217,10 @@ void MediaPlayerPrivateAVFoundationObjC::setCurrentTextTrack(InbandTextTrackPriv
 
     ALWAYS_LOG(LOGIDENTIFIER, "selecting track with language ", track ? track->language() : emptyAtom());
 
-    m_currentTextTrack = track;
-
     if (track) {
+
+        m_currentTextTrack = *track;
+
         if (track->textTrackCategory() == InbandTextTrackPrivateAVF::LegacyClosedCaption)
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             [m_avPlayer setClosedCaptionDisplayEnabled:YES];
@@ -3249,6 +3241,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
         return;
     }
+
+    m_currentTextTrack = { };
 
     @try {
         [m_avPlayerItem selectMediaOption:0 inMediaSelectionGroup:safeMediaSelectionGroupForLegibleMedia()];
@@ -3369,14 +3363,14 @@ MediaPlayer::WirelessPlaybackTargetType MediaPlayerPrivateAVFoundationObjC::wire
 }
 
 #if PLATFORM(IOS_FAMILY)
-static NSString *exernalDeviceDisplayNameForPlayer(AVPlayer *player)
+static RetainPtr<NSString> exernalDeviceDisplayNameForPlayer(AVPlayer *player)
 {
 #if HAVE(MEDIAEXPERIENCE_AVSYSTEMCONTROLLER)
     if (!PAL::isAVFoundationFrameworkAvailable())
         return nil;
 
     if (auto context = PAL::OutputContext::sharedAudioPresentationOutputContext())
-        return context->deviceName();
+        return context->deviceName().createNSString();
 
     if (player.externalPlaybackType != AVPlayerExternalPlaybackTypeAirPlay)
         return nil;
@@ -3385,7 +3379,7 @@ static NSString *exernalDeviceDisplayNameForPlayer(AVPlayer *player)
     if (!pickableRoutes || !CFArrayGetCount(pickableRoutes.get()))
         return nil;
 
-    NSString *displayName = nil;
+    RetainPtr<NSString> displayName = nil;
     for (NSDictionary *pickableRoute in (__bridge NSArray *)pickableRoutes.get()) {
         if (![pickableRoute[AVController_RouteDescriptionKey_RouteCurrentlyPicked] boolValue])
             continue;
@@ -3397,7 +3391,7 @@ static NSString *exernalDeviceDisplayNameForPlayer(AVPlayer *player)
             break;
 
         // The route is a speaker or HDMI out, override the name to be the localized device model.
-        NSString *localizedDeviceModelName = localizedDeviceModel();
+        RetainPtr localizedDeviceModelName = localizedDeviceModel().createNSString();
 
         // In cases where a route with that name already exists, prefix the name with the model.
         BOOL includeLocalizedDeviceModelName = NO;
@@ -3405,14 +3399,14 @@ static NSString *exernalDeviceDisplayNameForPlayer(AVPlayer *player)
             if (otherRoute == pickableRoute)
                 continue;
 
-            if ([otherRoute[AVController_RouteDescriptionKey_RouteName] rangeOfString:displayName].location != NSNotFound) {
+            if ([otherRoute[AVController_RouteDescriptionKey_RouteName] rangeOfString:displayName.get()].location != NSNotFound) {
                 includeLocalizedDeviceModelName = YES;
                 break;
             }
         }
 
         if (includeLocalizedDeviceModelName)
-            displayName = [NSString stringWithFormat:@"%@ %@", localizedDeviceModelName, displayName];
+            displayName = adoptNS([[NSString alloc] initWithFormat:@"%@ %@", localizedDeviceModelName.get(), displayName.get()]);
         else
             displayName = localizedDeviceModelName;
 
@@ -3437,7 +3431,7 @@ String MediaPlayerPrivateAVFoundationObjC::wirelessPlaybackTargetName() const
     if (RefPtr playbackTarget = m_playbackTarget)
         wirelessTargetName = playbackTarget->deviceName();
 #else
-    wirelessTargetName = exernalDeviceDisplayNameForPlayer(m_avPlayer.get());
+    wirelessTargetName = exernalDeviceDisplayNameForPlayer(m_avPlayer.get()).get();
 #endif
 
     return wirelessTargetName;
@@ -4031,12 +4025,7 @@ void MediaPlayerPrivateAVFoundationObjC::setPlatformDynamicRangeLimit(PlatformDy
 {
     assertIsMainThread();
 
-#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
-    if ([m_videoLayer respondsToSelector:@selector(setPreferredDynamicRange:)])
-        [m_videoLayer setPreferredDynamicRange:platformDynamicRangeLimitString(platformDynamicRangeLimit)];
-#else // HAVE(SUPPORT_HDR_DISPLAY_APIS)
-    UNUSED_PARAM(platformDynamicRangeLimit);
-#endif // HAVE(SUPPORT_HDR_DISPLAY_APIS)
+    setLayerDynamicRangeLimit(m_videoLayer.get(), platformDynamicRangeLimit);
 }
 
 void MediaPlayerPrivateAVFoundationObjC::audioOutputDeviceChanged()
@@ -4049,7 +4038,7 @@ void MediaPlayerPrivateAVFoundationObjC::audioOutputDeviceChanged()
     if (deviceId.isEmpty())
         m_avPlayer.get().audioOutputDeviceUniqueID = nil;
     else
-        m_avPlayer.get().audioOutputDeviceUniqueID = deviceId;
+        m_avPlayer.get().audioOutputDeviceUniqueID = deviceId.createNSString().get();
 #endif
 }
 
@@ -4103,35 +4092,40 @@ void MediaPlayerPrivateAVFoundationObjC::updateSpatialTrackingLabel()
             .spatialTrackingLabel = m_spatialTrackingLabel,
 #endif
         });
+        ALWAYS_LOG(LOGIDENTIFIER, "Setting spatialAudioExperience: ", spatialAudioExperienceDescription(experience.get()));
         [m_avPlayer setIntendedSpatialAudioExperience:experience.get()];
+
+        if (RefPtr client = player->messageClientForTesting())
+            client->sendInternalMessage({ "media-player-spatial-experience-change"_s, spatialAudioExperienceDescription(experience.get()) });
+
         return;
     }
 #endif
 
     if (!m_spatialTrackingLabel.isNull()) {
-        INFO_LOG(LOGIDENTIFIER, "Explicitly set STSLabel: ", m_spatialTrackingLabel);
-        [m_avPlayer _setSTSLabel:m_spatialTrackingLabel];
+        ALWAYS_LOG(LOGIDENTIFIER, "Explicitly set STSLabel: ", m_spatialTrackingLabel);
+        [m_avPlayer _setSTSLabel:m_spatialTrackingLabel.createNSString().get()];
         return;
     }
 
     if (m_videoLayer && isVisible()) {
         // If the media player has a renderer, and that renderer belongs to a page that is visible,
         // then let AVPlayer manage setting the spatial tracking label in its AVPlayerLayer itself;
-        INFO_LOG(LOGIDENTIFIER, "No videoLayer, set STSLabel: nil");
+        ALWAYS_LOG(LOGIDENTIFIER, "No videoLayer, set STSLabel: nil");
         [m_avPlayer _setSTSLabel:nil];
         return;
     }
 
     if (!m_defaultSpatialTrackingLabel.isNull()) {
         // If a default spatial tracking label was explicitly set, use it.
-        INFO_LOG(LOGIDENTIFIER, "Default STSLabel: ", m_defaultSpatialTrackingLabel);
-        [m_avPlayer _setSTSLabel:m_defaultSpatialTrackingLabel];
+        ALWAYS_LOG(LOGIDENTIFIER, "Default STSLabel: ", m_defaultSpatialTrackingLabel);
+        [m_avPlayer _setSTSLabel:m_defaultSpatialTrackingLabel.createNSString().get()];
         return;
     }
 
     // If there is no AVPlayerLayer, and no default spatial tracking label is available, use the session's spatial tracking label.
     AVAudioSession *session = [PAL::getAVAudioSessionClass() sharedInstance];
-    INFO_LOG(LOGIDENTIFIER, "AVAudioSession label: ", session.spatialTrackingLabel);
+    ALWAYS_LOG(LOGIDENTIFIER, "AVAudioSession label: ", session.spatialTrackingLabel);
     [m_avPlayer _setSTSLabel:session.spatialTrackingLabel];
 }
 #endif

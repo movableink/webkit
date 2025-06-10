@@ -36,7 +36,7 @@ namespace WebCore {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioTrackPrivateMediaSourceAVFObjC);
 
 AudioTrackPrivateMediaSourceAVFObjC::AudioTrackPrivateMediaSourceAVFObjC(AVAssetTrack* track)
-    : m_impl(makeUnique<AVTrackPrivateAVFObjCImpl>(track))
+    : m_impl(AVTrackPrivateAVFObjCImpl::create(track))
 {
     resetPropertiesFromTrack();
 }

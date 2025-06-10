@@ -54,9 +54,10 @@ bool coeff_equal(SkBlendModeCoeff skCoeff, skgpu::BlendCoeff gpuCoeff) {
 
 // These are intended to be unit tests of the PaintParamsKeyBuilder and PaintParamsKey.
 DEF_GRAPHITE_TEST_FOR_ALL_CONTEXTS(KeyWithInvalidCodeSnippetIDTest, reporter, context,
-                                   CtsEnforcement::kApiLevel_V) {
+                                   CtsEnforcement::kApiLevel_202404) {
     SkArenaAlloc arena{256};
     ShaderCodeDictionary* dict = context->priv().shaderCodeDictionary();
+    const Caps* caps = context->priv().caps();
 
     // A builder without any data is invalid. The Builder and the PaintParamKeys can include
     // invalid IDs without themselves becoming invalid. Normally adding an invalid ID triggers an
@@ -79,11 +80,11 @@ DEF_GRAPHITE_TEST_FOR_ALL_CONTEXTS(KeyWithInvalidCodeSnippetIDTest, reporter, co
                                  (int32_t) BuiltInCodeSnippetID::kFixedBlend_Src};
     SkSpan<const int32_t> invalidKeySpan{invalidKeyData, std::size(invalidKeyData)*sizeof(int32_t)};
     const PaintParamsKey* fakeKey = reinterpret_cast<const PaintParamsKey*>(&invalidKeySpan);
-    REPORTER_ASSERT(reporter, fakeKey->getRootNodes(dict, &arena).empty());
+    REPORTER_ASSERT(reporter, fakeKey->getRootNodes(caps, dict, &arena, 0).empty());
 }
 
 DEF_GRAPHITE_TEST_FOR_ALL_CONTEXTS(KeyEqualityChecksSnippetID, reporter, context,
-                                   CtsEnforcement::kApiLevel_V) {
+                                   CtsEnforcement::kApiLevel_202404) {
     SkArenaAlloc arena{256};
     ShaderCodeDictionary* dict = context->priv().shaderCodeDictionary();
 
@@ -99,8 +100,9 @@ DEF_GRAPHITE_TEST_FOR_ALL_CONTEXTS(KeyEqualityChecksSnippetID, reporter, context
 }
 
 DEF_GRAPHITE_TEST_FOR_ALL_CONTEXTS(ShaderInfoDetectsFixedFunctionBlend, reporter, context,
-                                   CtsEnforcement::kApiLevel_V) {
+                                   CtsEnforcement::kApiLevel_202404) {
     ShaderCodeDictionary* dict = context->priv().shaderCodeDictionary();
+    const Caps* caps = context->priv().caps();
 
     for (int bm = 0; bm <= (int) SkBlendMode::kLastCoeffMode; ++bm) {
         PaintParamsKeyBuilder builder(dict);
@@ -110,13 +112,22 @@ DEF_GRAPHITE_TEST_FOR_ALL_CONTEXTS(ShaderInfoDetectsFixedFunctionBlend, reporter
         UniquePaintParamsID paintID = dict->findOrCreate(&builder);
 
         const RenderStep* renderStep = &context->priv().rendererProvider()->nonAABounds()->step(0);
-        std::unique_ptr<ShaderInfo> shaderInfo = ShaderInfo::Make(context->priv().caps(),
-                                                                  dict,
-                                                                  /*rteDict=*/nullptr,
-                                                                  renderStep,
-                                                                  paintID,
-                                                                  /*useStorageBuffers=*/false,
-                                                                  skgpu::Swizzle::RGBA());
+        bool dstReadRequired =
+                !CanUseHardwareBlending(caps, static_cast<SkBlendMode>(bm), renderStep->coverage());
+
+        // ShaderInfo expects to receive a concrete determination of dstReadStrategy based upon
+        // whether a dst read is needed. Therefore, we need to decide whether to pass in the
+        // dstReadStrategy reported by caps OR DstReadStrategy::kNoneRequired.
+        std::unique_ptr<ShaderInfo> shaderInfo =
+                ShaderInfo::Make(caps,
+                                 dict,
+                                 /*rteDict=*/nullptr,
+                                 renderStep,
+                                 paintID,
+                                 /*useStorageBuffers=*/false,
+                                 skgpu::Swizzle::RGBA(),
+                                 dstReadRequired ? caps->getDstReadStrategy()
+                                                 : DstReadStrategy::kNoneRequired);
 
         SkBlendMode expectedBM = static_cast<SkBlendMode>(bm);
         if (expectedBM == SkBlendMode::kPlus) {

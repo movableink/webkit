@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "HTMLElementStack.h"
 #include "HTMLFormattingElementList.h"

@@ -22,12 +22,12 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 
 internal import SwiftUI
-@_spi(Private) @_spi(CrossImportOverlay) internal import WebKit
+@_spi(Private) internal import WebKit
 
 struct ContextMenuContext {
-#if os(macOS)
-    let menu: (WebPage.ElementInfo) -> NSMenu
-#endif
+    #if os(macOS)
+    let menu: @MainActor (WebView.ActivatedElementInfo) -> NSMenu
+    #endif
 }
 
 struct OnScrollGeometryChangeContext {
@@ -35,12 +35,11 @@ struct OnScrollGeometryChangeContext {
     let action: (AnyHashable, AnyHashable) -> Void
 }
 
-struct FindContext {
-    var isPresented: Binding<Bool>?
-    var canFind = true
-    var canReplace = true
-}
-
 struct ScrollPositionContext {
     var position: Binding<ScrollPosition>?
+}
+
+struct ScrollInputBehaviorContext {
+    let behavior: ScrollInputBehavior
+    let input: ScrollInputKind
 }

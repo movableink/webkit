@@ -41,14 +41,12 @@ public:
         , m_tier(thread.m_plan->tier())
     {
         RELEASE_ASSERT(m_thread.m_plan);
-        RELEASE_ASSERT(m_thread.m_worklist.m_numberOfActiveThreads);
     }
 
     ~WorkScope()
     {
         Locker locker { *m_thread.m_worklist.m_lock };
         m_thread.m_plan = nullptr;
-        m_thread.m_worklist.m_numberOfActiveThreads--;
         m_thread.m_worklist.m_ongoingCompilationsPerTier[static_cast<unsigned>(m_tier)]--;
     }
 
@@ -83,12 +81,11 @@ auto JITWorklistThread::poll(const AbstractLocker& locker) -> PollResult
         if (queue.isEmpty())
             continue;
 
-
         if (m_worklist.m_ongoingCompilationsPerTier[i] >= m_worklist.m_maximumNumberOfConcurrentCompilationsPerTier[i])
             continue;
 
         m_plan = queue.takeFirst();
-        if (UNLIKELY(!m_plan)) {
+        if (!m_plan) [[unlikely]] {
             if (Options::verboseCompilationQueue()) {
                 m_worklist.dump(locker, WTF::dataFile());
                 dataLog(": Thread shutting down\n");
@@ -97,11 +94,11 @@ auto JITWorklistThread::poll(const AbstractLocker& locker) -> PollResult
         }
 
         RELEASE_ASSERT(m_plan->stage() == JITPlanStage::Preparing);
-        m_worklist.m_numberOfActiveThreads++;
         m_worklist.m_ongoingCompilationsPerTier[i]++;
         return PollResult::Work;
     }
-
+    RELEASE_ASSERT(m_worklist.m_numberOfActiveThreads);
+    m_worklist.m_numberOfActiveThreads--;
     return PollResult::Wait;
 }
 
@@ -114,11 +111,8 @@ auto JITWorklistThread::work() -> WorkResult
         Locker locker { *m_worklist.m_lock };
         if (m_plan->stage() == JITPlanStage::Canceled)
             return WorkResult::Continue;
-        m_state = State::Compiling;
         m_plan->notifyCompiling();
     }
-
-
     dataLogLnIf(Options::verboseCompilationQueue(), m_worklist, ": Compiling ", m_plan->key(), " asynchronously");
 
     // There's no way for the GC to be safepointing since we own rightToRun.
@@ -136,7 +130,6 @@ auto JITWorklistThread::work() -> WorkResult
 
     {
         Locker locker { *m_worklist.m_lock };
-        m_state = State::NotCompiling;
         if (m_plan->stage() == JITPlanStage::Canceled)
             return WorkResult::Continue;
 

@@ -368,8 +368,6 @@ public:
     void setIsValid(bool isValid) { m_isValid = isValid; }
     void setBranchDirection(BranchDirection branchDirection) { m_branchDirection = branchDirection; }
 
-    void setShouldTryConstantFolding(bool) { }
-
     void setProofStatus(Edge& edge, ProofStatus status)
     {
         edge.setProofStatus(status);

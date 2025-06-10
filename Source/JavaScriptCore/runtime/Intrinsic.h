@@ -86,6 +86,7 @@ namespace JSC {
     macro(DatePrototypeGetYearIntrinsic) \
     macro(DatePrototypeSetTimeIntrinsic) \
     macro(FromCharCodeIntrinsic) \
+    macro(GlobalIsFiniteIntrinsic) \
     macro(GlobalIsNaNIntrinsic) \
     macro(PowIntrinsic) \
     macro(FloorIntrinsic) \
@@ -99,7 +100,6 @@ namespace JSC {
     macro(Log2Intrinsic) \
     macro(RegExpExecIntrinsic) \
     macro(RegExpTestIntrinsic) \
-    macro(RegExpTestFastIntrinsic) \
     macro(RegExpMatchFastIntrinsic) \
     macro(ObjectAssignIntrinsic) \
     macro(ObjectCreateIntrinsic) \
@@ -118,12 +118,15 @@ namespace JSC {
     macro(StringPrototypeLocaleCompareIntrinsic) \
     macro(StringPrototypeValueOfIntrinsic) \
     macro(StringPrototypeReplaceIntrinsic) \
+    macro(StringPrototypeReplaceAllIntrinsic) \
     macro(StringPrototypeReplaceRegExpIntrinsic) \
     macro(StringPrototypeReplaceStringIntrinsic) \
+    macro(StringPrototypeReplaceAllStringIntrinsic) \
     macro(StringPrototypeSliceIntrinsic) \
     macro(StringPrototypeSubstringIntrinsic) \
     macro(StringPrototypeToLowerCaseIntrinsic) \
     macro(NumberPrototypeToStringIntrinsic) \
+    macro(NumberIsFiniteIntrinsic) \
     macro(NumberIsNaNIntrinsic) \
     macro(NumberIsIntegerIntrinsic) \
     macro(NumberConstructorIntrinsic) \
@@ -195,6 +198,7 @@ namespace JSC {
     /* Getter intrinsics. */ \
     macro(TypedArrayLengthIntrinsic) \
     macro(TypedArrayByteLengthIntrinsic) \
+    macro(DataViewByteLengthIntrinsic) \
     macro(TypedArrayByteOffsetIntrinsic) \
     macro(UnderscoreProtoIntrinsic) \
     macro(SpeciesGetterIntrinsic) \

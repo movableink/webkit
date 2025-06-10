@@ -96,6 +96,9 @@ StyleSheetContents* UserAgentStyle::imageControlsStyleSheet;
 #if ENABLE(ATTACHMENT_ELEMENT)
 StyleSheetContents* UserAgentStyle::attachmentStyleSheet;
 #endif
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+StyleSheetContents* UserAgentStyle::vectorControlsStyleSheet;
+#endif
 
 static const MQ::MediaQueryEvaluator& screenEval()
 {
@@ -243,6 +246,17 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
         addToDefaultStyle(*viewTransitionsStyleSheet);
         addUserAgentKeyframes(*viewTransitionsStyleSheet);
     }
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+#if PLATFORM(MAC)
+    auto needsVectorControlStyles = element.document().settings().vectorBasedControlsOnMacEnabled();
+#else
+    auto needsVectorControlStyles = element.document().settings().macStyleControlsOnCatalyst();
+#endif
+    if (needsVectorControlStyles && !vectorControlsStyleSheet) {
+        vectorControlsStyleSheet = parseUASheet(StringImpl::createWithoutCopying(vectorControlsUserAgentStyleSheet));
+        addToDefaultStyle(*vectorControlsStyleSheet);
+    }
+#endif
 
     ASSERT(defaultStyle->features().idsInRules.isEmpty());
 }

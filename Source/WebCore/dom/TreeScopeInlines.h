@@ -30,6 +30,11 @@
 
 namespace WebCore {
 
+inline ContainerNode& TreeScope::rootNode() const
+{
+    return m_rootNode.get();
+}
+
 inline IdTargetObserverRegistry& TreeScope::idTargetObserverRegistry()
 {
     if (m_idTargetObserverRegistry)

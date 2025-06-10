@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "CSSSelectorList.h"
 #include "CSSSelectorParser.h"
 #include "ExceptionOr.h"
 #include "NodeList.h"

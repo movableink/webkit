@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 Apple Inc.
+ * Copyright (C) 2017-2025 Apple Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted, provided that the following conditions
@@ -159,7 +159,7 @@ private:
     bool m_isObservingVideoFrames { false };
 
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
     MonotonicTime m_lastFrameLogTime;
     unsigned m_frameCount { 0 };

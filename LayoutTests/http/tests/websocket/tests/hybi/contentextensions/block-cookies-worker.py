@@ -3,12 +3,12 @@
 
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs
 
 clear = parse_qs(os.environ.get('QUERY_STRING', ''), keep_blank_values=True).get('clear', [None])[0]
-clear_exp_time = datetime.utcnow() - timedelta(seconds=1)
-exp_time = datetime.utcnow() + timedelta(hours=1)
+clear_exp_time = datetime.now(timezone.utc) - timedelta(seconds=1)
+exp_time = datetime.now(timezone.utc) + timedelta(hours=1)
 
 if clear:
     sys.stdout.write(

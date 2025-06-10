@@ -26,6 +26,7 @@
 #include "CSSCalcTree+ContainerProgressEvaluator.h"
 
 #include "CSSCalcTree.h"
+#include "ContainerNodeInlines.h"
 #include "ContainerQueryEvaluator.h"
 #include "ContainerQueryFeatures.h"
 #include "RenderBox.h"

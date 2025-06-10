@@ -46,6 +46,8 @@ MeterMac::MeterMac(MeterPart& owningMeterPart, ControlFactoryMac& controlFactory
     ASSERT(m_levelIndicatorCell);
 }
 
+MeterMac::~MeterMac() = default;
+
 void MeterMac::updateCellStates(const FloatRect& rect, const ControlStyle& style)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS

@@ -1,4 +1,4 @@
-load("//bazel:skia_rules.bzl", "skia_cc_library", "split_srcs_and_hdrs")
+load("//bazel:skia_rules.bzl", "generate_cpp_files_for_headers", "skia_cc_library", "split_srcs_and_hdrs")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -25,8 +25,8 @@ GRAPHITE_FILES = [
     "ClientMappedBufferManager.h",
     "ClipAtlasManager.cpp",
     "ClipAtlasManager.h",
-    "ClipStack_graphite.cpp",
-    "ClipStack_graphite.h",
+    "ClipStack.cpp",
+    "ClipStack.h",
     "CommandBuffer.cpp",
     "CommandBuffer.h",
     "CommandTypes.h",
@@ -97,6 +97,7 @@ GRAPHITE_FILES = [
     "RasterPathUtils.h",
     "ReadSwizzle.h",
     "Recorder.cpp",
+    "RecorderOptionsPriv.h",
     "RecorderPriv.h",
     "Recording.cpp",
     "RecordingPriv.h",
@@ -131,6 +132,8 @@ GRAPHITE_FILES = [
     "Surface_Graphite.h",
     "Texture.cpp",
     "Texture.h",
+    "TextureFormat.cpp",
+    "TextureFormat.h",
     "TextureInfo.cpp",
     "TextureInfoPriv.h",
     "TextureProxy.cpp",
@@ -159,7 +162,6 @@ PRECOMPILE_FILES = [
     "FactoryFunctions.h",
     "PrecompileInternal.h",
     "PublicPrecompile.cpp",
-    "AndroidSpecificPrecompile.h",
     "SerializationUtils.cpp",
     "SerializationUtils.h",
 ]
@@ -206,6 +208,17 @@ skia_cc_library(
         "//src/core:core_priv",
         "//src/gpu",
         "//src/sksl/codegen:gpu",
+    ],
+)
+
+generate_cpp_files_for_headers(
+    name = "headers_to_compile",
+    headers = [
+        "ContextOptionsPriv.h",
+        "ContextPriv.h",
+        "RecorderOptionsPriv.h",
+        "RecordingPriv.h",
+        "RecorderPriv.h",
     ],
 )
 

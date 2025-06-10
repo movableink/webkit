@@ -167,7 +167,7 @@ void InlineDisplayContentBuilder::appendTextDisplayBox(const Line::Run& lineRun,
     auto& text = lineRun.textContent();
     auto isContentful = true;
 
-    m_hasSeenTextDecoration = m_hasSeenTextDecoration || (!lineIndex() ? inlineTextBox.parent().firstLineStyle().textDecorationsInEffect() : inlineTextBox.parent().style().textDecorationsInEffect());
+    m_hasSeenTextDecoration = m_hasSeenTextDecoration || (!lineIndex() ? inlineTextBox.parent().firstLineStyle().textDecorationLineInEffect() : inlineTextBox.parent().style().textDecorationLineInEffect());
 
     auto inkOverflow = [&] {
         auto inkOverflow = textRunRect;
@@ -214,7 +214,9 @@ void InlineDisplayContentBuilder::appendTextDisplayBox(const Line::Run& lineRun,
         addGlyphOverflow();
 
         return inkOverflow;
-    };
+    }();
+
+    m_contentHasInkOverflow = m_contentHasInkOverflow || (&inlineTextBox.parent() != &root() && textRunRect != inkOverflow);
 
     if (inlineTextBox.isCombined()) {
         static auto objectReplacementCharacterString = NeverDestroyed<String> { span(objectReplacementCharacter) };
@@ -224,7 +226,7 @@ void InlineDisplayContentBuilder::appendTextDisplayBox(const Line::Run& lineRun,
             , inlineTextBox
             , lineRun.bidiLevel()
             , textRunRect
-            , inkOverflow()
+            , inkOverflow
             , lineRun.expansion()
             , InlineDisplay::Box::Text { text->start, 1, objectReplacementCharacterString, content }
             , isContentful
@@ -241,7 +243,7 @@ void InlineDisplayContentBuilder::appendTextDisplayBox(const Line::Run& lineRun,
         , inlineTextBox
         , lineRun.bidiLevel()
         , textRunRect
-        , inkOverflow()
+        , inkOverflow
         , lineRun.expansion()
         , InlineDisplay::Box::Text { text->start, text->length, content, adjustedContentToRender(), text->needsHyphen }
         , isContentful
@@ -329,6 +331,15 @@ void InlineDisplayContentBuilder::appendRootInlineBoxDisplayBox(const InlineRect
     });
 }
 
+static inline bool isNestedInlineBoxWithDifferentFontCascadeFromParent(const Box& layoutBox, bool isFirstLine)
+{
+    if (!layoutBox.parent().isInlineBox())
+        return false;
+    auto& style = isFirstLine ? layoutBox.firstLineStyle() : layoutBox.style();
+    auto& parentStyle = isFirstLine ? layoutBox.parent().firstLineStyle() : layoutBox.parent().style();
+    return style.fontCascade() != parentStyle.fontCascade();
+}
+
 void InlineDisplayContentBuilder::appendInlineBoxDisplayBox(const Line::Run& lineRun, const InlineLevelBox& inlineBox, const InlineRect& inlineBoxBorderBox, InlineDisplay::Boxes& boxes)
 {
     ASSERT(lineRun.layoutBox().isInlineBox());
@@ -337,6 +348,7 @@ void InlineDisplayContentBuilder::appendInlineBoxDisplayBox(const Line::Run& lin
 
     auto& layoutBox = lineRun.layoutBox();
     m_hasSeenRubyBase = m_hasSeenRubyBase || layoutBox.isRubyBase();
+    m_hasSeenNestedInlineBoxesWithDifferentFontCascade = m_hasSeenNestedInlineBoxesWithDifferentFontCascade || isNestedInlineBoxWithDifferentFontCascadeFromParent(layoutBox, !lineIndex());
 
     auto inkOverflow = [&] {
         auto& style = !lineIndex() ? layoutBox.firstLineStyle() : layoutBox.style();
@@ -908,7 +920,7 @@ void InlineDisplayContentBuilder::processBidiContent(const LineLayoutResult& lin
 
 void InlineDisplayContentBuilder::collectInkOverflowForInlineBoxes(InlineDisplay::Boxes& boxes)
 {
-    if (!m_contentHasInkOverflow)
+    if (!m_contentHasInkOverflow && !m_hasSeenNestedInlineBoxesWithDifferentFontCascade)
         return;
     // Visit the inline boxes and propagate ink overflow to their parents -except to the root inline box.
     // (e.g. <span style="font-size: 10px;">Small font size<span style="font-size: 300px;">Larger font size. This overflows the top most span.</span></span>).
@@ -1012,7 +1024,7 @@ static float logicalBottomForTextDecorationContent(const InlineDisplay::Boxes& b
     for (auto& displayBox : boxes) {
         if (displayBox.isRootInlineBox())
             continue;
-        if (!displayBox.style().textDecorationsInEffect().contains(TextDecorationLine::Underline))
+        if (!displayBox.style().textDecorationLineInEffect().contains(TextDecorationLine::Underline))
             continue;
         if (displayBox.isText() || displayBox.style().textDecorationSkipInk() == TextDecorationSkipInk::None) {
             auto contentLogicalBottom = isHorizontalWritingMode ? displayBox.bottom() : displayBox.right();
@@ -1038,7 +1050,7 @@ void InlineDisplayContentBuilder::collectInkOverflowForTextDecorations(InlineDis
             continue;
 
         auto& parentStyle = displayBox.layoutBox().parent().style();
-        auto textDecorations = parentStyle.textDecorationsInEffect();
+        auto textDecorations = parentStyle.textDecorationLineInEffect();
         if (!textDecorations)
             continue;
 
@@ -1186,9 +1198,13 @@ void InlineDisplayContentBuilder::processRubyContent(InlineDisplay::Boxes& displ
     for (auto baseIndex : makeReversedRange(rubyBaseStartIndexListWithAnnotation)) {
         auto& annotationBox = *displayBoxes[baseIndex].layoutBox().associatedRubyAnnotationBox();
         auto annotationBorderBoxVisualRect = [&] {
+            // FIXME: We may wanna go back to full logical geometry on BoxGeometry (instead of this with visual left) and resolve it when
+            // render tree needs it.
             auto borderBoxLogicalRect = InlineRect { BoxGeometry::borderBoxRect(formattingContext().geometryForBox(annotationBox)) };
             borderBoxLogicalRect.setTop(borderBoxLogicalRect.top() - lineBoxLogicalRect.top());
-            auto visualRect = flipLogicalRectToVisualForWritingModeWithinLine(borderBoxLogicalRect, lineBoxLogicalRect, writingMode);
+            auto visualRect = mapInlineRectLogicalToVisual(borderBoxLogicalRect, lineBoxLogicalRect, writingMode);
+            if (writingMode.isLineOverLeft())
+                visualRect.setTop(borderBoxLogicalRect.left());
             isHorizontalWritingMode ? visualRect.moveVertically(lineBoxLogicalRect.top()) : visualRect.moveHorizontally(lineBoxLogicalRect.top());
             return visualRect;
         };
@@ -1216,53 +1232,6 @@ void InlineDisplayContentBuilder::setInlineBoxGeometry(const Box& inlineBox, Lay
     boxGeometry.setTopLeft(borderBoxRect.topLeft());
     boxGeometry.setContentBoxWidth(borderBoxRect.width() - boxGeometry.horizontalBorderAndPadding());
     boxGeometry.setContentBoxHeight(borderBoxRect.height() - boxGeometry.verticalBorderAndPadding());
-}
-
-InlineRect InlineDisplayContentBuilder::flipLogicalRectToVisualForWritingModeWithinLine(const InlineRect& logicalRect, const InlineRect& lineLogicalRect, WritingMode writingMode) const
-{
-    switch (writingMode.blockDirection()) {
-    case FlowDirection::TopToBottom:
-        return logicalRect;
-    case FlowDirection::BottomToTop: {
-        auto bottomOffset = lineLogicalRect.height() - logicalRect.bottom();
-        return { bottomOffset, logicalRect.left(), logicalRect.width(), logicalRect.height() };
-    }
-    case FlowDirection::LeftToRight: {
-        // Flip content such that the top (visual left) is now relative to the line bottom instead of the line top.
-        auto bottomOffset = lineLogicalRect.height() - logicalRect.bottom();
-        return { logicalRect.left(), bottomOffset, logicalRect.height(), logicalRect.width() };
-    }
-    case FlowDirection::RightToLeft:
-        // See InlineFormattingUtils for more info.
-        return { logicalRect.left(), logicalRect.top(), logicalRect.height(), logicalRect.width() };
-    default:
-        ASSERT_NOT_REACHED();
-        break;
-    }
-    return logicalRect;
-}
-
-InlineRect InlineDisplayContentBuilder::flipRootInlineBoxRectToVisualForWritingMode(const InlineRect& rootInlineBoxLogicalRect, WritingMode writingMode) const
-{
-    switch (writingMode.blockDirection()) {
-    case FlowDirection::TopToBottom:
-    case FlowDirection::BottomToTop: {
-        auto visualRect = rootInlineBoxLogicalRect;
-        visualRect.moveBy({ m_displayLine.left(), m_displayLine.top() });
-        return visualRect;
-    }
-    case FlowDirection::LeftToRight:
-    case FlowDirection::RightToLeft: {
-        // See InlineFormattingUtils for more info.
-        auto visualRect = InlineRect { rootInlineBoxLogicalRect.left(), rootInlineBoxLogicalRect.top(), rootInlineBoxLogicalRect.height(), rootInlineBoxLogicalRect.width() };
-        visualRect.moveBy({ m_displayLine.left(), m_displayLine.top() });
-        return visualRect;
-    }
-    default:
-        ASSERT_NOT_REACHED();
-        break;
-    }
-    return rootInlineBoxLogicalRect;
 }
 
 template <typename BoxType, typename LayoutUnitType>

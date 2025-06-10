@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -58,6 +58,7 @@
 #include "ContentAsStringIncludesChildFrames.h"
 #include "DownloadProxy.h"
 #include "GeolocationPermissionRequestProxy.h"
+#include "JavaScriptEvaluationResult.h"
 #include "LegacySessionStateCoding.h"
 #include "Logging.h"
 #include "MediaKeySystemPermissionRequest.h"
@@ -94,6 +95,7 @@
 #include "WebProcessPool.h"
 #include "WebProcessProxy.h"
 #include "WebProtectionSpace.h"
+#include <WebCore/AuthenticatorAssertionResponse.h>
 #include <WebCore/AutoplayEvent.h>
 #include <WebCore/ContentRuleListResults.h>
 #include <WebCore/FrameLoaderClient.h>
@@ -184,7 +186,7 @@ NO_RETURN_DUE_TO_CRASH NEVER_INLINE static void crashBecausePageIsSuspended()
     CRASH();
 }
 
-#define CRASH_IF_SUSPENDED if (UNLIKELY(pageRef && toImpl(pageRef)->isSuspended())) \
+#define CRASH_IF_SUSPENDED if (pageRef && toImpl(pageRef)->isSuspended()) [[unlikely]] \
     crashBecausePageIsSuspended()
 
 WKTypeID WKPageGetTypeID()
@@ -204,7 +206,7 @@ WKPageGroupRef WKPageGetPageGroup(WKPageRef pageRef)
 
 WKPageConfigurationRef WKPageCopyPageConfiguration(WKPageRef pageRef)
 {
-    return toAPI(&toImpl(pageRef)->configuration().copy().leakRef());
+    return toAPILeakingRef(toImpl(pageRef)->configuration().copy());
 }
 
 void WKPageLoadURL(WKPageRef pageRef, WKURLRef URLRef)
@@ -415,12 +417,12 @@ bool WKPageCanGoForward(WKPageRef pageRef)
 void WKPageGoBack(WKPageRef pageRef)
 {
     CRASH_IF_SUSPENDED;
-    auto& page = *toImpl(pageRef);
-    if (RefPtr pageClient = page.pageClient(); pageClient->hasBrowsingWarning()) {
+    Ref page = *toImpl(pageRef);
+    if (RefPtr pageClient = page->pageClient(); pageClient->hasBrowsingWarning()) {
         WKPageReload(pageRef);
         return;
     }
-    page.goBack();
+    page->goBack();
 }
 
 bool WKPageCanGoBack(WKPageRef pageRef)
@@ -558,14 +560,14 @@ void WKPageResetStateBetweenTests(WKPageRef pageRef)
 
 WKStringRef WKPageGetSessionHistoryURLValueType()
 {
-    static auto& sessionHistoryURLValueType = API::String::create("SessionHistoryURL"_s).leakRef();
-    return toAPI(&sessionHistoryURLValueType);
+    static NeverDestroyed<Ref<API::String>> sessionHistoryURLValueType = API::String::create("SessionHistoryURL"_s);
+    return toAPI(sessionHistoryURLValueType.get().ptr());
 }
 
 WKStringRef WKPageGetSessionBackForwardListItemValueType()
 {
-    static auto& sessionBackForwardListValueType = API::String::create("SessionBackForwardListItem"_s).leakRef();
-    return toAPI(&sessionBackForwardListValueType);
+    static NeverDestroyed<Ref<API::String>> sessionBackForwardListValueType = API::String::create("SessionBackForwardListItem"_s);
+    return toAPI(sessionBackForwardListValueType.get().ptr());
 }
 
 WKTypeRef WKPageCopySessionState(WKPageRef pageRef, void* context, WKPageSessionStateFilterCallback filter)
@@ -588,9 +590,9 @@ WKTypeRef WKPageCopySessionState(WKPageRef pageRef, void* context, WKPageSession
 
     auto data = encodeLegacySessionState(sessionState);
     if (shouldReturnData)
-        return toAPI(data.leakRef());
+        return toAPILeakingRef(WTFMove(data));
 
-    return toAPI(&API::SessionState::create(WTFMove(sessionState)).leakRef());
+    return toAPILeakingRef(API::SessionState::create(WTFMove(sessionState)));
 }
 
 static void restoreFromSessionState(WKPageRef pageRef, WKTypeRef sessionStateRef, bool navigate)
@@ -1035,13 +1037,13 @@ void WKPageSetPageContextMenuClient(WKPageRef pageRef, const WKPageContextMenuCl
             size_t newSize = array ? array->size() : 0;
             customMenu.reserveInitialCapacity(newSize);
             for (size_t i = 0; i < newSize; ++i) {
-                WebContextMenuItem* item = array->at<WebContextMenuItem>(i);
+                RefPtr item = array->at<WebContextMenuItem>(i);
                 if (!item) {
                     LOG(ContextMenu, "New menu entry at index %i is not a WebContextMenuItem", (int)i);
                     continue;
                 }
 
-                customMenu.append(*item);
+                customMenu.append(item.releaseNonNull());
             }
 
             contextMenuListener.useContextMenuItems(WTFMove(customMenu));
@@ -1186,6 +1188,10 @@ private:
     CompletionHandler<void()> m_completionHandler;
 };
 
+SPECIALIZE_TYPE_TRAITS_BEGIN(CompletionListener)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::CompletionListener; }
+SPECIALIZE_TYPE_TRAITS_END()
+
 namespace WebKit {
 WK_ADD_API_MAPPING(WKCompletionListenerRef, CompletionListener);
 }
@@ -1217,7 +1223,9 @@ void WKPageSetFullScreenClientForTesting(WKPageRef pageRef, const WKPageFullScre
         {
             if (!m_client.willEnterFullScreen)
                 return completionHandler(false);
-            completionHandler(m_client.willEnterFullScreen(toAPI(m_page.get()), m_client.base.clientInfo));
+            m_client.willEnterFullScreen(toAPI(m_page.get()), toAPI(CompletionListener::create([completionHandler = WTFMove(completionHandler)] mutable {
+                completionHandler(true);
+            }).ptr()), m_client.base.clientInfo);
         }
 
         void beganEnterFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame, CompletionHandler<void(bool)>&& completionHandler) override
@@ -1414,7 +1422,7 @@ void WKPageSetPageLoaderClient(WKPageRef pageRef, const WKPageLoaderClientBase* 
         }
     };
 
-    WebPageProxy* webPageProxy = toImpl(pageRef);
+    RefPtr webPageProxy = toImpl(pageRef);
 
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     // GCC 10 gets confused here and warns that WKPageSetPagePolicyClient is deprecated when we call
@@ -1642,6 +1650,26 @@ WK_ADD_API_MAPPING(WKPageRunJavaScriptPromptResultListenerRef, RunJavaScriptProm
 WK_ADD_API_MAPPING(WKPageRequestStorageAccessConfirmResultListenerRef, RequestStorageAccessConfirmResultListener)
 
 }
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::RunBeforeUnloadConfirmPanelResultListener)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::RunBeforeUnloadConfirmPanelResultListener; }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::RunJavaScriptAlertResultListener)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::RunJavaScriptAlertResultListener; }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::RunJavaScriptConfirmResultListener)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::RunJavaScriptConfirmResultListener; }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::RunJavaScriptPromptResultListener)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::RunJavaScriptPromptResultListener; }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::RequestStorageAccessConfirmResultListener)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::RequestStorageAccessConfirmResultListener; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 WKTypeID WKPageRunBeforeUnloadConfirmPanelResultListenerGetTypeID()
 {
@@ -1900,6 +1928,13 @@ void WKPageSetPageUIClient(WKPageRef pageRef, const WKPageUIClientBase* wkClient
             completionHandler(String());
         }
 
+        void addMessageToConsoleForTesting(WebPageProxy& page, String&& message) final
+        {
+            if (!m_client.addMessageToConsole)
+                return;
+            m_client.addMessageToConsole(toAPI(&page), toAPI(message.impl()), m_client.base.clientInfo);
+        }
+
         void setStatusText(WebPageProxy* page, const String& text) final
         {
             if (!m_client.setStatusText)
@@ -2009,7 +2044,7 @@ void WKPageSetPageUIClient(WKPageRef pageRef, const WKPageUIClientBase* wkClient
             return m_client.runBeforeUnloadConfirmPanel_deprecatedForUseWithV6 || m_client.runBeforeUnloadConfirmPanel;
         }
 
-        void runBeforeUnloadConfirmPanel(WebKit::WebPageProxy& page, const WTF::String& message, WebKit::WebFrameProxy* frame, FrameInfoData&&, Function<void(bool)>&& completionHandler) final
+        void runBeforeUnloadConfirmPanel(WebKit::WebPageProxy& page, WTF::String&& message, WebKit::WebFrameProxy* frame, FrameInfoData&&, Function<void(bool)>&& completionHandler) final
         {
             if (m_client.runBeforeUnloadConfirmPanel) {
                 RefPtr<RunBeforeUnloadConfirmPanelResultListener> listener = RunBeforeUnloadConfirmPanelResultListener::create(WTFMove(completionHandler));
@@ -2070,16 +2105,6 @@ void WKPageSetPageUIClient(WKPageRef pageRef, const WKPageUIClientBase* wkClient
             }
 
             m_client.decidePolicyForUserMediaPermissionRequest(toAPI(&page), toAPI(&frame), toAPI(&userMediaDocumentOrigin), toAPI(&topLevelDocumentOrigin), toAPI(&permissionRequest), m_client.base.clientInfo);
-        }
-
-        void checkUserMediaPermissionForOrigin(WebPageProxy& page, WebFrameProxy& frame, API::SecurityOrigin& userMediaDocumentOrigin, API::SecurityOrigin& topLevelDocumentOrigin, UserMediaPermissionCheckProxy& request) final
-        {
-            if (!m_client.checkUserMediaPermissionForOrigin) {
-                request.deny();
-                return;
-            }
-
-            m_client.checkUserMediaPermissionForOrigin(toAPI(&page), toAPI(&frame), toAPI(&userMediaDocumentOrigin), toAPI(&topLevelDocumentOrigin), toAPI(&request), m_client.base.clientInfo);
         }
         
         void decidePolicyForNotificationPermissionRequest(WebPageProxy& page, API::SecurityOrigin& origin, CompletionHandler<void(bool allowed)>&& completionHandler) final
@@ -2275,7 +2300,8 @@ void WKPageSetPageUIClient(WKPageRef pageRef, const WKPageUIClientBase* wkClient
                 void selectAssertionResponse(Vector<Ref<WebCore::AuthenticatorAssertionResponse>>&& responses, WebKit::WebAuthenticationSource, CompletionHandler<void(WebCore::AuthenticatorAssertionResponse*)>&& completionHandler) const final
                 {
                     ASSERT(!responses.isEmpty());
-                    completionHandler(responses[0].ptr());
+                    Ref firstResponse = responses[0];
+                    completionHandler(firstResponse.ptr());
                 }
 
                 void decidePolicyForLocalAuthenticator(CompletionHandler<void(WebKit::LocalAuthenticatorPolicy)>&& completionHandler) const final
@@ -2548,9 +2574,7 @@ void WKPageSetPageNavigationClient(WKPageRef pageRef, const WKPageNavigationClie
 #endif
     };
 
-    WebPageProxy* webPageProxy = toImpl(pageRef);
-
-    webPageProxy->setNavigationClient(makeUniqueRef<NavigationClient>(wkClient));
+    toProtectedImpl(pageRef)->setNavigationClient(makeUniqueRef<NavigationClient>(wkClient));
 }
 
 class StateClient final : public RefCounted<StateClient>, public API::Client<WKPageStateClientBase>, public PageLoadState::Observer {
@@ -2739,7 +2763,7 @@ void WKPageEvaluateJavaScriptInMainFrame(WKPageRef pageRef, WKStringRef scriptRe
         std::nullopt,
         WebCore::ForceUserGesture::Yes,
         RemoveTransientActivation::Yes
-    }, [context, callback] (auto&& result) {
+    }, !!callback, [context, callback] (auto&& result) {
         if (!callback)
             return;
         if (result)
@@ -2877,7 +2901,7 @@ void WKPageComputePagesForPrinting(WKPageRef pageRef, WKFrameRef frame, WKPrintI
         Vector<WKRect> wkRects(rects.size());
         for (size_t i = 0; i < rects.size(); ++i)
             wkRects[i] = toAPI(rects[i]);
-        callback(wkRects.data(), wkRects.size(), scaleFactor, nullptr, context);
+        callback(wkRects.mutableSpan().data(), wkRects.size(), scaleFactor, nullptr, context);
     });
 }
 
@@ -3036,17 +3060,17 @@ WKArrayRef WKPageCopyRelatedPages(WKPageRef pageRef)
             relatedPages.append(WTFMove(page));
     }
 
-    return toAPI(&API::Array::create(WTFMove(relatedPages)).leakRef());
+    return toAPILeakingRef(API::Array::create(WTFMove(relatedPages)));
 }
 
 WKFrameRef WKPageLookUpFrameFromHandle(WKPageRef pageRef, WKFrameHandleRef handleRef)
 {
-    auto page = toImpl(pageRef);
-    auto frame = WebFrameProxy::webFrame(toImpl(handleRef)->frameID());
-    if (!frame || frame->page() != page)
+    RefPtr page = toImpl(pageRef);
+    RefPtr frame = WebFrameProxy::webFrame(toImpl(handleRef)->frameID());
+    if (!frame || frame->page() != page.get())
         return nullptr;
 
-    return toAPI(frame);
+    return toAPI(frame.get());
 }
 
 void WKPageSetMayStartMediaWhenInWindow(WKPageRef pageRef, bool mayStartMedia)
@@ -3371,7 +3395,7 @@ void WKPageSetMockCaptureDevicesInterrupted(WKPageRef pageRef, bool isCameraInte
 {
     CRASH_IF_SUSPENDED;
 #if ENABLE(MEDIA_STREAM) && ENABLE(GPU_PROCESS)
-    auto preferences = toImpl(pageRef)->protectedPreferences();
+    Ref preferences = toImpl(pageRef)->preferences();
     if (preferences->useGPUProcessForMediaEnabled()) {
         Ref gpuProcess = toImpl(pageRef)->configuration().processPool().ensureGPUProcess();
         gpuProcess->setMockCaptureDevicesInterrupted(isCameraInterrupted, isMicrophoneInterrupted);
@@ -3393,7 +3417,7 @@ void WKPageTriggerMockCaptureConfigurationChange(WKPageRef pageRef, bool forCame
 #endif // USE(GSTREAMER)
 
 #if ENABLE(GPU_PROCESS)
-    auto preferences = toImpl(pageRef)->protectedPreferences();
+    Ref preferences = toImpl(pageRef)->preferences();
     if (!preferences->useGPUProcessForMediaEnabled())
         return;
 

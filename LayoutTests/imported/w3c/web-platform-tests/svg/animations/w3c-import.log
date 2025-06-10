@@ -30,6 +30,8 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/svg/animations/animate-color-transparent.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/animations/animate-css-xml-attributeType.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/animations/animate-currentColor.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/animations/animate-display-to-none-001-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/animations/animate-display-to-none-001.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/animations/animate-dynamic-update-attributeName.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/animations/animate-elem-02-t-drt.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/animations/animate-elem-14-t-drt.html
@@ -106,6 +108,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/svg/animations/first-interval-in-the-past-contribute.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/animations/first-interval-in-the-past-dont-contribute.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/animations/force-use-shadow-tree-recreation-while-animating.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/animations/historical.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/animations/interval-restart-events.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/animations/keysplines-x-limits.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/animations/keysplines-y-limits.html

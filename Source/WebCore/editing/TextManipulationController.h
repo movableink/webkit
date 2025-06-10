@@ -62,7 +62,8 @@ public:
     void didAddOrCreateRendererForNode(Node&);
     void removeNode(Node&);
 
-    WEBCORE_EXPORT Vector<ManipulationFailure> completeManipulation(const Vector<TextManipulationItem>&);
+    using ManipulationResult = TextManipulationControllerManipulationResult;
+    WEBCORE_EXPORT ManipulationResult completeManipulation(const Vector<TextManipulationItem>&);
 
 private:
     void observeParagraphs(const Position& start, const Position& end);

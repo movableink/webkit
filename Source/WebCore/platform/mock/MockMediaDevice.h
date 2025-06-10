@@ -116,7 +116,7 @@ struct MockMediaDevice {
     String label;
     Flags flags;
     bool isDefault;
-    std::variant<MockMicrophoneProperties, MockSpeakerProperties, MockCameraProperties, MockDisplayProperties> properties;
+    Variant<MockMicrophoneProperties, MockSpeakerProperties, MockCameraProperties, MockDisplayProperties> properties;
 };
 
 } // namespace WebCore

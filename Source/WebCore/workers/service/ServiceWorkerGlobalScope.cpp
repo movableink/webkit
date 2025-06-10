@@ -29,6 +29,8 @@
 #include "Document.h"
 #include "EventLoop.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
+#include "EventTargetInterfaces.h"
 #include "ExtendableEvent.h"
 #include "FetchEvent.h"
 #include "FrameLoader.h"
@@ -92,7 +94,7 @@ void ServiceWorkerGlobalScope::dispatchPushEvent(PushEvent& pushEvent)
     ASSERT(!m_pushEvent);
 #endif
 
-    m_pushEvent = &pushEvent;
+    m_pushEvent = pushEvent;
     m_lastPushEventTime = MonotonicTime::now();
     dispatchEvent(pushEvent);
     m_pushEvent = nullptr;
@@ -102,7 +104,7 @@ void ServiceWorkerGlobalScope::dispatchPushEvent(PushEvent& pushEvent)
 void ServiceWorkerGlobalScope::dispatchDeclarativePushEvent(PushEvent& event)
 {
     ASSERT(!m_declarativePushEvent && !m_pushEvent);
-    m_declarativePushEvent = &event;
+    m_declarativePushEvent = event;
     m_lastPushEventTime = MonotonicTime::now();
     dispatchEvent(event);
 }

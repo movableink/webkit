@@ -39,12 +39,14 @@
 #include "ImageBuffer.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSPlaneLayout.h"
+#include "NativeImage.h"
 #include "OffscreenCanvas.h"
 #include "PixelBuffer.h"
 #include "SVGImageElement.h"
 #include "SecurityOrigin.h"
 #include "VideoColorSpace.h"
 #include "WebCodecsVideoFrameAlgorithms.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/Seconds.h>
 #include <wtf/text/MakeString.h>
 
@@ -279,8 +281,6 @@ ExceptionOr<Ref<WebCodecsVideoFrame>> WebCodecsVideoFrame::create(ScriptExecutio
 
 static std::optional<Exception> validateI420Sizes(const WebCodecsVideoFrame::BufferInit& init)
 {
-    if (init.codedWidth % 2 || init.codedHeight % 2)
-        return Exception { ExceptionCode::TypeError, "coded width or height is odd"_s };
     if (init.visibleRect && (static_cast<size_t>(init.visibleRect->x) % 2 || static_cast<size_t>(init.visibleRect->x) % 2))
         return Exception { ExceptionCode::TypeError, "visible x or y is odd"_s };
     return { };
@@ -312,10 +312,8 @@ ExceptionOr<Ref<WebCodecsVideoFrame>> WebCodecsVideoFrame::create(ScriptExecutio
     auto colorSpace = videoFramePickColorSpace(init.colorSpace, pixelFormat);
     RefPtr<VideoFrame> videoFrame;
     if (pixelFormat == VideoPixelFormat::NV12) {
-        if (init.codedWidth % 2 || init.codedHeight % 2)
-            return Exception { ExceptionCode::TypeError, "coded width or height is odd"_s };
-        if (init.visibleRect && (static_cast<size_t>(init.visibleRect->x) % 2 || static_cast<size_t>(init.visibleRect->x) % 2))
-            return Exception { ExceptionCode::TypeError, "visible x or y is odd"_s };
+        if (auto exception = validateI420Sizes(init))
+            return WTFMove(*exception);
         videoFrame = VideoFrame::createNV12(data.span(), parsedRect.width, parsedRect.height, layout.computedLayouts[0], layout.computedLayouts[1], WTFMove(colorSpace));
     } else if (pixelFormat == VideoPixelFormat::RGBA || init.format == VideoPixelFormat::RGBX)
         videoFrame = VideoFrame::createRGBA(data.span(), parsedRect.width, parsedRect.height, layout.computedLayouts[0], WTFMove(colorSpace));
@@ -336,6 +334,11 @@ ExceptionOr<Ref<WebCodecsVideoFrame>> WebCodecsVideoFrame::create(ScriptExecutio
         return Exception { ExceptionCode::TypeError, "Unable to create internal resource from data"_s };
 
     return WebCodecsVideoFrame::create(context, videoFrame.releaseNonNull(), WTFMove(init));
+}
+
+ExceptionOr<Ref<WebCodecsVideoFrame>> WebCodecsVideoFrame::create(ScriptExecutionContext& context, Ref<NativeImage>&& image)
+{
+    return initializeFrameWithResourceAndSize(context, WTFMove(image), { });
 }
 
 Ref<WebCodecsVideoFrame> WebCodecsVideoFrame::create(ScriptExecutionContext& context, Ref<VideoFrame>&& videoFrame, BufferInit&& init)

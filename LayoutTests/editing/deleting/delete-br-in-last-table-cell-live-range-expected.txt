@@ -1,5 +1,4 @@
 | <html>
-|   <!--  webkit-test-runner [ LiveRangeSelectionEnabled=true ]  -->
 |   <head>
 |     "\n"
 |     <script>

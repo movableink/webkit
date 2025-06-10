@@ -23,6 +23,10 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
+DECLARE_SYSTEM_HEADER
+
 #if PLATFORM(MAC)
 
 #if USE(APPLE_INTERNAL_SDK)
@@ -33,10 +37,7 @@
 #import <AppKit/NSMenu_Private.h>
 #import <AppKit/NSTextInputClient_Private.h>
 #import <AppKit/NSWindow_Private.h>
-
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 #import <AppKit/NSScrollViewSeparatorTrackingAdapter_Private.h>
-#endif
 
 #else
 
@@ -48,7 +49,11 @@
 - (void)hasMarkedTextWithCompletionHandler:(void(^)(BOOL hasMarkedText))completionHandler;
 - (void)attributedSubstringForProposedRange:(NSRange)range completionHandler:(void(^)(NSAttributedString *, NSRange actualRange))completionHandler;
 - (void)firstRectForCharacterRange:(NSRange)range completionHandler:(void(^)(NSRect firstRect, NSRange actualRange))completionHandler;
+
+@optional
+
 - (void)insertTextPlaceholderWithSize:(CGSize)size completionHandler:(void (^)(NSTextPlaceholder *))completionHandler;
+
 - (void)removeTextPlaceholder:(NSTextPlaceholder *)placeholder willInsertText:(BOOL)willInsertText completionHandler:(void (^)(void))completionHandler;
 @end
 
@@ -89,12 +94,10 @@ NSString * const NSInspectorBarTextAlignmentItemIdentifier = @"NSInspectorBarTex
 - (void)setInspectorBar:(NSInspectorBar *)bar;
 @end
 
-#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 @protocol NSScrollViewSeparatorTrackingAdapter
 @property (readonly) NSRect scrollViewFrame;
 @property (readonly) BOOL hasScrolledContentsUnderTitlebar;
 @end
-#endif
 
 @interface NSMenu (SPI)
 @property (readonly) NSView *_presentingView;

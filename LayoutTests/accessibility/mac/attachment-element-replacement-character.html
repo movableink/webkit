@@ -1,29 +1,28 @@
-<!DOCTYPE html><!-- webkit-test-runner [ AttachmentElementEnabled=true ] -->
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN"><!-- webkit-test-runner [ AttachmentElementEnabled=true ] -->
 <html>
-<body id="body">
+<head>
+<script src="../../resources/accessibility-helper.js"></script>
+<script src="../../resources/js-test.js"></script>
+</head>
+<body>
 
 some
 <attachment id="attachment" title="title" subtitle="subtitle" action="action" progress="0.5"></attachment>
 test
 
-<p id="description"></p>
-<div id="console"></div>
-
-<script src="../../resources/js-test-pre.js"></script>
 <script>
+var output = "This tests that attachment element replacements are present in strings.\n\n";
 
-    description("This tests that attachment element replacements are present in strings.");
+if (window.accessibilityController) {
+    var body = accessibilityController.rootElement.childAtIndex(0);
+    var startMarker = body.startTextMarker;
+    var endMarker = body.endTextMarker;
+    var textMarkerRange = body.textMarkerRangeForMarkers(startMarker, endMarker);
+    output += `String: \n${body.stringForTextMarkerRange(textMarkerRange).replace(String.fromCharCode(65532), "[ATTACHMENT]")}`
 
-    if (window.accessibilityController) {
-        var body = accessibilityController.rootElement.childAtIndex(0);
-        var startMarker = body.startTextMarker;
-        var endMarker = body.endTextMarker;
-        var textMarkerRange = body.textMarkerRangeForMarkers(startMarker, endMarker);
-        debug("String: \n" + body.stringForTextMarkerRange(textMarkerRange).replace(String.fromCharCode(65532), "[ATTACHMENT]"));
-    }
-
+    debug(output);
+}
 </script>
-
-<script src="../../resources/js-test-post.js"></script>
 </body>
 </html>
+

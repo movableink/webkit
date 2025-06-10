@@ -786,6 +786,8 @@ static WKUserContentController *userContentController(BOOL usingPrivateBrowsing)
 
 - (TestWebExtensionTab *)openNewTabAtIndex:(NSUInteger)index
 {
+    index = std::min(index, _tabs.count);
+
     ASSERT(index <= _tabs.count);
 
     auto *newTab = [[TestWebExtensionTab alloc] initWithWindow:self extensionController:_extensionController];
@@ -808,6 +810,7 @@ static WKUserContentController *userContentController(BOOL usingPrivateBrowsing)
 
     if (!_activeTab)
         _activeTab = newTab;
+
 
     [_tabs insertObject:newTab atIndex:index];
     [_extensionController didOpenTab:newTab];
@@ -1026,63 +1029,6 @@ void performWithAppearance(Appearance appearance, void (^block)(void))
         : [UITraitCollection traitCollectionWithUserInterfaceStyle:UIUserInterfaceStyleLight];
     [traitCollection performAsCurrentTraitCollection:block];
 #endif
-}
-
-CocoaColor *pixelColor(CocoaImage *image, CGPoint point)
-{
-#if USE(APPKIT)
-    auto imageRef = [image CGImageForProposedRect:nullptr context:nil hints:nil];
-    auto *bitmap = [[NSBitmapImageRep alloc] initWithCGImage:imageRef];
-    auto *color = [bitmap colorAtX:point.x y:point.y];
-    return color;
-#else
-    image = [image.imageAsset imageWithTraitCollection:UITraitCollection.currentTraitCollection];
-
-    UIGraphicsBeginImageContext(image.size);
-
-    [image drawAtPoint:CGPointZero];
-
-    auto context = UIGraphicsGetCurrentContext();
-    auto *data = (unsigned char *)CGBitmapContextGetData(context);
-    if (!data)
-        return nil;
-
-    unsigned offset = ((image.size.width * point.y) + point.x) * 4;
-    auto *color = [UIColor colorWithRed:data[offset] / 255.0 green:data[offset + 1] / 255.0 blue:data[offset + 2] / 255.0 alpha:data[offset + 3] / 255.0];
-
-    UIGraphicsEndImageContext();
-
-    return color;
-#endif
-}
-
-CocoaColor *toSRGBColor(CocoaColor *color)
-{
-#if USE(APPKIT)
-    return [color colorUsingColorSpace:NSColorSpace.sRGBColorSpace];
-#else
-    return color;
-#endif
-}
-
-bool compareColors(CocoaColor *color1, CocoaColor *color2)
-{
-    if (color1 == color2 || [color1 isEqual:color2])
-        return true;
-
-    if (!color1 || !color2)
-        return false;
-
-    color1 = toSRGBColor(color1);
-    color2 = toSRGBColor(color2);
-
-    CGFloat red1, green1, blue1, alpha1;
-    [color1 getRed:&red1 green:&green1 blue:&blue1 alpha:&alpha1];
-
-    CGFloat red2, green2, blue2, alpha2;
-    [color2 getRed:&red2 green:&green2 blue:&blue2 alpha:&alpha2];
-
-    return fabs(red1 - red2) < 0.01 && fabs(green1 - green2) < 0.01 && fabs(blue1 - blue2) < 0.01 && fabs(alpha1 - alpha2) < 0.01;
 }
 
 } // namespace Util

@@ -23,7 +23,9 @@
 
 #if ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
 
+#include "ContextDestructionObserverInlines.h"
 #include "GStreamerMockDevice.h"
+#include "GUniquePtrGStreamer.h"
 #include "MockRealtimeMediaSourceCenter.h"
 #include <wtf/glib/WTFGType.h>
 
@@ -67,8 +69,10 @@ GStreamerMockDeviceProvider* webkitGstMockDeviceProviderSingleton()
 
 void webkitGstMockDeviceProviderSwitchDefaultDevice(const CaptureDevice& oldDevice, const CaptureDevice& newDevice)
 {
-    if (!s_provider)
+    if (!s_provider) {
+        GST_ERROR("Mock device provider not found");
         return;
+    }
 
     GRefPtr<GstDevice> oldGstDevice, newGstDevice;
     GList* devices = gst_device_provider_get_devices(GST_DEVICE_PROVIDER_CAST(s_provider));
@@ -85,20 +89,25 @@ void webkitGstMockDeviceProviderSwitchDefaultDevice(const CaptureDevice& oldDevi
     }
     g_list_free_full(devices, gst_object_unref);
 
-    if (!oldGstDevice)
+    if (!oldGstDevice) {
+        GST_ERROR_OBJECT(s_provider, "Unable to find GStreamer mock device corresponding to old capture device with ID %s", oldDevice.persistentId().utf8().data());
         return;
+    }
 
     CaptureDevice previousDefaultDevice = oldDevice;
     previousDefaultDevice.setIsDefault(false);
     auto previousDefaultGstDevice = adoptGRef(webkitMockDeviceCreate(previousDefaultDevice));
     gst_device_provider_device_changed(GST_DEVICE_PROVIDER_CAST(s_provider), previousDefaultGstDevice.get(), oldGstDevice.get());
 
-    if (!newGstDevice)
+    if (!newGstDevice) {
+        GST_ERROR_OBJECT(s_provider, "Unable to find GStreamer mock device corresponding to new capture device with ID %s", oldDevice.persistentId().utf8().data());
         return;
+    }
 
     CaptureDevice nextDefaultDevice = newDevice;
     nextDefaultDevice.setIsDefault(true);
     auto nextDefaultGstDevice = adoptGRef(webkitMockDeviceCreate(nextDefaultDevice));
+    GST_DEBUG_OBJECT(s_provider, "Emitting device-changed notification");
     gst_device_provider_device_changed(GST_DEVICE_PROVIDER_CAST(s_provider), nextDefaultGstDevice.get(), newGstDevice.get());
 }
 

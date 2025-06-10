@@ -56,6 +56,8 @@ ControlMac::ControlMac(ControlPart& owningPart, ControlFactoryMac& controlFactor
 {
 }
 
+ControlMac::~ControlMac() = default;
+
 bool ControlMac::userPrefersContrast()
 {
     return [[NSWorkspace sharedWorkspace] accessibilityDisplayShouldIncreaseContrast];
@@ -215,15 +217,11 @@ static void applyViewlessCellSettings(float deviceScaleFactor, const ControlStyl
     [cell _setFallbackBezelPresentationState:isInActiveWindow ? NSPresentationStateActiveKey : NSPresentationStateInactive];
 #endif
 
-#if USE(NSVIEW_SEMANTICCONTEXT)
     if (style.states.contains(ControlStyle::State::FormSemanticContext))
         [cell _setFallbackSemanticContext:NSViewSemanticContextForm];
-#else
-    UNUSED_PARAM(style);
-#endif
 }
 
-static void performDrawingWithUnflippedContext(GraphicsContext& context, const FloatRect& rect, Function<void(const FloatRect&)>&& draw)
+static void performDrawingWithUnflippedContext(GraphicsContext& context, const FloatRect& rect, NOESCAPE const Function<void(const FloatRect&)>& draw)
 {
     auto adjustedRect = rect;
 
@@ -281,7 +279,7 @@ void ControlMac::drawCellInternal(GraphicsContext& context, const FloatRect& rec
         return;
     }
 
-    auto *view = m_controlFactory.drawingView(rect, style);
+    auto *view = m_controlFactory->drawingView(rect, style);
     drawCellInView(context, rect, cell, view);
 }
 
@@ -311,7 +309,7 @@ void ControlMac::drawCellFocusRingInternal(GraphicsContext& context, const Float
         return;
     }
 
-    auto *view = m_controlFactory.drawingView(rect, style);
+    auto *view = m_controlFactory->drawingView(rect, style);
     drawCellFocusRingInView(context, rect, cell, view);
 }
 

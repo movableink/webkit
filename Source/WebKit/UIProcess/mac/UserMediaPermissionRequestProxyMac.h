@@ -42,7 +42,7 @@ private:
     void invalidate() final;
 
 #if ENABLE(MEDIA_STREAM)
-    bool m_hasPendingGetDispayMediaPrompt { false };
+    bool m_hasPendingGetDisplayMediaPrompt { false };
 #endif
 };
 

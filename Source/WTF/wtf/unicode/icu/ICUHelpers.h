@@ -79,7 +79,7 @@ template<typename FirstArgumentType, typename ...OtherArgumentTypes> auto argume
 
 template<typename CharacterType, size_t inlineCapacity, typename ...OtherArgumentTypes> auto argumentTuple(Vector<CharacterType, inlineCapacity>& buffer, OtherArgumentTypes&&... otherArguments)
 {
-    return tuple_cat(std::make_tuple(buffer.data(), buffer.size()), argumentTuple(std::forward<OtherArgumentTypes>(otherArguments)...));
+    return tuple_cat(std::make_tuple(buffer.mutableSpan().data(), buffer.size()), argumentTuple(std::forward<OtherArgumentTypes>(otherArguments)...));
 }
 
 template<typename FirstArgumentType, typename ...OtherArgumentTypes> auto argumentTuple(FirstArgumentType&& firstArgument, OtherArgumentTypes&&... otherArguments)

@@ -33,9 +33,12 @@
 #include <wtf/FileSystem.h>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
+#include <wtf/MappedFileData.h>
+#include <wtf/RawPtrTraits.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/Variant.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -79,7 +82,7 @@ class SharedMemoryHandle;
 class DataSegment : public ThreadSafeRefCounted<DataSegment> {
 public:
     size_t size() const { return span().size(); }
-    WEBCORE_EXPORT std::span<const uint8_t> span() const;
+    WEBCORE_EXPORT std::span<const uint8_t> span() const LIFETIME_BOUND;
 
     WEBCORE_EXPORT static Ref<DataSegment> create(Vector<uint8_t>&&);
 
@@ -137,7 +140,7 @@ private:
     explicit DataSegment(Provider&& provider)
         : m_immutableData(WTFMove(provider)) { }
 
-    std::variant<Vector<uint8_t>,
+    Variant<Vector<uint8_t>,
 #if USE(CF)
         RetainPtr<CFDataRef>,
 #endif
@@ -159,7 +162,7 @@ private:
 
 class FragmentedSharedBuffer : public ThreadSafeRefCounted<FragmentedSharedBuffer> {
 public:
-    using IPCData = std::variant<std::optional<WebCore::SharedMemoryHandle>, Vector<std::span<const uint8_t>>>;
+    using IPCData = Variant<std::optional<WebCore::SharedMemoryHandle>, Vector<std::span<const uint8_t>>>;
 
     WEBCORE_EXPORT static Ref<FragmentedSharedBuffer> create();
     WEBCORE_EXPORT static Ref<FragmentedSharedBuffer> create(std::span<const uint8_t>);
@@ -218,8 +221,8 @@ public:
         const Ref<const DataSegment> segment;
     };
     using DataSegmentVector = Vector<DataSegmentVectorEntry, 1>;
-    DataSegmentVector::const_iterator begin() const { return m_segments.begin(); }
-    DataSegmentVector::const_iterator end() const { return m_segments.end(); }
+    DataSegmentVector::const_iterator begin() const LIFETIME_BOUND { return m_segments.begin(); }
+    DataSegmentVector::const_iterator end() const LIFETIME_BOUND { return m_segments.end(); }
     bool hasOneSegment() const { return m_segments.size() == 1; }
 
     // begin and end take O(1) time, this takes O(log(N)) time.

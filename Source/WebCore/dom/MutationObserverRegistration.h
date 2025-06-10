@@ -71,7 +71,6 @@ public:
     bool isSubtree() const { return m_options.contains(MutationObserverOptionType::Subtree); }
 
     MutationObserver& observer() { return m_observer.get(); }
-    Ref<MutationObserver> protectedObserver() { return m_observer; }
     Node& node() { return m_node; }
     MutationRecordDeliveryOptions deliveryOptions() const { return m_options & MutationObserver::AllDeliveryFlags; }
     MutationObserverOptions mutationTypes() const { return m_options & MutationObserver::AllMutationTypes; }
@@ -79,7 +78,7 @@ public:
     bool isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor&) const;
 
 private:
-    Ref<MutationObserver> m_observer;
+    const Ref<MutationObserver> m_observer;
     WeakRef<Node, WeakPtrImplWithEventTargetData> m_node;
     RefPtr<Node> m_nodeKeptAlive;
     UncheckedKeyHashSet<GCReachableRef<Node>> m_transientRegistrationNodes;

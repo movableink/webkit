@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "GPUProcessConnection.h"
 #include "RemoteAudioDestinationProxy.h"
 #include "RemoteCDMFactory.h"
+#include "RemoteVideoFrameObjectHeapProxy.h"
 #include "WebProcess.h"
 #include <WebCore/AudioDestination.h>
 #include <WebCore/AudioIOCallback.h>
@@ -75,7 +76,7 @@ std::unique_ptr<WebCore::NowPlayingManager> WebMediaStrategy::createNowPlayingMa
             void clearNowPlayingInfoPrivate() final
             {
                 if (RefPtr connection = WebProcess::singleton().existingGPUProcessConnection())
-                    connection->protectedConnection()->send(Messages::GPUConnectionToWebProcess::ClearNowPlayingInfo { }, 0);
+                    connection->connection().send(Messages::GPUConnectionToWebProcess::ClearNowPlayingInfo { }, 0);
             }
 
             void setNowPlayingInfoPrivate(const WebCore::NowPlayingInfo& nowPlayingInfo, bool) final
@@ -122,12 +123,16 @@ void WebMediaStrategy::enableMockMediaSource()
 #endif
 
 #if PLATFORM(COCOA) && ENABLE(MEDIA_RECORDER)
-std::unique_ptr<MediaRecorderPrivateWriter> WebMediaStrategy::createMediaRecorderPrivateWriter(const String& type, WebCore::MediaRecorderPrivateWriterListener& listener) const
+std::unique_ptr<MediaRecorderPrivateWriter> WebMediaStrategy::createMediaRecorderPrivateWriter(MediaRecorderContainerType type, WebCore::MediaRecorderPrivateWriterListener& listener) const
 {
     ASSERT(isMainRunLoop());
 #if ENABLE(GPU_PROCESS)
-    if (m_useGPUProcess && (equalLettersIgnoringASCIICase(type, "video/mp4"_s) || equalLettersIgnoringASCIICase(type, "audio/mp4"_s)))
-        return RemoteMediaRecorderPrivateWriter::create(WebProcess::singleton().ensureProtectedGPUProcessConnection(), type, listener);
+    if (type != MediaRecorderContainerType::Mp4)
+        return nullptr;
+    if (m_useGPUProcess) {
+        Ref connection = WebProcess::singleton().ensureGPUProcessConnection();
+        return RemoteMediaRecorderPrivateWriter::create(connection, listener);
+    }
 #else
     UNUSED_PARAM(type);
     UNUSED_PARAM(listener);
@@ -135,4 +140,13 @@ std::unique_ptr<MediaRecorderPrivateWriter> WebMediaStrategy::createMediaRecorde
     return nullptr;
 }
 #endif
+
+#if PLATFORM(COCOA) && ENABLE(VIDEO)
+void WebMediaStrategy::nativeImageFromVideoFrame(const WebCore::VideoFrame& frame, CompletionHandler<void(std::optional<RefPtr<WebCore::NativeImage>>&&)>&& completionHandler)
+{
+    // FIMXE: Move out of sync IPC.
+    completionHandler(WebProcess::singleton().ensureProtectedGPUProcessConnection()->protectedVideoFrameObjectHeapProxy()->getNativeImage(frame));
+}
+#endif
+
 } // namespace WebKit

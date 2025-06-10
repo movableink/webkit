@@ -41,7 +41,7 @@ enum class WebKitH265 { Off, On };
 enum class WebKitVP9 { Off, Profile0, Profile0And2 };
 enum class WebKitVP9VTB { Off, On };
 enum class WebKitAv1 { Off, On };
-enum class BufferType { I420, I010 };
+enum class BufferType { I420, I010, I422, I210 };
 
 CVPixelBufferRef copyPixelBufferForFrame(const VideoFrame&) CF_RETURNS_RETAINED;
 CVPixelBufferRef createPixelBufferFromFrame(const VideoFrame&, const std::function<CVPixelBufferRef(size_t, size_t, BufferType)>& createPixelBuffer) CF_RETURNS_RETAINED;

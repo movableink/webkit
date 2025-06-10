@@ -804,7 +804,7 @@ uint32_t computeFramerate(uint32_t proposedFramerate, uint32_t maxAllowedFramera
 
 #if HAVE_VTB_REQUIREDLOWLATENCY
   if (_isH264LowLatencyEncoderEnabled && _useVCP) {
-#if defined(WEBRTC_ARCH_X86_FAMILY) && !ENABLE_LOW_LATENCY_INTEL_ENCODER_FOR_LOW_RESOLUTION
+#if defined(WEBRTC_ARCH_X86_FAMILY)
     if (_width < 192 || _height < 108) {
       int usageValue = 1;
       auto usage = CFNumberCreate(nullptr, kCFNumberIntType, &usageValue);

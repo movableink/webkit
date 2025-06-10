@@ -108,7 +108,7 @@ private:
 template<typename T>
 TextStream& operator<<(TextStream& ts, const RectCorners<T>& corners)
 {
-    return ts << "[topLeft " << corners.topLeft() << " topRight " << corners.topRight() << " bottomLeft " << corners.bottomLeft() << " bottomRight " << corners.bottomRight() << "]";
+    return ts << "[topLeft "_s << corners.topLeft() << " topRight "_s << corners.topRight() << " bottomLeft "_s << corners.bottomLeft() << " bottomRight "_s << corners.bottomRight() << ']';
 }
 
 } // namespace WebCore

@@ -34,6 +34,7 @@
 #import "TestRunnerWKWebView.h"
 #import "WPTFunctions.h"
 #import "WebKitTestRunnerPasteboard.h"
+#import <WebCore/RunLoopObserver.h>
 #import <WebKit/WKContextPrivate.h>
 #import <WebKit/WKProcessPoolPrivate.h>
 #import <WebKit/WKStringCF.h>
@@ -184,7 +185,15 @@ bool TestController::platformResetStateToConsistentValues(const TestOptions& opt
     while ([NSApp nextEventMatchingMask:NSEventMaskGesture | NSEventMaskScrollWheel untilDate:nil inMode:NSDefaultRunLoopMode dequeue:YES]) {
         // Clear out (and ignore) any pending gesture and scroll wheel events.
     }
-    
+
+    bool runLoopObserverFired = false;
+    auto observer = makeUnique<WebCore::RunLoopObserver>(WebCore::RunLoopObserver::WellKnownOrder::ActivityStateChange, [&] {
+        runLoopObserverFired = true;
+    }, WebCore::RunLoopObserver::Type::OneShot);
+    observer->schedule();
+    while (!runLoopObserverFired)
+        [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
+
     return true;
 }
 
@@ -227,14 +236,14 @@ void TestController::configureContentExtensionForTest(const TestInvocation& test
 
     __block bool doneCompiling = false;
 
-    NSURL *tempDir;
+    RetainPtr<NSURL> tempDir;
     if (const char* dumpRenderTreeTemp = libraryPathForTesting()) {
         String temporaryFolder = String::fromUTF8(dumpRenderTreeTemp);
-        tempDir = [NSURL fileURLWithPath:[(NSString*)temporaryFolder stringByAppendingPathComponent:@"ContentExtensions"] isDirectory:YES];
+        tempDir = adoptNS([[NSURL alloc] initFileURLWithPath:[temporaryFolder.createNSString() stringByAppendingPathComponent:@"ContentExtensions"] isDirectory:YES]);
     } else
-        tempDir = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:@"ContentExtensions"] isDirectory:YES];
+        tempDir = adoptNS([[NSURL alloc] initFileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:@"ContentExtensions"] isDirectory:YES]);
 
-    [[WKContentRuleListStore storeWithURL:tempDir] compileContentRuleListForIdentifier:@"TestContentExtensions" encodedContentRuleList:contentExtensionString.get() completionHandler:^(WKContentRuleList *list, NSError *error)
+    [[WKContentRuleListStore storeWithURL:tempDir.get()] compileContentRuleListForIdentifier:@"TestContentExtensions" encodedContentRuleList:contentExtensionString.get() completionHandler:^(WKContentRuleList *list, NSError *error)
     {
         if (!error)
             [mainWebView()->platformView().configuration.userContentController addContentRuleList:list];

@@ -145,6 +145,7 @@ public:
     }
 
     bool isZero() const
+        requires (requires { { !std::declval<T>() } -> std::same_as<bool>; })
     {
         return allOf([](auto& edge) { return !edge; });
     }
@@ -173,10 +174,27 @@ inline RectEdges<T>& operator+=(RectEdges<T>& a, const RectEdges<T>& b)
     return a;
 }
 
+template<typename T, typename F>
+inline RectEdges<T> blend(const RectEdges<T>& a, const RectEdges<T>& b, F&& functor)
+{
+    return {
+        functor(a.top(), b.top(), BoxSide::Top),
+        functor(a.right(), b.right(), BoxSide::Right),
+        functor(a.bottom(), b.bottom(), BoxSide::Bottom),
+        functor(a.left(), b.left(), BoxSide::Left)
+    };
+}
+
+template<typename T>
+inline RectEdges<T> max(const RectEdges<T>& a, const RectEdges<T>& b)
+{
+    return blend(a, b, [](const T& a, const T& b, BoxSide) { return std::max(a, b); });
+}
+
 template<typename T>
 TextStream& operator<<(TextStream& ts, const RectEdges<T>& edges)
 {
-    ts << "[top " << edges.top() << " right " << edges.right() << " bottom " << edges.bottom() << " left " << edges.left() << "]";
+    ts << "[top "_s << edges.top() << " right "_s << edges.right() << " bottom "_s << edges.bottom() << " left "_s << edges.left() << ']';
     return ts;
 }
 

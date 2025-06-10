@@ -45,7 +45,7 @@ typedef enum pas_scavenger_state pas_scavenger_state;
 
 PAS_END_EXTERN_C;
 
-#include <pthread.h>
+#include "pas_thread.h"
 
 PAS_BEGIN_EXTERN_C;
 

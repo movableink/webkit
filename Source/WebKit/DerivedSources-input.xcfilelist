@@ -2,8 +2,17 @@
 $(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/AdditionalFeatureDefines.h
 $(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/AdditionalPlatform.h
 $(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/AdditionalPlatformHave.h
+$(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/ISO18013MobileDocumentRequest+Extras.swift.in
 $(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/MaterialAdditions.swift.in
+$(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/WKIdentityDocumentPresentmentController.swift.in
+$(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/WKIdentityDocumentPresentmentMobileDocumentRequest.swift.in
+$(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/WKIdentityDocumentPresentmentMobileDocumentRequest+Extras.swift.in
+$(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/WKIdentityDocumentPresentmentRawRequest.swift.in
+$(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/WKIdentityDocumentPresentmentRequest.swift.in
+$(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/WKIdentityDocumentPresentmentResponse.swift.in
+$(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/WKIdentityDocumentRawRequestValidator.swift.in
 $(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/WKSeparatedImageView.swift.in
+$(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions/WebPageWebViewAdditions.swift.in
 $(BUILT_PRODUCTS_DIR)/usr/local/include/wtf/Compiler.h
 $(BUILT_PRODUCTS_DIR)/usr/local/include/wtf/Platform.h
 $(BUILT_PRODUCTS_DIR)/usr/local/include/wtf/PlatformCPU.h
@@ -173,10 +182,6 @@ $(PROJECT_DIR)/Platform/IPC/StreamServerConnection.serialization.in
 $(PROJECT_DIR)/Platform/LogMessages.in
 $(PROJECT_DIR)/Platform/SharedMemory.serialization.in
 $(PROJECT_DIR)/Platform/cocoa/MediaPlaybackTargetContextSerialized.serialization.in
-$(PROJECT_DIR)/PluginProcess/PluginControllerProxy.messages.in
-$(PROJECT_DIR)/PluginProcess/PluginProcess.messages.in
-$(PROJECT_DIR)/PluginProcess/WebProcessConnection.messages.in
-$(PROJECT_DIR)/PluginProcess/mac/com.apple.WebKit.plugin-common.sb.in
 $(PROJECT_DIR)/Resources/SandboxProfiles/ios/com.apple.WebKit.GPU.sb.in
 $(PROJECT_DIR)/Resources/SandboxProfiles/ios/com.apple.WebKit.Model.sb.in
 $(PROJECT_DIR)/Resources/SandboxProfiles/ios/com.apple.WebKit.Networking.sb.in
@@ -280,7 +285,6 @@ $(PROJECT_DIR)/Shared/ContextMenuContextData.serialization.in
 $(PROJECT_DIR)/Shared/CoordinateSystem.serialization.in
 $(PROJECT_DIR)/Shared/Databases/IndexedDB/WebIDBResult.serialization.in
 $(PROJECT_DIR)/Shared/DebuggableInfoData.serialization.in
-$(PROJECT_DIR)/Shared/DisplayListArgumentCoders.serialization.in
 $(PROJECT_DIR)/Shared/DocumentEditingContext.serialization.in
 $(PROJECT_DIR)/Shared/DragControllerAction.serialization.in
 $(PROJECT_DIR)/Shared/DrawingAreaInfo.serialization.in
@@ -347,6 +351,7 @@ $(PROJECT_DIR)/Shared/ProvisionalFrameCreationParameters.serialization.in
 $(PROJECT_DIR)/Shared/PushMessageForTesting.serialization.in
 $(PROJECT_DIR)/Shared/RTCNetwork.serialization.in
 $(PROJECT_DIR)/Shared/RTCPacketOptions.serialization.in
+$(PROJECT_DIR)/Shared/RemoteWebTouchEvent.serialization.in
 $(PROJECT_DIR)/Shared/RemoteLayerTree/BufferAndBackendInfo.serialization.in
 $(PROJECT_DIR)/Shared/RemoteLayerTree/RemoteLayerTree.serialization.in
 $(PROJECT_DIR)/Shared/RemoteLayerTree/RemoteScrollingCoordinatorTransaction.serialization.in
@@ -499,6 +504,7 @@ $(PROJECT_DIR)/Shared/ios/GestureTypes.serialization.in
 $(PROJECT_DIR)/Shared/ios/HardwareKeyboardState.serialization.in
 $(PROJECT_DIR)/Shared/ios/InteractionInformationAtPosition.serialization.in
 $(PROJECT_DIR)/Shared/ios/InteractionInformationRequest.serialization.in
+$(PROJECT_DIR)/Shared/ios/DragInitiationResult.serialization.in
 $(PROJECT_DIR)/Shared/ios/WebAutocorrectionContext.serialization.in
 $(PROJECT_DIR)/Shared/ios/WebAutocorrectionData.serialization.in
 $(PROJECT_DIR)/Shared/mac/PDFContextMenuItem.serialization.in
@@ -510,6 +516,9 @@ $(PROJECT_DIR)/UIProcess/Automation/WebAutomationSession.messages.in
 $(PROJECT_DIR)/UIProcess/Automation/protocol/BidiBrowser.json
 $(PROJECT_DIR)/UIProcess/Automation/protocol/BidiBrowsingContext.json
 $(PROJECT_DIR)/UIProcess/Automation/protocol/BidiLog.json
+$(PROJECT_DIR)/UIProcess/Automation/protocol/BidiScript.json
+$(PROJECT_DIR)/UIProcess/Automation/protocol/BidiSession.json
+$(PROJECT_DIR)/UIProcess/Automation/protocol/BidiStorage.json
 $(PROJECT_DIR)/UIProcess/Cocoa/PlaybackSessionManagerProxy.messages.in
 $(PROJECT_DIR)/UIProcess/Cocoa/UserMediaCaptureManagerProxy.messages.in
 $(PROJECT_DIR)/UIProcess/Cocoa/VideoPresentationManagerProxy.messages.in
@@ -527,7 +536,6 @@ $(PROJECT_DIR)/UIProcess/Media/RemoteMediaSessionCoordinatorProxy.messages.in
 $(PROJECT_DIR)/UIProcess/Model/ModelProcessProxy.messages.in
 $(PROJECT_DIR)/UIProcess/Network/CustomProtocols/LegacyCustomProtocolManagerProxy.messages.in
 $(PROJECT_DIR)/UIProcess/Network/NetworkProcessProxy.messages.in
-$(PROJECT_DIR)/UIProcess/Plugins/PluginProcessProxy.messages.in
 $(PROJECT_DIR)/UIProcess/RemoteLayerTree/RemoteLayerTreeDrawingAreaProxy.messages.in
 $(PROJECT_DIR)/UIProcess/SpeechRecognitionRemoteRealtimeMediaSourceManager.messages.in
 $(PROJECT_DIR)/UIProcess/SpeechRecognitionServer.messages.in
@@ -558,6 +566,7 @@ $(PROJECT_DIR)/WebProcess/Automation/WebAutomationSessionProxy.js
 $(PROJECT_DIR)/WebProcess/Automation/WebAutomationSessionProxy.messages.in
 $(PROJECT_DIR)/WebProcess/Cache/WebCacheStorageConnection.messages.in
 $(PROJECT_DIR)/WebProcess/Databases/IndexedDB/WebIDBConnectionToServer.messages.in
+$(PROJECT_DIR)/WebProcess/DigitalCredentials/DigitalCredentialsCoordinator.messages.in
 $(PROJECT_DIR)/WebProcess/Extensions/Bindings/Scripts/CodeGeneratorExtensions.pm
 $(PROJECT_DIR)/WebProcess/Extensions/Bindings/Scripts/GenerateImports.pl
 $(PROJECT_DIR)/WebProcess/Extensions/Bindings/Scripts/IDLAttributes.json
@@ -659,9 +668,6 @@ $(PROJECT_DIR)/WebProcess/Network/webrtc/WebMDNSRegister.messages.in
 $(PROJECT_DIR)/WebProcess/Network/webrtc/WebRTCMonitor.messages.in
 $(PROJECT_DIR)/WebProcess/Network/webrtc/WebRTCResolver.messages.in
 $(PROJECT_DIR)/WebProcess/Notifications/WebNotificationManager.messages.in
-$(PROJECT_DIR)/WebProcess/Plugins/PluginProcessConnection.messages.in
-$(PROJECT_DIR)/WebProcess/Plugins/PluginProcessConnectionManager.messages.in
-$(PROJECT_DIR)/WebProcess/Plugins/PluginProxy.messages.in
 $(PROJECT_DIR)/WebProcess/Speech/SpeechRecognitionRealtimeMediaSourceManager.messages.in
 $(PROJECT_DIR)/WebProcess/Storage/WebSWClientConnection.messages.in
 $(PROJECT_DIR)/WebProcess/Storage/WebSWContextManagerConnection.messages.in

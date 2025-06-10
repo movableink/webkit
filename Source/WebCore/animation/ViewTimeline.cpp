@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,9 +33,8 @@
 #include "Element.h"
 #include "LegacyRenderSVGModelObject.h"
 #include "RenderBlock.h"
-#include "RenderBox.h"
-#include "RenderBoxInlines.h"
-#include "RenderInline.h"
+#include "RenderBoxModelObject.h"
+#include "RenderElementInlines.h"
 #include "RenderLayerScrollableArea.h"
 #include "RenderSVGModelObject.h"
 #include "ScrollAnchoringController.h"
@@ -99,17 +98,14 @@ ExceptionOr<ViewTimeline::SpecifiedViewTimelineInsets> ViewTimeline::validateSpe
     if (auto* insetString = std::get_if<String>(&inset)) {
         if (insetString->isEmpty())
             return Exception { ExceptionCode::TypeError };
-        CSSTokenizer tokenizer(*insetString);
-        auto tokenRange = tokenizer.tokenRange();
-        tokenRange.consumeWhitespace();
-        auto consumedInset = CSSPropertyParserHelpers::consumeViewTimelineInsetListItem(tokenRange, Ref { document }->cssParserContext());
+        auto consumedInset = CSSPropertyParserHelpers::parseSingleViewTimelineInsetItem(*insetString, Ref { document }->cssParserContext());
         if (!consumedInset)
             return Exception { ExceptionCode::TypeError };
 
-        if (auto insetPair = dynamicDowncast<CSSValuePair>(consumedInset)) {
+        if (RefPtr insetPair = dynamicDowncast<CSSValuePair>(consumedInset)) {
             return { {
-                dynamicDowncast<CSSPrimitiveValue>(insetPair->protectedFirst()),
-                dynamicDowncast<CSSPrimitiveValue>(insetPair->protectedSecond())
+                RefPtr { dynamicDowncast<CSSPrimitiveValue>(insetPair->first()) },
+                RefPtr { dynamicDowncast<CSSPrimitiveValue>(insetPair->second()) }
             } };
         } else
             return { { dynamicDowncast<CSSPrimitiveValue>(consumedInset), nullptr } };
@@ -310,27 +306,22 @@ void ViewTimeline::cacheCurrentTime()
             return { };
 
         auto scrollDirection = resolvedScrollDirection();
-        if (!scrollDirection)
-            return { };
-
-        float scrollOffset = scrollDirection->isVertical ? sourceScrollableArea->scrollOffset().y() : sourceScrollableArea->scrollOffset().x();
-        float scrollContainerSize = scrollDirection->isVertical ? sourceScrollableArea->visibleHeight() : sourceScrollableArea->visibleWidth();
+        float scrollOffset = scrollDirection.isVertical ? sourceScrollableArea->scrollOffset().y() : sourceScrollableArea->scrollOffset().x();
+        float scrollContainerSize = scrollDirection.isVertical ? sourceScrollableArea->visibleHeight() : sourceScrollableArea->visibleWidth();
 
         // https://drafts.csswg.org/scroll-animations-1/#view-timelines-ranges
         // Transforms and sticky position offsets are ignored, but relative and absolute positioning are accounted for.
         OptionSet<MapCoordinatesMode> options { IgnoreStickyOffsets };
         auto subjectOffsetFromSource = subjectRenderer->localToContainerPoint(pointForLocalToContainer(*sourceScrollableArea), sourceRenderer.get(), options);
-        float subjectOffset = scrollDirection->isVertical ? subjectOffsetFromSource.y() : subjectOffsetFromSource.x();
+        float subjectOffset = scrollDirection.isVertical ? subjectOffsetFromSource.y() : subjectOffsetFromSource.x();
 
         // Ensure borders are subtracted.
         auto scrollerPaddingBoxOrigin = sourceRenderer->paddingBoxRect().location();
-        subjectOffset -= scrollDirection->isVertical ? scrollerPaddingBoxOrigin.y() : scrollerPaddingBoxOrigin.x();
+        subjectOffset -= scrollDirection.isVertical ? scrollerPaddingBoxOrigin.y() : scrollerPaddingBoxOrigin.x();
 
         auto subjectBounds = [&] -> FloatSize {
-            if (CheckedPtr subjectRenderBox = dynamicDowncast<RenderBox>(subjectRenderer.get()))
-                return subjectRenderBox->contentBoxRect().size();
-            if (CheckedPtr subjectRenderInline = dynamicDowncast<RenderInline>(subjectRenderer.get()))
-                return subjectRenderInline->borderBoundingBox().size();
+            if (CheckedPtr subjectRenderBoxModelObject = dynamicDowncast<RenderBoxModelObject>(subjectRenderer.get()))
+                return subjectRenderBoxModelObject->borderBoundingBox().size();
             if (CheckedPtr subjectRenderSVGModelObject = dynamicDowncast<RenderSVGModelObject>(subjectRenderer.get()))
                 return subjectRenderSVGModelObject->borderBoxRectEquivalent().size();
             if (is<LegacyRenderSVGModelObject>(subjectRenderer.get()))
@@ -338,7 +329,7 @@ void ViewTimeline::cacheCurrentTime()
             return { };
         }();
 
-        auto subjectSize = scrollDirection->isVertical ? subjectBounds.height() : subjectBounds.width();
+        auto subjectSize = scrollDirection.isVertical ? subjectBounds.height() : subjectBounds.width();
 
         if (m_specifiedInsets) {
             RefPtr subjectElement { &subject->element };
@@ -354,8 +345,8 @@ void ViewTimeline::cacheCurrentTime()
         auto scrollPadding = [&](PaddingEdge edge) {
             auto& style = sourceRenderer->style();
             if (edge == PaddingEdge::Start)
-                return scrollDirection->isVertical ? style.scrollPaddingTop() : style.scrollPaddingLeft();
-            return scrollDirection->isVertical ? style.scrollPaddingBottom() : style.scrollPaddingRight();
+                return scrollDirection.isVertical ? style.scrollPaddingTop() : style.scrollPaddingLeft();
+            return scrollDirection.isVertical ? style.scrollPaddingBottom() : style.scrollPaddingRight();
         };
 
         bool hasInsetsStart = m_insets.start.has_value();
@@ -382,7 +373,7 @@ void ViewTimeline::cacheCurrentTime()
                 insetEnd = insetStart; 
             }
         } else if (hasInsetsEnd) {
-            insetStart = Style::evaluate(scrollPadding(PaddingEdge::Start), scrollContainerSize);\
+            insetStart = Style::evaluate(scrollPadding(PaddingEdge::Start), scrollContainerSize);
 
             if (m_insets.end->isAuto())
                 insetEnd = Style::evaluate(scrollPadding(PaddingEdge::End), scrollContainerSize);
@@ -398,7 +389,7 @@ void ViewTimeline::cacheCurrentTime()
             FloatRect constrainingRect = stickyContainer->constrainingRectForStickyPosition();
             StickyPositionViewportConstraints constraints;
             stickyContainer->computeStickyPositionConstraints(constraints, constrainingRect);
-            stickyData = StickinessAdjustmentData::computeStickinessAdjustmentData(constraints, *scrollDirection, scrollContainerSize, subjectSize, subjectOffset);
+            stickyData = StickinessAdjustmentData::computeStickinessAdjustmentData(constraints, scrollDirection, scrollContainerSize, subjectSize, subjectOffset);
         }
 
         return {
@@ -633,18 +624,18 @@ Ref<CSSNumericValue> ViewTimeline::endOffset() const
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, const StickinessAdjustmentData& stickiness)
 {
-    ts << "[ TopOrLeftAdjustment: " << stickiness.stickyTopOrLeftAdjustment << ", TopOrLeftLocation: " << stickiness.topOrLeftAdjustmentLocation << ", BottomOrRightAdjustment: " << stickiness.stickyBottomOrRightAdjustment << ", BottomOrRightLocation: " << stickiness.bottomOrRightAdjustmentLocation << " ]";
+    ts << "[ TopOrLeftAdjustment: "_s << stickiness.stickyTopOrLeftAdjustment << ", TopOrLeftLocation: "_s << stickiness.topOrLeftAdjustmentLocation << ", BottomOrRightAdjustment: "_s << stickiness.stickyBottomOrRightAdjustment << ", BottomOrRightLocation: "_s << stickiness.bottomOrRightAdjustmentLocation << " ]"_s;
     return ts;
 }
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, const StickinessAdjustmentData::StickinessLocation& stickiness)
 {
     switch (stickiness) {
-    case StickinessAdjustmentData::StickinessLocation::BeforeEntry: ts << "BeforeEntry"; break;
-    case StickinessAdjustmentData::StickinessLocation::DuringEntry: ts << "DuringEntry"; break;
-    case StickinessAdjustmentData::StickinessLocation::WhileContained: ts << "WhileContained"; break;
-    case StickinessAdjustmentData::StickinessLocation::DuringExit: ts << "DuringExit"; break;
-    case StickinessAdjustmentData::StickinessLocation::AfterExit: ts << "AfterExit"; break;
+    case StickinessAdjustmentData::StickinessLocation::BeforeEntry: ts << "BeforeEntry"_s; break;
+    case StickinessAdjustmentData::StickinessLocation::DuringEntry: ts << "DuringEntry"_s; break;
+    case StickinessAdjustmentData::StickinessLocation::WhileContained: ts << "WhileContained"_s; break;
+    case StickinessAdjustmentData::StickinessLocation::DuringExit: ts << "DuringExit"_s; break;
+    case StickinessAdjustmentData::StickinessLocation::AfterExit: ts << "AfterExit"_s; break;
     }
     return ts;
 }

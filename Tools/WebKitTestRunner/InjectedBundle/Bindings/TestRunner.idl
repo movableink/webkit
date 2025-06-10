@@ -61,7 +61,6 @@ interface TestRunner {
     undefined dumpChildFrameScrollPositions();
     undefined dumpEditingCallbacks();
     undefined dumpSelectionRect();
-    undefined dumpStatusCallbacks();
     undefined dumpTitleChanges();
     undefined dumpFullScreenCallbacks();
     undefined dumpFrameLoadCallbacks();
@@ -70,7 +69,6 @@ interface TestRunner {
     undefined dumpResourceResponseMIMETypes();
     undefined dumpWillCacheResponse();
     undefined dumpApplicationCacheDelegateCallbacks();
-    undefined dumpDatabaseCallbacks();
     undefined dumpDOMAsWebArchive();
     undefined dumpPolicyDelegateCallbacks();
     undefined dumpResourceLoadStatistics();
@@ -239,9 +237,9 @@ interface TestRunner {
     undefined setMicrophonePermission(boolean value);
     undefined setUserMediaPermission(boolean value);
     undefined resetUserMediaPermission();
-    undefined setUserMediaPersistentPermissionForOrigin(boolean permission, DOMString origin, DOMString parentOrigin);
-    unsigned long userMediaPermissionRequestCountForOrigin(DOMString origin, DOMString parentOrigin);
-    undefined resetUserMediaPermissionRequestCountForOrigin(DOMString origin, DOMString parentOrigin);
+    undefined delayUserMediaRequestDecision();
+    unsigned long userMediaPermissionRequestCount();
+    undefined resetUserMediaPermissionRequestCount();
     readonly attribute boolean isDoingMediaCapture;
 
     // Audio testing.
@@ -461,6 +459,7 @@ interface TestRunner {
     Promise<undefined> flushConsoleLogs();
     Promise<undefined> updatePresentation();
 
+    undefined scrollDuringEnterFullscreen();
     undefined waitBeforeFinishingFullscreenExit();
     undefined finishFullscreenExit();
     undefined requestExitFullscreenFromUIProcess();

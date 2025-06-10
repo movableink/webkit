@@ -31,6 +31,7 @@
 
 namespace WTF {
 
+class ContinuousTime;
 class WallTime;
 class PrintStream;
 
@@ -54,6 +55,7 @@ public:
     
     MonotonicTime approximateMonotonicTime() const { return *this; }
     WTF_EXPORT_PRIVATE WallTime approximateWallTime() const;
+    WTF_EXPORT_PRIVATE ContinuousTime approximateContinuousTime() const;
 
     WTF_EXPORT_PRIVATE void dump(PrintStream&) const;
 

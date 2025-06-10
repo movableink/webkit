@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include <JavaScriptCore/Forward.h>
 #include <span>
 #include <wtf/Function.h>
@@ -36,6 +35,7 @@ namespace WebCore {
 
 class BufferSource;
 class ReadableStream;
+template<typename> class ExceptionOr;
 
 class ReadableStreamSink : public RefCounted<ReadableStreamSink> {
 public:

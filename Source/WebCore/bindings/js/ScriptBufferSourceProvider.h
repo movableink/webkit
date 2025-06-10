@@ -102,6 +102,24 @@ public:
         m_contiguousBuffer = nullptr;
     }
 
+    void lockUnderlyingBufferImpl() final
+    {
+        ASSERT(!m_buffer);
+        m_buffer = m_scriptBuffer.buffer();
+
+        if (!m_buffer)
+            return;
+
+        if (!m_buffer->isContiguous())
+            m_buffer = m_buffer->makeContiguous();
+    }
+
+    void unlockUnderlyingBufferImpl() final
+    {
+        ASSERT(m_buffer);
+        m_buffer = nullptr;
+    }
+
 private:
     ScriptBufferSourceProvider(const ScriptBuffer& scriptBuffer, const JSC::SourceOrigin& sourceOrigin, String&& sourceURL, String&& preRedirectURL, const TextPosition& startPosition, JSC::SourceProviderSourceType sourceType)
         : JSC::SourceProvider(sourceOrigin, WTFMove(sourceURL), WTFMove(preRedirectURL), JSC::SourceTaintedOrigin::Untainted, startPosition, sourceType)
@@ -110,6 +128,7 @@ private:
     }
 
     ScriptBuffer m_scriptBuffer;
+    RefPtr<const FragmentedSharedBuffer> m_buffer;
     mutable RefPtr<SharedBuffer> m_contiguousBuffer;
     mutable unsigned m_scriptHash { 0 };
     mutable String m_cachedScriptString;

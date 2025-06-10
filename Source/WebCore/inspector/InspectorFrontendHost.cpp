@@ -189,7 +189,7 @@ void InspectorFrontendHost::addSelfToGlobalObjectInWorld(DOMWrapperWorld& world)
     JSC::JSLockHolder lock(vm);
     auto scope = DECLARE_CATCH_SCOPE(vm);
     globalObject.putDirect(vm, JSC::Identifier::fromString(vm, "InspectorFrontendHost"_s), toJS<IDLInterface<InspectorFrontendHost>>(globalObject, globalObject, *this));
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         reportException(&globalObject, scope.exception());
 }
 
@@ -678,11 +678,7 @@ bool InspectorFrontendHost::engineeringSettingsAllowed()
 
 bool InspectorFrontendHost::supportsShowCertificate() const
 {
-#if PLATFORM(COCOA)
-    return true;
-#else
-    return false;
-#endif
+    return m_frontendPage->settings().inspectorSupportsShowingCertificate();
 }
 
 bool InspectorFrontendHost::showCertificate(const String& serializedCertificate)

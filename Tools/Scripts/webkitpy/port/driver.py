@@ -568,8 +568,8 @@ class Driver(object):
             cmd.append('--remote-layer-tree')
         if self._port.get_option('no_remote_layer_tree'):
             cmd.append('--no-remote-layer-tree')
-        if self._port.get_option('wpe_platform_api'):
-            cmd.append('--wpe-platform-api')
+        if self._port.get_option('wpe_legacy_api'):
+            cmd.append('--wpe-legacy-api')
         if self._port.get_option('world_leaks'):
             cmd.append('--world-leaks')
         if self._port.get_option('threaded'):
@@ -797,9 +797,9 @@ class Driver(object):
                     # FIXME: This can likely be removed once <rdar://problem/18701447> is fixed.
                     deadline += 10 * 60 * 1000
                 if asan_violation_detected:
-                    self._crash_report_from_driver += string_utils.decode(err_line, target_type=str)
+                    self._crash_report_from_driver += string_utils.decode(err_line, target_type=str, errors="replace")
                 else:
-                    self.error_from_test += string_utils.decode(err_line, target_type=str)
+                    self.error_from_test += string_utils.decode(err_line, target_type=str, errors="replace")
 
         if asan_violation_detected and not self._crashed_process_name:
             self._crashed_process_name = self._server_process.process_name()

@@ -156,7 +156,7 @@ static AuthenticatorManager::TransportSet collectTransports(const Vector<PublicK
     return result;
 }
 
-static String getRpId(const std::variant<PublicKeyCredentialCreationOptions, PublicKeyCredentialRequestOptions>& options)
+static String getRpId(const Variant<PublicKeyCredentialCreationOptions, PublicKeyCredentialRequestOptions>& options)
 {
     if (std::holds_alternative<PublicKeyCredentialCreationOptions>(options)) {
         auto& creationOptions = std::get<PublicKeyCredentialCreationOptions>(options);
@@ -166,7 +166,7 @@ static String getRpId(const std::variant<PublicKeyCredentialCreationOptions, Pub
     return std::get<PublicKeyCredentialRequestOptions>(options).rpId;
 }
 
-static String getUserName(const std::variant<PublicKeyCredentialCreationOptions, PublicKeyCredentialRequestOptions>& options)
+static String getUserName(const Variant<PublicKeyCredentialCreationOptions, PublicKeyCredentialRequestOptions>& options)
 {
     if (std::holds_alternative<PublicKeyCredentialCreationOptions>(options))
         return std::get<PublicKeyCredentialCreationOptions>(options).user.name;
@@ -490,6 +490,8 @@ void AuthenticatorManager::runPanel()
     RefPtr frame = WebFrameProxy::webFrame(m_pendingRequestData.globalFrameID->frameID);
     if (!frame)
         return;
+    if (!m_pendingRequestData.frameInfo)
+        return;
 
     // Get available transports and start discovering authenticators on them.
     auto& options = m_pendingRequestData.options;
@@ -501,7 +503,7 @@ void AuthenticatorManager::runPanel()
 
     m_pendingRequestData.panel = API::WebAuthenticationPanel::create(*this, getRpId(options), transports, getClientDataType(options), getUserName(options));
     Ref panel = *m_pendingRequestData.panel;
-    page->uiClient().runWebAuthenticationPanel(*page, panel, *frame, FrameInfoData { m_pendingRequestData.frameInfo }, [transports = WTFMove(transports), weakPanel = WeakPtr { panel.get() }, weakThis = WeakPtr { *this }] (WebAuthenticationPanelResult result) {
+    page->uiClient().runWebAuthenticationPanel(*page, panel, *frame, FrameInfoData { *m_pendingRequestData.frameInfo }, [transports = WTFMove(transports), weakPanel = WeakPtr { panel.get() }, weakThis = WeakPtr { *this }] (WebAuthenticationPanelResult result) {
         // The panel address is used to determine if the current pending request is still the same.
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis || !weakPanel

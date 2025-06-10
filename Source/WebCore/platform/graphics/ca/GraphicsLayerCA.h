@@ -191,6 +191,7 @@ public:
 
     WEBCORE_EXPORT void setDebugBackgroundColor(const Color&) override;
     WEBCORE_EXPORT void setDebugBorder(const Color&, float borderWidth) override;
+    WEBCORE_EXPORT void setShowFrameProcessBorders(bool) override;
 
     WEBCORE_EXPORT void setCustomAppearance(CustomAppearance) override;
 
@@ -315,10 +316,15 @@ private:
 
     virtual void setLayerContentsToImageBuffer(PlatformCALayer*, ImageBuffer*) { }
 
+    RefPtr<PlatformCALayer> protectedLayer() const { return m_layer; }
+    RefPtr<PlatformCALayer> protectedBackdropLayer() const { return m_backdropLayer; }
+    RefPtr<PlatformCALayer> protectedStructuralLayer() const { return m_structuralLayer; }
     PlatformCALayer* primaryLayer() const { return m_structuralLayer.get() ? m_structuralLayer.get() : m_layer.get(); }
+    RefPtr<PlatformCALayer> protectedPrimaryLayer() const { return primaryLayer(); }
     PlatformCALayer* hostLayerForSublayers() const;
     PlatformCALayer* layerForSuperlayer() const;
     PlatformCALayer* animatedLayer(AnimatedProperty) const;
+    RefPtr<PlatformCALayer> protectedAnimatedLayer(AnimatedProperty property) const { return animatedLayer(property); }
 
     WEBCORE_EXPORT void setTileCoverage(TileCoverage) override;
 
@@ -733,9 +739,9 @@ private:
     Vector<LayerPropertyAnimation> m_baseValueTransformAnimations;
     Vector<LayerPropertyAnimation> m_animationGroups;
 
-    Vector<FloatRect> m_dirtyRects;
+    Vector<FloatRect, 4> m_dirtyRects;
 
-    std::unique_ptr<DisplayList::DisplayList> m_displayList;
+    RefPtr<const DisplayList::DisplayList> m_displayList;
 
     float m_contentsScaleLimitingFactor { 1 };
     float m_rootRelativeScaleFactor { 1.0f };

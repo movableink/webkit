@@ -21,6 +21,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import unittest
+from unittest.mock import patch
 
 
 class DummySession(object):
@@ -37,8 +38,6 @@ class PartialProxyTest(unittest.TestCase):
     def test_session(self):
         # Some imports must be done within mock contexts because we're attempting to
         # test an override of request.Session with an override of request.Session
-        from mock import patch
-
         with patch('requests.Session', new=DummySession):
             from webkitcorepy import PartialProxy
 

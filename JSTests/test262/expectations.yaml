@@ -1,6 +1,15 @@
 ---
 test/annexB/language/function-code/block-decl-func-skip-arguments.js:
   default: 'Test262Error: Expected SameValue(«"function arguments() {}"», «"[object Arguments]"») to be true'
+test/built-ins/AsyncIteratorPrototype/Symbol.asyncDispose/throw-rejected-return.js:
+  default: 'Test262Error: asyncTest called without async flag'
+  strict mode: 'Test262Error: asyncTest called without async flag'
+test/built-ins/AsyncIteratorPrototype/Symbol.asyncDispose/throw-return-getter.js:
+  default: 'Test262Error: asyncTest called without async flag'
+  strict mode: 'Test262Error: asyncTest called without async flag'
+test/built-ins/AsyncIteratorPrototype/Symbol.asyncDispose/throw-return.js:
+  default: 'Test262Error: asyncTest called without async flag'
+  strict mode: 'Test262Error: asyncTest called without async flag'
 test/built-ins/Function/internals/Construct/derived-return-val-realm.js:
   default: 'Test262Error: Expected a TypeError but got a different error constructor with the same name'
   strict mode: 'Test262Error: Expected a TypeError but got a different error constructor with the same name'
@@ -163,6 +172,9 @@ test/built-ins/Temporal/Duration/prototype/round/relativeTo-ignores-incorrect-pr
 test/built-ins/Temporal/Duration/prototype/round/relativeTo-required-properties.js:
   default: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
   strict mode: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
+test/built-ins/Temporal/Duration/prototype/round/relativeto-propertybag-calendar-invalid-iso-string.js:
+  default: 'Test262Error: empty string is not a valid calendar ID Expected a RangeError but got a Error'
+  strict mode: 'Test262Error: empty string is not a valid calendar ID Expected a RangeError but got a Error'
 test/built-ins/Temporal/Duration/prototype/round/relativeto-string-limits.js:
   default: 'Test262Error: "+275760-09-13T00:00Z[UTC]" is outside the representable range for a relativeTo parameter after conversion to DateTime Expected a RangeError to be thrown but no exception was thrown at all'
   strict mode: 'Test262Error: "+275760-09-13T00:00Z[UTC]" is outside the representable range for a relativeTo parameter after conversion to DateTime Expected a RangeError to be thrown but no exception was thrown at all'
@@ -245,17 +257,17 @@ test/built-ins/Temporal/Duration/prototype/total/precision-exact-mathematical-va
   default: 'Test262Error: seconds=0, milliseconds=950 Expected SameValue(«0.9500000000000001», «0.95») to be true'
   strict mode: 'Test262Error: seconds=0, milliseconds=950 Expected SameValue(«0.9500000000000001», «0.95») to be true'
 test/built-ins/Temporal/Duration/prototype/total/relativeto-plaindatetime.js:
-  default: 'RangeError: Cannot total a duration of years, months, or weeks without a relativeTo option'
-  strict mode: 'RangeError: Cannot total a duration of years, months, or weeks without a relativeTo option'
+  default: 'Error: FIXME: years, months, or weeks totalling with relativeTo not implemented yet'
+  strict mode: 'Error: FIXME: years, months, or weeks totalling with relativeTo not implemented yet'
 test/built-ins/Temporal/Duration/prototype/total/relativeto-propertybag-invalid-offset-string.js:
-  default: 'Test262Error: "0 is not a valid offset string Expected a TypeError but got a RangeError'
-  strict mode: 'Test262Error: "0 is not a valid offset string Expected a TypeError but got a RangeError'
+  default: 'Test262Error: "0" is not a valid offset string Expected a TypeError but got a RangeError'
+  strict mode: 'Test262Error: "0" is not a valid offset string Expected a TypeError but got a RangeError'
 test/built-ins/Temporal/Duration/prototype/total/relativeto-string-limits.js:
   default: 'Test262Error: "+275760-09-13T00:00Z[UTC]" is outside the representable range for a relativeTo parameter after conversion to DateTime Expected a RangeError to be thrown but no exception was thrown at all'
   strict mode: 'Test262Error: "+275760-09-13T00:00Z[UTC]" is outside the representable range for a relativeTo parameter after conversion to DateTime Expected a RangeError to be thrown but no exception was thrown at all'
 test/built-ins/Temporal/Duration/prototype/total/throws-if-date-time-invalid-with-plaindate-relative.js:
-  default: 'Test262Error: Expected a RangeError to be thrown but no exception was thrown at all'
-  strict mode: 'Test262Error: Expected a RangeError to be thrown but no exception was thrown at all'
+  default: 'Test262Error: Expected a RangeError but got a Error'
+  strict mode: 'Test262Error: Expected a RangeError but got a Error'
 test/built-ins/Temporal/Duration/prototype/total/throws-if-date-time-invalid-with-zoneddatetime-relative.js:
   default: "TypeError: undefined is not a constructor (evaluating 'new Temporal.ZonedDateTime(864n * 10n**19n - 1n, \"UTC\")')"
   strict mode: "TypeError: undefined is not a constructor (evaluating 'new Temporal.ZonedDateTime(864n * 10n**19n - 1n, \"UTC\")')"
@@ -358,9 +370,9 @@ test/built-ins/Temporal/PlainDate/argument-convert.js:
 test/built-ins/Temporal/PlainDate/calendar-case-insensitive.js:
   default: 'Test262Error: Calendar is case-insensitive Expected SameValue(«undefined», «"iso8601"») to be true'
   strict mode: 'Test262Error: Calendar is case-insensitive Expected SameValue(«undefined», «"iso8601"») to be true'
-test/built-ins/Temporal/PlainDate/calendar-iso-string.js:
-  default: 'Test262Error: An ISO string is not a valid calendar ID for constructor parameter Expected a RangeError to be thrown but no exception was thrown at all'
-  strict mode: 'Test262Error: An ISO string is not a valid calendar ID for constructor parameter Expected a RangeError to be thrown but no exception was thrown at all'
+test/built-ins/Temporal/PlainDate/calendar-invalid-iso-string.js:
+  default: 'Test262Error: empty string is not a valid calendar ID Expected a RangeError to be thrown but no exception was thrown at all'
+  strict mode: 'Test262Error: empty string is not a valid calendar ID Expected a RangeError to be thrown but no exception was thrown at all'
 test/built-ins/Temporal/PlainDate/calendar-string.js:
   default: 'Test262Error: Calendar created from string "iso8601" Expected SameValue(«undefined», «"iso8601"») to be true'
   strict mode: 'Test262Error: Calendar created from string "iso8601" Expected SameValue(«undefined», «"iso8601"») to be true'
@@ -514,6 +526,18 @@ test/built-ins/Temporal/PlainDate/prototype/calendarId/prop-desc.js:
 test/built-ins/Temporal/PlainDate/prototype/equals/argument-propertybag-calendar-iso-string.js:
   default: 'RangeError: invalid calendar ID'
   strict mode: 'RangeError: invalid calendar ID'
+test/built-ins/Temporal/PlainDate/prototype/era/branding.js:
+  default: "TypeError: undefined is not an object (evaluating 'Object.getOwnPropertyDescriptor(Temporal.PlainDate.prototype, \"era\").get')"
+  strict mode: "TypeError: undefined is not an object (evaluating 'Object.getOwnPropertyDescriptor(Temporal.PlainDate.prototype, \"era\").get')"
+test/built-ins/Temporal/PlainDate/prototype/era/prop-desc.js:
+  default: "TypeError: undefined is not an object (evaluating 'descriptor.get')"
+  strict mode: "TypeError: undefined is not an object (evaluating 'descriptor.get')"
+test/built-ins/Temporal/PlainDate/prototype/eraYear/branding.js:
+  default: "TypeError: undefined is not an object (evaluating 'Object.getOwnPropertyDescriptor(Temporal.PlainDate.prototype, \"eraYear\").get')"
+  strict mode: "TypeError: undefined is not an object (evaluating 'Object.getOwnPropertyDescriptor(Temporal.PlainDate.prototype, \"eraYear\").get')"
+test/built-ins/Temporal/PlainDate/prototype/eraYear/prop-desc.js:
+  default: "TypeError: undefined is not an object (evaluating 'descriptor.get')"
+  strict mode: "TypeError: undefined is not an object (evaluating 'descriptor.get')"
 test/built-ins/Temporal/PlainDate/prototype/since/argument-propertybag-calendar-iso-string.js:
   default: 'RangeError: invalid calendar ID'
   strict mode: 'RangeError: invalid calendar ID'
@@ -628,9 +652,9 @@ test/built-ins/Temporal/PlainDate/subclass.js:
 test/built-ins/Temporal/PlainDateTime/calendar-case-insensitive.js:
   default: 'Test262Error: Calendar is case-insensitive Expected SameValue(«undefined», «"iso8601"») to be true'
   strict mode: 'Test262Error: Calendar is case-insensitive Expected SameValue(«undefined», «"iso8601"») to be true'
-test/built-ins/Temporal/PlainDateTime/calendar-iso-string.js:
-  default: 'Test262Error: An ISO string is not a valid calendar ID for constructor parameter Expected a RangeError to be thrown but no exception was thrown at all'
-  strict mode: 'Test262Error: An ISO string is not a valid calendar ID for constructor parameter Expected a RangeError to be thrown but no exception was thrown at all'
+test/built-ins/Temporal/PlainDateTime/calendar-invalid-iso-string.js:
+  default: 'Test262Error: empty string is not a valid calendar ID Expected a RangeError to be thrown but no exception was thrown at all'
+  strict mode: 'Test262Error: empty string is not a valid calendar ID Expected a RangeError to be thrown but no exception was thrown at all'
 test/built-ins/Temporal/PlainDateTime/calendar-string.js:
   default: 'Test262Error: Calendar created from string "iso8601" Expected SameValue(«undefined», «"iso8601"») to be true'
   strict mode: 'Test262Error: Calendar created from string "iso8601" Expected SameValue(«undefined», «"iso8601"») to be true'
@@ -781,6 +805,18 @@ test/built-ins/Temporal/PlainDateTime/prototype/calendarId/prop-desc.js:
 test/built-ins/Temporal/PlainDateTime/prototype/equals/argument-propertybag-calendar-iso-string.js:
   default: 'RangeError: invalid calendar ID'
   strict mode: 'RangeError: invalid calendar ID'
+test/built-ins/Temporal/PlainDateTime/prototype/era/branding.js:
+  default: "TypeError: undefined is not an object (evaluating 'Object.getOwnPropertyDescriptor(Temporal.PlainDateTime.prototype, \"era\").get')"
+  strict mode: "TypeError: undefined is not an object (evaluating 'Object.getOwnPropertyDescriptor(Temporal.PlainDateTime.prototype, \"era\").get')"
+test/built-ins/Temporal/PlainDateTime/prototype/era/prop-desc.js:
+  default: "TypeError: undefined is not an object (evaluating 'descriptor.get')"
+  strict mode: "TypeError: undefined is not an object (evaluating 'descriptor.get')"
+test/built-ins/Temporal/PlainDateTime/prototype/eraYear/branding.js:
+  default: "TypeError: undefined is not an object (evaluating 'Object.getOwnPropertyDescriptor(Temporal.PlainDateTime.prototype, \"eraYear\").get')"
+  strict mode: "TypeError: undefined is not an object (evaluating 'Object.getOwnPropertyDescriptor(Temporal.PlainDateTime.prototype, \"eraYear\").get')"
+test/built-ins/Temporal/PlainDateTime/prototype/eraYear/prop-desc.js:
+  default: "TypeError: undefined is not an object (evaluating 'descriptor.get')"
+  strict mode: "TypeError: undefined is not an object (evaluating 'descriptor.get')"
 test/built-ins/Temporal/PlainDateTime/prototype/round/balance.js:
   default: 'Test262Error: calendar must be string in canonicalizeCalendarEra Expected SameValue(«"undefined"», «"string"») to be true'
   strict mode: 'Test262Error: calendar must be string in canonicalizeCalendarEra Expected SameValue(«"undefined"», «"string"») to be true'
@@ -1006,6 +1042,9 @@ test/built-ins/TypedArray/prototype/set/array-arg-value-conversion-resizes-array
 test/built-ins/TypedArrayConstructors/ctors/object-arg/iterated-array-changed-by-tonumber.js:
   default: 'Test262Error: Expected SameValue(«NaN», «2») to be true (Testing with Float64Array.)'
   strict mode: 'Test262Error: Expected SameValue(«NaN», «2») to be true (Testing with Float64Array.)'
+test/built-ins/TypedArrayConstructors/ctors/typedarray-arg/throw-type-error-before-custom-proto-access.js:
+  default: 'Test262Error: Expected a TypeError but got a Test262Error (Testing with Float64Array.)'
+  strict mode: 'Test262Error: Expected a TypeError but got a Test262Error (Testing with Float64Array.)'
 test/built-ins/TypedArrayConstructors/internals/Set/BigInt/key-is-canonical-invalid-index-prototype-chain-set.js:
   default: 'Test262Error: 1 setter should be unreachable! (Testing with BigInt64Array.)'
   strict mode: 'Test262Error: 1 setter should be unreachable! (Testing with BigInt64Array.)'
@@ -1042,15 +1081,18 @@ test/built-ins/TypedArrayConstructors/internals/Set/key-is-valid-index-prototype
 test/built-ins/TypedArrayConstructors/internals/Set/key-is-valid-index-reflect-set.js:
   default: 'Test262Error: target[0] should remain unchanged (receiver: empty object) Expected SameValue(«2.3», «0») to be true (Testing with Float64Array.)'
   strict mode: 'Test262Error: target[0] should remain unchanged (receiver: empty object) Expected SameValue(«2.3», «0») to be true (Testing with Float64Array.)'
-test/intl402/DateTimeFormat/prototype/format/dayPeriod-long-en.js:
-  default: 'Test262Error: 00:00, long format Expected SameValue(«"in the morning"», «"at night"») to be true'
-  strict mode: 'Test262Error: 00:00, long format Expected SameValue(«"in the morning"», «"at night"») to be true'
-test/intl402/DateTimeFormat/prototype/format/dayPeriod-narrow-en.js:
-  default: 'Test262Error: 00:00, narrow format Expected SameValue(«"in the morning"», «"at night"») to be true'
-  strict mode: 'Test262Error: 00:00, narrow format Expected SameValue(«"in the morning"», «"at night"») to be true'
-test/intl402/DateTimeFormat/prototype/format/dayPeriod-short-en.js:
-  default: 'Test262Error: 00:00, short format Expected SameValue(«"in the morning"», «"at night"») to be true'
-  strict mode: 'Test262Error: 00:00, short format Expected SameValue(«"in the morning"», «"at night"») to be true'
+test/harness/verifyProperty-value-error.js:
+  default: 'Error: The error thrown did not define the specified message'
+  strict mode: 'Error: The error thrown did not define the specified message'
+test/intl402/DateTimeFormat/canonicalize-timezone.js:
+  default: 'Test262Error: Time zone name Australia/Canberra should be preserved and not canonicalized to Australia/Sydney Expected SameValue(«"Australia/Sydney"», «"Australia/Canberra"») to be true'
+  strict mode: 'Test262Error: Time zone name Australia/Canberra should be preserved and not canonicalized to Australia/Sydney Expected SameValue(«"Australia/Sydney"», «"Australia/Canberra"») to be true'
+test/intl402/DateTimeFormat/canonicalize-utc-timezone.js:
+  default: "Test262Error: Time zone name Etc/GMT should be preserved and not canonicalized to 'UTC' Expected SameValue(«\"UTC\"», «\"Etc/GMT\"») to be true"
+  strict mode: "Test262Error: Time zone name Etc/GMT should be preserved and not canonicalized to 'UTC' Expected SameValue(«\"UTC\"», «\"Etc/GMT\"») to be true"
+test/intl402/DateTimeFormat/prototype/format/temporal-objects-formatting.js:
+  default: 'TypeError: Temporal.PlainDate.prototype.valueOf must not be called. To compare PlainDate values, use Temporal.PlainDate.compare'
+  strict mode: 'TypeError: Temporal.PlainDate.prototype.valueOf must not be called. To compare PlainDate values, use Temporal.PlainDate.compare'
 test/intl402/DateTimeFormat/prototype/format/temporal-objects-not-overlapping-options.js:
   default: "TypeError: undefined is not a constructor (evaluating 'new Temporal.PlainYearMonth(2024, 9)')"
   strict mode: "TypeError: undefined is not a constructor (evaluating 'new Temporal.PlainYearMonth(2024, 9)')"
@@ -1075,15 +1117,6 @@ test/intl402/DateTimeFormat/prototype/formatRangeToParts/temporal-zoneddatetime-
 test/intl402/DateTimeFormat/prototype/formatRangeToParts/to-datetime-formattable-with-different-arg-kinds.js:
   default: "TypeError: undefined is not a constructor (evaluating 'new Temporal.PlainYearMonth(1970, 1)')"
   strict mode: "TypeError: undefined is not a constructor (evaluating 'new Temporal.PlainYearMonth(1970, 1)')"
-test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-long-en.js:
-  default: 'Test262Error: expected part value. 00:00, long format Expected SameValue(«"in the morning"», «"at night"») to be true'
-  strict mode: 'Test262Error: expected part value. 00:00, long format Expected SameValue(«"in the morning"», «"at night"») to be true'
-test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-narrow-en.js:
-  default: 'Test262Error: expected part value. 00:00, narrow format Expected SameValue(«"in the morning"», «"at night"») to be true'
-  strict mode: 'Test262Error: expected part value. 00:00, narrow format Expected SameValue(«"in the morning"», «"at night"») to be true'
-test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-short-en.js:
-  default: 'Test262Error: expected part value. 00:00, short format Expected SameValue(«"in the morning"», «"at night"») to be true'
-  strict mode: 'Test262Error: expected part value. 00:00, short format Expected SameValue(«"in the morning"», «"at night"») to be true'
 test/intl402/DateTimeFormat/prototype/formatToParts/temporal-objects-not-overlapping-options.js:
   default: "TypeError: undefined is not a constructor (evaluating 'new Temporal.PlainYearMonth(2024, 9)')"
   strict mode: "TypeError: undefined is not a constructor (evaluating 'new Temporal.PlainYearMonth(2024, 9)')"
@@ -1099,12 +1132,27 @@ test/intl402/DateTimeFormat/timezone-legacy-non-iana.js:
 test/intl402/DateTimeFormat/timezone-not-canonicalized.js:
   default: 'Test262Error: Expected SameValue(«"Asia/Calcutta"», «"Asia/Kolkata"») to be true'
   strict mode: 'Test262Error: Expected SameValue(«"Asia/Calcutta"», «"Asia/Kolkata"») to be true'
+test/intl402/Intl/supportedValuesOf/calendars-accepted-by-DateTimeFormat.js:
+  default: 'RangeError: calendar is not a well-formed calendar value'
+  strict mode: 'RangeError: calendar is not a well-formed calendar value'
+test/intl402/Intl/supportedValuesOf/calendars-accepted-by-DisplayNames.js:
+  default: 'Test262Error: bangla is supported by DisplayNames Expected SameValue(«"undefined"», «"string"») to be true'
+  strict mode: 'Test262Error: bangla is supported by DisplayNames Expected SameValue(«"undefined"», «"string"») to be true'
+test/intl402/Intl/supportedValuesOf/calendars.js:
+  default: "Test262Error: malayalam matches the 'type' production"
+  strict mode: "Test262Error: malayalam matches the 'type' production"
+test/intl402/Intl/supportedValuesOf/timeZones-include-non-continental.js:
+  default: 'Test262Error: non-continental timezone Etc/GMT+1 is not supported'
+  strict mode: 'Test262Error: non-continental timezone Etc/GMT+1 is not supported'
 test/intl402/Locale/extensions-grandfathered.js:
   default: 'Test262Error: Expected SameValue(«"fr-Cyrl-FR-gaulish-u-nu-latn"», «"fr-Cyrl-FR-u-nu-latn"») to be true'
   strict mode: 'Test262Error: Expected SameValue(«"fr-Cyrl-FR-gaulish-u-nu-latn"», «"fr-Cyrl-FR-u-nu-latn"») to be true'
+test/intl402/Locale/getters.js:
+  default: 'Test262Error: Expected SameValue(«undefined», «"und"») to be true'
+  strict mode: 'Test262Error: Expected SameValue(«undefined», «"und"») to be true'
 test/intl402/NumberFormat/currency-digits-nonstandard-notation.js:
-  default: "Test262Error: Didn't get correct maximumFractionDigits for JPY in compact notation. Expected SameValue(«0», «3») to be true"
-  strict mode: "Test262Error: Didn't get correct maximumFractionDigits for JPY in compact notation. Expected SameValue(«0», «3») to be true"
+  default: "Test262Error: Didn't get correct maximumFractionDigits for JPY in engineering notation. Expected SameValue(«0», «3») to be true"
+  strict mode: "Test262Error: Didn't get correct maximumFractionDigits for JPY in engineering notation. Expected SameValue(«0», «3») to be true"
 test/intl402/NumberFormat/prototype/format/unit-ja-JP.js:
   default: 'Test262Error: Expected SameValue(«"時速-987キロメートル"», «"時速 -987 キロメートル"») to be true'
   strict mode: 'Test262Error: Expected SameValue(«"時速-987キロメートル"», «"時速 -987 キロメートル"») to be true'
@@ -1117,6 +1165,12 @@ test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:
 test/intl402/NumberFormat/prototype/formatToParts/unit-zh-TW.js:
   default: 'Test262Error: undefined: length Expected SameValue(«3», «4») to be true'
   strict mode: 'Test262Error: undefined: length Expected SameValue(«3», «4») to be true'
+test/intl402/PluralRules/prototype/constructor/notation.js:
+  default: 'Test262Error: Resolved options should have notation standard'
+  strict mode: 'Test262Error: Resolved options should have notation standard'
+test/intl402/PluralRules/prototype/select/notation.js:
+  default: 'Test262Error: compact notation Expected SameValue(«"other"», «"one"») to be true'
+  strict mode: 'Test262Error: compact notation Expected SameValue(«"other"», «"one"») to be true'
 test/intl402/Temporal/Duration/compare/relativeto-sub-minute-offset.js:
   default: 'RangeError: Cannot compare a duration of years, months, or weeks without a relativeTo option'
   strict mode: 'RangeError: Cannot compare a duration of years, months, or weeks without a relativeTo option'
@@ -1138,6 +1192,9 @@ test/intl402/Temporal/Duration/prototype/round/relativeto-sub-minute-offset.js:
 test/intl402/Temporal/Duration/prototype/round/rounding-with-largestunit.js:
   default: "TypeError: undefined is not a constructor (evaluating 'new Temporal.ZonedDateTime(0n, \"UTC\")')"
   strict mode: "TypeError: undefined is not a constructor (evaluating 'new Temporal.ZonedDateTime(0n, \"UTC\")')"
+test/intl402/Temporal/Duration/prototype/toLocaleString/returns-same-results-as-DurationFormat.js:
+  default: 'Test262Error: locale="undefined", options="undefined", duration=""P1Y2M3W4DT5H6M7.00800901S"" Expected SameValue(«"P1Y2M3W4DT5H6M7.00800901S"», «"1 yr, 2 mths, 3 wks, 4 days, 5 hr, 6 min, 7 sec, 8 ms, 9 μs, 10 ns"») to be true'
+  strict mode: 'Test262Error: locale="undefined", options="undefined", duration=""P1Y2M3W4DT5H6M7.00800901S"" Expected SameValue(«"P1Y2M3W4DT5H6M7.00800901S"», «"1 yr, 2 mths, 3 wks, 4 days, 5 hr, 6 min, 7 sec, 8 ms, 9 μs, 10 ns"») to be true'
 test/intl402/Temporal/Duration/prototype/total/dst-balancing-result.js:
   default: "TypeError: undefined is not a constructor (evaluating 'new Temporal.ZonedDateTime("
   strict mode: "TypeError: undefined is not a constructor (evaluating 'new Temporal.ZonedDateTime("
@@ -1178,8 +1235,8 @@ test/language/expressions/assignment/destructuring/obj-prop-__proto__dup.js:
   default: 'SyntaxError: Attempted to redefine __proto__ property.'
   strict mode: 'SyntaxError: Attempted to redefine __proto__ property.'
 test/language/expressions/assignment/fn-name-lhs-cover.js:
-  default: 'Test262Error: descriptor value should be ; object value should be '
-  strict mode: 'Test262Error: descriptor value should be ; object value should be '
+  default: "Test262Error: obj['name'] descriptor value should be ; obj['name'] value should be "
+  strict mode: "Test262Error: obj['name'] descriptor value should be ; obj['name'] value should be "
 test/language/expressions/assignmenttargettype/direct-callexpression-arguments.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/expressions/assignmenttargettype/parenthesized-callexpression-arguments.js:
@@ -1210,6 +1267,9 @@ test/language/expressions/delete/super-property-uninitialized-this.js:
 test/language/expressions/dynamic-import/for-await-resolution-and-error-agen-yield.js:
   default: 'Test262:AsyncTestFailure:Test262Error: Test262Error: f Expected SameValue(«null», «"foo"») to be true'
   strict mode: 'Test262:AsyncTestFailure:Test262Error: Test262Error: f Expected SameValue(«null», «"foo"») to be true'
+test/language/expressions/dynamic-import/import-errored-module.js:
+  default: 'Test262:AsyncTestFailure:Test262Error: Test262Error: The import should reject (second import) Expected a Error to be thrown asynchronously but no exception was thrown at all'
+  strict mode: 'Test262:AsyncTestFailure:Test262Error: Test262Error: The import should reject (second import) Expected a Error to be thrown asynchronously but no exception was thrown at all'
 test/language/expressions/new/non-ctor-err-realm.js:
   default: 'Test262Error: production including Arguments Expected a TypeError but got a different error constructor with the same name'
   strict mode: 'Test262Error: production including Arguments Expected a TypeError but got a different error constructor with the same name'
@@ -1239,32 +1299,11 @@ test/language/expressions/yield/star-rhs-iter-thrw-res-done-no-value.js:
   strict mode: 'Test262Error: access count (second iteration) Expected SameValue(«1», «0») to be true'
 test/language/identifier-resolution/assign-to-global-undefined.js:
   strict mode: Expected uncaught exception with name 'ReferenceError' but none was thrown
-test/language/identifiers/part-unicode-16.0.0-class-escaped.js:
-  default: "SyntaxError: Invalid unicode escape in identifier: '#_\\u0897'"
-  strict mode: "SyntaxError: Invalid unicode escape in identifier: '#_\\u0897'"
-test/language/identifiers/part-unicode-16.0.0-class.js:
-  default: "SyntaxError: Invalid character '\\u0897'"
-  strict mode: "SyntaxError: Invalid character '\\u0897'"
-test/language/identifiers/part-unicode-16.0.0-escaped.js:
-  default: "SyntaxError: Invalid unicode escape in identifier: '_\\u0897'"
-  strict mode: "SyntaxError: Invalid unicode escape in identifier: '_\\u0897'"
-test/language/identifiers/part-unicode-16.0.0.js:
-  default: "SyntaxError: Invalid character '\\u0897'"
-  strict mode: "SyntaxError: Invalid character '\\u0897'"
-test/language/identifiers/start-unicode-16.0.0-class-escaped.js:
-  default: "SyntaxError: Invalid unicode escape in identifier: '#\\u1C89'"
-  strict mode: "SyntaxError: Invalid unicode escape in identifier: '#\\u1C89'"
-test/language/identifiers/start-unicode-16.0.0-class.js:
-  default: "SyntaxError: Invalid character: '#'"
-  strict mode: "SyntaxError: Invalid character: '#'"
-test/language/identifiers/start-unicode-16.0.0-escaped.js:
-  default: "SyntaxError: Invalid unicode escape in identifier: '\\u1C89'"
-  strict mode: "SyntaxError: Invalid unicode escape in identifier: '\\u1C89'"
-test/language/identifiers/start-unicode-16.0.0.js:
-  default: "SyntaxError: Invalid character '\\u1c89'"
-  strict mode: "SyntaxError: Invalid character '\\u1c89'"
 test/language/module-code/top-level-await/async-module-does-not-block-sibling-modules.js:
   module: 'Test262Error: Expected SameValue(«true», «false») to be true'
+test/language/module-code/top-level-await/dynamic-import-of-waiting-module.js:
+  default: 'Test262:AsyncTestFailure:Test262Error: Test262Error: The second import should not resolve before the first one'
+  strict mode: 'Test262:AsyncTestFailure:Test262Error: Test262Error: The second import should not resolve before the first one'
 test/language/statements/async-generator/yield-star-promise-not-unwrapped.js:
   default: 'Test262:AsyncTestFailure:Test262Error: Test262Error: yield* should not unwrap promises from manually-implemented async iterators Expected SameValue(«"unwrapped value"», «[object Promise]») to be true'
   strict mode: 'Test262:AsyncTestFailure:Test262Error: Test262Error: yield* should not unwrap promises from manually-implemented async iterators Expected SameValue(«"unwrapped value"», «[object Promise]») to be true'
@@ -1309,12 +1348,8 @@ test/language/statements/with/get-mutable-binding-binding-deleted-in-get-unscopa
   default: "ReferenceError: Can't find variable: binding"
 test/language/statements/with/set-mutable-binding-idref-compound-assign-with-proxy-env.js:
   default: 'Test262Error: Actual [has:p, get:Symbol(Symbol.unscopables), get:p, has:p, set:p, getOwnPropertyDescriptor:p, defineProperty:p] and expected [has:p, get:Symbol(Symbol.unscopables), has:p, get:p, has:p, set:p, getOwnPropertyDescriptor:p, defineProperty:p] should have the same contents. '
-test/staging/sm/Array/change-array-by-copy-errors-from-correct-realm.js:
-  default: "Test262Error: toSpliced - adding elements would exceed max array length didn't throw RangeError from other realm Expected SameValue(«false», «true») to be true"
 test/staging/sm/ArrayBuffer/slice-species.js:
   default: 'Test262Error: Expected SameValue(«function ArrayBuffer() {'
-test/staging/sm/Date/makeday-year-month-is-infinity.js:
-  default: 'Test262Error: Expected SameValue(«-62167219200000», «NaN») to be true'
 test/staging/sm/Date/non-iso.js:
   default: 'Test262Error: Expected SameValue(«NaN», «857811661010») to be true'
 test/staging/sm/Date/to-temporal-instant.js:
@@ -1323,22 +1358,10 @@ test/staging/sm/Date/two-digit-years.js:
   default: 'Test262Error: Expected SameValue(«923641200000», «NaN») to be true'
 test/staging/sm/Function/arguments-parameter-shadowing.js:
   default: 'Test262Error: Expected SameValue(«true», «false») to be true'
-test/staging/sm/Function/function-bind.js:
-  default: 'Test262Error: Expected SameValue(«false», «true») to be true'
 test/staging/sm/Function/function-name-assignment.js:
   default: 'Test262Error: Expected SameValue(«"inParen"», «""») to be true'
 test/staging/sm/Function/function-toString-builtin-name.js:
   default: 'Test262Error: Incorrect match for undefined Expected SameValue(«"fn"», «undefined») to be true'
-test/staging/sm/Iterator/prototype/every/check-fn-after-getting-iterator.js:
-  default: 'Test262Error: Actual [get: every, get: return] and expected [get: every] should have the same contents. '
-test/staging/sm/Iterator/prototype/find/check-fn-after-getting-iterator.js:
-  default: 'Test262Error: Actual [get: find, get: return] and expected [get: find] should have the same contents. '
-test/staging/sm/Iterator/prototype/forEach/check-fn-after-getting-iterator.js:
-  default: 'Test262Error: Actual [get: forEach, get: return] and expected [get: forEach] should have the same contents. '
-test/staging/sm/Iterator/prototype/reduce/check-fn-after-getting-iterator.js:
-  default: 'Test262Error: Actual [get: reduce, get: return] and expected [get: reduce] should have the same contents. '
-test/staging/sm/Iterator/prototype/some/check-fn-after-getting-iterator.js:
-  default: 'Test262Error: Actual [get: some, get: return] and expected [get: some] should have the same contents. '
 test/staging/sm/Proxy/revoked-get-function-realm-typeerror.js:
   default: 'Error: Assertion failed: expected exception TypeError, no exception thrown'
 test/staging/sm/RegExp/lastIndex-search.js:
@@ -1359,24 +1382,6 @@ test/staging/sm/RegExp/unicode-braced.js:
   default: 'SyntaxError: Invalid regular expression: regular expression too large'
 test/staging/sm/RegExp/unicode-class-braced.js:
   default: 'SyntaxError: Invalid regular expression: regular expression too large'
-test/staging/sm/RegExp/unicode-class-lead-trail.js:
-  default: "Test262Error: Actual argument shouldn't be nullish. "
-test/staging/sm/RegExp/unicode-class-negated.js:
-  default: 'Test262Error: Actual [�] and expected [�] should have the same contents. '
-test/staging/sm/RegExp/unicode-everything.js:
-  default: "Test262Error: Actual argument shouldn't be nullish. "
-test/staging/sm/RegExp/unicode-lead-trail.js:
-  default: "Test262Error: Actual argument shouldn't be nullish. "
-test/staging/sm/RegExp/unicode-raw.js:
-  default: 'Test262Error: Expected SameValue(«🐸», «null») to be true'
-test/staging/sm/Set/symmetric-difference.js:
-  default: 'Test262Error: Expected SameValue(«3», «1») to be true'
-test/staging/sm/Set/union.js:
-  default: 'Test262Error: Expected SameValue(«3», «1») to be true'
-test/staging/sm/String/string-code-point-upper-lower-mapping.js:
-  default: 'Test262Error: Expected SameValue(«68976», «68944») to be true'
-test/staging/sm/String/string-upper-lower-mapping.js:
-  default: 'Test262Error: Expected SameValue(«"ƛ"», «"Ƛ"») to be true'
 test/staging/sm/Symbol/enumeration-order.js:
   default: 'Test262Error: Expected ["string", "symbol", "string", "symbol", "symbol", "string"] to be structurally equal to ["string", "string", "string", "symbol", "symbol", "symbol"]. '
 test/staging/sm/TypedArray/constructor-buffer-sequence.js:
@@ -1407,8 +1412,6 @@ test/staging/sm/expressions/short-circuit-compound-assignment-const.js:
   default: 'Test262Error: Expected SameValue(«true», «function fn() {'
 test/staging/sm/extensions/function-caller-skips-eval-frames.js:
   default: 'Test262Error: Expected SameValue(«null», «function nest() { return eval("innermost();"); }») to be true'
-test/staging/sm/extensions/inc-dec-functioncall.js:
-  default: 'Test262Error: Expected SameValue(«false», «true») to be true'
 test/staging/sm/extensions/new-cross-compartment.js:
   default: 'Test262Error: Expected SameValue(«false», «true») to be true'
 test/staging/sm/extensions/regress-469625-01.js:
@@ -1425,8 +1428,6 @@ test/staging/sm/generators/delegating-yield-6.js:
   default: 'Test262Error: Expected SameValue(«"indvndvndvndvndvndv"», «"indndndndndndv"») to be true'
 test/staging/sm/generators/delegating-yield-7.js:
   default: 'Test262Error: Expected [Object {value: 1}, Object {value: 34, done: true}] to be structurally equal to [Object {value: 1, done: false}, Object {value: 34, done: true}]. '
-test/staging/sm/generators/syntax.js:
-  default: "Error: Assertion failed: expected SyntaxError, but no exception thrown - function* yield() { 'use strict'; (yield 3) + (yield 4); }"
 test/staging/sm/lexical-environment/block-scoped-functions-annex-b-label.js:
   default: "TypeError: f1 is not a function. (In 'f1()', 'f1' is undefined)"
 test/staging/sm/lexical-environment/block-scoped-functions-deprecated-redecl.js:
@@ -1441,9 +1442,5 @@ test/staging/sm/module/module-export-name-star.js:
   module: "ReferenceError: Can't find variable: y"
 test/staging/sm/object/defineProperties-order.js:
   default: 'Test262Error: Expected SameValue(«"ownKeys,getOwnPropertyDescriptor,getOwnPropertyDescriptor,get,get"», «"ownKeys,getOwnPropertyDescriptor,get,getOwnPropertyDescriptor,get"») to be true'
-test/staging/sm/regress/regress-609617.js:
-  default: 'Error: Assertion failed: expected exception 2, got ReferenceError: Postfix ++ operator applied to value that is not a reference.'
-test/staging/sm/statements/for-of-iterator-close.js:
-  default: 'Error: Assertion failed: expected exception in lhs, got ReferenceError: Left side of for-of statement is not a reference.'
 test/staging/sm/syntax/syntax-parsed-arrow-then-directive.js:
   default: "Test262Error: stack should contain 'http://example.com/foo.js': block, semi Expected SameValue(«false», «true») to be true"
