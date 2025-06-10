@@ -4666,10 +4666,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             break;
         }
 
-        auto resolved = value;
-        resolved.setType(m_graph, SpecStringResolved);
-        forNode(node->child1()) = resolved;
-        setForNode(node, resolved);
+        setTypeForNode(node, SpecStringResolved);
         break;
     }
     case ConstantStoragePointer: {
