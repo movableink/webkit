@@ -136,7 +136,6 @@ list(APPEND WebCore_SOURCES
 #    platform/graphics/texmap/TextureMapperImageBuffer.cpp
 
     platform/graphics/qt/ColorQt.cpp
-    platform/graphics/qt/DrawGlyphsRecorderQt.cpp
     platform/graphics/qt/FloatPointQt.cpp
     platform/graphics/qt/FloatRectQt.cpp
     platform/graphics/qt/FloatSizeQt.cpp

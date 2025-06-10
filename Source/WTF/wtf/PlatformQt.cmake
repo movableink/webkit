@@ -34,6 +34,8 @@ if (WIN32)
 else ()
     list(APPEND WTF_SOURCES
         posix/FileSystemPOSIX.cpp
+        posix/FileHandlePOSIX.cpp
+        posix/MappedFileDataPOSIX.cpp
         posix/OSAllocatorPOSIX.cpp
         posix/ThreadingPOSIX.cpp
         posix/CPUTimePOSIX.cpp
