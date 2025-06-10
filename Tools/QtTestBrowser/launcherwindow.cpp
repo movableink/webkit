@@ -432,11 +432,13 @@ void LauncherWindow::createChrome()
     toggleTiledBackingStore->setEnabled(isGraphicsBased());
     toggleTiledBackingStore->connect(toggleGraphicsView, SIGNAL(toggled(bool)), SLOT(setEnabled(bool)));
 
+#ifndef QT_NO_OPENGL
     QAction* toggleQOpenGLWidgetViewport = graphicsViewMenu->addAction("Toggle use of QOpenGLWidget Viewport", this, SLOT(toggleQOpenGLWidgetViewport(bool)));
     toggleQOpenGLWidgetViewport->setCheckable(true);
     toggleQOpenGLWidgetViewport->setChecked(m_windowOptions.useQOpenGLWidgetViewport);
     toggleQOpenGLWidgetViewport->setEnabled(isGraphicsBased());
     toggleQOpenGLWidgetViewport->connect(toggleGraphicsView, SIGNAL(toggled(bool)), SLOT(setEnabled(bool)));
+#endif
 
     QMenu* viewportUpdateMenu = graphicsViewMenu->addMenu("Change Viewport Update Mode");
     viewportUpdateMenu->setEnabled(isGraphicsBased());
