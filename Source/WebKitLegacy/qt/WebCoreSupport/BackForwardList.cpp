@@ -54,7 +54,7 @@ BackForwardList::~BackForwardList()
     ASSERT(m_closed);
 }
 
-void BackForwardList::addItem(FrameIdentifier, Ref<HistoryItem>&& newItem)
+void BackForwardList::addItem(Ref<HistoryItem>&& newItem)
 {
     if (!m_capacity || !m_enabled)
         return;
