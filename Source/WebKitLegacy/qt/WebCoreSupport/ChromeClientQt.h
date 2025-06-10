@@ -128,6 +128,7 @@ public:
 
     IntPoint screenToRootView(const IntPoint&) const final;
     IntRect rootViewToScreen(const IntRect&) const final;
+    IntPoint rootViewToScreen(const IntPoint&) const final;
     PlatformPageClient platformPageClient() const final;
     void contentsSizeChanged(LocalFrame&, const IntSize&) const final;
 
@@ -166,18 +167,14 @@ public:
 
 #if ENABLE(FULLSCREEN_API)
     bool supportsFullScreenForElement(const Element&, bool) final;
-    void enterFullScreenForElement(Element&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode = WebCore::HTMLMediaElementEnums::VideoFullscreenModeStandard) final;
-    void exitFullScreenForElement(Element*) final;
+    void enterFullScreenForElement(Element&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode, CompletionHandler<void(ExceptionOr<void>)>&& willEnterFullscreen, CompletionHandler<bool(bool)>&& didEnterFullscreen) final;
+    void exitFullScreenForElement(Element*, CompletionHandler<void()>&& completionHandler) final;
 #endif
 
-#if ENABLE(INPUT_TYPE_COLOR)
     RefPtr<ColorChooser> createColorChooser(ColorChooserClient&, const Color&) final;
-#endif
-
-#if ENABLE(DATALIST_ELEMENT)
     RefPtr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&) final;
     bool canShowDataListSuggestionLabels() const final { return false; }
-#endif
+    RefPtr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&) final;
 
     void setTextIndicator(const WebCore::TextIndicatorData&) const final;
 
