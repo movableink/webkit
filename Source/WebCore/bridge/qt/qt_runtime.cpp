@@ -302,7 +302,7 @@ static void getGregorianDateTimeUTC(JSContextRef context, JSRealType type, JSVal
     } else {
         double ms = JSValueToNumber(context, value, exception);
         GregorianDateTime convertedGdt;
-        lexicalGlobalObject->vm().dateCache.msToGregorianDateTime(ms, WTF::UTCTime, convertedGdt);
+        lexicalGlobalObject->vm().dateCache.msToGregorianDateTime(ms, TimeType::UTCTime, convertedGdt);
         other = &convertedGdt;
     }
 
