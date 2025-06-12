@@ -38,6 +38,7 @@
 #include <WebCore/HandleUserInputEventResult.h>
 #include <WebCore/HTMLFormElement.h>
 #include <WebCore/ProgressTracker.h>
+#include <QCursor>
 
 namespace WebCore {
 
@@ -80,7 +81,8 @@ void ProgressTrackerClientQt::progressFinished(LocalFrame& originatingProgressFr
     // (2) display the tool tip if the mouse hovers a node which has a tool tip.
     QPoint localPos;
     if (frame->handleProgressFinished(&localPos)) {
-        QMouseEvent event(QEvent::MouseMove, localPos, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+        QPoint globalPos = QCursor::pos();
+        QMouseEvent event(QEvent::MouseMove, localPos, globalPos, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
         originatingProgressFrame.eventHandler().mouseMoved(convertMouseEvent(&event, 0));
     }
 }
