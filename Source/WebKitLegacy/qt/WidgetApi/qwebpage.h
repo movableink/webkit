@@ -64,8 +64,7 @@ namespace WebCore {
     class InspectorFrontendClientQt;
     class ResourceHandle;
     class QNetworkReplyHandler;
-
-    struct FrameLoadRequest;
+    class FrameLoadRequest;
 }
 
 class QWEBKITWIDGETS_EXPORT QWebPage : public QObject {
