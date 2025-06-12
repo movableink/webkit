@@ -77,8 +77,7 @@ RefPtr<Font> FontCache::systemFallbackForCharacterCluster(const FontDescription&
 Vector<String> FontCache::systemFontFamilies()
 {
     Vector<String> families;
-    QFontDatabase db;
-    for (const QString& family : db.families())
+    for (const QString& family : QFontDatabase::families())
         families.append(family);
     return families;
 }
@@ -97,8 +96,7 @@ Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescripti
 
 std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontCreationContext&, OptionSet<FontLookupOptions>)
 {
-    QFontDatabase db;
-    if (!db.hasFamily(family.string()))
+    if (!QFontDatabase::hasFamily(family.string()))
         return nullptr;
     return std::make_unique<FontPlatformData>(fontDescription, family);
 }
