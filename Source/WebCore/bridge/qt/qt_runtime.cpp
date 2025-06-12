@@ -425,7 +425,7 @@ QVariant convertValueToQVariant(JSContextRef context, JSValueRef value, QMetaTyp
         case QMetaType::Float:
         case QMetaType::Double:
             ret = QVariant(JSValueToNumber(context, value, 0));
-            ret.convert((QVariant::Type)hint);
+            ret.convert(QMetaType(hint));
             if (type == Number) {
                 switch (hint) {
                 case QMetaType::Double:
@@ -721,7 +721,7 @@ JSValueRef convertQVariantToValue(JSContextRef context, RootObject* root, const 
 
     qConvDebug() << "convertQVariantToValue: metatype:" << type << ", isnull: " << variant.isNull();
     if (variant.isNull() &&
-        !QMetaType::typeFlags(type).testFlag(QMetaType::PointerToQObject) &&
+        !(QMetaType(type).flags() & QMetaType::PointerToQObject) &&
         type != QMetaType::VoidStar &&
         type != QMetaType::QString) {
         return JSValueMakeNull(context);
@@ -781,7 +781,7 @@ JSValueRef convertQVariantToValue(JSContextRef context, RootObject* root, const 
         return toRef(lexicalGlobalObject, toJS(lexicalGlobalObject, static_cast<JSDOMGlobalObject*>(lexicalGlobalObject), wtfByteArray.get()));
     }
 
-    if (QMetaType::typeFlags(type).testFlag(QMetaType::PointerToQObject)) {
+    if (QMetaType(type).flags() & QMetaType::PointerToQObject) {
         QObject* obj = variant.value<QObject*>();
         if (!obj)
             return JSValueMakeNull(context);
@@ -790,7 +790,7 @@ JSValueRef convertQVariantToValue(JSContextRef context, RootObject* root, const 
         return toRef(lexicalGlobalObject, QtInstance::getQtInstance(obj, WTFMove(root), QtInstance::QtOwnership)->createRuntimeObject(lexicalGlobalObject));
     }
 
-    if (QtPixmapRuntime::canHandle(static_cast<QMetaType::Type>(variant.type())))
+    if (QtPixmapRuntime::canHandle(static_cast<QMetaType::Type>(variant.typeId())))
         return QtPixmapRuntime::toJS(context, variant, exception);
 
     if (customRuntimeConversions()->contains(type)) {
@@ -1127,7 +1127,7 @@ static int findMethodIndex(JSContextRef context,
                 matchDistance += argdistance;
                 args[i+1] = v;
             } else {
-                qMatchDebug() << "failed to convert argument " << i << "type" << types.at(i+1).typeId() << QMetaType::typeName(types.at(i+1).typeId());
+                qMatchDebug() << "failed to convert argument " << i << "type" << types.at(i+1).typeId() << QMetaType(types.at(i+1).typeId()).name();
                 converted = false;
             }
         }
