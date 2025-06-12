@@ -267,7 +267,7 @@ QList<ItemType> convertToList(JSContextRef context, JSRealType type, JSObjectRef
             else
                 break;
         }
-        if (list.count() != length)
+        if (static_cast<size_t>(list.count()) != length)
             list.clear();
         else if (distance)
             *distance = 5;
@@ -1010,7 +1010,7 @@ static int indexOfMetaEnum(const QMetaObject *meta, const QByteArray &str)
 static int findMethodIndex(JSContextRef context,
                            const QMetaObject* meta,
                            const QByteArray& signature,
-                           int argumentCount,
+                           unsigned argumentCount,
                            const JSValueRef arguments[],
                            bool allowPrivate,
                            QVarLengthArray<QVariant, 10> &vars,
@@ -1095,7 +1095,7 @@ static int findMethodIndex(JSContextRef context,
         }
 
         // If the native method requires more arguments than what was passed from JavaScript
-        if (argumentCount + 1 < static_cast<unsigned>(types.count())) {
+        if (argumentCount + 1 < types.count()) {
             qMatchDebug() << "Match:too few args for" << method.methodSignature();
             tooFewArgs.append(index);
             continue;
@@ -1119,7 +1119,7 @@ static int findMethodIndex(JSContextRef context,
 
         bool converted = true;
         int matchDistance = 0;
-        for (unsigned i = 0; converted && i + 1 < static_cast<unsigned>(types.count()); ++i) {
+        for (unsigned i = 0; converted && i + 1 < types.count(); ++i) {
             JSValueRef arg = i < argumentCount ? arguments[i] : JSValueMakeUndefined(context);
 
             int argdistance = -1;
@@ -1136,7 +1136,7 @@ static int findMethodIndex(JSContextRef context,
         qMatchDebug() << "Match: " << method.methodSignature() << (converted ? "converted":"failed to convert") << "distance " << matchDistance;
 
         if (converted) {
-            if ((argumentCount + 1 == static_cast<unsigned>(types.count()))
+            if ((argumentCount + 1 == types.count())
                 && (matchDistance == 0)) {
                 // perfect match, use this one
                 chosenIndex = index;
@@ -1383,11 +1383,11 @@ JSValueRef QtRuntimeMethod::connectOrDisconnect(JSContextRef context, JSObjectRe
     }
 
     if ((!(d->m_flags & QtRuntimeMethod::MethodIsSignal))) {
-        setException(context, exception, QStringLiteral("QtMetaMethod.%3: %1::%2() is not a signal").arg(QString::fromUtf8(d->m_object.data()->metaObject()->className())).arg(QString::fromLatin1(d->m_identifier)).arg(functionName));
+        setException(context, exception, QStringLiteral("QtMetaMethod.%3: %1::%2() is not a signal").arg(QString::fromUtf8(d->m_object->metaObject()->className())).arg(QString::fromLatin1(d->m_identifier)).arg(functionName));
         return JSValueMakeUndefined(context);
     }
 
-    QObject* sender = d->m_object.data();
+    QObject* sender = d->m_object;
 
     if (!sender) {
         setException(context, exception, QStringLiteral("cannot call function of deleted QObject"));
@@ -1410,7 +1410,7 @@ JSValueRef QtRuntimeMethod::connectOrDisconnect(JSContextRef context, JSObjectRe
         if (JSObjectIsFunction(context, targetFunction)) {
             // object.signal.connect(otherObject.slot);
             if (QtRuntimeMethod* targetMethod = toRuntimeMethod(context, targetFunction))
-                targetObject = toRef(QtInstance::getQtInstance(targetMethod->m_object.data(), d->m_instance->rootObject(), QtInstance::QtOwnership)->createRuntimeObject(toJS(context)));
+                targetObject = toRef(QtInstance::getQtInstance(targetMethod->m_object, d->m_instance->rootObject(), QtInstance::QtOwnership)->createRuntimeObject(toJS(context)));
         } else
             targetFunction = 0;
     } else {
