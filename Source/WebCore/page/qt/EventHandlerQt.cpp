@@ -116,7 +116,7 @@ OptionSet<PlatformEvent::Modifier> EventHandler::accessKeyModifiers()
     // to the Command keys on the keyboard,
     // and the MetaModifier value corresponds to the Control keys.
     // See http://doc.qt.io/qt-5/qt.html#KeyboardModifier-enum
-    if (UNLIKELY(QCoreApplication::testAttribute(Qt::AA_MacDontSwapCtrlAndMeta)))
+    if (QCoreApplication::testAttribute(Qt::AA_MacDontSwapCtrlAndMeta)) [[unlikely]]
         return { PlatformEvent::Modifier::ControlKey, PlatformEvent::Modifier::AltKey };
     else
         return { PlatformEvent::Modifier::MetaKey, PlatformEvent::Modifier::AltKey };
