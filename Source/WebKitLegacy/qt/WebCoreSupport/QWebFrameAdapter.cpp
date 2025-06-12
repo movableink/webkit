@@ -52,6 +52,7 @@
 #include <WebCore/IntSize.h>
 #include <WebCore/JSDOMWindow.h>
 #include <WebCore/NavigationScheduler.h>
+#include <WebCore/NativeImage.h>
 #include <WebCore/NetworkingContext.h>
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/ScriptController.h>

@@ -28,6 +28,7 @@
 #include "ActiveDOMObject.h"
 #include "BroadcastChannelIdentifier.h"
 #include "ClientOrigin.h"
+#include "ContextDestructionObserverInlines.h"
 #include "EventTarget.h"
 #include "EventTargetInterfaces.h"
 #include <wtf/Forward.h>

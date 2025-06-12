@@ -24,6 +24,7 @@
 #include "Document.h"
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSPropertyParser.h"
+#include "NodeInlines.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
 #include "StyledElement.h"

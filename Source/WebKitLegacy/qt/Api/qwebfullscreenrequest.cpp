@@ -30,6 +30,7 @@
 #include <QPointer>
 #include <WebCore/Element.h>
 #include <WebCore/Document.h>
+#include <WebCore/NodeInlines.h>
 
 class QWebFullScreenRequestPrivate {
 public:

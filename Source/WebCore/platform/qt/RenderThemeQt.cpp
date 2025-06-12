@@ -34,6 +34,7 @@
 #include "CSSValueKeywords.h"
 #include "ChromeClient.h"
 #include "Color.h"
+#include "ContainerNodeInlines.h"
 #include "FileList.h"
 #include "FillLayer.h"
 #include "GraphicsContext.h"

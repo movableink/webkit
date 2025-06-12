@@ -27,6 +27,7 @@
 #include "DragImage.h"
 
 #include "Image.h"
+#include "NativeImage.h"
 #include <QImage>
 
 namespace WebCore {

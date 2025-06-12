@@ -31,6 +31,7 @@
 #include "CryptoKeyPair.h"
 #include "CryptoKeyUsage.h"
 #include "JsonWebKey.h"
+#include "ExceptionOr.h"
 #include <pal/crypto/CryptoDigest.h>
 #include <wtf/Function.h>
 #include <wtf/ThreadSafeRefCounted.h>

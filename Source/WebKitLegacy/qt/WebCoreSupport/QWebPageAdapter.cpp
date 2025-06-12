@@ -65,6 +65,7 @@
 #include <WebCore/CacheStorageProvider.h>
 #include <WebCore/Chrome.h>
 #include <WebCore/CompositionHighlight.h>
+#include <WebCore/ContainerNodeInlines.h>
 #include <WebCore/ContextMenu.h>
 #include <WebCore/ContextMenuClient.h>
 #include <WebCore/ContextMenuController.h>

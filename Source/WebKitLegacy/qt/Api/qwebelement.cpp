@@ -23,6 +23,7 @@
 #include "qwebelement_p.h"
 #include <QPainter>
 #include <WebCore/Attr.h>
+#include <WebCore/ContainerNodeInlines.h>
 #include <WebCore/DocumentFragment.h>
 #include <WebCore/DocumentFullscreen.h>
 #include <WebCore/ElementInlines.h>

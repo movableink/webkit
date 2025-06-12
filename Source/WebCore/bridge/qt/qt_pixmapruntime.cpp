@@ -21,6 +21,7 @@
 
 #include <JavaScriptCore/APICast.h>
 #include "CachedImage.h"
+#include "ContainerNodeInlines.h"
 #include "HTMLImageElement.h"
 #include "ImageData.h"
 #include "IntSize.h"
@@ -30,6 +31,7 @@
 #include "JSImageData.h"
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <JavaScriptCore/JavaScript.h>
+#include "NativeImage.h"
 #include "RenderElement.h"
 #include "StillImageQt.h"
 #include <QBuffer>

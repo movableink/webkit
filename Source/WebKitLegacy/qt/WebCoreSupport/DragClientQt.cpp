@@ -30,6 +30,8 @@
 #include <WebCore/DragController.h>
 #include <WebCore/EventHandler.h>
 #include <WebCore/Frame.h>
+#include <WebCore/FrameInlines.h>
+#include <WebCore/LocalFrame.h>
 #include <WebCore/Page.h>
 #include <WebCore/Pasteboard.h>
 #include <WebCore/PlatformMouseEvent.h>

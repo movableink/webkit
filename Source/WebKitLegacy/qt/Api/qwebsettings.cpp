@@ -38,9 +38,11 @@
 #include <WebCore/MemoryCache.h>
 #include <WebCore/MemoryRelease.h>
 #include <WebCore/NetworkStateNotifier.h>
+#include <WebCore/NativeImage.h>
 #include <WebCore/Page.h>
 #include <WebCore/Settings.h>
 #include <WebCore/WorkerThread.h>
+#include <wtf/Compiler.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/FileSystem.h>
 #include <wtf/URL.h>

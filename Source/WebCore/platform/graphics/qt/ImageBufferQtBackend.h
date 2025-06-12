@@ -28,6 +28,7 @@
 #include "GraphicsContextQt.h"
 #include "ImageBufferBackend.h"
 #include "PlatformImage.h"
+#include "NativeImage.h"
 #include "PixelBuffer.h"
 #include <wtf/IsoMalloc.h>
 #include <QPainter>

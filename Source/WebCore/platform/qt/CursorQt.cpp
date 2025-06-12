@@ -34,6 +34,7 @@
 
 #include "Image.h"
 #include "IntPoint.h"
+#include "NativeImage.h"
 
 #include "NotImplemented.h"
 

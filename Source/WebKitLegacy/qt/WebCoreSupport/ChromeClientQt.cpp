@@ -43,6 +43,7 @@
 
 #include <QEventLoop>
 #include <QWindow>
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <WebCore/ApplicationCacheStorage.h>
 #include <WebCore/ColorChooser.h>
 #include <WebCore/ColorChooserClient.h>

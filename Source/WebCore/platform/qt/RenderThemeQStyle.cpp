@@ -46,6 +46,7 @@
 #include "RenderStyleSetters.h"
 #include "RenderProgress.h"
 #include "ScrollbarThemeQStyle.h"
+#include "StylePadding.h"
 #include "StyleResolver.h"
 #include "UserAgentStyleSheets.h"
 

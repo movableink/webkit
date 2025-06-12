@@ -41,6 +41,7 @@
 #include <QUrl>
 #include <QVariant>
 #include <WebCore/LocalFrame.h>
+#include <WebCore/LocalFrameInlines.h>
 #include <WebCore/LocalFrameView.h>
 #include <WebCore/InspectorController.h>
 #include <WebCore/NotImplemented.h>

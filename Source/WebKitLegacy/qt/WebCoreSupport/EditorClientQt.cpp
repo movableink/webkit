@@ -51,10 +51,13 @@
 #include <WebCore/QWebPageClient.h>
 #include <WebCore/Range.h>
 #include <WebCore/Settings.h>
+#include <WebCore/SimpleRange.h>
 #include <WebCore/SpatialNavigation.h>
 #include <WebCore/StyleProperties.h>
 #include <WebCore/WindowsKeyboardCodes.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <WebCore/NodeInlines.h>
+#include <WebCore/LocalFrameInlines.h>
 #include <stdio.h>
 
 

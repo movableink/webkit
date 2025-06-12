@@ -34,6 +34,7 @@
 #include "EventNames.h"
 #include "FloatPoint.h"
 #include "FocusController.h"
+#include "FrameInlines.h"
 #include "LocalFrame.h"
 #include "FrameLoader.h"
 #include "FrameTree.h"

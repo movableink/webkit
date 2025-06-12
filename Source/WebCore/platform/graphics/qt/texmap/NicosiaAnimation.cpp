@@ -20,6 +20,7 @@
 #include "config.h"
 #include "NicosiaAnimation.h"
 
+#include "AnimationUtilities.h"
 #include "LayoutSize.h"
 #include "TranslateTransformOperation.h"
 #include <wtf/Scope.h>

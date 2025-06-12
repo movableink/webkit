@@ -26,6 +26,7 @@
 #pragma once
 
 #include "CryptoAlgorithmIdentifier.h"
+#include "ExceptionOr.h"
 #include <CommonCrypto/CommonCryptor.h>
 #include <CommonCrypto/CommonRandom.h>
 #include <pal/spi/cocoa/CommonCryptoSPI.h>

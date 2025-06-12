@@ -40,9 +40,7 @@ typedef struct CGImage *CGImageRef;
 #include <wtf/RetainPtr.h>
 OBJC_CLASS NSImage;
 #elif PLATFORM(QT)
-QT_BEGIN_NAMESPACE
-class QImage;
-QT_END_NAMESPACE
+#include <QImage>
 #elif USE(CAIRO)
 #if PLATFORM(WIN)
 typedef struct HBITMAP__* HBITMAP;

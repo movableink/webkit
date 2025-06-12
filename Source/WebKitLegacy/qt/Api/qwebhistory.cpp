@@ -28,6 +28,7 @@
 
 #include <WebCore/KeyedDecoderQt.h>
 #include <WebCore/KeyedEncoderQt.h>
+#include <WebCore/LocalFrame.h>
 #include <WebCore/Page.h>
 #include <WebCore/ShouldTreatAsContinuingLoad.h>
 #include <wtf/URL.h>

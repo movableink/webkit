@@ -33,6 +33,7 @@
 #include <WebCore/Document.h>
 #include <WebCore/EventHandler.h>
 #include <WebCore/Frame.h>
+#include <WebCore/FrameInlines.h>
 #include <WebCore/FrameLoader.h>
 #include <WebCore/HandleUserInputEventResult.h>
 #include <WebCore/HTMLFormElement.h>
