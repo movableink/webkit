@@ -141,7 +141,7 @@ void FormDataIODevice::moveToNextElement()
         m_currentFile->close();
     m_currentDelta = 0;
 
-    m_formElements.remove(0);
+    m_formElements.removeAt(0);
 
     prepareCurrentElement();
 }

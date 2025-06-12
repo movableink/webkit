@@ -313,7 +313,7 @@ void PathQt::add(PathArcTo arcTo)
     orth_p1p0 = FloatPoint(-orth_p1p0.x(), -orth_p1p0.y());
     float sa = acos(orth_p1p0.x() / orth_p1p0_length);
     if (orth_p1p0.y() < 0.f)
-        sa = 2 * piDouble - sa;
+        sa = 2 * std::numbers::pi - sa;
 
     // anticlockwise logic
     RotationDirection rotationDirection = RotationDirection::Clockwise;
@@ -324,10 +324,10 @@ void PathQt::add(PathArcTo arcTo)
     float orth_p1p2_length = sqrtf(orth_p1p2.x() * orth_p1p2.x() + orth_p1p2.y() * orth_p1p2.y());
     float ea = acos(orth_p1p2.x() / orth_p1p2_length);
     if (orth_p1p2.y() < 0)
-        ea = 2 * piDouble - ea;
-    if ((sa > ea) && ((sa - ea) < piDouble))
+        ea = 2 * std::numbers::pi - ea;
+    if ((sa > ea) && ((sa - ea) < std::numbers::pi))
         rotationDirection = RotationDirection::Counterclockwise;
-    if ((sa < ea) && ((ea - sa) > piDouble))
+    if ((sa < ea) && ((ea - sa) > std::numbers::pi))
         rotationDirection = RotationDirection::Counterclockwise;
 
     m_path.lineTo(t_p1p0);

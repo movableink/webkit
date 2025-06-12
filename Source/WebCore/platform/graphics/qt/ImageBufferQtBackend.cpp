@@ -52,9 +52,9 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(ImageBufferQtBackend);
 
 ImageBufferQtBackend::ImageBufferQtBackend(const Parameters& parameters, std::unique_ptr<GraphicsContext>&& context, std::unique_ptr<QImage>&& nativeImage, Ref<Image> image)
     : ImageBufferBackend(parameters)
-    , m_context(WTFMove(context))
-    , m_nativeImage(WTFMove(nativeImage))
     , m_image(WTFMove(image))
+    , m_nativeImage(WTFMove(nativeImage))
+    , m_context(WTFMove(context))
 {}
 
 std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const Parameters& parameters, const ImageBufferCreationContext&)
@@ -80,7 +80,7 @@ std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const Paramet
     return std::unique_ptr<ImageBufferQtBackend>(new ImageBufferQtBackend(parameters, WTFMove(context), WTFMove(nativeImage), WTFMove(image)));
 }
 
-std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const Parameters& parameters, const GraphicsContext& context)
+std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const Parameters& parameters, const GraphicsContext&)
 {
     return ImageBufferQtBackend::create(parameters, ImageBufferCreationContext { });
 }
@@ -212,9 +212,9 @@ void ImageBufferQtBackend::getPixelBuffer(const IntRect& srcRect, PixelBuffer& d
     ImageBufferBackend::getPixelBuffer(srcRect, std::span<const uint8_t>(m_nativeImage->bits(), m_nativeImage->sizeInBytes()), destination);
 }
 
-void ImageBufferQtBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
+void ImageBufferQtBackend::putPixelBuffer(const PixelBufferSourceView& pixelBufferSourceView, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
 {
-    ImageBufferBackend::putPixelBuffer(pixelBuffer, srcRect, destPoint, destFormat, std::span<uint8_t>(m_nativeImage->bits(), m_nativeImage->sizeInBytes()));
+    ImageBufferBackend::putPixelBuffer(pixelBufferSourceView, srcRect, destPoint, destFormat, std::span<uint8_t>(m_nativeImage->bits(), m_nativeImage->sizeInBytes()));
 }
 
 unsigned ImageBufferQtBackend::bytesPerRow() const

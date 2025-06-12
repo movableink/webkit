@@ -833,7 +833,7 @@ void TextureMapperLayer::removeFromParent()
     if (m_parent) {
         size_t index = m_parent->m_children.find(this);
         ASSERT(index != notFound);
-        m_parent->m_children.remove(index);
+        m_parent->m_children.removeAt(index);
     }
 
     m_parent = nullptr;
