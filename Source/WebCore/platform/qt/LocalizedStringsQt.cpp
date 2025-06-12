@@ -502,6 +502,11 @@ String AXSearchFieldCancelButtonText()
     return String();
 }
 
+String AXAttachmentRoleText()
+{
+    return QCoreApplication::translate("QWebPage", "attachment", "accessibility role description for an attachment element");
+}
+
 String AXButtonActionVerb()
 {
     notImplemented();
