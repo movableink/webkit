@@ -29,25 +29,18 @@
 
 #pragma once
 
-#if PLATFORM(COCOA)
+#include "FontCascade.h"
 
-#include "FontCascadeCocoaInlines.h"
+namespace WebCore {
 
-#elif USE(CAIRO)
+inline constexpr bool FontCascade::canReturnFallbackFontsForComplexText()
+{
+    return false;
+}
 
-#include "FontCascadeCairoInlines.h"
+inline constexpr bool FontCascade::canExpandAroundIdeographsInComplexText()
+{
+    return false;
+}
 
-#elif USE(SKIA)
-
-#include "FontCascadeSkiaInlines.h"
-
-#elif PLATFORM(WIN)
-
-#include "FontCascadeWinInlines.h"
-
-#elif PLATFORM(QT)
-
-#include "qt/FontCascadeQtInlines.h"
-
-#endif
-
+} 

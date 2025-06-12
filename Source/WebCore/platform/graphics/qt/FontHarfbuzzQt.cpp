@@ -33,16 +33,6 @@
 
 namespace WebCore {
 
-bool FontCascade::canReturnFallbackFontsForComplexText()
-{
-    return false;
-}
-
-bool FontCascade::canExpandAroundIdeographsInComplexText()
-{
-    return false;
-}
-
 static bool characterSequenceIsEmoji(SurrogatePairAwareTextIterator& iterator, UChar32 firstCharacter, unsigned firstClusterLength)
 {
     UChar32 character = firstCharacter;
