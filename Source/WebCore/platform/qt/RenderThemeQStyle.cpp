@@ -145,6 +145,7 @@ RenderThemeQStyle::~RenderThemeQStyle()
 
 void RenderThemeQStyle::setPaletteFromPageClientIfExists(QPalette& palette) const
 {
+    UNUSED_PARAM(palette);
 }
 
 QRect RenderThemeQStyle::indicatorRect(QStyleFacade::ButtonType part, const QRect& originalRect) const
@@ -203,11 +204,12 @@ void RenderThemeQStyle::computeControlRect(QStyleFacade::ButtonType part, FloatR
     inflateCheckBoxRectImpl(originalRect, indicatorRect(part, enclosingIntRect(originalRect)));
 }
 
-static int extendFixedPadding(Length oldPadding, int padding)
+static int extendFixedPadding(const Style::PaddingEdge& oldPadding, int padding)
 {
-    if (oldPadding.isFixed())
-        return std::max(oldPadding.intValue(), padding);
-
+    if (oldPadding.isFixed()) {
+        if (auto fixed = oldPadding.tryFixed())
+            return std::max(static_cast<int>(fixed->value), padding);
+    }
     return padding;
 }
 
@@ -221,10 +223,10 @@ void RenderThemeQStyle::computeSizeBasedOnStyle(RenderStyle& renderStyle) const
     case StyleAppearance::SearchField:
     case StyleAppearance::TextField: {
         int padding = m_qStyle->findFrameLineWidth();
-        renderStyle.setPaddingLeft(Length(extendFixedPadding(renderStyle.paddingLeft(),  padding), LengthType::Fixed));
-        renderStyle.setPaddingRight(Length(extendFixedPadding(renderStyle.paddingRight(),  padding), LengthType::Fixed));
-        renderStyle.setPaddingTop(Length(extendFixedPadding(renderStyle.paddingTop(),  padding), LengthType::Fixed));
-        renderStyle.setPaddingBottom(Length(extendFixedPadding(renderStyle.paddingBottom(),  padding), LengthType::Fixed));
+        renderStyle.setPaddingLeft(Style::PaddingEdge(Length(extendFixedPadding(renderStyle.paddingLeft(),  padding), LengthType::Fixed)));
+        renderStyle.setPaddingRight(Style::PaddingEdge(Length(extendFixedPadding(renderStyle.paddingRight(),  padding), LengthType::Fixed)));
+        renderStyle.setPaddingTop(Style::PaddingEdge(Length(extendFixedPadding(renderStyle.paddingTop(),  padding), LengthType::Fixed)));
+        renderStyle.setPaddingBottom(Style::PaddingEdge(Length(extendFixedPadding(renderStyle.paddingBottom(),  padding), LengthType::Fixed)));
         break;
     }
     default:
@@ -338,19 +340,19 @@ void RenderThemeQStyle::setButtonPadding(RenderStyle& style) const
         // Can't use this right now because we don't have the baseline to compensate
         // paddingBottom = layoutRect.bottom() - contentsRect.bottom();
     }
-    style.setPaddingLeft(Length(paddingLeft, LengthType::Fixed));
-    style.setPaddingRight(Length(paddingRight, LengthType::Fixed));
-    style.setPaddingTop(Length(paddingTop, LengthType::Fixed));
-    style.setPaddingBottom(Length(paddingBottom, LengthType::Fixed));
+    style.setPaddingLeft(Style::PaddingEdge(Length(paddingLeft, LengthType::Fixed)));
+    style.setPaddingRight(Style::PaddingEdge(Length(paddingRight, LengthType::Fixed)));
+    style.setPaddingTop(Style::PaddingEdge(Length(paddingTop, LengthType::Fixed)));
+    style.setPaddingBottom(Style::PaddingEdge(Length(paddingBottom, LengthType::Fixed)));
 }
 
-bool RenderThemeQStyle::paintButton(const RenderObject& o, const PaintInfo& i, const IntRect& r)
+bool RenderThemeQStyle::paintButton(const RenderObject& o, const PaintInfo& i, const FloatRect& r)
 {
     StylePainterQStyle p(this, i, o);
     if (!p.isValid())
         return true;
 
-    p.styleOption.rect = r;
+    p.styleOption.rect = IntRect(r);
     p.styleOption.state |= QStyleFacade::State_Small;
 
     if (p.appearance == StyleAppearance::PushButton || p.appearance == StyleAppearance::Button) {
@@ -403,13 +405,13 @@ void RenderThemeQStyle::setPopupPadding(RenderStyle& style) const
     const int paddingLeft = 4;
     const int paddingRight = style.width().isFixed() || style.width().isPercent() ? 5 : 8;
 
-    style.setPaddingLeft(Length(paddingLeft, LengthType::Fixed));
+    style.setPaddingLeft(Style::PaddingEdge(Length(paddingLeft, LengthType::Fixed)));
 
     int w = m_qStyle->simplePixelMetric(QStyleFacade::PM_ButtonIconSize);
-    style.setPaddingRight(Length(paddingRight + w, LengthType::Fixed));
+    style.setPaddingRight(Style::PaddingEdge(Length(paddingRight + w, LengthType::Fixed)));
 
-    style.setPaddingTop(Length(2, LengthType::Fixed));
-    style.setPaddingBottom(Length(2, LengthType::Fixed));
+    style.setPaddingTop(Style::PaddingEdge(Length(2, LengthType::Fixed)));
+    style.setPaddingBottom(Style::PaddingEdge(Length(2, LengthType::Fixed)));
 }
 
 QPalette RenderThemeQStyle::colorPalette() const
@@ -454,7 +456,7 @@ Seconds RenderThemeQStyle::animationDurationForProgressBar() const
     return Seconds(2.475);
 }
 
-bool RenderThemeQStyle::paintProgressBar(const RenderObject& o, const PaintInfo& pi, const IntRect& r)
+bool RenderThemeQStyle::paintProgressBar(const RenderObject& o, const PaintInfo& pi, const FloatRect& r)
 {
     if (!o.isRenderProgress())
         return true;
@@ -463,22 +465,22 @@ bool RenderThemeQStyle::paintProgressBar(const RenderObject& o, const PaintInfo&
     if (!p.isValid())
         return true;
 
-    p.styleOption.rect = r;
+    p.styleOption.rect = IntRect(r);
     auto& renderProgress = downcast<RenderProgress>(o);
     p.paintProgressBar(renderProgress.position(), renderProgress.animationProgress());
     return false;
 }
 
-bool RenderThemeQStyle::paintSliderTrack(const RenderObject& o, const PaintInfo& pi, const IntRect& r)
+bool RenderThemeQStyle::paintSliderTrack(const RenderObject& o, const PaintInfo& pi, const FloatRect& r)
 {
     StylePainterQStyle p(this, pi, o);
     if (!p.isValid())
         return true;
 
-    const QPoint topLeft = r.location();
+    const QPoint topLeft = IntRect(r).location();
     p.painter->translate(topLeft);
 
-    p.styleOption.rect = r;
+    p.styleOption.rect = IntRect(r);
     p.styleOption.rect.moveTo(QPoint(0, 0));
 
     if (p.appearance == StyleAppearance::SliderVertical)
@@ -511,19 +513,19 @@ bool RenderThemeQStyle::paintSliderTrack(const RenderObject& o, const PaintInfo&
 
 void RenderThemeQStyle::adjustSliderTrackStyle(RenderStyle& style, const Element*) const
 {
-    style.setBoxShadow(nullptr);
+    style.setBoxShadow({ });
 }
 
-bool RenderThemeQStyle::paintSliderThumb(const RenderObject& o, const PaintInfo& pi, const IntRect& r)
+bool RenderThemeQStyle::paintSliderThumb(const RenderObject& o, const PaintInfo& pi, const FloatRect& r)
 {
     StylePainterQStyle p(this, pi, o);
     if (!p.isValid())
         return true;
 
-    const QPoint topLeft = r.location();
+    const QPoint topLeft = IntRect(r).location();
     p.painter->translate(topLeft);
 
-    p.styleOption.rect = r;
+    p.styleOption.rect = IntRect(r);
     p.styleOption.rect.moveTo(QPoint(0, 0));
     p.styleOption.slider.orientation = Qt::Horizontal;
     if (p.appearance == StyleAppearance::SliderThumbVertical)
@@ -540,7 +542,7 @@ bool RenderThemeQStyle::paintSliderThumb(const RenderObject& o, const PaintInfo&
 void RenderThemeQStyle::adjustSliderThumbStyle(RenderStyle& style, const Element* element) const
 {
     RenderTheme::adjustSliderThumbStyle(style, element);
-    style.setBoxShadow(nullptr);
+    style.setBoxShadow({ });
 }
 
 bool RenderThemeQStyle::paintSearchField(const RenderObject& o, const PaintInfo& pi, const FloatRect& r)
@@ -554,7 +556,7 @@ void RenderThemeQStyle::adjustSearchFieldDecorationPartStyle(RenderStyle& style,
     RenderTheme::adjustSearchFieldDecorationPartStyle(style, e);
 }
 
-bool RenderThemeQStyle::paintSearchFieldDecorationPart(const RenderObject& o, const PaintInfo& pi, const IntRect& r)
+bool RenderThemeQStyle::paintSearchFieldDecorationPart(const RenderObject& o, const PaintInfo& pi, const FloatRect& r)
 {
     notImplemented();
     return RenderTheme::paintSearchFieldDecorationPart(o, pi, r);
@@ -566,7 +568,7 @@ void RenderThemeQStyle::adjustSearchFieldResultsDecorationPartStyle(RenderStyle&
     RenderTheme::adjustSearchFieldResultsDecorationPartStyle(style, e);
 }
 
-bool RenderThemeQStyle::paintSearchFieldResultsDecorationPart(const RenderBox& o, const PaintInfo& pi, const IntRect& r)
+bool RenderThemeQStyle::paintSearchFieldResultsDecorationPart(const RenderBox& o, const PaintInfo& pi, const FloatRect& r)
 {
     notImplemented();
     return RenderTheme::paintSearchFieldResultsDecorationPart(o, pi, r);
@@ -627,6 +629,9 @@ StyleAppearance RenderThemeQStyle::initializeCommonQStyleOptions(QStyleFacadeOpt
     case StyleAppearance::Radio:
     case StyleAppearance::Checkbox:
         option.state |= (isChecked(o) ? QStyleFacade::State_On : QStyleFacade::State_Off);
+        break;
+    default:
+        break;
     }
 
     return result;

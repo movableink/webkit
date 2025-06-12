@@ -91,7 +91,7 @@ public:
 
     std::optional<Seconds> caretBlinkInterval() const override;
 
-    bool isControlStyled(const RenderStyle&, const RenderStyle&) const override;
+    bool isControlStyled(const RenderStyle&) const override;
 
 #if 0 //ENABLE(VIDEO)
     virtual String extraMediaControlsStyleSheet(const HTMLMediaElement&);
@@ -126,13 +126,13 @@ protected:
     void adjustSearchFieldStyle(RenderStyle&, const Element*) const override;
 
     void adjustSearchFieldCancelButtonStyle(RenderStyle&, const Element*) const override;
-    bool paintSearchFieldCancelButton(const RenderBox&, const PaintInfo&, const IntRect&) override;
+    bool paintSearchFieldCancelButton(const RenderBox&, const PaintInfo&, const FloatRect&) override;
 
     void adjustSearchFieldDecorationPartStyle(RenderStyle&, const Element*) const override;
-    bool paintSearchFieldDecorationPart(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    bool paintSearchFieldDecorationPart(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void adjustSearchFieldResultsDecorationPartStyle(RenderStyle&, const Element*) const override;
-    bool paintSearchFieldResultsDecorationPart(const RenderBox&, const PaintInfo&, const IntRect&) override;
+    bool paintSearchFieldResultsDecorationPart(const RenderBox&, const PaintInfo&, const FloatRect&) override;
 
     String m_mediaControlsStyleSheet;
 

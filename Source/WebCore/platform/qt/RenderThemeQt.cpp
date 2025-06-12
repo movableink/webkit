@@ -103,16 +103,14 @@ RenderTheme& RenderTheme::singleton()
 }
 
 // Remove this when SearchFieldPart is style-able in RenderTheme::isControlStyled()
-bool RenderThemeQt::isControlStyled(const RenderStyle& style, const RenderStyle& userAgentStyle) const
+bool RenderThemeQt::isControlStyled(const RenderStyle& style) const
 {
     switch (style.usedAppearance()) {
     case StyleAppearance::SearchField:
         // Test the style to see if the UA border and background match.
-        return (style.border() != userAgentStyle.border()
-                || style.backgroundLayers() != userAgentStyle.backgroundLayers()
-                || style.visitedDependentColor(CSSPropertyBackgroundColor) != userAgentStyle.backgroundColor());
+        return style.nativeAppearanceDisabled();
     default:
-        return RenderTheme::isControlStyled(style, userAgentStyle);
+        return RenderTheme::isControlStyled(style);
     }
 }
 
@@ -358,18 +356,18 @@ Seconds RenderThemeQt::animationRepeatIntervalForProgressBar(const RenderProgres
 
 void RenderThemeQt::adjustProgressBarStyle(RenderStyle& style, const Element*) const
 {
-    style.setBoxShadow(nullptr);
+    style.setBoxShadow({ });
 }
 
 void RenderThemeQt::adjustSliderTrackStyle(RenderStyle& style, const Element*) const
 {
-    style.setBoxShadow(nullptr);
+    style.setBoxShadow({ });
 }
 
 void RenderThemeQt::adjustSliderThumbStyle(RenderStyle& style, const Element* element) const
 {
     RenderTheme::adjustSliderThumbStyle(style, element);
-    style.setBoxShadow(nullptr);
+    style.setBoxShadow({ });
 }
 
 #if ENABLE(DATALIST_ELEMENT)
@@ -431,7 +429,7 @@ QPalette RenderThemeQt::colorPalette() const
 }
 
 bool RenderThemeQt::paintSearchFieldCancelButton(const RenderBox& box, const PaintInfo& pi,
-                                                 const IntRect& r)
+                                                 const FloatRect& r)
 {
     if (!box.element())
         return false;
@@ -447,7 +445,7 @@ bool RenderThemeQt::paintSearchFieldCancelButton(const RenderBox& box, const Pai
     IntRect inputBoxRect = snappedIntRect(inputBox.contentBoxRect());
 
     // Make sure the scaled button stays square and will fit in its parent's box.
-    int cancelButtonSize = qMin(inputBoxRect.width(), qMin(inputBoxRect.height(), r.height()));
+    int cancelButtonSize = qMin(inputBoxRect.width(), qMin(inputBoxRect.height(), static_cast<int>(r.height())));
 
     // Calculate cancel button's coordinates relative to the input element.
     // Center the button vertically. Round up though, so if it has to be one pixel off-center, it will
@@ -455,7 +453,7 @@ bool RenderThemeQt::paintSearchFieldCancelButton(const RenderBox& box, const Pai
     FloatRect cancelButtonRect(box.offsetFromAncestorContainer(inputBox).width(),
         inputBoxRect.y() + (inputBoxRect.height() - cancelButtonSize + 1) / 2,
         cancelButtonSize, cancelButtonSize);
-    FloatPoint paintingPos = convertToPaintingPosition(inputBox, box, cancelButtonRect.location(), r.location());
+    FloatPoint paintingPos = convertToPaintingPosition(inputBox, box, cancelButtonRect.location(), roundedIntPoint(r.location()));
     cancelButtonRect.setLocation(paintingPos);
 
     static Ref<Image> cancelImage = ImageAdapter::loadPlatformResource("searchCancelButton");
@@ -471,7 +469,7 @@ void RenderThemeQt::adjustSearchFieldDecorationPartStyle(RenderStyle& style, con
 }
 
 bool RenderThemeQt::paintSearchFieldDecorationPart(const RenderObject& o, const PaintInfo& pi,
-                                               const IntRect& r)
+                                               const FloatRect& r)
 {
     notImplemented();
     return RenderTheme::paintSearchFieldDecorationPart(o, pi, r);
@@ -484,7 +482,7 @@ void RenderThemeQt::adjustSearchFieldResultsDecorationPartStyle(RenderStyle& sty
 }
 
 bool RenderThemeQt::paintSearchFieldResultsDecorationPart(const RenderBox& o, const PaintInfo& pi,
-                                                      const IntRect& r)
+                                                      const FloatRect& r)
 {
     notImplemented();
     return RenderTheme::paintSearchFieldResultsDecorationPart(o, pi, r);
