@@ -42,6 +42,7 @@ public:
     static Ref<PathQt> create(const PathQt&);
     static Ref<PathQt> create(const PathSegment&);
     static Ref<PathQt> create(const PathStream&);
+    static Ref<PathQt> create(std::span<const PathSegment>);
     static Ref<PathQt> create(QPainterPath);
     static PlatformPathPtr emptyPlatformPath();
 
@@ -53,7 +54,7 @@ public:
     PathQt& operator=(const PathQt&);
     PathQt& operator=(PathQt&& other);
 
-    QPainterPath platformPath() const;
+    const QPainterPath& platformPath() const;
 
     void addPath(const PathQt&, const AffineTransform&);
 

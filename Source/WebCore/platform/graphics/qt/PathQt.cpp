@@ -71,6 +71,16 @@ Ref<PathQt> PathQt::create(const PathSegment& segment)
     return pathQt;
 }
 
+Ref<PathQt> PathQt::create(std::span<const PathSegment> segments)
+{
+    auto pathQt = PathQt::create();
+
+    for (auto& segment : segments)
+        pathQt->addSegment(segment);
+
+    return pathQt;
+}
+
 Ref<PathQt> PathQt::create(QPainterPath platformPath)
 {
     return adoptRef(*new PathQt(WTFMove(platformPath)));
@@ -131,7 +141,7 @@ Ref<PathImpl> PathQt::copy() const
     return create(m_path);
 }
 
-QPainterPath PathQt::platformPath() const
+const QPainterPath& PathQt::platformPath() const
 {
     return m_path;
 }
@@ -409,7 +419,8 @@ void PathQt::add(PathRect r)
 
 void PathQt::add(PathRoundedRect rect)
 {
-    addBeziersForRoundedRect(rect.roundedRect);
+    for (auto& segment : PathImpl::beziersForRoundedRect(rect.roundedRect))
+        addSegment(segment);
 }
 
 void PathQt::add(PathEllipse ellipse)
