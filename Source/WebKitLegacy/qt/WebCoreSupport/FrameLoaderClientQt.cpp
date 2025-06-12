@@ -705,7 +705,7 @@ void FrameLoaderClientQt::updateGlobalHistoryRedirectLinks()
     }
 }
 
-ShouldGoToHistoryItem FrameLoaderClientQt::shouldGoToHistoryItem(HistoryItem&, IsSameDocumentNavigation) const
+ShouldGoToHistoryItem FrameLoaderClientQt::shouldGoToHistoryItem(HistoryItem&, IsSameDocumentNavigation, ProcessSwapDisposition) const
 {
     return ShouldGoToHistoryItem::Yes;
 }
@@ -717,7 +717,7 @@ bool FrameLoaderClientQt::supportsAsyncShouldGoToHistoryItem() const
 
 void FrameLoaderClientQt::shouldGoToHistoryItemAsync(HistoryItem& item, CompletionHandler<void(ShouldGoToHistoryItem)>&& completionHandler) const
 {
-    completionHandler(shouldGoToHistoryItem(item, IsSameDocumentNavigation::No));
+    completionHandler(shouldGoToHistoryItem(item, IsSameDocumentNavigation::No, ProcessSwapDisposition()));
 }
 
 void FrameLoaderClientQt::didDisplayInsecureContent()
@@ -783,9 +783,9 @@ bool FrameLoaderClientQt::shouldFallBack(const WebCore::ResourceError& error) co
     return true;
 }
 
-Ref<WebCore::DocumentLoader> FrameLoaderClientQt::createDocumentLoader(const WebCore::ResourceRequest& request, const SubstituteData& substituteData)
+Ref<WebCore::DocumentLoader> FrameLoaderClientQt::createDocumentLoader(WebCore::ResourceRequest&& request, WebCore::SubstituteData&& substituteData)
 {
-    Ref<DocumentLoader> loader = DocumentLoader::create(request, substituteData);
+    Ref<DocumentLoader> loader = DocumentLoader::create(WTFMove(request), WTFMove(substituteData));
     if (!deferMainResourceDataLoad || substituteData.isValid())
         loader->setDeferMainResourceDataLoad(false);
     return loader;
@@ -965,12 +965,12 @@ bool FrameLoaderClientQt::callErrorPageExtension(const WebCore::ResourceError& e
     URL baseUrl(output.baseUrl);
     URL failingUrl(option.url);
 
-    WebCore::ResourceRequest request(baseUrl);
+    WebCore::ResourceRequest request(WTFMove(baseUrl));
     WTF::RefPtr<WebCore::SharedBuffer> buffer = WebCore::SharedBuffer::create(std::span { output.content.constData(), static_cast<size_t>(output.content.size()) });
-    WebCore::ResourceResponse response(failingUrl, output.contentType, buffer->size(), output.encoding);
+    WebCore::ResourceResponse response(URL(failingUrl), WTF::String(output.contentType), buffer->size(), WTF::String(output.encoding));
     // FIXME: visibility?
-    WebCore::SubstituteData substituteData(WTFMove(buffer), failingUrl, response, SubstituteData::SessionHistoryVisibility::Hidden);
-    m_frame->loader().load(WebCore::FrameLoadRequest(*m_frame, request, substituteData));
+    WebCore::SubstituteData substituteData(WTFMove(buffer), WTFMove(failingUrl), WTFMove(response), SubstituteData::SessionHistoryVisibility::Hidden);
+    m_frame->loader().load(WebCore::FrameLoadRequest(*m_frame, WTFMove(request), WTFMove(substituteData)));
 
     m_shouldSuppressLoadStarted = false;
 

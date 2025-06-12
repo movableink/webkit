@@ -105,7 +105,7 @@ public:
     void addMessageToConsole(MessageSource, MessageLevel, const String& message, unsigned lineNumber, unsigned columnNumber, const String& sourceID) final;
 
     bool canRunBeforeUnloadConfirmPanel() final;
-    bool runBeforeUnloadConfirmPanel(const String& message, LocalFrame&) final;
+    bool runBeforeUnloadConfirmPanel(String&& message, LocalFrame&) final;
 
     void closeWindow() final;
 
@@ -177,6 +177,7 @@ public:
     RefPtr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&) final;
 
     void setTextIndicator(const WebCore::TextIndicatorData&) const final;
+    void updateTextIndicator(const WebCore::TextIndicatorData&) const final;
 
     void runOpenPanel(LocalFrame&, FileChooser&) final;
     void loadIconForFiles(const Vector<String>&, FileIconLoader&) final;

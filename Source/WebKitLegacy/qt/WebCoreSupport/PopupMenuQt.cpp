@@ -88,6 +88,7 @@ void PopupMenuQt::disconnectClient()
 
 void PopupMenuQt::show(const IntRect& rect, LocalFrameView& view, int index)
 {
+    UNUSED_PARAM(index);
     if (!m_popupClient)
         return;
 

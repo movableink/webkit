@@ -188,6 +188,7 @@ static inline Qt::DropAction dragOpToDropAction(std::variant<std::optional<DragO
         else if (*action == DragOperation::Link)
             result = Qt::LinkAction;
     }
+    return result;
 }
 
 static inline QWebPageAdapter::VisibilityState webCoreVisibilityStateToWebPageVisibilityState(WebCore::VisibilityState state)
@@ -783,7 +784,6 @@ void QWebPageAdapter::inputMethodEvent(QInputMethodEvent *ev)
                 frame->selection().removeCaretVisibilitySuppressionReason(CaretVisibilitySuppressionReason::IsNotFocusedOrActive);
                 RenderObject* caretRenderer = frame->selection().caretRendererWithoutUpdatingLayout();
                 if (caretRenderer) {
-                    QColor qcolor = a.value.value<QColor>();
 //                    caretRenderer->style().setColor(qcolor);
                 }
             } else {
@@ -878,7 +878,7 @@ QVariant QWebPageAdapter::inputMethodQuery(Qt::InputMethodQuery property) const
     }
     case Qt::ImSurroundingText: {
         if (renderTextControl) {
-            QString text = renderTextControl->textFormControlElement().value();
+            QString text = renderTextControl->textFormControlElement().value().get();
             std::optional<SimpleRange> range = editor.compositionRange();
             if (range)
                 text.remove(range->startOffset(), range->endOffset() - range->startOffset());
@@ -891,7 +891,7 @@ QVariant QWebPageAdapter::inputMethodQuery(Qt::InputMethodQuery property) const
             int start = frame->selection().selection().start().offsetInContainerNode();
             int end = frame->selection().selection().end().offsetInContainerNode();
             if (end > start)
-                return QVariant(QString(renderTextControl->textFormControlElement().value()).mid(start, end - start));
+                return QVariant(QString(renderTextControl->textFormControlElement().value().get()).mid(start, end - start));
         }
         return QVariant();
 

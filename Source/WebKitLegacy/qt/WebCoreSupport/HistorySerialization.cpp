@@ -30,6 +30,7 @@
 #include <WebCore/FormData.h>
 #include <WebCore/KeyedDecoderQt.h>
 #include <WebCore/KeyedEncoderQt.h>
+#include <WebCore/SerializedScriptValue.h>
 
 namespace WebCore {
 
@@ -264,7 +265,7 @@ static bool decodeBackForwardTreeNode(KeyedDecoder& decoder, HistoryItem& item)
         item.setItemSequenceNumber(itemSequenceNumber);
 
     decodeString(decoder, "referrer"_s, [&item](String&& str) {
-        item.setReferrer(str);
+        item.setReferrer(WTFMove(str));
     });
 
     int ignore2;

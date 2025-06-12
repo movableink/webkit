@@ -114,7 +114,7 @@ void QWebFrameAdapter::load(const QNetworkRequest& req, QNetworkAccessManager::O
 
     QUrl url = ensureAbsoluteUrl(req.url());
 
-    WebCore::ResourceRequest request(url);
+    WebCore::ResourceRequest request{URL(url)};
 
     switch (operation) {
     case QNetworkAccessManager::HeadOperation:
@@ -158,7 +158,7 @@ void QWebFrameAdapter::load(const QNetworkRequest& req, QNetworkAccessManager::O
     if (!body.isEmpty())
         request.setHTTPBody(WebCore::FormData::create(std::span<const uint8_t> { reinterpret_cast<const uint8_t*>(body.constData()), static_cast<size_t>(body.size()) }));
 
-    frame->loader().load(WebCore::FrameLoadRequest(*frame, request));
+    frame->loader().load(WebCore::FrameLoadRequest(*frame, WTFMove(request)));
 
     if (frame->tree().parent())
         pageAdapter->insideOpenCall = false;
@@ -251,7 +251,7 @@ QString QWebFrameAdapter::toPlainText() const
 void QWebFrameAdapter::setContent(const QByteArray &data, const QString &mimeType, const QUrl &baseUrl)
 {
     URL kurl(baseUrl);
-    WebCore::ResourceRequest request(kurl);
+    WebCore::ResourceRequest request(WTFMove(kurl));
     WTF::RefPtr<WebCore::SharedBuffer> buffer = WebCore::SharedBuffer::create(std::span { data.constData(), static_cast<size_t>(data.length()) });
     QString actualMimeType;
     WTF::StringView encoding;
@@ -263,20 +263,20 @@ void QWebFrameAdapter::setContent(const QByteArray &data, const QString &mimeTyp
     }
     WebCore::ResourceResponse response(URL(), actualMimeType, buffer->size(), encoding.toStringWithoutCopying());
     // FIXME: visibility?
-    WebCore::SubstituteData substituteData(WTFMove(buffer), URL(), response, SubstituteData::SessionHistoryVisibility::Hidden);
-    frame->loader().load(WebCore::FrameLoadRequest(*frame, request, substituteData));
+    WebCore::SubstituteData substituteData(WTFMove(buffer), URL(), WTFMove(response), SubstituteData::SessionHistoryVisibility::Hidden);
+    frame->loader().load(WebCore::FrameLoadRequest(*frame, WTFMove(request), WTFMove(substituteData)));
 }
 
 void QWebFrameAdapter::setHtml(const QString &html, const QUrl &baseUrl)
 {
     URL kurl(baseUrl);
-    WebCore::ResourceRequest request(kurl);
+    WebCore::ResourceRequest request(WTFMove(kurl));
     const QByteArray utf8 = html.toUtf8();
     WTF::RefPtr<WebCore::SharedBuffer> data = WebCore::SharedBuffer::create(std::span { utf8.constData(), static_cast<size_t>(utf8.length()) });
     WebCore::ResourceResponse response(URL(), "text/html"_s, data->size(), "utf-8"_s);
     // FIXME: visibility?
-    WebCore::SubstituteData substituteData(WTFMove(data), URL(), response, SubstituteData::SessionHistoryVisibility::Hidden);
-    frame->loader().load(WebCore::FrameLoadRequest(*frame, request, substituteData));
+    WebCore::SubstituteData substituteData(WTFMove(data), URL(), WTFMove(response), SubstituteData::SessionHistoryVisibility::Hidden);
+    frame->loader().load(WebCore::FrameLoadRequest(*frame, WTFMove(request), WTFMove(substituteData)));
 }
 
 QMultiMap<QString, QString> QWebFrameAdapter::metaData() const

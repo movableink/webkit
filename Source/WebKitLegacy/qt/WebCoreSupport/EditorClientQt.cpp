@@ -423,7 +423,7 @@ void EditorClientQt::handleKeyboardEvent(KeyboardEvent& event)
     // FIXME: refactor all of this to use Actions or something like them
     if (start->isContentEditable()) {
         bool doSpatialNavigation = false;
-        if (isSpatialNavigationEnabled(frame.get())) {
+        if (frame->document() && frame->document()->settings().spatialNavigationEnabled()) {
             if (!kevent->modifiers()) {
                 switch (kevent->windowsVirtualKeyCode()) {
                 case VK_LEFT:

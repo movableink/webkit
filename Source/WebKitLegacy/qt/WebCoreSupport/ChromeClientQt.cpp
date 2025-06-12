@@ -334,7 +334,7 @@ bool ChromeClientQt::canRunBeforeUnloadConfirmPanel()
     return true;
 }
 
-bool ChromeClientQt::runBeforeUnloadConfirmPanel(const String& message, LocalFrame& frame)
+bool ChromeClientQt::runBeforeUnloadConfirmPanel(String&& message, LocalFrame& frame)
 {
     return runJavaScriptConfirm(frame, message);
 }
@@ -804,6 +804,10 @@ void ChromeClientQt::requestCookieConsent(CompletionHandler<void(CookieConsentDe
 }
 
 void ChromeClientQt::setTextIndicator(const WebCore::TextIndicatorData&) const
+{
+}
+
+void ChromeClientQt::updateTextIndicator(const WebCore::TextIndicatorData&) const
 {
 }
 

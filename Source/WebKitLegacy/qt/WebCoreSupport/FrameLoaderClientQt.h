@@ -32,6 +32,7 @@
 
 #include <WebCore/FormState.h>
 #include <WebCore/LocalFrameLoaderClient.h>
+#include <WebCore/ProcessSwapDisposition.h>
 #include <WebCore/ResourceResponse.h>
 #include <WebCore/ResourceError.h>
 
@@ -145,7 +146,7 @@ public:
 
     void updateGlobalHistory() override;
     void updateGlobalHistoryRedirectLinks() override;
-    ShouldGoToHistoryItem shouldGoToHistoryItem(HistoryItem&, IsSameDocumentNavigation) const override;
+    ShouldGoToHistoryItem shouldGoToHistoryItem(HistoryItem&, IsSameDocumentNavigation, ProcessSwapDisposition processSwapDisposition) const override;
     bool supportsAsyncShouldGoToHistoryItem() const override;
     void shouldGoToHistoryItemAsync(HistoryItem&, CompletionHandler<void(ShouldGoToHistoryItem)>&&) const override;
     void didDisplayInsecureContent() override;
@@ -168,7 +169,7 @@ public:
     void didFinishLoad() override;
     void prepareForDataSourceReplacement() override;
 
-    Ref<WebCore::DocumentLoader> createDocumentLoader(const WebCore::ResourceRequest&, const WebCore::SubstituteData&) override;
+    Ref<WebCore::DocumentLoader> createDocumentLoader(WebCore::ResourceRequest&&, WebCore::SubstituteData&&) override;
     void setTitle(const StringWithDirection&, const URL&) override;
 
     String userAgent(const WTF::URL&) const override;
