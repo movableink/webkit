@@ -46,7 +46,6 @@
 #include <JavaScriptCore/NumberObject.h>
 #include <FrameDestructionObserverInlines.h>
 #include <QDateTime>
-#include <QTimeZone>
 #include <QDebug>
 #include <QMetaObject>
 #include <QMetaType>
@@ -325,7 +324,7 @@ static QDateTime toQDateTimeUTC(JSContextRef context, JSRealType type, JSValueRe
     getGregorianDateTimeUTC(context, type, value, object, exception, &gdt);
     QDate date(gdt.year(), gdt.month() + 1, gdt.monthDay());
     QTime time(gdt.hour(), gdt.minute(), gdt.second());
-    return QDateTime(date, time, QTimeZone::UTC);
+    return QDateTime(date, time, Qt::UTC);
 }
 
 QVariant convertValueToQVariant(JSContextRef context, JSValueRef value, QMetaType::Type hint, int *distance, HashSet<JSObjectRef>* visitedObjects, int recursionLimit, JSValueRef* exception)
