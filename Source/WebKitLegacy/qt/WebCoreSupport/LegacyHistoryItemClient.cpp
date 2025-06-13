@@ -25,6 +25,9 @@
 
 #include "LegacyHistoryItemClient.h"
 
+#include <wtf/NeverDestroyed.h>
+#include <wtf/Ref.h>
+
 LegacyHistoryItemClient& LegacyHistoryItemClient::singleton()
 {
     static NeverDestroyed<Ref<LegacyHistoryItemClient>> client { adoptRef(*new LegacyHistoryItemClient) };
