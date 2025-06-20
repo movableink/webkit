@@ -212,7 +212,7 @@ public:
     void updateSandboxFlags(WebCore::SandboxFlags) override { }
     void updateOpener(const WebCore::Frame&) override { }
 
-    RefPtr<HistoryItem> createHistoryItemTree(bool clipAtTarget, BackForwardItemIdentifier) const override;
+    RefPtr<HistoryItem> createHistoryItemTree(bool clipAtTarget, BackForwardItemIdentifier itemID) const override;
 
     static bool dumpFrameLoaderCallbacks;
     static bool dumpUserGestureInFrameLoaderCallbacks;

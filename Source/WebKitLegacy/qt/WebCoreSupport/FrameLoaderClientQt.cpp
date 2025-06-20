@@ -57,6 +57,7 @@
 #include <WebCore/FrameLoader.h>
 #include <WebCore/FrameLoadRequest.h>
 #include <WebCore/FrameView.h>
+#include <WebCore/HistoryController.h>
 #include <WebCore/HTMLPlugInElement.h>
 #include <WebCore/HTTPParsers.h>
 #include <WebCore/HitTestResult.h>
@@ -1384,11 +1385,11 @@ void FrameLoaderClientQt::sendH2Ping(const URL& url, CompletionHandler<void(Expe
     completionHandler(makeUnexpected(WebCore::internalError(url)));
 }
 
-RefPtr<HistoryItem> FrameLoaderClientQt::createHistoryItemTree(bool clipAtTarget, BackForwardItemIdentifier) const
+RefPtr<HistoryItem> FrameLoaderClientQt::createHistoryItemTree(bool clipAtTarget, BackForwardItemIdentifier itemID) const
 {
-    // Qt WebKit doesn't use this functionality, so we return nullptr
-    // This method is used for creating history item trees for process navigation
-    return nullptr;
+    // Create history item tree like the Mac implementation
+    Ref coreMainFrame = m_frame->rootFrame();
+    return coreMainFrame->loader().history().createItemTree(*m_frame, clipAtTarget, itemID);
 }
 
 }
