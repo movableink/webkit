@@ -446,6 +446,13 @@ void QWebFrameAdapter::renderCompositedLayers(WebCore::GraphicsContext& context,
 // FIXME: this might not be necessary, but for the sake of not breaking things, we'll use that for now.
 QUrl QWebFrameAdapter::coreFrameUrl() const
 {
+    // For back/forward navigation, use the target URL if available
+    if (auto* activeLoader = frame->loader().activeDocumentLoader()) {
+        const URL& targetUrl = activeLoader->url();
+        if (!targetUrl.isEmpty() && targetUrl != frame->document()->url()) {
+            return targetUrl;
+        }
+    }
     return frame->document()->url();
 }
 
