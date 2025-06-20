@@ -54,10 +54,10 @@ static QRawFont rawFontForCharacters(const QString& string, const QRawFont& font
     layout.endLayout();
 
     QList<QGlyphRun> glyphList = layout.glyphRuns();
-    ASSERT(glyphList.size() <= 1);
     if (!glyphList.size())
         return QRawFont();
 
+    // Use the first glyph run's font for the fallback
     const QGlyphRun& glyphs(glyphList.at(0));
     return glyphs.rawFont();
 }
