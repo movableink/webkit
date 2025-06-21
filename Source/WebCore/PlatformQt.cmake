@@ -46,6 +46,8 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     bindings/js/CachedScriptSourceProvider.h
     bindings/js/ScriptBufferSourceProvider.h
 
+    platform/qt/QtBytecodeDiskCache.h
+
     dom/StaticNodeList.h
 
     inspector/LegacyWebSocketInspectorInstrumentation.h
@@ -197,6 +199,7 @@ list(APPEND WebCore_SOURCES
     platform/qt/PlatformKeyboardEventQt.cpp
     platform/qt/PlatformScreenQt.cpp
     platform/qt/QStyleHelpers.cpp
+    platform/qt/QtBytecodeDiskCache.cpp
     platform/qt/RenderThemeQStyle.cpp
     platform/qt/RenderThemeQt.cpp
     platform/qt/RenderThemeQtMobile.cpp
