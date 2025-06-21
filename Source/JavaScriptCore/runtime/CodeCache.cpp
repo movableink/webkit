@@ -43,14 +43,40 @@ void CodeCacheMap::pruneSlowCase()
     if (m_capacity < m_minCapacity)
         m_capacity = m_minCapacity;
 
+#if PLATFORM(QT)
+    size_t entriesEvicted = 0;
+    int64_t bytesEvicted = 0;
+    int64_t sizeBefore = m_size;
+    size_t entriesBefore = numberOfEntries();
+    bool evictingForSize = m_size > m_capacity;
+    bool evictingForEntries = !canPruneQuickly();
+
+    dataLogIf(Options::logBytecodeCacheActivity(), "BytecodeCache: PRUNE starting - reason: ", evictingForSize ? "size limit" : "entry limit", " [before: ", sizeBefore, "/", m_capacity, " bytes, ", entriesBefore, " entries, limits: ", workingSetMaxBytes, " bytes, ", workingSetMaxEntries, " entries]\n");
+#endif
+
     while (m_size > m_capacity || !canPruneQuickly()) {
         MapType::iterator it = m_map.begin();
 
         writeCodeBlock(it->key, it->value);
 
+#if PLATFORM(QT)        
+        int64_t entrySize = it->key.length();
+        dataLogIf(Options::logBytecodeCacheActivity(), "BytecodeCache: EVICT - ", it->key.source().provider().sourceURL(), " (", entrySize, " bytes) [remaining: ", m_size - entrySize, "/", m_capacity, " bytes, ", numberOfEntries() - 1, " entries]\n");
+
+        bytesEvicted += entrySize;
+        entriesEvicted++;
+#endif
+
         m_size -= it->key.length();
         m_map.remove(it);
     }
+
+#if PLATFORM(QT)
+    if (entriesEvicted > 0) {
+        double sizeReduction = (double)bytesEvicted / sizeBefore * 100.0;
+        dataLogIf(Options::logBytecodeCacheActivity(), "BytecodeCache: PRUNE completed - evicted ", entriesEvicted, " entries (", bytesEvicted, " bytes, ", String::numberToStringFixedPrecision(sizeReduction), "% reduction) [after: ", m_size, "/", m_capacity, " bytes, ", numberOfEntries(), " entries]\n");
+    }
+#endif
 }
 
 static void generateUnlinkedCodeBlockForFunctions(VM& vm, UnlinkedCodeBlock* unlinkedCodeBlock, const SourceCode& parentSource, OptionSet<CodeGenerationMode> codeGenerationMode, ParserError& error)
@@ -280,8 +306,16 @@ void CodeCache::write()
 void writeCodeBlock(const SourceCodeKey& key, const SourceCodeValue& value)
 {
     UnlinkedCodeBlock* codeBlock = jsDynamicCast<UnlinkedCodeBlock*>(value.cell.get());
+#if PLATFORM(QT)
+    if (!codeBlock)
+        dataLogIf(Options::logBytecodeCacheActivity(), "BytecodeCache: DISK WRITE skipped (not a code block) - ", key.source().provider().sourceURL(), "\n");
+#endif
     if (!codeBlock)
         return;
+
+#if PLATFORM(QT)
+    dataLogIf(Options::logBytecodeCacheActivity(), "BytecodeCache: DISK WRITE - ", key.source().provider().sourceURL(), " (", key.length(), " bytes)\n");
+#endif
 
     key.source().provider().commitCachedBytecode();
 }
