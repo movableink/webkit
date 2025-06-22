@@ -77,6 +77,7 @@ list(APPEND WebKitLegacy_SOURCES
     qt/Api/qwebscriptworld.cpp
     qt/Api/qwebsecurityorigin.cpp
     qt/Api/qwebsettings.cpp
+    qt/Api/qwebbytecodecachedelegate.cpp
 
     qt/WebCoreSupport/BackForwardList.cpp
     qt/WebCoreSupport/ChromeClientQt.cpp
@@ -220,6 +221,7 @@ set(QtWebKit_PUBLIC_FRAMEWORK_HEADERS
     qt/Api/qwebscriptworld.h
     qt/Api/qwebsecurityorigin.h
     qt/Api/qwebsettings.h
+    qt/Api/qwebbytecodecachedelegate.h
 )
 
 WEBKIT_COPY_FILES(QtWebKit_CopyHeaders
@@ -813,6 +815,7 @@ if (COMPILER_IS_GCC_OR_CLANG)
         qt/Api/qwebscriptworld.cpp
         qt/Api/qwebsecurityorigin.cpp
         qt/Api/qwebsettings.cpp
+        qt/Api/qwebbytecodecachedelegate.cpp
 
         qt/WidgetApi/qgraphicswebview.cpp
         qt/WidgetApi/qwebframe.cpp

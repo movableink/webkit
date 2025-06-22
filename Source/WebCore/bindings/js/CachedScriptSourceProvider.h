@@ -31,10 +31,6 @@
 #include "CachedScriptFetcher.h"
 #include <JavaScriptCore/SourceProvider.h>
 
-#if PLATFORM(QT)
-#include "QtBytecodeDiskCache.h"
-#endif
-
 namespace WebCore {
 
 class CachedScriptSourceProvider final : public JSC::SourceProvider, public CachedResourceClient {
@@ -96,23 +92,5 @@ inline StringView CachedScriptSourceProvider::source() const
         return m_cachedScript->script(CachedScript::ShouldDecodeAsUTF8Only::Yes);
     return m_cachedScript->script();
 }
-
-#if PLATFORM(QT)
-inline RefPtr<JSC::CachedBytecode> CachedScriptSourceProvider::cachedBytecode() const
-{
-    auto& cache = QtBytecodeDiskCache::shared();
-    cache.initialize(); // Ensure initialization happens when first script loads
-    return cache.retrieve(sourceURL(), hash());
-}
-
-inline void CachedScriptSourceProvider::cacheBytecode(const JSC::BytecodeCacheGenerator& generator) const
-{
-    auto bytecode = generator();
-    if (bytecode) {
-        auto& cache = QtBytecodeDiskCache::shared();
-        cache.store(sourceURL(), hash(), *bytecode);
-    }
-}
-#endif
 
 } // namespace WebCore

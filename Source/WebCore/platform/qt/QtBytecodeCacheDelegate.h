@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 The Qt Company Ltd.
+ * Copyright (C) 2025 Movable, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,48 +25,30 @@
 
 #pragma once
 
-#if PLATFORM(QT)
-
-#include <JavaScriptCore/CachedBytecode.h>
-#include <wtf/Forward.h>
-#include <wtf/Noncopyable.h>
-#include <wtf/RefPtr.h>
-#include <atomic>
+class QString;
+class QByteArray;
 
 namespace WebCore {
 
-class QtBytecodeDiskCache {
-    WTF_MAKE_NONCOPYABLE(QtBytecodeDiskCache);
+class WEBCORE_EXPORT QtBytecodeCacheDelegate {
 public:
-    static QtBytecodeDiskCache& shared();
-    
-    RefPtr<JSC::CachedBytecode> retrieve(const String& sourceURL, unsigned sourceHash);
-    void store(const String& sourceURL, unsigned sourceHash, const JSC::CachedBytecode&);
-    
-    bool isEnabled() const;
-    void initialize(); // Public so it can be called early for logging
-    
-private:
-    QtBytecodeDiskCache() = default;
-    
-    String cacheDirectory() const;
-    String cacheFilePath(const String& sourceURL) const;
-    bool validateCacheFile(const String& filePath, unsigned expectedSourceHash) const;
-    void evictLRUIfNeeded();
-    size_t totalCacheSize() const;
-    
-    // Deferred maintenance using Qt timers
-    void scheduleMaintenanceIfNeeded();
-    void performDeferredMaintenance();
-    
-    mutable bool m_initialized { false };
-    mutable String m_cacheDirectory;
-    
-    // Deferred maintenance state  
-    std::atomic<bool> m_maintenanceScheduled { false };
-    std::atomic<size_t> m_approximateCacheSize { 0 };
+    virtual ~QtBytecodeCacheDelegate() = default;
+
+    // Load cached bytecode for the given source URL and hash
+    // Returns empty QByteArray if not found or on error
+    virtual QByteArray loadBytecode(const QString& sourceURL, const QString& sourceHash) = 0;
+
+    // Store bytecode for the given source URL and hash
+    // Implementation should handle errors gracefully (no exceptions)
+    virtual void storeBytecode(const QString& sourceURL, const QString& sourceHash, const QByteArray& bytecode) = 0;
+
+    // Optional maintenance callback (e.g., cache cleanup)
+    // Called periodically by QtWebKit when appropriate
+    virtual void performMaintenance() { }
 };
 
-} // namespace WebCore
+// Internal API for QWebSettings integration
+WEBCORE_EXPORT void setGlobalBytecodeCacheDelegate(QtBytecodeCacheDelegate* delegate);
+WEBCORE_EXPORT QtBytecodeCacheDelegate* globalBytecodeCacheDelegate();
 
-#endif // PLATFORM(QT)
+} // namespace WebCore

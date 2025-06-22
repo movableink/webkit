@@ -19,6 +19,7 @@
 */
 
 #include "qwebsettings.h"
+#include "qwebbytecodecachedelegate.h"
 
 #include "InitWebCoreQt.h"
 #include "qwebplugindatabase_p.h"
@@ -42,6 +43,8 @@
 #include <WebCore/Page.h>
 #include <WebCore/Settings.h>
 #include <WebCore/WorkerThread.h>
+#include <WebCore/QtBytecodeCacheDelegate.h>
+
 #include <wtf/Compiler.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/FileSystem.h>
@@ -962,6 +965,74 @@ void QWebSettings::setCSSMediaType(const QString& type)
 QString QWebSettings::cssMediaType() const
 {
     return d->mediaType;
+}
+
+/*!
+    Sets the bytecode cache delegate to \a delegate.
+    
+    The delegate allows applications to implement custom bytecode caching
+    strategies (e.g., Redis-based shared caching).
+    
+    Pass nullptr to disable custom caching and use only the default disk cache.
+    
+    \note The delegate must remain valid for the lifetime of any cache operations.
+    
+    \sa bytecodeCacheDelegate()
+*/
+// Internal adapter to bridge QWebBytecodeCacheDelegate to WebCore::QtBytecodeCacheDelegate
+class QWebBytecodeCacheDelegateAdapter : public WebCore::QtBytecodeCacheDelegate {
+public:
+    QWebBytecodeCacheDelegateAdapter(QWebBytecodeCacheDelegate* delegate) : m_delegate(delegate) {}
+    
+    QByteArray loadBytecode(const QString& sourceURL, const QString& sourceHash) override {
+        return m_delegate ? m_delegate->loadBytecode(sourceURL, sourceHash) : QByteArray();
+    }
+    
+    void storeBytecode(const QString& sourceURL, const QString& sourceHash, const QByteArray& bytecode) override {
+        if (m_delegate)
+            m_delegate->storeBytecode(sourceURL, sourceHash, bytecode);
+    }
+    
+    void performMaintenance() override {
+        if (m_delegate)
+            m_delegate->performMaintenance();
+    }
+    
+private:
+    QWebBytecodeCacheDelegate* m_delegate;
+};
+
+static QWebBytecodeCacheDelegate* s_publicDelegate = nullptr;
+static QWebBytecodeCacheDelegateAdapter* s_adapterDelegate = nullptr;
+
+void QWebSettings::setBytecodeCacheDelegate(QWebBytecodeCacheDelegate* delegate)
+{
+    WebCore::initializeWebCoreQt();
+    
+    // Clean up previous adapter
+    delete s_adapterDelegate;
+    s_adapterDelegate = nullptr;
+    
+    s_publicDelegate = delegate;
+    
+    if (delegate) {
+        s_adapterDelegate = new QWebBytecodeCacheDelegateAdapter(delegate);
+        WebCore::setGlobalBytecodeCacheDelegate(s_adapterDelegate);
+    } else {
+        WebCore::setGlobalBytecodeCacheDelegate(nullptr);
+    }
+}
+
+/*!
+    Returns the currently registered bytecode cache delegate.
+    
+    Returns nullptr if no custom delegate has been set.
+    
+    \sa setBytecodeCacheDelegate()
+*/
+QWebBytecodeCacheDelegate* QWebSettings::bytecodeCacheDelegate()
+{
+    return s_publicDelegate;
 }
 
 /*!
