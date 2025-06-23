@@ -23,6 +23,48 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "qwebbytecodecachedelegate.h"
+#include "qwebbytecodediskcache.h"
 
-#include "moc_qwebbytecodecachedelegate.cpp"
+#include <WebCore/QtDiskCacheDelegate.h>
+
+class QWebBytecodeDiskCache::QWebBytecodeDiskCachePrivate {
+public:
+    QWebBytecodeDiskCachePrivate(const QString& cachePath, size_t maxSize)
+        : impl(new WebCore::QtDiskCacheDelegate(cachePath, maxSize))
+    {
+    }
+    
+    ~QWebBytecodeDiskCachePrivate()
+    {
+        delete impl;
+    }
+    
+    WebCore::QtDiskCacheDelegate* impl;
+};
+
+QWebBytecodeDiskCache::QWebBytecodeDiskCache(const QString& cachePath, size_t maxSize)
+    : d(new QWebBytecodeDiskCachePrivate(cachePath, maxSize))
+{
+}
+
+QWebBytecodeDiskCache::~QWebBytecodeDiskCache()
+{
+    delete d;
+}
+
+QByteArray QWebBytecodeDiskCache::loadBytecode(const QString& sourceURL, const QString& sourceHash)
+{
+    return d->impl->loadBytecode(sourceURL, sourceHash);
+}
+
+void QWebBytecodeDiskCache::storeBytecode(const QString& sourceURL, const QString& sourceHash, const QByteArray& bytecode)
+{
+    d->impl->storeBytecode(sourceURL, sourceHash, bytecode);
+}
+
+void QWebBytecodeDiskCache::performMaintenance()
+{
+    d->impl->performMaintenance();
+}
+
+#include "moc_qwebbytecodediskcache.cpp"

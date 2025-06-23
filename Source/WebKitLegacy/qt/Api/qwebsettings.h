@@ -29,7 +29,6 @@
 
 namespace WebCore {
 class Page;
-class QtBytecodeCacheDelegate;
 }
 
 class QWebBytecodeCacheDelegate;

@@ -42,6 +42,7 @@
 
 #include <qwebsettings.h>
 #include <qwebbytecodecachedelegate.h>
+#include <qwebbytecodediskcache.h>
 
 WindowOptions windowOptions;
 
@@ -280,8 +281,8 @@ void LauncherApplication::handleUserOptions()
             }
         }
 
-        static QWebDiskCacheDelegate* diskCacheDelegate = 
-            new QWebDiskCacheDelegate(cachePath, maxSizeMB * 1024 * 1024);
+        static QWebBytecodeDiskCache* diskCacheDelegate = 
+            new QWebBytecodeDiskCache(cachePath, maxSizeMB * 1024 * 1024);
         QWebSettings::setBytecodeCacheDelegate(diskCacheDelegate);
     }
 

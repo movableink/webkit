@@ -49,19 +49,4 @@ public:
     virtual void performMaintenance() { }
 };
 
-class QWEBKIT_EXPORT QWebDiskCacheDelegate final : public QWebBytecodeCacheDelegate {
-public:
-    QWebDiskCacheDelegate(const QString& cachePath = QString(), size_t maxSize = 100 * 1024 * 1024);
-    ~QWebDiskCacheDelegate();
-
-    // QWebBytecodeCacheDelegate interface
-    QByteArray loadBytecode(const QString& sourceURL, const QString& sourceHash) override;
-    void storeBytecode(const QString& sourceURL, const QString& sourceHash, const QByteArray& bytecode) override;
-    void performMaintenance() override;
-
-private:
-    class QWebDiskCacheDelegatePrivate;
-    QWebDiskCacheDelegatePrivate* d;
-};
-
 #endif // QWEBBYTECODECACHEDELEGATE_H

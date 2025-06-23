@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Movable, Inc.
+ * Copyright (C) 2025 The Qt Company Ltd.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,6 +23,24 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef QWEBBYTECODEDISKCACHE_H
+#define QWEBBYTECODEDISKCACHE_H
+
 #include "qwebbytecodecachedelegate.h"
 
-#include "moc_qwebbytecodecachedelegate.cpp"
+class QWEBKIT_EXPORT QWebBytecodeDiskCache final : public QWebBytecodeCacheDelegate {
+public:
+    QWebBytecodeDiskCache(const QString& cachePath = QString(), size_t maxSize = 100 * 1024 * 1024);
+    ~QWebBytecodeDiskCache();
+
+    // QWebBytecodeCacheDelegate interface
+    QByteArray loadBytecode(const QString& sourceURL, const QString& sourceHash) override;
+    void storeBytecode(const QString& sourceURL, const QString& sourceHash, const QByteArray& bytecode) override;
+    void performMaintenance() override;
+
+private:
+    class QWebBytecodeDiskCachePrivate;
+    QWebBytecodeDiskCachePrivate* d;
+};
+
+#endif // QWEBBYTECODEDISKCACHE_H

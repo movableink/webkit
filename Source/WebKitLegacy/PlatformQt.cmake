@@ -78,6 +78,7 @@ list(APPEND WebKitLegacy_SOURCES
     qt/Api/qwebsecurityorigin.cpp
     qt/Api/qwebsettings.cpp
     qt/Api/qwebbytecodecachedelegate.cpp
+    qt/Api/qwebbytecodediskcache.cpp
 
     qt/WebCoreSupport/BackForwardList.cpp
     qt/WebCoreSupport/ChromeClientQt.cpp
@@ -222,6 +223,7 @@ set(QtWebKit_PUBLIC_FRAMEWORK_HEADERS
     qt/Api/qwebsecurityorigin.h
     qt/Api/qwebsettings.h
     qt/Api/qwebbytecodecachedelegate.h
+    qt/Api/qwebbytecodediskcache.h
 )
 
 WEBKIT_COPY_FILES(QtWebKit_CopyHeaders
@@ -242,6 +244,8 @@ ecm_generate_headers(
         QWebPluginFactory
         QWebSecurityOrigin
         QWebSettings
+        QWebBytecodeCacheDelegate
+        QWebBytecodeDiskCache
     COMMON_HEADER
         QtWebKit
     COMMON_HEADER_EXTRAS
@@ -816,6 +820,7 @@ if (COMPILER_IS_GCC_OR_CLANG)
         qt/Api/qwebsecurityorigin.cpp
         qt/Api/qwebsettings.cpp
         qt/Api/qwebbytecodecachedelegate.cpp
+        qt/Api/qwebbytecodediskcache.cpp
 
         qt/WidgetApi/qgraphicswebview.cpp
         qt/WidgetApi/qwebframe.cpp
