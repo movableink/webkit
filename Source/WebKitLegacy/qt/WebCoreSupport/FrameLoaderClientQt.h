@@ -33,6 +33,7 @@
 #include <WebCore/FormState.h>
 #include <WebCore/LocalFrameLoaderClient.h>
 #include <WebCore/ProcessSwapDisposition.h>
+#include <WebCore/ResourceLoadTrackerQt.h>
 #include <WebCore/ResourceResponse.h>
 #include <WebCore/ResourceError.h>
 
@@ -68,6 +69,12 @@ class FrameLoaderClientQt final : public QObject, public LocalFrameLoaderClient 
 Q_SIGNALS:
     void titleChanged(const QString& title);
     void unsupportedContent(QNetworkReply*);
+    void resourceLoadStarted(const QUrl& url, const QString& type, const QtResourceRequestInfo& requestInfo, bool fromCache);
+    void resourceLoadFinished(const QUrl& url, const QString& type, qint64 size, const QtResourceTimingInfo& timing, bool fromCache, bool success);
+
+public Q_SLOTS:
+    void onResourceLoadStarted(const QUrl& url, const QString& type, const QtResourceRequestInfo& requestInfo, bool fromCache);
+    void onResourceLoadFinished(const QUrl& url, const QString& type, qint64 size, const QtResourceTimingInfo& timing, bool fromCache, bool success);
 
 public:
     FrameLoaderClientQt(WebCore::FrameLoader&);

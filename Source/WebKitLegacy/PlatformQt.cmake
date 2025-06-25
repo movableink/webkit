@@ -215,6 +215,7 @@ set(QtWebKit_PUBLIC_FRAMEWORK_HEADERS
     qt/Api/qwebhistory.h
     qt/Api/qwebhistoryinterface.h
     qt/Api/qwebkitglobal.h
+    qt/Api/qwebresourcetypes.h
     qt/Api/qwebkitplatformplugin.h
     qt/Api/qwebpluginfactory.h
     qt/Api/qwebscriptworld.h
