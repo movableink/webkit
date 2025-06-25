@@ -77,7 +77,6 @@ list(APPEND WebKitLegacy_SOURCES
     qt/Api/qwebscriptworld.cpp
     qt/Api/qwebsecurityorigin.cpp
     qt/Api/qwebsettings.cpp
-    qt/Api/qwebbytecodecachedelegate.cpp
     qt/Api/qwebbytecodediskcache.cpp
 
     qt/WebCoreSupport/BackForwardList.cpp
@@ -819,7 +818,6 @@ if (COMPILER_IS_GCC_OR_CLANG)
         qt/Api/qwebscriptworld.cpp
         qt/Api/qwebsecurityorigin.cpp
         qt/Api/qwebsettings.cpp
-        qt/Api/qwebbytecodecachedelegate.cpp
         qt/Api/qwebbytecodediskcache.cpp
 
         qt/WidgetApi/qgraphicswebview.cpp
