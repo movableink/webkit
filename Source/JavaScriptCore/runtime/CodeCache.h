@@ -100,6 +100,11 @@ public:
         prune();
 
         iterator findResult = m_map.find(key);
+#if PLATFORM(QT)
+        if (findResult == m_map.end()) {
+            dataLogIf(Options::logBytecodeCacheActivity(), "BytecodeCache: MISS (memory) - ", key.source().provider().sourceURL(), " (", key.length(), " bytes) [cache: ", m_size, "/", m_capacity, " bytes, ", numberOfEntries(), " entries]\n");
+        }
+#endif
         if (findResult == m_map.end())
             return fetchFromDisk<UnlinkedCodeBlockType>(vm, key);
 
@@ -121,6 +126,10 @@ public:
         findResult->value.age = m_age;
         m_age += key.length();
 
+#if PLATFORM(QT)
+        dataLogIf(Options::logBytecodeCacheActivity(), "BytecodeCache: HIT (memory) - ", key.source().provider().sourceURL(), " (", key.length(), " bytes, age: ", age, ") [cache: ", m_size, "/", m_capacity, " bytes, ", numberOfEntries(), " entries]\n");
+#endif
+
         return jsCast<UnlinkedCodeBlockType*>(findResult->value.cell.get());
     }
 
@@ -133,6 +142,14 @@ public:
 
         m_size += key.length();
         m_age += key.length();
+
+#if PLATFORM(QT)
+        double utilization = m_capacity > 0 ? (double)m_size / m_capacity * 100.0 : 0.0;
+        bool nearLimit = utilization > 80.0 || numberOfEntries() > (workingSetMaxEntries * 0.8);
+        const char* warning = nearLimit ? " [WARNING: near limit]" : "";
+        dataLogIf(Options::logBytecodeCacheActivity(), "BytecodeCache: ADD - ", key.source().provider().sourceURL(), " (", key.length(), " bytes) [cache: ", m_size, "/", m_capacity, " bytes (", String::numberToStringFixedPrecision(utilization), "%), ", numberOfEntries(), "/", workingSetMaxEntries, " entries]", warning, "\n");
+#endif
+
         return addResult;
     }
 
@@ -156,9 +173,21 @@ private:
     UnlinkedCodeBlockType* fetchFromDiskImpl(VM& vm, const SourceCodeKey& key)
     {
         RefPtr<CachedBytecode> cachedBytecode = key.source().provider().cachedBytecode();
+#if PLATFORM(QT)
+        if (!cachedBytecode || !cachedBytecode->size()) {
+            dataLogIf(Options::logBytecodeCacheActivity(), "BytecodeCache: MISS (disk) - ", key.source().provider().sourceURL(), " (", key.length(), " bytes)\n");
+        }
+#endif
         if (!cachedBytecode || !cachedBytecode->size())
             return nullptr;
-        return decodeCodeBlock<UnlinkedCodeBlockType>(vm, key, *cachedBytecode);
+        UnlinkedCodeBlockType* result = decodeCodeBlock<UnlinkedCodeBlockType>(vm, key, *cachedBytecode);
+#if PLATFORM(QT)
+        if (result)
+            dataLogIf(Options::logBytecodeCacheActivity(), "BytecodeCache: HIT (disk) - ", key.source().provider().sourceURL(), " (", key.length(), " bytes)\n");
+        else
+            dataLogIf(Options::logBytecodeCacheActivity(), "BytecodeCache: MISS (disk decode failed) - ", key.source().provider().sourceURL(), " (", key.length(), " bytes)\n");
+#endif
+        return result;
     }
 
     template<typename UnlinkedCodeBlockType>
@@ -174,6 +203,9 @@ private:
         } else {
             UNUSED_PARAM(vm);
             UNUSED_PARAM(key);
+#if PLATFORM(QT)
+            dataLogIf(Options::logBytecodeCacheActivity(), "BytecodeCache: MISS (disk not supported for this type) - ", key.source().provider().sourceURL(), " (", key.length(), " bytes)\n");
+#endif
             return nullptr;
         }
     }

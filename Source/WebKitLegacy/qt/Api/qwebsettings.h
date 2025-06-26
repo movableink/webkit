@@ -31,6 +31,8 @@ namespace WebCore {
 class Page;
 }
 
+class QWebBytecodeCacheDelegate;
+
 class QWebPage;
 class QWebPluginDatabase;
 class QWebSettingsPrivate;
@@ -170,6 +172,9 @@ public:
     static void clearMemoryCaches();
 
     static void enablePersistentStorage(const QString& path = QString());
+
+    static void setBytecodeCacheDelegate(QWebBytecodeCacheDelegate* delegate);
+    static QWebBytecodeCacheDelegate* bytecodeCacheDelegate();
 
     void setThirdPartyCookiePolicy(ThirdPartyCookiePolicy);
     QWebSettings::ThirdPartyCookiePolicy thirdPartyCookiePolicy() const;

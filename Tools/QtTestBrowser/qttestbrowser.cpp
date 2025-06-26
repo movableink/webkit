@@ -40,6 +40,10 @@
 #include "QtTestSupport.h"
 #endif
 
+#include <qwebsettings.h>
+#include <qwebbytecodecachedelegate.h>
+#include <qwebbytecodediskcache.h>
+
 WindowOptions windowOptions;
 
 #include <QApplication>
@@ -161,6 +165,7 @@ void LauncherApplication::handleUserOptions()
              << "[-use-test-fonts]"
 #endif
              << "[-print-loaded-urls]"
+             << "[-bytecode-cache [path] [maxSizeMB]]"
              << "URLs";
         appQuit(0);
     }
@@ -257,6 +262,29 @@ void LauncherApplication::handleUserOptions()
 
     if (args.contains("-print-loaded-urls"))
         windowOptions.printLoadedUrls = true;
+
+    int bytecodeCacheIndex = args.indexOf("-bytecode-cache");
+    if (bytecodeCacheIndex != -1) {
+        args.removeAt(bytecodeCacheIndex);
+
+        QString cachePath;
+        size_t maxSizeMB = 100;
+
+        if (bytecodeCacheIndex < args.size() && !args[bytecodeCacheIndex].startsWith("-")) {
+            cachePath = args.takeAt(bytecodeCacheIndex);
+
+            if (bytecodeCacheIndex < args.size() && !args[bytecodeCacheIndex].startsWith("-")) {
+                bool ok;
+                int sizeMB = args.takeAt(bytecodeCacheIndex).toInt(&ok);
+                if (ok && sizeMB > 0)
+                    maxSizeMB = sizeMB;
+            }
+        }
+
+        static QWebBytecodeDiskCache* diskCacheDelegate = 
+            new QWebBytecodeDiskCache(cachePath, maxSizeMB * 1024 * 1024);
+        QWebSettings::setBytecodeCacheDelegate(diskCacheDelegate);
+    }
 
     QString inspectorUrlArg("-inspector-url");
     int inspectorUrlIndex = args.indexOf(inspectorUrlArg);

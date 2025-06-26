@@ -46,6 +46,9 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     bindings/js/CachedScriptSourceProvider.h
     bindings/js/ScriptBufferSourceProvider.h
 
+    platform/qt/QtBytecodeCacheDelegate.h
+    platform/qt/QtDiskCacheDelegate.h
+
     dom/StaticNodeList.h
 
     inspector/LegacyWebSocketInspectorInstrumentation.h
@@ -103,6 +106,7 @@ list(APPEND WebCore_SOURCES
     accessibility/qt/AccessibilityObjectQt.cpp
     accessibility/qt/AXObjectCacheQt.cpp
 
+    bindings/js/CachedScriptSourceProviderQt.cpp
     bindings/js/ScriptControllerQt.cpp
 
     bridge/qt/qt_class.cpp
@@ -198,10 +202,12 @@ list(APPEND WebCore_SOURCES
     platform/qt/PlatformKeyboardEventQt.cpp
     platform/qt/PlatformScreenQt.cpp
     platform/qt/QStyleHelpers.cpp
-    platform/qt/ResourceLoadTrackerQt.cpp
+    platform/qt/QtBytecodeCacheDelegate.cpp
+    platform/qt/QtDiskCacheDelegate.cpp
     platform/qt/RenderThemeQStyle.cpp
     platform/qt/RenderThemeQt.cpp
     platform/qt/RenderThemeQtMobile.cpp
+    platform/qt/ResourceLoadTrackerQt.cpp
     platform/qt/ScrollViewQt.cpp
     platform/qt/ScrollbarThemeQStyle.cpp
     platform/qt/ScrollbarThemeQt.cpp

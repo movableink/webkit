@@ -46,6 +46,11 @@ public:
     unsigned hash() const override;
     StringView source() const override;
 
+#if PLATFORM(QT)
+    RefPtr<JSC::CachedBytecode> cachedBytecode() const override;
+    void cacheBytecode(const JSC::BytecodeCacheGenerator&) const override;
+#endif
+
     void lockUnderlyingBufferImpl() final
     {
         ASSERT(!m_buffer);
