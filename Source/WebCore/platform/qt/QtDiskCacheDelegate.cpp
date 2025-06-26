@@ -37,6 +37,7 @@
 #include <wtf/text/MakeString.h>
 #include <wtf/HexNumber.h>
 #include "Logging.h"
+#include "LogInitialization.h"
 
 namespace WebCore {
 
@@ -52,8 +53,10 @@ QtDiskCacheDelegate::QtDiskCacheDelegate(const QString& cachePath, size_t maxSiz
     });
     
     // Initialize eagerly if logging is enabled to show startup message
-    if (LogBytecodeCache.state != WTFLogChannelState::Off)
-        ensureInitialized();
+    if (WTFLogChannel* logChannel = getLogChannel("BytecodeCache"_s)) {
+        if(logChannel->state != WTFLogChannelState::Off)
+            ensureInitialized();
+    } 
 }
 
 void QtDiskCacheDelegate::ensureInitialized()
