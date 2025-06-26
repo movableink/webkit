@@ -195,17 +195,17 @@ jobs:
     - name: Build (Linux)
       if: runner.os == 'Linux'
       shell: bash --noprofile --norc -eo pipefail -x {0}
-      run: ninja -C build -j $HOST_N_CORES -v
+      run: ninja -C build -j $HOST_N_CORES
 
     - name: Build (MSVC/Conan)
       if: runner.os == 'Windows' && matrix.config.environment_script != ''
       shell: cmd
-      run: py Tools\qt\build-qtwebkit-conan.py --build --install --ninjaargs="-j %HOST_N_CORES% -v" || exit /b 1
+      run: py Tools\qt\build-qtwebkit-conan.py --build --install --ninjaargs="-j %HOST_N_CORES%" || exit /b 1
 
     - name: Build (macOS/Conan)
       if: runner.os == 'macOS'
       shell: bash --noprofile --norc -eo pipefail -x {0}
-      run: Tools/qt/build-qtwebkit-conan.py --build --install --ninjaargs="-j $HOST_N_CORES -v"
+      run: Tools/qt/build-qtwebkit-conan.py --build --install --ninjaargs="-j $HOST_N_CORES"
 
     # - name: Verify (Linux)
     #   if: runner.os == 'Linux'
