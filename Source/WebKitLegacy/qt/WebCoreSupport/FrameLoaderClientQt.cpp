@@ -67,6 +67,7 @@
 #include <WebCore/PluginData.h>
 #include <WebCore/QNetworkReplyHandler.h>
 #include <WebCore/QStyleHelpers.h>
+#include <WebCore/ResourceLoadTrackerQt.h>
 #include <WebCore/QWebPageClient.h>
 #include <WebCore/ResourceHandle.h>
 #include <WebCore/ResourceHandleInternal.h>
@@ -230,11 +231,25 @@ void FrameLoaderClientQt::setFrame(QWebFrameAdapter* webFrame, LocalFrame* frame
         return;
     }
 
+    if (frame && frame->isMainFrame()) {
+        auto& tracker = WebCore::ResourceLoadTrackerQt::instance();
+
+        connect(&tracker, SIGNAL(resourceLoadStarted(QUrl,QString,QtResourceRequestInfo,bool)), 
+                this, SLOT(onResourceLoadStarted(QUrl,QString,QtResourceRequestInfo,bool)));
+        connect(&tracker, SIGNAL(resourceLoadFinished(QUrl,QString,qint64,QtResourceTimingInfo,bool,bool)),
+                this, SLOT(onResourceLoadFinished(QUrl,QString,qint64,QtResourceTimingInfo,bool,bool)));
+    }
+
     connect(this, SIGNAL(unsupportedContent(QNetworkReply*)),
         m_webFrame->pageAdapter->handle(), SIGNAL(unsupportedContent(QNetworkReply*)));
 
     connect(this, SIGNAL(titleChanged(QString)),
         m_webFrame->handle(), SIGNAL(titleChanged(QString)));
+
+    connect(this, SIGNAL(resourceLoadStarted(QUrl,QString,QtResourceRequestInfo,bool)),
+        m_webFrame->pageAdapter->handle(), SIGNAL(resourceLoadStarted(QUrl,QString,QtResourceRequestInfo,bool)));
+    connect(this, SIGNAL(resourceLoadFinished(QUrl,QString,qint64,QtResourceTimingInfo,bool,bool)),
+        m_webFrame->pageAdapter->handle(), SIGNAL(resourceLoadFinished(QUrl,QString,qint64,QtResourceTimingInfo,bool,bool)));
 }
 
 bool FrameLoaderClientQt::hasWebView() const
@@ -1390,6 +1405,16 @@ RefPtr<HistoryItem> FrameLoaderClientQt::createHistoryItemTree(bool clipAtTarget
     // Create history item tree like the Mac implementation
     Ref coreMainFrame = m_frame->rootFrame();
     return coreMainFrame->loader().history().createItemTree(*m_frame, clipAtTarget, itemID);
+}
+
+void FrameLoaderClientQt::onResourceLoadStarted(const QUrl& url, const QString& type, const QtResourceRequestInfo& requestInfo, bool fromCache)
+{
+    Q_EMIT resourceLoadStarted(url, type, requestInfo, fromCache);
+}
+
+void FrameLoaderClientQt::onResourceLoadFinished(const QUrl& url, const QString& type, qint64 size, const QtResourceTimingInfo& timing, bool fromCache, bool success)
+{
+    Q_EMIT resourceLoadFinished(url, type, size, timing, fromCache, success);
 }
 
 }

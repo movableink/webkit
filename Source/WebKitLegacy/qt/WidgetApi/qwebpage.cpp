@@ -3440,6 +3440,32 @@ bool QWebPage::recentlyAudible() const
 */
 
 /*!
+    \fn void QWebPage::resourceLoadStarted(const QUrl& url, const QString& type, qint64 expectedSize, bool fromCache)
+
+    This signal is emitted when a resource (image, stylesheet, script, etc.) begins loading.
+    \a url contains the URL of the resource being loaded.
+    \a type contains the resource type (e.g., "image", "stylesheet", "script").
+    \a expectedSize contains the expected size in bytes, or 0 if unknown.
+    \a fromCache indicates whether the resource is being loaded from memory cache.
+
+    \sa resourceLoadFinished()
+*/
+
+/*!
+    \fn void QWebPage::resourceLoadFinished(const QUrl& url, const QString& type, qint64 size, qint64 durationMs, bool fromCache, bool success)
+
+    This signal is emitted when a resource finishes loading (successfully or with error).
+    \a url contains the URL of the resource that finished loading.
+    \a type contains the resource type (e.g., "image", "stylesheet", "script").
+    \a size contains the actual size in bytes of the loaded resource.
+    \a durationMs contains the load duration in milliseconds.
+    \a fromCache indicates whether the resource was loaded from memory cache.
+    \a success indicates whether the resource loaded successfully.
+
+    \sa resourceLoadStarted()
+*/
+
+/*!
     \fn void QWebPage::linkHovered(const QString &link, const QString &title, const QString &textContent)
 
     This signal is emitted when the mouse hovers over a link.
