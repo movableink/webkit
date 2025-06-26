@@ -80,6 +80,7 @@ list(APPEND WebKitLegacy_SOURCES
     qt/Api/qwebbytecodediskcache.cpp
 
     qt/WebCoreSupport/BackForwardList.cpp
+    qt/WebCoreSupport/BytecodeCacheSupport.cpp
     qt/WebCoreSupport/ChromeClientQt.cpp
     qt/WebCoreSupport/ContextMenuClientQt.cpp
     qt/WebCoreSupport/CryptoClientQt.cpp

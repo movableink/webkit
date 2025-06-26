@@ -48,7 +48,7 @@ public:
 };
 
 // Internal API for QWebSettings integration
-WEBCORE_EXPORT void setGlobalBytecodeCacheDelegate(QtBytecodeCacheDelegate* delegate);
+WEBCORE_EXPORT void setGlobalBytecodeCacheDelegate(std::unique_ptr<QtBytecodeCacheDelegate> delegate);
 WEBCORE_EXPORT QtBytecodeCacheDelegate* globalBytecodeCacheDelegate();
 
 } // namespace WebCore

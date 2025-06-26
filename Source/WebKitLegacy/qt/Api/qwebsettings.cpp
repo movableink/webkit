@@ -23,6 +23,7 @@
 
 #include "InitWebCoreQt.h"
 #include "qwebplugindatabase_p.h"
+#include "BytecodeCacheSupport.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -194,7 +195,7 @@ void QWebSettingsPrivate::apply()
 
         // NOTE: setHyperlinkAuditingEnabled has been removed from WebCore::Settings
         // Hyperlink auditing feature is deprecated and no longer supported
- 
+
         value = attributes.value(QWebSettings::JavascriptCanOpenWindows,
                                       global->attributes.value(QWebSettings::JavascriptCanOpenWindows));
         settings->setJavaScriptCanOpenWindowsAutomatically(value);
@@ -470,8 +471,8 @@ QWebSettings* QWebSettings::globalSettings()
     \value TiledBackingStoreEnabled This setting enables the tiled backing store feature
         for a QGraphicsWebView. With the tiled backing store enabled, the web page contents in and around
         the current visible area is speculatively cached to bitmap tiles. The tiles are automatically kept
-        in sync with the web page as it changes. Enabling tiling can significantly speed up painting heavy 
-        operations like scrolling. Enabling the feature increases memory consumption. It does not work well 
+        in sync with the web page as it changes. Enabling tiling can significantly speed up painting heavy
+        operations like scrolling. Enabling the feature increases memory consumption. It does not work well
         with contents using CSS fixed positioning (see also \l{QGraphicsWebView::}{resizesToContents} property).
         \l{QGraphicsWebView::}{tiledBackingStoreFrozen} property allows application to temporarily
         freeze the contents of the backing store. This is disabled by default.
@@ -946,9 +947,9 @@ QWebSettings::ThirdPartyCookiePolicy QWebSettings::thirdPartyCookiePolicy() cons
 
 /*!
     Sets the CSS media type to \a type.
-    
+
     Setting this will override the normal value of the CSS media property.
-    
+
     \note Setting the value to null QString will restore the default value.
 */
 void QWebSettings::setCSSMediaType(const QString& type)
@@ -959,7 +960,7 @@ void QWebSettings::setCSSMediaType(const QString& type)
 
 /*!
     Returns the current CSS media type.
-    
+
     \note It will only return the value set through setCSSMediaType and not the one used internally.
 */
 QString QWebSettings::cssMediaType() const
@@ -969,55 +970,23 @@ QString QWebSettings::cssMediaType() const
 
 /*!
     Sets the bytecode cache delegate to \a delegate.
-    
+
     The delegate allows applications to implement custom bytecode caching
     strategies (e.g., Redis-based shared caching).
-    
+
     Pass nullptr to disable custom caching and use only the default disk cache.
-    
+
     \note The delegate must remain valid for the lifetime of any cache operations.
-    
+
     \sa bytecodeCacheDelegate()
 */
-// Internal adapter to bridge QWebBytecodeCacheDelegate to WebCore::QtBytecodeCacheDelegate
-class QWebBytecodeCacheDelegateAdapter : public WebCore::QtBytecodeCacheDelegate {
-public:
-    QWebBytecodeCacheDelegateAdapter(QWebBytecodeCacheDelegate* delegate) : m_delegate(delegate) {}
-    
-    QByteArray loadBytecode(const QString& sourceURL, const QString& sourceHash) override {
-        return m_delegate ? m_delegate->loadBytecode(sourceURL, sourceHash) : QByteArray();
-    }
-    
-    void storeBytecode(const QString& sourceURL, const QString& sourceHash, const QByteArray& bytecode) override {
-        if (m_delegate)
-            m_delegate->storeBytecode(sourceURL, sourceHash, bytecode);
-    }
-    
-    void performMaintenance() override {
-        if (m_delegate)
-            m_delegate->performMaintenance();
-    }
-    
-private:
-    QWebBytecodeCacheDelegate* m_delegate;
-};
-
-static QWebBytecodeCacheDelegate* s_publicDelegate = nullptr;
-static QWebBytecodeCacheDelegateAdapter* s_adapterDelegate = nullptr;
-
 void QWebSettings::setBytecodeCacheDelegate(QWebBytecodeCacheDelegate* delegate)
 {
     WebCore::initializeWebCoreQt();
-    
-    // Clean up previous adapter
-    delete s_adapterDelegate;
-    s_adapterDelegate = nullptr;
-    
-    s_publicDelegate = delegate;
-    
+
     if (delegate) {
-        s_adapterDelegate = new QWebBytecodeCacheDelegateAdapter(delegate);
-        WebCore::setGlobalBytecodeCacheDelegate(s_adapterDelegate);
+        auto adapter = std::make_unique<QWebBytecodeCacheDelegateAdapter>(delegate);
+        WebCore::setGlobalBytecodeCacheDelegate(WTFMove(adapter));
     } else {
         WebCore::setGlobalBytecodeCacheDelegate(nullptr);
     }
@@ -1025,14 +994,20 @@ void QWebSettings::setBytecodeCacheDelegate(QWebBytecodeCacheDelegate* delegate)
 
 /*!
     Returns the currently registered bytecode cache delegate.
-    
+
     Returns nullptr if no custom delegate has been set.
-    
+
     \sa setBytecodeCacheDelegate()
 */
 QWebBytecodeCacheDelegate* QWebSettings::bytecodeCacheDelegate()
 {
-    return s_publicDelegate;
+    auto* coreDelegate = WebCore::globalBytecodeCacheDelegate();
+    if (!coreDelegate)
+        return nullptr;
+
+    // Safe to static_cast because we control the creation of the adapter
+    auto* adapter = static_cast<QWebBytecodeCacheDelegateAdapter*>(coreDelegate);
+    return adapter->originalDelegate();
 }
 
 /*!
@@ -1266,12 +1241,12 @@ qint64 QWebSettings::offlineWebApplicationCacheQuota()
     \since 4.6
 
     Sets the path for HTML5 local storage to \a path.
-    
+
     For more information on HTML5 local storage see the
     \l{http://www.w3.org/TR/webstorage/#the-localstorage-attribute}{Web Storage standard}.
-    
+
     Support for local storage can enabled by setting the
-    \l{QWebSettings::LocalStorageEnabled}{LocalStorageEnabled} attribute.     
+    \l{QWebSettings::LocalStorageEnabled}{LocalStorageEnabled} attribute.
 
     \sa localStoragePath()
 */
@@ -1298,7 +1273,7 @@ QString QWebSettings::localStoragePath() const
 
     Enables WebKit data persistence and sets the path to \a path.
     If \a path is empty, the user-specific data location specified by
-    \l{QDesktopServices::AppLocalDataLocation}{AppLocalDataLocation} 
+    \l{QDesktopServices::AppLocalDataLocation}{AppLocalDataLocation}
     will be used instead.
 
     This method will simultaneously set and enable the iconDatabasePath(),

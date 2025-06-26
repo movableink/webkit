@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef QWEBBYTECODEDISKCACHE_H
-#define QWEBBYTECODEDISKCACHE_H
+#pragma once
 
 #include "qwebbytecodecachedelegate.h"
 
@@ -42,5 +41,3 @@ private:
     class QWebBytecodeDiskCachePrivate;
     QWebBytecodeDiskCachePrivate* d;
 };
-
-#endif // QWEBBYTECODEDISKCACHE_H

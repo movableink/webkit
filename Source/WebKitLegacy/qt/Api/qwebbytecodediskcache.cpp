@@ -33,12 +33,12 @@ public:
         : impl(new WebCore::QtDiskCacheDelegate(cachePath, maxSize))
     {
     }
-    
+
     ~QWebBytecodeDiskCachePrivate()
     {
         delete impl;
     }
-    
+
     WebCore::QtDiskCacheDelegate* impl;
 };
 
@@ -66,5 +66,3 @@ void QWebBytecodeDiskCache::performMaintenance()
 {
     d->impl->performMaintenance();
 }
-
-#include "moc_qwebbytecodediskcache.cpp"

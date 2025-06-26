@@ -28,16 +28,16 @@
 
 namespace WebCore {
 
-static QtBytecodeCacheDelegate* s_bytecodeCacheDelegate = nullptr;
+static std::unique_ptr<QtBytecodeCacheDelegate> s_bytecodeCacheDelegate;
 
-void setGlobalBytecodeCacheDelegate(QtBytecodeCacheDelegate* delegate)
+void setGlobalBytecodeCacheDelegate(std::unique_ptr<QtBytecodeCacheDelegate> delegate)
 {
-    s_bytecodeCacheDelegate = delegate;
+    s_bytecodeCacheDelegate = WTFMove(delegate);
 }
 
 QtBytecodeCacheDelegate* globalBytecodeCacheDelegate()
 {
-    return s_bytecodeCacheDelegate;
+    return s_bytecodeCacheDelegate.get();
 }
 
 } // namespace WebCore
