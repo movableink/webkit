@@ -243,6 +243,7 @@ ecm_generate_headers(
         QWebHistoryInterface
         QWebKitPlatformPlugin,QWebHapticFeedbackPlayer,QWebFullScreenVideoHandler,QWebNotificationData,QWebNotificationPresenter,QWebSelectData,QWebSelectMethod,QWebSpellChecker,QWebTouchModifier
         QWebPluginFactory
+        QWebResourceTypes
         QWebSecurityOrigin
         QWebSettings
         QWebBytecodeCacheDelegate
