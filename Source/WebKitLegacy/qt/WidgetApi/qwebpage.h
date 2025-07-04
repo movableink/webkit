@@ -433,8 +433,8 @@ Q_SIGNALS:
     void loadStarted();
     void loadProgress(int progress);
     void loadFinished(bool ok);
-    void resourceLoadStarted(const QUrl& url, const QString& type, const QtResourceRequestInfo& requestInfo, bool fromCache);
-    void resourceLoadFinished(const QUrl& url, const QString& type, qint64 size, const QtResourceTimingInfo& timing, bool fromCache, bool success);
+    void resourceLoadStarted(const QUrl& url, const QtResourceRequestInfo& requestInfo, bool fromCache);
+    void resourceLoadFinished(const QUrl& url, qint64 size, const QtResourceTimingInfo& timing, bool success);
 
     void linkHovered(const QString &link, const QString &title, const QString &textContent);
     void statusBarMessage(const QString& text);

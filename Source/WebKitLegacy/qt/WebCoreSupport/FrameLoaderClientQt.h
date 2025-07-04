@@ -30,14 +30,16 @@
 #ifndef FrameLoaderClientQt_h
 #define FrameLoaderClientQt_h
 
+#include <WebCore/CachedResource.h>
 #include <WebCore/FormState.h>
 #include <WebCore/LocalFrameLoaderClient.h>
+#include <WebCore/NetworkLoadMetrics.h>
 #include <WebCore/ProcessSwapDisposition.h>
-#include <WebCore/ResourceLoadTrackerQt.h>
 #include <WebCore/ResourceResponse.h>
 #include <WebCore/ResourceError.h>
 
 #include <QObject>
+#include "qwebresourcetypes.h"
 #include <QUrl>
 #include <wtf/URL.h>
 
@@ -69,12 +71,8 @@ class FrameLoaderClientQt final : public QObject, public LocalFrameLoaderClient 
 Q_SIGNALS:
     void titleChanged(const QString& title);
     void unsupportedContent(QNetworkReply*);
-    void resourceLoadStarted(const QUrl& url, const QString& type, const QtResourceRequestInfo& requestInfo, bool fromCache);
-    void resourceLoadFinished(const QUrl& url, const QString& type, qint64 size, const QtResourceTimingInfo& timing, bool fromCache, bool success);
-
-public Q_SLOTS:
-    void onResourceLoadStarted(const QUrl& url, const QString& type, const QtResourceRequestInfo& requestInfo, bool fromCache);
-    void onResourceLoadFinished(const QUrl& url, const QString& type, qint64 size, const QtResourceTimingInfo& timing, bool fromCache, bool success);
+    void resourceLoadStarted(const QUrl& url, const QtResourceRequestInfo& requestInfo, bool fromCache);
+    void resourceLoadFinished(const QUrl& url, qint64 size, const QtResourceTimingInfo& timing, bool success);
 
 public:
     FrameLoaderClientQt(WebCore::FrameLoader&);
@@ -104,6 +102,8 @@ public:
     void dispatchDidFinishLoading(WebCore::DocumentLoader*, WebCore::IsMainResourceLoad, WebCore::ResourceLoaderIdentifier) override;
     void dispatchDidFailLoading(WebCore::DocumentLoader*, WebCore::IsMainResourceLoad, WebCore::ResourceLoaderIdentifier, const WebCore::ResourceError&) override;
     bool dispatchDidLoadResourceFromMemoryCache(WebCore::DocumentLoader*, const WebCore::ResourceRequest&, const WebCore::ResourceResponse&, int) override;
+    void dispatchDidStartResourceLoad(const WebCore::CachedResource&) override;
+    void dispatchDidFinishResourceLoad(const WebCore::CachedResource&) override;
 
     void dispatchDidDispatchOnloadEvents() override;
     void dispatchDidReceiveServerRedirectForProvisionalLoad() override;
@@ -253,6 +253,10 @@ private:
     // QTFIXME: consider introducing some sort of flags for storing state
     bool m_isDisplayingErrorPage;
     bool m_shouldSuppressLoadStarted;
+    
+    // Helper methods for resource tracking
+    QString resourceTypeToString(WebCore::CachedResource::Type type) const;
+    QtResourceTimingInfo extractTimingInfo(const WebCore::NetworkLoadMetrics& metrics) const;
 };
 
 }

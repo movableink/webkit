@@ -90,7 +90,6 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/qt/QStyleFacade.h
     platform/qt/QStyleHelpers.h
     platform/qt/QWebPageClient.h
-    platform/qt/ResourceLoadTrackerQt.h
     platform/qt/RenderThemeQt.h
     platform/qt/RenderThemeQStyle.h
     platform/qt/ScrollbarThemeQStyle.h
@@ -207,7 +206,6 @@ list(APPEND WebCore_SOURCES
     platform/qt/RenderThemeQStyle.cpp
     platform/qt/RenderThemeQt.cpp
     platform/qt/RenderThemeQtMobile.cpp
-    platform/qt/ResourceLoadTrackerQt.cpp
     platform/qt/ScrollViewQt.cpp
     platform/qt/ScrollbarThemeQStyle.cpp
     platform/qt/ScrollbarThemeQt.cpp
@@ -239,7 +237,6 @@ QTWEBKIT_GENERATE_MOC_FILES_H(WebCore
     platform/network/qt/QNetworkReplyHandler.h
     platform/network/qt/QtMIMETypeSniffer.h
     platform/network/qt/SharedCookieJarQt.h
-    platform/qt/ResourceLoadTrackerQt.h
 )
 
 QTWEBKIT_GENERATE_MOC_FILE_H(WebCore platform/network/qt/NetworkStateNotifierPrivate.h platform/network/qt/NetworkStateNotifierQt.cpp)

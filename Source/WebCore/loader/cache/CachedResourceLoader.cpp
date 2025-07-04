@@ -93,9 +93,6 @@
 #include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
-#if PLATFORM(QT)
-#include "ResourceLoadTrackerQt.h"
-#endif
 
 #if ENABLE(APPLICATION_MANIFEST)
 #include "CachedApplicationManifest.h"
@@ -1126,10 +1123,6 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
 
     LOG(ResourceLoading, "CachedResourceLoader::requestResource '%.255s', charset '%s', priority=%d, forPreload=%u", url.stringCenterEllipsizedToLength().latin1().data(), request.charset().latin1().data(), request.priority() ? static_cast<int>(request.priority().value()) : -1, forPreload == ForPreload::Yes);
 
-#if PLATFORM(QT)
-    ResourceLoadTrackerQt::instance().trackRequestStarted(url, type, request, frame.ptr());
-#endif
-
     request.setDestinationIfNotSet(destinationForType(type, frame));
 
     // Entry point to https://fetch.spec.whatwg.org/#main-fetch.
@@ -1350,9 +1343,6 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
                 if (auto metricsFromResource = resource->takeNetworkLoadMetrics(); metricsFromResource && documentLoader && metricsFromResource->redirectStart >= documentLoader->timing().timeOrigin())
                     metrics = WTFMove(metricsFromResource);
                 auto resourceTiming = ResourceTiming::fromMemoryCache(url, request.initiatorType(), loadTiming, resource->response(), metrics ? *metrics : NetworkLoadMetrics::emptyMetrics(), *request.protectedOrigin());
-#if PLATFORM(QT)
-                ResourceLoadTrackerQt::instance().trackMemoryCacheHit(url, resource->encodedSize(), metrics ? *metrics : NetworkLoadMetrics::emptyMetrics(), frame.ptr());
-#endif
                 if (initiatorContext == InitiatorContext::Worker)
                     downcast<CachedRawResource>(resource.get())->finishedTimingForWorkerLoad(WTFMove(resourceTiming));
                 else {
@@ -1805,10 +1795,6 @@ void CachedResourceLoader::decrementRequestCount(const CachedResource& resource)
 
     --m_requestCount;
     ASSERT(m_requestCount > -1);
-
-#if PLATFORM(QT)
-    ResourceLoadTrackerQt::instance().trackRequestFinished(resource, frame());
-#endif
 }
 
 void CachedResourceLoader::notifyFinished(const CachedResource& resource)

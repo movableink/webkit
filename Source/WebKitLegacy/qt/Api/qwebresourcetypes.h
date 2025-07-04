@@ -38,10 +38,7 @@ struct QWEBKIT_EXPORT QtResourceTimingInfo {
 
 struct QWEBKIT_EXPORT QtResourceRequestInfo {
     QString initiatorType;
-    QString cachePolicy;
-    QUrl referrer;
-    bool corsEnabled = false;
-    qint64 requestBodySize = 0;
+    QString resourceType;
 };
 
 #endif // QWEBRESOURCETYPES_H

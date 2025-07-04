@@ -67,7 +67,6 @@
 #include <WebCore/PluginData.h>
 #include <WebCore/QNetworkReplyHandler.h>
 #include <WebCore/QStyleHelpers.h>
-#include <WebCore/ResourceLoadTrackerQt.h>
 #include <WebCore/QWebPageClient.h>
 #include <WebCore/ResourceHandle.h>
 #include <WebCore/ResourceHandleInternal.h>
@@ -231,25 +230,16 @@ void FrameLoaderClientQt::setFrame(QWebFrameAdapter* webFrame, LocalFrame* frame
         return;
     }
 
-    if (frame && frame->isMainFrame()) {
-        auto& tracker = WebCore::ResourceLoadTrackerQt::instance();
-
-        connect(&tracker, SIGNAL(resourceLoadStarted(QUrl,QString,QtResourceRequestInfo,bool)), 
-                this, SLOT(onResourceLoadStarted(QUrl,QString,QtResourceRequestInfo,bool)));
-        connect(&tracker, SIGNAL(resourceLoadFinished(QUrl,QString,qint64,QtResourceTimingInfo,bool,bool)),
-                this, SLOT(onResourceLoadFinished(QUrl,QString,qint64,QtResourceTimingInfo,bool,bool)));
-    }
-
     connect(this, SIGNAL(unsupportedContent(QNetworkReply*)),
         m_webFrame->pageAdapter->handle(), SIGNAL(unsupportedContent(QNetworkReply*)));
 
     connect(this, SIGNAL(titleChanged(QString)),
         m_webFrame->handle(), SIGNAL(titleChanged(QString)));
 
-    connect(this, SIGNAL(resourceLoadStarted(QUrl,QString,QtResourceRequestInfo,bool)),
-        m_webFrame->pageAdapter->handle(), SIGNAL(resourceLoadStarted(QUrl,QString,QtResourceRequestInfo,bool)));
-    connect(this, SIGNAL(resourceLoadFinished(QUrl,QString,qint64,QtResourceTimingInfo,bool,bool)),
-        m_webFrame->pageAdapter->handle(), SIGNAL(resourceLoadFinished(QUrl,QString,qint64,QtResourceTimingInfo,bool,bool)));
+    connect(this, SIGNAL(resourceLoadStarted(const QUrl&, const QtResourceRequestInfo&, bool)),
+        m_webFrame->pageAdapter->handle(), SIGNAL(resourceLoadStarted(const QUrl&, const QtResourceRequestInfo&, bool)));
+    connect(this, SIGNAL(resourceLoadFinished(const QUrl, qint64, const QtResourceTimingInfo&, bool)),
+        m_webFrame->pageAdapter->handle(), SIGNAL(resourceLoadFinished(const QUrl&, qint64, const QtResourceTimingInfo&, bool)));
 }
 
 bool FrameLoaderClientQt::hasWebView() const
@@ -1407,14 +1397,114 @@ RefPtr<HistoryItem> FrameLoaderClientQt::createHistoryItemTree(bool clipAtTarget
     return coreMainFrame->loader().history().createItemTree(*m_frame, clipAtTarget, itemID);
 }
 
-void FrameLoaderClientQt::onResourceLoadStarted(const QUrl& url, const QString& type, const QtResourceRequestInfo& requestInfo, bool fromCache)
+
+void FrameLoaderClientQt::dispatchDidStartResourceLoad(const WebCore::CachedResource& resource)
 {
-    Q_EMIT resourceLoadStarted(url, type, requestInfo, fromCache);
+    QUrl qurl(resource.url());
+
+    bool isCoalesced = resource.numberOfClients() == 0;
+
+    QtResourceRequestInfo requestInfo;    
+    requestInfo.resourceType = resourceTypeToString(resource.type());
+    requestInfo.initiatorType = resource.initiatorType().string();
+
+    Q_EMIT resourceLoadStarted(qurl, requestInfo, isCoalesced);
 }
 
-void FrameLoaderClientQt::onResourceLoadFinished(const QUrl& url, const QString& type, qint64 size, const QtResourceTimingInfo& timing, bool fromCache, bool success)
+void FrameLoaderClientQt::dispatchDidFinishResourceLoad(const WebCore::CachedResource& resource)
 {
-    Q_EMIT resourceLoadFinished(url, type, size, timing, fromCache, success);
+    QUrl qurl(resource.url());
+    qint64 size = resource.encodedSize();
+    bool success = (resource.status() != WebCore::CachedResource::Status::LoadError && 
+                   resource.status() != WebCore::CachedResource::Status::DecodeError);
+    
+    // Create timing info from resource
+    QtResourceTimingInfo timing;
+    if (auto networkMetrics = const_cast<WebCore::CachedResource&>(resource).takeNetworkLoadMetrics()) {
+        timing = extractTimingInfo(*networkMetrics);
+    } else {
+        timing.totalMs = 0; // Fallback
+    }
+
+    Q_EMIT resourceLoadFinished(qurl, size, timing, success);
+}
+
+QString FrameLoaderClientQt::resourceTypeToString(WebCore::CachedResource::Type type) const
+{
+    switch (type) {
+    case WebCore::CachedResource::Type::MainResource:
+        return QStringLiteral("document");
+    case WebCore::CachedResource::Type::ImageResource:
+        return QStringLiteral("image");
+    case WebCore::CachedResource::Type::CSSStyleSheet:
+        return QStringLiteral("stylesheet");
+    case WebCore::CachedResource::Type::Script:
+        return QStringLiteral("script");
+    case WebCore::CachedResource::Type::FontResource:
+        return QStringLiteral("font");
+    case WebCore::CachedResource::Type::SVGFontResource:
+        return QStringLiteral("svg-font");
+    case WebCore::CachedResource::Type::MediaResource:
+        return QStringLiteral("media");
+    case WebCore::CachedResource::Type::RawResource:
+        return QStringLiteral("xhr");
+    case WebCore::CachedResource::Type::Icon:
+        return QStringLiteral("icon");
+    case WebCore::CachedResource::Type::Beacon:
+        return QStringLiteral("beacon");
+    case WebCore::CachedResource::Type::Ping:
+        return QStringLiteral("ping");
+#if ENABLE(XSLT)
+    case WebCore::CachedResource::Type::XSLStyleSheet:
+        return QStringLiteral("xsl");
+#endif
+    case WebCore::CachedResource::Type::LinkPrefetch:
+        return QStringLiteral("prefetch");
+#if ENABLE(VIDEO)
+    case WebCore::CachedResource::Type::TextTrackResource:
+        return QStringLiteral("track");
+#endif
+#if ENABLE(APPLICATION_MANIFEST)
+    case WebCore::CachedResource::Type::ApplicationManifest:
+        return QStringLiteral("manifest");
+#endif
+    case WebCore::CachedResource::Type::SVGDocumentResource:
+        return QStringLiteral("svg");
+    }
+    return QStringLiteral("unknown");
+}
+
+QtResourceTimingInfo FrameLoaderClientQt::extractTimingInfo(const WebCore::NetworkLoadMetrics& metrics) const
+{
+    QtResourceTimingInfo info;
+    
+    // Extract detailed timing breakdown from NetworkLoadMetrics (W3C Resource Timing API)
+    if (metrics.domainLookupStart.secondsSinceEpoch().value() > 0 && metrics.domainLookupEnd.secondsSinceEpoch().value() > 0) {
+        info.domainLookupMs = (metrics.domainLookupEnd - metrics.domainLookupStart).millisecondsAs<qint64>();
+    }
+    
+    if (metrics.connectStart.secondsSinceEpoch().value() > 0 && metrics.connectEnd.secondsSinceEpoch().value() > 0) {
+        info.connectMs = (metrics.connectEnd - metrics.connectStart).millisecondsAs<qint64>();
+    }
+    
+    if (metrics.secureConnectionStart.secondsSinceEpoch().value() > 0 && metrics.connectEnd.secondsSinceEpoch().value() > 0) {
+        info.sslMs = (metrics.connectEnd - metrics.secureConnectionStart).millisecondsAs<qint64>();
+    }
+    
+    if (metrics.requestStart.secondsSinceEpoch().value() > 0 && metrics.responseStart.secondsSinceEpoch().value() > 0) {
+        info.requestMs = (metrics.responseStart - metrics.requestStart).millisecondsAs<qint64>();
+    }
+    
+    if (metrics.responseStart.secondsSinceEpoch().value() > 0 && metrics.responseEnd.secondsSinceEpoch().value() > 0) {
+        info.responseMs = (metrics.responseEnd - metrics.responseStart).millisecondsAs<qint64>();
+    }
+    
+    // Calculate total timing
+    if (metrics.fetchStart.secondsSinceEpoch().value() > 0 && metrics.responseEnd.secondsSinceEpoch().value() > 0) {
+        info.totalMs = (metrics.responseEnd - metrics.fetchStart).millisecondsAs<qint64>();
+    }
+    
+    return info;
 }
 
 }
