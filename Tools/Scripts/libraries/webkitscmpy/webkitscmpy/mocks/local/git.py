@@ -25,12 +25,13 @@ import json
 import os
 import re
 import time
-
-from datetime import datetime
 from collections import OrderedDict
+from datetime import datetime, timezone
+from unittest.mock import patch
 
-from webkitcorepy import decorators, mocks, string_utils, OutputCapture, StringIO
-from webkitscmpy import local, Commit, Contributor
+from webkitcorepy import OutputCapture, StringIO, decorators, mocks, string_utils
+
+from webkitscmpy import Commit, Contributor, local
 from webkitscmpy.program.canonicalize.committer import main as committer_main
 from webkitscmpy.program.canonicalize.message import main as message_main
 
@@ -374,6 +375,15 @@ nothing to commit, working tree clean
                     ])
                 )
             ), mocks.Subprocess.Route(
+                self.executable, 'log', re.compile(r'--max-count=\d+'), '--follow', '--format=%H', '--', re.compile(r'.+'),
+                cwd=self.path,
+                generator=lambda *args, **kwargs: mocks.ProcessCompletion(
+                    returncode=0,
+                    stdout='\n'.join([
+                        commit.hash for commit in self.commits[self.branch] if commit.identifier % 2
+                    ][:int(args[2].split('=')[-1])])
+                )
+            ), mocks.Subprocess.Route(
                 self.executable, 'log', re.compile(r'.+'),
                 cwd=self.path,
                 generator=lambda *args, **kwargs: mocks.ProcessCompletion(
@@ -386,7 +396,7 @@ nothing to commit, working tree clean
                             hash=commit.hash,
                             author=commit.author.name,
                             email=commit.author.email,
-                            date=commit.timestamp if '--date=unix' in args else datetime.utcfromtimestamp(commit.timestamp + time.timezone).strftime('%a %b %d %H:%M:%S %Y +0000'),
+                            date=commit.timestamp if '--date=unix' in args else datetime.fromtimestamp(commit.timestamp + time.timezone, timezone.utc).strftime('%a %b %d %H:%M:%S %Y +0000'),
                             log='\n'.join(
                                 [
                                     ('    ' + line) if line else '' for line in commit.message.splitlines()
@@ -649,7 +659,7 @@ nothing to commit, working tree clean
                             hash=commit.hash,
                             author=commit.author.name,
                             email=commit.author.email,
-                            date=datetime.utcfromtimestamp(commit.timestamp + time.timezone).strftime('%a %b %d %H:%M:%S %Y +0000'),
+                            date=datetime.fromtimestamp(commit.timestamp + time.timezone, timezone.utc).strftime('%a %b %d %H:%M:%S %Y +0000'),
                             message=commit.message.rstrip(),
                             content='\n'.join(['+{}'.format(line) for line in commit.message.splitlines()]),
                         ) for commit in list(self.rev_list(args[2] if '..' in args[2] else '{}..HEAD'.format(args[2])))
@@ -695,7 +705,7 @@ nothing to commit, working tree clean
                             hash=self.find(args[2]).hash,
                             author=self.find(args[2]).author.name,
                             email=self.find(args[2]).author.email,
-                            date=self.find(args[2]).timestamp if '--date=unix' in args else datetime.utcfromtimestamp(self.find(args[2]).timestamp + time.timezone).strftime('%a %b %d %H:%M:%S %Y +0000'),
+                            date=self.find(args[2]).timestamp if '--date=unix' in args else datetime.fromtimestamp(self.find(args[2]).timestamp + time.timezone, timezone.utc).strftime('%a %b %d %H:%M:%S %Y +0000'),
                             log='\n'.join(
                                 [
                                     ('    ' + line) if line else '' for line in self.find(args[2]).message.splitlines()
@@ -774,11 +784,14 @@ nothing to commit, working tree clean
         )
 
     def __enter__(self):
-        from mock import patch
-        from shutil import which
-
-        self.patches.append(patch('shutil.which', lambda cmd: dict(git=self.executable).get(cmd, which(cmd))))
+        local.Git.executable.clear()  # Clear the memoized cache prior to patching
+        p = patch('shutil.which', lambda cmd: self.executable if cmd == 'git' else p.temp_original(cmd))
+        self.patches.append(p)
         return super(Git, self).__enter__()
+
+    def __exit__(self, typ, exc, tb):
+        super().__exit__(typ, exc, tb)
+        local.Git.executable.clear()  # Clear the memoized cache after patching
 
     @property
     def branch(self):

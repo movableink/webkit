@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -58,9 +58,12 @@ public:
     void enableAllDevicesQuery();
     void disableAllDevicesQuery();
 
-    void setPreferredAudioSessionDeviceUID(const String&);
-    String preferredAudioSessionDeviceUID() const { return m_preferredAudioDeviceUID; }
-    void configurePreferredAudioCaptureDevice();
+    void setPreferredMicrophoneID(const String&);
+    const String& preferredMicrophoneID() const { return m_preferredMicrophoneID; }
+    void configurePreferredMicrophone();
+
+    WEBCORE_EXPORT void setPreferredSpeakerID(const String&);
+    bool isReceiverPreferredSpeaker() const { return m_isReceiverPreferredSpeaker; }
 
 private:
     AVAudioSessionCaptureDeviceManager();
@@ -70,18 +73,20 @@ private:
     void refreshAudioCaptureDevices();
     Vector<AVAudioSessionCaptureDevice> retrieveAudioSessionCaptureDevices() const;
     void setAudioCaptureDevices(Vector<AVAudioSessionCaptureDevice>&&);
-    bool setPreferredAudioSessionDeviceUIDInternal(const String&);
+    bool setPreferredAudioSessionDeviceIDs();
     void notifyNewCurrentMicrophoneDevice(CaptureDevice&&);
 
     enum class AudioSessionState { NotNeeded, Inactive, Active };
 
-    std::optional<Vector<CaptureDevice>> m_devices;
+    std::optional<Vector<CaptureDevice>> m_captureDevices;
     Vector<CaptureDevice> m_speakerDevices;
     std::optional<Vector<AVAudioSessionCaptureDevice>> m_audioSessionCaptureDevices;
     RetainPtr<WebAVAudioSessionAvailableInputsListener> m_listener;
     RetainPtr<AVAudioSession> m_audioSession;
-    Ref<WorkQueue> m_dispatchQueue;
-    String m_preferredAudioDeviceUID;
+    const Ref<WorkQueue> m_dispatchQueue;
+    String m_preferredMicrophoneID;
+    String m_preferredSpeakerID;
+    bool m_isReceiverPreferredSpeaker { false };
     bool m_recomputeDevices { true };
     mutable RetainPtr<AVAudioSessionPortDescription> m_lastDefaultMicrophone;
 };

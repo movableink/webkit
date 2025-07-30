@@ -4,7 +4,8 @@
  *           (C) 1998 Waldo Bastian (bastian@kde.org)
  *           (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003, 2004, 2005, 2006, 2009, 2010, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.\
+ * Copyright (C) 2016 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -68,7 +69,7 @@ public:
     inline LayoutUnit borderTop() const final;
     inline LayoutUnit borderBottom() const final;
 
-    Color bgColor() const { return style().visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor); }
+    Color bgColor() const { return checkedStyle()->visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor); }
 
     LayoutUnit outerBorderBefore() const;
     LayoutUnit outerBorderAfter() const;
@@ -167,13 +168,7 @@ public:
     }
 
     bool needsSectionRecalc() const { return m_needsSectionRecalc; }
-    void setNeedsSectionRecalc()
-    {
-        if (renderTreeBeingDestroyed())
-            return;
-        m_needsSectionRecalc = true;
-        setNeedsLayout();
-    }
+    void setNeedsSectionRecalc();
 
     RenderTableSection* sectionAbove(const RenderTableSection*, SkipEmptySectionsValue = DoNotSkipEmptySections) const;
     RenderTableSection* sectionBelow(const RenderTableSection*, SkipEmptySectionsValue = DoNotSkipEmptySections) const;
@@ -186,6 +181,7 @@ public:
     typedef Vector<CollapsedBorderValue> CollapsedBorderValues;
     bool collapsedBordersAreValid() const { return m_collapsedBordersValid; }
     void invalidateCollapsedBorders(RenderTableCell* cellWithStyleChange = nullptr);
+    void invalidateCollapsedBordersAfterStyleChangeIfNeeded(const RenderStyle& oldStyle, const RenderStyle& newStyle, RenderTableCell* cellWithStyleChange = nullptr);
     void collapsedEmptyBorderIsPresent() { m_collapsedEmptyBorderIsPresent = true; }
     const CollapsedBorderValue* currentBorderValue() const { return m_currentBorder; }
     
@@ -196,9 +192,6 @@ public:
         if (m_needsSectionRecalc)
             recalcSections();
     }
-
-    static RenderPtr<RenderTable> createAnonymousWithParentRenderer(const RenderElement&);
-    RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const override;
 
     void addCaption(RenderTableCaption&);
     void removeCaption(RenderTableCaption&);
@@ -217,16 +210,15 @@ public:
 
     LayoutUnit sumCaptionsLogicalHeight() const;
 
+    // Whether a table has opaque foreground depends on many factors, e.g. border spacing, missing cells, etc.
+    // For simplicity, just conservatively assume foreground of all tables are not opaque.
+    bool foregroundIsKnownToBeOpaqueInRect(const LayoutRect&, unsigned) const override { return false; }
+
 protected:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
     void simplifiedNormalFlowLayout() final;
 
-private:
-    static RenderPtr<RenderTable> createTableWithStyle(Document&, const RenderStyle&);
-
     ASCIILiteral renderName() const override { return "RenderTable"_s; }
-
-    bool avoidsFloats() const final { return true; }
 
     void paint(PaintInfo&, const LayoutPoint&) final;
     void paintObject(PaintInfo&, const LayoutPoint&) final;
@@ -256,8 +248,8 @@ private:
     LayoutUnit convertStyleLogicalWidthToComputedWidth(const Length& styleLogicalWidth, LayoutUnit availableWidth);
     LayoutUnit convertStyleLogicalHeightToComputedHeight(const Length& styleLogicalHeight);
 
-    LayoutRect overflowClipRect(const LayoutPoint& location, RenderFragmentContainer*, OverlayScrollbarSizeRelevancy = OverlayScrollbarSizeRelevancy::IgnoreOverlayScrollbarSize, PaintPhase = PaintPhase::BlockBackground) const final;
-    LayoutRect overflowClipRectForChildLayers(const LayoutPoint& location, RenderFragmentContainer* fragment, OverlayScrollbarSizeRelevancy relevancy) const override { return RenderBox::overflowClipRect(location, fragment, relevancy); }
+    LayoutRect overflowClipRect(const LayoutPoint& location, OverlayScrollbarSizeRelevancy = OverlayScrollbarSizeRelevancy::IgnoreOverlayScrollbarSize, PaintPhase = PaintPhase::BlockBackground) const final;
+    LayoutRect overflowClipRectForChildLayers(const LayoutPoint& location, OverlayScrollbarSizeRelevancy relevancy) const override { return RenderBox::overflowClipRect(location, relevancy); }
 
     void addOverflowFromChildren() final;
 
@@ -317,11 +309,6 @@ private:
     mutable LayoutUnit m_columnOffsetHeight;
     unsigned m_recursiveSectionMovedWithPaginationLevel { 0 };
 };
-
-inline RenderPtr<RenderBox> RenderTable::createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const
-{
-    return RenderTable::createTableWithStyle(renderer.document(), renderer.style());
-}
 
 } // namespace WebCore
 

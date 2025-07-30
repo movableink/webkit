@@ -74,7 +74,7 @@ FunctionAllowlist& BBQPlan::ensureGlobalBBQAllowlist()
 
 bool BBQPlan::dumpDisassembly(CompilationContext& context, LinkBuffer& linkBuffer, FunctionCodeIndex functionIndex, const TypeDefinition& signature, FunctionSpaceIndex functionIndexSpace)
 {
-    if (UNLIKELY(shouldDumpDisassemblyFor(CompilationMode::BBQMode))) {
+    if (shouldDumpDisassemblyFor(CompilationMode::BBQMode)) [[unlikely]] {
         dataLogF("Generated BBQ code for WebAssembly BBQ function[%zu] %s name %s\n", functionIndex.rawIndex(), signature.toString().ascii().data(), makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data());
         if (context.bbqDisassembler)
             context.bbqDisassembler->dump(linkBuffer);
@@ -84,7 +84,7 @@ bool BBQPlan::dumpDisassembly(CompilationContext& context, LinkBuffer& linkBuffe
     return false;
 }
 
-void BBQPlan::work(CompilationEffort)
+void BBQPlan::work()
 {
     ASSERT(m_calleeGroup->runnable());
     CompilationContext context;
@@ -99,7 +99,7 @@ void BBQPlan::work(CompilationEffort)
     std::unique_ptr<InternalFunction> function = compileFunction(m_functionIndex, callee.get(), context, unlinkedWasmToWasmCalls);
 
     LinkBuffer linkBuffer(*context.wasmEntrypointJIT, callee.ptr(), LinkBuffer::Profile::WasmBBQ, JITCompilationCanFail);
-    if (UNLIKELY(linkBuffer.didFailToAllocate())) {
+    if (linkBuffer.didFailToAllocate()) [[unlikely]] {
         Locker locker { m_lock };
         Base::fail(makeString("Out of executable memory while tiering up function at index "_s, m_functionIndex.rawIndex()), Plan::Error::OutOfMemory);
         return;
@@ -109,7 +109,8 @@ void BBQPlan::work(CompilationEffort)
     Vector<CodeLocationLabel<WasmEntryPtrTag>> loopEntrypointLocations;
     computeExceptionHandlerAndLoopEntrypointLocations(exceptionHandlerLocations, loopEntrypointLocations, function.get(), context, linkBuffer);
 
-    computePCToCodeOriginMap(context, linkBuffer);
+    if (context.pcToCodeOriginMapBuilder)
+        context.pcToCodeOriginMap = Box<PCToCodeOriginMap>::create(WTFMove(*context.pcToCodeOriginMapBuilder), linkBuffer);
 
     bool alreadyDumped = dumpDisassembly(context, linkBuffer, m_functionIndex, signature, functionIndexSpace);
     function->entrypoint.compilation = makeUnique<Compilation>(
@@ -140,16 +141,16 @@ void BBQPlan::work(CompilationEffort)
 
         for (auto& call : callee->wasmToWasmCallsites()) {
             CodePtr<WasmEntryPtrTag> entrypoint;
-            Wasm::Callee* calleeCallee = nullptr;
+            RefPtr<Wasm::Callee> calleeCallee;
             if (call.functionIndexSpace < m_moduleInformation->importFunctionCount())
                 entrypoint = m_calleeGroup->m_wasmToWasmExitStubs[call.functionIndexSpace].code();
             else {
-                calleeCallee = &m_calleeGroup->wasmEntrypointCalleeFromFunctionIndexSpace(locker, call.functionIndexSpace);
-                entrypoint = m_calleeGroup->wasmEntrypointCalleeFromFunctionIndexSpace(locker, call.functionIndexSpace).entrypoint().retagged<WasmEntryPtrTag>();
+                calleeCallee = m_calleeGroup->wasmEntrypointCalleeFromFunctionIndexSpace(locker, call.functionIndexSpace);
+                entrypoint = calleeCallee->entrypoint().retagged<WasmEntryPtrTag>();
             }
 
             MacroAssembler::repatchNearCall(call.callLocation, CodeLocationLabel<WasmEntryPtrTag>(entrypoint));
-            MacroAssembler::repatchPointer(call.calleeLocation, CalleeBits::boxNativeCalleeIfExists(calleeCallee));
+            MacroAssembler::repatchPointer(call.calleeLocation, CalleeBits::boxNativeCalleeIfExists(calleeCallee.get()));
         }
 
         m_calleeGroup->updateCallsitesToCallUs(locker, CodeLocationLabel<WasmEntryPtrTag>(entrypoint), m_functionIndex);
@@ -184,10 +185,11 @@ std::unique_ptr<InternalFunction> BBQPlan::compileFunction(FunctionCodeIndex fun
     Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileResult;
 
     beginCompilerSignpost(callee);
+    RELEASE_ASSERT(mode() == m_calleeGroup->mode());
     parseAndCompileResult = parseAndCompileBBQ(context, callee, function, signature, unlinkedWasmToWasmCalls, m_moduleInformation.get(), m_mode, functionIndex, m_hasExceptionHandlers, UINT32_MAX);
     endCompilerSignpost(callee);
 
-    if (UNLIKELY(!parseAndCompileResult)) {
+    if (!parseAndCompileResult) [[unlikely]] {
         Locker locker { m_lock };
         if (!m_errorMessage) {
             // Multiple compiles could fail simultaneously. We arbitrarily choose the first.

@@ -45,21 +45,25 @@
 #include "compiler/translator/tree_ops/PruneNoOps.h"
 #include "compiler/translator/tree_ops/RemoveArrayLengthMethod.h"
 #include "compiler/translator/tree_ops/RemoveDynamicIndexing.h"
+#include "compiler/translator/tree_ops/RemoveInactiveInterfaceVariables.h"
 #include "compiler/translator/tree_ops/RemoveInvariantDeclaration.h"
 #include "compiler/translator/tree_ops/RemoveUnreferencedVariables.h"
+#include "compiler/translator/tree_ops/RemoveUnusedFramebufferFetch.h"
 #include "compiler/translator/tree_ops/RescopeGlobalVariables.h"
 #include "compiler/translator/tree_ops/RewritePixelLocalStorage.h"
+#include "compiler/translator/tree_ops/ScalarizeVecAndMatConstructorArgs.h"
 #include "compiler/translator/tree_ops/SeparateDeclarations.h"
 #include "compiler/translator/tree_ops/SimplifyLoopConditions.h"
 #include "compiler/translator/tree_ops/SplitSequenceOperator.h"
 #include "compiler/translator/tree_ops/glsl/RegenerateStructNames.h"
 #include "compiler/translator/tree_ops/glsl/RewriteRepeatedAssignToSwizzled.h"
-#include "compiler/translator/tree_ops/glsl/ScalarizeVecAndMatConstructorArgs.h"
 #include "compiler/translator/tree_ops/glsl/UseInterfaceBlockFields.h"
 #include "compiler/translator/tree_ops/glsl/apple/AddAndTrueToLoopCondition.h"
 #include "compiler/translator/tree_ops/glsl/apple/RewriteDoWhile.h"
 #include "compiler/translator/tree_ops/glsl/apple/UnfoldShortCircuitAST.h"
+#include "compiler/translator/tree_ops/msl/EnsureLoopForwardProgress.h"
 #include "compiler/translator/tree_util/BuiltIn.h"
+#include "compiler/translator/tree_util/FindSymbolNode.h"
 #include "compiler/translator/tree_util/IntermNodePatternMatcher.h"
 #include "compiler/translator/tree_util/ReplaceShadowingVariables.h"
 #include "compiler/translator/tree_util/ReplaceVariable.h"
@@ -112,6 +116,30 @@ bool IsTopLevelNodeUnusedFunction(const CallDAG &callDag,
 
     ASSERT(callDagIndex < metadata.size());
     return !metadata[callDagIndex].used;
+}
+
+void AddBuiltInToInitList(TSymbolTable *symbolTable,
+                          int shaderVersion,
+                          TIntermBlock *root,
+                          const char *name,
+                          InitVariableList *list)
+{
+    const TIntermSymbol *builtin = FindSymbolNode(root, ImmutableString(name));
+    const TVariable *builtinVar  = nullptr;
+    if (builtin != nullptr)
+    {
+        builtinVar = &builtin->variable();
+    }
+    else
+    {
+        builtinVar = static_cast<const TVariable *>(
+            symbolTable->findBuiltIn(ImmutableString(name), shaderVersion));
+    }
+
+    if (builtinVar != nullptr)
+    {
+        list->push_back(builtinVar);
+    }
 }
 
 #if defined(ANGLE_FUZZER_CORPUS_OUTPUT_DIR)
@@ -775,6 +803,19 @@ bool TCompiler::checkAndSimplifyAST(TIntermBlock *root,
         return false;
     }
 
+    // Turn |inout| variables that are never read from into |out| before collecting variables and
+    // before PLS uses them.
+    if (mShaderVersion >= 300 &&
+        (IsExtensionEnabled(mExtensionBehavior, TExtension::EXT_shader_framebuffer_fetch) ||
+         IsExtensionEnabled(mExtensionBehavior,
+                            TExtension::EXT_shader_framebuffer_fetch_non_coherent)))
+    {
+        if (!RemoveUnusedFramebufferFetch(this, root, &mSymbolTable))
+        {
+            return false;
+        }
+    }
+
     // For now, rewrite pixel local storage before collecting variables or any operations on images.
     //
     // TODO(anglebug.com/40096838):
@@ -1026,6 +1067,14 @@ bool TCompiler::checkAndSimplifyAST(TIntermBlock *root,
         }
     }
 
+    if (compileOptions.ensureLoopForwardProgress)
+    {
+        if (!EnsureLoopForwardProgress(this, root))
+        {
+            return false;
+        }
+    }
+
     if (compileOptions.simplifyLoopConditions)
     {
         if (!SimplifyLoopConditions(this, root, &getSymbolTable()))
@@ -1172,6 +1221,24 @@ bool TCompiler::checkAndSimplifyAST(TIntermBlock *root,
             return false;
         }
     }
+
+    // Remove declarations of inactive shader interface variables so backends don't need to account
+    // for them.  Note that currently, CollectVariables marks every field of an active uniform
+    // that's of struct type as active, i.e. no extracted sampler is inactive, so this can be done
+    // before extracting samplers from structs.
+    //
+    // For the MSL output, keep the inactive fragment outputs, but remove them otherwise.
+    if (compileOptions.removeInactiveVariables)
+    {
+        if (!RemoveInactiveInterfaceVariables(this, root, &getSymbolTable(), getAttributes(),
+                                              getInputVaryings(), getOutputVariables(),
+                                              getUniforms(), getInterfaceBlocks(),
+                                              mOutputType != SH_MSL_METAL_OUTPUT))
+        {
+            return false;
+        }
+    }
+
     bool needInitializeOutputVariables =
         compileOptions.initOutputVariables && mShaderType != GL_COMPUTE_SHADER;
     needInitializeOutputVariables |=
@@ -1767,10 +1834,16 @@ bool TCompiler::limitExpressionComplexity(TIntermBlock *root)
 
 bool TCompiler::initializeGLPosition(TIntermBlock *root)
 {
-    sh::ShaderVariable var(GL_FLOAT_VEC4);
-    var.name = "gl_Position";
-    return InitializeVariables(this, root, {var}, &mSymbolTable, mShaderVersion, mExtensionBehavior,
-                               false, false);
+    InitVariableList list;
+    AddBuiltInToInitList(&mSymbolTable, mShaderVersion, root, "gl_Position", &list);
+
+    if (!list.empty())
+    {
+        return InitializeVariables(this, root, list, &mSymbolTable, mShaderVersion,
+                                   mExtensionBehavior, false, false);
+    }
+
+    return true;
 }
 
 bool TCompiler::useAllMembersInUnusedStandardAndSharedBlocks(TIntermBlock *root)
@@ -1791,35 +1864,79 @@ bool TCompiler::useAllMembersInUnusedStandardAndSharedBlocks(TIntermBlock *root)
 
 bool TCompiler::initializeOutputVariables(TIntermBlock *root)
 {
+    // Place `main` at the end of the shader if not already.  If a variable is declared after main,
+    // main cannot reference it.
+    {
+        const TIntermSequence *original = root->getSequence();
+        TIntermSequence reordered;
+        TIntermNode *main = nullptr;
+
+        for (TIntermNode *node : *original)
+        {
+            TIntermFunctionDefinition *function = node->getAsFunctionDefinition();
+            if (function != nullptr && function->getFunction()->isMain())
+            {
+                ASSERT(main == nullptr);
+                main = node;
+            }
+            else
+            {
+                reordered.push_back(node);
+            }
+        }
+        ASSERT(main != nullptr);
+        reordered.push_back(main);
+
+        root->replaceAllChildren(std::move(reordered));
+    }
+
     InitVariableList list;
-    list.reserve(mOutputVaryings.size());
-    if (mShaderType == GL_VERTEX_SHADER || mShaderType == GL_GEOMETRY_SHADER_EXT ||
-        mShaderType == GL_TESS_CONTROL_SHADER_EXT || mShaderType == GL_TESS_EVALUATION_SHADER_EXT)
+
+    for (TIntermNode *node : *root->getSequence())
     {
-        for (const sh::ShaderVariable &var : mOutputVaryings)
+        TIntermDeclaration *asDecl = node->getAsDeclarationNode();
+        if (asDecl == nullptr)
         {
-            list.push_back(var);
-            if (var.name == "gl_Position")
-            {
-                ASSERT(!mGLPositionInitialized);
-                mGLPositionInitialized = true;
-            }
+            continue;
+        }
+
+        TIntermSymbol *symbol = asDecl->getSequence()->front()->getAsSymbolNode();
+        if (symbol == nullptr)
+        {
+            TIntermBinary *initNode = asDecl->getSequence()->front()->getAsBinaryNode();
+            ASSERT(initNode->getOp() == EOpInitialize);
+            symbol = initNode->getLeft()->getAsSymbolNode();
+        }
+        ASSERT(symbol);
+
+        // inout variables represent the context of the framebuffer when the draw call starts, so
+        // they have to be considered as already initialized.
+        const TQualifier qualifier = symbol->getType().getQualifier();
+        if (qualifier != EvqFragmentInOut && IsShaderOut(symbol->getType().getQualifier()))
+        {
+            list.push_back(&symbol->variable());
         }
     }
-    else
+
+    // Initialize built-in outputs as well.
+    const std::vector<ShaderVariable> &outputVariables =
+        mShaderType == GL_FRAGMENT_SHADER ? mOutputVariables : mOutputVaryings;
+
+    for (const ShaderVariable &var : outputVariables)
     {
-        ASSERT(mShaderType == GL_FRAGMENT_SHADER);
-        for (const sh::ShaderVariable &var : mOutputVariables)
+        if (var.isFragmentInOut || !var.isBuiltIn())
         {
-            // in-out variables represent the context of the framebuffer
-            // when the draw call starts, so they have to be considered
-            // as already initialized.
-            if (!var.isFragmentInOut)
-            {
-                list.push_back(var);
-            }
+            continue;
+        }
+
+        AddBuiltInToInitList(&mSymbolTable, mShaderVersion, root, var.name.c_str(), &list);
+        if (var.name == "gl_Position")
+        {
+            ASSERT(!mGLPositionInitialized);
+            mGLPositionInitialized = true;
         }
     }
+
     return InitializeVariables(this, root, list, &mSymbolTable, mShaderVersion, mExtensionBehavior,
                                false, false);
 }

@@ -5,7 +5,7 @@ import re
 import sys
 import tempfile
 from base64 import b64encode
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode, parse_qs
 
 file = __file__.split(':/cygwin')[-1]
@@ -72,7 +72,7 @@ beacon_file.close()
 os.rename(beacon_filename + '.tmp', beacon_filename)
 
 if 'dontclearcookies' not in query.keys():
-    expires = datetime.utcnow() - timedelta(seconds=60)
+    expires = datetime.now(timezone.utc) - timedelta(seconds=60)
     for name in get_cookies().keys():
         sys.stdout.write('Set-Cookie: {}=deleted; expires={} GMT; Max-Age=0; path=/\r\n'.format(name, expires.strftime('%a, %d-%b-%Y %H:%M:%S')))
 

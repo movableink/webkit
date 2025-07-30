@@ -285,8 +285,27 @@ shouldBe(`${Temporal.Instant.from('1976-11-18T15:23:30+00')}`, '1976-11-18T15:23
 shouldBe(`${Temporal.Instant.from('1976-11-18T15Z')}`, '1976-11-18T15:00:00Z');
 // ignores any specified calendar
 shouldBe(`${Temporal.Instant.from('1976-11-18T15:23:30.123456789Z[u-ca=discord]')}`, '1976-11-18T15:23:30.123456789Z');
+// unknown annotations are ignored
+shouldBe(`${Temporal.Instant.from('1976-11-18T15:23:30.123456789Z[foo=bar]')}`, '1976-11-18T15:23:30.123456789Z');
+shouldBe(`${Temporal.Instant.from('1976-11-18T15:23:30.123456789Z[_foo=bar]')}`, '1976-11-18T15:23:30.123456789Z');
+shouldBe(`${Temporal.Instant.from('1976-11-18T15:23:30.123456789Z[foo-0_5=bar]')}`, '1976-11-18T15:23:30.123456789Z');
+// critical annotations work
+shouldBe(`${Temporal.Instant.from('1976-11-18T15:23:30.123456789Z[!u-ca=hebrew]')}`, '1976-11-18T15:23:30.123456789Z');
+// multiple annotations work
+shouldBe(`${Temporal.Instant.from('1976-11-18T15:23:30.123456789Z[u-ca=hebrew][u-ca=discord]')}`, '1976-11-18T15:23:30.123456789Z');
+// can't have multiple annotations if one is critical
+shouldThrow(() => Temporal.Instant.from('1976-11-18T15:23:30.123456789Z[!u-ca=hebrew][u-ca=discord]'), RangeError);
+// can't have an unknown critical annotation
+shouldThrow(() => Temporal.Instant.from('1976-11-18T15:23:30.123456789Z[!foo=bar]'), RangeError);
 // no junk at end of string
 shouldThrow(() => Temporal.Instant.from('1976-11-18T15:23:30.123456789Zjunk'), RangeError);
+// annotation starts with invalid leading char
+shouldThrow(() => Temporal.Instant.from('1976-11-18T15:23:30.1234Z[-foo=bar]'), RangeError);
+shouldThrow(() => Temporal.Instant.from('1976-11-18T15:23:30Z[1foo=bar]'), RangeError);
+// no zero-length annotation key
+shouldThrow(() => Temporal.Instant.from('1976-11-18T15:23:30.123456789Z[======]'), RangeError);
+// no zero-length annotation value
+shouldThrow(() => Temporal.Instant.from('1976-11-18T15:23:30.123456789Z[!x-ff=]'), RangeError);
 // non-ASCII minusSign is invalid
 shouldThrow(() => Temporal.Instant.from('1976-11-18T15:23:30.12\u221202:00'), RangeError);
 shouldThrow(() => Temporal.Instant.from('\u2212009999-11-18T15:23:30.12Z'), RangeError);

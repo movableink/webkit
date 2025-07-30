@@ -31,6 +31,7 @@
 #include "Encoder.h"
 #include "StreamConnectionEncoder.h"
 #include "Test.h"
+#include <wtf/StdLibExtras.h>
 
 namespace TestWebKitAPI {
 
@@ -96,7 +97,7 @@ public:
 
     std::unique_ptr<IPC::Decoder> createDecoder() const
     {
-        auto decoder = makeUnique<IPC::Decoder>(std::span { m_impl->buffer.data(), m_impl->buffer.size() }, 0);
+        auto decoder = makeUnique<IPC::Decoder>(m_impl->buffer.span(), 0);
         return decoder;
     }
 
@@ -307,7 +308,7 @@ TEST_P(ArgumentCoderEncodingCounterTest, EncodeVariant)
     testEncoding(1,
         [](auto& counterValues)
         {
-            return std::variant<EncodingCounter, unsigned> { EncodingCounter { counterValues } };
+            return Variant<EncodingCounter, unsigned> { EncodingCounter { counterValues } };
         });
 }
 
@@ -529,7 +530,7 @@ TYPED_TEST_P(ArgumentCoderDecodingMoveCounterTest, DecodeVector)
 
 TYPED_TEST_P(ArgumentCoderDecodingMoveCounterTest, DecodeVariant)
 {
-    using VariantType = std::variant<DecodingMoveCounter, uint64_t>;
+    using VariantType = Variant<DecodingMoveCounter, uint64_t>;
     TestFixture::encoder() << VariantType { DecodingMoveCounter { } };
     TestFixture::encoder() << VariantType { DecodingMoveCounter { } };
 
@@ -594,14 +595,14 @@ TYPED_TEST_P(ArgumentCoderSpanTest, SimpleSpan)
         ASSERT_TRUE(!!span);
         ASSERT_EQ(data8.size(), span->size());
         ASSERT_EQ(data8.size() * sizeof(uint8_t), span->size_bytes());
-        ASSERT_EQ(memcmp(data8.data(), span->data(), span->size_bytes()), 0);
+        ASSERT_TRUE(equalSpans(std::span { data8 }, *span));
     }
     {
         auto span = decoder->template decode<std::span<const uint32_t>>();
         ASSERT_TRUE(!!span);
         ASSERT_EQ(data32.size(), span->size());
         ASSERT_EQ(data32.size() * sizeof(uint32_t), span->size_bytes());
-        ASSERT_EQ(memcmp(data32.data(), span->data(), span->size_bytes()), 0);
+        ASSERT_TRUE(equalSpans(std::span { data32 }, *span));
     }
     {
         auto span = decoder->template decode<std::span<const uint64_t>>();

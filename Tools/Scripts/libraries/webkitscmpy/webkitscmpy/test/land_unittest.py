@@ -23,12 +23,16 @@
 import logging
 import os
 import time
+from unittest.mock import patch
 
-from mock import patch
-from webkitbugspy import Tracker, User, bugzilla, radar, mocks as bmocks
+from webkitbugspy import Tracker, User, bugzilla, radar
+from webkitbugspy import mocks as bmocks
 from webkitcorepy import OutputCapture, testing
-from webkitcorepy.mocks import Terminal as MockTerminal, Time as MockTime, Environment
-from webkitscmpy import Contributor, Commit, local, program, mocks
+from webkitcorepy.mocks import Environment
+from webkitcorepy.mocks import Terminal as MockTerminal
+from webkitcorepy.mocks import Time as MockTime
+
+from webkitscmpy import Commit, Contributor, local, mocks, program
 
 
 def repository(path, has_oops=True, remote=None, remotes=None, git_svn=False, issue_url=None):

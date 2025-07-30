@@ -85,7 +85,7 @@ CoreIPCNSURLCredential::CoreIPCNSURLCredential(NSURLCredential *credential)
                 ASSERT_NOT_REACHED();
                 break;
             }
-            std::optional<std::variant<CoreIPCNumber, CoreIPCString, CoreIPCDate>> option;
+            std::optional<Variant<CoreIPCNumber, CoreIPCString, CoreIPCDate>> option;
             if ([value isKindOfClass:NSString.class])
                 option = CoreIPCString(value);
             if ([value isKindOfClass:NSNumber.class])
@@ -155,6 +155,9 @@ CoreIPCNSURLCredential::CoreIPCNSURLCredential(NSURLCredential *credential)
             break;
         case kURLCredentialOAuth2:
             m_data.type = CoreIPCNSURLCredentialType::OAuth2;
+            break;
+        case kURLCredentialClientCertificate:
+            m_data.type = CoreIPCNSURLCredentialType::ClientCertificate;
             break;
         default:
             ASSERT_NOT_REACHED();
@@ -245,6 +248,9 @@ RetainPtr<id> CoreIPCNSURLCredential::toID() const
                 [flags setObject: flagPair.second.toID().get() forKey:flagPair.first.toID().get()];
             [dict setObject:flags.get() forKey:@"flags"];
         }
+        break;
+    case CoreIPCNSURLCredentialType::ClientCertificate:
+        [dict setObject:@(kURLCredentialClientCertificate) forKey:@"type"];
         break;
     case CoreIPCNSURLCredentialType::XMobileMeAuthToken:
         [dict setObject:@(kURLCredentialXMobileMeAuthToken) forKey:@"type"];

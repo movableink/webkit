@@ -40,6 +40,7 @@
 #include "UserAgentParts.h"
 #include "UserStyleSheetTypes.h"
 #include <algorithm>
+#include <ranges>
 #include <wtf/Language.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RetainPtr.h>
@@ -336,18 +337,12 @@ String CaptionUserPreferencesMediaAF::captionsWindowCSS() const
     CGFloat opacity = MACaptionAppearanceGetWindowOpacity(kMACaptionAppearanceDomainUser, &behavior);
     if (!important)
         important = behaviorShouldNotBeOverriden(behavior);
-    String windowStyle = colorPropertyCSS(CSSPropertyBackgroundColor, windowColor.colorWithAlpha(opacity), important);
-
-    if (!opacity)
-        return windowStyle;
-
-    return makeString(windowStyle, nameLiteral(CSSPropertyPadding), ": .4em !important;"_s);
+    return colorPropertyCSS(CSSPropertyBackgroundColor, windowColor.colorWithAlpha(opacity), important);
 }
 
 String CaptionUserPreferencesMediaAF::captionsBackgroundCSS() const
 {
-    // This default value must be the same as the one specified in mediaControls.css for -webkit-media-text-track-past-nodes
-    // and webkit-media-text-track-future-nodes.
+    // This must match the ::cue background color of WebCore/Modules/modern-media-controls/controls/text-tracks.css
     constexpr auto defaultBackgroundColor = Color::black.colorWithAlphaByte(204);
 
     MACaptionAppearanceBehavior behavior;
@@ -370,7 +365,7 @@ Color CaptionUserPreferencesMediaAF::captionsTextColor(bool& important) const
     RetainPtr color = adoptCF(MACaptionAppearanceCopyForegroundColor(kMACaptionAppearanceDomainUser, &behavior)).get();
     Color textColor(roundAndClampToSRGBALossy(color.get()));
     if (!textColor.isValid()) {
-        // This default value must be the same as the one specified in mediaControls.css for -webkit-media-text-track-container.
+        // This must match the ::cue text color of WebCore/Modules/modern-media-controls/controls/text-tracks.css
         textColor = Color::white;
     }
     important = behaviorShouldNotBeOverriden(behavior);
@@ -403,6 +398,7 @@ String CaptionUserPreferencesMediaAF::windowRoundedCornerRadiusCSS() const
 
     StringBuilder builder;
     appendCSS(builder, CSSPropertyBorderRadius, behaviorShouldNotBeOverriden(behavior), radius, "px"_s);
+    appendCSS(builder, CSSPropertyPadding, behaviorShouldNotBeOverriden(behavior), radius / 4, "px"_s);
     return builder.toString();
 }
 
@@ -740,7 +736,7 @@ static String trackDisplayName(const TrackBase& track)
 
     String result;
 
-    String label = track.label();
+    String label = track.label().string().trim(isASCIIWhitespace);
     String trackLanguageIdentifier = track.validBCP47Language();
 
     auto preferredLanguages = userPreferredLanguages(ShouldMinimizeLanguages::No);
@@ -766,8 +762,12 @@ static String trackDisplayName(const TrackBase& track)
 
         result = addTrackKindDisplayNameIfNeeded(track, result);
 
-        if (!label.isEmpty() && !result.contains(label))
-            result = addTrackLabelAsSuffix(result, label);
+        if (!label.isEmpty()) {
+            if (result.isEmpty())
+                result = label;
+            else if (!result.contains(label))
+                result = addTrackLabelAsSuffix(result, label);
+        }
     }
 
     if (result.isEmpty())
@@ -844,7 +844,7 @@ Vector<RefPtr<AudioTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu
 
     Collator collator;
 
-    std::sort(tracksForMenu.begin(), tracksForMenu.end(), [&] (auto& a, auto& b) {
+    std::ranges::sort(tracksForMenu, [&] (auto& a, auto& b) {
         if (auto trackDisplayComparison = collator.collate(trackDisplayName(*a), trackDisplayName(*b)))
             return trackDisplayComparison < 0;
 
@@ -854,12 +854,12 @@ Vector<RefPtr<AudioTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu
     return tracksForMenu;
 }
 
-Vector<RefPtr<TextTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(TextTrackList* trackList, HashSet<TextTrack::Kind> kinds)
+Vector<RefPtr<TextTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(TextTrackList* trackList, UncheckedKeyHashSet<TextTrack::Kind> kinds)
 {
     ASSERT(trackList);
 
     Vector<RefPtr<TextTrack>> tracksForMenu;
-    HashSet<String> languagesIncluded;
+    UncheckedKeyHashSet<String> languagesIncluded;
     CaptionDisplayMode displayMode = captionDisplayMode();
     bool prefersAccessibilityTracks = userPrefersCaptions();
     bool filterTrackList = shouldFilterTrackMenu();
@@ -960,7 +960,7 @@ Vector<RefPtr<TextTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(
     if (tracksForMenu.isEmpty())
         return tracksForMenu;
 
-    std::sort(tracksForMenu.begin(), tracksForMenu.end(), textTrackCompare);
+    std::ranges::sort(tracksForMenu, textTrackCompare);
 
     if (requestingCaptionsOrDescriptionsOrSubtitles) {
         tracksForMenu.insert(0, &TextTrack::captionMenuOffItem());

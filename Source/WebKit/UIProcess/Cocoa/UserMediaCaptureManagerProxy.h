@@ -66,7 +66,7 @@ public:
         virtual void removeMessageReceiver(IPC::ReceiverName) = 0;
         virtual IPC::Connection& connection() = 0;
         Ref<IPC::Connection> protectedConnection() { return connection(); }
-        virtual bool willStartCapture(WebCore::CaptureDevice::DeviceType) const = 0;
+        virtual bool willStartCapture(WebCore::CaptureDevice::DeviceType, WebCore::PageIdentifier) const = 0;
         virtual Logger& logger() = 0;
         Ref<Logger> protectedLogger() { return logger(); };
         virtual bool setCaptureAttributionString() { return true; }
@@ -82,6 +82,7 @@ public:
 
         virtual void startMonitoringCaptureDeviceRotation(WebCore::PageIdentifier, const String&) { }
         virtual void stopMonitoringCaptureDeviceRotation(WebCore::PageIdentifier, const String&) { }
+        virtual std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess() const = 0;
     };
     static Ref<UserMediaCaptureManagerProxy> create(UniqueRef<ConnectionProxy>&&);
     ~UserMediaCaptureManagerProxy();
@@ -100,6 +101,8 @@ public:
 
     bool hasSourceProxies() const;
 
+    std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess() const;
+
 private:
     explicit UserMediaCaptureManagerProxy(UniqueRef<ConnectionProxy>&&);
 
@@ -115,7 +118,7 @@ private:
     void applyConstraints(WebCore::RealtimeMediaSourceIdentifier, WebCore::MediaConstraints&&);
     void clone(WebCore::RealtimeMediaSourceIdentifier clonedID, WebCore::RealtimeMediaSourceIdentifier cloneID, WebCore::PageIdentifier);
     void endProducingData(WebCore::RealtimeMediaSourceIdentifier);
-    void setShouldApplyRotation(WebCore::RealtimeMediaSourceIdentifier, bool shouldApplyRotation);
+    void setShouldApplyRotation(WebCore::RealtimeMediaSourceIdentifier);
     void setIsInBackground(WebCore::RealtimeMediaSourceIdentifier, bool);
     void isPowerEfficient(WebCore::RealtimeMediaSourceIdentifier, CompletionHandler<void(bool)>&&);
 

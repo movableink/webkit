@@ -205,6 +205,8 @@ protected:
     SkArenaAlloc* const fAlloc;
     int fNumMonotonePolys = 0;
     int fNumEdges = 0;
+    // Track how deep of a stack we get from mergeCollinearEdges()
+    mutable int fMergeCollinearStackCount = 0;
 
     // Internal control knobs.
     bool fRoundVerticesToQuarterPixel = false;
@@ -458,6 +460,7 @@ struct GrTriangulator::Edge {
     void insertBelow(Vertex*, const Comparator&);
     void disconnect();
     bool intersect(const Edge& other, SkPoint* p, uint8_t* alpha = nullptr) const;
+    bool hasTopAndBottom() const { return fTop != nullptr && fBottom != nullptr; }
 };
 
 struct GrTriangulator::EdgeList {

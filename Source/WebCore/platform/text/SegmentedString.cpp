@@ -20,6 +20,7 @@
 #include "config.h"
 #include "SegmentedString.h"
 
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextPosition.h>
 
@@ -167,7 +168,7 @@ String SegmentedString::toString() const
 
 void SegmentedString::advanceWithoutUpdatingLineNumber16()
 {
-    m_currentSubstring.s.currentCharacter16 = m_currentSubstring.s.currentCharacter16.subspan(1);
+    skip(m_currentSubstring.s.currentCharacter16, 1);
     m_currentCharacter = m_currentSubstring.s.currentCharacter16.front();
     updateAdvanceFunctionPointersIfNecessary();
 }
@@ -176,7 +177,7 @@ void SegmentedString::advanceAndUpdateLineNumber16()
 {
     ASSERT(m_currentSubstring.doNotExcludeLineNumbers);
     processPossibleNewline();
-    m_currentSubstring.s.currentCharacter16 = m_currentSubstring.s.currentCharacter16.subspan(1);
+    skip(m_currentSubstring.s.currentCharacter16, 1);
     m_currentCharacter = m_currentSubstring.s.currentCharacter16.front();
     updateAdvanceFunctionPointersIfNecessary();
 }
@@ -245,7 +246,7 @@ void SegmentedString::setCurrentPosition(OrdinalNumber line, OrdinalNumber colum
 SegmentedString::AdvancePastResult SegmentedString::advancePastSlowCase(ASCIILiteral literal, bool lettersIgnoringASCIICase)
 {
     constexpr unsigned maxLength = 10;
-    ASSERT(!strchr(literal.characters(), '\n'));
+    ASSERT(!WTF::contains(literal.span(), '\n'));
     auto length = literal.length();
     ASSERT(length <= maxLength);
     if (length > this->length())

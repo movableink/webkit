@@ -29,7 +29,6 @@
 #if PLATFORM(IOS_FAMILY)
 
 #import "APIPageConfiguration.h"
-#import "AccessibilityIOS.h"
 #import "Connection.h"
 #import "FrameProcess.h"
 #import "FullscreenClient.h"
@@ -43,11 +42,9 @@
 #import "SmartMagnificationController.h"
 #import "UIKitSPI.h"
 #import "VisibleContentRectUpdateInfo.h"
-#import "WKBrowsingContextControllerInternal.h"
 #import "WKBrowsingContextGroupPrivate.h"
 #import "WKInspectorHighlightView.h"
 #import "WKPreferencesInternal.h"
-#import "WKProcessGroupPrivate.h"
 #import "WKUIDelegatePrivate.h"
 #import "WKVisibilityPropagationView.h"
 #import "WKWebViewConfiguration.h"
@@ -56,11 +53,14 @@
 #import "WebKit2Initialize.h"
 #import "WebPageGroup.h"
 #import "WebPageMessages.h"
+#import "WebPageProxy.h"
 #import "WebPageProxyMessages.h"
 #import "WebProcessPool.h"
 #import "_WKFrameHandleInternal.h"
 #import "_WKWebViewPrintFormatterInternal.h"
 #import <CoreGraphics/CoreGraphics.h>
+#import <WebCore/AccessibilityObject.h>
+#import <WebCore/FloatConversion.h>
 #import <WebCore/FloatQuad.h>
 #import <WebCore/InspectorOverlay.h>
 #import <WebCore/LocalFrameView.h>
@@ -69,15 +69,14 @@
 #import <WebCore/Quirks.h>
 #import <WebCore/Site.h>
 #import <WebCore/VelocityData.h>
-#import <objc/message.h>
 #import <pal/spi/cocoa/NSAccessibilitySPI.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <wtf/Condition.h>
 #import <wtf/RetainPtr.h>
-#import <wtf/RuntimeApplicationChecks.h>
 #import <wtf/UUID.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #import <wtf/cocoa/SpanCocoa.h>
+#import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/MakeString.h>
 #import <wtf/text/TextStream.h>
 #import <wtf/threads/BinarySemaphore.h>
@@ -202,10 +201,7 @@ typedef NS_ENUM(NSInteger, _WKPrintRenderingCallbackType) {
 @end
 
 @implementation WKContentView {
-    std::unique_ptr<WebKit::PageClientImpl> _pageClient;
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    RetainPtr<WKBrowsingContextController> _browsingContextController;
-ALLOW_DEPRECATED_DECLARATIONS_END
+    const std::unique_ptr<WebKit::PageClientImpl> _pageClient;
 
     RetainPtr<UIView> _rootContentView;
     RetainPtr<UIView> _fixedClippingView;
@@ -248,15 +244,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     _WKPrintRenderingCallbackType _printRenderingCallbackType;
 
     Vector<RetainPtr<NSURL>> _temporaryURLsToDeleteWhenDeallocated;
-}
-
-// Evernote expects to swizzle -keyCommands on WKContentView or they crash. Remove this hack
-// as soon as reasonably possible. See <rdar://problem/51759247>.
-static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
-{
-    struct objc_super super = { self, class_getSuperclass(object_getClass(self)) };
-    using SuperKeyCommandsFunction = NSArray *(*)(struct objc_super*, SEL);
-    return reinterpret_cast<SuperKeyCommandsFunction>(&objc_msgSendSuper)(&super, @selector(keyCommands));
 }
 
 - (instancetype)_commonInitializationWithProcessPool:(WebKit::WebProcessPool&)processPool configuration:(Ref<API::PageConfiguration>&&)configuration
@@ -313,14 +300,20 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #endif
 
 #if HAVE(SPATIAL_TRACKING_LABEL)
-    _spatialTrackingView = adoptNS([[UIView alloc] init]);
-    [_spatialTrackingView layer].separatedState = kCALayerSeparatedStateTracked;
-    _spatialTrackingLabel = makeString("WKContentView Label: "_s, createVersion4UUIDString());
-    [[_spatialTrackingView layer] setValue:(NSString *)_spatialTrackingLabel forKeyPath:@"separatedOptions.STSLabel"];
-    [_spatialTrackingView setAutoresizingMask:UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin];
-    [_spatialTrackingView setFrame:CGRectMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds), 0, 0)];
-    [_spatialTrackingView setUserInteractionEnabled:NO];
-    [self addSubview:_spatialTrackingView.get()];
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    if (!_page->preferences().preferSpatialAudioExperience()) {
+#endif
+        _spatialTrackingView = adoptNS([[UIView alloc] init]);
+        [_spatialTrackingView layer].separatedState = kCALayerSeparatedStateTracked;
+        _spatialTrackingLabel = makeString("WKContentView Label: "_s, createVersion4UUIDString());
+        [[_spatialTrackingView layer] setValue:_spatialTrackingLabel.createNSString().get() forKeyPath:@"separatedOptions.STSLabel"];
+        [_spatialTrackingView setAutoresizingMask:UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin];
+        [_spatialTrackingView setFrame:CGRectMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds), 0, 0)];
+        [_spatialTrackingView setUserInteractionEnabled:NO];
+        [self addSubview:_spatialTrackingView.get()];
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    }
+#endif
 #endif
 
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_applicationWillResignActive:) name:UIApplicationWillResignActiveNotification object:[UIApplication sharedApplication]];
@@ -331,9 +324,6 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     // FIXME: <rdar://131638772> UIScreen.mainScreen is deprecated.
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_screenCapturedDidChange:) name:UIScreenCapturedDidChangeNotification object:[UIScreen mainScreen]];
 ALLOW_DEPRECATED_DECLARATIONS_END
-
-    if (WTF::IOSApplication::isEvernote() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::WKContentViewDoesNotOverrideKeyCommands))
-        class_addMethod(self.class, @selector(keyCommands), reinterpret_cast<IMP>(&keyCommandsPlaceholderHackForEvernote), method_getTypeEncoding(class_getInstanceMethod(self.class, @selector(keyCommands))));
 
     return self;
 }
@@ -377,7 +367,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     // Propagate the view's visibility state to the WebContent process so that it is marked as "Foreground Running" when necessary.
 #if HAVE(NON_HOSTING_VISIBILITY_PROPAGATION_VIEW)
     auto environmentIdentifier = _page->legacyMainFrameProcess().environmentIdentifier();
-    _visibilityPropagationViewForWebProcess = adoptNS([[_UINonHostingVisibilityPropagationView alloc] initWithFrame:CGRectZero pid:processID environmentIdentifier:environmentIdentifier]);
+    _visibilityPropagationViewForWebProcess = adoptNS([[_UINonHostingVisibilityPropagationView alloc] initWithFrame:CGRectZero pid:processID environmentIdentifier:environmentIdentifier.createNSString().get()]);
 #else
     _visibilityPropagationViewForWebProcess = adoptNS([[_UILayerHostView alloc] initWithFrame:CGRectZero pid:processID contextID:contextID]);
 #endif
@@ -482,14 +472,14 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #endif // ENABLE(MODEL_PROCESS)
 #endif // HAVE(VISIBILITY_PROPAGATION_VIEW)
 
-- (instancetype)initWithFrame:(CGRect)frame processPool:(NakedRef<WebKit::WebProcessPool>)processPool configuration:(Ref<API::PageConfiguration>&&)configuration webView:(WKWebView *)webView
+- (instancetype)initWithFrame:(CGRect)frame processPool:(std::reference_wrapper<WebKit::WebProcessPool>)processPool configuration:(Ref<API::PageConfiguration>&&)configuration webView:(WKWebView *)webView
 {
     if (!(self = [super initWithFrame:frame webView:webView]))
         return nil;
 
     WebKit::InitializeWebKit2();
 
-    _pageClient = makeUniqueWithoutRefCountedCheck<WebKit::PageClientImpl>(self, webView);
+    lazyInitialize(_pageClient, makeUniqueWithoutRefCountedCheck<WebKit::PageClientImpl>(self, webView));
     _webView = webView;
 
     return [self _commonInitializationWithProcessPool:processPool configuration:WTFMove(configuration)];
@@ -590,16 +580,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         [self cleanUpInteractionPreviewContainers];
 }
 
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-- (WKBrowsingContextController *)browsingContextController
-{
-    if (!_browsingContextController)
-        _browsingContextController = adoptNS([[WKBrowsingContextController alloc] _initWithPageRef:toAPI(_page.get())]);
-
-    return _browsingContextController.get();
-}
-ALLOW_DEPRECATED_DECLARATIONS_END
-
 - (WKPageRef)_pageRef
 {
     return toAPI(_page.get());
@@ -668,7 +648,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 static WebCore::FloatBoxExtent floatBoxExtent(UIEdgeInsets insets)
 {
-    return WebCore::FloatBoxExtent(insets.top, insets.right, insets.bottom, insets.left);
+    return { WebCore::narrowPrecisionToFloatFromCGFloat(insets.top), WebCore::narrowPrecisionToFloatFromCGFloat(insets.right), WebCore::narrowPrecisionToFloatFromCGFloat(insets.bottom), WebCore::narrowPrecisionToFloatFromCGFloat(insets.left) };
 }
 
 - (CGRect)_computeUnobscuredContentRectRespectingInputViewBounds:(CGRect)unobscuredContentRect inputViewBounds:(CGRect)inputViewBounds
@@ -787,7 +767,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (UIInterfaceOrientation)interfaceOrientation
 {
-    return self.window.windowScene.interfaceOrientation;
+    return self.window.windowScene.effectiveGeometry.interfaceOrientation;
 }
 
 #if HAVE(SPATIAL_TRACKING_LABEL)
@@ -868,15 +848,16 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
 - (void)_accessibilityRegisterUIProcessTokens
 {
     auto uuid = [NSUUID UUID];
-    NSData *remoteElementToken = WebKit::newAccessibilityRemoteToken(uuid);
+    if (RetainPtr remoteElementToken = WebCore::Accessibility::newAccessibilityRemoteToken(uuid.UUIDString)) {
+        // Store information about the WebProcess that can later be retrieved by the iOS Accessibility runtime.
+        if (_page->legacyMainFrameProcess().state() == WebKit::WebProcessProxy::State::Running) {
+            [self _updateRemoteAccessibilityRegistration:YES];
+            storeAccessibilityRemoteConnectionInformation(self, _page->legacyMainFrameProcess().processID(), uuid);
 
-    // Store information about the WebProcess that can later be retrieved by the iOS Accessibility runtime.
-    if (_page->legacyMainFrameProcess().state() == WebKit::WebProcessProxy::State::Running) {
-        [self _updateRemoteAccessibilityRegistration:YES];
-        storeAccessibilityRemoteConnectionInformation(self, _page->legacyMainFrameProcess().processID(), uuid);
+            auto elementToken = makeVector(remoteElementToken.get());
+            _page->registerUIProcessAccessibilityTokens(elementToken, elementToken);
+        }
 
-        auto elementToken = span(remoteElementToken);
-        _page->registerUIProcessAccessibilityTokens(elementToken, elementToken);
     }
 }
 

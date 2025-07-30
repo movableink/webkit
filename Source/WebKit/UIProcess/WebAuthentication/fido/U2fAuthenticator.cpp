@@ -132,7 +132,7 @@ void U2fAuthenticator::issueNewCommand(Vector<uint8_t>&& command, CommandType ty
 void U2fAuthenticator::issueCommand(const Vector<uint8_t>& command, CommandType type)
 {
     U2F_RELEASE_LOG("issueCommand: Sending %s", base64EncodeToString(command).utf8().data());
-    driver().transact(Vector<uint8_t>(command), [weakThis = WeakPtr { *this }, type](Vector<uint8_t>&& data) {
+    protectedDriver()->transact(Vector<uint8_t>(command), [weakThis = WeakPtr { *this }, type](Vector<uint8_t>&& data) {
         ASSERT(RunLoop::isMain());
         if (!weakThis)
             return;
@@ -142,9 +142,9 @@ void U2fAuthenticator::issueCommand(const Vector<uint8_t>& command, CommandType 
 
 void U2fAuthenticator::responseReceived(Vector<uint8_t>&& response, CommandType type)
 {
-    auto apduResponse = ApduResponse::createFromMessage(response);
+    auto apduResponse = ApduResponse::createFromMessage(WTFMove(response));
     if (!apduResponse) {
-        U2F_RELEASE_LOG("responseReceived: Failed to parse response: %s", base64EncodeToString(response).utf8().data());
+        U2F_RELEASE_LOG("responseReceived: Failed to parse response.");
         receiveRespond(ExceptionData { ExceptionCode::UnknownError, "Couldn't parse the APDU response."_s });
         return;
     }

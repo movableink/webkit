@@ -36,13 +36,16 @@
 #include "qwebkitglobal.h"
 
 #include <WebCore/Document.h>
+#include <WebCore/DocumentInlines.h>
 #include <WebCore/Event.h>
 #include <WebCore/EventNames.h>
 #include <WebCore/Frame.h>
+#include <WebCore/LocalFrameInlines.h>
 #include <WebCore/Notification.h>
 #include <WebCore/NotificationData.h>
 #include <WebCore/Page.h>
 #include <WebCore/ScriptExecutionContext.h>
+#include <WebCore/UserGestureIndicator.h>
 #include <WebCore/FrameDestructionObserverInlines.h>
 #include <wtf/UUID.h>
 #include <wtf/TZoneMallocInlines.h>

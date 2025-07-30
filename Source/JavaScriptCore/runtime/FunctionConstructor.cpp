@@ -66,23 +66,25 @@ void FunctionConstructor::finishCreation(VM& vm, FunctionPrototype* functionProt
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, functionPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
 }
 
-static String stringifyFunction(JSGlobalObject* globalObject, const ArgList& args, const Identifier& functionName, FunctionConstructionMode functionConstructionMode, ThrowScope& scope, std::optional<int>& functionConstructorParametersEndPosition)
+ASCIILiteral functionConstructorPrefix(FunctionConstructionMode functionConstructionMode)
 {
-    ASCIILiteral prefix;
     switch (functionConstructionMode) {
     case FunctionConstructionMode::Function:
-        prefix = "function "_s;
-        break;
+        return "function "_s;
     case FunctionConstructionMode::Generator:
-        prefix = "function* "_s;
-        break;
+        return "function* "_s;
     case FunctionConstructionMode::Async:
-        prefix = "async function "_s;
-        break;
+        return "async function "_s;
     case FunctionConstructionMode::AsyncGenerator:
-        prefix = "async function* "_s;
-        break;
+        return "async function* "_s;
     }
+    ASSERT_NOT_REACHED();
+    return ASCIILiteral { };
+}
+
+static String stringifyFunction(JSGlobalObject* globalObject, const ArgList& args, const Identifier& functionName, FunctionConstructionMode functionConstructionMode, ThrowScope& scope, std::optional<int>& functionConstructorParametersEndPosition)
+{
+    ASCIILiteral prefix = functionConstructorPrefix(functionConstructionMode);
 
     // How we stringify functions is sometimes important for web compatibility.
     // See https://bugs.webkit.org/show_bug.cgi?id=24350.
@@ -94,10 +96,22 @@ static String stringifyFunction(JSGlobalObject* globalObject, const ArgList& arg
         auto body = args.at(0).toWTFString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
         program = tryMakeString(prefix, functionName.string(), "(\n) {\n"_s, body, "\n}"_s);
-        if (UNLIKELY(!program)) {
+        if (!program) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return { };
         }
+    } else if (args.size() == 2) {
+        // This is really common since it means (1) arguments + (2) body.
+        auto arg = args.at(0).toWTFString(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+        auto body = args.at(1).toWTFString(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+        program = tryMakeString(prefix, functionName.string(), "("_s, arg, "\n) {\n"_s, body, "\n}"_s);
+        if (!program) [[unlikely]] {
+            throwOutOfMemoryError(globalObject, scope);
+            return { };
+        }
+        functionConstructorParametersEndPosition = prefix.length() + functionName.string().length() + "("_s.length() + arg.length() + "\n)"_s.length();
     } else {
         StringBuilder builder(OverflowPolicy::RecordOverflow);
         builder.append(prefix, functionName.string(), '(');
@@ -114,19 +128,19 @@ static String stringifyFunction(JSGlobalObject* globalObject, const ArgList& arg
             RETURN_IF_EXCEPTION(scope, { });
             builder.append(',', view.data);
         }
-        if (UNLIKELY(builder.hasOverflowed())) {
+        if (builder.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return { };
         }
 
-        functionConstructorParametersEndPosition = builder.length() + sizeof("\n)") - 1;
+        functionConstructorParametersEndPosition = builder.length() + "\n)"_s.length();
 
         auto* bodyString = args.at(args.size() - 1).toString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
         auto body = bodyString->view(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
         builder.append("\n) {\n"_s, body.data, "\n}"_s);
-        if (UNLIKELY(builder.hasOverflowed())) {
+        if (builder.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return { };
         }
@@ -141,18 +155,41 @@ JSObject* constructFunction(JSGlobalObject* globalObject, const ArgList& args, c
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-
     std::optional<int> functionConstructorParametersEndPosition;
     auto code = stringifyFunction(globalObject, args, functionName, functionConstructionMode, scope, functionConstructorParametersEndPosition);
     EXCEPTION_ASSERT(!!scope.exception() == code.isNull());
 
-    if (UNLIKELY(!globalObject->evalEnabled())) {
-        scope.clearException();
-        globalObject->globalObjectMethodTable()->reportViolationForUnsafeEval(globalObject, !code.isNull() ? jsNontrivialString(vm, WTFMove(code)) : nullptr);
-        throwException(globalObject, scope, createEvalError(globalObject, globalObject->evalDisabledErrorMessage()));
-        return nullptr;
+    if (globalObject->trustedTypesEnforcement() != TrustedTypesEnforcement::None) {
+        bool isTrusted = true;
+        auto* structure = globalObject->trustedScriptStructure();
+        for (size_t i = 0; i < args.size(); i++) {
+            auto arg = args.at(i);
+
+            if (!arg.isObject() || structure != asObject(arg)->structure()) {
+                isTrusted = false;
+                break;
+            }
+        }
+
+        if (!isTrusted) {
+            bool canCompileStrings = globalObject->globalObjectMethodTable()->canCompileStrings(globalObject, CompilationType::Function, code, args);
+            RETURN_IF_EXCEPTION(scope, { });
+            if (!canCompileStrings) {
+                throwException(globalObject, scope, createEvalError(globalObject, "Refused to evaluate a string as JavaScript because this document requires a 'Trusted Type' assignment."_s));
+                return nullptr;
+            }
+        }
     }
-    if (UNLIKELY(code.isNull()))
+
+    if (!globalObject->evalEnabled()) [[unlikely]] {
+        if (globalObject->trustedTypesEnforcement() != TrustedTypesEnforcement::EnforcedWithEvalEnabled) {
+            scope.clearException();
+            globalObject->globalObjectMethodTable()->reportViolationForUnsafeEval(globalObject, !code.isNull() ? WTFMove(code) : nullString());
+            throwException(globalObject, scope, createEvalError(globalObject, globalObject->evalDisabledErrorMessage()));
+            return nullptr;
+        }
+    }
+    if (code.isNull()) [[unlikely]]
         return nullptr;
 
     LexicallyScopedFeatures lexicallyScopedFeatures = globalObject->globalScopeExtension() ? TaintedByWithScopeLexicallyScopedFeature : NoLexicallyScopedFeatures;
@@ -166,8 +203,8 @@ JSObject* constructFunctionSkippingEvalEnabledCheck(JSGlobalObject* globalObject
 
     SourceCode source = makeSource(program, sourceOrigin, taintedOrigin, sourceURL, position);
     JSObject* exception = nullptr;
-    FunctionExecutable* function = FunctionExecutable::fromGlobalCode(functionName, globalObject, source, lexicallyScopedFeatures, exception, overrideLineNumber, functionConstructorParametersEndPosition);
-    if (UNLIKELY(!function)) {
+    FunctionExecutable* function = FunctionExecutable::fromGlobalCode(functionName, globalObject, source, lexicallyScopedFeatures, exception, overrideLineNumber, functionConstructorParametersEndPosition, functionConstructionMode);
+    if (!function) [[unlikely]] {
         ASSERT(exception);
         throwException(globalObject, scope, exception);
         return nullptr;

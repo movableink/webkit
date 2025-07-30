@@ -41,6 +41,7 @@ class HTMLFormElement;
 class HTMLImageLoader;
 class HTMLMapElement;
 class Image;
+class SecurityOrigin;
 
 struct ImageCandidate;
 
@@ -81,8 +82,6 @@ public:
     bool isServerMap() const;
 
     const AtomString& altText() const;
-
-    CompositeOperator compositeOperator() const { return m_compositeOperator; }
 
     WEBCORE_EXPORT CachedImage* cachedImage() const;
 #if PLATFORM(QT)
@@ -184,7 +183,7 @@ public:
 
     void setFetchPriorityForBindings(const AtomString&);
     String fetchPriorityForBindings() const;
-    RequestPriority fetchPriorityHint() const;
+    RequestPriority fetchPriority() const;
 
     bool originClean(const SecurityOrigin&) const;
 
@@ -207,7 +206,7 @@ private:
     void invalidateAttributeMapping();
     void collectExtraStyleForPresentationalHints(MutableStyleProperties&) override;
 
-    Ref<Element> cloneElementWithoutAttributesAndChildren(Document& targetDocument) final;
+    Ref<Element> cloneElementWithoutAttributesAndChildren(Document&, CustomElementRegistry*) final;
 
     // ActiveDOMObject.
     bool virtualHasPendingActivity() const final;
@@ -222,7 +221,7 @@ private:
     bool isURLAttribute(const Attribute&) const override;
     bool attributeContainsURL(const Attribute&) const override;
     String completeURLsInAttributeValue(const URL& base, const Attribute&, ResolveURLs = ResolveURLs::Yes) const override;
-    Attribute replaceURLsInAttributeValue(const Attribute&, const UncheckedKeyHashMap<String, String>&) const override;
+    Attribute replaceURLsInAttributeValue(const Attribute&, const CSS::SerializationContext&) const override;
 
     bool isDraggableIgnoringAttributes() const final { return true; }
 
@@ -266,14 +265,13 @@ private:
     IntersectionObserverData& ensureIntersectionObserverData() final;
     IntersectionObserverData* intersectionObserverDataIfExists() final;
 
-    std::unique_ptr<HTMLImageLoader> m_imageLoader;
+    const std::unique_ptr<HTMLImageLoader> m_imageLoader;
     std::unique_ptr<IntersectionObserverData> m_intersectionObserverData;
 
     AtomString m_bestFitImageURL;
     URL m_currentURL;
     AtomString m_currentSrc;
     AtomString m_parsedUsemap;
-    CompositeOperator m_compositeOperator;
     float m_imageDevicePixelRatio;
 #if ENABLE(SERVICE_CONTROLS)
     bool m_isImageMenuEnabled { false };

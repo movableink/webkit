@@ -36,7 +36,7 @@
 
 namespace WebCore {
 
-typedef HashSet<String, ASCIICaseInsensitiveHash> HTTPHeaderSet;
+using HTTPHeaderSet = HashSet<String, ASCIICaseInsensitiveHash>;
 
 class ResourceResponse;
 enum class HTTPHeaderName : uint16_t;
@@ -102,9 +102,9 @@ WEBCORE_EXPORT bool isValidUserAgentHeaderValue(const String&);
 bool isValidHTTPToken(const String&);
 bool isValidHTTPToken(StringView);
 std::optional<WallTime> parseHTTPDate(const String&);
-StringView filenameFromHTTPContentDisposition(StringView);
+StringView filenameFromHTTPContentDisposition(StringView value LIFETIME_BOUND);
 WEBCORE_EXPORT String extractMIMETypeFromMediaType(const String&);
-WEBCORE_EXPORT StringView extractCharsetFromMediaType(StringView);
+WEBCORE_EXPORT StringView extractCharsetFromMediaType(StringView mediaType LIFETIME_BOUND);
 XSSProtectionDisposition parseXSSProtectionHeader(const String& header, String& failureReason, unsigned& failurePosition, String& reportURL);
 AtomString extractReasonPhraseFromHTTPStatusLine(const String&);
 WEBCORE_EXPORT XFrameOptionsDisposition parseXFrameOptionsHeader(StringView);

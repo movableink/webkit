@@ -239,7 +239,7 @@ class TextureVk : public TextureImpl, public angle::ObserverInterface
                                           bool texelFetchStaticUse,
                                           bool samplerExternal2DY2YEXT) const;
 
-    angle::Result getBufferView(vk::Context *context,
+    angle::Result getBufferView(vk::ErrorContext *context,
                                 const vk::Format *imageUniformFormat,
                                 const gl::SamplerBinding *samplerBinding,
                                 bool isImage,
@@ -247,7 +247,7 @@ class TextureVk : public TextureImpl, public angle::ObserverInterface
 
     // A special view used for texture copies that shouldn't perform swizzle.
     const vk::ImageView &getCopyImageView() const;
-    angle::Result getStorageImageView(vk::Context *context,
+    angle::Result getStorageImageView(vk::ErrorContext *context,
                                       const gl::ImageUnit &binding,
                                       const vk::ImageView **imageViewOut);
 
@@ -324,7 +324,7 @@ class TextureVk : public TextureImpl, public angle::ObserverInterface
     {
         return mState.getBuffer();
     }
-    vk::BufferHelper *getPossiblyEmulatedTextureBuffer(vk::Context *context) const;
+    vk::BufferHelper *getPossiblyEmulatedTextureBuffer(vk::ErrorContext *context) const;
 
     bool isSRGBOverrideEnabled() const
     {
@@ -421,6 +421,12 @@ class TextureVk : public TextureImpl, public angle::ObserverInterface
                                 const gl::ImageIndex &index,
                                 const vk::Format &format,
                                 const gl::Extents &size);
+
+    // If an image is in use by the GPU but is overwritten completely, a new VkImage can be created
+    // instead to avoid creating an unnecessary dependency.
+    angle::Result ghostOnOverwrite(ContextVk *contextVk,
+                                   const gl::ImageIndex &index,
+                                   const gl::Box &area);
 
     angle::Result setImageImpl(const gl::Context *context,
                                const gl::ImageIndex &index,
@@ -557,15 +563,13 @@ class TextureVk : public TextureImpl, public angle::ObserverInterface
                                               gl::LevelIndex level,
                                               GLuint layerIndex,
                                               GLuint layerCount);
-    angle::Result getLevelLayerImageView(vk::Context *context,
+    angle::Result getLevelLayerImageView(vk::ErrorContext *context,
                                          gl::LevelIndex levelGL,
                                          size_t layer,
                                          const vk::ImageView **imageViewOut);
 
     // Flush image's staged updates for all levels and layers.
     angle::Result flushImageStagedUpdates(ContextVk *contextVk);
-
-    angle::Result performImageQueueTransferIfNecessary(ContextVk *contextVk);
 
     // For various reasons, the underlying image may need to be respecified.  For example because
     // base/max level changed, usage/create flags have changed, the format needs modification to
@@ -585,9 +589,13 @@ class TextureVk : public TextureImpl, public angle::ObserverInterface
     angle::Result maybeUpdateBaseMaxLevels(ContextVk *contextVk,
                                            TextureUpdateResult *changeResultOut);
 
-    bool isFastUnpackPossible(const vk::Format &vkFormat,
+    bool isFastUnpackPossible(const gl::Box &area,
+                              GLuint rowLengthPixels,
+                              GLuint imageHeightPixels,
+                              const vk::Format &vkFormat,
                               size_t offset,
-                              const vk::Format &bufferVkFormat) const;
+                              const vk::Format &bufferVkFormat,
+                              GLenum type) const;
 
     bool updateMustBeStaged(gl::LevelIndex textureLevelIndexGL, angle::FormatID dstFormatID) const;
     bool updateMustBeFlushed(gl::LevelIndex textureLevelIndexGL, angle::FormatID dstFormatID) const;
@@ -610,7 +618,9 @@ class TextureVk : public TextureImpl, public angle::ObserverInterface
 
     angle::Result ensureMutable(ContextVk *contextVk);
     angle::Result refreshImageViews(ContextVk *contextVk);
-    void initImageUsageFlags(ContextVk *contextVk, angle::FormatID actualFormatID);
+    void initImageUsageFlags(ContextVk *contextVk,
+                             const angle::Format &intendedFormat,
+                             angle::FormatID actualFormatID);
     void handleImmutableSamplerTransition(const vk::ImageHelper *previousImage,
                                           const vk::ImageHelper *nextImage);
 
@@ -635,11 +645,6 @@ class TextureVk : public TextureImpl, public angle::ObserverInterface
     angle::Result setStorageImpl(ContextVk *contextVk,
                                  gl::TextureType type,
                                  const vk::Format &format);
-
-    GLint getFormatSupportedCompressionRatesImpl(vk::Renderer *renderer,
-                                                 const vk::Format &format,
-                                                 GLsizei bufSize,
-                                                 GLint *rates);
 
     bool mOwnsImage;
     // Generated from ImageVk if EGLImage target, or from throw-away generator if Surface target.

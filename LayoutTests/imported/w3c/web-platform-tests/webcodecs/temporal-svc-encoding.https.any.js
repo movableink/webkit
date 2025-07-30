@@ -1,3 +1,4 @@
+// META: timeout=long
 // META: global=window,dedicatedworker
 // META: script=/webcodecs/video-encoder-utils.js
 // META: variant=?av1
@@ -18,7 +19,6 @@ promise_setup(async () => {
   config.height = 200;
   config.bitrate = 1000000;
   config.bitrateMode = "constant";
-  config.latencyMode = "realtime";
   config.framerate = 30;
   ENCODER_CONFIG = config;
 });

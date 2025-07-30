@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,9 @@
 
 #if ENABLE(PDF_PLUGIN)
 
+#import "DocumentEditingContext.h"
+#import "EditorState.h"
+#import "GestureTypes.h"
 #import "Logging.h"
 #import "MessageSenderInlines.h"
 #import "PDFIncrementalLoader.h"
@@ -45,9 +48,15 @@
 #import "WebProcess.h"
 #import <CoreFoundation/CoreFoundation.h>
 #import <PDFKit/PDFKit.h>
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <WebCore/AXObjectCache.h>
 #import <WebCore/ArchiveResource.h>
+#import <WebCore/CSSPropertyNames.h>
 #import <WebCore/Chrome.h>
+#import <WebCore/Color.h>
+#import <WebCore/ColorCocoa.h>
+#import <WebCore/ColorSerialization.h>
+#import <WebCore/ContainerNodeInlines.h>
 #import <WebCore/Cursor.h>
 #import <WebCore/Document.h>
 #import <WebCore/EventNames.h>
@@ -60,6 +69,11 @@
 #import <WebCore/LoaderNSURLExtras.h>
 #import <WebCore/LocalizedStrings.h>
 #import <WebCore/MouseEvent.h>
+#import <WebCore/PageIdentifier.h>
+#import <WebCore/PagePasteboardContext.h>
+#import <WebCore/Pasteboard.h>
+#import <WebCore/PasteboardStrategy.h>
+#import <WebCore/PlatformStrategies.h>
 #import <WebCore/PluginDocument.h>
 #import <WebCore/RenderEmbeddedObject.h>
 #import <WebCore/RenderLayer.h>
@@ -68,9 +82,11 @@
 #import <WebCore/ScrollAnimator.h>
 #import <WebCore/SharedBuffer.h>
 #import <WebCore/VoidCallback.h>
+#import <wtf/CheckedArithmetic.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/cf/VectorCF.h>
+#import <wtf/cocoa/NSURLExtras.h>
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/MakeString.h>
 #import <wtf/text/TextStream.h>
@@ -93,7 +109,6 @@ PluginInfo PDFPluginBase::pluginInfo()
     info.desc = pdfDocumentTypeDescription();
     info.file = "internal-pdf-viewer"_s;
     info.isApplicationPlugin = true;
-    info.clientLoadPolicy = PluginLoadClientPolicy::Undefined;
     info.bundleIdentifier = "com.apple.webkit.builtinpdfplugin"_s;
 
     MimeClassInfo pdfMimeClassInfo;
@@ -118,12 +133,16 @@ PDFPluginBase::PDFPluginBase(HTMLPlugInElement& element)
     , m_incrementalPDFLoadingEnabled(element.document().settings().incrementalPDFLoadingEnabled())
 #endif
 {
+    if (isFullFramePlugin()) {
+        Ref document = element.document();
+        RefPtr { document->bodyOrFrameset() }->setInlineStyleProperty(CSSPropertyBackgroundColor, serializationForHTML(pluginBackgroundColor()));
+    }
 }
 
 PDFPluginBase::~PDFPluginBase()
 {
 #if ENABLE(PDF_HUD)
-    if (auto* page = m_frame ? m_frame->page() : nullptr)
+    if (RefPtr page = m_frame ? m_frame->page() : nullptr)
         page->removePDFHUD(*this);
 #endif
 
@@ -153,10 +172,10 @@ void PDFPluginBase::teardown()
 
     if (auto existingCompletionHandler = std::exchange(m_pendingOpenCompletionHandler, { })) {
         // FrameInfo can't be default-constructed; the receiving process will ASSERT if it is.
-        FrameInfoData frameInfo;
+        std::optional<FrameInfoData> frameInfo;
         if (m_frame)
             frameInfo = m_frame->info();
-        existingCompletionHandler({ }, WTFMove(frameInfo), { }, { });
+        existingCompletionHandler({ }, WTFMove(frameInfo), { });
     }
 #endif // ENABLE(PDF_HUD)
 
@@ -165,6 +184,12 @@ void PDFPluginBase::teardown()
 
     if (m_pdfTestCallback && m_element)
         m_element->pluginDestroyedWithPendingPDFTestCallback(WTFMove(m_pdfTestCallback));
+}
+
+WebPage* PDFPluginBase::webPage() const
+{
+    RefPtr frame = m_frame.get();
+    return frame ? frame->page() : nullptr;
 }
 
 Page* PDFPluginBase::page() const
@@ -219,7 +244,11 @@ bool PDFPluginBase::isFullFramePlugin() const
 
 bool PDFPluginBase::handlesPageScaleFactor() const
 {
+#if PLATFORM(IOS_FAMILY)
+    return false;
+#else
     return m_frame && m_frame->isMainFrame() && isFullFramePlugin();
+#endif
 }
 
 bool PDFPluginBase::isLocked() const
@@ -240,6 +269,30 @@ NSData *PDFPluginBase::originalData() const
     return (__bridge NSData *)m_data.get();
 }
 
+RefPtr<FragmentedSharedBuffer> PDFPluginBase::liveResourceData() const
+{
+    RetainPtr pdfData = liveData();
+
+    if (!pdfData)
+        return nullptr;
+
+    return SharedBuffer::create(pdfData.get());
+}
+
+NSData *PDFPluginBase::liveData() const
+{
+#if PLATFORM(MAC)
+    if (m_activeAnnotation)
+        m_activeAnnotation->commit();
+#endif
+    // Save data straight from the resource instead of PDFKit if the document is
+    // untouched by the user, so that PDFs which PDFKit can't display will still be downloadable.
+    if (m_pdfDocumentWasMutated)
+        return [m_pdfDocument dataRepresentation];
+
+    return originalData();
+}
+
 void PDFPluginBase::ensureDataBufferLength(uint64_t targetLength)
 {
     if (!m_data)
@@ -256,6 +309,28 @@ uint64_t PDFPluginBase::streamedBytes() const
     Locker locker { m_streamedDataLock };
     return m_streamedBytes;
 }
+
+#if !LOG_DISABLED
+
+// Thread safety analysis gets really confused by conditional locking, so
+// it is difficult to prove that any previous stack frame did in fact secure
+// the data lock without having to pass around Locker instances across dataSpanForRange()
+// and its callers. Instead, this method opts out of thread safety analysis
+// and ensures the lock is held when reading m_streamedBytes, else we give up.
+std::optional<uint64_t> PDFPluginBase::streamedBytesForDebugLogging() const WTF_IGNORES_THREAD_SAFETY_ANALYSIS
+{
+    if (m_streamedDataLock.isHeld())
+        return m_streamedBytes;
+
+    if (m_streamedDataLock.tryLock()) {
+        Locker locker { AdoptLock, m_streamedDataLock };
+        return m_streamedBytes;
+    }
+
+    return std::nullopt;
+}
+
+#endif
 
 bool PDFPluginBase::haveStreamedDataForRange(uint64_t offset, size_t count) const
 {
@@ -283,7 +358,7 @@ size_t PDFPluginBase::copyDataAtPosition(std::span<uint8_t> buffer, uint64_t sou
     return buffer.size();
 }
 
-std::span<const uint8_t> PDFPluginBase::dataSpanForRange(uint64_t sourcePosition, size_t count, CheckValidRanges checkValidRanges) const
+void PDFPluginBase::dataSpanForRange(uint64_t sourcePosition, size_t count, CheckValidRanges checkValidRanges, CompletionHandler<void(std::span<const uint8_t>)>&& completionHandler) const
 {
     Locker locker { m_streamedDataLock };
 
@@ -295,7 +370,7 @@ std::span<const uint8_t> PDFPluginBase::dataSpanForRange(uint64_t sourcePosition
             return true;
 
         uint64_t dataLength = CFDataGetLength(m_data.get());
-        if (sourcePosition + count > dataLength)
+        if (!isSumSmallerThanOrEqual(sourcePosition, static_cast<uint64_t>(count), dataLength))
             return false;
 
         if (checkValidRanges == CheckValidRanges::No)
@@ -305,9 +380,9 @@ std::span<const uint8_t> PDFPluginBase::dataSpanForRange(uint64_t sourcePosition
     };
 
     if (!haveValidData(checkValidRanges))
-        return { };
+        return completionHandler({ });
 
-    return span(m_data.get()).subspan(sourcePosition, count);
+    completionHandler(span(m_data.get()).subspan(sourcePosition, count));
 }
 
 bool PDFPluginBase::getByteRanges(CFMutableArrayRef dataBuffersArray, std::span<const CFRange> ranges) const
@@ -509,7 +584,7 @@ void PDFPluginBase::startByteRangeRequest(NetscapePlugInStreamLoaderClient& stre
 
     auto resourceRequest = documentLoader->request();
     resourceRequest.setRequester(ResourceRequestRequester::Unspecified);
-    resourceRequest.setURL(m_view->mainResourceURL());
+    resourceRequest.setURL(URL { m_view->mainResourceURL() });
     resourceRequest.setHTTPHeaderField(HTTPHeaderName::Range, makeString("bytes="_s, position, '-', position + count - 1));
     resourceRequest.setCachePolicy(ResourceRequestCachePolicy::DoNotUseAnyCache);
 
@@ -566,8 +641,8 @@ void PDFPluginBase::addArchiveResource()
     // FIXME: It's a hack to force add a resource to DocumentLoader. PDF documents should just be fetched as CachedResources.
 
     // Add just enough data for context menu handling and web archives to work.
-    NSDictionary* headers = @{ @"Content-Disposition": (NSString *)m_suggestedFilename, @"Content-Type" : @"application/pdf" };
-    auto response = adoptNS([[NSHTTPURLResponse alloc] initWithURL:m_view->mainResourceURL() statusCode:200 HTTPVersion:(NSString*)kCFHTTPVersion1_1 headerFields:headers]);
+    RetainPtr headers = @{ @"Content-Disposition": m_suggestedFilename.createNSString().get(), @"Content-Type" : @"application/pdf" };
+    RetainPtr response = adoptNS([[NSHTTPURLResponse alloc] initWithURL:m_view->mainResourceURL().createNSURL().get() statusCode:200 HTTPVersion:(NSString*)kCFHTTPVersion1_1 headerFields:headers.get()]);
     ResourceResponse synthesizedResponse(response.get());
 
     RetainPtr data = originalData();
@@ -625,13 +700,17 @@ bool PDFPluginBase::shouldShowHUD() const
 
 void PDFPluginBase::updateHUDVisibility()
 {
-    if (!m_frame)
+    RefPtr frame = m_frame.get();
+    if (!frame)
+        return;
+    RefPtr page = frame->page();
+    if (!page)
         return;
 
     if (shouldShowHUD())
-        m_frame->page()->createPDFHUD(*this, frameForHUDInRootViewCoordinates());
+        page->createPDFHUD(*this, frame->frameID(), frameForHUDInRootViewCoordinates());
     else
-        m_frame->page()->removePDFHUD(*this);
+        page->removePDFHUD(*this);
 }
 #endif
 
@@ -655,32 +734,13 @@ void PDFPluginBase::invalidateRect(const IntRect& rect)
     m_view->invalidateRect(rect);
 }
 
-IntPoint PDFPluginBase::convertFromRootViewToPlugin(const IntPoint& point) const
-{
-    return m_rootViewToPluginTransform.mapPoint(point);
-}
-
-IntRect PDFPluginBase::convertFromRootViewToPlugin(const IntRect& rect) const
-{
-    return m_rootViewToPluginTransform.mapRect(rect);
-}
-
-IntPoint PDFPluginBase::convertFromPluginToRootView(const IntPoint& point) const
-{
-    return m_rootViewToPluginTransform.inverse()->mapPoint(point);
-}
-
-IntRect PDFPluginBase::convertFromPluginToRootView(const IntRect& rect) const
-{
-    return m_rootViewToPluginTransform.inverse()->mapRect(rect);
-}
-
 IntRect PDFPluginBase::boundsOnScreen() const
 {
-    return WebCore::Accessibility::retrieveValueFromMainThread<WebCore::IntRect>([&] () -> WebCore::IntRect {
-        FloatRect bounds = FloatRect(FloatPoint(), size());
-        FloatRect rectInRootViewCoordinates = valueOrDefault(m_rootViewToPluginTransform.inverse()).mapRect(bounds);
-        RefPtr page = this->page();
+    Ref protectedThis { *this };
+    return WebCore::Accessibility::retrieveValueFromMainThread<WebCore::IntRect>([&protectedThis] () -> WebCore::IntRect {
+        FloatRect bounds = FloatRect(FloatPoint(), protectedThis->size());
+        FloatRect rectInRootViewCoordinates = valueOrDefault(protectedThis->m_rootViewToPluginTransform.inverse()).mapRect(bounds);
+        RefPtr page = protectedThis->page();
         if (!page)
             return { };
         return page->chrome().rootViewToScreen(enclosingIntRect(rectInRootViewCoordinates));
@@ -728,6 +788,16 @@ ScrollableArea* PDFPluginBase::enclosingScrollableArea() const
 
     return enclosingScrollableLayer->scrollableArea();
 }
+
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+bool PDFPluginBase::vectorBasedControlsEnabled() const
+{
+    if (RefPtr page = this->page())
+        return page->settings().vectorBasedControlsOnMacEnabled();
+
+    return false;
+}
+#endif
 
 IntRect PDFPluginBase::scrollableAreaBoundingBox(bool*) const
 {
@@ -983,7 +1053,7 @@ void PDFPluginBase::destroyScrollbar(ScrollbarOrientation orientation)
     if (!scrollbar)
         return;
 
-    willRemoveScrollbar(scrollbar.get(), orientation);
+    willRemoveScrollbar(*scrollbar, orientation);
     scrollbar->removeFromParent();
     scrollbar = nullptr;
 }
@@ -1012,36 +1082,118 @@ void PDFPluginBase::print()
         page->chrome().print(*m_frame->coreLocalFrame());
 }
 
-#if PLATFORM(MAC)
-
-void PDFPluginBase::writeItemsToPasteboard(NSString *pasteboardName, Vector<PasteboardItem>&& pasteboardItems) const
+std::optional<PageIdentifier> PDFPluginBase::pageIdentifier() const
 {
-    // FIXME: <https://webkit.org/b/269174> PDFPluginBase::writeItemsToPasteboard should be platform-agnostic.
-    auto pasteboardTypes = pasteboardItems.map([](const auto& item) -> String {
-        return item.type.get();
-    });
-    auto pageIdentifier = m_frame && m_frame->coreLocalFrame() ? m_frame->coreLocalFrame()->pageID() : std::nullopt;
-
-    auto& webProcess = WebProcess::singleton();
-    webProcess.parentProcessConnection()->sendSync(Messages::WebPasteboardProxy::SetPasteboardTypes(pasteboardName, pasteboardTypes, pageIdentifier), 0);
-
-    for (auto&& [data, type] : WTFMove(pasteboardItems)) {
-        // We don't expect the data for any items to be empty, but aren't completely sure.
-        // Avoid crashing in the SharedMemory constructor in release builds if we're wrong.
-        ASSERT([data length]);
-        if (![data length])
-            continue;
-
-        if ([type isEqualToString:legacyStringPasteboardType()] || [type isEqualToString:NSPasteboardTypeString]) {
-            auto plainTextString = adoptNS([[NSString alloc] initWithData:data.get() encoding:NSUTF8StringEncoding]);
-            webProcess.parentProcessConnection()->sendSync(Messages::WebPasteboardProxy::SetPasteboardStringForType(pasteboardName, type.get(), plainTextString.get(), pageIdentifier), 0);
-        } else {
-            auto buffer = SharedBuffer::create(data.get());
-            webProcess.parentProcessConnection()->sendSync(Messages::WebPasteboardProxy::SetPasteboardBufferForType(pasteboardName, type.get(), WTFMove(buffer), pageIdentifier), 0);
-        }
-    }
+    return m_frame && m_frame->coreLocalFrame() ? m_frame->coreLocalFrame()->pageID() : std::nullopt;
 }
 
+NSString *PDFPluginBase::stringPasteboardType()
+{
+#if PLATFORM(IOS_FAMILY)
+    return UTTypeUTF8PlainText.identifier;
+#else
+    return NSPasteboardTypeString;
+#endif
+}
+
+NSString *PDFPluginBase::urlPasteboardType()
+{
+#if PLATFORM(IOS_FAMILY)
+    return UTTypeURL.identifier;
+#else
+    return NSPasteboardTypeURL;
+#endif
+}
+
+NSString *PDFPluginBase::htmlPasteboardType()
+{
+#if PLATFORM(IOS_FAMILY)
+    return UTTypeHTML.identifier;
+#else
+    return NSPasteboardTypeHTML;
+#endif
+}
+
+NSString *PDFPluginBase::rtfPasteboardType()
+{
+#if PLATFORM(IOS_FAMILY)
+    return UTTypeRTF.identifier;
+#else
+    return NSPasteboardTypeRTF;
+#endif
+}
+
+void PDFPluginBase::writeItemsToGeneralPasteboard(Vector<PasteboardItem>&& pasteboardItems) const
+{
+    auto originIdentifier = [frame = m_frame] -> String {
+        if (!frame || !frame->coreLocalFrame())
+            return { };
+        RefPtr document = frame->coreLocalFrame()->document();
+        if (!document)
+            return { };
+        return document->originIdentifierForPasteboard();
+    }();
+
+    auto applyLinkDecorationFiltering = [frame = m_frame](const URL& url) {
+        if (!frame || !frame->coreLocalFrame())
+            return url;
+        RefPtr document = frame->coreLocalFrame()->document();
+        if (!document)
+            return url;
+        RefPtr page = document->page();
+        if (!page)
+            return url;
+        return page->applyLinkDecorationFiltering(url, LinkDecorationFilteringTrigger::Copy);
+    };
+
+    std::optional<PasteboardWebContent> pasteboardContent;
+    std::optional<PasteboardURL> pasteboardURL;
+
+    auto ensureContent = [originIdentifier](std::optional<PasteboardWebContent>& content) -> decltype(content) {
+        if (!content)
+            content = PasteboardWebContent { .contentOrigin = originIdentifier, .canSmartCopyOrDelete = false };
+        return content;
+    };
+
+    for (auto&& [data, type] : WTFMove(pasteboardItems)) {
+        if (![data length]) {
+            ASSERT_NOT_REACHED();
+            continue;
+        }
+
+        if ([type isEqualToString:htmlPasteboardType()])
+            ensureContent(pasteboardContent)->dataInHTMLFormat = String { adoptNS([[NSString alloc] initWithData:data.get() encoding:NSUTF8StringEncoding]).autorelease() };
+        else if ([type isEqualToString:rtfPasteboardType()])
+            ensureContent(pasteboardContent)->dataInRTFFormat = SharedBuffer::create(data.get());
+        else if ([type isEqualToString:stringPasteboardType()])
+            ensureContent(pasteboardContent)->dataInStringFormat = String { adoptNS([[NSString alloc] initWithData:data.get() encoding:NSUTF8StringEncoding]).autorelease() };
+        else if ([type isEqualToString:urlPasteboardType()]) {
+            URL url { [NSURL URLWithDataRepresentation:data.get() relativeToURL:nil] };
+            URL sanitizedURL { applyLinkDecorationFiltering(url) };
+            pasteboardURL = PasteboardURL {
+                .url = sanitizedURL,
+                .title = sanitizedURL.string(),
+#if PLATFORM(MAC)
+                .userVisibleForm = WTF::userVisibleString(sanitizedURL.createNSURL().get()),
+#endif
+            };
+        }
+    }
+
+    auto pasteboard = Pasteboard::createForCopyAndPaste(PagePasteboardContext::create(pageIdentifier()));
+    if (pasteboardContent)
+        pasteboard->write(*pasteboardContent);
+    if (pasteboardURL)
+        pasteboard->write(*pasteboardURL);
+}
+
+#if PLATFORM(MAC)
+void PDFPluginBase::writeStringToFindPasteboard(const String& string) const
+{
+    auto context = PagePasteboardContext::create(pageIdentifier());
+    platformStrategies()->pasteboardStrategy()->setTypes({ NSPasteboardTypeString }, NSPasteboardNameFind, context.get());
+    platformStrategies()->pasteboardStrategy()->setStringForType(string, NSPasteboardTypeString, NSPasteboardNameFind, context.get());
+}
 #endif
 
 #if ENABLE(PDF_HUD)
@@ -1073,29 +1225,29 @@ void PDFPluginBase::save(CompletionHandler<void(const String&, const URL&, std::
         return;
     }
 
-    NSData *data = liveData();
+    RetainPtr data = liveData();
     URL url;
     if (m_frame)
         url = m_frame->url();
-    completionHandler(m_suggestedFilename, url, span(data));
+    completionHandler(m_suggestedFilename, url, span(data.get()));
 }
 
-void PDFPluginBase::openWithPreview(CompletionHandler<void(const String&, FrameInfoData&&, std::span<const uint8_t>, const String&)>&& completionHandler)
+void PDFPluginBase::openWithPreview(CompletionHandler<void(const String&, std::optional<FrameInfoData>&&, std::span<const uint8_t>)>&& completionHandler)
 {
-    FrameInfoData frameInfo;
+    std::optional<FrameInfoData> frameInfo;
     if (m_frame)
         frameInfo = m_frame->info();
 
     if (!m_documentFinishedLoading) {
         if (auto existingCompletionHandler = std::exchange(m_pendingOpenCompletionHandler, WTFMove(completionHandler))) {
             // FrameInfo can't be default-constructed; the receiving process will ASSERT if it is.
-            existingCompletionHandler({ }, WTFMove(frameInfo), { }, { });
+            existingCompletionHandler({ }, WTFMove(frameInfo), { });
         }
         return;
     }
 
-    NSData *data = liveData();
-    completionHandler(m_suggestedFilename, WTFMove(frameInfo), span(data), createVersion4UUIDString());
+    RetainPtr data = liveData();
+    completionHandler(m_suggestedFilename, WTFMove(frameInfo), span(data.get()));
 }
 
 #endif // ENABLE(PDF_HUD)
@@ -1116,7 +1268,7 @@ bool PDFPluginBase::supportsForms() const
 
 bool PDFPluginBase::showContextMenuAtPoint(const IntPoint& point)
 {
-    auto* frameView = m_frame ? m_frame->coreLocalFrame()->view() : nullptr;
+    RefPtr frameView = m_frame ? m_frame->coreLocalFrame()->view() : nullptr;
     if (!frameView)
         return false;
     IntPoint contentsPoint = frameView->contentsToRootView(point);
@@ -1152,7 +1304,7 @@ WebCore::IntPoint PDFPluginBase::lastKnownMousePositionInView() const
     return { };
 }
 
-void PDFPluginBase::navigateToURL(const URL& url)
+void PDFPluginBase::navigateToURL(const URL& url, std::optional<PlatformMouseEvent>&& event)
 {
     if (url.protocolIsJavaScript())
         return;
@@ -1162,8 +1314,10 @@ void PDFPluginBase::navigateToURL(const URL& url)
         return;
 
     RefPtr<Event> coreEvent;
-    if (m_lastMouseEvent)
-        coreEvent = MouseEvent::create(eventNames().clickEvent, &frame->windowProxy(), platform(*m_lastMouseEvent), { }, { }, 0, 0);
+    if (event || m_lastMouseEvent) {
+        auto platformEvent = event ? WTFMove(*event) : platform(*m_lastMouseEvent);
+        coreEvent = MouseEvent::create(eventNames().clickEvent, &frame->windowProxy(), platformEvent, { }, { }, 0, 0);
+    }
 
     frame->loader().changeLocation(url, emptyAtom(), coreEvent.get(), ReferrerPolicy::NoReferrer, ShouldOpenExternalURLsPolicy::ShouldAllow);
 }
@@ -1192,10 +1346,45 @@ id PDFPluginBase::accessibilityAssociatedPluginParentForElement(Element* element
     return nil;
 }
 
+bool PDFPluginBase::populateEditorStateIfNeeded(EditorState& state) const
+{
+    if (platformPopulateEditorStateIfNeeded(state)) {
+        // Defer to platform-specific logic.
+        return true;
+    }
+
+    if (selectionString().isNull())
+        return false;
+
+    state.selectionIsNone = false;
+    state.selectionIsRange = true;
+    state.isInPlugin = true;
+    return true;
+}
+
+#if PLATFORM(IOS_FAMILY)
+
+SelectionWasFlipped PDFPluginBase::moveSelectionEndpoint(FloatPoint, SelectionEndpoint)
+{
+    return SelectionWasFlipped::No;
+}
+
+SelectionEndpoint PDFPluginBase::extendInitialSelection(FloatPoint pointInRootView, TextGranularity)
+{
+    return SelectionEndpoint::Start;
+}
+
+DocumentEditingContext PDFPluginBase::documentEditingContext(DocumentEditingContextRequest&&) const
+{
+    return { };
+}
+
+#endif // PLATFORM(IOS_FAMILY)
+
 #if !LOG_DISABLED
 
 #if HAVE(INCREMENTAL_PDF_APIS)
-static void verboseLog(PDFIncrementalLoader* incrementalLoader, uint64_t streamedBytes, bool documentFinishedLoading)
+static void verboseLog(PDFIncrementalLoader* incrementalLoader, std::optional<uint64_t>&& streamedBytes, bool documentFinishedLoading)
 {
     ASSERT(isMainRunLoop());
 
@@ -1206,7 +1395,12 @@ static void verboseLog(PDFIncrementalLoader* incrementalLoader, uint64_t streame
     if (incrementalLoader)
         incrementalLoader->logState(stream);
 
-    stream << "The main document loader has finished loading " << streamedBytes << " bytes, and is";
+    stream << "The main document loader has finished loading ";
+    if (streamedBytes)
+        stream << *streamedBytes;
+    else
+        stream << "(unknown)";
+    stream << " bytes, and is";
     if (!documentFinishedLoading)
         stream << " not";
     stream << " complete";
@@ -1218,20 +1412,23 @@ static void verboseLog(PDFIncrementalLoader* incrementalLoader, uint64_t streame
 void PDFPluginBase::incrementalLoaderLog(const String& message)
 {
 #if HAVE(INCREMENTAL_PDF_APIS)
-    if (!isMainRunLoop()) {
-        callOnMainRunLoop([this, protectedThis = Ref { *this }, message = message.isolatedCopy()] {
-            incrementalLoaderLog(message);
+    ensureOnMainRunLoop([this, protectedThis = Ref { *this }, message = message.isolatedCopy(), byteCount = streamedBytesForDebugLogging()] mutable {
+        // If we failed to acquire the data lock, try again post main thread hop.
+        byteCount = byteCount.or_else([&protectedThis] {
+            return protectedThis->streamedBytesForDebugLogging();
         });
-        return;
-    }
-
-    auto streamedBytes = this->streamedBytes();
-    LOG_WITH_STREAM(IncrementalPDF, stream << message);
-    verboseLog(m_incrementalLoader.get(), streamedBytes, m_documentFinishedLoading);
-    LOG_WITH_STREAM(IncrementalPDFVerbose, stream << message);
+        incrementalLoaderLogWithBytes(message, WTFMove(byteCount));
+    });
 #else
     UNUSED_PARAM(message);
 #endif
+}
+
+void PDFPluginBase::incrementalLoaderLogWithBytes(const String& message, std::optional<uint64_t>&& streamedBytes)
+{
+    LOG_WITH_STREAM(IncrementalPDF, stream << message);
+    verboseLog(m_incrementalLoader.get(), WTFMove(streamedBytes), m_documentFinishedLoading);
+    LOG_WITH_STREAM(IncrementalPDFVerbose, stream << message);
 }
 
 #endif // !LOG_DISABLED
@@ -1241,7 +1438,7 @@ void PDFPluginBase::registerPDFTest(RefPtr<WebCore::VoidCallback>&& callback)
     ASSERT(!m_pdfTestCallback);
 
     if (m_pdfDocument && callback)
-        callback->handleEvent();
+        callback->invoke();
     else
         m_pdfTestCallback = WTFMove(callback);
 }
@@ -1349,6 +1546,21 @@ String PDFPluginBase::annotationStyle() const
     ".password-form + input.annotation[type='password'] {"
     "    margin-top: 16px;"
     "}"_s;
+}
+
+Color PDFPluginBase::pluginBackgroundColor()
+{
+    static NeverDestroyed color = roundAndClampToSRGBALossy([CocoaColor grayColor].CGColor);
+    return color.get();
+}
+
+unsigned PDFPluginBase::countFindMatches(const String& target, WebCore::FindOptions options, unsigned maxMatchCount)
+{
+    if (!target.length())
+        return 0;
+
+    NSStringCompareOptions nsOptions = options.contains(FindOption::CaseInsensitive) ? NSCaseInsensitiveSearch : 0;
+    return [[m_pdfDocument findString:target.createNSString().get() withOptions:nsOptions] count];
 }
 
 } // namespace WebKit

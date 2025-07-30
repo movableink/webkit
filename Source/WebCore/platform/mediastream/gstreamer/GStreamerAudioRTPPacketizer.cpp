@@ -22,6 +22,7 @@
 
 #if USE(GSTREAMER_WEBRTC)
 
+#include "ContextDestructionObserverInlines.h"
 #include "GStreamerCommon.h"
 #include "GStreamerRegistryScanner.h"
 #include <gst/rtp/rtp.h>
@@ -67,7 +68,7 @@ RefPtr<GStreamerAudioRTPPacketizer> GStreamerAudioRTPPacketizer::create(RefPtr<U
 
     GRefPtr<GstElement> encoder;
     if (encoding == "opus"_s) {
-        encoder = makeGStreamerElement("opusenc", nullptr);
+        encoder = makeGStreamerElement("opusenc"_s);
         if (!encoder)
             return nullptr;
 
@@ -96,11 +97,11 @@ RefPtr<GStreamerAudioRTPPacketizer> GStreamerAudioRTPPacketizer::create(RefPtr<U
             }
         }
     } else if (encoding == "g722"_s)
-        encoder = makeGStreamerElement("avenc_g722", nullptr);
+        encoder = makeGStreamerElement("avenc_g722"_s);
     else if (encoding == "pcma"_s)
-        encoder = makeGStreamerElement("alawenc", nullptr);
+        encoder = makeGStreamerElement("alawenc"_s);
     else if (encoding == "pcmu"_s)
-        encoder = makeGStreamerElement("mulawenc", nullptr);
+        encoder = makeGStreamerElement("mulawenc"_s);
     else {
         GST_ERROR("Unsupported outgoing audio encoding: %s", encoding.ascii().data());
         return nullptr;
@@ -111,12 +112,16 @@ RefPtr<GStreamerAudioRTPPacketizer> GStreamerAudioRTPPacketizer::create(RefPtr<U
         return nullptr;
     }
 
+    // Make sure the audio encoder tracks upstream timestamps.
+    if (gstObjectHasProperty(encoder.get(), "perfect-timestamp"_s))
+        g_object_set(encoder.get(), "perfect-timestamp", FALSE, nullptr);
+
     // Align MTU with libwebrtc implementation, also helping to reduce packet fragmentation.
     g_object_set(payloader.get(), "auto-header-extension", TRUE, "mtu", 1200, nullptr);
 
     if (auto minPTime = gstStructureGetString(structure.get(), "minptime"_s)) {
         if (auto value = parseIntegerAllowingTrailingJunk<int64_t>(minPTime)) {
-            if (gstObjectHasProperty(payloader.get(), "min-ptime"))
+            if (gstObjectHasProperty(payloader.get(), "min-ptime"_s))
                 g_object_set(payloader.get(), "min-ptime", *value * GST_MSECOND, nullptr);
             else
                 GST_WARNING_OBJECT(payloader.get(), "min-ptime property not supported");
@@ -125,13 +130,8 @@ RefPtr<GStreamerAudioRTPPacketizer> GStreamerAudioRTPPacketizer::create(RefPtr<U
     }
 
     auto payloadType = gstStructureGet<int>(codecParameters, "payload"_s);
-    if (payloadType)
-        g_object_set(payloader.get(), "pt", *payloadType, nullptr);
-    else {
+    if (!payloadType)
         payloadType = gstStructureGet<int>(encodingParameters.get(), "payload"_s);
-        if (payloadType)
-            g_object_set(payloader.get(), "pt", *payloadType, nullptr);
-    }
 
     auto rtpCaps = adoptGRef(gst_caps_new_empty());
 
@@ -140,17 +140,17 @@ RefPtr<GStreamerAudioRTPPacketizer> GStreamerAudioRTPPacketizer::create(RefPtr<U
     setSsrcAudioLevelVadOn(structure.get());
 
     gst_caps_append_structure(rtpCaps.get(), structure.release());
-    return adoptRef(*new GStreamerAudioRTPPacketizer(WTFMove(inputCaps), WTFMove(encoder), WTFMove(payloader), WTFMove(encodingParameters), WTFMove(rtpCaps)));
+    return adoptRef(*new GStreamerAudioRTPPacketizer(WTFMove(inputCaps), WTFMove(encoder), WTFMove(payloader), WTFMove(encodingParameters), WTFMove(rtpCaps), WTFMove(payloadType)));
 }
 
-GStreamerAudioRTPPacketizer::GStreamerAudioRTPPacketizer(GRefPtr<GstCaps>&& inputCaps, GRefPtr<GstElement>&& encoder, GRefPtr<GstElement>&& payloader, GUniquePtr<GstStructure>&& encodingParameters, GRefPtr<GstCaps>&& rtpCaps)
-    : GStreamerRTPPacketizer(WTFMove(encoder), WTFMove(payloader), WTFMove(encodingParameters))
+GStreamerAudioRTPPacketizer::GStreamerAudioRTPPacketizer(GRefPtr<GstCaps>&& inputCaps, GRefPtr<GstElement>&& encoder, GRefPtr<GstElement>&& payloader, GUniquePtr<GstStructure>&& encodingParameters, GRefPtr<GstCaps>&& rtpCaps, std::optional<int>&& payloadType)
+    : GStreamerRTPPacketizer(WTFMove(encoder), WTFMove(payloader), WTFMove(encodingParameters), WTFMove(payloadType))
 {
     g_object_set(m_capsFilter.get(), "caps", rtpCaps.get(), nullptr);
     GST_DEBUG_OBJECT(m_bin.get(), "RTP caps: %" GST_PTR_FORMAT, rtpCaps.get());
 
-    m_audioconvert = makeGStreamerElement("audioconvert", nullptr);
-    m_audioresample = makeGStreamerElement("audioresample", nullptr);
+    m_audioconvert = makeGStreamerElement("audioconvert"_s);
+    m_audioresample = makeGStreamerElement("audioresample"_s);
     m_inputCapsFilter = gst_element_factory_make("capsfilter", nullptr);
     g_object_set(m_inputCapsFilter.get(), "caps", inputCaps.get(), nullptr);
 

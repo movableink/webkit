@@ -30,6 +30,7 @@
 
 #import "AddEventListenerOptions.h"
 #import "AudioTrackList.h"
+#import "DocumentInlines.h"
 #import "Event.h"
 #import "EventListener.h"
 #import "EventNames.h"
@@ -37,10 +38,12 @@
 #import "Logging.h"
 #import "MediaControlsHost.h"
 #import "MediaSelectionOption.h"
+#import "NodeInlines.h"
 #import "Page.h"
 #import "PageGroup.h"
 #import "TextTrackList.h"
 #import "TimeRanges.h"
+#import "UserGestureIndicator.h"
 #import "VideoTrack.h"
 #import "VideoTrackConfiguration.h"
 #import "VideoTrackList.h"
@@ -56,6 +59,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(PlaybackSessionModelMediaElement);
 PlaybackSessionModelMediaElement::PlaybackSessionModelMediaElement()
     : EventListener(EventListener::CPPEventListenerType)
     , m_soundStageSize { AudioSessionSoundStageSize::Automatic }
+    , m_videoTrackConfigurationObserver { [&] { videoTrackConfigurationChanged(); } }
 {
 }
 
@@ -87,7 +91,13 @@ void PlaybackSessionModelMediaElement::setMediaElement(HTMLMediaElement* mediaEl
             audioTracks->removeEventListener(events.removetrackEvent, *this, false);
         }
 
-        if (auto* textTracks = oldMediaElement->audioTracks()) {
+        if (auto* videoTracks = oldMediaElement->videoTracks()) {
+            videoTracks->removeEventListener(events.addtrackEvent, *this, false);
+            videoTracks->removeEventListener(events.changeEvent, *this, false);
+            videoTracks->removeEventListener(events.removetrackEvent, *this, false);
+        }
+
+        if (auto* textTracks = oldMediaElement->textTracks()) {
             textTracks->removeEventListener(events.addtrackEvent, *this, false);
             textTracks->removeEventListener(events.changeEvent, *this, false);
             textTracks->removeEventListener(events.removetrackEvent, *this, false);
@@ -108,6 +118,11 @@ void PlaybackSessionModelMediaElement::setMediaElement(HTMLMediaElement* mediaEl
         audioTracks.addEventListener(events.addtrackEvent, *this, false);
         audioTracks.addEventListener(events.changeEvent, *this, false);
         audioTracks.addEventListener(events.removetrackEvent, *this, false);
+
+        auto& videoTracks = newMediaElement->ensureVideoTracks();
+        videoTracks.addEventListener(events.addtrackEvent, *this, false);
+        videoTracks.addEventListener(events.changeEvent, *this, false);
+        videoTracks.addEventListener(events.removetrackEvent, *this, false);
 
         auto& textTracks = newMediaElement->ensureTextTracks();
         textTracks.addEventListener(events.addtrackEvent, *this, false);
@@ -132,6 +147,11 @@ void PlaybackSessionModelMediaElement::mediaEngineChanged()
 void PlaybackSessionModelMediaElement::handleEvent(WebCore::ScriptExecutionContext&, WebCore::Event& event)
 {
     updateForEventName(event.type());
+}
+
+void PlaybackSessionModelMediaElement::updateAll()
+{
+    updateForEventName(eventNameAll());
 }
 
 void PlaybackSessionModelMediaElement::updateForEventName(const WTF::AtomString& eventName)
@@ -189,12 +209,11 @@ void PlaybackSessionModelMediaElement::updateForEventName(const WTF::AtomString&
     if (all
         || eventName == eventNames().progressEvent) {
         auto bufferedTime = this->bufferedTime();
-        auto seekableRanges = this->seekableRanges();
         auto seekableTimeRangesLastModifiedTime = this->seekableTimeRangesLastModifiedTime();
         auto liveUpdateInterval = this->liveUpdateInterval();
         for (auto& client : m_clients) {
             client->bufferedTimeChanged(bufferedTime);
-            client->seekableRangesChanged(seekableRanges, seekableTimeRangesLastModifiedTime, liveUpdateInterval);
+            client->seekableRangesChanged(seekableRanges(), seekableTimeRangesLastModifiedTime, liveUpdateInterval);
         }
     }
 
@@ -242,6 +261,12 @@ void PlaybackSessionModelMediaElement::updateForEventName(const WTF::AtomString&
         }
     }
 }
+
+void PlaybackSessionModelMediaElement::videoTrackConfigurationChanged()
+{
+    maybeUpdateVideoMetadata();
+}
+
 void PlaybackSessionModelMediaElement::addClient(PlaybackSessionModelClient& client)
 {
     ASSERT(!m_clients.contains(&client));
@@ -407,6 +432,16 @@ void PlaybackSessionModelMediaElement::enterFullscreen()
     element->enterFullscreenIgnoringPermissionsPolicy();
 }
 
+void PlaybackSessionModelMediaElement::setPlayerIdentifierForVideoElement()
+{
+    RefPtr element = dynamicDowncast<HTMLVideoElement>(m_mediaElement);
+    ASSERT(element);
+    if (!element)
+        return;
+
+    element->setPlayerIdentifierForVideoElement();
+}
+
 void PlaybackSessionModelMediaElement::exitFullscreen()
 {
     RefPtr element = dynamicDowncast<HTMLVideoElement>(m_mediaElement);
@@ -494,16 +529,42 @@ void PlaybackSessionModelMediaElement::updateMediaSelectionOptions()
         client->legibleMediaSelectionOptionsChanged(legibleOptions, legibleIndex);
     }
 
-#if ENABLE(LINEAR_MEDIA_PLAYER)
+    maybeUpdateVideoMetadata();
+}
+
+void PlaybackSessionModelMediaElement::maybeUpdateVideoMetadata()
+{
+    RefPtr mediaElement = m_mediaElement;
+    if (!mediaElement)
+        return;
     RefPtr videoTracks = mediaElement->videoTracks();
     auto* selectedItem = videoTracks ? videoTracks->selectedItem() : nullptr;
+
+    // Occasionally, when tearing down an AVAssetTrack in a HLS stream, the tracks
+    // exposed to web content are recreated, and a "removetrack" event is fired before
+    // the subsequent "addtrack" event is fired. This leads to a brief moment when
+    // there is no "selected" video track. In this case, ignore the update and
+    // return early.
+    if (!selectedItem && (m_spatialVideoMetadata || m_videoProjectionMetadata)) {
+        ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER, "no selected item, but have cached spatial metadata or projection metadata; bailing");
+        return;
+    }
+
     auto spatialVideoMetadata = selectedItem ? selectedItem->configuration().spatialVideoMetadata() : std::nullopt;
     if (spatialVideoMetadata != m_spatialVideoMetadata) {
+        m_spatialVideoMetadata = WTFMove(spatialVideoMetadata);
+        ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER, "spatialVideoMetadata: ", m_spatialVideoMetadata);
         for (auto& client : m_clients)
             client->spatialVideoMetadataChanged(spatialVideoMetadata);
-        m_spatialVideoMetadata = WTFMove(spatialVideoMetadata);
     }
-#endif
+
+    auto videoProjectionMetadata = selectedItem ? selectedItem->configuration().videoProjectionMetadata() : std::nullopt;
+    if (videoProjectionMetadata != m_videoProjectionMetadata) {
+        m_videoProjectionMetadata = videoProjectionMetadata;
+        ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER, "videoProjectionMetadata: ", m_videoProjectionMetadata);
+        for (auto& client : m_clients)
+            client->videoProjectionMetadataChanged(m_videoProjectionMetadata);
+    }
 }
 
 void PlaybackSessionModelMediaElement::updateMediaSelectionIndices()
@@ -515,6 +576,8 @@ void PlaybackSessionModelMediaElement::updateMediaSelectionIndices()
         client->audioMediaSelectionIndexChanged(audioIndex);
         client->legibleMediaSelectionIndexChanged(legibleIndex);
     }
+
+    maybeUpdateVideoMetadata();
 }
 
 double PlaybackSessionModelMediaElement::playbackStartedTime() const
@@ -600,11 +663,11 @@ double PlaybackSessionModelMediaElement::playbackRate() const
     return 0;
 }
 
-Ref<TimeRanges> PlaybackSessionModelMediaElement::seekableRanges() const
+PlatformTimeRanges PlaybackSessionModelMediaElement::seekableRanges() const
 {
     if (RefPtr mediaElement = m_mediaElement; mediaElement && mediaElement->supportsSeeking())
-        return mediaElement->seekable();
-    return TimeRanges::create();
+        return mediaElement->platformSeekable();
+    return { };
 }
 
 double PlaybackSessionModelMediaElement::seekableTimeRangesLastModifiedTime() const
@@ -620,7 +683,7 @@ double PlaybackSessionModelMediaElement::liveUpdateInterval() const
         return mediaElement->liveUpdateInterval();
     return 0;
 }
-    
+
 bool PlaybackSessionModelMediaElement::canPlayFastReverse() const
 {
     if (RefPtr mediaElement = m_mediaElement)
@@ -791,6 +854,12 @@ const Logger* PlaybackSessionModelMediaElement::loggerPtr() const
         return &mediaElement->logger();
     return nullptr;
 }
+
+WTFLogChannel& PlaybackSessionModelMediaElement::logChannel() const
+{
+    return LogMedia;
+}
+
 #endif
 
 } // namespace WebCore

@@ -26,6 +26,7 @@
 #include "config.h"
 #include "MemoryRelease.h"
 
+#include "AsyncNodeDeletionQueueInlines.h"
 #include "BackForwardCache.h"
 #include "CSSFontSelector.h"
 #include "CSSValuePool.h"
@@ -73,6 +74,10 @@
 #include <wtf/spi/darwin/OSVariantSPI.h>
 #endif
 
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+#include "InteractionRegion.h"
+#endif
+
 namespace WebCore {
 
 static void releaseNoncriticalMemory(MaintainMemoryCache maintainMemoryCache)
@@ -84,10 +89,17 @@ static void releaseNoncriticalMemory(MaintainMemoryCache maintainMemoryCache)
     GlyphDisplayListCache::singleton().clear();
     SelectorQueryCache::singleton().clear();
 
-    for (auto& document : Document::allDocuments()) {
+    auto allDocuments = Document::allDocuments();
+    auto protectedDocuments = WTF::map(allDocuments, [](auto& document) -> Ref<Document> {
+        return document.get();
+    });
+
+    for (auto& document : protectedDocuments) {
+        document->asyncNodeDeletionQueue().deleteNodesNow();
         if (CheckedPtr renderView = document->renderView()) {
             LayoutIntegration::LineLayout::releaseCaches(*renderView);
             Layout::TextBreakingPositionCache::singleton().clear();
+            renderView->layoutContext().deleteDetachedRenderersNow();
         }
     }
 
@@ -98,6 +110,9 @@ static void releaseNoncriticalMemory(MaintainMemoryCache maintainMemoryCache)
     HTMLNameCache::clear();
     ImmutableStyleProperties::clearDeduplicationMap();
     SVGPathElement::clearCache();
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    InteractionRegion::clearCache();
+#endif
 }
 
 static void releaseCriticalMemory(Synchronous synchronous, MaintainBackForwardCache maintainBackForwardCache, MaintainMemoryCache maintainMemoryCache)
@@ -257,7 +272,7 @@ void logMemoryStatistics(LogMemoryStatisticsReason reason)
     RELEASE_LOG(MemoryPressure, "Live JavaScript objects at time of %" PUBLIC_LOG_STRING ":", description.characters());
     auto typeCounts = vm.heap.objectTypeCounts();
     for (auto& it : *typeCounts)
-        RELEASE_LOG(MemoryPressure, "  %" PUBLIC_LOG_STRING ": %d", it.key, it.value);
+        RELEASE_LOG(MemoryPressure, "  %" PUBLIC_LOG_STRING ": %d", it.key.characters(), it.value);
 }
 #endif
 

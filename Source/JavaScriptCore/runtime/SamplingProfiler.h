@@ -180,7 +180,7 @@ public:
     };
 
     SamplingProfiler(VM&, Ref<Stopwatch>&&);
-    ~SamplingProfiler();
+    JS_EXPORT_PRIVATE ~SamplingProfiler();
     void noticeJSLockAcquisition();
     void noticeVMEntry();
     void shutdown();
@@ -190,7 +190,7 @@ public:
     JS_EXPORT_PRIVATE void start();
     void startWithLock() WTF_REQUIRES_LOCK(m_lock);
     Vector<StackTrace> releaseStackTraces() WTF_REQUIRES_LOCK(m_lock);
-    JS_EXPORT_PRIVATE String stackTracesAsJSONString();
+    JS_EXPORT_PRIVATE Ref<JSON::Value> stackTracesAsJSON();
     JS_EXPORT_PRIVATE void noticeCurrentThreadAsJSCExecutionThread();
     void noticeCurrentThreadAsJSCExecutionThreadWithLock() WTF_REQUIRES_LOCK(m_lock);
     void processUnverifiedStackTraces() WTF_REQUIRES_LOCK(m_lock);
@@ -225,7 +225,7 @@ private:
     Seconds m_timingInterval;
     RefPtr<Thread> m_thread;
     RefPtr<Thread> m_jscExecutionThread WTF_GUARDED_BY_LOCK(m_lock);
-    HashSet<JSCell*> m_liveCellPointers WTF_GUARDED_BY_LOCK(m_lock);
+    UncheckedKeyHashSet<JSCell*> m_liveCellPointers WTF_GUARDED_BY_LOCK(m_lock);
     Vector<UnprocessedStackFrame> m_currentFrames WTF_GUARDED_BY_LOCK(m_lock);
 };
 

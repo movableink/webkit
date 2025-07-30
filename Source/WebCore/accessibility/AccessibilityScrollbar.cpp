@@ -58,7 +58,7 @@ Document* AccessibilityScrollbar::document() const
     return parent ? parent->document() : nullptr;
 }
 
-AccessibilityOrientation AccessibilityScrollbar::orientation() const
+std::optional<AccessibilityOrientation> AccessibilityScrollbar::explicitOrientation() const
 {
     // ARIA 1.1 Elements with the role scrollbar have an implicit aria-orientation value of vertical.
     if (m_scrollbar->orientation() == ScrollbarOrientation::Horizontal)

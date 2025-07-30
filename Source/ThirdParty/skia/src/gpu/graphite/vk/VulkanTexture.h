@@ -9,9 +9,11 @@
 #define skgpu_graphite_VulkanTexture_DEFINED
 
 #include "include/core/SkRefCnt.h"
+#include "include/gpu/graphite/vk/VulkanGraphiteTypes.h"
 #include "include/gpu/vk/VulkanTypes.h"
 #include "include/private/base/SkTArray.h"
 #include "src/gpu/graphite/Texture.h"
+#include "src/gpu/graphite/TextureInfoPriv.h"
 #include "src/gpu/graphite/vk/VulkanImageView.h"
 
 #include <utility>
@@ -20,9 +22,13 @@ namespace skgpu { class MutableTextureState; }
 
 namespace skgpu::graphite {
 
+class Sampler;
 class VulkanSharedContext;
 class VulkanCommandBuffer;
+class VulkanDescriptorSet;
+class VulkanFramebuffer;
 class VulkanResourceProvider;
+struct RenderPassDesc;
 
 class VulkanTexture : public Texture {
 public:
@@ -40,7 +46,6 @@ public:
     static sk_sp<Texture> Make(const VulkanSharedContext*,
                                SkISize dimensions,
                                const TextureInfo&,
-                               skgpu::Budgeted,
                                sk_sp<VulkanYcbcrConversion>);
 
     static sk_sp<Texture> MakeWrapped(const VulkanSharedContext*,
@@ -51,8 +56,11 @@ public:
                                       const VulkanAlloc&,
                                       sk_sp<VulkanYcbcrConversion>);
 
-    ~VulkanTexture() override {}
+    ~VulkanTexture() override;
 
+    const VulkanTextureInfo& vulkanTextureInfo() const {
+        return TextureInfoPriv::Get<VulkanTextureInfo>(this->textureInfo());
+    }
     VkImage vkImage() const { return fImage; }
 
     void setImageLayout(VulkanCommandBuffer* buffer,
@@ -86,6 +94,15 @@ public:
 
     bool supportsInputAttachmentUsage() const;
 
+    sk_sp<VulkanDescriptorSet> getCachedSingleTextureDescriptorSet(const Sampler*) const;
+    void addCachedSingleTextureDescriptorSet(sk_sp<VulkanDescriptorSet>,
+                                            sk_sp<const Sampler>) const;
+
+    sk_sp<VulkanFramebuffer> getCachedFramebuffer(const RenderPassDesc& renderPassDesc,
+                                                  const VulkanTexture* msaaTexture,
+                                                  const VulkanTexture* depthStencilTexture) const;
+    void addCachedFramebuffer(sk_sp<VulkanFramebuffer>);
+
 private:
     VulkanTexture(const VulkanSharedContext* sharedContext,
                   SkISize dimensions,
@@ -94,19 +111,24 @@ private:
                   VkImage,
                   const VulkanAlloc&,
                   Ownership,
-                  skgpu::Budgeted,
                   sk_sp<VulkanYcbcrConversion>);
 
     void freeGpuData() override;
+
+    size_t onUpdateGpuMemorySize() override;
 
     VkImage fImage;
     VulkanAlloc fMemoryAlloc;
     sk_sp<VulkanYcbcrConversion> fYcbcrConversion;
 
     mutable skia_private::STArray<2, std::unique_ptr<const VulkanImageView>> fImageViews;
+
+    using CachedTextureDescSet = std::pair<sk_sp<const Sampler>, sk_sp<VulkanDescriptorSet>>;
+    mutable skia_private::STArray<3, CachedTextureDescSet> fCachedSingleTextureDescSets;
+
+    skia_private::STArray<3, sk_sp<VulkanFramebuffer>> fCachedFramebuffers;
 };
 
 } // namespace skgpu::graphite
 
 #endif // skgpu_graphite_VulkanTexture_DEFINED
-

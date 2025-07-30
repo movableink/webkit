@@ -115,7 +115,7 @@
 #define IDC_AUTH_USER                   1053
 #define IDC_AUTH_PASSWORD               1054
 #define IDC_URL_BAR                     1055
-#define IDC_REALM_TEXT                  1056
+#define IDC_AUTH_TEXT                   1056
 #define IDC_PROXY_URL                   1057
 #define IDC_PROXY_DEFAULT               1058
 #define IDC_PROXY_CUSTOM                1059
@@ -125,7 +125,7 @@
 #define IDM_EXPERIMENTAL_FEATURES_BEGIN 30000
 #define IDM_EXPERIMENTAL_FEATURES_END   30999
 #define IDM_INTERNAL_DEBUG_FEATURES_BEGIN 31000
-#define IDM_INTERNAL_DEBUG_FEATURES_END   31999
+#define IDM_INTERNAL_DEBUG_FEATURES_END 31999
 #define IDM_NEW_WEBKIT_WINDOW           32776
 #define IDM_PROXY_SETTINGS              32778
 #define IDM_RELOAD                      32779
@@ -134,8 +134,8 @@
 #define IDM_SET_DEFAULT_URL             32782
 #define IDM_EXPERIMENTAL_FEATURES_RESET_ALL_TO_DEFAULTS 32783
 #define IDM_INTERNAL_DEBUG_FEATURES_RESET_ALL_TO_DEFAULTS 32784
-#define IDM_CLEAR_COOKIES 32785
-#define IDM_CLEAR_WEBSITE_DATA 32786
+#define IDM_CLEAR_COOKIES               32785
+#define IDM_CLEAR_WEBSITE_DATA          32786
 #define IDC_STATIC                      -1
 
 // Next default values for new objects

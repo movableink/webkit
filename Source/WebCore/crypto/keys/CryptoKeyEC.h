@@ -27,7 +27,6 @@
 
 #include "CryptoKey.h"
 #include "CryptoKeyPair.h"
-#include "ExceptionOr.h"
 
 #if OS(DARWIN) && !PLATFORM(GTK)
 #include "CommonCryptoUtilities.h"
@@ -66,6 +65,7 @@ using PlatformECKeyContainer = WebCore::EvpPKeyPtr;
 namespace WebCore {
 
 struct JsonWebKey;
+template<typename> class ExceptionOr;
 
 class CryptoKeyEC final : public CryptoKey {
 public:
@@ -104,8 +104,9 @@ private:
     CryptoKeyEC(CryptoAlgorithmIdentifier, NamedCurve, CryptoKeyType, PlatformECKeyContainer&&, bool extractable, CryptoKeyUsageBitmap);
 
     CryptoKeyClass keyClass() const final { return CryptoKeyClass::EC; }
-
     KeyAlgorithm algorithm() const final;
+    CryptoKey::Data data() const final;
+
     static bool platformSupportedCurve(NamedCurve);
     static std::optional<CryptoKeyPair> platformGeneratePair(CryptoAlgorithmIdentifier, NamedCurve, bool extractable, CryptoKeyUsageBitmap);
     static RefPtr<CryptoKeyEC> platformImportRaw(CryptoAlgorithmIdentifier, NamedCurve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap);

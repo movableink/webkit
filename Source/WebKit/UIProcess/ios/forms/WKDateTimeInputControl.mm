@@ -87,6 +87,8 @@ static constexpr auto yearAndMonthDatePickerMode = static_cast<UIDatePickerMode>
         return nil;
 
     RetainPtr maximumDateFormatter = adoptNS([[NSDateFormatter alloc] init]);
+    [maximumDateFormatter setLocale:[NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"]];
+    [maximumDateFormatter setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];
     [maximumDateFormatter setDateFormat:kDateTimeFormatString];
     RetainPtr maximumDate = [maximumDateFormatter dateFromString:@"10000-12-31T23:59"]; // UIDatePicker cannot have more than 10,000 selectable years
     _dateInterval = adoptNS([[NSDateInterval alloc] initWithStartDate:[NSDate distantPast] endDate:maximumDate.get()]);
@@ -348,7 +350,7 @@ static constexpr auto yearAndMonthDatePickerMode = static_cast<UIDatePickerMode>
 
     // Currently no value for the <input>. Start the picker with the current time.
     // Also, update the actual <input> value.
-    _initialValue = _view.focusedElementInformation.value;
+    _initialValue = _view.focusedElementInformation.value.createNSString().get();
     [self setDateTimePickerToInitialValue];
     [self showDateTimePicker];
 }
@@ -386,8 +388,8 @@ static constexpr auto yearAndMonthDatePickerMode = static_cast<UIDatePickerMode>
 
 - (void)setHour:(NSInteger)hour minute:(NSInteger)minute
 {
-    NSString *timeString = [NSString stringWithFormat:@"%.2ld:%.2ld", (long)hour, (long)minute];
-    [_datePicker setDate:[[self dateFormatterForPicker] dateFromString:timeString]];
+    RetainPtr timeString = adoptNS([[NSString alloc] initWithFormat:@"%.2ld:%.2ld", (long)hour, (long)minute]);
+    [_datePicker setDate:[[self dateFormatterForPicker] dateFromString:timeString.get()]];
     [self _dateChanged];
 }
 

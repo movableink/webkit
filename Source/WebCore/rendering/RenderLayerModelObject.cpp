@@ -3,7 +3,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2005 Allan Sandfeld Jensen (kde@carewolf.com)
  *           (C) 2005, 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2005-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2010-2015 Google Inc. All rights reserved.
  * Copyright (C) 2023, 2024 Igalia S.L.
  *
@@ -26,8 +26,10 @@
 #include "config.h"
 #include "RenderLayerModelObject.h"
 
+#include "BlendingKeyframes.h"
 #include "InspectorInstrumentation.h"
 #include "MotionPath.h"
+#include "ReferenceFilterOperation.h"
 #include "ReferencedSVGResources.h"
 #include "RenderDescendantIterator.h"
 #include "RenderLayer.h"
@@ -133,8 +135,8 @@ void RenderLayerModelObject::styleWillChange(StyleDifference diff, const RenderS
 
 void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
-    RenderElement::styleDidChange(diff, oldStyle);
     updateFromStyle();
+    RenderElement::styleDidChange(diff, oldStyle);
 
     // When an out-of-flow-positioned element changes its display between block and inline-block,
     // then an incremental layout on the element's containing block lays out the element through
@@ -158,7 +160,7 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
             if (s_wasFloating && isFloating())
                 setChildNeedsLayout();
             createLayer();
-            if (parent() && !needsLayout() && containingBlock())
+            if (parent() && !needsLayout())
                 layer()->setRepaintStatus(RepaintStatus::NeedsFullRepaint);
         }
     } else if (layer() && layer()->parent()) {
@@ -198,8 +200,7 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
             view().frameView().removeViewportConstrainedObject(*this);
     }
 
-    const RenderStyle& newStyle = style();
-    if (oldStyle && oldStyle->scrollPadding() != newStyle.scrollPadding()) {
+    if (oldStyle && !oldStyle->scrollPaddingEqual(style())) {
         if (isDocumentElementRenderer()) {
             LocalFrameView& frameView = view().frameView();
             frameView.updateScrollbarSteps();
@@ -207,10 +208,7 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
             renderLayer->updateScrollbarSteps();
     }
 
-    bool scrollMarginChanged = oldStyle && oldStyle->scrollMargin() != newStyle.scrollMargin();
-    bool scrollAlignChanged = oldStyle && oldStyle->scrollSnapAlign() != newStyle.scrollSnapAlign();
-    bool scrollSnapStopChanged = oldStyle && oldStyle->scrollSnapStop() != newStyle.scrollSnapStop();
-    if (scrollMarginChanged || scrollAlignChanged || scrollSnapStopChanged) {
+    if (oldStyle && !oldStyle->scrollSnapDataEquivalent(style())) {
         if (auto* scrollSnapBox = enclosingScrollableContainer())
             scrollSnapBox->setNeedsLayout();
     }
@@ -218,7 +216,7 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
 
 bool RenderLayerModelObject::shouldPlaceVerticalScrollbarOnLeft() const
 {
-// RTL Scrollbars require some system support, and this system support does not exist on certain versions of OS X. iOS uses a separate mechanism.
+// RTL Scrollbars require some system support, and this system support does not exist on certain versions of macOS. iOS uses a separate mechanism.
 #if PLATFORM(IOS_FAMILY)
     return false;
 #else
@@ -245,18 +243,18 @@ bool RenderLayerModelObject::startAnimation(double timeOffset, const Animation& 
     return layer()->backing()->startAnimation(timeOffset, animation, keyframes);
 }
 
-void RenderLayerModelObject::animationPaused(double timeOffset, const String& name)
+void RenderLayerModelObject::animationPaused(double timeOffset, const BlendingKeyframes& keyframes)
 {
     if (!layer() || !layer()->backing())
         return;
-    layer()->backing()->animationPaused(timeOffset, name);
+    layer()->backing()->animationPaused(timeOffset, keyframes.acceleratedAnimationName());
 }
 
-void RenderLayerModelObject::animationFinished(const String& name)
+void RenderLayerModelObject::animationFinished(const BlendingKeyframes& keyframes)
 {
     if (!layer() || !layer()->backing())
         return;
-    layer()->backing()->animationFinished(name);
+    layer()->backing()->animationFinished(keyframes.acceleratedAnimationName());
 }
 
 void RenderLayerModelObject::transformRelatedPropertyDidChange()
@@ -479,7 +477,7 @@ RenderSVGResourceFilter* RenderLayerModelObject::svgFilterResourceFromStyle() co
     if (operations.size() != 1)
         return nullptr;
 
-    RefPtr referenceFilterOperation = dynamicDowncast<ReferenceFilterOperation>(operations.at(0));
+    RefPtr referenceFilterOperation = dynamicDowncast<Style::ReferenceFilterOperation>(operations.at(0));
     if (!referenceFilterOperation)
         return nullptr;
 
@@ -499,12 +497,12 @@ RenderSVGResourceMasker* RenderLayerModelObject::svgMaskerResourceFromStyle() co
     if (!document().settings().layerBasedSVGEngineEnabled())
         return nullptr;
 
-    auto* maskImage = style().maskImage();
-    auto reresolvedURL = maskImage ? maskImage->reresolvedURL(document()) : URL();
-    if (reresolvedURL.isEmpty())
+    RefPtr maskImage = style().maskImage();
+    auto maskImageURL = maskImage ? maskImage->url() : Style::URL::none();
+    if (maskImageURL.isNone())
         return nullptr;
 
-    auto resourceID = SVGURIReference::fragmentIdentifierFromIRIString(reresolvedURL.string(), protectedDocument());
+    auto resourceID = SVGURIReference::fragmentIdentifierFromIRIString(maskImageURL, protectedDocument());
 
     if (RefPtr referencedMaskElement = ReferencedSVGResources::referencedMaskElement(treeScopeForSVGReferences(), *maskImage)) {
         if (auto* referencedMaskerRenderer = dynamicDowncast<RenderSVGResourceMasker>(referencedMaskElement->renderer()))
@@ -532,9 +530,9 @@ RenderSVGResourceMarker* RenderLayerModelObject::svgMarkerEndResourceFromStyle()
     return svgMarkerResourceFromStyle(style().svgStyle().markerEndResource());
 }
 
-RenderSVGResourceMarker* RenderLayerModelObject::svgMarkerResourceFromStyle(const String& markerResource) const
+RenderSVGResourceMarker* RenderLayerModelObject::svgMarkerResourceFromStyle(const Style::URL& markerResource) const
 {
-    if (markerResource.isEmpty() || !document().settings().layerBasedSVGEngineEnabled())
+    if (markerResource.isNone() || !document().settings().layerBasedSVGEngineEnabled())
         return nullptr;
 
     if (RefPtr referencedMarkerElement = ReferencedSVGResources::referencedMarkerElement(treeScopeForSVGReferences(), markerResource)) {
@@ -543,7 +541,7 @@ RenderSVGResourceMarker* RenderLayerModelObject::svgMarkerResourceFromStyle(cons
     }
 
     if (auto* element = dynamicDowncast<SVGElement>(this->element()))
-        document().addPendingSVGResource(AtomString(markerResource), *element);
+        document().addPendingSVGResource(AtomString(markerResource.resolved.string()), *element);
 
     return nullptr;
 }
@@ -563,7 +561,7 @@ RenderSVGResourcePaintServer* RenderLayerModelObject::svgFillPaintServerResource
     }
 
     if (auto* element = this->element())
-        document().addPendingSVGResource(AtomString(svgStyle.fillPaintUri()), downcast<SVGElement>(*element));
+        document().addPendingSVGResource(AtomString(svgStyle.fillPaintUri().resolved.string()), downcast<SVGElement>(*element));
 
     return nullptr;
 }
@@ -583,9 +581,18 @@ RenderSVGResourcePaintServer* RenderLayerModelObject::svgStrokePaintServerResour
     }
 
     if (auto* element = this->element())
-        document().addPendingSVGResource(AtomString(svgStyle.strokePaintUri()), downcast<SVGElement>(*element));
+        document().addPendingSVGResource(AtomString(svgStyle.strokePaintUri().resolved.string()), downcast<SVGElement>(*element));
 
     return nullptr;
+}
+
+LegacyRenderSVGResourceClipper* RenderLayerModelObject::legacySVGClipperResourceFromStyle() const
+{
+    RefPtr referenceClipPathOperation = dynamicDowncast<ReferencePathOperation>(style().clipPath());
+    if (!referenceClipPathOperation)
+        return nullptr;
+
+    return ReferencedSVGResources::referencedClipperRenderer(treeScopeForSVGReferences(), *referenceClipPathOperation);
 }
 
 bool RenderLayerModelObject::pointInSVGClippingArea(const FloatPoint& point) const
@@ -610,7 +617,7 @@ bool RenderLayerModelObject::pointInSVGClippingArea(const FloatPoint& point) con
                     referenceBox.setSize(*viewportSize);
                 break;
             }
-            FALLTHROUGH;
+            [[fallthrough]];
         case CSSBoxType::ContentBox:
         case CSSBoxType::FillBox:
         case CSSBoxType::PaddingBox:

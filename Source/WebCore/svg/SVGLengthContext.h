@@ -1,6 +1,6 @@
 /*
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,7 +20,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "FloatRect.h"
 #include "SVGLengthValue.h"
 #include "SVGUnitTypes.h"
@@ -31,6 +30,8 @@ class SVGElement;
 class WeakPtrImplWithEventTargetData;
 
 struct Length;
+
+template<typename> class ExceptionOr;
 
 class SVGLengthContext {
 public:
@@ -58,11 +59,17 @@ private:
     ExceptionOr<float> convertValueFromPercentageToUserUnits(float value, SVGLengthMode) const;
     static float convertValueFromPercentageToUserUnits(float value, SVGLengthMode, FloatSize);
 
-    ExceptionOr<float> convertValueFromUserUnitsToEMS(float value) const;
-    ExceptionOr<float> convertValueFromEMSToUserUnits(float value) const;
+    ExceptionOr<float> convertValueFromUserUnitsToEMS(float) const;
+    ExceptionOr<float> convertValueFromEMSToUserUnits(float) const;
 
-    ExceptionOr<float> convertValueFromUserUnitsToEXS(float value) const;
-    ExceptionOr<float> convertValueFromEXSToUserUnits(float value) const;
+    ExceptionOr<float> convertValueFromUserUnitsToEXS(float) const;
+    ExceptionOr<float> convertValueFromEXSToUserUnits(float) const;
+
+    ExceptionOr<float> convertValueFromUserUnitsToLh(float) const;
+    ExceptionOr<float> convertValueFromLhToUserUnits(float) const;
+
+    ExceptionOr<float> convertValueFromUserUnitsToCh(float) const;
+    ExceptionOr<float> convertValueFromChToUserUnits(float) const;
 
     std::optional<FloatSize> computeViewportSize() const;
 

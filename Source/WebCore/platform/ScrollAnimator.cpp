@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014-2015 Apple Inc.  All rights reserved.
- * Copyright (c) 2010, Google Inc. All rights reserved.
+ * Copyright (c) 2010 Google Inc. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -369,7 +369,7 @@ float ScrollAnimator::pageScaleFactor() const
 
 std::unique_ptr<ScrollingEffectsControllerTimer> ScrollAnimator::createTimer(Function<void()>&& function)
 {
-    return makeUnique<ScrollingEffectsControllerTimer>(RunLoop::current(), [function = WTFMove(function), weakScrollableArea = WeakPtr { m_scrollableArea }] {
+    return makeUnique<ScrollingEffectsControllerTimer>(RunLoop::currentSingleton(), [function = WTFMove(function), weakScrollableArea = WeakPtr { m_scrollableArea }] {
         if (!weakScrollableArea)
             return;
         function();
@@ -405,7 +405,7 @@ void ScrollAnimator::removeWheelEventTestCompletionDeferralForReason(ScrollingNo
     m_wheelEventTestMonitor->removeDeferralForReason(identifier, reason);
 }
 
-#if PLATFORM(GTK) || USE(NICOSIA)
+#if USE(COORDINATED_GRAPHICS)
 bool ScrollAnimator::scrollAnimationEnabled() const
 {
     return m_scrollableArea.scrollAnimatorEnabled();

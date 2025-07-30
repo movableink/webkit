@@ -31,8 +31,7 @@
 #include "ContentExtensionRule.h"
 #include "DFA.h"
 #include "DFANode.h"
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+#include <wtf/StdLibExtras.h>
 
 namespace WebCore::ContentExtensions {
 
@@ -40,7 +39,7 @@ template <typename IntType>
 void append(Vector<DFABytecode>& bytecode, IntType value)
 {
     bytecode.grow(bytecode.size() + sizeof(IntType));
-    memcpy(&bytecode[bytecode.size() - sizeof(IntType)], &value, sizeof(IntType));
+    memcpySpan(bytecode.mutableSpan().last(sizeof(IntType)), asByteSpan(value));
 }
 
 static void append24BitUnsignedInteger(Vector<DFABytecode>& bytecode, uint32_t value)
@@ -82,8 +81,9 @@ static DFABytecodeFlagsSize bytecodeFlagsSize(ResourceFlags flags)
         return DFABytecodeFlagsSize::UInt8;
     if (flags <= std::numeric_limits<uint16_t>::max())
         return DFABytecodeFlagsSize::UInt16;
-    RELEASE_ASSERT(flags <= UInt24Max);
-    return DFABytecodeFlagsSize::UInt24;
+    if (flags <= UInt24Max)
+        return DFABytecodeFlagsSize::UInt24;
+    return DFABytecodeFlagsSize::UInt32;
 }
 
 static DFABytecodeActionSize bytecodeActionSize(uint32_t actionWithoutFlags)
@@ -106,6 +106,8 @@ static size_t toSizeT(DFABytecodeFlagsSize size)
         return sizeof(uint16_t);
     case DFABytecodeFlagsSize::UInt24:
         return UInt24Size;
+    case DFABytecodeFlagsSize::UInt32:
+        return sizeof(uint32_t);
     }
     RELEASE_ASSERT_NOT_REACHED();
 }
@@ -302,7 +304,7 @@ DFABytecodeCompiler::JumpTable DFABytecodeCompiler::extractJumpTable(Vector<DFAB
         return range.destination;
     });
 
-    ranges.remove(firstRange, size);
+    ranges.removeAt(firstRange, size);
 
     return jumpTable;
 }
@@ -311,9 +313,9 @@ auto DFABytecodeCompiler::transitions(const DFANode& node) -> Transitions
 {
     Transitions transitions;
 
-    uint32_t destinations[128];
-    memset(destinations, 0xff, sizeof(destinations));
-    const uint32_t noDestination = std::numeric_limits<uint32_t>::max();
+    constexpr uint32_t noDestination = std::numeric_limits<uint32_t>::max();
+    std::array<uint32_t, 128> destinations;
+    destinations.fill(noDestination);
 
     transitions.useFallbackTransition = node.canUseFallbackTransition(m_dfa);
     if (transitions.useFallbackTransition)
@@ -569,7 +571,5 @@ void DFABytecodeCompiler::compile()
 }
 
 } // namespace WebCore::ContentExtensions
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(CONTENT_EXTENSIONS)

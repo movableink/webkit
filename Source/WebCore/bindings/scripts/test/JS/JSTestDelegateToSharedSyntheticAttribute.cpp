@@ -22,6 +22,7 @@
 #include "JSTestDelegateToSharedSyntheticAttribute.h"
 
 #include "ActiveDOMObject.h"
+#include "ContextDestructionObserverInlines.h"
 #include "CustomElementReactionQueue.h"
 #include "ExtendedDOMClientIsoSubspaces.h"
 #include "ExtendedDOMIsoSubspaces.h"
@@ -164,7 +165,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestDelegateToSharedSyntheticAttributeConstructor, (J
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestDelegateToSharedSyntheticAttributePrototype*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestDelegateToSharedSyntheticAttribute::getConstructor(vm, prototype->globalObject()));
 }
@@ -190,7 +191,7 @@ static inline bool setJSTestDelegateToSharedSyntheticAttribute_sharedAttribute1S
     CustomElementReactionStack customElementReactionStack(lexicalGlobalObject);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = thisObject.wrapped();
     auto nativeValueConversionResult = convert<IDLLegacyNullToEmptyStringAdaptor<IDLUSVString>>(lexicalGlobalObject, value);
-    if (UNLIKELY(nativeValueConversionResult.hasException(throwScope)))
+    if (nativeValueConversionResult.hasException(throwScope)) [[unlikely]]
         return false;
     invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
         return impl.setSharedAttribute1(propertyNameToAtomString(propertyName), nativeValueConversionResult.releaseReturnValue());
@@ -224,7 +225,7 @@ static inline bool setJSTestDelegateToSharedSyntheticAttribute_sharedAttribute2S
     CustomElementReactionStack customElementReactionStack(lexicalGlobalObject);
     SUPPRESS_UNCOUNTED_LOCAL auto& impl = thisObject.wrapped();
     auto nativeValueConversionResult = convert<IDLLegacyNullToEmptyStringAdaptor<IDLUSVString>>(lexicalGlobalObject, value);
-    if (UNLIKELY(nativeValueConversionResult.hasException(throwScope)))
+    if (nativeValueConversionResult.hasException(throwScope)) [[unlikely]]
         return false;
     invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
         return impl.setSharedAttribute2(propertyNameToAtomString(propertyName), nativeValueConversionResult.releaseReturnValue());

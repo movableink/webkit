@@ -40,6 +40,7 @@
 #include "InternalObserverInspect.h"
 #include "InternalObserverLast.h"
 #include "InternalObserverMap.h"
+#include "InternalObserverReduce.h"
 #include "InternalObserverSome.h"
 #include "InternalObserverTake.h"
 #include "JSDOMPromiseDeferred.h"
@@ -47,6 +48,7 @@
 #include "MapperCallback.h"
 #include "ObservableInspector.h"
 #include "PredicateCallback.h"
+#include "ReducerCallback.h"
 #include "SubscribeOptions.h"
 #include "Subscriber.h"
 #include "SubscriberCallback.h"
@@ -95,7 +97,7 @@ void Observable::subscribeInternal(ScriptExecutionContext& context, Ref<Internal
     JSC::Exception* previousException = nullptr;
     {
         auto catchScope = DECLARE_CATCH_SCOPE(vm);
-        m_subscriberCallback->handleEventRethrowingException(subscriber);
+        m_subscriberCallback->invokeRethrowingException(subscriber);
         previousException = catchScope.exception();
         if (previousException) {
             catchScope.clearException();
@@ -167,6 +169,11 @@ void Observable::every(ScriptExecutionContext& context, Ref<PredicateCallback>&&
 void Observable::some(ScriptExecutionContext& context, Ref<PredicateCallback>&& callback, const SubscribeOptions& options, Ref<DeferredPromise>&& promise)
 {
     return createInternalObserverOperatorSome(context, *this, WTFMove(callback), options, WTFMove(promise));
+}
+
+void Observable::reduce(ScriptExecutionContext& context, Ref<ReducerCallback>&& callback, JSC::JSValue initialValue, const SubscribeOptions& options, Ref<DeferredPromise>&& promise)
+{
+    return createInternalObserverOperatorReduce(context, *this, WTFMove(callback), initialValue, options, WTFMove(promise));
 }
 
 Observable::Observable(Ref<SubscriberCallback> callback)

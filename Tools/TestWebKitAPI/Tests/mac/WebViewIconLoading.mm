@@ -28,6 +28,7 @@
 #import <WebKit/WebFrameLoadDelegate.h>
 #import <WebKit/WebView.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/cocoa/SpanCocoa.h>
 
 static NSString *MainFrameIconKeyPath = @"mainFrameIcon";
 static bool messageReceived = false;
@@ -42,9 +43,9 @@ static const char customFaviconHTML[] =
 "</head>";
 
 static const char* currentMainHTML;
-static NSData *mainResourceData()
+static RetainPtr<NSData> mainResourceData()
 {
-    return [NSData dataWithBytesNoCopy:(void*)currentMainHTML length:strlen(currentMainHTML) freeWhenDone:NO];
+    return toNSDataNoCopy(unsafeSpan8(currentMainHTML), FreeWhenDone::No);
 }
 
 static NSData *defaultFaviconData()
@@ -63,9 +64,6 @@ static NSImage *imageFromData(NSData *data)
 {
     auto image = adoptNS([[NSImage alloc] initWithData:data]);
 
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    [image setScalesWhenResized:YES];
-ALLOW_DEPRECATED_DECLARATIONS_END
     [image setSize:NSMakeSize(16, 16)];
 
     return image.autorelease();
@@ -88,7 +86,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (void)startLoading
 {
-    NSData *resourceData = nil;
+    RetainPtr<NSData> resourceData;
     RetainPtr<NSURLResponse> response;
 
     if ([self.request.URL.path hasSuffix:@"main"]) {
@@ -104,7 +102,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         RELEASE_ASSERT_NOT_REACHED();
 
     [self.client URLProtocol:self didReceiveResponse:response.get() cacheStoragePolicy:NSURLCacheStorageNotAllowed];
-    [self.client URLProtocol:self didLoadData:resourceData];
+    [self.client URLProtocol:self didLoadData:resourceData.get()];
     [self.client URLProtocolDidFinishLoading:self];
 }
 

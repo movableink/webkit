@@ -2,7 +2,7 @@
 tbd-version: 4
 targets: [arm64-xros, arm64e-xros]
 install-name: /System/Library/PrivateFrameworks/CoreRE.framework/CoreRE
-current-version: 366.0.18
+current-version: 366.120.1
 exports:
 -       targets: [arm64-xros, arm64e-xros]
         symbols: [_REAABBExtents, _REAnimationComponentGetComponentType, _REAnimationComponentPlay, _REAnimationHandoffDefaultDescEx,
@@ -15,11 +15,12 @@ exports:
                 _REComponentClassGetName, _REComponentGetClass, _REComponentGetEntity, _REECSManagerAddEngineSystem, _REECSManagerAddScene,
                 _REEngineConfigurationCreateDefault, _REEngineConfigurationGetServicesToCreate, _REEngineConfigurationSetCALayerServiceType,
                 _REEngineConfigurationSetClockMode, _REEngineConfigurationSetEngineQueue, _REEngineConfigurationSetRenderFlags,
-                _REEngineConfigurationSetServicesToCreate, _REEngineConfigurationSetServicesToUpdate, _REEngineCreate, _REEngineGetServiceLocator,
-                _REEngineGetShared, _REEngineInitWithConfiguration, _REEngineSetShared, _REEngineStart, _REEntityComputeMeshBounds,
-                _REEntityCreate, _REEntityGetChild, _REEntityGetChildCount, _REEntityGetComponentByClass, _REEntityGetName,
-                _REEntityGetOrAddComponentByClass, _REEntityRemoveComponentByClass, _REEntitySetName, _REEntitySetParent,
-                _REEntitySubtreeAddNetworkComponentRecursive, _REHierarchicalFadeComponentGetComponentType, _REHierarchicalFadeComponentSetOpacity,
+                _REEngineConfigurationSetServicesToCreate, _REEngineConfigurationSetServicesToUpdate, _REEngineConfigurationSetUseMetal,
+                _REEngineCreate, _REEngineDoUpdateEventSubscribe, _REEngineGetEventBus, _REEngineGetServiceLocator, _REEngineGetShared,
+                _REEngineInitWithConfiguration, _REEngineSetShared, _REEngineStart, _REEntityComputeMeshBounds, _REEntityCreate,
+                _REEntityGetChild, _REEntityGetChildCount, _REEntityGetComponentByClass, _REEntityGetName, _REEntityGetOrAddComponentByClass,
+                _REEntityRemoveComponentByClass, _REEntityRemoveFromSceneOrParent, _REEntitySetName, _REEntitySetParent, _REEntitySubtreeAddNetworkComponentRecursive,
+                _REEventBusUnsubscribe, _REHierarchicalFadeComponentGetComponentType, _REHierarchicalFadeComponentSetOpacity,
                 _REMakeSRTFromMatrix, _REMeshComponentGetComponentType, _RENetworkMarkComponentDirty, _RENetworkMarkEntityMetadataDirty,
                 _RERelease, _RERetain, _RESRTMatrix, _RESceneAddEntity, _REServiceLocatorGetAssetManager, _REServiceLocatorGetCALayerService,
                 _REServiceLocatorGetECSService, _RETimelineDefinitionCreateChildTimelineRef, _RETimelineDefinitionCreateClipSourceRef,

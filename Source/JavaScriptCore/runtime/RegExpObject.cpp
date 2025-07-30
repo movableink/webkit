@@ -143,7 +143,7 @@ bool RegExpObject::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName 
         if (!thisObject->lastIndexIsWritable())
             return typeError(globalObject, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
 
-        if (UNLIKELY(slot.thisValue() != thisObject))
+        if (slot.thisValue() != thisObject) [[unlikely]]
             RELEASE_AND_RETURN(scope, JSObject::definePropertyOnReceiver(globalObject, propertyName, value, slot));
 
         bool result = thisObject->setLastIndex(globalObject, value, slot.isStrictMode());
@@ -186,7 +186,7 @@ JSValue RegExpObject::matchGlobal(JSGlobalObject* globalObject, JSString* string
         RELEASE_AND_RETURN(scope, collectGlobalAtomMatches(globalObject, string, regExp));
     }
 
-    auto s = string->value(globalObject);
+    auto s = string->view(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
     ASSERT(!s->isNull());

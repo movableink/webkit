@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -81,12 +81,14 @@ public:
     void visitWeakReferences(Visitor&);
 
     template<typename Visitor>
-    void iterateCodeBlocksForGC(Visitor&, VM&, const Function<void(CodeBlock*)>&);
+    void iterateCodeBlocksForGC(Visitor&, VM&, NOESCAPE const Function<void(CodeBlock*)>&);
 
     void dump(PrintStream&) const;
 
 private:
     JITWorklist();
+
+    void wakeThreads(const AbstractLocker&, unsigned enqueuedTier);
 
     size_t queueLength(const AbstractLocker&) const;
 
@@ -102,6 +104,7 @@ private:
     unsigned m_numberOfActiveThreads { 0 };
     std::array<unsigned, static_cast<size_t>(JITPlan::Tier::Count)> m_ongoingCompilationsPerTier { 0, 0, 0 };
     std::array<unsigned, static_cast<size_t>(JITPlan::Tier::Count)> m_maximumNumberOfConcurrentCompilationsPerTier;
+    std::array<unsigned, static_cast<size_t>(JITPlan::Tier::Count)> m_loadWeightsPerTier;
 
     Vector<Ref<JITWorklistThread>> m_threads;
 
@@ -121,7 +124,7 @@ private:
     Lock m_suspensionLock;
     Box<Lock> m_lock;
 
-    Ref<AutomaticThreadCondition> m_planEnqueued;
+    const Ref<AutomaticThreadCondition> m_planEnqueued;
     Condition m_planCompiledOrCancelled;
 };
 

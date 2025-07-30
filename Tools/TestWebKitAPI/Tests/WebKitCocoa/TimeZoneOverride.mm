@@ -50,7 +50,7 @@ public:
     void runScriptAndExecuteCallback(const String& script, Function<void(id)>&& callback)
     {
         bool complete = false;
-        [_webView evaluateJavaScript:script completionHandler:[&] (id result, NSError *error) {
+        [_webView evaluateJavaScript:script.createNSString().get() completionHandler:[&] (id result, NSError *error) {
             EXPECT_NULL(error);
             callback(result);
             complete = true;
@@ -61,7 +61,7 @@ public:
     void callAsyncFunctionBody(const String& functionBody, Function<void(id)>&& callback)
     {
         bool complete = false;
-        [_webView callAsyncJavaScript:functionBody arguments:nil inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:[&] (id result, NSError *error) {
+        [_webView callAsyncJavaScript:functionBody.createNSString().get() arguments:nil inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:[&] (id result, NSError *error) {
             EXPECT_NULL(error);
             callback(result);
             complete = true;

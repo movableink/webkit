@@ -98,14 +98,17 @@ sk_sp<SharedContext> VulkanSharedContext::Make(const VulkanBackendContext& conte
     return sk_sp<SharedContext>(new VulkanSharedContext(context,
                                                         std::move(interface),
                                                         std::move(memoryAllocator),
-                                                        std::move(caps)));
+                                                        std::move(caps),
+                                                        options.fUserDefinedKnownRuntimeEffects));
 }
 
-VulkanSharedContext::VulkanSharedContext(const VulkanBackendContext& backendContext,
-                                         sk_sp<const skgpu::VulkanInterface> interface,
-                                         sk_sp<skgpu::VulkanMemoryAllocator> memoryAllocator,
-                                         std::unique_ptr<const VulkanCaps> caps)
-        : skgpu::graphite::SharedContext(std::move(caps), BackendApi::kVulkan)
+VulkanSharedContext::VulkanSharedContext(
+                const VulkanBackendContext& backendContext,
+                sk_sp<const skgpu::VulkanInterface> interface,
+                sk_sp<skgpu::VulkanMemoryAllocator> memoryAllocator,
+                std::unique_ptr<const VulkanCaps> caps,
+                SkSpan<sk_sp<SkRuntimeEffect>> userDefinedKnownRuntimeEffects)
+        : SharedContext(std::move(caps), BackendApi::kVulkan, userDefinedKnownRuntimeEffects)
         , fInterface(std::move(interface))
         , fMemoryAllocator(std::move(memoryAllocator))
         , fPhysDevice(backendContext.fPhysicalDevice)
@@ -122,34 +125,12 @@ VulkanSharedContext::~VulkanSharedContext() {
 std::unique_ptr<ResourceProvider> VulkanSharedContext::makeResourceProvider(
         SingleOwner* singleOwner,
         uint32_t recorderID,
-        size_t resourceBudget,
-        bool avoidBufferAlloc) {
-
-    sk_sp<Buffer> intrinsicConstantBuffer;
-
-    if (!avoidBufferAlloc) {
-        // Establish a uniform buffer that can be updated across multiple render passes and
-        // cmd buffers
-        size_t alignedIntrinsicConstantSize =
-                std::max(VulkanResourceProvider::kIntrinsicConstantSize,
-                         this->vulkanCaps().requiredUniformBufferAlignment());
-        intrinsicConstantBuffer = VulkanBuffer::Make(
-                this, alignedIntrinsicConstantSize, BufferType::kUniform, AccessPattern::kGpuOnly);
-        if (!intrinsicConstantBuffer) {
-            SKGPU_LOG_E("Failed to create intrinsic constant uniform buffer");
-            return nullptr;
-        }
-        SkASSERT(static_cast<VulkanBuffer*>(intrinsicConstantBuffer.get())->bufferUsageFlags()
-                 & VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-        intrinsicConstantBuffer->setLabel("IntrinsicConstantBuffer");
-    }
-
+        size_t resourceBudget) {
     return std::unique_ptr<ResourceProvider>(
             new VulkanResourceProvider(this,
                                        singleOwner,
                                        recorderID,
-                                       resourceBudget,
-                                       std::move(intrinsicConstantBuffer)));
+                                       resourceBudget));
 }
 
 bool VulkanSharedContext::checkVkResult(VkResult result) const {

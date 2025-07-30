@@ -28,17 +28,27 @@
 
 #if PLATFORM(IOS_FAMILY)
 
+#import "AXRemoteFrame.h"
 #import "AccessibilityRenderObject.h"
 #import "EventNames.h"
+#import "EventTargetInlines.h"
 #import "HTMLInputElement.h"
 #import "HTMLNames.h"
 #import "LocalFrameView.h"
 #import "RenderObject.h"
 #import "WAKView.h"
 #import "WebAccessibilityObjectWrapperIOS.h"
+#import <pal/spi/ios/AXRuntimeSPI.h>
 #import <wtf/SoftLinking.h>
+#import <wtf/cocoa/SpanCocoa.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
+#import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/MakeString.h>
+#import <wtf/text/WTFString.h>
+
+#if !PLATFORM(MACCATALYST)
+SOFT_LINK_CLASS_OPTIONAL(AXRuntime, AXRemoteElement);
+#endif
 
 SOFT_LINK_CONSTANT(AXRuntime, UIAccessibilityTokenBlockquoteLevel, NSString *);
 #define AccessibilityTokenBlockquoteLevel getUIAccessibilityTokenBlockquoteLevel()
@@ -103,7 +113,7 @@ unsigned AccessibilityObject::accessibilitySecureFieldLength()
         return 0;
 
     auto* inputElement = dynamicDowncast<HTMLInputElement>(renderer->node());
-    return inputElement ? inputElement->value().length() : 0;
+    return inputElement ? inputElement->value()->length() : 0;
 }
 
 bool AccessibilityObject::accessibilityIgnoreAttachment() const
@@ -113,7 +123,7 @@ bool AccessibilityObject::accessibilityIgnoreAttachment() const
     
 AccessibilityObjectInclusion AccessibilityObject::accessibilityPlatformIncludesObject() const
 {
-    if (roleValue() == AccessibilityRole::Unknown)
+    if (role() == AccessibilityRole::Unknown)
         return AccessibilityObjectInclusion::IgnoreObject;
     return AccessibilityObjectInclusion::DefaultBehavior;
 }
@@ -141,7 +151,7 @@ void AccessibilityObject::setLastPresentedTextPrediction(Node& previousCompositi
 
     if (state == CompositionState::Ended && !lastPresentedTextPrediction().text.isEmpty()) {
         auto* nodeText = dynamicDowncast<Text>(previousCompositionNode);
-        String previousCompositionNodeText = nodeText ? nodeText->wholeText() : String();
+        String previousCompositionNodeText = nodeText ? nodeText->data() : String();
         size_t wordStart = 0;
 
         // Find the location of the complete word being predicted by iterating backwards through the text to find whitespace.
@@ -171,6 +181,49 @@ void AccessibilityObject::setLastPresentedTextPrediction(Node& previousCompositi
 #endif // HAVE (INLINE_PREDICTIONS)
 }
 
+#if !PLATFORM(MACCATALYST)
+
+static RetainPtr<NSDictionary> unarchivedTokenForData(RetainPtr<NSData> tokenData)
+{
+    NSError *error = nil;
+    return [NSKeyedUnarchiver unarchivedObjectOfClasses:[NSSet setWithObjects:[NSDictionary class], [NSNumber class], [NSString class], nil] fromData:tokenData.get() error:&error];
+}
+
+#endif
+
+Vector<uint8_t> AXRemoteFrame::generateRemoteToken() const
+{
+    if (RetainPtr data = Accessibility::newAccessibilityRemoteToken([[NSUUID UUID] UUIDString]))
+        return makeVector(data.get());
+    return { };
+}
+
+void AXRemoteFrame::initializePlatformElementWithRemoteToken(std::span<const uint8_t> token, int processIdentifier)
+{
+#if !PLATFORM(MACCATALYST)
+    m_processIdentifier = processIdentifier;
+
+    RetainPtr nsToken = WTF::toNSData(token);
+    NSDictionary *tokenDictionary = nsToken ? unarchivedTokenForData(nsToken).get() : nil;
+    if (!tokenDictionary)
+        return;
+
+    NSString *uuid = [tokenDictionary objectForKey:@"ax-uuid"];
+    RetainPtr remoteElement = adoptNS([allocAXRemoteElementInstance() initWithUUID:uuid andRemotePid:processIdentifier andContextId:0]);
+    remoteElement.get().onClientSide = YES;
+    RefPtr parent = parentObjectUnignored();
+    remoteElement.get().accessibilityContainer = parent ?  parent->wrapper() : nil;
+
+    m_remoteFramePlatformElement = WTFMove(remoteElement);
+
+    if (CheckedPtr cache = axObjectCache())
+        cache->onRemoteFrameInitialized(*this);
+#else
+    UNUSED_PARAM(token);
+    UNUSED_PARAM(processIdentifier);
+#endif // !PLATFORM(MACCATALYST)
+}
+
 // NSAttributedString support.
 
 static void attributeStringSetLanguage(NSMutableAttributedString *attrString, RenderObject* renderer, const NSRange& range)
@@ -179,9 +232,9 @@ static void attributeStringSetLanguage(NSMutableAttributedString *attrString, Re
         return;
 
     RefPtr object = renderer->document().axObjectCache()->getOrCreate(*renderer);
-    NSString *language = object->language();
-    if (language.length)
-        [attrString addAttribute:AccessibilityTokenLanguage value:language range:range];
+    RetainPtr language = object->languageIncludingAncestors().createNSString();
+    if (language.get().length)
+        [attrString addAttribute:AccessibilityTokenLanguage value:language.get() range:range];
     else
         [attrString removeAttribute:AccessibilityTokenLanguage range:range];
 }
@@ -193,7 +246,7 @@ static unsigned blockquoteLevel(RenderObject* renderer)
 
     unsigned result = 0;
     for (Node* node = renderer->node(); node; node = node->parentNode()) {
-        if (node->hasTagName(HTMLNames::blockquoteTag))
+        if (WebCore::elementName(*node) == ElementName::HTML_blockquote)
             ++result;
     }
 
@@ -218,9 +271,9 @@ static void attributeStringSetStyle(NSMutableAttributedString *attrString, Rende
     auto& style = renderer->style();
 
     // Set basic font info.
-    attributedStringSetFont(attrString, style.fontCascade().primaryFont().getCTFont(), range);
+    attributedStringSetFont(attrString, style.fontCascade().primaryFont()->getCTFont(), range);
 
-    auto decor = style.textDecorationsInEffect();
+    auto decor = style.textDecorationLineInEffect();
     if (decor & TextDecorationLine::Underline)
         attributedStringSetNumber(attrString, AccessibilityTokenUnderline, @YES, range);
 
@@ -230,7 +283,7 @@ static void attributeStringSetStyle(NSMutableAttributedString *attrString, Rende
         return axObject.isCode();
     };
 
-    if (const auto* parent = Accessibility::findAncestor<AccessibilityObject>(*object, true, WTFMove(matchFunc)))
+    if (Accessibility::findAncestor<AccessibilityObject>(*object, true, WTFMove(matchFunc)))
         [attrString addAttribute:UIAccessibilityTextAttributeContext value:UIAccessibilityTextualContextSourceCode range:range];
 }
 
@@ -251,8 +304,9 @@ static void attributedStringSetCompositionAttributes(NSMutableAttributedString *
 
     if (!lastPresentedCompleteWord.text.isEmpty() && lastPresentedCompleteWordPosition + lastPresentedCompleteWordLength <= [attributedString length]) {
         NSRange completeWordRange = NSMakeRange(lastPresentedCompleteWordPosition, lastPresentedCompleteWordLength);
-        if ([[attributedString.string substringWithRange:completeWordRange] isEqualToString:lastPresentedCompleteWord.text])
-            [attributedString addAttribute:AccessibilityAcceptedInlineTextCompletion value:lastPresentedCompleteWord.text range:completeWordRange];
+        RetainPtr lastPresentedCompleteWordText = lastPresentedCompleteWord.text.createNSString();
+        if ([[attributedString.string substringWithRange:completeWordRange] isEqualToString:lastPresentedCompleteWordText.get()])
+            [attributedString addAttribute:AccessibilityAcceptedInlineTextCompletion value:lastPresentedCompleteWordText.get() range:completeWordRange];
     }
 
     auto& lastPresentedTextPrediction = object->lastPresentedTextPrediction();
@@ -261,7 +315,7 @@ static void attributedStringSetCompositionAttributes(NSMutableAttributedString *
 
     if (!lastPresentedTextPrediction.text.isEmpty() && lastPresentedPosition + lastPresentedLength <= [attributedString length]) {
         NSRange presentedRange = NSMakeRange(lastPresentedPosition, lastPresentedLength);
-        if (![[attributedString.string substringWithRange:presentedRange] isEqualToString:lastPresentedTextPrediction.text])
+        if (![[attributedString.string substringWithRange:presentedRange] isEqualToString:lastPresentedTextPrediction.text.createNSString().get()])
             return;
 
         [attributedString addAttribute:AccessibilityInlineTextCompletion value:[attributedString.string substringWithRange:presentedRange] range:presentedRange];
@@ -289,6 +343,17 @@ RetainPtr<NSAttributedString> attributedStringCreate(Node& node, StringView text
     attributedStringSetCompositionAttributes(result.get(), renderer.get());
 
     return result;
+}
+
+namespace Accessibility {
+
+RetainPtr<NSData> newAccessibilityRemoteToken(NSString *uuidString)
+{
+    if (!uuidString)
+        return nil;
+    return [NSKeyedArchiver archivedDataWithRootObject:@{ @"ax-pid" : @(getpid()), @"ax-uuid" : uuidString, @"ax-register" : @YES } requiringSecureCoding:YES error:nullptr];
+}
+
 }
 
 } // WebCore

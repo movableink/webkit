@@ -26,6 +26,7 @@
 #include "config.h"
 #include "HTTPServer.h"
 
+#include "Logging.h"
 #include <libsoup/soup.h>
 #include <wtf/Function.h>
 #include <wtf/glib/GUniquePtr.h>
@@ -55,7 +56,7 @@ bool HTTPServer::listen(const std::optional<String>& host, unsigned port)
     m_soupServer = adoptGRef(soup_server_new("server-header", "WebKitWebDriver", nullptr));
     GUniqueOutPtr<GError> error;
     if (!soupServerListen(m_soupServer.get(), host, port, &error.outPtr())) {
-        WTFLogAlways("Failed to start HTTP server at port %u: %s", port, error->message);
+        RELEASE_LOG(WebDriverClassic, "Failed to start HTTP server at port %u: %s", port, error->message);
         return false;
     }
 

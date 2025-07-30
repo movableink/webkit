@@ -56,10 +56,11 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerRunLoop);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerDedicatedRunLoop);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(WorkerDedicatedRunLoop, Task);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerDedicatedRunLoop::Task);
 
 class WorkerSharedTimer final : public SharedTimer {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(WorkerSharedTimer);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WorkerSharedTimer);
 public:
     // SharedTimer interface.
     void setFiredFunction(Function<void()>&& function) final { m_sharedTimerFunction = WTFMove(function); }
@@ -106,7 +107,6 @@ private:
 };
 
 WorkerDedicatedRunLoop::WorkerDedicatedRunLoop()
-    : m_sharedTimer(makeUnique<WorkerSharedTimer>())
 {
 }
 
@@ -133,8 +133,10 @@ public:
         : m_runLoop(runLoop)
         , m_isForDebugging(isForDebugging)
     {
-        if (!m_runLoop.m_nestedCount)
+        if (!m_runLoop.m_nestedCount) {
+            m_runLoop.m_sharedTimer = makeUnique<WorkerSharedTimer>();
             threadGlobalData().threadTimers().setSharedTimer(m_runLoop.m_sharedTimer.get());
+        }
         m_runLoop.m_nestedCount++;
         if (m_isForDebugging == IsForDebugging::Yes)
             m_runLoop.m_debugCount++;
@@ -143,8 +145,10 @@ public:
     ~RunLoopSetup()
     {
         m_runLoop.m_nestedCount--;
-        if (!m_runLoop.m_nestedCount)
+        if (!m_runLoop.m_nestedCount) {
             threadGlobalData().threadTimers().setSharedTimer(nullptr);
+            m_runLoop.m_sharedTimer = nullptr;
+        }
         if (m_isForDebugging == IsForDebugging::Yes)
             m_runLoop.m_debugCount--;
     }
@@ -181,7 +185,7 @@ bool WorkerDedicatedRunLoop::runInMode(WorkerOrWorkletGlobalScope* context, cons
 MessageQueueWaitResult WorkerDedicatedRunLoop::runInMode(WorkerOrWorkletGlobalScope* context, const ModePredicate& predicate)
 {
     ASSERT(context);
-    ASSERT(context->workerOrWorkletThread()->thread() == &Thread::current());
+    ASSERT(context->workerOrWorkletThread()->thread() == &Thread::currentSingleton());
 
     AutodrainedPool pool;
 
@@ -258,7 +262,7 @@ MessageQueueWaitResult WorkerDedicatedRunLoop::runInMode(WorkerOrWorkletGlobalSc
 void WorkerDedicatedRunLoop::runCleanupTasks(WorkerOrWorkletGlobalScope* context)
 {
     ASSERT(context);
-    ASSERT(context->workerOrWorkletThread()->thread() == &Thread::current());
+    ASSERT(context->workerOrWorkletThread()->thread() == &Thread::currentSingleton());
     ASSERT(m_messageQueue.killed());
 
     while (true) {
@@ -302,7 +306,7 @@ void WorkerDedicatedRunLoop::Task::performTask(WorkerOrWorkletGlobalScope* conte
         JSC::VM& vm = context->script()->vm();
         auto scope = DECLARE_CATCH_SCOPE(vm);
         m_task.performTask(*context);
-        if (UNLIKELY(context->script() && scope.exception())) {
+        if (context->script() && scope.exception()) [[unlikely]] {
             if (vm.hasPendingTerminationException()) {
                 context->script()->forbidExecution();
                 return;
@@ -333,7 +337,7 @@ void WorkerMainRunLoop::postTaskAndTerminate(ScriptExecutionContext::Task&& task
     if (m_terminated)
         return;
 
-    RunLoop::main().dispatch([weakThis = WeakPtr { *this }, task = WTFMove(task)]() mutable {
+    RunLoop::protectedMain()->dispatch([weakThis = WeakPtr { *this }, task = WTFMove(task)]() mutable {
         if (!weakThis || !weakThis->m_workerOrWorkletGlobalScope || weakThis->m_terminated)
             return;
 
@@ -347,7 +351,7 @@ void WorkerMainRunLoop::postTaskForMode(ScriptExecutionContext::Task&& task, con
     if (m_terminated)
         return;
 
-    RunLoop::main().dispatch([weakThis = WeakPtr { *this }, task = WTFMove(task)]() mutable {
+    RunLoop::protectedMain()->dispatch([weakThis = WeakPtr { *this }, task = WTFMove(task)]() mutable {
         if (!weakThis || !weakThis->m_workerOrWorkletGlobalScope || weakThis->m_terminated)
             return;
 

@@ -1,9 +1,13 @@
+// META: timeout=long
 // META: global=window,dedicatedworker
 // META: script=/webcodecs/video-encoder-utils.js
 // META: variant=?av1
+// META: variant=?av1_444_high
 // META: variant=?vp8
 // META: variant=?vp9_p0
 // META: variant=?vp9_p2
+// META: variant=?vp9_444_p1
+// META: variant=?vp9_444_p3
 // META: variant=?h264_avc
 // META: variant=?h264_annexb
 // META: variant=?h265_hevc
@@ -12,11 +16,16 @@
 var ENCODER_CONFIG = null;
 promise_setup(async () => {
   const config = {
-    // FIXME: H.264 has embedded color space information too.
     '?av1': {
       codec: 'av01.0.04M.08',
       hasEmbeddedColorSpace: true,
       hardwareAcceleration: 'prefer-software',
+    },
+    '?av1_444_high': {
+      codec: 'av01.1.04M.08.0.000',
+      hasEmbeddedColorSpace: true,
+      hardwareAcceleration: 'prefer-software',
+      outputPixelFormat: 'I444',
     },
     '?vp8': {
       codec: 'vp8',
@@ -32,6 +41,21 @@ promise_setup(async () => {
       codec: 'vp09.02.10.10',
       hasEmbeddedColorSpace: true,
       hardwareAcceleration: 'prefer-software',
+      // TODO(https://github.com/w3c/webcodecs/issues/384):
+      // outputPixelFormat should be 'I420P10'
+    },
+    '?vp9_444_p1': {
+      codec: 'vp09.01.10.08.03',
+      hasEmbeddedColorSpace: true,
+      hardwareAcceleration: 'prefer-software',
+      outputPixelFormat: 'I444',
+    },
+    '?vp9_444_p3': {
+      codec: 'vp09.03.10.10.03',
+      hasEmbeddedColorSpace: true,
+      hardwareAcceleration: 'prefer-software',
+      // TODO(https://github.com/w3c/webcodecs/issues/384):
+      // outputPixelFormat should be 'I444P10'
     },
     '?h264_avc': {
       codec: 'avc1.42001E',
@@ -90,6 +114,12 @@ async function runFullCycleTest(t, options) {
         assert_equals(frame.timestamp, next_ts++, "decode timestamp");
       }
 
+      if (ENCODER_CONFIG.outputPixelFormat) {
+        assert_equals(
+            frame.format, ENCODER_CONFIG.outputPixelFormat,
+            "decoded pixel format");
+      }
+
       // The encoder is allowed to change the color space to satisfy the
       // encoder when readback is needed to send the frame for encoding, but
       // the decoder shouldn't change it after the fact.
@@ -109,7 +139,6 @@ async function runFullCycleTest(t, options) {
       frames_decoded++;
       assert_true(validateBlackDots(frame, frame.timestamp),
         "frame doesn't match. ts: " + frame.timestamp);
-      frame.close();
     },
     error(e) {
       assert_unreached(e.message);
@@ -120,7 +149,10 @@ async function runFullCycleTest(t, options) {
   const encoder_init = {
     output(chunk, metadata) {
       let config = metadata.decoderConfig;
-      if (config) {
+      // Issue a configure if there's a new config, or on the
+      // first chunk if testing rate control
+      if (!options.rateControl && config ||
+          options.rateControl && chunk.timestamp == 0) {
         config.hardwareAcceleration = encoder_config.hardwareAcceleration;
         encoder_color_space = config.colorSpace;
 
@@ -156,6 +188,11 @@ async function runFullCycleTest(t, options) {
 
     let keyframe = (i % 5 == 0);
     encoder.encode(frame, { keyFrame: keyframe });
+    if (i % 3 == 0 && options.rateControl) {
+      // reconfigure with a different rate
+      encoder_config.bitrate = encoder_config.bitrate * 0.9;
+      encoder.configure(encoder_config);
+    }
     frame.close();
   }
   await encoder.flush();
@@ -182,3 +219,7 @@ promise_test(async t => {
   if (ENCODER_CONFIG.hasEmbeddedColorSpace)
     return runFullCycleTest(t, {stripDecoderConfigColorSpace: true});
 }, 'Encoding and decoding cycle w/ stripped color space');
+
+promise_test(async t => {
+  return runFullCycleTest(t, {rateControl: true});
+}, 'Encoding and decoding cycle w/ rate control');

@@ -66,22 +66,22 @@ static void onGStreamerDeinterleavePadRemovedCallback(GstElement*, GstPad* pad, 
     provider->handleRemovedDeinterleavePad(pad);
 }
 
-static void copyGStreamerBuffersToAudioChannel(GstAdapter* adapter, AudioBus* bus , int channelNumber, size_t framesToProcess)
+static void copyGStreamerBuffersToAudioChannel(GstAdapter* adapter, AudioBus& bus , int channelNumber, size_t framesToProcess)
 {
     auto available = gst_adapter_available(adapter);
     if (!available) {
         GST_TRACE("Adapter empty, silencing bus");
-        bus->zero();
+        bus.zero();
         return;
     }
 
     GST_TRACE("%zu samples available for channel %d (%zu frames requested)", available, channelNumber, framesToProcess);
     size_t bytes = framesToProcess * sizeof(float);
     if (available >= bytes) {
-        gst_adapter_copy(adapter, bus->channel(channelNumber)->mutableData(), 0, bytes);
+        gst_adapter_copy(adapter, bus.channel(channelNumber)->mutableData(), 0, bytes);
         gst_adapter_flush(adapter, bytes);
     } else
-        bus->zero();
+        bus.zero();
 }
 
 AudioSourceProviderGStreamer::AudioSourceProviderGStreamer()
@@ -111,7 +111,7 @@ AudioSourceProviderGStreamer::AudioSourceProviderGStreamer(MediaStreamTrackPriva
 
     m_audioSinkBin = gst_parse_bin_from_description("tee name=audioTee", true, nullptr);
 
-    auto* decodebin = makeGStreamerElement("uridecodebin3", nullptr);
+    auto* decodebin = makeGStreamerElement("uridecodebin3"_s);
 
     g_signal_connect_swapped(decodebin, "source-setup", G_CALLBACK(+[](AudioSourceProviderGStreamer* provider, GstElement* sourceElement) {
         if (!WEBKIT_IS_MEDIA_STREAM_SRC(sourceElement)) {
@@ -123,7 +123,7 @@ AudioSourceProviderGStreamer::AudioSourceProviderGStreamer(MediaStreamTrackPriva
 
     g_signal_connect_swapped(decodebin, "pad-added", G_CALLBACK(+[](AudioSourceProviderGStreamer* provider, GstPad* pad) {
         auto padCaps = adoptGRef(gst_pad_query_caps(pad, nullptr));
-        bool isAudio = doCapsHaveType(padCaps.get(), "audio");
+        bool isAudio = doCapsHaveType(padCaps.get(), "audio"_s);
         RELEASE_ASSERT(isAudio);
 
         auto sinkPad = adoptGRef(gst_element_get_static_pad(provider->m_audioSinkBin.get(), "sink"));
@@ -205,11 +205,11 @@ void AudioSourceProviderGStreamer::configureAudioBin(GstElement* audioBin, GstEl
 
     GstElement* audioTee = gst_element_factory_make("tee", "audioTee");
     GstElement* audioQueue = gst_element_factory_make("queue", nullptr);
-    GstElement* audioConvert = makeGStreamerElement("audioconvert", nullptr);
-    GstElement* audioConvert2 = makeGStreamerElement("audioconvert", nullptr);
-    GstElement* audioResample = makeGStreamerElement("audioresample", nullptr);
-    GstElement* audioResample2 = makeGStreamerElement("audioresample", nullptr);
-    GstElement* volumeElement = makeGStreamerElement("volume", "volume");
+    GstElement* audioConvert = makeGStreamerElement("audioconvert"_s);
+    GstElement* audioConvert2 = makeGStreamerElement("audioconvert"_s);
+    GstElement* audioResample = makeGStreamerElement("audioresample"_s);
+    GstElement* audioResample2 = makeGStreamerElement("audioresample"_s);
+    GstElement* volumeElement = makeGStreamerElement("volume"_s, "volume"_s);
 
     gst_bin_add_many(GST_BIN_CAST(m_audioSinkBin.get()), audioTee, audioQueue, audioConvert, audioResample, volumeElement, audioConvert2, audioResample2, audioSink, nullptr);
 
@@ -229,7 +229,7 @@ void AudioSourceProviderGStreamer::configureAudioBin(GstElement* audioBin, GstEl
     gst_element_link_pads_full(audioResample2, "src", audioSink, "sink", GST_PAD_LINK_CHECK_NOTHING);
 }
 
-void AudioSourceProviderGStreamer::provideInput(AudioBus* bus, size_t framesToProcess)
+void AudioSourceProviderGStreamer::provideInput(AudioBus& bus, size_t framesToProcess)
 {
     GST_TRACE("Fetching buffers from adapters");
     if (!m_adapterLock.tryLock())
@@ -306,15 +306,12 @@ void AudioSourceProviderGStreamer::setClient(WeakPtr<AudioSourceProviderClient>&
         auto teeSrcPad = adoptGRef(gst_pad_get_peer(queueSinkPad.get()));
 
         GST_DEBUG("Cleaning up audio deinterleave chain");
-        gst_element_set_locked_state(m_audioSinkBin.get(), true);
-
-        gst_element_set_state(audioQueue.get(), GST_STATE_NULL);
-        gst_element_set_state(audioConvert.get(), GST_STATE_NULL);
-        gst_element_set_state(audioResample.get(), GST_STATE_NULL);
-        gst_element_set_state(capsFilter.get(), GST_STATE_NULL);
-        gst_element_set_state(deInterleave.get(), GST_STATE_NULL);
+        gstElementLockAndSetState(audioQueue.get(), GST_STATE_NULL);
+        gstElementLockAndSetState(audioConvert.get(), GST_STATE_NULL);
+        gstElementLockAndSetState(audioResample.get(), GST_STATE_NULL);
+        gstElementLockAndSetState(capsFilter.get(), GST_STATE_NULL);
+        gstElementLockAndSetState(deInterleave.get(), GST_STATE_NULL);
         gst_element_unlink_many(audioTee.get(), audioQueue.get(), audioConvert.get(), audioResample.get(), capsFilter.get(), deInterleave.get(), nullptr);
-        gst_element_set_locked_state(m_audioSinkBin.get(), false);
         gst_bin_remove_many(GST_BIN_CAST(m_audioSinkBin.get()), audioQueue.get(), audioConvert.get(), audioResample.get(), capsFilter.get(), deInterleave.get(), nullptr);
         gst_element_release_request_pad(audioTee.get(), teeSrcPad.get());
     }
@@ -324,10 +321,10 @@ void AudioSourceProviderGStreamer::setClient(WeakPtr<AudioSourceProviderClient>&
         // ensure deinterleave and the sinks downstream receive buffers in
         // the format specified by the capsfilter.
         auto* audioQueue = gst_element_factory_make("queue", "queue");
-        auto* audioConvert = makeGStreamerElement("audioconvert", "audioconvert");
-        auto* audioResample = makeGStreamerElement("audioresample", "audioresample");
+        auto* audioConvert = makeGStreamerElement("audioconvert"_s, "audioconvert"_s);
+        auto* audioResample = makeGStreamerElement("audioresample"_s, "audioresample"_s);
         auto* capsFilter = gst_element_factory_make("capsfilter", "capsfilter");
-        auto* deInterleave = makeGStreamerElement("deinterleave", "deinterleave");
+        auto* deInterleave = makeGStreamerElement("deinterleave"_s, "deinterleave"_s);
 
         GST_DEBUG("Setting up audio deinterleave chain");
         g_object_set(deInterleave, "keep-positions", TRUE, nullptr);
@@ -377,7 +374,7 @@ void AudioSourceProviderGStreamer::handleNewDeinterleavePad(GstPad* pad)
     // channel. Pipeline looks like:
     // ... deinterleave ! queue ! appsink.
     auto* queue = gst_element_factory_make("queue", nullptr);
-    auto* sink = makeGStreamerElement("appsink", nullptr);
+    auto* sink = makeGStreamerElement("appsink"_s);
 
     static GstAppSinkCallbacks callbacks = {
         nullptr,
@@ -465,9 +462,10 @@ void AudioSourceProviderGStreamer::handleRemovedDeinterleavePad(GstPad* pad)
 
     g_signal_handlers_disconnect_by_data(sink.get(), sink.get());
 
-    gst_pad_unlink(srcPad.get(), sinkSinkPad.get());
-    gst_element_set_state(queue.get(), GST_STATE_NULL);
     gst_element_set_state(sink.get(), GST_STATE_NULL);
+    gst_element_set_state(queue.get(), GST_STATE_NULL);
+    gst_pad_unlink(srcPad.get(), sinkSinkPad.get());
+    gst_pad_unlink(pad, sinkPad);
     gst_bin_remove_many(GST_BIN_CAST(m_audioSinkBin.get()), queue.get(), sink.get(), nullptr);
 }
 

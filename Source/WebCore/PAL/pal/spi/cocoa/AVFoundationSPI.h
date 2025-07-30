@@ -23,6 +23,10 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
+DECLARE_SYSTEM_HEADER
+
 #import <objc/runtime.h>
 #import <wtf/Platform.h>
 
@@ -56,6 +60,13 @@ IGNORE_WARNINGS_END
 #import <AVFoundation/AVStreamDataParser.h>
 #endif
 #endif
+
+NS_ASSUME_NONNULL_BEGIN
+@interface AVOutputContext(WKSecureCoding)
+- (NSDictionary *)_webKitPropertyListData;
+- (instancetype)_initWithWebKitPropertyListData:(NSDictionary *)plist;
+@end
+NS_ASSUME_NONNULL_END
 
 #import <AVFoundation/AVAudioSession_Private.h>
 

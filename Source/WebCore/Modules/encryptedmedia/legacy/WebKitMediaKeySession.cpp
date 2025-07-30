@@ -31,6 +31,8 @@
 #include "Document.h"
 #include "EventLoop.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
+#include "ExceptionOr.h"
 #include "Logging.h"
 #include "Page.h"
 #include "SecurityOriginData.h"
@@ -90,9 +92,10 @@ RefPtr<ArrayBuffer> WebKitMediaKeySession::cachedKeyForKeyId(const String& keyId
     return m_session ? m_session->cachedKeyForKeyID(keyId) : nullptr;
 }
 
-void WebKitMediaKeySession::generateKeyRequest(const String& mimeType, Ref<Uint8Array>&& initData)
+void WebKitMediaKeySession::generateKeyRequest(const String& mimeType, Ref<Uint8Array>&& initData, const String& mediaKeysHashSalt)
 {
     ALWAYS_LOG(LOGIDENTIFIER, "mimeType: ", mimeType);
+    m_mediaKeysHashSalt = mediaKeysHashSalt;
     m_pendingKeyRequests.append({ mimeType, WTFMove(initData) });
     m_keyRequestTimer.startOneShot(0_s);
 }

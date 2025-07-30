@@ -33,7 +33,6 @@
 
 #include <tuple>
 #include <type_traits>
-#include <variant>
 #include <wtf/Assertions.h>
 #include <wtf/Expected.h>
 #include <wtf/Forward.h>
@@ -42,6 +41,7 @@
 #include <wtf/RefPtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/TypeTraits.h>
+#include <wtf/Variant.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
@@ -87,21 +87,43 @@ template<bool isEnumOrConvertibleToInteger, bool isThreadSafeRefCounted, typenam
 template<typename T> struct CrossThreadCopierBase<true, false, T> : public CrossThreadCopierPassThrough<T> {
 };
 
-// Classes that have an isolatedCopy() method get a default specialization.
+// All non-specified types passed to crossThreadCopy() must provide isolatedCopy().
 template<typename T>
 struct CrossThreadCopierBase<false, false, T> {
     using Type = T;
-    static constexpr bool IsNeeded = HasIsolatedCopy<T>::value;
-    template<typename U> static auto copy(U&& value) -> Type
+    static constexpr bool IsNeeded = true;
+    static Type copy(const Type& value)
     {
-        if constexpr (HasIsolatedCopy<U>::value)
-            return std::forward<U>(value).isolatedCopy();
-        else
-            return std::forward<U>(value);
+        return value.isolatedCopy();
+    }
+
+    static Type copy(Type&& value)
+    {
+        return WTFMove(value).isolatedCopy();
     }
 };
 
 // Custom copy methods.
+template<typename T, typename Deleter>
+struct CrossThreadCopierBase<false, false, std::unique_ptr<T, Deleter>> {
+    using Type = std::unique_ptr<T, Deleter>;
+    static constexpr bool IsNeeded = false;
+    static Type copy(Type&& value)
+    {
+        return WTFMove(value);
+    }
+};
+
+template<typename T>
+struct CrossThreadCopierBase<false, false, RetainPtr<T>> {
+    using Type = RetainPtr<T>;
+    static constexpr bool IsNeeded = false;
+    static Type copy(Type&& value)
+    {
+        return WTFMove(value);
+    }
+};
+
 template<typename T> struct CrossThreadCopierBase<false, true, T> {
     using RefCountedType = typename CrossThreadCopierBaseHelper::RemovePointer<T>::Type;
     static_assert(std::is_convertible<RefCountedType*, ThreadSafeRefCountedBase*>::value, "T is not convertible to ThreadSafeRefCounted!");
@@ -209,8 +231,8 @@ template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t min
 };
 
 // Default specialization for HashSets of CrossThreadCopyable classes
-template<typename T> struct CrossThreadCopierBase<false, false, HashSet<T> > {
-    using Type = HashSet<T>;
+template<typename T, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey> struct CrossThreadCopierBase<false, false, HashSet<T, HashFunctions, Traits, TableTraits, shouldValidateKey>> {
+    using Type = HashSet<T, HashFunctions, Traits, TableTraits, shouldValidateKey>;
     static constexpr bool IsNeeded = CrossThreadCopier<T>::IsNeeded;
     static Type copy(const Type& source)
     {
@@ -296,19 +318,19 @@ template<> struct CrossThreadCopierBase<false, false, std::nullptr_t> {
     static std::nullptr_t copy(std::nullptr_t) { return nullptr; }
 };
 
-// Default specialization for std::variant of CrossThreadCopyable classes.
-template<typename... Types> struct CrossThreadCopierBase<false, false, std::variant<Types...>> {
-    using Type = std::variant<Types...>;
+// Default specialization for Variant of CrossThreadCopyable classes.
+template<typename... Types> struct CrossThreadCopierBase<false, false, Variant<Types...>> {
+    using Type = Variant<Types...>;
     static constexpr bool IsNeeded = (CrossThreadCopier<std::remove_cvref_t<Types>>::IsNeeded || ...);
-    static std::variant<Types...> copy(const Type& source)
+    static Variant<Types...> copy(const Type& source)
     {
-        return std::visit([] (auto& type) -> std::variant<Types...> {
+        return WTF::visit([] (auto& type) -> Variant<Types...> {
             return CrossThreadCopier<std::remove_cvref_t<decltype(type)>>::copy(type);
         }, source);
     }
-    static std::variant<Types...> copy(Type&& source)
+    static Variant<Types...> copy(Type&& source)
     {
-        return std::visit([] (auto&& type) -> std::variant<Types...> {
+        return WTF::visit([] (auto&& type) -> Variant<Types...> {
             return CrossThreadCopier<std::remove_cvref_t<decltype(type)>>::copy(std::forward<decltype(type)>(type));
         }, WTFMove(source));
     }

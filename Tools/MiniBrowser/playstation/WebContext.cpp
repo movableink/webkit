@@ -88,7 +88,6 @@ WebContext::WebContext()
 
     m_preferencesMaster = adoptWK(WKPreferencesCreate());
     WKPreferencesSetFullScreenEnabled(m_preferencesMaster.get(), true);
-    WKPreferencesSetDNSPrefetchingEnabled(m_preferencesMaster.get(), true);
     WKPreferencesSetNeedsSiteSpecificQuirks(m_preferencesMaster.get(), false);
 }
 

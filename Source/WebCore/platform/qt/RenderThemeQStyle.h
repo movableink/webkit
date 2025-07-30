@@ -52,7 +52,7 @@ public:
 
 protected:
     void adjustButtonStyle(RenderStyle&, const Element*) const final;
-    bool paintButton(const RenderObject&, const PaintInfo&, const IntRect&) final;
+    bool paintButton(const RenderObject&, const PaintInfo&, const FloatRect&) final;
 
     bool paintTextField(const RenderObject&, const PaintInfo&, const FloatRect&) final;
 
@@ -66,21 +66,21 @@ protected:
 
     // Returns the duration of the animation for the progress bar.
     Seconds animationDurationForProgressBar() const final;
-    bool paintProgressBar(const RenderObject&, const PaintInfo&, const IntRect&) final;
+    bool paintProgressBar(const RenderObject&, const PaintInfo&, const FloatRect&) final;
 
-    bool paintSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) final;
+    bool paintSliderTrack(const RenderObject&, const PaintInfo&, const FloatRect&) final;
     void adjustSliderTrackStyle(RenderStyle&, const Element*) const final;
 
-    bool paintSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) final;
+    bool paintSliderThumb(const RenderObject&, const PaintInfo&, const FloatRect&) final;
     void adjustSliderThumbStyle(RenderStyle&, const Element*) const final;
 
-    bool paintSearchField(const RenderObject&, const PaintInfo&, const IntRect&) final;
+    bool paintSearchField(const RenderObject&, const PaintInfo&, const FloatRect&) final;
 
     void adjustSearchFieldDecorationPartStyle(RenderStyle&, const Element*) const final;
-    bool paintSearchFieldDecorationPart(const RenderObject&, const PaintInfo&, const IntRect&) final;
+    bool paintSearchFieldDecorationPart(const RenderObject&, const PaintInfo&, const FloatRect&) final;
 
     void adjustSearchFieldResultsDecorationPartStyle(RenderStyle&, const Element*) const final;
-    bool paintSearchFieldResultsDecorationPart(const RenderBox&, const PaintInfo&, const IntRect&) final;
+    bool paintSearchFieldResultsDecorationPart(const RenderBox&, const PaintInfo&, const FloatRect&) final;
 
 protected:
     void computeSizeBasedOnStyle(RenderStyle&) const final;

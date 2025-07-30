@@ -21,6 +21,7 @@ Copyright (C) 2010-2024 Apple Inc. All rights reserved.
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 [
+    ExceptionForEnabledBy,
     DispatchedFrom=WebContent,
     DispatchedTo=UI,
     SharedPreferencesNeedsConnection
@@ -35,7 +36,7 @@ messages -> WebPageProxy {
     RunJavaScriptPrompt(WebCore::FrameIdentifier frameID, struct WebKit::FrameInfoData frameInfo, String message, String defaultValue) -> (String result) Synchronous
     MouseDidMoveOverElement(struct WebKit::WebHitTestResultData hitTestResultData, OptionSet<WebKit::WebEventModifier> modifiers, WebKit::UserData userData)
 
-    DidReceiveEvent(enum:uint8_t WebKit::WebEventType eventType, bool handled, struct std::optional<WebCore::RemoteUserInputEventData> remoteUserInputEventData)
+    DidReceiveEventIPC(enum:uint8_t WebKit::WebEventType eventType, bool handled, struct std::optional<WebCore::RemoteUserInputEventData> remoteUserInputEventData)
     SetCursor(WebCore::Cursor cursor)
     SetCursorHiddenUntilMouseMoves(bool hiddenUntilMouseMoves)
     SetFocus(bool focused)
@@ -53,12 +54,14 @@ messages -> WebPageProxy {
     SetWindowFrame(WebCore::FloatRect windowFrame)
     GetWindowFrame() -> (WebCore::FloatRect windowFrame) Synchronous
     ScreenToRootView(WebCore::IntPoint screenPoint) -> (WebCore::IntPoint windowPoint) Synchronous
-    RootViewToScreen(WebCore::IntRect rect) -> (WebCore::IntRect screenFrame) Synchronous
+    RootViewPointToScreen(WebCore::IntPoint rect) -> (WebCore::IntPoint viewPoint) Synchronous
+    RootViewRectToScreen(WebCore::IntRect rect) -> (WebCore::IntRect screenFrame) Synchronous
     AccessibilityScreenToRootView(WebCore::IntPoint screenPoint) -> (WebCore::IntPoint windowPoint) Synchronous
     RootViewToAccessibilityScreen(WebCore::IntRect rect) -> (WebCore::IntRect screenFrame) Synchronous
 #if PLATFORM(IOS_FAMILY)
     RelayAccessibilityNotification(String notificationName, std::span<const uint8_t> notificationData)
 #endif
+    EnableAccessibilityForAllProcesses()
 
 #if PLATFORM(COCOA) || PLATFORM(GTK)
     ShowValidationMessage(WebCore::IntRect anchorRect, String message)
@@ -69,8 +72,14 @@ messages -> WebPageProxy {
     PageDidScroll(WebCore::IntPoint scrollPosition)
     SetHasActiveAnimatedScrolls(bool hasActiveAnimatedScrolls)
     RunOpenPanel(WebCore::FrameIdentifier frameID, struct WebKit::FrameInfoData frameInfo, struct WebCore::FileChooserSettings parameters)
-    ShowShareSheet(struct WebCore::ShareDataWithParsedURL shareData) -> (bool granted)
+    [EnabledBy=WebShareEnabled] ShowShareSheet(struct WebCore::ShareDataWithParsedURL shareData) -> (bool granted)
     [EnabledBy=ContactPickerAPIEnabled] ShowContactPicker(struct WebCore::ContactsRequestData requestData) -> (std::optional<Vector<WebCore::ContactInfo>> info)
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+    [EnabledBy=DigitalCredentialsEnabled] ShowDigitalCredentialsPicker(struct WebCore::DigitalCredentialsRequestData requestData) -> (Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData> response)
+    [EnabledBy=DigitalCredentialsEnabled] DismissDigitalCredentialsPicker() -> (bool didDismiss)
+#endif
+
     PrintFrame(WebCore::FrameIdentifier frameID, String title, WebCore::FloatSize pdfFirstPageSize) -> () Synchronous
     RunModal()
     NotifyScrollerThumbIsVisibleInRect(WebCore::IntRect scrollerThumb)
@@ -80,6 +89,9 @@ messages -> WebPageProxy {
     DidChangePageCount(unsigned pageCount)
 #if PLATFORM(MAC)
     ThemeColorChanged(WebCore::Color themeColor)
+#endif
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    [EnabledBy=WebPageSpatialBackdropEnabled] SpatialBackdropSourceChanged(struct std::optional<WebCore::SpatialBackdropSource> spatialBackdropSource)
 #endif
     PageExtendedBackgroundColorDidChange(WebCore::Color backgroundColor)
     SampledPageTopColorChanged(WebCore::Color sampledPageTopColor)
@@ -95,22 +107,16 @@ messages -> WebPageProxy {
     DidChangeContentSize(WebCore::IntSize newSize)
     DidChangeIntrinsicContentSize(WebCore::IntSize newIntrinsicContentSize)
 
-#if ENABLE(INPUT_TYPE_COLOR)
     [EnabledBy=InputTypeColorEnabled] ShowColorPicker(WebCore::Color initialColor, WebCore::IntRect elementRect, enum:bool WebKit::ColorControlSupportsAlpha supportsAlpha, Vector<WebCore::Color> suggestions);
     [EnabledBy=InputTypeColorEnabled] SetColorPickerColor(WebCore::Color color);
     [EnabledBy=InputTypeColorEnabled] EndColorPicker();
-#endif
 
-#if ENABLE(DATALIST_ELEMENT)
     [EnabledBy=DataListElementEnabled] ShowDataListSuggestions(struct WebCore::DataListSuggestionInformation suggestionInformation);
     [EnabledBy=DataListElementEnabled] HandleKeydownInDataList(String key);
     [EnabledBy=DataListElementEnabled] EndDataListSuggestions();
-#endif
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-    ShowDateTimePicker(struct WebCore::DateTimeChooserParameters params);
-    EndDateTimePicker();
-#endif
+    [EnabledBy=InputTypeDateEnabled || InputTypeDateTimeLocalEnabled || InputTypeMonthEnabled || InputTypeTimeEnabled || InputTypeWeekEnabled] ShowDateTimePicker(struct WebCore::DateTimeChooserParameters params);
+    [EnabledBy=InputTypeDateEnabled || InputTypeDateTimeLocalEnabled || InputTypeMonthEnabled || InputTypeTimeEnabled || InputTypeWeekEnabled] EndDateTimePicker();
 
     # Policy messages
     DecidePolicyForResponse(struct WebKit::FrameInfoData frameInfo, std::optional<WebCore::NavigationIdentifier> navigationID, WebCore::ResourceResponse response, WebCore::ResourceRequest request, bool canShowMIMEType, String downloadAttribute, bool isShowingInitialAboutBlank, enum:uint8_t WebCore::CrossOriginOpenerPolicyValue activeDocumentCOOPValue) -> (struct WebKit::PolicyDecision PolicyDecision)
@@ -139,7 +145,7 @@ messages -> WebPageProxy {
     DidCancelClientRedirectForFrame(WebCore::FrameIdentifier frameID)
     DidChangeProvisionalURLForFrame(WebCore::FrameIdentifier frameID, std::optional<WebCore::NavigationIdentifier> navigationID, URL url)
     DidFailProvisionalLoadForFrame(struct WebKit::FrameInfoData frameInfo, WebCore::ResourceRequest request, std::optional<WebCore::NavigationIdentifier> navigationID, String provisionalURL, WebCore::ResourceError error, enum:bool WebCore::WillContinueLoading willContinueLoading, WebKit::UserData userData, enum:bool WebCore::WillInternallyHandleFailure willInternallyHandleFailure)
-    DidCommitLoadForFrame(WebCore::FrameIdentifier frameID, struct WebKit::FrameInfoData frameInfo, WebCore::ResourceRequest request, std::optional<WebCore::NavigationIdentifier> navigationID, String mimeType, bool hasCustomContentProvider, enum:uint8_t WebCore::FrameLoadType loadType, WebCore::CertificateInfo certificateInfo, bool usedLegacyTLS, bool wasPrivateRelayed, bool containsPluginDocument, enum:bool WebCore::HasInsecureContent hasInsecureContent, enum:uint8_t WebCore::MouseEventPolicy mouseEventPolicy, WebKit::UserData userData)
+    DidCommitLoadForFrame(WebCore::FrameIdentifier frameID, struct WebKit::FrameInfoData frameInfo, WebCore::ResourceRequest request, std::optional<WebCore::NavigationIdentifier> navigationID, String mimeType, bool hasCustomContentProvider, enum:uint8_t WebCore::FrameLoadType loadType, WebCore::CertificateInfo certificateInfo, bool usedLegacyTLS, bool wasPrivateRelayed, String proxyName, enum:uint8_t WebCore::ResourceResponseSource source, bool containsPluginDocument, enum:bool WebCore::HasInsecureContent hasInsecureContent, enum:uint8_t WebCore::MouseEventPolicy mouseEventPolicy, WebKit::UserData userData)
     DidFailLoadForFrame(WebCore::FrameIdentifier frameID, struct WebKit::FrameInfoData frameInfo, WebCore::ResourceRequest request, std::optional<WebCore::NavigationIdentifier> navigationID, WebCore::ResourceError error, WebKit::UserData userData)
     DidFinishDocumentLoadForFrame(WebCore::FrameIdentifier frameID, std::optional<WebCore::NavigationIdentifier> navigationID, WebKit::UserData userData, WallTime timestamp)
     DidFinishLoadForFrame(WebCore::FrameIdentifier frameID, struct WebKit::FrameInfoData frameInfo, WebCore::ResourceRequest request, std::optional<WebCore::NavigationIdentifier> navigationID, WebKit::UserData userData)
@@ -157,7 +163,6 @@ messages -> WebPageProxy {
     UpdateSandboxFlags(WebCore::FrameIdentifier frameID, WebCore::SandboxFlags sandboxFlags)
     UpdateOpener(WebCore::FrameIdentifier frameID, WebCore::FrameIdentifier newOpener)
     [EnabledBy=SiteIsolationEnabled] UpdateScrollingMode(WebCore::FrameIdentifier frameID, enum:uint8_t WebCore::ScrollbarMode scrollingMode)
-    [EnabledBy=SiteIsolationEnabled] UpdateRemoteFrameSize(WebCore::FrameIdentifier frameID, WebCore::IntSize size)
     ResolveAccessibilityHitTestForTesting(WebCore::FrameIdentifier frameID, WebCore::IntPoint point) -> (String result)
 
     MainFramePluginHandlesPageScaleGestureDidChange(bool mainFramePluginHandlesPageScaleGesture, double minScale, double maxScale)
@@ -183,7 +188,7 @@ messages -> WebPageProxy {
     WillSubmitForm(WebCore::FrameIdentifier frameID, WebCore::FrameIdentifier sourceFrameID, Vector<std::pair<String, String>> textFieldValues, WebKit::UserData userData) -> ()
 
 #if PLATFORM(IOS_FAMILY)
-    InterpretKeyEvent(struct WebKit::EditorState state, bool isCharEvent) -> (bool handled) Synchronous
+    InterpretKeyEvent(struct WebKit::EditorState state, struct WebKit::KeyEventInterpretationContext context) -> (bool handled) Synchronous
     DidReceivePositionInformation(struct WebKit::InteractionInformationAtPosition information) CanDispatchOutOfOrder
     SaveImageToLibrary(WebCore::SharedMemory::Handle handle, String authorizationToken)
     ShowPlaybackTargetPicker(bool hasVideo, WebCore::IntRect elementRect, enum:uint8_t WebCore::RouteSharingPolicy policy, String routingContextUID)
@@ -192,7 +197,7 @@ messages -> WebPageProxy {
     DidCompleteSyntheticClick()
     DidHandleTapAsHover()
     DisableDoubleTapGesturesDuringTapIfNecessary(WebKit::TapIdentifier requestID)
-    HandleSmartMagnificationInformationForPotentialTap(WebKit::TapIdentifier requestID, WebCore::FloatRect renderRect, bool fitEntireRect, double viewportMinimumScale, double viewportMaximumScale, bool nodeIsRootLevel)
+    HandleSmartMagnificationInformationForPotentialTap(WebKit::TapIdentifier requestID, WebCore::FloatRect renderRect, bool fitEntireRect, double viewportMinimumScale, double viewportMaximumScale, bool nodeIsRootLevel, bool nodeIsPluginElement)
     IsPotentialTapInProgress() -> (bool result)
 #endif
 #if ENABLE(DATA_DETECTION)
@@ -209,19 +214,20 @@ messages -> WebPageProxy {
     # Support for connecting the Accessibility worlds of the UI and the Web processes
     BindAccessibilityTree(String plugID)
 
-    SetInputMethodState(std::optional<WebKit::InputMethodState> state);
+    SetInputMethodState(struct std::optional<WebKit::InputMethodState> state);
 #endif
 
     # BackForward messages
-    BackForwardAddItem(WebCore::FrameIdentifier targetFrameID, Ref<WebKit::FrameState> rootFrameState)
-    BackForwardSetChildItem(WebCore::BackForwardItemIdentifier identifier, Ref<WebKit::FrameState> frameState)
+    BackForwardAddItem(Ref<WebKit::FrameState> navigatedFrameState)
+    BackForwardSetChildItem(WebCore::BackForwardFrameItemIdentifier frameItemID, Ref<WebKit::FrameState> frameState)
+    BackForwardClearChildren(WebCore::BackForwardItemIdentifier itemID, WebCore::BackForwardFrameItemIdentifier frameItemID)
+    BackForwardUpdateItem(Ref<WebKit::FrameState> frameState)
     BackForwardGoToItem(WebCore::BackForwardItemIdentifier itemID) -> (struct WebKit::WebBackForwardListCounts counts) Synchronous
     BackForwardItemAtIndex(int32_t itemIndex, WebCore::FrameIdentifier frameID) -> (RefPtr<WebKit::FrameState> frameState) Synchronous
     BackForwardListContainsItem(WebCore::BackForwardItemIdentifier itemID) -> (bool contains) Synchronous
     BackForwardListCounts() -> (struct WebKit::WebBackForwardListCounts counts) Synchronous
-    WillGoToBackForwardListItem(WebCore::BackForwardItemIdentifier itemID, bool inBackForwardCache)
-    BackForwardGoToProvisionalItem(WebCore::BackForwardItemIdentifier itemID) -> (struct WebKit::WebBackForwardListCounts counts) Synchronous
-    BackForwardClearProvisionalItem(WebCore::BackForwardItemIdentifier itemID)
+    ShouldGoToBackForwardListItem(WebCore::BackForwardItemIdentifier itemID, bool inBackForwardCache) -> (enum:uint8_t WebCore::ShouldGoToHistoryItem shouldGoToHistoryItem)
+    ShouldGoToBackForwardListItemSync(WebCore::BackForwardItemIdentifier itemID) -> (enum:uint8_t WebCore::ShouldGoToHistoryItem shouldGoToHistoryItem) Synchronous
 
     # Undo/Redo messages
     RegisterEditCommandForUndo(uint64_t commandID, String label) AllowedWhenWaitingForSyncReply
@@ -259,14 +265,14 @@ messages -> WebPageProxy {
 
     ProofreadingSessionUpdateStateForSuggestionWithID(enum:uint8_t WebCore::WritingTools::TextSuggestionState state, struct WebCore::WritingTools::TextSuggestion::ID replacementID)
 
-    AddTextAnimationForAnimationID(WTF::UUID uuid, struct WebCore::TextAnimationData styleData, struct WebCore::TextIndicatorData indicatorData)
-    AddTextAnimationForAnimationIDWithCompletionHandler(WTF::UUID uuid, struct WebCore::TextAnimationData styleData, struct WebCore::TextIndicatorData indicatorData) -> (enum:uint8_t WebCore::TextAnimationRunMode runMode)
+    AddTextAnimationForAnimationID(WTF::UUID uuid, struct WebCore::TextAnimationData styleData, RefPtr<WebCore::TextIndicator> textIndicator)
+    AddTextAnimationForAnimationIDWithCompletionHandler(WTF::UUID uuid, struct WebCore::TextAnimationData styleData, RefPtr<WebCore::TextIndicator> textIndicator) -> (enum:uint8_t WebCore::TextAnimationRunMode runMode)
     RemoveTextAnimationForAnimationID(WTF::UUID uuid)
     DidEndPartialIntelligenceTextAnimation()
 #endif
 
 #if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS) && USE(UICONTEXTMENU)
-    ShowMediaControlsContextMenu(WebCore::FloatRect targetFrame, Vector<WebCore::MediaControlsContextMenuItem> items) -> (WebCore::MediaControlsContextMenuItem::ID selectedItemID)
+    [EnabledBy=MediaControlsContextMenusEnabled] ShowMediaControlsContextMenu(WebCore::FloatRect targetFrame, Vector<WebCore::MediaControlsContextMenuItem> items) -> (WebCore::MediaControlsContextMenuItem::ID selectedItemID)
 #endif // ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS) && USE(UICONTEXTMENU)
 
 #if HAVE(TOUCH_BAR)
@@ -281,7 +287,8 @@ messages -> WebPageProxy {
 #endif
 
     # Find messages
-    SetTextIndicatorFromFrame(WebCore::FrameIdentifier frameID, struct WebCore::TextIndicatorData indicator, uint64_t lifetime)
+    SetTextIndicatorFromFrame(WebCore::FrameIdentifier frameID, struct WebCore::TextIndicatorData indicator, enum:uint8_t WebCore::TextIndicatorLifetime lifetime)
+    UpdateTextIndicatorFromFrame(WebCore::FrameIdentifier frameID, struct WebCore::TextIndicatorData indicator)
     ClearTextIndicator()
     DidGetImageForFindMatch(struct WebCore::ImageBufferParameters parameters, WebCore::ShareableBitmapHandle contentImageHandle, uint32_t matchIndex)
 
@@ -290,8 +297,7 @@ messages -> WebPageProxy {
     HidePopupMenu()
 
 #if ENABLE(CONTEXT_MENUS)
-    ShowContextMenu(WebKit::ContextMenuContextData contextMenuContextData, WebKit::UserData userData)
-    ShowContextMenuFromFrame(WebCore::FrameIdentifier frameID, WebKit::ContextMenuContextData contextMenuContextData, WebKit::UserData userData)
+    ShowContextMenuFromFrame(struct WebKit::FrameInfoData frameInfo, WebKit::ContextMenuContextData contextMenuContextData, WebKit::UserData userData)
 #endif
 
     [EnabledBy=ServiceWorkersEnabled] DidFinishServiceWorkerPageRegistration(bool success)
@@ -305,15 +311,15 @@ messages -> WebPageProxy {
 
 #if ENABLE(MEDIA_STREAM)
     # MediaSteam messages
-    RequestUserMediaPermissionForFrame(WebCore::UserMediaRequestIdentifier userMediaID, WebCore::FrameIdentifier frameID, WebCore::SecurityOriginData userMediaDocumentOriginIdentifier, WebCore::SecurityOriginData topLevelDocumentOriginIdentifier, struct WebCore::MediaStreamRequest request)
+    RequestUserMediaPermissionForFrame(WebCore::UserMediaRequestIdentifier userMediaID, struct WebKit::FrameInfoData frameInfo, WebCore::SecurityOriginData userMediaDocumentOriginIdentifier, WebCore::SecurityOriginData topLevelDocumentOriginIdentifier, struct WebCore::MediaStreamRequest request)
     EnumerateMediaDevicesForFrame(WebCore::FrameIdentifier frameID, WebCore::SecurityOriginData userMediaDocumentOriginIdentifier, WebCore::SecurityOriginData topLevelDocumentOriginIdentifier) -> (Vector<WebCore::CaptureDeviceWithCapabilities> devices, struct WebCore::MediaDeviceHashSalts mediaDeviceIdentifierHashSalts)
     BeginMonitoringCaptureDevices()
-    ValidateCaptureStateUpdate(WebCore::UserMediaRequestIdentifier userMediaID, struct WebCore::ClientOrigin clientOrigin, WebCore::FrameIdentifier frameID, bool isActive, enum:uint8_t WebCore::MediaProducerMediaCaptureKind kind) -> (std::optional<WebCore::Exception> result)
+    ValidateCaptureStateUpdate(WebCore::UserMediaRequestIdentifier userMediaID, struct WebCore::ClientOrigin clientOrigin, struct WebKit::FrameInfoData frameInfo, bool isActive, enum:uint8_t WebCore::MediaProducerMediaCaptureKind kind) -> (std::optional<WebCore::Exception> result)
     SetShouldListenToVoiceActivity(bool shouldListen);
 #endif
 
 #if ENABLE(ENCRYPTED_MEDIA)
-    [EnabledBy=EncryptedMediaAPIEnabled] RequestMediaKeySystemPermissionForFrame(WebCore::MediaKeySystemRequestIdentifier mediaKeySystemID, WebCore::FrameIdentifier frameID, WebCore::SecurityOriginData topLevelDocumentOriginIdentifier, String keySystem)
+    [EnabledBy=EncryptedMediaAPIEnabled] RequestMediaKeySystemPermissionForFrame(WebCore::MediaKeySystemRequestIdentifier mediaKeySystemID, WebCore::FrameIdentifier frameID, struct WebCore::ClientOrigin clientOrigin, String keySystem)
 #endif
 
     # Notification messages
@@ -335,7 +341,7 @@ messages -> WebPageProxy {
 
     # Drag and drop messages
 #if PLATFORM(COCOA) && ENABLE(DRAG_SUPPORT)
-    StartDrag(struct WebCore::DragItem dragItem, WebCore::ShareableBitmapHandle dragImage)
+    StartDrag(struct WebCore::DragItem dragItem, WebCore::ShareableBitmapHandle dragImage, std::optional<WebCore::ElementIdentifier> elementID)
     SetPromisedDataForImage(String pasteboardName, WebCore::SharedMemory::Handle imageHandle, String filename, String extension, String title, String url, String visibleURL, WebCore::SharedMemory::Handle archiveHandle, String originIdentifier)
 #endif
 #if PLATFORM(GTK) && ENABLE(DRAG_SUPPORT)
@@ -343,10 +349,12 @@ messages -> WebPageProxy {
 #endif
 
 #if PLATFORM(IOS_FAMILY) && ENABLE(DRAG_SUPPORT)
-    DidHandleDragStartRequest(bool started)
-    DidHandleAdditionalDragItemsRequest(bool added)
     WillReceiveEditDragSnapshot()
-    DidReceiveEditDragSnapshot(std::optional<WebCore::TextIndicatorData> textIndicator)
+    DidReceiveEditDragSnapshot(struct std::optional<WebCore::TextIndicatorData> textIndicator)
+#endif
+
+#if ENABLE(MODEL_PROCESS)
+    DidReceiveInteractiveModelElement(std::optional<WebCore::ElementIdentifier> elementID)
 #endif
 
 #if PLATFORM(COCOA)
@@ -380,7 +388,7 @@ messages -> WebPageProxy {
 #endif
 #if PLATFORM(MAC)
     # Autocorrection messages
-    ShowCorrectionPanel(enum:uint8_t WebCore::AlternativeTextType panelType, WebCore::FloatRect boundingBoxOfReplacedString, String replacedString, String replacementString, Vector<String> alternativeReplacementStrings)
+    ShowCorrectionPanel(enum:uint8_t WebCore::AlternativeTextType panelType, WebCore::FloatRect boundingBoxOfReplacedString, String replacedString, String replacementString, Vector<String> alternativeReplacementStrings, WebCore::FrameIdentifier rootFrameID)
     DismissCorrectionPanel(enum:uint8_t WebCore::ReasonForDismissingAlternativeText reason)
     DismissCorrectionPanelSoon(enum:uint8_t WebCore::ReasonForDismissingAlternativeText reason) -> (String result) Synchronous
     RecordAutocorrectionResponse(enum:uint8_t WebCore::AutocorrectionResponse response, String replacedString, String replacementString);
@@ -412,6 +420,7 @@ messages -> WebPageProxy {
     ElementDidFocus(struct WebKit::FocusedElementInformation information, bool userIsInteracting, bool blurPreviousNode, OptionSet<WebCore::ActivityState> activityStateChanges, WebKit::UserData userData)
     ElementDidBlur()
     UpdateInputContextAfterBlurringAndRefocusingElement()
+    DidProgrammaticallyClearFocusedElement(struct WebCore::ElementContext context)
     UpdateFocusedElementInformation(struct WebKit::FocusedElementInformation information)
     FocusedElementDidChangeInputMode(enum:uint8_t WebCore::InputMode mode)
     ScrollingNodeScrollWillStartScroll(std::optional<WebCore::ScrollingNodeID> nodeID)
@@ -443,9 +452,8 @@ messages -> WebPageProxy {
 
     DidUpdateActivityState() CanDispatchOutOfOrder
 
-    WrapCryptoKey(Vector<uint8_t> key) -> (std::optional<Vector<uint8_t>> wrappedKey) Synchronous
+    SerializeAndWrapCryptoKey(struct WebCore::CryptoKeyData key) -> (std::optional<Vector<uint8_t>> wrappedKey) Synchronous
     UnwrapCryptoKey(struct WebCore::WrappedCryptoKey wrappedKey) -> (std::optional<Vector<uint8_t>> key) Synchronous
-
 
 #if ENABLE(TELEPHONE_NUMBER_DETECTION)
 #if PLATFORM(MAC)
@@ -472,7 +480,7 @@ messages -> WebPageProxy {
 #if PLATFORM(MAC)
     DidPerformImmediateActionHitTest(struct WebKit::WebHitTestResultData result, bool contentPreventsDefault, WebKit::UserData userData) CanDispatchOutOfOrder
 #endif
-    HandleMessage(String messageName, WebKit::UserData messageBody)
+    HandleMessage(String messageName, WebKit::UserData messageBody) AllowedWhenWaitingForSyncReply
     HandleMessageWithAsyncReply(String messageName, WebKit::UserData messageBody) -> (WebKit::UserData reply)
     HandleSynchronousMessage(String messageName, WebKit::UserData messageBody) -> (WebKit::UserData returnData) Synchronous
 
@@ -497,16 +505,13 @@ messages -> WebPageProxy {
 #endif
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
-    SetMockVideoPresentationModeEnabled(bool enabled)
+    [EnabledBy=VideoPresentationManagerEnabled || VideoPresentationModeAPIEnabled] SetMockVideoPresentationModeEnabled(bool enabled)
 #endif
 
 #if ENABLE(POINTER_LOCK)
     RequestPointerLock()
     RequestPointerUnlock()
 #endif
-
-    DidFailToSuspendAfterProcessSwap()
-    DidSuspendAfterProcessSwap()
 
     ImageOrMediaDocumentSizeChanged(WebCore::IntSize newSize)
 
@@ -518,10 +523,6 @@ messages -> WebPageProxy {
     RequestScrollToRect(WebCore::FloatRect targetRect, WebCore::FloatPoint origin)
 
     GetLoadDecisionForIcon(struct WebCore::LinkIcon icon, WebKit::CallbackID callbackID)
-
-#if PLATFORM(MAC)
-    DidHandleAcceptedCandidate()
-#endif
 
     StartURLSchemeTask(struct WebKit::URLSchemeTaskParameters parameters)
     StopURLSchemeTask(WebKit::WebURLSchemeHandlerIdentifier handlerIdentifier, WebCore::ResourceLoaderIdentifier taskIdentifier)
@@ -556,22 +557,21 @@ messages -> WebPageProxy {
     [EnabledBy=SpeechSynthesisAPIEnabled] SpeechSynthesisResetState()
 #endif
 
-#if ENABLE(PDF_PLUGIN)
-
-#if PLATFORM(MAC)
-    ShowPDFContextMenu(struct WebKit::PDFContextMenu contextMenu, WebKit::PDFPluginIdentifier identifier) -> (std::optional<int32_t> selectedItem)
-#endif
-
-#if PLATFORM(IOS_FAMILY)
-    PluginDidInstallPDFDocument(double initialScale);
-#endif
-
+#if ENABLE(PDF_PLUGIN) && PLATFORM(MAC)
+    ShowPDFContextMenu(struct WebKit::PDFContextMenu contextMenu, WebKit::PDFPluginIdentifier identifier, WebCore::FrameIdentifier frameID) -> (std::optional<int32_t> selectedItem)
 #endif
 
 #if ENABLE(PDF_HUD)
-    CreatePDFHUD(WebKit::PDFPluginIdentifier identifier, WebCore::IntRect boundingBox)
+    CreatePDFHUD(WebKit::PDFPluginIdentifier identifier, WebCore::FrameIdentifier frameID, WebCore::IntRect boundingBox)
     UpdatePDFHUDLocation(WebKit::PDFPluginIdentifier identifier, WebCore::IntRect boundingBox)
     RemovePDFHUD(WebKit::PDFPluginIdentifier identifier)
+#endif
+
+#if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+    CreatePDFPageNumberIndicator(WebKit::PDFPluginIdentifier identifier, WebCore::IntRect boundingBox, size_t pageCount)
+    UpdatePDFPageNumberIndicatorLocation(WebKit::PDFPluginIdentifier identifier, WebCore::IntRect boundingBox)
+    UpdatePDFPageNumberIndicatorCurrentPage(WebKit::PDFPluginIdentifier identifier, size_t pageIndex)
+    RemovePDFPageNumberIndicator(WebKit::PDFPluginIdentifier identifier)
 #endif
 
     ConfigureLoggingChannel(String channelName, enum:uint8_t WTFLogChannelState state, enum:uint8_t WTFLogLevel level)
@@ -585,7 +585,7 @@ messages -> WebPageProxy {
 #endif
 
 #if ENABLE(WEB_AUTHN)
-    SetMockWebAuthenticationConfiguration(struct WebCore::MockWebAuthenticationConfiguration configuration);
+    [EnabledBy=AllowTestOnlyIPC] SetMockWebAuthenticationConfiguration(struct WebCore::MockWebAuthenticationConfiguration configuration);
 #endif
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
@@ -648,7 +648,7 @@ messages -> WebPageProxy {
     DidCreateSleepDisabler(WebCore::SleepDisablerIdentifier identifier, String reason, bool display)
     DidDestroySleepDisabler(WebCore::SleepDisablerIdentifier identifier)
 
-    RequestCookieConsent() -> (enum:uint8_t WebCore::CookieConsentDecisionResult result)
+    [EnabledBy=CookieConsentAPIEnabled] RequestCookieConsent() -> (enum:uint8_t WebCore::CookieConsentDecisionResult result)
 
 #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
     DidAccessWindowProxyPropertyViaOpenerForFrame(WebCore::FrameIdentifier frameID, WebCore::SecurityOriginData openerOrigin, enum:uint8_t WebCore::WindowProxyProperty property)
@@ -656,6 +656,7 @@ messages -> WebPageProxy {
 
     DidApplyLinkDecorationFiltering(URL originalURL, URL adjustedURL)
     [EnabledBy=SiteIsolationEnabled] BroadcastProcessSyncData(struct WebCore::ProcessSyncData processSyncData)
+    [EnabledBy=SiteIsolationEnabled] BroadcastTopDocumentSyncData(Ref<WebCore::DocumentSyncData> documentSyncData)
 
     [EnabledBy=SiteIsolationEnabled] DispatchLoadEventToFrameOwnerElement(WebCore::FrameIdentifier frameID)
 
@@ -664,6 +665,7 @@ messages -> WebPageProxy {
     [EnabledBy=SiteIsolationEnabled] RenderTreeAsTextForTesting(WebCore::FrameIdentifier identifier, size_t baseIndent, OptionSet<WebCore::RenderAsTextFlag> behavior) -> (String renderTreeDump) Synchronous
     [EnabledBy=SiteIsolationEnabled] FrameTextForTesting(WebCore::FrameIdentifier frameID) -> (String text) Synchronous
     [EnabledBy=SiteIsolationEnabled] LayerTreeAsTextForTesting(WebCore::FrameIdentifier identifier, size_t baseIndent, OptionSet<WebCore::LayerTreeAsTextOptions> options) -> (String layerTreeDump) Synchronous
+    AddMessageToConsoleForTesting(String message) AllowedWhenWaitingForSyncReply
     [EnabledBy=SiteIsolationEnabled] BindRemoteAccessibilityFrames(int processIdentifier, WebCore::FrameIdentifier frameID, Vector<uint8_t> dataToken) -> (Vector<uint8_t> token, int processIdentifier) Synchronous
     [EnabledBy=SiteIsolationEnabled] UpdateRemoteFrameAccessibilityOffset(WebCore::FrameIdentifier frameID, WebCore::IntPoint offset)
     [EnabledBy=SiteIsolationEnabled] DocumentURLForConsoleLog(WebCore::FrameIdentifier frameID) -> (URL url)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,11 +23,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if USE(APPLE_INTERNAL_SDK)
+#pragma once
 
-#ifndef OS_UNFAIR_LOCK_INLINE
-#define OS_UNFAIR_LOCK_INLINE 1
-#endif
+DECLARE_SYSTEM_HEADER
+
+#if USE(APPLE_INTERNAL_SDK)
 
 #import <ARKit/ARKit.h>
 #import <ARKit/ARKitPrivate.h>

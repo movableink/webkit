@@ -7,6 +7,8 @@ Speech started
 PASS speechSynthesis.pending is true
 Speech error received because we cancelled and speech should no longer be pending.
 PASS speechSynthesis.pending is false
+Speech error received because we cancelled and speech should no longer be pending.
+Speech error received because we cancelled and speech should no longer be pending.
 PASS successfullyParsed is true
 
 TEST COMPLETE

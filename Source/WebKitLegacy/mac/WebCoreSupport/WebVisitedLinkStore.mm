@@ -31,6 +31,7 @@
 #import "WebHistoryInternal.h"
 #import "WebViewInternal.h"
 #import <WebCore/BackForwardCache.h>
+#import <WebCore/Page.h>
 #import <wtf/BlockObjCExceptions.h>
 #import <wtf/NeverDestroyed.h>
 
@@ -90,9 +91,9 @@ void WebVisitedLinkStore::addVisitedLink(NSString *urlString)
     }
 
     Vector<UniChar, 512> buffer(length);
-    [urlString getCharacters:buffer.data()];
+    [urlString getCharacters:buffer.mutableSpan().data()];
 
-    addVisitedLinkHash(computeSharedStringHash(std::span { reinterpret_cast<const UChar*>(buffer.data()), length }));
+    addVisitedLinkHash(computeSharedStringHash(spanReinterpretCast<const UChar>(buffer.span())));
 }
 
 void WebVisitedLinkStore::removeVisitedLink(NSString *urlString)

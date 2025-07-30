@@ -5,7 +5,7 @@ SCHEME = All WebKit Tools
 
 else
 
-MODULES = DumpRenderTree WebKitTestRunner MiniBrowser ../Source/ThirdParty/gtest/xcode TestWebKitAPI
+MODULES = DumpRenderTree WebKitTestRunner MiniBrowser SwiftBrowser ../Source/ThirdParty/gtest/xcode TestWebKitAPI
 
 TO_LOWER = $(shell echo $(1) | tr [:upper:] [:lower:])
 

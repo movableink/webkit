@@ -25,38 +25,12 @@
 
 #pragma once
 
-#include "WebProcessPool.h"
-
 #if ENABLE(REMOTE_INSPECTOR)
 #include "APIAutomationClient.h"
-#include "APIAutomationSessionClient.h"
-#include "APIUIClient.h"
-#include "WebView.h"
+#include "WebProcessPool.h"
 #include <JavaScriptCore/RemoteInspectorServer.h>
-#endif
 
 namespace WebKit {
-
-#if ENABLE(REMOTE_INSPECTOR)
-
-class AutomationSessionClient final : public API::AutomationSessionClient {
-public:
-    explicit AutomationSessionClient(const String&);
-
-    String sessionIdentifier() const override { return m_sessionIdentifier; }
-
-    void requestNewPageWithOptions(WebKit::WebAutomationSession&, API::AutomationSessionBrowsingContextOptions, CompletionHandler<void(WebKit::WebPageProxy*)>&&) override;
-    void didDisconnectFromRemote(WebKit::WebAutomationSession&) override;
-
-    void retainWebView(Ref<WebView>&&);
-    void releaseWebView(WebPageProxy*);
-
-private:
-    String m_sessionIdentifier;
-
-    static void close(WKPageRef, const void*);
-    HashSet<Ref<WebView>> m_webViews;
-};
 
 class AutomationClient final : public API::AutomationClient, Inspector::RemoteInspector::Client {
 public:
@@ -64,10 +38,6 @@ public:
     ~AutomationClient();
 
 private:
-    // API::AutomationClient
-    bool allowsRemoteAutomation(WebKit::WebProcessPool*) final { return remoteAutomationAllowed(); }
-    void didRequestAutomationSession(WebKit::WebProcessPool*, const String& sessionIdentifier) final { }
-
     // RemoteInspector::Client
     bool remoteAutomationAllowed() const override { return true; }
 
@@ -83,6 +53,6 @@ private:
     WeakPtr<WebProcessPool> m_processPool;
 };
 
-#endif
-
 } // namespace WebKit
+
+#endif // ENABLE(REMOTE_INSPECTOR)

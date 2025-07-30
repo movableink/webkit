@@ -20,9 +20,9 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import mock
 import os
 import unittest
+from unittest import mock
 
 from .results import get_project_issue_count_as_string
 

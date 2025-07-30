@@ -4,7 +4,7 @@ import cgi
 import os
 import sys
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs
 
 # This test loads an uncacheable main resource and a cacheable image subresource.
@@ -18,7 +18,7 @@ file = __file__.split(':/cygwin')[-1]
 http_root = os.path.dirname(os.path.dirname(os.path.abspath(os.path.dirname(file))))
 
 request_method = os.environ.get('REQUEST_METHOD', '')
-expires = '{} +0000'.format((datetime.utcnow() - timedelta(seconds=1)).strftime('%a, %d %b %Y %H:%M:%S'))
+expires = '{} +0000'.format((datetime.now(timezone.utc) - timedelta(seconds=1)).strftime('%a, %d %b %Y %H:%M:%S'))
 finish = parse_qs(os.environ.get('QUERY_STRING', ''), keep_blank_values=True).get('finish', [''])[0]
 
 request = {}

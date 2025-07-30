@@ -20,8 +20,13 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+[
+    ExceptionForEnabledBy,
+    DispatchedFrom=WebContent,
+    DispatchedTo=UI
+]
 messages -> WebInspectorUIProxy {
-    OpenLocalInspectorFrontend(bool canAttach, bool underTest)
+    RequestOpenLocalInspectorFrontend()
     SetFrontendConnection(IPC::ConnectionHandle connectionHandle)
 
     SendMessageToBackend(String message)
@@ -32,8 +37,8 @@ messages -> WebInspectorUIProxy {
     Reopen()
     ResetState()
 
-    SetForcedAppearance(WebCore::InspectorFrontendClient::Appearance appearance)
-    EffectiveAppearanceDidChange(WebCore::InspectorFrontendClient::Appearance appearance)
+    SetForcedAppearance(enum:uint8_t WebCore::InspectorFrontendClientAppearance appearance)
+    EffectiveAppearanceDidChange(enum:uint8_t WebCore::InspectorFrontendClientAppearance appearance)
 
     OpenURLExternally(String url)
     RevealFileExternally(String path)
@@ -48,7 +53,7 @@ messages -> WebInspectorUIProxy {
     SetEmulatedConditions(std::optional<int64_t> bytesPerSecondLimit)
 #endif
 
-    Save(Vector<WebCore::InspectorFrontendClient::SaveData> saveDatas, bool forceSaveAs)
+    Save(Vector<WebCore::InspectorFrontendClientSaveData> saveDatas, bool forceSaveAs)
     Load(String path) -> (String content)
     PickColorFromScreen() -> (std::optional<WebCore::Color> color)
 

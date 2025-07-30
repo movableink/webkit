@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -74,7 +74,8 @@ OBJC_CLASS NSMutableDictionary;
 #endif
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
-#include "DMABufRendererBufferMode.h"
+#include "AvailableInputDevices.h"
+#include "RendererBufferTransportMode.h"
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -101,6 +102,7 @@ enum class UserInterfaceIdiom : uint8_t;
 
 namespace WebCore {
 class CPUMonitor;
+class Frame;
 class PageGroup;
 class SecurityOriginData;
 class Site;
@@ -143,6 +145,7 @@ class WebAutomationSessionProxy;
 class WebBadgeClient;
 class WebBroadcastChannelRegistry;
 class WebCacheStorageProvider;
+class WebCompiledContentRuleListData;
 class WebCookieJar;
 class WebFileSystemStorageConnection;
 class WebFrame;
@@ -154,6 +157,7 @@ class WebProcessSupplement;
 class WebTransportSession;
 
 struct AccessibilityPreferences;
+struct AdditionalFonts;
 struct RemoteWorkerInitializationData;
 struct UserMessage;
 struct WebProcessCreationParameters;
@@ -197,13 +201,17 @@ public:
     template <typename T>
     void addSupplement()
     {
-        m_supplements.add(T::supplementName(), makeUniqueWithoutRefCountedCheck<T>(*this));
+        m_supplements.add(T::supplementName(), makeUnique<T>(*this));
     }
 
     template <typename T>
     void addSupplementWithoutRefCountedCheck()
     {
-        m_supplements.add(T::supplementName(), makeUniqueWithoutRefCountedCheck<T>(*this));
+        // WebProcessSupplement objects forward their ref-counting to the WebProcess. The WebProcess
+        // stores this in a HashMap. It is currently safe because we only ever add to the HashMap, never remove.
+        // However, the current design is fragile and the need to const_cast here is annoying so it would be good
+        // to find a better pattern.
+        m_supplements.add(T::supplementName(), const_cast<std::unique_ptr<WebProcessSupplement>&&>(makeUniqueWithoutRefCountedCheck<T, WebProcessSupplement>(*this)));
     }
 
     // ref() & deref() do nothing since WebProcess is a singleton object.
@@ -224,11 +232,6 @@ public:
 
     WebCore::ThirdPartyCookieBlockingMode thirdPartyCookieBlockingMode() const { return m_thirdPartyCookieBlockingMode; }
 
-#if HAVE(HOSTED_CORE_ANIMATION)
-    const WTF::MachSendRight& compositingRenderServerPort() const { return m_compositingRenderServerPort; }
-    void setCompositingRenderServerPort(WTF::MachSendRight&& port) { m_compositingRenderServerPort = WTFMove(port); }
-#endif
-
     bool fullKeyboardAccessEnabled() const { return m_fullKeyboardAccessEnabled; }
 
 #if HAVE(MOUSE_DEVICE_OBSERVATION)
@@ -247,7 +250,7 @@ public:
     void addWebFrame(WebCore::FrameIdentifier, WebFrame*);
     void removeWebFrame(WebCore::FrameIdentifier, WebPage*);
 
-    WebPageGroupProxy* webPageGroup(const WebPageGroupData&);
+    WebPageGroupProxy* webPageGroup(WebPageGroupData&&);
 
     std::optional<WebCore::UserGestureTokenIdentifier> userGestureTokenIdentifier(std::optional<WebCore::PageIdentifier>, RefPtr<WebCore::UserGestureToken>);
     void userGestureTokenDestroyed(WebCore::PageIdentifier, WebCore::UserGestureToken&);
@@ -256,16 +259,21 @@ public:
     void setTextCheckerState(OptionSet<TextCheckerState>);
 
     EventDispatcher& eventDispatcher() { return m_eventDispatcher; }
+    Ref<EventDispatcher> protectedEventDispatcher() { return m_eventDispatcher; }
+    Ref<WebInspectorInterruptDispatcher> protectedWebInspectorInterruptDispatcher() { return m_webInspectorInterruptDispatcher; }
 
     NetworkProcessConnection& ensureNetworkProcessConnection();
     Ref<NetworkProcessConnection> ensureProtectedNetworkProcessConnection();
 
     void networkProcessConnectionClosed(NetworkProcessConnection*);
     NetworkProcessConnection* existingNetworkProcessConnection() { return m_networkProcessConnection.get(); }
+    RefPtr<NetworkProcessConnection> protectedNetworkProcessConnection();
     WebLoaderStrategy& webLoaderStrategy();
+    Ref<WebLoaderStrategy> protectedWebLoaderStrategy();
     WebFileSystemStorageConnection& fileSystemStorageConnection();
+    Ref<WebFileSystemStorageConnection> protectedFileSystemStorageConnection();
 
-    WebTransportSession* webTransportSession(WebTransportSessionIdentifier);
+    RefPtr<WebTransportSession> webTransportSession(WebTransportSessionIdentifier);
     void addWebTransportSession(WebTransportSessionIdentifier, WebTransportSession&);
     void removeWebTransportSession(WebTransportSessionIdentifier);
 
@@ -370,6 +378,7 @@ public:
 #endif
 #if ENABLE(GPU_PROCESS) && HAVE(AVASSETREADER)
     RemoteImageDecoderAVFManager& remoteImageDecoderAVFManager() { return m_remoteImageDecoderAVFManager.get(); }
+    Ref<RemoteImageDecoderAVFManager> protectedRemoteImageDecoderAVFManager();
 #endif
     WebBroadcastChannelRegistry& broadcastChannelRegistry() { return m_broadcastChannelRegistry.get(); }
     WebCookieJar& cookieJar() { return m_cookieJar.get(); }
@@ -399,6 +408,13 @@ public:
 #if ENABLE(NOTIFY_BLOCKING)
     void postNotification(const String& message, std::optional<uint64_t> state);
     void postObserverNotification(const String& message);
+    void getNotifyStateForTesting(const String&, CompletionHandler<void(std::optional<uint64_t>)>&&);
+    void setNotifyState(const String&, uint64_t state);
+#endif
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    void setResourceMonitorContentRuleList(WebCompiledContentRuleListData&&);
+    void setResourceMonitorContentRuleListAsync(WebCompiledContentRuleListData&&, CompletionHandler<void()>&&);
 #endif
 
     bool areAllPagesThrottleable() const;
@@ -455,8 +471,7 @@ public:
     void deleteWebsiteDataForOrigin(OptionSet<WebsiteDataType>, const WebCore::ClientOrigin&, CompletionHandler<void()>&&);
     void reloadExecutionContextsForOrigin(const WebCore::ClientOrigin&, std::optional<WebCore::FrameIdentifier> triggeringFrame, CompletionHandler<void()>&&);
 
-    void setAppBadge(std::optional<WebPageProxyIdentifier>, const WebCore::SecurityOriginData&, std::optional<uint64_t>);
-    void setClientBadge(WebPageProxyIdentifier, const WebCore::SecurityOriginData&, std::optional<uint64_t>);
+    void setAppBadge(WebCore::Frame*, const WebCore::SecurityOriginData&, std::optional<uint64_t> badge);
 
     void deferNonVisibleProcessEarlyMemoryCleanupTimer();
 
@@ -465,9 +480,12 @@ public:
 #endif
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
-    const OptionSet<DMABufRendererBufferMode>& dmaBufRendererBufferMode() const { return m_dmaBufRendererBufferMode; }
+    const OptionSet<RendererBufferTransportMode>& rendererBufferTransportMode() const { return m_rendererBufferTransportMode; }
     void initializePlatformDisplayIfNeeded() const;
-#endif
+    const OptionSet<AvailableInputDevices>& availableInputDevices() const { return m_availableInputDevices; }
+    std::optional<AvailableInputDevices> primaryPointingDevice() const;
+    void setAvailableInputDevices(OptionSet<AvailableInputDevices>);
+#endif // PLATFORM(WPE)
 
     String mediaKeysStorageDirectory() const { return m_mediaKeysStorageDirectory; }
     FileSystem::Salt mediaKeysStorageSalt() const { return m_mediaKeysStorageSalt; }
@@ -477,6 +495,12 @@ public:
     void enableMediaPlayback();
 #if ENABLE(ROUTING_ARBITRATION)
     AudioSessionRoutingArbitrator* audioSessionRoutingArbitrator() const { return m_routingArbitrator.get(); }
+#endif
+
+    bool mediaPlaybackEnabled() const { return m_mediaPlaybackEnabled; }
+
+#if PLATFORM(COCOA)
+    void registerAdditionalFonts(AdditionalFonts&&);
 #endif
 
 private:
@@ -536,6 +560,9 @@ private:
     void seedResourceLoadStatisticsForTesting(const WebCore::RegistrableDomain& firstPartyDomain, const WebCore::RegistrableDomain& thirdPartyDomain, bool shouldScheduleNotification, CompletionHandler<void()>&&);
     void userPreferredLanguagesChanged(const Vector<String>&) const;
     void fullKeyboardAccessModeChanged(bool fullKeyboardAccessEnabled);
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+    void setOptInCookiePartitioningEnabled(bool);
+#endif
 
     void platformSetCacheModel(CacheModel);
 
@@ -557,6 +584,7 @@ private:
 #endif
 
     void establishRemoteWorkerContextConnectionToNetworkProcess(RemoteWorkerType, PageGroupIdentifier, WebPageProxyIdentifier, WebCore::PageIdentifier, const WebPreferencesStore&, WebCore::Site&&, std::optional<WebCore::ScriptExecutionContextIdentifier> serviceWorkerPageIdentifier, RemoteWorkerInitializationData&&, CompletionHandler<void()>&&);
+    void registerServiceWorkerClients(CompletionHandler<void(bool)>&&);
 
     void fetchWebsiteData(OptionSet<WebsiteDataType>, CompletionHandler<void(WebsiteData&&)>&&);
     void deleteWebsiteData(OptionSet<WebsiteDataType>, WallTime modifiedSince, CompletionHandler<void()>&&);
@@ -704,9 +732,11 @@ private:
     void sendLogOnStream(std::span<const uint8_t> logChannel, std::span<const uint8_t> logCategory, std::span<const uint8_t> logString, os_log_type_t);
 #endif
 
+    bool isProcessBeingCachedForPerformance();
+
     HashMap<WebCore::PageIdentifier, RefPtr<WebPage>> m_pageMap;
     HashMap<PageGroupIdentifier, RefPtr<WebPageGroupProxy>> m_pageGroupMap;
-    RefPtr<InjectedBundle> m_injectedBundle;
+    const RefPtr<InjectedBundle> m_injectedBundle;
 
     EventDispatcher m_eventDispatcher;
 #if PLATFORM(IOS_FAMILY)
@@ -716,10 +746,6 @@ private:
 
     bool m_hasSetCacheModel { false };
     CacheModel m_cacheModel { CacheModel::DocumentViewer };
-
-#if HAVE(HOSTED_CORE_ANIMATION)
-    WTF::MachSendRight m_compositingRenderServerPort;
-#endif
 
     bool m_fullKeyboardAccessEnabled { false };
 
@@ -740,7 +766,7 @@ private:
 
     String m_uiProcessBundleIdentifier;
     RefPtr<NetworkProcessConnection> m_networkProcessConnection;
-    UniqueRef<WebLoaderStrategy> m_webLoaderStrategy;
+    const UniqueRef<WebLoaderStrategy> m_webLoaderStrategy;
     RefPtr<WebFileSystemStorageConnection> m_fileSystemStorageConnection;
 
 #if ENABLE(GPU_PROCESS)
@@ -757,23 +783,23 @@ private:
 #endif
 
 #if ENABLE(MODEL_PROCESS)
-    Ref<ModelProcessModelPlayerManager> m_modelProcessModelPlayerManager;
+    const Ref<ModelProcessModelPlayerManager> m_modelProcessModelPlayerManager;
     RefPtr<ModelProcessConnection> m_modelProcessConnection;
 #endif
 
-    Ref<WebCacheStorageProvider> m_cacheStorageProvider;
-    Ref<WebBadgeClient> m_badgeClient;
+    const Ref<WebCacheStorageProvider> m_cacheStorageProvider;
+    const Ref<WebBadgeClient> m_badgeClient;
 #if ENABLE(GPU_PROCESS) && ENABLE(VIDEO)
-    Ref<RemoteMediaPlayerManager> m_remoteMediaPlayerManager;
+    const Ref<RemoteMediaPlayerManager> m_remoteMediaPlayerManager;
 #endif
 #if ENABLE(GPU_PROCESS) && HAVE(AVASSETREADER)
-    Ref<RemoteImageDecoderAVFManager> m_remoteImageDecoderAVFManager;
+    const Ref<RemoteImageDecoderAVFManager> m_remoteImageDecoderAVFManager;
 #endif
-    Ref<WebBroadcastChannelRegistry> m_broadcastChannelRegistry;
-    Ref<WebCookieJar> m_cookieJar;
+    const Ref<WebBroadcastChannelRegistry> m_broadcastChannelRegistry;
+    const Ref<WebCookieJar> m_cookieJar;
     WebSocketChannelManager m_webSocketChannelManager;
 
-    std::unique_ptr<LibWebRTCNetwork> m_libWebRTCNetwork;
+    const std::unique_ptr<LibWebRTCNetwork> m_libWebRTCNetwork;
 
     HashSet<String> m_dnsPrefetchedHosts;
     PAL::HysteresisActivity m_dnsPrefetchHystereris;
@@ -798,6 +824,7 @@ private:
     bool m_suppressMemoryPressureHandler { false };
     bool m_loggedProcessLimitWarningMemoryStatistics { false };
     bool m_loggedProcessLimitCriticalMemoryStatistics { false };
+    bool m_wasVisibleSinceLastProcessSuspensionEvent { false };
 #if PLATFORM(MAC)
     std::unique_ptr<WebCore::CPUMonitor> m_cpuMonitor;
     std::optional<double> m_cpuLimit;
@@ -817,7 +844,8 @@ private:
     WeakHashMap<WebCore::UserGestureToken, WebCore::UserGestureTokenIdentifier> m_userGestureTokens;
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
-    OptionSet<DMABufRendererBufferMode> m_dmaBufRendererBufferMode;
+    OptionSet<RendererBufferTransportMode> m_rendererBufferTransportMode;
+    OptionSet<AvailableInputDevices> m_availableInputDevices;
 #endif
 
     bool m_hasSuspendedPageProxy { false };
@@ -865,7 +893,7 @@ private:
 #endif
 
 #if ENABLE(MEDIA_STREAM)
-    std::unique_ptr<SpeechRecognitionRealtimeMediaSourceManager> m_speechRecognitionRealtimeMediaSourceManager;
+    const std::unique_ptr<SpeechRecognitionRealtimeMediaSourceManager> m_speechRecognitionRealtimeMediaSourceManager;
 #endif
 #if ENABLE(ROUTING_ARBITRATION)
     std::unique_ptr<AudioSessionRoutingArbitrator> m_routingArbitrator;
@@ -882,12 +910,16 @@ private:
     String m_mediaKeysStorageDirectory;
     FileSystem::Salt m_mediaKeysStorageSalt;
 
-    HashMap<WebTransportSessionIdentifier, WeakPtr<WebTransportSession>> m_webTransportSessions;
+    HashMap<WebTransportSessionIdentifier, ThreadSafeWeakPtr<WebTransportSession>> m_webTransportSessions;
     HashSet<WebCore::RegistrableDomain> m_domainsWithStorageAccessQuirks;
     std::unique_ptr<ScriptTelemetryFilter> m_scriptTelemetryFilter;
-#if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
-    RefPtr<IPC::StreamClientConnection> m_logStreamConnection;
-    LogStreamIdentifier m_logStreamIdentifier { LogStreamIdentifier::generate() };
+    bool m_mediaPlaybackEnabled { false };
+
+#if ENABLE(NOTIFY_BLOCKING)
+    HashMap<String, int> m_notifyTokens;
+#endif
+#if ENABLE(LAUNCHSERVICES_SANDBOX_EXTENSION_BLOCKING)
+    String m_pendingDisplayName;
 #endif
 };
 

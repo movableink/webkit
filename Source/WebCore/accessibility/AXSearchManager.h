@@ -87,11 +87,16 @@ struct AccessibilitySearchCriteria {
     unsigned resultsLimit { 0 };
     bool visibleOnly { false };
     bool immediateDescendantsOnly { false };
+    // For some types of common searches (e.g. all the live regions on the page), we eagerly
+    // compute results. This flag determines whether to use these precached results or not.
+    bool usePreCachedResults { true };
 };
 
 class AXSearchManager {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AXSearchManager);
 public:
+    AXCoreObject* findNextStartingFrom(AccessibilitySearchKey, AXCoreObject* start, AXCoreObject& anchor);
+    AXCoreObject::AccessibilityChildrenVector findAllMatchingObjectsIgnoringCache(Vector<AccessibilitySearchKey>&&, AXCoreObject& anchor);
     AXCoreObject::AccessibilityChildrenVector findMatchingObjects(AccessibilitySearchCriteria&&);
     std::optional<AXTextMarkerRange> findMatchingRange(AccessibilitySearchCriteria&&);
 private:
@@ -102,7 +107,7 @@ private:
     bool matchForSearchKeyAtIndex(Ref<AXCoreObject>, const AccessibilitySearchCriteria&, size_t);
 
     // Keeps the ranges of misspellings for each object.
-    UncheckedKeyHashMap<AXID, Vector<AXTextMarkerRange>> m_misspellingRanges;
+    HashMap<AXID, Vector<AXTextMarkerRange>> m_misspellingRanges;
 };
 
 inline AXCoreObject::AccessibilityChildrenVector AXSearchManager::findMatchingObjects(AccessibilitySearchCriteria&& criteria)

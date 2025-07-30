@@ -26,6 +26,7 @@
     #include "include/effects/SkPerlinNoiseShader.h"
     #include "include/effects/SkRuntimeEffect.h"
     #include "include/effects/SkShaderMaskFilter.h"
+    #include "include/effects/SkTableMaskFilter.h"
     #include "src/core/SkBlendModeBlender.h"
     #include "src/core/SkImageFilter_Base.h"
     #include "src/core/SkLocalMatrixImageFilter.h"
@@ -51,7 +52,6 @@
     void SkFlattenable::PrivateInitializer::InitEffects() {
         // Shaders.
         SkRegisterBlendShaderFlattenable();
-        SkRegisterColor4ShaderFlattenable();
         SK_REGISTER_FLATTENABLE(SkColorFilterShader);
         SkRegisterColorShaderFlattenable();
         SkRegisterCoordClampShaderFlattenable();
@@ -83,6 +83,7 @@
         SK_REGISTER_FLATTENABLE(SkEmbossMaskFilter);
         SkMaskFilter::RegisterFlattenables();
         SkShaderMaskFilter::RegisterFlattenables();
+        SkTableMaskFilter::RegisterFlattenables();
 
         // Path effects.
         SkCornerPathEffect::RegisterFlattenables();

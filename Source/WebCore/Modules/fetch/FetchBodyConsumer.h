@@ -61,14 +61,14 @@ public:
     void append(const SharedBuffer&);
 
     bool hasData() const { return !!m_buffer; }
-    const FragmentedSharedBuffer* data() const { return m_buffer.get().get(); }
+    const FragmentedSharedBuffer* data() const LIFETIME_BOUND { return m_buffer.get().get(); }
     void setData(Ref<FragmentedSharedBuffer>&&);
 
     RefPtr<FragmentedSharedBuffer> takeData();
     RefPtr<JSC::ArrayBuffer> takeAsArrayBuffer();
     String takeAsText();
 
-    bool hasPendingActivity() const { return m_formDataConsumer ? m_formDataConsumer->hasPendingActivity() : false; }
+    bool hasPendingActivity() const;
 
     void setType(Type type) { m_type = type; }
 

@@ -37,12 +37,14 @@ public:
     ShaderCodeDictionary* shaderCodeDictionary() {
         return fContext->fSharedContext->shaderCodeDictionary();
     }
+#if defined(GPU_TEST_UTILS)
     const GlobalCache* globalCache() const {
         return fContext->fSharedContext->globalCache();
     }
     GlobalCache* globalCache() {
         return fContext->fSharedContext->globalCache();
     }
+#endif
     const RendererProvider* rendererProvider() const {
         return fContext->fSharedContext->rendererProvider();
     }
@@ -52,6 +54,7 @@ public:
     SharedContext* sharedContext() {
         return fContext->fSharedContext.get();
     }
+    const skcpu::ContextImpl* cpuContext() const { return fContext->fCPUContext.get(); }
 
 #if defined(GPU_TEST_UTILS)
     void startCapture() {
@@ -61,7 +64,9 @@ public:
         fContext->fQueueManager->stopCapture();
     }
 
-    void deregisterRecorder(const Recorder*);
+    void deregisterRecorder(const Recorder* recorder) {
+        fContext->deregisterRecorder(recorder);
+    }
 
     bool readPixels(const SkPixmap&,
                     const TextureProxy*,

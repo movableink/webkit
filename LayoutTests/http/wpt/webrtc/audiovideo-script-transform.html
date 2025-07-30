@@ -9,7 +9,7 @@
         <video id="video" autoplay playsInline></video>
         <script src="routines.js"></script>
         <script>
-function waitForMessage(port, data)
+function waitForExpectedMessage(port, expected)
 {
     let gotMessage;
     const promise = new Promise((resolve, reject) => {
@@ -18,9 +18,20 @@ function waitForMessage(port, data)
     });
     port.onmessage = event => {
        promise.lastData = event.data;
-       if (event.data === data)
+       if (event.data === expected)
            gotMessage();
     };
+    return promise;
+}
+
+function waitForMessage(port)
+{
+    let gotMessage;
+    const promise = new Promise((resolve, reject) => {
+        gotMessage = resolve;
+        setTimeout(() => { reject("did not get any message") }, 5000);
+    });
+    port.onmessage = event => gotMessage(event.data);
     return promise;
 }
 
@@ -68,42 +79,88 @@ promise_test(async (test) => {
 
 promise_test((test) => {
     audioSenderTransform.port.postMessage("tryGenerateKeyFrame");
-    return waitForMessage(audioSenderTransform.port, "FAIL: InvalidStateError");
+    return waitForExpectedMessage(audioSenderTransform.port, "FAIL: InvalidStateError");
 }, "key frame on audio sender");
 
 promise_test((test) => {
     audioReceiverTransform.port.postMessage("trySendKeyFrameRequest");
-    return waitForMessage(audioReceiverTransform.port, "FAIL: InvalidStateError");
+    return waitForExpectedMessage(audioReceiverTransform.port, "FAIL: InvalidStateError");
 }, "key frame on audio receiver");
 
 promise_test((test) => {
     videoReceiverTransform.port.postMessage("tryGenerateKeyFrame");
-    return waitForMessage(videoReceiverTransform.port, "FAIL: InvalidStateError");
+    return waitForExpectedMessage(videoReceiverTransform.port, "FAIL: InvalidStateError");
 }, "generate key frame on video receiver");
 
 promise_test((test) => {
     videoSenderTransform.port.postMessage("trySendKeyFrameRequest");
-    return waitForMessage(videoSenderTransform.port, "FAIL: InvalidStateError");
+    return waitForExpectedMessage(videoSenderTransform.port, "FAIL: InvalidStateError");
 }, "send request key frame on video sender");
 
 promise_test((test) => {
     videoSenderTransform.port.postMessage("tryGenerateKeyFramePromiseHandling");
-    return waitForMessage(videoSenderTransform.port, "PASS");
+    return waitForExpectedMessage(videoSenderTransform.port, "PASS");
 }, "generate key frame promise handling on video sender");
 
 promise_test(async (test) => {
-    audioReceiverTransform.port.postMessage("tryAccessingDataTwice");
+    audioReceiverTransform.port.postMessage("checkDataAfterWrite");
     await waitForMessage(audioReceiverTransform.port, "PASS");
 
-    audioSenderTransform.port.postMessage("tryAccessingDataTwice");
+    audioSenderTransform.port.postMessage("checkDataAfterWrite");
     await waitForMessage(audioSenderTransform.port, "PASS");
 
-    videoReceiverTransform.port.postMessage("tryAccessingDataTwice");
+    videoReceiverTransform.port.postMessage("checkDataAfterWrite");
     await waitForMessage(videoReceiverTransform.port, "PASS");
 
-    videoSenderTransform.port.postMessage("tryAccessingDataTwice");
+    videoSenderTransform.port.postMessage("checkDataAfterWrite");
     await waitForMessage(videoSenderTransform.port, "PASS");
+}, "Check data after write");
+
+promise_test(async (test) => {
+    audioReceiverTransform.port.postMessage("checkModifiedDataAfterWrite");
+    await waitForMessage(audioReceiverTransform.port, "PASS");
+
+    audioSenderTransform.port.postMessage("checkModifiedDataAfterWrite");
+    await waitForMessage(audioSenderTransform.port, "PASS");
+
+    videoReceiverTransform.port.postMessage("checkModifiedDataAfterWrite");
+    await waitForMessage(videoReceiverTransform.port, "PASS");
+
+    videoSenderTransform.port.postMessage("checkModifiedDataAfterWrite");
+    await waitForMessage(videoSenderTransform.port, "PASS");
+}, "Check modified data after write");
+
+promise_test(async (test) => {
+    audioReceiverTransform.port.postMessage("tryAccessingDataTwice");
+    await waitForExpectedMessage(audioReceiverTransform.port, "PASS");
+
+    audioSenderTransform.port.postMessage("tryAccessingDataTwice");
+    await waitForExpectedMessage(audioSenderTransform.port, "PASS");
+
+    videoReceiverTransform.port.postMessage("tryAccessingDataTwice");
+    await waitForExpectedMessage(videoReceiverTransform.port, "PASS");
+
+    videoSenderTransform.port.postMessage("tryAccessingDataTwice");
+    await waitForExpectedMessage(videoSenderTransform.port, "PASS");
 }, "Check data getter");
+
+promise_test(async (test) => {
+    audioReceiverTransform.port.postMessage("tryAccessingMetadata");
+    let metadata = await waitForMessage(audioReceiverTransform.port);
+    assert_array_equals(Object.keys(metadata), ["contributingSources", "mimeType", "payloadType", "rtpTimestamp", "sequenceNumber", "synchronizationSource"]);
+
+    audioSenderTransform.port.postMessage("tryAccessingMetadata");
+    metadata = await waitForMessage(audioSenderTransform.port);
+    assert_array_equals(Object.keys(metadata), ["contributingSources", "mimeType", "payloadType", "rtpTimestamp", "synchronizationSource"]);
+
+    videoReceiverTransform.port.postMessage("tryAccessingMetadata");
+    metadata = await waitForMessage(videoReceiverTransform.port);
+    assert_array_equals(Object.keys(metadata), ["contributingSources", "dependencies", "height", "mimeType", "payloadType", "rtpTimestamp", "spatialIndex", "synchronizationSource", "temporalIndex", "width"]);
+
+    videoSenderTransform.port.postMessage("tryAccessingMetadata");
+    metadata =await waitForMessage(videoSenderTransform.port);
+    assert_array_equals(Object.keys(metadata), ["contributingSources", "dependencies", "frameId", "height", "mimeType", "payloadType", "rtpTimestamp", "spatialIndex", "synchronizationSource", "temporalIndex", "width"]);
+}, "Check metadata getter");
         </script>
     </body>
 </html>

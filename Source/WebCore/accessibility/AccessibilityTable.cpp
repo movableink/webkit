@@ -42,6 +42,7 @@
 #include "HTMLTableRowElement.h"
 #include "HTMLTableSectionElement.h"
 #include "NodeRenderStyle.h"
+#include "RenderElementInlines.h"
 #include "RenderObject.h"
 #include "RenderTable.h"
 #include "RenderTableCell.h"
@@ -49,8 +50,6 @@
 #include <wtf/WeakRef.h>
 
 #include <queue>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -168,13 +167,14 @@ bool AccessibilityTable::isDataTable() const
 
         // If there's a colgroup or col element, it's probably a data table.
         for (const auto& child : childrenOfType<HTMLElement>(*tableElement)) {
-            if (child.hasTagName(colTag) || child.hasTagName(colgroupTag))
+            auto elementName = child.elementName();
+            if (elementName == ElementName::HTML_col || elementName == ElementName::HTML_colgroup)
                 return true;
         }
     }
     
     // The following checks should only apply if this is a real <table> element.
-    if (!hasTagName(tableTag))
+    if (!hasElementName(ElementName::HTML_table))
         return false;
     
     // If the author has used ARIA to specify a valid column or row count, assume they
@@ -194,7 +194,7 @@ bool AccessibilityTable::isDataTable() const
 
         // If the top section has any non-group role, then don't make this a data table. The author probably wants to use the role on the section.
         if (auto* axTableSection = cache->getOrCreate(*tableSectionElement)) {
-            auto role = axTableSection->roleValue();
+            auto role = axTableSection->role();
             if (!axTableSection->isGroup() && role != AccessibilityRole::Unknown && role != AccessibilityRole::Ignored)
                 return true;
         }
@@ -215,8 +215,8 @@ bool AccessibilityTable::isDataTable() const
     unsigned cellsWithLeftBorder = 0;
     unsigned cellsWithRightBorder = 0;
 
-    UncheckedKeyHashMap<Node*, unsigned> cellCountForEachRow;
-    Color alternatingRowColors[5];
+    HashMap<Node*, unsigned> cellCountForEachRow;
+    std::array<Color, 5> alternatingRowColors;
     int alternatingRowColorCount = 0;
     unsigned rowCount = 0;
     unsigned maxColumnCount = 0;
@@ -240,13 +240,14 @@ bool AccessibilityTable::isDataTable() const
         bool rowIsAllTableHeaderCells = true;
         for (RefPtr currentElement = currentParent ? currentParent->firstElementChild() : nullptr; currentElement; currentElement = currentElement->nextElementSibling()) {
             if (auto* tableSectionElement = dynamicDowncast<HTMLTableSectionElement>(currentElement.get())) {
-                if (tableSectionElement->hasTagName(theadTag)) {
+                auto elementName = tableSectionElement->elementName();
+                if (elementName == ElementName::HTML_thead) {
                     if (topSectionIndicatesLayoutTable(tableSectionElement))
                         return false;
-                } else if (tableSectionElement->hasTagName(tbodyTag))
+                } else if (elementName == ElementName::HTML_tbody)
                     firstBody = firstBody ? firstBody : tableSectionElement;
                 else {
-                    ASSERT_WITH_MESSAGE(tableSectionElement->hasTagName(tfootTag), "table section elements should always have either thead, tbody, or tfoot tag");
+                    ASSERT_WITH_MESSAGE(elementName == ElementName::HTML_tfoot, "table section elements should always have either thead, tbody, or tfoot tag");
                     firstFoot = firstFoot ? firstFoot : tableSectionElement;
                 }
             } else if (auto* tableRow = dynamicDowncast<HTMLTableRowElement>(currentElement.get())) {
@@ -269,7 +270,7 @@ bool AccessibilityTable::isDataTable() const
             } else if (auto* cell = dynamicDowncast<HTMLTableCellElement>(currentElement.get())) {
                 cellCount++;
 
-                bool isTHCell = cell->hasTagName(thTag);
+                bool isTHCell = cell->elementName() == ElementName::HTML_th;
                 if (!isTHCell && rowIsAllTableHeaderCells)
                     rowIsAllTableHeaderCells = false;
                 if (auto* parentNode = cell->parentNode()) {
@@ -487,6 +488,10 @@ void AccessibilityTable::addChildren()
     // update their roles now that the table knows its status.
     // see bug: https://bugs.webkit.org/show_bug.cgi?id=147001
     updateChildrenRoles();
+
+#ifndef NDEBUG
+    verifyChildrenIndexInParent();
+#endif
 }
 
 // Returns the number of columns the table should have.
@@ -548,7 +553,7 @@ unsigned AccessibilityTable::computeCellSlots()
             return;
         processedRows.add(row);
 
-        if (row->roleValue() != AccessibilityRole::Unknown && row->isIgnored()) {
+        if (row->role() != AccessibilityRole::Unknown && row->isIgnored()) {
             // Skip ignored rows (except for those ignored because they have an unknown role, which will happen after a table has become un-exposed but is potentially becoming re-exposed).
             // This is an addition on top of the HTML algorithm because the computed AX table has extra restrictions (e.g. cannot contain aria-hidden or role="presentation" rows).
             return;
@@ -623,6 +628,16 @@ unsigned AccessibilityTable::computeCellSlots()
                     xCurrent,
                     colSpan,
                     rowSpan - 1
+                });
+            } else if (!rowSpan) {
+                // Zero is a special value for rowspan that means it spans all remaining rows.
+                // Pass the max rowspan value for DownwardGrowingCell::remainingRowsToSpan, allowing
+                // this cell to span for as long as the table extends.
+                downwardGrowingCells.append({
+                    *currentCell,
+                    xCurrent,
+                    colSpan,
+                    HTMLTableCellElement::maxRowspan - yCurrent
                 });
             }
 
@@ -701,7 +716,7 @@ unsigned AccessibilityTable::computeCellSlots()
         auto* element = dynamicDowncast<Element>(node);
         // Step 8: While the current element is not one of the following elements, advance the
         // current element to the next child of the table.
-        bool descendantIsRow = element && (element->hasTagName(trTag) || hasRole(*element, "row"_s));
+        bool descendantIsRow = element && (element->elementName() == ElementName::HTML_tr || hasRole(*element, "row"_s));
         bool descendantIsRowGroup = !descendantIsRow && element && isRowGroup(*element);
 
 #if !ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
@@ -753,7 +768,7 @@ unsigned AccessibilityTable::computeCellSlots()
             endRowGroup();
 
         // Step 15: If the current element is a tfoot...
-        if (element->hasTagName(tfootTag)) {
+        if (element->elementName() == ElementName::HTML_tfoot) {
             // ...then add that element to the list of pending tfoot elements
             pendingTfootElements.append(*element);
             // ...advance the current element to the next child of the table.
@@ -899,7 +914,7 @@ void AccessibilityTable::labelText(Vector<AccessibilityText>& textOrder) const
 {
     String title = this->title();
     if (!title.isEmpty())
-        textOrder.append(AccessibilityText(title, AccessibilityTextSource::LabelByElement));
+        textOrder.append(AccessibilityText(WTFMove(title), AccessibilityTextSource::LabelByElement));
 }
 
 String AccessibilityTable::title() const
@@ -960,5 +975,3 @@ void AccessibilityTable::ensureRowAndColumn(unsigned rowIndex, unsigned columnIn
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

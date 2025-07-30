@@ -285,7 +285,6 @@ WI.SettingsTabContentView = class SettingsTabContentView extends WI.TabContentVi
         let elementsSettingsView = new WI.SettingsView("elements", WI.UIString("Elements"));
 
         // COMPATIBILITY (macOS 13.0, iOS 16.0): CSS.LayoutFlag.Rendered did not exist yet.
-        console.log(InspectorBackend.Enum.CSS);
         if (InspectorBackend.Enum.CSS?.LayoutFlag?.Rendered) {
             elementsSettingsView.addSetting(WI.UIString("DOM Tree:"), WI.settings.domTreeDeemphasizesNodesThatAreNotRendered, WI.UIString("De-emphasize nodes that are not rendered"));
 
@@ -336,7 +335,7 @@ WI.SettingsTabContentView = class SettingsTabContentView extends WI.TabContentVi
     {
         let consoleSettingsView = new WI.SettingsView("console", WI.UIString("Console"));
 
-        // COMPATIBILITY (iOS 12.2): Runtime.setSavedResultAlias did not exist.
+        // COMPATIBILITY (iOS 13.0): Runtime.setSavedResultAlias did not exist.
         if (InspectorBackend.hasCommand("Runtime.setSavedResultAlias")) {
             let consoleSavedResultAliasEditor = consoleSettingsView.addGroupWithCustomEditor(WI.UIString("Saved Result Alias:"));
 
@@ -435,6 +434,7 @@ WI.SettingsTabContentView = class SettingsTabContentView extends WI.TabContentVi
         let sourcesGroup = experimentalSettingsView.addGroup(WI.UIString("Sources:"));
         sourcesGroup.addSetting(WI.settings.experimentalLimitSourceCodeHighlighting, WI.UIString("Limit syntax highlighting on long lines of code"));
         sourcesGroup.addSetting(WI.settings.experimentalUseFuzzyMatchingForCSSCodeCompletion, WI.UIString("Use fuzzy matching for CSS code completion"));
+        sourcesGroup.addSetting(WI.settings.experimentalVirtualizeSourcesNavigationSidebarTreeOutline, WI.UIString("Limit number of resources in navigation sidebar"));
 
         experimentalSettingsView.addSeparator();
 
@@ -458,15 +458,21 @@ WI.SettingsTabContentView = class SettingsTabContentView extends WI.TabContentVi
             }, reloadInspectorContainerElement);
         }
 
+        listenForChange(WI.settings.experimentalGroupSourceMapErrors);
+        listenForChange(WI.settings.experimentalShowCaseSensitiveAutocomplete);
+
         if (hasCSSDomain) {
             listenForChange(WI.settings.experimentalEnableStylesJumpToEffective);
             listenForChange(WI.settings.experimentalEnableStylesJumpToVariableDeclaration);
+            listenForChange(WI.settings.experimentalCSSSortPropertyNameAutocompletionByUsage);
         }
 
         if (hasNetworkEmulatedCondition)
             listenForChange(WI.settings.experimentalEnableNetworkEmulatedCondition);
 
         listenForChange(WI.settings.experimentalLimitSourceCodeHighlighting);
+        listenForChange(WI.settings.experimentalUseFuzzyMatchingForCSSCodeCompletion);
+        listenForChange(WI.settings.experimentalVirtualizeSourcesNavigationSidebarTreeOutline);
 
         this._createReferenceLink(experimentalSettingsView);
 

@@ -225,13 +225,13 @@ public:
         m_maps.clear();
     }
 
-    const BoyerMooreBitmap::Map::WordType* tryReuseBoyerMooreBitmap(const BoyerMooreBitmap::Map& map) const
+    const std::span<BoyerMooreBitmap::Map::WordType> tryReuseBoyerMooreBitmap(const BoyerMooreBitmap::Map& map) const
     {
         for (auto& stored : m_maps) {
             if (stored.get() == map)
                 return stored->storage();
         }
-        return nullptr;
+        return { };
     }
 
 private:
@@ -449,10 +449,6 @@ void jitCompile(YarrPattern&, StringView patternString, CharSize, std::optional<
 class YarrJITRegisters;
 
 void jitCompileInlinedTest(StackCheck*, StringView, OptionSet<Yarr::Flags>, CharSize, VM*, YarrBoyerMooreData&, CCallHelpers&, YarrJITRegisters&);
-#endif
-
-#if ENABLE(YARR_JIT_BACKREFERENCES_FOR_16BIT_EXPRS)
-MacroAssemblerCodeRef<JITThunkPtrTag> areCanonicallyEquivalentThunkGenerator(VM&);
 #endif
 
 } } // namespace JSC::Yarr

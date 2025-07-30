@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -91,7 +91,7 @@ private:
 
     void appendAccumulatedDataToDataBuffer(ByteRangeRequest&);
 
-    std::span<const uint8_t> dataSpanForRange(uint64_t position, size_t count, CheckValidRanges) const;
+    void dataSpanForRange(uint64_t position, size_t count, CheckValidRanges, CompletionHandler<void(std::span<const uint8_t>)>&&) const;
     uint64_t availableDataSize() const;
 
     void getResourceBytesAtPosition(size_t count, off_t position, DataRequestCompletionHandler&&);
@@ -145,7 +145,7 @@ private:
     RetainPtr<PDFDocument> m_backgroundThreadDocument;
     RefPtr<Thread> m_pdfThread;
 
-    Ref<PDFPluginStreamLoaderClient> m_streamLoaderClient;
+    const Ref<PDFPluginStreamLoaderClient> m_streamLoaderClient;
 
     struct RequestData;
     std::unique_ptr<RequestData> m_requestData;

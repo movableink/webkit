@@ -54,7 +54,7 @@ void CtapNfcDriver::transact(Vector<uint8_t>&& data, ResponseCallback&& callback
 {
     // For CTAP2, commands follow:
     // https://fidoalliance.org/specs/fido-v2.0-ps-20190130/fido-client-to-authenticator-protocol-v2.0-ps-20190130.html#nfc-command-framing
-    if (protocol() == ProtocolVersion::kCtap) {
+    if (isCtap2Protocol()) {
         if (!isValidSize(data.size()))
             RELEASE_LOG(WebAuthn, "CtapNfcDriver::transact Sending data larger than maxSize. msgSize=%ld", data.size());
         ApduCommand command;
@@ -92,7 +92,7 @@ void CtapNfcDriver::transact(Vector<uint8_t>&& data, ResponseCallback&& callback
 // Return the response async to match the HID behaviour, such that nfc could fit into the current infra.
 void CtapNfcDriver::respondAsync(ResponseCallback&& callback, Vector<uint8_t>&& response) const
 {
-    RunLoop::main().dispatch([callback = WTFMove(callback), response = WTFMove(response)] () mutable {
+    RunLoop::protectedMain()->dispatch([callback = WTFMove(callback), response = WTFMove(response)] () mutable {
         callback(WTFMove(response));
     });
 }

@@ -27,6 +27,7 @@
 #include "Pattern.h"
 
 #include "Image.h"
+#include "NativeImage.h"
 
 namespace WebCore {
 

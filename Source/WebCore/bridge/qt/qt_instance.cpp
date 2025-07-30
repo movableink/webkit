@@ -260,7 +260,7 @@ JSValue QtInstance::stringValue(JSGlobalObject* lexicalGlobalObject) const
                 qargs[0] = ret.data();
 
                 if (QMetaObject::metacall(obj, QMetaObject::InvokeMetaMethod, index, qargs) < 0) {
-                    if (ret.isValid() && ret.canConvert(QVariant::String)) {
+                    if (ret.isValid() && ret.canConvert<QString>()) {
                         buf = ret.toString().toLatin1().constData(); // ### Latin 1? Ascii?
                         useDefault = false;
                     }

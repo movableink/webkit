@@ -36,15 +36,15 @@
 #include <pal/spi/cg/CoreGraphicsSPI.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/cf/VectorCF.h>
 #include <wtf/spi/cocoa/IOSurfaceSPI.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
 ShareableBitmapConfiguration::ShareableBitmapConfiguration(NativeImage& image)
     : m_size(image.size())
     , m_colorSpace(image.colorSpace())
+    , m_headroom(image.headroom())
     , m_bytesPerPixel(CGImageGetBitsPerPixel(image.platformImage().get()) / 8)
     , m_bytesPerRow(CGImageGetBytesPerRow(image.platformImage().get()))
     , m_bitmapInfo(CGImageGetBitmapInfo(image.platformImage().get()))
@@ -60,7 +60,7 @@ std::optional<DestinationColorSpace> ShareableBitmapConfiguration::validateColor
         return colorSpaceAsRGB;
 
 #if HAVE(CORE_GRAPHICS_EXTENDED_SRGB_COLOR_SPACE)
-    return DestinationColorSpace(extendedSRGBColorSpaceRef());
+    return DestinationColorSpace::ExtendedSRGB();
 #else
     return DestinationColorSpace::SRGB();
 #endif
@@ -109,14 +109,18 @@ CGBitmapInfo ShareableBitmapConfiguration::calculateBitmapInfo(const Destination
 RefPtr<ShareableBitmap> ShareableBitmap::createFromImagePixels(NativeImage& image)
 {
     auto colorSpace = image.colorSpace();
-    if (colorSpace != DestinationColorSpace::SRGB())
+    if (CGColorSpaceGetModel(colorSpace.platformColorSpace()) != kCGColorSpaceModelRGB)
+        return nullptr;
+
+    auto sourceProvider = CGImageGetDataProvider(image.platformImage().get());
+    if (!sourceProvider)
         return nullptr;
 
     auto configuration = ShareableBitmapConfiguration(image);
 
     RetainPtr<CFDataRef> pixels;
     @try {
-        pixels = adoptCF(CGDataProviderCopyData(CGImageGetDataProvider(image.platformImage().get())));
+        pixels = adoptCF(CGDataProviderCopyData(sourceProvider));
     } @catch (id exception) {
         LOG_WITH_STREAM(Images, stream
             << "ShareableBitmap::createFromImagePixels() failed CGDataProviderCopyData "
@@ -129,28 +133,26 @@ RefPtr<ShareableBitmap> ShareableBitmap::createFromImagePixels(NativeImage& imag
     if (!pixels)
         return nullptr;
 
-    const auto* bytes = byteCast<uint8_t>(CFDataGetBytePtr(pixels.get()));
-    CheckedUint32 sizeInBytes = CFDataGetLength(pixels.get());
-    if (!bytes || !sizeInBytes || sizeInBytes.hasOverflowed())
+    auto bytes = WTF::span(pixels.get());
+    if (bytes.empty() || CheckedUint32(bytes.size()).hasOverflowed())
         return nullptr;
 
-    if (configuration.sizeInBytes() != sizeInBytes) {
+    if (configuration.sizeInBytes() != bytes.size()) {
         LOG_WITH_STREAM(Images, stream
             << "ShareableBitmap::createFromImagePixels() " << image.platformImage().get()
             << " CGImage size: " << configuration.size()
             << " CGImage bytesPerRow: " << configuration.bytesPerRow()
             << " CGImage sizeInBytes: " << configuration.sizeInBytes()
-            << " CGDataProvider sizeInBytes: " << sizeInBytes
+            << " CGDataProvider sizeInBytes: " << bytes.size()
             << " CGImage and its CGDataProvider disagree about how many bytes are in pixels buffer. CGImage is a sub-image; bailing.");
         return nullptr;
     }
 
-    RefPtr<SharedMemory> sharedMemory = SharedMemory::allocate(sizeInBytes);
+    RefPtr sharedMemory = SharedMemory::allocate(bytes.size());
     if (!sharedMemory)
         return nullptr;
 
-    memcpySpan(sharedMemory->mutableSpan(), std::span { bytes, static_cast<size_t>(sizeInBytes) });
-
+    memcpySpan(sharedMemory->mutableSpan(), bytes);
     return adoptRef(new ShareableBitmap(configuration, sharedMemory.releaseNonNull()));
 }
 
@@ -247,7 +249,12 @@ RetainPtr<CGImageRef> ShareableBitmap::createCGImage(CGDataProviderRef dataProvi
     unsigned bitsPerPixel = m_configuration.bytesPerPixel() * 8;
     unsigned bytesPerRow = m_configuration.bytesPerRow();
 
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
+    if (m_configuration.headroom() != Headroom::None)
+        return adoptCF(CGImageCreateWithContentHeadroom(m_configuration.headroom(), size().width(), size().height(), bitsPerPixel / 4, bitsPerPixel, bytesPerRow, m_configuration.platformColorSpace(), m_configuration.bitmapInfo(), dataProvider, 0, shouldInterpolate == ShouldInterpolate::Yes, kCGRenderingIntentDefault));
+#endif
     return adoptCF(CGImageCreate(size().width(), size().height(), bitsPerPixel / 4, bitsPerPixel, bytesPerRow, m_configuration.platformColorSpace(), m_configuration.bitmapInfo(), dataProvider, 0, shouldInterpolate == ShouldInterpolate::Yes, kCGRenderingIntentDefault));
+
 }
 
 void ShareableBitmap::releaseBitmapContextData(void* typelessBitmap, void* typelessData)
@@ -274,5 +281,3 @@ void ShareableBitmap::setOwnershipOfMemory(const ProcessIdentity& identity)
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

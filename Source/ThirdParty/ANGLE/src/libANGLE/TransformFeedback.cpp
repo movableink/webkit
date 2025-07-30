@@ -234,7 +234,7 @@ void TransformFeedback::onVerticesDrawn(const Context *context, GLsizei count, G
     {
         if (buffer.get() != nullptr)
         {
-            buffer->onDataChanged();
+            buffer->onDataChanged(context);
         }
     }
 }
@@ -322,11 +322,6 @@ bool TransformFeedback::buffersBoundForOtherUseInWebGL() const
         }
     }
     return false;
-}
-
-rx::TransformFeedbackImpl *TransformFeedback::getImplementation() const
-{
-    return mImplementation;
 }
 
 void TransformFeedback::onBindingChanged(const Context *context, bool bound)

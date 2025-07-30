@@ -29,6 +29,7 @@
 
 #include "JITCompilation.h"
 #include "NativeCallee.h"
+#include "PCToCodeOriginMap.h"
 #include "RegisterAtOffsetList.h"
 #include "StackAlignment.h"
 #include "WasmCompilationMode.h"
@@ -50,6 +51,10 @@
 namespace JSC {
 
 class LLIntOffsetsExtractor;
+
+namespace B3 {
+class PCToOriginMap;
+}
 
 namespace Wasm {
 
@@ -151,7 +156,6 @@ public:
     static constexpr ptrdiff_t offsetOfIdent() { return OBJECT_OFFSETOF(JSEntrypointCallee, m_ident); }
 #endif
     static constexpr ptrdiff_t offsetOfWasmCallee() { return OBJECT_OFFSETOF(JSEntrypointCallee, m_wasmCallee); }
-    static constexpr ptrdiff_t offsetOfWasmFunctionPrologue() { return OBJECT_OFFSETOF(JSEntrypointCallee, m_wasmFunctionPrologue); }
     static constexpr ptrdiff_t offsetOfFrameSize() { return OBJECT_OFFSETOF(JSEntrypointCallee, m_frameSize); }
 
     // Space for callee-saves; Not included in frameSize
@@ -164,17 +168,12 @@ public:
     unsigned ident() const { return m_ident; }
 #endif
     unsigned frameSize() const { return m_frameSize; }
-    EncodedJSValue wasmCallee() const { return m_wasmCallee; }
+    CalleeBits wasmCallee() const { return m_wasmCallee; }
     TypeIndex typeIndex() const { return m_typeIndex; }
 
-    void setWasmCallee(EncodedJSValue wasmCallee)
+    void setWasmCallee(CalleeBits wasmCallee)
     {
         m_wasmCallee = wasmCallee;
-    }
-
-    void setReplacementTarget(CodePtr<WasmEntryPtrTag> replacement)
-    {
-        m_wasmFunctionPrologue = replacement;
     }
 
 private:
@@ -185,11 +184,8 @@ private:
 #endif
     unsigned m_frameSize { };
     // This must be initialized after the callee is created unfortunately.
-    EncodedJSValue m_wasmCallee;
+    CalleeBits m_wasmCallee;
     const TypeIndex m_typeIndex;
-    // In the JIT case, we want to always call the llint prologue from a jit function.
-    // In the no-jit case, we dont' care.
-    CodePtr<WasmEntryPtrTag> m_wasmFunctionPrologue;
 };
 
 class WasmToJSCallee final : public Callee {
@@ -198,14 +194,18 @@ public:
     friend class Callee;
     friend class JSC::LLIntOffsetsExtractor;
 
-    WasmToJSCallee(FunctionSpaceIndex index, std::pair<const Name*, RefPtr<NameSection>>&& name) : Callee(Wasm::CompilationMode::WasmToJSMode, index, WTFMove(name)) { };
+    WasmToJSCallee(FunctionSpaceIndex, std::pair<const Name*, RefPtr<NameSection>>&&);
     static WasmToJSCallee& singleton();
+
+    CalleeBits* boxedWasmCalleeLoadLocation() { return &m_boxedThis; }
 
 private:
     WasmToJSCallee();
     std::tuple<void*, void*> rangeImpl() const { return { nullptr, nullptr }; }
     CodePtr<WasmEntryPtrTag> entrypointImpl() const { return { }; }
     RegisterAtOffsetList* calleeSaveRegistersImpl() { return nullptr; }
+
+    CalleeBits m_boxedThis;
 };
 
 #if ENABLE(JIT)
@@ -256,6 +256,9 @@ public:
 
     void addCodeOrigin(unsigned firstInlineCSI, unsigned lastInlineCSI, const Wasm::ModuleInformation&, uint32_t functionIndex);
     IndexOrName getOrigin(unsigned csi, unsigned depth, bool& isInlined) const;
+    std::optional<CallSiteIndex> tryGetCallSiteIndex(const void*) const;
+
+    Box<PCToCodeOriginMap> materializePCToOriginMap(B3::PCToOriginMap&&, LinkBuffer&);
 
 protected:
     OptimizingJITCallee(Wasm::CompilationMode mode, FunctionSpaceIndex index, std::pair<const Name*, RefPtr<NameSection>>&& name)
@@ -278,6 +281,7 @@ private:
     StackMaps m_stackmaps;
     Vector<WasmCodeOrigin, 0> codeOrigins;
     Vector<Ref<NameSection>, 0> nameSections;
+    Box<PCToCodeOriginMap> m_callSiteIndexMap;
 };
 
 constexpr int32_t stackCheckUnset = 0;

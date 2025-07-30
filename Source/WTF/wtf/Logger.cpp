@@ -39,8 +39,8 @@ Lock messageHandlerLoggerObserverLock;
 String Logger::LogSiteIdentifier::toString() const
 {
     if (className)
-        return makeString(className, "::"_s, span(methodName), '(', hex(objectIdentifier), ") "_s);
-    return makeString(span(methodName), '(', hex(objectIdentifier), ") "_s);
+        return makeString(className, "::"_s, unsafeSpan(methodName), '(', hex(objectIdentifier), ") "_s);
+    return makeString(unsafeSpan(methodName), '(', hex(objectIdentifier), ") "_s);
 }
 
 String LogArgument<const void*>::toString(const void* argument)
@@ -66,6 +66,18 @@ Vector<std::reference_wrapper<Logger::MessageHandlerObserver>>& Logger::messageH
         observers.construct();
     });
     return observers;
+}
+
+const Logger& emptyLogger()
+{
+    static NeverDestroyed<Ref<Logger>> emptyLogger = [&] {
+        // Passing the wrapper as the "owner" of the logger ensures
+        // no caller will every be able to enable this logger.
+        auto logger = Logger::create(&emptyLogger);
+        logger->setEnabled(&emptyLogger, false);
+        return logger;
+    }();
+    return emptyLogger->get();
 }
 
 } // namespace WTF

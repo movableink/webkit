@@ -43,13 +43,13 @@ public:
 
     QWebPageAdapter& page() { return m_page; }
 
-    void addItem(WebCore::FrameIdentifier, Ref<WebCore::HistoryItem>&&) override;
+    void addItem(Ref<WebCore::HistoryItem>&&) override;
     void goBack();
     void goForward();
     void goToItem(WebCore::HistoryItem&) override;
-    void setChildItem(WebCore::BackForwardItemIdentifier, Ref<WebCore::HistoryItem>&&) final { }
-    void goToProvisionalItem(const WebCore::HistoryItem&) final;
-    void clearProvisionalItem(const WebCore::HistoryItem&) final;
+    void setChildItem(WebCore::BackForwardFrameItemIdentifier, Ref<WebCore::HistoryItem>&&) override { }
+    void goToProvisionalItem(const WebCore::HistoryItem&);
+    void clearProvisionalItem(const WebCore::HistoryItem&);
 
     RefPtr<WebCore::HistoryItem> backItem();
     RefPtr<WebCore::HistoryItem> currentItem();

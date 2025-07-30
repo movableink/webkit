@@ -40,16 +40,18 @@
 #include <wtf/StdSet.h>
 #include <wtf/Vector.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace fido {
 using namespace WebCore;
 using CBOR = cbor::CBORValue;
 
 static ProtocolVersion convertStringToProtocolVersion(const String& version)
 {
+    if (version == kCtap21Version)
+        return ProtocolVersion::kCtap21;
+    if (version == kCtap21PreVersion)
+        return ProtocolVersion::kCtap21Pre;
     if (version == kCtap2Version)
-        return ProtocolVersion::kCtap;
+        return ProtocolVersion::kCtap2;
     if (version == kU2fVersion)
         return ProtocolVersion::kU2f;
 
@@ -87,10 +89,8 @@ static Vector<uint8_t> getCredentialId(const Vector<uint8_t>& authenticatorData)
 
     if (authenticatorData.size() < credentialIdLengthOffset + credentialIdLengthLength + credentialIdLength)
         return { };
-    Vector<uint8_t> credentialId;
-    auto beginIt = authenticatorData.begin() + credentialIdLengthOffset + credentialIdLengthLength;
-    credentialId.appendRange(beginIt, beginIt + credentialIdLength);
-    return credentialId;
+
+    return Vector<uint8_t>(authenticatorData.subspan(credentialIdLengthOffset + credentialIdLengthLength, credentialIdLength));
 }
 
 
@@ -206,7 +206,7 @@ std::optional<AuthenticatorGetInfoResponse> readCTAPGetInfoResponse(const Vector
         return std::nullopt;
     const auto& responseMap = decodedMap->getMap();
 
-    auto it = responseMap.find(CBOR(1));
+    auto it = responseMap.find(CBOR(kCtapAuthenticatorGetInfoVersionsKey));
     if (it == responseMap.end() || !it->second.isArray())
         return std::nullopt;
     StdSet<ProtocolVersion> protocolVersions;
@@ -226,13 +226,13 @@ std::optional<AuthenticatorGetInfoResponse> readCTAPGetInfoResponse(const Vector
     if (protocolVersions.empty())
         return std::nullopt;
 
-    it = responseMap.find(CBOR(3));
+    it = responseMap.find(CBOR(kCtapAuthenticatorGetInfoAAGUIDKey));
     if (it == responseMap.end() || !it->second.isByteString() || it->second.getByteString().size() != aaguidLength)
         return std::nullopt;
 
     AuthenticatorGetInfoResponse response(WTFMove(protocolVersions), Vector<uint8_t>(it->second.getByteString()));
 
-    it = responseMap.find(CBOR(2));
+    it = responseMap.find(CBOR(kCtapAuthenticatorGetInfoExtensionsKey));
     if (it != responseMap.end()) {
         if (!it->second.isArray())
             return std::nullopt;
@@ -248,7 +248,7 @@ std::optional<AuthenticatorGetInfoResponse> readCTAPGetInfoResponse(const Vector
     }
 
     AuthenticatorSupportedOptions options;
-    it = responseMap.find(CBOR(4));
+    it = responseMap.find(CBOR(kCtapAuthenticatorGetInfoOptionsKey));
     if (it != responseMap.end()) {
         if (!it->second.isMap())
             return std::nullopt;
@@ -303,7 +303,7 @@ std::optional<AuthenticatorGetInfoResponse> readCTAPGetInfoResponse(const Vector
         response.setOptions(WTFMove(options));
     }
 
-    it = responseMap.find(CBOR(5));
+    it = responseMap.find(CBOR(kCtapAuthenticatorGetInfoMaxMsgSizeKey));
     if (it != responseMap.end()) {
         if (!it->second.isUnsigned())
             return std::nullopt;
@@ -311,7 +311,7 @@ std::optional<AuthenticatorGetInfoResponse> readCTAPGetInfoResponse(const Vector
         response.setMaxMsgSize(it->second.getUnsigned());
     }
 
-    it = responseMap.find(CBOR(6));
+    it = responseMap.find(CBOR(kCtapAuthenticatorGetInfoPinUVAuthProtocolsKey));
     if (it != responseMap.end()) {
         if (!it->second.isArray())
             return std::nullopt;
@@ -326,7 +326,22 @@ std::optional<AuthenticatorGetInfoResponse> readCTAPGetInfoResponse(const Vector
         response.setPinProtocols(WTFMove(supportedPinProtocols));
     }
 
-    it = responseMap.find(CBOR(9));
+    it = responseMap.find(CBOR(kCtapAuthenticatorGetInfoMaxCredentialCountInListKey));
+    if (it != responseMap.end()) {
+        if (!it->second.isUnsigned())
+            return std::nullopt;
+
+        response.setMaxCredentialCountInList(it->second.getUnsigned());
+    }
+    it = responseMap.find(CBOR(kCtapAuthenticatorGetInfoMaxCredentialIdLengthKey));
+    if (it != responseMap.end()) {
+        if (!it->second.isUnsigned())
+            return std::nullopt;
+
+        response.setMaxCredentialIDLength(it->second.getUnsigned());
+    }
+
+    it = responseMap.find(CBOR(kCtapAuthenticatorGetInfoTransportsKey));
     if (it != responseMap.end()) {
         if (!it->second.isArray())
             return std::nullopt;
@@ -342,7 +357,14 @@ std::optional<AuthenticatorGetInfoResponse> readCTAPGetInfoResponse(const Vector
         response.setTransports(WTFMove(transports));
     }
 
-    it = responseMap.find(CBOR(20));
+    it = responseMap.find(CBOR(kCtapAuthenticatorGetInfoMinPINLengthKey));
+    if (it != responseMap.end()) {
+        if (!it->second.isUnsigned())
+            return std::nullopt;
+        response.setMinPINLength(it->second.getUnsigned());
+    }
+
+    it = responseMap.find(CBOR(kCtapAuthenticatorGetInfoRemainingDiscoverableCredentialsKey));
     if (it != responseMap.end()) {
         if (!it->second.isUnsigned())
             return std::nullopt;
@@ -354,7 +376,5 @@ std::optional<AuthenticatorGetInfoResponse> readCTAPGetInfoResponse(const Vector
 }
 
 } // namespace fido
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUTHN)

@@ -20,10 +20,12 @@
 #include "include/private/SkIDChangeListener.h"
 #include "include/private/SkPathRef.h"
 #include "include/private/base/SkDebug.h"
+#include "include/private/base/SkSpan_impl.h"
 #include "src/core/SkPathEnums.h"
 
 #include <cstdint>
 #include <iterator>
+#include <optional>
 #include <utility>
 
 class SkMatrix;
@@ -34,8 +36,17 @@ static_assert(1 == static_cast<int>(SkPathFillType::kEvenOdd), "fill_type_mismat
 static_assert(2 == static_cast<int>(SkPathFillType::kInverseWinding), "fill_type_mismatch");
 static_assert(3 == static_cast<int>(SkPathFillType::kInverseEvenOdd), "fill_type_mismatch");
 
+// These are computed from a stream of verbs
+struct SkPathVerbAnalysis {
+    int      points, weights;
+    unsigned segmentMask;
+    bool     valid;
+};
+
 class SkPathPriv {
 public:
+    static SkPathVerbAnalysis AnalyzeVerbs(const uint8_t verbs[], int count);
+
     // skbug.com/9906: Not a perfect solution for W plane clipping, but 1/16384 is a
     // reasonable limit (roughly 5e-5)
     inline static constexpr SkScalar kW0PlaneDistance = 1.f / (1 << 14);
@@ -143,7 +154,7 @@ public:
         Verbs(const SkPath& path) : fPathRef(path.fPathRef.get()) {}
         struct Iter {
             void operator++() { fVerb++; }
-            bool operator!=(const Iter& b) { return fVerb != b.fVerb; }
+            bool operator!=(const Iter& b) const { return fVerb != b.fVerb; }
             SkPath::Verb operator*() { return static_cast<SkPath::Verb>(*fVerb); }
             const uint8_t* fVerb;
         };
@@ -422,6 +433,21 @@ public:
         builder->privateReverseAddPath(reverseMe);
     }
 
+    static std::optional<SkPoint> GetPoint(const SkPathBuilder& builder, int index) {
+        if ((unsigned)index < (unsigned)builder.fPts.size()) {
+            return builder.fPts.at(index);
+        }
+        return std::nullopt;
+    }
+
+    static SkSpan<const uint8_t> GetVerbs(const SkPathBuilder& builder) {
+        return builder.fVerbs;
+    }
+
+    static int CountVerbs(const SkPathBuilder& builder) {
+        return builder.fVerbs.size();
+    }
+
     static SkPath MakePath(const SkPathVerbAnalysis& analysis,
                            const SkPoint points[],
                            const uint8_t verbs[],
@@ -450,10 +476,6 @@ class SkPathEdgeIter {
     bool            fNextIsNewContour;
     SkDEBUGCODE(bool fIsConic;)
 
-    enum {
-        kIllegalEdgeValue = 99
-    };
-
 public:
     SkPathEdgeIter(const SkPath& path);
 
@@ -463,10 +485,11 @@ public:
     }
 
     enum class Edge {
-        kLine  = SkPath::kLine_Verb,
-        kQuad  = SkPath::kQuad_Verb,
+        kLine = SkPath::kLine_Verb,
+        kQuad = SkPath::kQuad_Verb,
         kConic = SkPath::kConic_Verb,
         kCubic = SkPath::kCubic_Verb,
+        kInvalid = 99,
     };
 
     static SkPath::Verb EdgeToVerb(Edge e) {
@@ -494,9 +517,7 @@ public:
         for (;;) {
             SkASSERT(fVerbs <= fVerbsStop);
             if (fVerbs == fVerbsStop) {
-                return fNeedsCloseLine
-                    ? closeline()
-                    : Result{ nullptr, Edge(kIllegalEdgeValue), false };
+                return fNeedsCloseLine ? closeline() : Result{nullptr, Edge::kInvalid, false};
             }
 
             SkDEBUGCODE(fIsConic = false;)

@@ -202,7 +202,6 @@ macro doVMEntry(makeCall)
     addp CallFrameHeaderSlots, t4, t4
     lshiftp 3, t4
     subp sp, t4, t3
-    bqbeq sp, t3, _llint_throw_stack_overflow_error_from_vm_entry
 
     # Ensure that we have enough additional stack capacity for the incoming args,
     # and the frame for the JS code we're executing. We need to do this check
@@ -224,7 +223,7 @@ macro doVMEntry(makeCall)
 .stackHeightOK:
         move t3, sp
     else
-        bpb t3, VM::m_softStackLimit[vm],  _llint_throw_stack_overflow_error_from_vm_entry
+        bplteq t3, VM::m_softStackLimit[vm],  _llint_throw_stack_overflow_error_from_vm_entry
         move t3, sp
     end
 
@@ -727,9 +726,9 @@ macro functionArityCheck(opcodeName, doneLabel)
     subp cfr, t3, t5
     loadp CodeBlock::m_vm[t1], t0
     if C_LOOP
-        bpbeq VM::m_cloopStackLimit[t0], t5, .stackHeightOK
+        bplteq VM::m_cloopStackLimit[t0], t5, .stackHeightOK
     else
-        bpbeq VM::m_softStackLimit[t0], t5, .stackHeightOK
+        bplteq VM::m_softStackLimit[t0], t5, .stackHeightOK
     end
 
     prepareStateForCCall()
@@ -1741,11 +1740,9 @@ llintOpWithProfile(op_get_prototype_of, OpGetPrototypeOf, macro (size, get, disp
 
     btqnz t0, notCellMask, .opGetPrototypeOfSlow
     bbb JSCell::m_type[t0], ObjectType, .opGetPrototypeOfSlow
+    btbnz JSCell::m_flags[t0], OverridesGetPrototype, .opGetPrototypeOfSlow
 
     loadStructureWithScratch(t0, t2, t1)
-    loadh Structure::m_outOfLineTypeFlags[t2], t3
-    btinz t3, OverridesGetPrototypeOutOfLine, .opGetPrototypeOfSlow
-
     loadq Structure::m_prototype[t2], t2
     btqz t2, .opGetPrototypeOfPolyProto
     return(t2)
@@ -2760,7 +2757,7 @@ macro nativeCallTrampoline(executableOffsetToFunction)
     btpz a2, (constexpr JSFunction::rareDataTag), .isExecutable
     loadp (FunctionRareData::m_executable - (constexpr JSFunction::rareDataTag))[a2], a2
 .isExecutable:
-    loadp JSFunction::m_scope[a0], a0
+    loadp JSCallee::m_scope[a0], a0
     loadp JSGlobalObject::m_vm[a0], a1
     storep cfr, VM::topCallFrame[a1]
     if ARM64 or ARM64E or C_LOOP
@@ -2775,7 +2772,7 @@ macro nativeCallTrampoline(executableOffsetToFunction)
     end
 
     loadp Callee[cfr], t3
-    loadp JSFunction::m_scope[t3], t3
+    loadp JSCallee::m_scope[t3], t3
     loadp JSGlobalObject::m_vm[t3], t3
 
     btpnz VM::m_exception[t3], .handleException
@@ -3573,7 +3570,7 @@ llintOpWithMetadata(op_enumerator_put_by_val, OpEnumeratorPutByVal, macro (size,
     bineq t2, JSCell::m_structureID[t0], .putSlowPath
 
     structureIDToStructureWithScratch(t2, t3)
-    btinz Structure::m_bitField[t2], (constexpr Structure::s_isWatchingReplacementBits), .putSlowPath
+    btinz Structure::m_bitField[t2], ((constexpr Structure::s_hasReadOnlyOrGetterSetterPropertiesExcludingProtoBits) | (constexpr Structure::s_isWatchingReplacementBits)), .putSlowPath
 
     get(m_value, t2)
     loadConstantOrVariable(size, t2, t3)

@@ -37,6 +37,7 @@
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "LocalizedStrings.h"
+#include "NodeInlines.h"
 #include "Page.h"
 #include "PopupMenu.h"
 #include "RenderBoxInlines.h"
@@ -210,7 +211,7 @@ void RenderSearchField::updateCancelButtonVisibility() const
 
 Visibility RenderSearchField::visibilityForCancelButton() const
 {
-    return (style().usedVisibility() == Visibility::Hidden || inputElement().value().isEmpty()) ? Visibility::Hidden : Visibility::Visible;
+    return (style().usedVisibility() == Visibility::Hidden || inputElement().value()->isEmpty()) ? Visibility::Hidden : Visibility::Visible;
 }
 
 const AtomString& RenderSearchField::autosaveName() const

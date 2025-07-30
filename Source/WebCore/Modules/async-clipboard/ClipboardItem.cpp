@@ -31,6 +31,7 @@
 #include "ClipboardItemBindingsDataSource.h"
 #include "ClipboardItemPasteboardDataSource.h"
 #include "CommonAtomStrings.h"
+#include "ExceptionOr.h"
 #include "Navigator.h"
 #include "PasteboardCustomData.h"
 #include "PasteboardItemInfo.h"
@@ -42,7 +43,7 @@ ClipboardItem::~ClipboardItem() = default;
 
 Ref<Blob> ClipboardItem::blobFromString(ScriptExecutionContext* context, const String& stringData, const String& type)
 {
-    return Blob::create(context, Vector(stringData.utf8().span()), Blob::normalizedContentType(type));
+    return Blob::create(context, Vector(byteCast<uint8_t>(stringData.utf8().span())), Blob::normalizedContentType(type));
 }
 
 static ClipboardItem::PresentationStyle clipboardItemPresentationStyle(const PasteboardItemInfo& info)

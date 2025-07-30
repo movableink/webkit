@@ -45,19 +45,20 @@ class StyleSheetContents;
 class StyleRule;
 
 namespace Style {
-
 struct PseudoElementIdentifier;
-
 }
 
 class CSSSelectorParser {
 public:
-    CSSSelectorParser(const CSSSelectorParserContext&, StyleSheetContents*, CSSParserEnum::NestedContext = { });
+    enum class DisallowPseudoElement : bool { No, Yes };
+    CSSSelectorParser(const CSSSelectorParserContext&, StyleSheetContents*, CSSParserEnum::NestedContext = { }, DisallowPseudoElement= DisallowPseudoElement::No);
 
     MutableCSSSelectorList consumeComplexSelectorList(CSSParserTokenRange&);
     MutableCSSSelectorList consumeNestedSelectorList(CSSParserTokenRange&);
     MutableCSSSelectorList consumeComplexForgivingSelectorList(CSSParserTokenRange&);
     MutableCSSSelectorList consumeNestedComplexForgivingSelectorList(CSSParserTokenRange&);
+
+    WEBCORE_EXPORT static std::optional<CSSSelectorList> parseSelectorList(const String&, const CSSParserContext&, StyleSheetContents* = nullptr, CSSParserEnum::NestedContext = { });
 
     static bool supportsComplexSelector(CSSParserTokenRange, const CSSSelectorParserContext&);
     static CSSSelectorList resolveNestingParent(const CSSSelectorList& nestedSelectorList, const CSSSelectorList* parentResolvedSelectorList);
@@ -117,6 +118,6 @@ private:
 
 std::optional<CSSSelectorList> parseCSSSelectorList(CSSParserTokenRange, const CSSSelectorParserContext&, StyleSheetContents* = nullptr, CSSParserEnum::NestedContext = { });
 
-MutableCSSSelectorList parseMutableCSSSelectorList(CSSParserTokenRange&, const CSSSelectorParserContext&, StyleSheetContents*, CSSParserEnum::NestedContext, CSSParserEnum::IsForgiving);
+MutableCSSSelectorList parseMutableCSSSelectorList(CSSParserTokenRange&, const CSSSelectorParserContext&, StyleSheetContents*, CSSParserEnum::NestedContext, CSSParserEnum::IsForgiving, CSSSelectorParser::DisallowPseudoElement);
 
 } // namespace WebCore

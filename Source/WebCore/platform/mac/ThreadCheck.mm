@@ -33,13 +33,11 @@
 #import <wtf/StdLibExtras.h>
 #import <wtf/text/StringHash.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 static bool didReadThreadViolationBehaviorFromUserDefaults = false;
 static bool threadViolationBehaviorIsDefault = true;
-static ThreadViolationBehavior threadViolationBehavior[MaximumThreadViolationRound] = { RaiseExceptionOnThreadViolation, RaiseExceptionOnThreadViolation, RaiseExceptionOnThreadViolation };
+static std::array<ThreadViolationBehavior, MaximumThreadViolationRound> threadViolationBehavior { RaiseExceptionOnThreadViolation, RaiseExceptionOnThreadViolation, RaiseExceptionOnThreadViolation };
 
 static void readThreadViolationBehaviorFromUserDefaults()
 {
@@ -121,7 +119,5 @@ void WebCoreReportThreadViolation(const char* function, WebCore::ThreadViolation
             break;
     }
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // PLATFORM(MAC)

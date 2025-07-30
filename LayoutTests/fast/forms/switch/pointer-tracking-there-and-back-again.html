@@ -2,8 +2,9 @@
 <html class="reftest-wait">
 <script src="../../../resources/ui-helper.js"></script>
 <input type=checkbox switch onclick=end()>
+<div id=state></div>
 <script>
-window.onload = () => {
+window.onload = async () => {
     const input = document.querySelector("input");
     const x = input.offsetLeft;
     const y = input.offsetTop;
@@ -12,20 +13,22 @@ window.onload = () => {
     if (UIHelper.isIOSFamily()) {
         const eventStreamData = new UIHelper.EventStreamBuilder()
             .begin(x, y)
-            .move(x + width, y, 0.1)
-            .move(x, y, 0.1)
+            .wait(0.21)
+            .move(x + width, y, 0.01)
+            .move(x, y, 0.01)
             .end()
             .takeResult();
         UIHelper.sendEventStream(eventStreamData);
         return;
     }
-    window.eventSender.mouseMoveTo(x, y);
-    window.eventSender.mouseDown();
-    window.eventSender.mouseMoveTo(x + width, y);
-    window.eventSender.mouseMoveTo(x, y);
-    window.eventSender.mouseUp();
+    await eventSender.asyncMouseMoveTo(x, y);
+    await eventSender.asyncMouseDown();
+    await eventSender.asyncMouseMoveTo(x + width, y);
+    await eventSender.asyncMouseMoveTo(x, y);
+    await eventSender.asyncMouseUp();
 }
 function end() {
-    setTimeout(() => document.documentElement.removeAttribute("class"), 200);
+    document.querySelector("#state").textContent = document.querySelector("input").checked ? "Switched on." : "Switched off.";
+    setTimeout(() => document.documentElement.removeAttribute("class"), 50);
 }
 </script>

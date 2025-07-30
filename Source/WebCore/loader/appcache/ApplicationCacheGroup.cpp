@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +34,6 @@
 #include "ApplicationCacheStorage.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
-#include "DOMApplicationCache.h"
 #include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "EventNames.h"
@@ -184,7 +183,7 @@ void ApplicationCacheGroup::selectCache(LocalFrame& frame, const URL& passedMani
             // as part of the initial load.
             // The navigation will not result in the same resource being loaded, because "foreign" entries are never picked during navigation.
             RefPtr document = frame.document();
-            frame.protectedNavigationScheduler()->scheduleLocationChange(*document, document->protectedSecurityOrigin(), documentLoader.url(), frame.loader().referrer());
+            frame.protectedNavigationScheduler()->scheduleLocationChange(*document, document->protectedSecurityOrigin(), URL { documentLoader.url() }, frame.loader().referrer());
         }
         return;
     }
@@ -261,7 +260,7 @@ void ApplicationCacheGroup::finishedLoadingMainResource(DocumentLoader& loader)
                 ASSERT(!resource->storageID());
             }
         } else
-            m_newestCache->addResource(ApplicationCacheResource::create(url, loader.response(), ApplicationCacheResource::Master, loader.mainResourceData()));
+            m_newestCache->addResource(ApplicationCacheResource::create(WTFMove(url), ResourceResponse { loader.response() }, ApplicationCacheResource::Master, loader.mainResourceData()));
         break;
     case Failure:
         // Cache update has been a failure, so there is no reason to keep the document associated with the incomplete cache
@@ -279,7 +278,7 @@ void ApplicationCacheGroup::finishedLoadingMainResource(DocumentLoader& loader)
                 ASSERT(!resource->storageID());
             }
         } else
-            m_cacheBeingUpdated->addResource(ApplicationCacheResource::create(url, loader.response(), ApplicationCacheResource::Master, loader.mainResourceData()));
+            m_cacheBeingUpdated->addResource(ApplicationCacheResource::create(WTFMove(url), ResourceResponse { loader.response() }, ApplicationCacheResource::Master, loader.mainResourceData()));
         // The "cached" event will be posted to all associated documents once update is complete.
         break;
     }
@@ -506,7 +505,7 @@ void ApplicationCacheGroup::abort(LocalFrame& frame)
     cacheUpdateFailed();
 }
 
-void ApplicationCacheGroup::didFinishLoadingEntry(const URL& entryURL)
+void ApplicationCacheGroup::didFinishLoadingEntry(URL&& entryURL)
 {
     // FIXME: We should have NetworkLoadMetrics for ApplicationCache loads.
     NetworkLoadMetrics emptyMetrics;
@@ -523,7 +522,7 @@ void ApplicationCacheGroup::didFinishLoadingEntry(const URL& entryURL)
         if (m_newestCache) {
             ApplicationCacheResource* newestCachedResource = m_newestCache->resourceForURL(entryURL.string());
             if (newestCachedResource) {
-                m_cacheBeingUpdated->addResource(ApplicationCacheResource::create(entryURL, newestCachedResource->response(), type, &newestCachedResource->data(), newestCachedResource->path()));
+                m_cacheBeingUpdated->addResource(ApplicationCacheResource::create(WTFMove(entryURL), ResourceResponse { newestCachedResource->response() }, type, &newestCachedResource->data(), String { newestCachedResource->path() }));
                 m_entryLoader = nullptr;
                 startLoadingEntry();
                 return;
@@ -554,14 +553,14 @@ void ApplicationCacheGroup::didFinishLoadingEntry(const URL& entryURL)
     startLoadingEntry();
 }
 
-void ApplicationCacheGroup::didFailLoadingEntry(ApplicationCacheResourceLoader::Error error, const URL& entryURL, unsigned type)
+void ApplicationCacheGroup::didFailLoadingEntry(ApplicationCacheResourceLoader::Error error, URL&& entryURL, unsigned type)
 {
     // FIXME: We should get back the error from ApplicationCacheResourceLoader level.
     ResourceError resourceError { error == ApplicationCacheResourceLoader::Error::CannotCreateResource ? ResourceError::Type::AccessControl : ResourceError::Type::General };
 
     InspectorInstrumentation::didFailLoading(m_frame.get(), m_frame->loader().protectedDocumentLoader().get(), *m_currentResourceIdentifier, resourceError);
 
-    URL url(entryURL);
+    URL url = WTFMove(entryURL);
     url.removeFragmentIdentifier();
 
     ASSERT(!m_currentResource || !m_pendingEntries.contains(url.string()));
@@ -587,7 +586,7 @@ void ApplicationCacheGroup::didFailLoadingEntry(ApplicationCacheResourceLoader::
     ASSERT(m_newestCache);
     ApplicationCacheResource* newestCachedResource = m_newestCache->resourceForURL(url.string());
     ASSERT(newestCachedResource);
-    m_cacheBeingUpdated->addResource(ApplicationCacheResource::create(url, newestCachedResource->response(), type, &newestCachedResource->data(), newestCachedResource->path()));
+    m_cacheBeingUpdated->addResource(ApplicationCacheResource::create(WTFMove(url), ResourceResponse { newestCachedResource->response() }, type, &newestCachedResource->data(), String { newestCachedResource->path() }));
     // Load the next resource, if any.
     startLoadingEntry();
 }
@@ -754,7 +753,7 @@ void ApplicationCacheGroup::manifestNotFound()
     m_manifestResource = nullptr;
 
     while (!m_pendingMasterResourceLoaders.isEmpty()) {
-        HashSet<DocumentLoader*>::iterator it = m_pendingMasterResourceLoaders.begin();
+        auto it = m_pendingMasterResourceLoaders.begin();
         
         ASSERT((*it)->applicationCacheHost().candidateApplicationCacheGroup() == this);
         ASSERT(!(*it)->applicationCacheHost().applicationCache());
@@ -928,17 +927,17 @@ void ApplicationCacheGroup::startLoadingEntry()
     auto& documentLoader = *m_frame->loader().documentLoader();
     auto requestURL = request.url();
     unsigned type = m_pendingEntries.begin()->value;
-    m_entryLoader = ApplicationCacheResourceLoader::create(type, documentLoader.cachedResourceLoader(), WTFMove(request), [this, requestURL = WTFMove(requestURL), type] (auto&& resourceOrError) {
+    m_entryLoader = ApplicationCacheResourceLoader::create(type, documentLoader.cachedResourceLoader(), WTFMove(request), [this, requestURL = WTFMove(requestURL), type] (auto&& resourceOrError) mutable {
         if (!resourceOrError.has_value()) {
             auto error = resourceOrError.error();
             if (error == ApplicationCacheResourceLoader::Error::Abort)
                 return;
-            this->didFailLoadingEntry(error, requestURL, type);
+            this->didFailLoadingEntry(error, WTFMove(requestURL), type);
             return;
         }
 
         m_currentResource = WTFMove(resourceOrError.value());
-        this->didFinishLoadingEntry(requestURL);
+        this->didFinishLoadingEntry(WTFMove(requestURL));
     });
 }
 

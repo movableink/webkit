@@ -130,19 +130,10 @@ AccessibilityTable* AccessibilityARIAGridRow::parentTable() const
         // The parent table for an ARIA grid row should be an ARIA table.
         // Unless the row is a native tr element.
         if (auto* ancestorTable = dynamicDowncast<AccessibilityTable>(ancestor))
-            return ancestorTable->isExposable() && (ancestorTable->isAriaTable() || node()->hasTagName(HTMLNames::trTag));
+            return ancestorTable->isExposable() && (ancestorTable->isAriaTable() || elementName() == ElementName::HTML_tr);
 
         return false;
     }));
-}
-
-AccessibilityObject* AccessibilityARIAGridRow::rowHeader()
-{
-    for (const auto& child : unignoredChildren()) {
-        if (child->roleValue() == AccessibilityRole::RowHeader)
-            return &downcast<AccessibilityObject>(child.get());
-    }
-    return nullptr;
 }
 
 } // namespace WebCore

@@ -169,7 +169,7 @@ namespace JSC {
             ASSERT(size <= freeablePoolSize);
             size_t alignedSize = alignSize(size);
             ASSERT(alignedSize <= freeablePoolSize);
-            if (UNLIKELY(static_cast<size_t>(m_freeablePoolEnd - m_freeableMemory) < alignedSize))
+            if (static_cast<size_t>(m_freeablePoolEnd - m_freeableMemory) < alignedSize) [[unlikely]]
                 allocateFreeablePool();
             void* block = m_freeableMemory;
             m_freeableMemory += alignedSize;
@@ -191,7 +191,7 @@ namespace JSC {
 
         IdentifierArena& identifierArena()
         {
-            if (UNLIKELY (!m_identifierArena))
+            if (!m_identifierArena) [[unlikely]]
                 m_identifierArena = makeUnique<IdentifierArena>();
             return *m_identifierArena;
         }

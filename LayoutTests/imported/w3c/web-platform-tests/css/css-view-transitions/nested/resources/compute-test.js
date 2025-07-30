@@ -6,27 +6,16 @@ function add_rule() {
     document.head.append(style);
 }
 
-const mode = new URLSearchParams(location.search).get("vtmode");
-if (mode === "crossdoc") {
-    onload = () => {
-        const url = new URL(location.href);
-        url.searchParams.set("vtmode", "crossdoc-newpage");
-        location.replace(url.href);
-    };
-    add_rule();
-} else if (mode === "crossdoc-newpage") {
-    document.documentElement.classList.add("vt-new");
-    add_rule();
-    takeScreenshot();
-} else {
-    onload = async() => {
-        const transition = document.startViewTransition(() => {
-            document.documentElement.classList.add("vt-new");
-        });
-        transition.finished.then(() => {
-            document.documentElement.classList.remove("vt-new");
-        });
-        transition.ready.then(() => takeScreenshot());
-    }
+onload = async() => {
+    document.documentElement.classList.add("vt-old");
+    const transition = document.startViewTransition(() => {
+        document.documentElement.classList.add("vt-new");
+        document.documentElement.classList.remove("vt-old");
+    });
+    transition.finished.then(() => {
+        document.documentElement.classList.remove("vt-new");
+        document.documentElement.classList.remove("vt-old");
+    });
+    transition.ready.then(() => takeScreenshot());
 }
 

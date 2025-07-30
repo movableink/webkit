@@ -22,6 +22,7 @@
 #include "JSTestIterable.h"
 
 #include "ActiveDOMObject.h"
+#include "ContextDestructionObserverInlines.h"
 #include "ExtendedDOMClientIsoSubspaces.h"
 #include "ExtendedDOMIsoSubspaces.h"
 #include "JSDOMBinding.h"
@@ -169,7 +170,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestIterableConstructor, (JSGlobalObject* lexicalGlob
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestIterablePrototype*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestIterable::getConstructor(vm, prototype->globalObject()));
 }

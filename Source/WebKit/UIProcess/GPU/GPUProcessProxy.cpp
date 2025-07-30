@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,10 @@
 #include "GPUProcessSessionParameters.h"
 #include "Logging.h"
 #include "OverrideLanguages.h"
+#include "ProcessTerminationReason.h"
 #include "ProvisionalPageProxy.h"
+#include "SharedFileHandle.h"
+#include "WebKitServiceNames.h"
 #include "WebPageGroup.h"
 #include "WebPageMessages.h"
 #include "WebPageProxy.h"
@@ -50,6 +53,7 @@
 #include <WebCore/LogInitialization.h>
 #include <WebCore/MockRealtimeMediaSourceCenter.h>
 #include <WebCore/ScreenProperties.h>
+#include <algorithm>
 #include <wtf/CompletionHandler.h>
 #include <wtf/LogInitialization.h>
 #include <wtf/MachSendRight.h>
@@ -57,7 +61,6 @@
 #include <wtf/TranslatedProcess.h>
 
 #if PLATFORM(IOS_FAMILY)
-#include <WebCore/AGXCompilerService.h>
 #include <wtf/spi/darwin/XPCSPI.h>
 #endif
 
@@ -104,7 +107,7 @@ static WeakPtr<GPUProcessProxy>& singleton()
 
 static RefPtr<GPUProcessProxy>& keptAliveGPUProcessProxy()
 {
-    static MainThreadNeverDestroyed<RefPtr<GPUProcessProxy>> keptAliveGPUProcessProxy;
+    static MainRunLoopNeverDestroyed<RefPtr<GPUProcessProxy>> keptAliveGPUProcessProxy;
     return keptAliveGPUProcessProxy.get();
 }
 
@@ -179,8 +182,6 @@ GPUProcessProxy::GPUProcessProxy()
 #endif
 #endif // ENABLE(MEDIA_STREAM)
 
-    parameters.parentPID = getCurrentProcessID();
-
 #if USE(SANDBOX_EXTENSIONS_FOR_CACHE_AND_TEMP_DIRECTORY_ACCESS)
     parameters.containerCachesDirectory = resolveAndCreateReadWriteDirectoryForSandboxExtension(gpuProcessCachesDirectory());
     auto containerTemporaryDirectory = WebsiteDataStore::defaultResolvedContainerTemporaryDirectory();
@@ -191,14 +192,9 @@ GPUProcessProxy::GPUProcessProxy()
     }
 
     if (!containerTemporaryDirectory.isEmpty()) {
-        if (auto handle = SandboxExtension::createHandleWithoutResolvingPath(containerTemporaryDirectory, SandboxExtension::Type::ReadWrite))
+        auto tempDirectory = resolveAndCreateReadWriteDirectoryForSandboxExtension(FileSystem::pathByAppendingComponent(containerTemporaryDirectory, gpuServiceName));
+        if (auto handle = SandboxExtension::createHandleWithoutResolvingPath(tempDirectory, SandboxExtension::Type::ReadWrite))
             parameters.containerTemporaryDirectoryExtensionHandle = WTFMove(*handle);
-    }
-#endif
-#if PLATFORM(IOS_FAMILY) && HAVE(AGX_COMPILER_SERVICE)
-    if (WebCore::deviceHasAGXCompilerService()) {
-        parameters.compilerServiceExtensionHandles = SandboxExtension::createHandlesForMachLookup(WebCore::agxCompilerServices(), std::nullopt);
-        parameters.dynamicIOKitExtensionHandles = SandboxExtension::createHandlesForIOKitClassExtensions(WebCore::agxCompilerClasses(), std::nullopt);
     }
 #endif
 
@@ -240,18 +236,6 @@ void GPUProcessProxy::setUseMockCaptureDevices(bool value)
     send(Messages::GPUProcess::SetMockCaptureDevicesEnabled { m_useMockCaptureDevices }, 0);
 }
 
-void GPUProcessProxy::setUseSCContentSharingPicker(bool use)
-{
-#if HAVE(SC_CONTENT_SHARING_PICKER)
-    if (use == m_useSCContentSharingPicker)
-        return;
-    m_useSCContentSharingPicker = use;
-    send(Messages::GPUProcess::SetUseSCContentSharingPicker { m_useSCContentSharingPicker }, 0);
-#else
-    UNUSED_PARAM(use);
-#endif
-}
-
 void GPUProcessProxy::enableMicrophoneMuteStatusAPI()
 {
     if (m_isMicrophoneMuteStatusAPIEnabled)
@@ -271,9 +255,12 @@ void GPUProcessProxy::setOrientationForMediaCapture(WebCore::IntDegrees orientat
 #if HAVE(APPLE_CAMERA_USER_CLIENT)
 static const ASCIILiteral appleCameraUserClientPath { "com.apple.aneuserd"_s };
 static const ASCIILiteral appleCameraUserClientIOKitClientClass { "H11ANEInDirectPathClient"_s };
+// FIXME: Remove the "H11ANEIn" extension. See rdar://144622656.
 static const ASCIILiteral appleCameraUserClientIOKitServiceClass { "H11ANEIn"_s };
+static const ASCIILiteral appleCameraUserClientIOKitServiceClassLoadBalancer { "H1xANELoadBalancer"_s };
 #endif
 
+#if PLATFORM(COCOA)
 static inline bool addCameraSandboxExtensions(Vector<SandboxExtension::Handle>& extensions)
 {
     auto sandboxExtensionHandle = SandboxExtension::createHandleForGenericExtension("com.apple.webkit.camera"_s);
@@ -320,6 +307,13 @@ static inline bool addCameraSandboxExtensions(Vector<SandboxExtension::Handle>& 
             }
             extensions.append(WTFMove(*appleCameraUserClientIOKitServiceClassExtensionHandle));
 
+            auto appleCameraUserClientIOKitServiceClassLoadBalancerExtensionHandle = SandboxExtension::createHandleForIOKitClassExtension(appleCameraUserClientIOKitServiceClassLoadBalancer, std::nullopt);
+            if (!appleCameraUserClientIOKitServiceClassLoadBalancerExtensionHandle) {
+                RELEASE_LOG_ERROR(WebRTC, "Unable to create %s sandbox extension", appleCameraUserClientIOKitServiceClassLoadBalancer.characters());
+                return false;
+            }
+            extensions.append(WTFMove(*appleCameraUserClientIOKitServiceClassLoadBalancerExtensionHandle));
+
 #endif
         }
 #endif // HAVE(AUDIT_TOKEN)
@@ -338,6 +332,7 @@ static inline bool addMicrophoneSandboxExtension(Vector<SandboxExtension::Handle
     extensions.append(WTFMove(*sandboxExtensionHandle));
     return true;
 }
+#endif // PLATFORM(COCOA)
 
 #if HAVE(SCREEN_CAPTURE_KIT)
 static inline bool addDisplayCaptureSandboxExtension(std::optional<audit_token_t> auditToken, Vector<SandboxExtension::Handle>& extensions)
@@ -457,9 +452,9 @@ void GPUProcessProxy::setMockCaptureDevicesInterrupted(bool isCameraInterrupted,
     send(Messages::GPUProcess::SetMockCaptureDevicesInterrupted { isCameraInterrupted, isMicrophoneInterrupted }, 0);
 }
 
-void GPUProcessProxy::triggerMockCaptureConfigurationChange(bool forMicrophone, bool forDisplay)
+void GPUProcessProxy::triggerMockCaptureConfigurationChange(bool forCamera, bool forMicrophone, bool forDisplay)
 {
-    send(Messages::GPUProcess::TriggerMockCaptureConfigurationChange { forMicrophone, forDisplay }, 0);
+    send(Messages::GPUProcess::TriggerMockCaptureConfigurationChange { forCamera, forMicrophone, forDisplay }, 0);
 }
 
 void GPUProcessProxy::setShouldListenToVoiceActivity(const WebPageProxy& proxy, bool shouldListen)
@@ -474,7 +469,7 @@ void GPUProcessProxy::setShouldListenToVoiceActivity(const WebPageProxy& proxy, 
             return;
     }
 
-    bool shouldListenToVoiceActivity = anyOf(m_pagesListeningToVoiceActivity, [] (auto& page) {
+    bool shouldListenToVoiceActivity = std::ranges::any_of(m_pagesListeningToVoiceActivity, [](auto& page) {
         return page.shouldListenToVoiceActivity();
     });
     if (m_shouldListenToVoiceActivity == shouldListenToVoiceActivity)
@@ -494,6 +489,14 @@ void GPUProcessProxy::promptForGetDisplayMedia(WebCore::DisplayCapturePromptType
 void GPUProcessProxy::cancelGetDisplayMediaPrompt()
 {
     send(Messages::GPUProcess::CancelGetDisplayMediaPrompt { }, 0);
+}
+#endif
+
+#if PLATFORM(COCOA)
+void GPUProcessProxy::didDrawRemoteToPDF(PageIdentifier pageID, RefPtr<SharedBuffer>&& data, SnapshotIdentifier snapshotIdentifier)
+{
+    if (auto page = WebProcessProxy::webPage(pageID))
+        page->didDrawRemoteToPDF(WTFMove(data), snapshotIdentifier);
 }
 #endif
 
@@ -537,10 +540,9 @@ void GPUProcessProxy::createGPUProcessConnection(WebProcessProxy& webProcessProx
 
     RELEASE_LOG(ProcessSuspension, "%p - GPUProcessProxy is taking a background assertion because a web process is requesting a connection", this);
     startResponsivenessTimer(UseLazyStop::No);
-    sendWithAsyncReply(Messages::GPUProcess::CreateGPUConnectionToWebProcess { webProcessProxy.coreProcessIdentifier(), webProcessProxy.sessionID(), WTFMove(connectionIdentifier), WTFMove(parameters) }, [this, weakThis = WeakPtr { *this }]() mutable {
-        if (!weakThis)
-            return;
-        stopResponsivenessTimer();
+    sendWithAsyncReply(Messages::GPUProcess::CreateGPUConnectionToWebProcess { webProcessProxy.coreProcessIdentifier(), webProcessProxy.sessionID(), WTFMove(connectionIdentifier), WTFMove(parameters) }, [weakThis = WeakPtr { *this }]() mutable {
+        if (RefPtr protectedThis = weakThis.get())
+            protectedThis->stopResponsivenessTimer();
     }, 0, IPC::SendOption::DispatchMessageEvenWhenWaitingForSyncReply);
 }
 
@@ -569,6 +571,7 @@ void GPUProcessProxy::gpuProcessExited(ProcessTerminationReason reason)
     case ProcessTerminationReason::RequestedByModelProcess:
     case ProcessTerminationReason::GPUProcessCrashedTooManyTimes:
     case ProcessTerminationReason::ModelProcessCrashedTooManyTimes:
+    case ProcessTerminationReason::NonMainFrameWebContentProcessCrash:
         ASSERT_NOT_REACHED();
         break;
     }
@@ -901,6 +904,32 @@ void GPUProcessProxy::statusBarWasTapped(CompletionHandler<void()>&& completionH
 }
 #endif
 #endif // ENABLE(MEDIA_STREAM)
+
+#if HAVE(AUDIT_TOKEN)
+void GPUProcessProxy::setPresentingApplicationAuditToken(WebCore::ProcessIdentifier processIdentifier, WebCore::PageIdentifier pageIdentifier, std::optional<CoreIPCAuditToken> auditToken)
+{
+    send(Messages::GPUProcess::SetPresentingApplicationAuditToken(processIdentifier, pageIdentifier, auditToken), 0);
+}
+#endif
+
+#if PLATFORM(VISION) && ENABLE(MODEL_PROCESS)
+void GPUProcessProxy::requestSharedSimulationConnection(audit_token_t modelProcessAuditToken, CompletionHandler<void(std::optional<IPC::SharedFileHandle>)>&& completionHandler)
+{
+    sendWithAsyncReply(Messages::GPUProcess::RequestSharedSimulationConnection { modelProcessAuditToken }, WTFMove(completionHandler));
+}
+
+#if HAVE(TASK_IDENTITY_TOKEN)
+void GPUProcessProxy::createMemoryAttributionIDForTask(WebCore::ProcessIdentity processIdentity, CompletionHandler<void(const std::optional<String>&)>&& completionHandler)
+{
+    sendWithAsyncReply(Messages::GPUProcess::CreateMemoryAttributionIDForTask { WTFMove(processIdentity) }, WTFMove(completionHandler));
+}
+
+void GPUProcessProxy::unregisterMemoryAttributionID(const String& attributionID, CompletionHandler<void()>&& completionHandler)
+{
+    sendWithAsyncReply(Messages::GPUProcess::UnregisterMemoryAttributionID { attributionID }, WTFMove(completionHandler));
+}
+#endif
+#endif
 
 } // namespace WebKit
 

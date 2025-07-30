@@ -70,8 +70,10 @@ void ExternalTexture::destroy()
 {
     m_pixelBuffer = nil;
     m_destroyed = true;
-    for (Ref commandEncoder : m_commandEncoders)
-        commandEncoder->makeSubmitInvalid();
+    for (auto commandEncoder : m_commandEncoders) {
+        if (RefPtr ptr = m_device->commandEncoderFromIdentifier(commandEncoder))
+            ptr->makeSubmitInvalid();
+    }
 
     m_commandEncoders.clear();
 }
@@ -85,8 +87,16 @@ void ExternalTexture::undestroy()
 void ExternalTexture::setCommandEncoder(CommandEncoder& commandEncoder) const
 {
     CommandEncoder::trackEncoder(commandEncoder, m_commandEncoders);
+    commandEncoder.addTexture(m_texture0);
+    commandEncoder.addTexture(m_texture1);
     if (isDestroyed())
         commandEncoder.makeSubmitInvalid();
+}
+
+void ExternalTexture::updateExternalTextures(id<MTLTexture> texture0, id<MTLTexture> texture1)
+{
+    m_texture0 = texture0;
+    m_texture1 = texture1;
 }
 
 bool ExternalTexture::isDestroyed() const
@@ -111,7 +121,7 @@ void ExternalTexture::update(CVPixelBufferRef pixelBuffer)
 
 size_t ExternalTexture::openCommandEncoderCount() const
 {
-    return m_commandEncoders.computeSize();
+    return CommandEncoder::computeSize(m_commandEncoders, m_device.get());
 }
 
 } // namespace WebGPU

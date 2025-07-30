@@ -158,7 +158,26 @@ void ExtensionStyleSheets::updateInjectedStyleSheetCache() const
         if (userStyleSheet.injectedFrames() == UserContentInjectedFrames::InjectInTopFrameOnly && m_document->ownerElement())
             return;
 
-        if (!UserContentURLPattern::matchesPatterns(m_document->url(), userStyleSheet.allowlist(), userStyleSheet.blocklist()))
+        auto url = m_document->url();
+
+        if (RefPtr parentDocument = m_document->parentDocument()) {
+            switch (userStyleSheet.matchParentFrame()) {
+            case UserContentMatchParentFrame::ForOpaqueOrigins:
+                if (url.protocolIsAbout() || url.protocolIsBlob() || url.protocolIsData())
+                    url = parentDocument->url();
+                break;
+
+            case UserContentMatchParentFrame::ForAboutBlank:
+                if (url.isAboutBlank())
+                    url = parentDocument->url();
+                break;
+
+            case UserContentMatchParentFrame::Never:
+                break;
+            }
+        }
+
+        if (!UserContentURLPattern::matchesPatterns(url, userStyleSheet.allowlist(), userStyleSheet.blocklist()))
             return;
 
         addStyleSheet(userStyleSheet);
@@ -231,7 +250,7 @@ void ExtensionStyleSheets::maybeAddContentExtensionSheet(const String& identifie
 
 String ExtensionStyleSheets::contentForInjectedStyleSheet(const RefPtr<CSSStyleSheet>& styleSheet) const
 {
-    return m_injectedStyleSheetToSource.get(styleSheet);
+    return m_injectedStyleSheetToSource.get(*styleSheet);
 }
 
 void ExtensionStyleSheets::detachFromDocument()

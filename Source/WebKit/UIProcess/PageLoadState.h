@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,9 +33,13 @@
 #include <wtf/WeakHashSet.h>
 #include <wtf/text/WTFString.h>
 
+namespace WebCore {
+enum class ResourceResponseSource : uint8_t;
+}
 namespace WebKit {
 
 class WebPageProxy;
+enum class Source;
 
 class PageLoadStateObserverBase : public AbstractRefCountedAndCanMakeWeakPtr<PageLoadStateObserverBase> {
 public:
@@ -152,16 +156,18 @@ public:
     bool hasNegotiatedLegacyTLS() const;
     void negotiatedLegacyTLS(const Transaction::Token&);
     bool wasPrivateRelayed() const { return m_committedState.wasPrivateRelayed; }
+    String proxyName() { return m_committedState.proxyName; }
+    WebCore::ResourceResponseSource source() { return m_committedState.source; }
 
     double estimatedProgress() const;
     bool networkRequestsInProgress() const { return m_committedState.networkRequestsInProgress; }
 
     const WebCore::CertificateInfo& certificateInfo() const { return m_committedState.certificateInfo; }
 
-    const URL& resourceDirectoryURL() const;
+    const URL& resourceDirectoryURL() const { return m_committedState.resourceDirectoryURL; }
 
-    const String& pendingAPIRequestURL() const;
-    const PendingAPIRequest& pendingAPIRequest() const;
+    const String& pendingAPIRequestURL() const { return m_committedState.pendingAPIRequest.url; }
+    const PendingAPIRequest& pendingAPIRequest() const { return m_committedState.pendingAPIRequest; }
     void setPendingAPIRequest(const Transaction::Token&, PendingAPIRequest&& pendingAPIRequest, const URL& resourceDirectoryPath = { });
     void clearPendingAPIRequest(const Transaction::Token&);
 
@@ -170,7 +176,8 @@ public:
     void didReceiveServerRedirectForProvisionalLoad(const Transaction::Token&, const String& url);
     void didFailProvisionalLoad(const Transaction::Token&);
 
-    void didCommitLoad(const Transaction::Token&, const WebCore::CertificateInfo&, bool hasInsecureContent, bool usedLegacyTLS, bool privateRelayed, const WebCore::SecurityOriginData&);
+    void didCommitLoad(const Transaction::Token&, const WebCore::CertificateInfo&, bool hasInsecureContent, bool usedLegacyTLS, bool privateRelayed, const String& proxyName, const WebCore::ResourceResponseSource, const WebCore::SecurityOriginData&);
+
     void didFinishLoad(const Transaction::Token&);
     void didFailLoad(const Transaction::Token&);
 
@@ -181,7 +188,7 @@ public:
     void setUnreachableURL(const Transaction::Token&, const String&);
 
     const String& title() const;
-    void setTitle(const Transaction::Token&, const String&);
+    void setTitle(const Transaction::Token&, String&&);
     void setTitleFromBrowsingWarning(const Transaction::Token&, const String&);
 
     bool canGoBack() const;
@@ -241,6 +248,8 @@ private:
         bool networkRequestsInProgress { false };
 
         WebCore::CertificateInfo certificateInfo;
+        String proxyName;
+        WebCore::ResourceResponseSource source;
     };
 
     static bool isLoading(const Data&);

@@ -70,11 +70,6 @@ HTMLAttachmentElement* AccessibilityAttachment::attachmentElement() const
     ASSERT(is<HTMLAttachmentElement>(node()));
     return dynamicDowncast<HTMLAttachmentElement>(node());
 }
-    
-String AccessibilityAttachment::roleDescription() const
-{
-    return AXAttachmentRoleText();
-}
 
 bool AccessibilityAttachment::computeIsIgnored() const
 {
@@ -92,13 +87,13 @@ void AccessibilityAttachment::accessibilityText(Vector<AccessibilityText>& textO
     auto& action = getAttribute(actionAttr);
     
     if (action.length())
-        textOrder.append(AccessibilityText(action, AccessibilityTextSource::Action));
+        textOrder.append(AccessibilityText(WTFMove(action), AccessibilityTextSource::Action));
 
     if (title.length())
-        textOrder.append(AccessibilityText(title, AccessibilityTextSource::Title));
+        textOrder.append(AccessibilityText(WTFMove(title), AccessibilityTextSource::Title));
 
     if (subtitle.length())
-        textOrder.append(AccessibilityText(subtitle, AccessibilityTextSource::Subtitle));
+        textOrder.append(AccessibilityText(WTFMove(subtitle), AccessibilityTextSource::Subtitle));
 }
 
 } // namespace WebCore

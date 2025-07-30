@@ -113,7 +113,7 @@ public:
     PolicyClientTest()
         : LoadTrackingTest()
     {
-        g_signal_connect(m_webView, "decide-policy", G_CALLBACK(decidePolicyCallback), this);
+        g_signal_connect(m_webView.get(), "decide-policy", G_CALLBACK(decidePolicyCallback), this);
 #if !ENABLE(2022_GLIB_API)
         webkit_user_content_manager_register_script_message_handler(m_userContentManager.get(), "testHandler");
 #else
@@ -229,7 +229,7 @@ static void testResponsePolicy(PolicyClientTest* test, gconstpointer)
     WebKitURIResponse* response = webkit_response_policy_decision_get_response(decision);
     g_assert_true(WEBKIT_IS_URI_RESPONSE(response));
     ASSERT_CMP_CSTRING(webkit_uri_response_get_uri(response), ==, kServer->getURIForPath("/"));
-    g_assert_cmpint(webkit_web_view_can_show_mime_type(test->m_webView, webkit_uri_response_get_mime_type(response)), ==,
+    g_assert_cmpint(webkit_web_view_can_show_mime_type(test->webView(), webkit_uri_response_get_mime_type(response)), ==,
         webkit_response_policy_decision_is_mime_type_supported(decision));
     g_assert_true(webkit_response_policy_decision_is_main_frame_main_resource(decision));
 
@@ -276,13 +276,13 @@ static void testNewWindowPolicy(PolicyClientTest* test, gconstpointer)
         "    </script>"
         "</body></html>";
     test->m_policyDecisionTypeFilter = WEBKIT_POLICY_DECISION_TYPE_NEW_WINDOW_ACTION;
-    webkit_settings_set_javascript_can_open_windows_automatically(webkit_web_view_get_settings(test->m_webView), TRUE);
+    webkit_settings_set_javascript_can_open_windows_automatically(webkit_web_view_get_settings(test->webView()), TRUE);
 
     CreateCallbackData data;
     data.triedToOpenWindow = false;
     data.mainLoop = test->m_mainLoop;
 
-    g_signal_connect(test->m_webView, "create", G_CALLBACK(createCallback), &data);
+    g_signal_connect(test->webView(), "create", G_CALLBACK(createCallback), &data);
     test->m_policyDecisionResponse = PolicyClientTest::Use;
     test->loadHtml(windowOpeningHTML, "http://webkitgtk.org/");
     test->wait(1);

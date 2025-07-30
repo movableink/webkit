@@ -27,6 +27,7 @@
         letter-spacing: 0.006rem;
         text-align: center;
         line-height: 1.04167;
+        text-wrap: balance;
     }
 
     .hero p {

@@ -2,12 +2,6 @@ description("This test makes sure that two read-only transactions to two differe
 
 indexedDBTest(prepareDatabase);
 
-
-function done()
-{
-    finishJSTest();
-}
-
 var dbname;
 function prepareDatabase(event)
 {
@@ -22,21 +16,18 @@ function prepareDatabase(event)
     var request = objectStore.put("foo1", "bar1");
 
     request.onerror = function(event) {
-        debug("put1 FAILED - " + event);
-        done();
+        endTestWithLog("put1 FAILED - " + event);
     }
     
     objectStore = database.createObjectStore("OS2");
     request = objectStore.put("foo2", "bar2");
 
     request.onerror = function(event) {
-        debug("put2 FAILED - " + event);
-        done();
+        endTestWithLog("put2 FAILED - " + event);
     }
 
     versionTransaction.onabort = function(event) {
-        debug("versionchange transaction aborted");
-        done();
+        endTestWithLog("versionchange transaction aborted");
     }
 
     versionTransaction.oncomplete = function(event) {
@@ -46,8 +37,7 @@ function prepareDatabase(event)
     }
 
     versionTransaction.onerror = function(event) {
-        debug("versionchange transaction error'ed - " + event);
-        done();
+        endTestWithLog("versionchange transaction error'ed - " + event);
     }
 }
 
@@ -67,16 +57,13 @@ function setupRequest(request, osname)
         startTransactionLoop(event.target.result.transaction(osname, "readonly"), osname, true);
     }
     request.onerror = function(event) {
-        debug("Unexpected error - " + osname + " - " + event);
-        done();
+        endTestWithLog("Unexpected error - " + osname + " - " + event);
     }
     request.onblocked = function(event) {
-        debug("Unexpected blocked - " + osname + " - " + event);
-        done();
+        endTestWithLog("Unexpected blocked - " + osname + " - " + event);
     }
     request.onupgradeneeded = function(event) {
-        debug("Unexpected upgradeneeded - " + osname + " - " + event);
-        done();
+        endTestWithLog("Unexpected upgradeneeded - " + osname + " - " + event);
     } 
 }
 
@@ -92,32 +79,27 @@ function startTransactionLoop(transaction, osname, isFirstTime)
             numberOfOpenTransactions++;
         
         if (numberOfOpenTransactions == 2) {
-            debug("Two transactions open at once. Yay.");
-            done();
+            endTestWithLog("Two transactions open at once. Yay.");
         }
         startTransactionLoop(event.target.transaction, osname, false);
     }
 
     request.onerror = function(event) {
-        debug("Unexpected request error - " + event);
-        done();
+        endTestWithLog("Unexpected request error - " + event);
     }
 
     transaction.onerror = function(event) {
-        debug("Unexpected transaction error - " + event);
-        done();
+        endTestWithLog("Unexpected transaction error - " + event);
     }
 
     transaction.onabort = function(event) {
         --numberOfOpenTransactions;
-        debug("Unexpected transaction abort - " + event);
-        done();
+        endTestWithLog("Unexpected transaction abort - " + event);
     }
 
     transaction.oncomplete = function(event) {
         --numberOfOpenTransactions;
-        debug("Unexpected transaction complete - " + event);
-        done();
+        endTestWithLog("Unexpected transaction complete - " + event);
     }
 }
 

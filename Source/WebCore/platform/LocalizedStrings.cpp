@@ -94,19 +94,17 @@ String formatLocalizedString(const char* format, ...)
 #if PLATFORM(COCOA)
 static CFBundleRef webCoreBundle()
 {
-    static NeverDestroyed<RetainPtr<CFBundleRef>> bundle = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebCore"));
+    static LazyNeverDestroyed<RetainPtr<CFBundleRef>> bundle;
+    static std::once_flag flag;
+    std::call_once(flag, [&] mutable {
+        bundle.construct(CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebCore")));
+    });
     ASSERT(bundle.get());
     return bundle.get().get();
 }
 
 RetainPtr<CFStringRef> copyLocalizedString(CFStringRef key)
 {
-#if !PLATFORM(IOS_FAMILY)
-    // Can be called on a dispatch queue when initializing strings on iOS.
-    // See LoadWebLocalizedStrings and <rdar://problem/7902473>.
-    ASSERT(isMainThread());
-#endif
-
     static CFStringRef notFound = CFSTR("localized string not found");
 
     auto result = adoptCF(CFBundleCopyLocalizedString(webCoreBundle(), key, notFound, nullptr));
@@ -510,14 +508,33 @@ String contextMenuItemTagTranslate(const String& selectedString)
 #if ENABLE(WRITING_TOOLS)
 String contextMenuItemTagWritingTools()
 {
+#if ENABLE(TOP_LEVEL_WRITING_TOOLS_CONTEXT_MENU_ITEMS)
+    return WEB_UI_STRING("Show Writing Tools", "Writing Tools context menu item");
+#else
     return WEB_UI_STRING("Writing Tools", "Writing Tools context menu item");
+#endif
+}
+
+String contextMenuItemTagProofread()
+{
+    return WEB_UI_STRING("Proofread", "Proofread context menu item");
+}
+
+String contextMenuItemTagRewrite()
+{
+    return WEB_UI_STRING("Rewrite", "Rewrite context menu item");
+}
+
+String contextMenuItemTagSummarize()
+{
+    return WEB_UI_STRING("Summarize", "Summarize context menu item");
 }
 #endif
 
 #if ENABLE(UNIFIED_PDF)
-String contextMenuItemPDFOpenWithPreview()
+String contextMenuItemPDFOpenWithDefaultViewer(const String& appName)
 {
-    return WEB_UI_STRING("Open with Preview", "Open with Preview context menu item");
+    return WEB_UI_FORMAT_STRING("Open with %@", "Open with default PDF viewer context menu item", appName.createCFString().get());
 }
 #endif
 
@@ -602,6 +619,13 @@ String searchMenuClearRecentSearchesText()
 
 #endif // !PLATFORM(IOS_FAMILY)
 
+#if ENABLE(MEDIA_STREAM)
+String defaultSystemSpeakerLabel()
+{
+    return WEB_UI_STRING("Default", "label for the default system speaker");
+}
+#endif
+
 String AXWebAreaText()
 {
     return WEB_UI_STRING("HTML content", "accessibility role description for web area");
@@ -664,7 +688,12 @@ String AXSummaryText()
 
 String AXFooterRoleDescriptionText()
 {
-    return WEB_UI_STRING("footer", "accessibility role description for a footer");
+    return WEB_UI_STRING("section footer", "accessibility role description for a footer");
+}
+
+String AXHeaderRoleDescriptionText()
+{
+    return WEB_UI_STRING("section header", "accessibility role description for a header");
 }
 
 String AXSuggestionRoleDescriptionText()
@@ -812,6 +841,8 @@ String AXARIAContentGroupText(StringView ariaType)
         return WEB_UI_STRING("complementary", "An ARIA accessibility group that acts as a region of complementary information.");
     if (ariaType == "ARIALandmarkContentInfo"_s)
         return WEB_UI_STRING("content information", "An ARIA accessibility group that contains content.");
+    if (ariaType == "ARIALandmarkForm"_s)
+        return WEB_UI_STRING("form", "An ARIA accessibility group that acts as a form region.");
     if (ariaType == "ARIALandmarkMain"_s)
         return WEB_UI_STRING("main", "An ARIA accessibility group that is the main portion of the website.");
     if (ariaType == "ARIALandmarkNavigation"_s)
@@ -820,6 +851,10 @@ String AXARIAContentGroupText(StringView ariaType)
         return WEB_UI_STRING("region", "An ARIA accessibility group that acts as a distinct region in a document.");
     if (ariaType == "ARIALandmarkSearch"_s)
         return WEB_UI_STRING("search", "An ARIA accessibility group that contains a search feature of a website.");
+    if (ariaType == "ARIASectionFooter"_s)
+        return WEB_UI_STRING("section footer", "An ARIA accessibility group that acts as a footer region.");
+    if (ariaType == "ARIASectionHeader"_s)
+        return WEB_UI_STRING("section header", "An ARIA accessibility group that acts as a header region.");
     if (ariaType == "ARIAUserInterfaceTooltip"_s)
         return WEB_UI_STRING("tooltip", "An ARIA accessibility group that acts as a tooltip.");
     if (ariaType == "ARIATabPanel"_s)
@@ -1457,21 +1492,6 @@ String contextMenuItemTagShowMediaStats()
 
 #endif // ENABLE(VIDEO)
 
-String snapshottedPlugInLabelTitle()
-{
-    return WEB_UI_STRING("Snapshotted Plug-In", "Title of the label to show on a snapshotted plug-in");
-}
-
-String snapshottedPlugInLabelSubtitle()
-{
-    return WEB_UI_STRING("Click to restart", "Subtitle of the label to show on a snapshotted plug-in");
-}
-
-String useBlockedPlugInContextMenuTitle()
-{
-    return WEB_UI_STRING("Show in blocked plug-in", "Title of the context menu item to show when PDFPlugin was used instead of a blocked plugin");
-}
-
 #if PLATFORM(COCOA)
 
 String webCryptoMasterKeyKeychainLabel(const String& localizedApplicationName)
@@ -1596,6 +1616,11 @@ String contextMenuItemTagCopyLinkWithHighlight()
 String fullscreenControllerViewSpatial()
 {
     return WEB_UI_STRING("View Spatial", "Title for View Spatial action button while in fullscreen");
+}
+
+String fullscreenControllerViewImmersive()
+{
+    return WEB_UI_STRING("View Immersive", "Title for View Immersive action button while in fullscreen");
 }
 #endif
 

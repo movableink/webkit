@@ -36,6 +36,7 @@
 #include "WebPageProxyIdentifier.h"
 #include "WebProcessProxy.h"
 #include <algorithm>
+#include <ranges>
 #include <wtf/RunLoop.h>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -59,11 +60,13 @@
 #include "ExtensionCapabilityGrant.h"
 #endif
 
+#include "WebPageProxyMessages.h"
+
 namespace WebKit {
 
 static HashMap<IPC::Connection::UniqueID, WeakPtr<AuxiliaryProcessProxy>>& connectionToProcessMap()
 {
-    static MainThreadNeverDestroyed<HashMap<IPC::Connection::UniqueID, WeakPtr<AuxiliaryProcessProxy>>> map;
+    static MainRunLoopNeverDestroyed<HashMap<IPC::Connection::UniqueID, WeakPtr<AuxiliaryProcessProxy>>> map;
     return map.get();
 }
 
@@ -87,6 +90,9 @@ AuxiliaryProcessProxy::AuxiliaryProcessProxy(ShouldTakeUIBackgroundAssertion sho
 
 AuxiliaryProcessProxy::~AuxiliaryProcessProxy()
 {
+    if (state() != State::Terminated)
+        platformStartConnectionTerminationWatchdog();
+
     protectedThrottler()->didDisconnectFromProcess();
 
     if (RefPtr connection = m_connection)
@@ -185,6 +191,9 @@ void AuxiliaryProcessProxy::terminate()
 {
     RELEASE_LOG(Process, "AuxiliaryProcessProxy::terminate: PID=%d", processID());
 
+    if (state() != State::Terminated)
+        platformStartConnectionTerminationWatchdog();
+
 #if PLATFORM(COCOA) && !USE(EXTENSIONKIT_PROCESS_TERMINATION)
     if (RefPtr connection = m_connection) {
         if (connection->kill())
@@ -250,8 +259,8 @@ bool AuxiliaryProcessProxy::sendMessage(UniqueRef<IPC::Encoder>&& encoder, Optio
 
     if (asyncReplyHandler && canSendMessage() && shouldStartProcessThrottlerActivity == ShouldStartProcessThrottlerActivity::Yes) {
         auto completionHandler = WTFMove(asyncReplyHandler->completionHandler);
-        asyncReplyHandler->completionHandler = [activity = protectedThrottler()->quietBackgroundActivity(description(encoder->messageName())), completionHandler = WTFMove(completionHandler)](IPC::Decoder* decoder) mutable {
-            completionHandler(decoder);
+        asyncReplyHandler->completionHandler = [activity = protectedThrottler()->quietBackgroundActivity(description(encoder->messageName())), completionHandler = WTFMove(completionHandler)](IPC::Connection* connection, IPC::Decoder* decoder) mutable {
+            completionHandler(connection, decoder);
         };
     }
 
@@ -276,11 +285,11 @@ bool AuxiliaryProcessProxy::sendMessage(UniqueRef<IPC::Encoder>&& encoder, Optio
     }
 
     if (asyncReplyHandler && asyncReplyHandler->completionHandler) {
-        RunLoop::protectedCurrent()->dispatch([completionHandler = WTFMove(asyncReplyHandler->completionHandler)]() mutable {
-            completionHandler(nullptr);
+        RunLoop::currentSingleton().dispatch([completionHandler = WTFMove(asyncReplyHandler->completionHandler)]() mutable {
+            completionHandler(nullptr, nullptr);
         });
     }
-    
+
     return false;
 }
 
@@ -340,7 +349,7 @@ void AuxiliaryProcessProxy::didFinishLaunching(ProcessLauncher* launcher, IPC::C
         return;
 
 #if PLATFORM(MAC) && USE(RUNNINGBOARD)
-    m_lifetimeActivity = throttler().foregroundActivity("Lifetime Activity"_s);
+    m_lifetimeActivity = protectedThrottler()->foregroundActivity("Lifetime Activity"_s);
     m_boostedJetsamAssertion = ProcessAssertion::create(*this, "Jetsam Boost"_s, ProcessAssertionType::BoostedJetsam);
 #endif
     
@@ -395,8 +404,8 @@ void AuxiliaryProcessProxy::wakeUpTemporarilyForIPC()
     // If we keep trying to send IPC to a suspended process, the outgoing message queue may grow large and result
     // in increased memory usage. To avoid this, we allow the process to stay alive for 1 second after draining
     // its message queue.
-    auto completionHandler = [activity = throttler().backgroundActivity("IPC sending due to large outgoing queue"_s)]() mutable {
-        RunLoop::main().dispatchAfter(1_s, [activity = WTFMove(activity)]() { });
+    auto completionHandler = [activity = protectedThrottler()->backgroundActivity("IPC sending due to large outgoing queue"_s)]() mutable {
+        RunLoop::protectedMain()->dispatchAfter(1_s, [activity = WTFMove(activity)]() { });
     };
     sendWithAsyncReply(Messages::AuxiliaryProcess::MainThreadPing(), WTFMove(completionHandler), 0, { }, ShouldStartProcessThrottlerActivity::No);
 }
@@ -407,14 +416,14 @@ void AuxiliaryProcessProxy::replyToPendingMessages()
     ASSERT(isMainRunLoop());
     for (auto& pendingMessage : std::exchange(m_pendingMessages, { })) {
         if (pendingMessage.asyncReplyHandler)
-            pendingMessage.asyncReplyHandler->completionHandler(nullptr);
+            pendingMessage.asyncReplyHandler->completionHandler(nullptr, nullptr);
     }
 }
 
 void AuxiliaryProcessProxy::shutDownProcess()
 {
-    auto scopeExit = WTF::makeScopeExit([&] {
-        protectedThrottler()->didDisconnectFromProcess();
+    auto scopeExit = WTF::makeScopeExit([protectedThis = Ref { *this }] {
+        protectedThis->protectedThrottler()->didDisconnectFromProcess();
     });
 
     switch (state()) {
@@ -612,16 +621,15 @@ void AuxiliaryProcessProxy::didChangeThrottleState(ProcessThrottleState state)
     m_isSuspended = isNowSuspended;
 
     if (!isNowSuspended && !m_messagesToSendOnResume.isEmpty()) {
-        Vector<std::pair<unsigned, std::unique_ptr<IPC::Encoder>>> indexMessagePairs;
+        using PairType = std::pair<unsigned, std::unique_ptr<IPC::Encoder>>;
+        Vector<PairType> indexMessagePairs;
         indexMessagePairs.reserveInitialCapacity(m_messagesToSendOnResume.size());
 
         for (auto& indexMessagePair : m_messagesToSendOnResume.values())
             indexMessagePairs.append(WTFMove(indexMessagePair));
 
         // Send messages in the order that they were enqueued after coalescing.
-        std::sort(indexMessagePairs.begin(), indexMessagePairs.end(), [](const auto& pair1, const auto& pair2) {
-            return pair1.first < pair2.first;
-        });
+        std::ranges::sort(indexMessagePairs, { }, &PairType::first);
 
         for (auto& indexMessagePair : indexMessagePairs) {
             auto& encoder = indexMessagePair.second;

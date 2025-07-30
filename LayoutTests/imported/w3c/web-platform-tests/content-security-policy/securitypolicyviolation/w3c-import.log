@@ -25,6 +25,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/content-security-policy/securitypolicyviolation/inside-dedicated-worker.html
 /LayoutTests/imported/w3c/web-platform-tests/content-security-policy/securitypolicyviolation/inside-service-worker.https.html
 /LayoutTests/imported/w3c/web-platform-tests/content-security-policy/securitypolicyviolation/inside-shared-worker.html
+/LayoutTests/imported/w3c/web-platform-tests/content-security-policy/securitypolicyviolation/linenumber.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/content-security-policy/securitypolicyviolation/script-sample-no-opt-in.html
 /LayoutTests/imported/w3c/web-platform-tests/content-security-policy/securitypolicyviolation/script-sample.html
 /LayoutTests/imported/w3c/web-platform-tests/content-security-policy/securitypolicyviolation/securitypolicyviolation-block-cross-origin-image-from-script.sub.html

@@ -97,7 +97,7 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
     auto sizeForDrawing = expandedIntSize(sourceSize * scaleFactorForDrawing);
     auto subsamplingLevel =  m_source->subsamplingLevelForScaleFactor(context, scaleFactorForDrawing, options.allowImageSubsampling());
 
-    auto nativeImage = m_source->currentNativeImageForDrawing(subsamplingLevel, { options.decodingMode(), sizeForDrawing });
+    auto nativeImage = m_source->currentNativeImageForDrawing(subsamplingLevel, { options.decodingMode(), m_source->shouldDecodeToHDR(), sizeForDrawing });
 
     if (!nativeImage) {
         if (nativeImage.error() != DecodingStatus::Decoding)
@@ -122,10 +122,14 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
             orientation = currentFrameOrientation();
 
         auto headroom = options.headroom();
-        if (headroom == Headroom::FromImage)
-            headroom = currentFrameHeadroom();
+        if (hasHDRContentForTesting() && options.dynamicRangeLimit() != PlatformDynamicRangeLimit::standard())
+            fillWithSolidColor(context, destinationRect, Color::gold, options.compositeOperator());
+        else {
+            if (headroom == Headroom::FromImage)
+                headroom = currentFrameHeadroom();
 
-        context.drawNativeImage(*nativeImage, destinationRect, adjustedSourceRect, { options, orientation, headroom });
+            context.drawNativeImage(*nativeImage, destinationRect, adjustedSourceRect, { options, orientation, headroom });
+        }
     }
 
     if (auto observer = imageObserver())
@@ -139,7 +143,10 @@ void BitmapImage::drawPattern(GraphicsContext& context, const FloatRect& destina
     if (tileRect.isEmpty())
         return;
 
-    if (context.drawLuminanceMask())
+    auto headroom = options.headroom();
+    if (headroom == Headroom::FromImage && hasHDRContentForTesting())
+        fillWithSolidColor(context, destinationRect, Color::gold, options.compositeOperator());
+    else if (context.drawLuminanceMask())
         drawLuminanceMaskPattern(context, destinationRect, tileRect, transform, phase, spacing, options);
     else
         Image::drawPattern(context, destinationRect, tileRect, transform, phase, spacing, { options, ImageOrientation::Orientation::FromImage });

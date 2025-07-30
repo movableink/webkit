@@ -28,7 +28,8 @@
 #include "CompositeOperation.h"
 #include "RenderStyleConstants.h"
 #include "ScopedName.h"
-#include "ScrollTimeline.h"
+#include "ScrollAxis.h"
+#include "TimelineRange.h"
 #include "TimingFunction.h"
 #include "WebAnimationTypes.h"
 
@@ -65,12 +66,21 @@ public:
 
     bool isEmpty() const
     {
-        return !m_directionSet && !m_durationSet && !m_fillModeSet
-            && !m_nameSet && !m_playStateSet && !m_iterationCountSet
-            && !m_delaySet && !m_timingFunctionSet && !m_propertySet
-            && !m_isNone && !m_compositeOperationSet && !m_timelineSet
-            && !m_allowsDiscreteTransitionsSet && !m_rangeStartSet
-            && !m_rangeEndSet;
+        return !m_nameSet
+            && !m_isNone
+            && (!m_directionSet || m_directionFilled)
+            && (!m_durationSet || m_durationFilled)
+            && (!m_fillModeSet || m_fillModeFilled)
+            && (!m_playStateSet || m_playStateFilled)
+            && (!m_iterationCountSet || m_iterationCountFilled)
+            && (!m_delaySet || m_delayFilled)
+            && (!m_timingFunctionSet || m_timingFunctionFilled)
+            && (!m_propertySet || m_propertyFilled)
+            && (!m_compositeOperationSet || m_compositeOperationFilled)
+            && (!m_timelineSet || m_timelineFilled)
+            && (!m_allowsDiscreteTransitionsSet || m_allowsDiscreteTransitionsFilled)
+            && (!m_rangeStartSet || m_rangeStartFilled)
+            && (!m_rangeEndSet || m_rangeEndFilled);
     }
 
     bool isEmptyOrZeroDuration() const
@@ -83,7 +93,11 @@ public:
     void clearDuration() { m_durationSet = false; m_durationFilled = false; }
     void clearFillMode() { m_fillModeSet = false; m_fillModeFilled = false; }
     void clearIterationCount() { m_iterationCountSet = false; m_iterationCountFilled = false; }
-    void clearName() { m_nameSet = false; }
+    void clearName()
+    {
+        m_nameSet = false;
+        m_name = initialName();
+    }
     void clearPlayState() { m_playStateSet = false; m_playStateFilled = false; }
     void clearProperty() { m_propertySet = false; m_propertyFilled = false; }
     void clearTimeline() { m_timelineSet = false; m_timelineFilled = false; }
@@ -134,7 +148,17 @@ public:
     };
 
     enum class TimelineKeyword : bool { None, Auto };
-    using Timeline = std::variant<TimelineKeyword, AtomString, Ref<ScrollTimeline>>;
+    struct AnonymousScrollTimeline {
+        Scroller scroller;
+        ScrollAxis axis;
+        bool operator==(const AnonymousScrollTimeline& o) const { return scroller == o.scroller && axis == o.axis; }
+    };
+    struct AnonymousViewTimeline {
+        ScrollAxis axis;
+        ViewTimelineInsets insets;
+        bool operator==(const AnonymousViewTimeline& o) const { return axis == o.axis && insets == o.insets; }
+    };
+    using Timeline = Variant<TimelineKeyword, AtomString, AnonymousScrollTimeline, AnonymousViewTimeline>;
 
     Direction direction() const { return static_cast<Direction>(m_direction); }
     bool directionIsForwards() const { return direction() == Direction::Normal || direction() == Direction::Alternate; }
@@ -151,6 +175,7 @@ public:
     TransitionProperty property() const { return m_property; }
     const Timeline& timeline() const { return m_timeline; }
     TimingFunction* timingFunction() const { return m_timingFunction.get(); }
+    RefPtr<TimingFunction> protectedTimingFunction() const { return m_timingFunction; }
     TimingFunction* defaultTimingFunctionForKeyframes() const { return m_defaultTimingFunctionForKeyframes.get(); }
     const SingleTimelineRange rangeStart() const { return m_range.start; }
     const SingleTimelineRange rangeEnd() const { return m_range.end; }
@@ -197,6 +222,7 @@ public:
     bool isDurationFilled() const { return m_durationFilled; }
     bool isFillModeFilled() const { return m_fillModeFilled; }
     bool isIterationCountFilled() const { return m_iterationCountFilled; }
+    static bool isNameFilled() { return false; } // Needed for property generation generalization.
     bool isPlayStateFilled() const { return m_playStateFilled; }
     bool isPropertyFilled() const { return m_propertyFilled; }
     bool isTimelineFilled() const { return m_timelineFilled; }
@@ -298,6 +324,8 @@ WTF::TextStream& operator<<(WTF::TextStream&, AnimationPlayState);
 WTF::TextStream& operator<<(WTF::TextStream&, Animation::TransitionProperty);
 WTF::TextStream& operator<<(WTF::TextStream&, Animation::Direction);
 WTF::TextStream& operator<<(WTF::TextStream&, Animation::TimelineKeyword);
+WTF::TextStream& operator<<(WTF::TextStream&, const Animation::AnonymousScrollTimeline&);
+WTF::TextStream& operator<<(WTF::TextStream&, const Animation::AnonymousViewTimeline&);
 WTF::TextStream& operator<<(WTF::TextStream&, const Animation::Timeline&);
 WTF::TextStream& operator<<(WTF::TextStream&, const Animation&);
 

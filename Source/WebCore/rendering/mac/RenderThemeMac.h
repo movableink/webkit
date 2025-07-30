@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -45,7 +45,7 @@ public:
     void inflateRectForControlRenderer(const RenderObject&, FloatRect&) final;
     void adjustRepaintRect(const RenderBox&, FloatRect&) final;
 
-    bool isControlStyled(const RenderStyle&, const RenderStyle& userAgentStyle) const final;
+    bool isControlStyled(const RenderStyle&) const final;
 
     bool supportsSelectionForegroundColors(OptionSet<StyleColorOptions>) const final;
 
@@ -70,25 +70,33 @@ public:
 
     void adjustSliderThumbSize(RenderStyle&, const Element*) const final;
 
-#if ENABLE(DATALIST_ELEMENT)
     IntSize sliderTickSize() const final;
     int sliderTickOffsetFromTrackCenter() const final;
-#endif
 
-    LengthBox popupInternalPaddingBox(const RenderStyle&) const final;
+    Style::PaddingBox popupInternalPaddingBox(const RenderStyle&) const final;
     PopupMenuStyle::Size popupMenuSize(const RenderStyle&, IntRect&) const final;
+
+    std::optional<FontCascadeDescription> controlFont(StyleAppearance, const FontCascade&, float zoomFactor) const final;
+    Style::PaddingBox controlPadding(StyleAppearance, const Style::PaddingBox&, float zoomFactor) const final;
+    LengthSize controlSize(StyleAppearance, const FontCascade&, const LengthSize&, float zoomFactor) const final;
+    LengthSize minimumControlSize(StyleAppearance, const FontCascade&, const LengthSize&, float zoomFactor) const final;
+    LengthBox controlBorder(StyleAppearance, const FontCascade&, const LengthBox& zoomedBox, float zoomFactor) const final;
+    bool controlRequiresPreWhiteSpace(StyleAppearance) const final;
 
     bool popsMenuByArrowKeys() const final { return true; }
 
     FloatSize meterSizeForBounds(const RenderMeter&, const FloatRect&) const final;
     bool supportsMeter(StyleAppearance) const final;
 
+    void createColorWellSwatchSubtree(HTMLElement&) final;
+    void setColorWellSwatchBackground(HTMLElement&, Color) final;
+
     IntRect progressBarRectForBounds(const RenderProgress&, const IntRect&) const final;
 
     // Controls color values returned from platformFocusRingColor(). systemColor() will be used when false.
     bool usesTestModeFocusRingColor() const;
 
-    WEBCORE_EXPORT static RetainPtr<NSImage> iconForAttachment(const String& fileName, const String& attachmentType, const String& title);
+    WEBCORE_EXPORT static IconAndSize iconForAttachment(const String& fileName, const String& attachmentType, const String& title);
 
 private:
     RenderThemeMac();
@@ -123,9 +131,7 @@ private:
     Seconds switchAnimationVisuallyOnDuration() const final { return 300_ms; }
     bool hasSwitchHapticFeedback(SwitchTrigger trigger) const final { return trigger == SwitchTrigger::PointerTracking; }
 
-#if ENABLE(DATALIST_ELEMENT)
     void adjustListButtonStyle(RenderStyle&, const Element*) const final;
-#endif
     
 #if ENABLE(SERVICE_CONTROLS)
     void adjustImageControlsButtonStyle(RenderStyle&, const Element*) const final;
@@ -141,7 +147,7 @@ private:
 
     Color systemColor(CSSValueID, OptionSet<StyleColorOptions>) const final;
 
-    bool searchFieldShouldAppearAsTextField(const RenderStyle&) const final;
+    bool searchFieldShouldAppearAsTextField(const RenderStyle&, const Settings&) const final;
 
     std::span<const IntSize, 4> menuListSizes() const;
     std::span<const IntSize, 4> searchFieldSizes() const;

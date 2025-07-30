@@ -100,6 +100,5 @@ private:
     std::unordered_map<std::wstring, std::wstring> m_acceptedServerTrustCerts;
     std::vector<WKRetainPtr<WKStringRef>> m_experimentalFeatureKeys;
     std::vector<WKRetainPtr<WKStringRef>> m_internalDebugFeatureKeys;
-
-    float m_defaultResetPageZoomFactor = 1;
+    bool m_isControlledByAutomation { false };
 };

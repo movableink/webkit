@@ -39,7 +39,7 @@ static std::optional<size_t> getKeyLengthFromHash(CryptoAlgorithmIdentifier hash
 {
     switch (hash) {
     case CryptoAlgorithmIdentifier::SHA_1:
-    case CryptoAlgorithmIdentifier::SHA_224:
+    case CryptoAlgorithmIdentifier::DEPRECATED_SHA_224:
     case CryptoAlgorithmIdentifier::SHA_256:
         return 512;
     case CryptoAlgorithmIdentifier::SHA_384:
@@ -123,6 +123,7 @@ JsonWebKey CryptoKeyHMAC::exportJwk() const
     result.kty = "oct"_s;
     result.k = base64URLEncodeToString(m_key);
     result.key_ops = usages();
+    result.usages = usagesBitmap();
     result.ext = extractable();
     return result;
 }
@@ -144,6 +145,22 @@ auto CryptoKeyHMAC::algorithm() const -> KeyAlgorithm
     result.hash.name = CryptoAlgorithmRegistry::singleton().name(m_hash);
     result.length = m_key.size() * 8;
     return result;
+}
+
+CryptoKey::Data CryptoKeyHMAC::data() const
+{
+    auto keyData = key();
+    return CryptoKey::Data {
+        CryptoKeyClass::HMAC,
+        algorithmIdentifier(),
+        extractable(),
+        usagesBitmap(),
+        std::nullopt,
+        exportJwk(),
+        hashAlgorithmIdentifier(),
+        std::nullopt,
+        key().size() * CHAR_BIT, // Size in bits.
+    };
 }
 
 } // namespace WebCore

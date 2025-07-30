@@ -26,6 +26,7 @@ class SkCapabilities;
 class SkColorSpace;
 class SkPaint;
 class SkPixmap;
+class SkRecorder;
 class GrSurfaceCharacterization;
 class SkSurfaceProps;
 enum GrSurfaceOrigin : int;
@@ -71,6 +72,7 @@ public:
 
     virtual GrRecordingContext* onGetRecordingContext() const;
     virtual skgpu::graphite::Recorder* onGetRecorder() const;
+    virtual SkRecorder* onGetBaseRecorder() const;
 
     /**
      *  Allocate a canvas that will draw into this surface. We will cache this
@@ -92,6 +94,8 @@ public:
      *  on copy-on-write.
      */
     virtual sk_sp<SkImage> onNewImageSnapshot(const SkIRect* subset = nullptr) { return nullptr; }
+
+    virtual sk_sp<SkImage> onMakeTemporaryImage() { return this->makeImageSnapshot(); }
 
     virtual void onWritePixels(const SkPixmap&, int x, int y) = 0;
 

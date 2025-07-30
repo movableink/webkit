@@ -84,6 +84,9 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-text-decor/text-shadow/svg-stroke-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-text-decor/text-shadow/svg-stroke-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-text-decor/text-shadow/svg-stroke.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-text-decor/text-shadow/text-shadow-emoji-transparent-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-text-decor/text-shadow/text-shadow-emoji-transparent-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-text-decor/text-shadow/text-shadow-emoji-transparent.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-text-decor/text-shadow/textindent-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-text-decor/text-shadow/textindent-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-text-decor/text-shadow/textindent.html

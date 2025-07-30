@@ -32,7 +32,7 @@
 #import <wtf/WeakHashSet.h>
 #import <wtf/WeakPtr.h>
 
-using CVPixelBufferRef = struct __CVBuffer*;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer* CVPixelBufferRef;
 
 struct WGPUExternalTextureImpl {
 };
@@ -66,6 +66,7 @@ public:
     bool isValid() const;
     void update(CVPixelBufferRef);
     size_t openCommandEncoderCount() const;
+    void updateExternalTextures(id<MTLTexture>, id<MTLTexture>);
 
 private:
     ExternalTexture(CVPixelBufferRef, WGPUColorSpace, Device&);
@@ -77,7 +78,9 @@ private:
     WGPUColorSpace m_colorSpace;
     const Ref<Device> m_device;
     bool m_destroyed { false };
-    mutable WeakHashSet<CommandEncoder> m_commandEncoders;
+    id<MTLTexture> m_texture0 { nil };
+    id<MTLTexture> m_texture1 { nil };
+    mutable Vector<uint64_t> m_commandEncoders;
 };
 
 } // namespace WebGPU

@@ -457,7 +457,8 @@ const char *QueryDeviceStringEXT(Thread *thread, Device *dev, EGLint name)
             result = dev->getDeviceString(name).c_str();
             break;
         default:
-            thread->setError(EglBadDevice(), "eglQueryDeviceStringEXT", GetDeviceIfValid(dev));
+            thread->setError(egl::Error(EGL_BAD_DEVICE_EXT), "eglQueryDeviceStringEXT",
+                             GetDeviceIfValid(dev));
             return nullptr;
     }
 
@@ -675,6 +676,22 @@ EGLBoolean SwapBuffersWithDamageKHR(Thread *thread,
     return EGL_TRUE;
 }
 
+void LockVulkanQueueANGLE(Thread *thread, egl::Display *display)
+{
+    ANGLE_EGL_TRY_PREPARE_FOR_CALL(thread, display->prepareForCall(), "eglLockVulkanQueueANGLE",
+                                   GetDisplayIfValid(display));
+    display->lockVulkanQueue();
+    thread->setSuccess();
+}
+
+void UnlockVulkanQueueANGLE(Thread *thread, egl::Display *display)
+{
+    ANGLE_EGL_TRY_PREPARE_FOR_CALL(thread, display->prepareForCall(), "eglUnlockVulkanQueueANGLE",
+                                   GetDisplayIfValid(display));
+    display->unlockVulkanQueue();
+    thread->setSuccess();
+}
+
 EGLBoolean PrepareSwapBuffersANGLE(Thread *thread, Display *display, SurfaceID surfaceID)
 {
     Surface *eglSurface = display->getSurface(surfaceID);
@@ -846,24 +863,6 @@ const char *QueryStringiANGLE(Thread *thread, Display *display, EGLint name, EGL
                                           GetDisplayIfValid(display), nullptr);
     thread->setSuccess();
     return display->queryStringi(name, index);
-}
-
-EGLBoolean SwapBuffersWithFrameTokenANGLE(Thread *thread,
-                                          Display *display,
-                                          SurfaceID surfaceID,
-                                          EGLFrameTokenANGLE frametoken)
-{
-    Surface *eglSurface = display->getSurface(surfaceID);
-
-    ANGLE_EGL_TRY_PREPARE_FOR_CALL_RETURN(thread, display->prepareForCall(),
-                                          "eglSwapBuffersWithFrameTokenANGLE",
-                                          GetDisplayIfValid(display), EGL_FALSE);
-    ANGLE_EGL_TRY_RETURN(thread, eglSurface->swapWithFrameToken(thread->getContext(), frametoken),
-                         "eglSwapBuffersWithFrameTokenANGLE", GetDisplayIfValid(display),
-                         EGL_FALSE);
-
-    thread->setSuccess();
-    return EGL_TRUE;
 }
 
 void ReleaseHighPowerGPUANGLE(Thread *thread, Display *display, gl::ContextID contextID)
@@ -1084,6 +1083,28 @@ void SetValidationEnabledANGLE(Thread *thread, EGLBoolean validationState)
 {
     SetEGLValidationEnabled(validationState != EGL_FALSE);
     thread->setSuccess();
+}
+
+EGLBoolean QuerySupportedCompressionRatesEXT(Thread *thread,
+                                             egl::Display *display,
+                                             egl::Config *configPacked,
+                                             const EGLAttrib *attrib_list,
+                                             EGLint *rates,
+                                             EGLint rate_size,
+                                             EGLint *num_rates)
+{
+    ANGLE_EGL_TRY_PREPARE_FOR_CALL_RETURN(thread, display->prepareForCall(),
+                                          "eglQuerySupportedCompressionRatesEXT",
+                                          GetDisplayIfValid(display), EGL_FALSE);
+
+    const AttributeMap &attributes = PackParam<const AttributeMap &>((const EGLint *)attrib_list);
+    ANGLE_EGL_TRY_RETURN(thread,
+                         display->querySupportedCompressionRates(configPacked, attributes, rates,
+                                                                 rate_size, num_rates),
+                         "eglQuerySupportedCompressionRatesEXT", GetDisplayIfValid(display),
+                         EGL_FALSE);
+    thread->setSuccess();
+    return EGL_TRUE;
 }
 
 }  // namespace egl

@@ -320,7 +320,7 @@ TEST(IndexedDB, IndexedDBThirdPartyStorageLayout)
     }];
     TestWebKitAPI::Util::run(&done);
     RetainPtr webkitIframeRootDirectory = [NSURL fileURLWithPath:directoryString.get() isDirectory:YES];
-    RetainPtr webkitIframeDatabaseDirectory = [webkitIframeRootDirectory URLByAppendingPathComponent:databaseHash];
+    RetainPtr webkitIframeDatabaseDirectory = [webkitIframeRootDirectory URLByAppendingPathComponent:databaseHash.createNSString().get()];
     RetainPtr webkitIframeDatabaseFile = [webkitIframeDatabaseDirectory URLByAppendingPathComponent:@"IndexedDB.sqlite3"];
 
     done = false;
@@ -365,10 +365,10 @@ TEST(IndexedDB, MigrateThirdPartyDataToGeneralStorageDirectory)
     NSURL *wrongWebkitIframeDatabaseDirectory = [webkitOriginDirectory URLByAppendingPathComponent:@"IndexedDB/iframe__0"];
     NSURL *webkitIframeOriginDirectory = [generalStorageDirectory URLByAppendingPathComponent:@"EAO66s8JvCWNn4D3YQut5pXfiGF_UXNZGvMGN6aKILg/vudvbMlKXj1m6RibnVvc8PdAdcXZsNE6ON_Al7yqOsg"];
     NSURL *webkitIframeOriginFile = [webkitIframeOriginDirectory URLByAppendingPathComponent:@"origin"];
-    NSString *hashedDatabaseName = WebCore::SQLiteFileSystem::computeHashForFileName("IndexedDBThirdPartyFrameHasAccess"_s);
-    NSURL *webkitIframeDatabaseFile= [NSURL fileURLWithPath:[NSString pathWithComponents:@[webkitIframeOriginDirectory.path, @"IndexedDB", hashedDatabaseName, @"IndexedDB.sqlite3"]]];
+    RetainPtr hashedDatabaseName = WebCore::SQLiteFileSystem::computeHashForFileName("IndexedDBThirdPartyFrameHasAccess"_s).createNSString();
+    NSURL *webkitIframeDatabaseFile= [NSURL fileURLWithPath:[NSString pathWithComponents:@[webkitIframeOriginDirectory.path, @"IndexedDB", hashedDatabaseName.get(), @"IndexedDB.sqlite3"]]];
     NSURL *idbDirectory = [NSURL fileURLWithPath:[@"~/Library/WebKit/com.apple.WebKit.TestWebKitAPI/CustomWebsiteData/IndexedDB" stringByExpandingTildeInPath] isDirectory:YES];
-    NSURL *oldWebkitIframeDatabaseDirectory = [NSURL fileURLWithPath:[NSString pathWithComponents:@[idbDirectory.path, @"v1/http_webkit.org_0/iframe__0", hashedDatabaseName]]];
+    NSURL *oldWebkitIframeDatabaseDirectory = [NSURL fileURLWithPath:[NSString pathWithComponents:@[idbDirectory.path, @"v1/http_webkit.org_0/iframe__0", hashedDatabaseName.get()]]];
     NSURL *oldWebkitIframeDatabaseFile = [oldWebkitIframeDatabaseDirectory URLByAppendingPathComponent:@"IndexedDB.sqlite3"];
 
     NSFileManager *fileManager = [NSFileManager defaultManager];

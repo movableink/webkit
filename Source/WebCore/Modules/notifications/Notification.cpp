@@ -36,8 +36,10 @@
 #include "Notification.h"
 
 #include "DedicatedWorkerGlobalScope.h"
+#include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "JSDOMPromiseDeferred.h"
 #include "LocalDOMWindow.h"
@@ -118,7 +120,7 @@ ExceptionOr<Ref<Notification>> Notification::createForServiceWorker(ScriptExecut
 Ref<Notification> Notification::create(ScriptExecutionContext& context, NotificationData&& data)
 {
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-    Options options { data.direction, WTFMove(data.language), WTFMove(data.body), WTFMove(data.tag), WTFMove(data.iconURL), JSC::jsNull(), nullptr, nullptr, data.silent, { }, WTFMove(data.defaultActionURL) };
+    Options options { data.direction, WTFMove(data.language), WTFMove(data.body), WTFMove(data.tag), WTFMove(data.iconURL), JSC::jsNull(), nullptr, nullptr, data.silent, data.navigateURL.string() };
 #else
     Options options { data.direction, WTFMove(data.language), WTFMove(data.body), WTFMove(data.tag), WTFMove(data.iconURL), JSC::jsNull(), nullptr, nullptr, data.silent };
 #endif
@@ -134,8 +136,8 @@ Ref<Notification> Notification::create(ScriptExecutionContext& context, const UR
     Options options;
     if (payload.options) {
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-        options = { payload.options->dir, payload.options->lang, payload.options->body, payload.options->tag, payload.options->icon, JSC::jsNull(), nullptr, nullptr, payload.options->silent, { }, { } };
-        options.defaultActionURL = payload.defaultActionURL;
+        options = { payload.options->dir, payload.options->lang, payload.options->body, payload.options->tag, payload.options->icon, JSC::jsNull(), nullptr, nullptr, payload.options->silent, { } };
+        options.navigate = payload.defaultActionURL.string();
 #else
         options = { payload.options->dir, payload.options->lang, payload.options->body, payload.options->tag, payload.options->icon, JSC::jsNull(), nullptr, nullptr, payload.options->silent };
 #endif
@@ -181,12 +183,10 @@ Notification::Notification(ScriptExecutionContext& context, WTF::UUID identifier
         RELEASE_ASSERT_NOT_REACHED();
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-    if (options.defaultActionURL.isValid())
-        m_defaultActionURL = WTFMove(options.defaultActionURL).isolatedCopy();
-    else if (!options.defaultAction.isEmpty()) {
-        auto defaultActionURL = context.completeURL(WTFMove(options.defaultAction).isolatedCopy());
-        if (defaultActionURL.isValid())
-            m_defaultActionURL = WTFMove(defaultActionURL);
+    if (!options.navigate.isEmpty()) {
+        auto navigate = context.completeURL(WTFMove(options.navigate).isolatedCopy());
+        if (navigate.isValid())
+            m_navigate = WTFMove(navigate);
     }
 #endif
 
@@ -219,8 +219,8 @@ void Notification::stopResourcesLoader()
 
 void Notification::showSoon()
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this] {
-        show();
+    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [](auto& notification) {
+        notification.show();
     });
 }
 
@@ -346,9 +346,9 @@ void Notification::dispatchClickEvent()
     ASSERT(m_notificationSource != NotificationSource::ServiceWorker);
     ASSERT(!isPersistent());
 
-    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this] {
+    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [](auto& notification) {
         WindowFocusAllowedIndicator windowFocusAllowed;
-        dispatchEvent(Event::create(eventNames().clickEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        notification.dispatchEvent(Event::create(eventNames().clickEvent, Event::CanBubble::No, Event::IsCancelable::No));
     });
 }
 
@@ -401,7 +401,7 @@ void Notification::requestPermission(Document& document, RefPtr<NotificationPerm
     auto resolvePromiseAndCallback = [document = Ref { document }, callback = WTFMove(callback), promise = WTFMove(promise)](Permission permission) mutable {
         document->eventLoop().queueTask(TaskSource::DOMManipulation, [callback = WTFMove(callback), promise = WTFMove(promise), permission]() mutable {
             if (callback)
-                callback->handleEvent(permission);
+                callback->invoke(permission);
             promise->resolve<IDLEnumeration<NotificationPermission>>(permission);
         });
     };
@@ -449,7 +449,7 @@ NotificationData Notification::data() const
 
     return {
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-        m_defaultActionURL,
+        m_navigate,
 #else
         { },
 #endif

@@ -205,7 +205,7 @@ void WebAssemblyModuleRecord::initializeImports(JSGlobalObject* globalObject, JS
 
             JSWebAssemblyInstance* calleeInstance = nullptr;
             WasmToWasmImportableFunction::LoadLocation entrypointLoadLocation = nullptr;
-            const uintptr_t* boxedTargetCalleeLoadLocation = nullptr;
+            const CalleeBits* boxedWasmCalleeLoadLocation = &Wasm::NullWasmCallee;
             JSObject* function = jsCast<JSObject*>(value);
 
             // ii. If v is an Exported Function Exotic Object:
@@ -218,11 +218,12 @@ void WebAssemblyModuleRecord::initializeImports(JSGlobalObject* globalObject, JS
                     importedTypeIndex = wasmFunction->typeIndex();
                     calleeInstance = wasmFunction->instance();
                     entrypointLoadLocation = wasmFunction->entrypointLoadLocation();
-                    boxedTargetCalleeLoadLocation = wasmFunction->boxedWasmCalleeLoadLocation();
+                    boxedWasmCalleeLoadLocation = wasmFunction->boxedWasmCalleeLoadLocation();
                 } else {
                     importedTypeIndex = wasmWrapperFunction->typeIndex();
                     // b. Let closure be v.[[Closure]].
                     function = wasmWrapperFunction->function();
+                    boxedWasmCalleeLoadLocation = wasmWrapperFunction->boxedWasmCalleeLoadLocation();
                 }
                 Wasm::TypeIndex expectedTypeIndex = moduleInformation.importFunctionTypeIndices[import.kindIndex];
                 if (!Wasm::isSubtypeIndex(importedTypeIndex, expectedTypeIndex))
@@ -235,9 +236,10 @@ void WebAssemblyModuleRecord::initializeImports(JSGlobalObject* globalObject, JS
             // Note: adding the JSCell to the instance list fulfills closure requirements b. above (the WebAssembly.Instance wil be kept alive) and v. below (the JSFunction).
 
             auto* info = m_instance->importFunctionInfo(import.kindIndex);
+            info->boxedWasmCalleeLoadLocation = boxedWasmCalleeLoadLocation;
             info->targetInstance.setMayBeNull(vm, m_instance.get(), calleeInstance);
-            info->wasmEntrypointLoadLocation = entrypointLoadLocation;
-            info->boxedTargetCalleeLoadLocation = boxedTargetCalleeLoadLocation;
+            info->entrypointLoadLocation = entrypointLoadLocation;
+            info->typeIndex = moduleInformation.importFunctionTypeIndices[import.kindIndex];
             m_instance->importFunction(import.kindIndex).set(vm, m_instance.get(), function);
             break;
         }
@@ -270,7 +272,7 @@ void WebAssemblyModuleRecord::initializeImports(JSGlobalObject* globalObject, JS
                             if (!global.type.isNullable() && value.isNull())
                                 return exception(createJSWebAssemblyLinkError(globalObject, vm, importFailMessage(import, "imported global"_s, "non-null externref cannot be null"_s)));
                             m_instance->setGlobal(import.kindIndex, value);
-                        } else if (Wasm::isFuncref(declaredGlobalType) || (!Options::useWasmGC() && isRefWithTypeIndex(declaredGlobalType))) {
+                        } else if (Wasm::isFuncref(declaredGlobalType)) {
                             WebAssemblyFunction* wasmFunction = nullptr;
                             WebAssemblyWrapperFunction* wasmWrapperFunction = nullptr;
                             value = globalValue->global()->get(globalObject);
@@ -289,8 +291,9 @@ void WebAssemblyModuleRecord::initializeImports(JSGlobalObject* globalObject, JS
 
                             m_instance->setGlobal(import.kindIndex, value);
                         } else {
-                            RELEASE_ASSERT(Options::useWasmGC());
-                            value = Wasm::internalizeExternref(globalValue->global()->get(globalObject));
+                            auto global = globalValue->global()->get(globalObject);
+                            RETURN_IF_EXCEPTION(scope, void());
+                            value = Wasm::internalizeExternref(global);
                             if (!Wasm::TypeInformation::castReference(value, declaredGlobalType.isNullable(), declaredGlobalType.index))
                                 return exception(createJSWebAssemblyLinkError(globalObject, vm, importFailMessage(import, "imported global"_s, "Argument value did not match the reference type"_s)));
                             m_instance->setGlobal(import.kindIndex, value);
@@ -334,7 +337,7 @@ void WebAssemblyModuleRecord::initializeImports(JSGlobalObject* globalObject, JS
                             if (!globalType.isNullable() && value.isNull())
                                 return exception(createJSWebAssemblyLinkError(globalObject, vm, importFailMessage(import, "imported global"_s, "must be a non-null value"_s)));
                             m_instance->setGlobal(import.kindIndex, value);
-                        } else if (Wasm::isFuncref(globalType) || (!Options::useWasmGC() && Wasm::isRefWithTypeIndex(globalType))) {
+                        } else if (Wasm::isFuncref(globalType)) {
                             WebAssemblyFunction* wasmFunction = nullptr;
                             WebAssemblyWrapperFunction* wasmWrapperFunction = nullptr;
                             if (!isWebAssemblyHostFunction(value, wasmFunction, wasmWrapperFunction) && (!globalType.isNullable() || !value.isNull())) {
@@ -350,8 +353,9 @@ void WebAssemblyModuleRecord::initializeImports(JSGlobalObject* globalObject, JS
                             }
 
                             m_instance->setGlobal(import.kindIndex, value);
-                        } else {
-                            RELEASE_ASSERT(Options::useWasmGC());
+                        } else if (Wasm::isExnref(globalType))
+                            return exception(createJSWebAssemblyLinkError(globalObject, vm, importFailMessage(import, "imported global"_s, "cannot be exnref"_s)));
+                        else {
                             value = Wasm::internalizeExternref(value);
                             if (!Wasm::TypeInformation::castReference(value, global.type.isNullable(), global.type.index))
                                 return exception(createJSWebAssemblyLinkError(globalObject, vm, importFailMessage(import, "imported global"_s, "Argument value did not match the reference type"_s)));
@@ -514,11 +518,12 @@ void WebAssemblyModuleRecord::initializeExports(JSGlobalObject* globalObject)
             //     b. Append func to funcs.
             //     c. Return func.
             auto& jsEntrypointCallee = calleeGroup->jsEntrypointCalleeFromFunctionIndexSpace(functionIndexSpace);
-            auto* wasmCallee = calleeGroup->wasmCalleeFromFunctionIndexSpace(functionIndexSpace);
+            auto wasmCallee = calleeGroup->wasmCalleeFromFunctionIndexSpace(functionIndexSpace);
+            ASSERT(wasmCallee);
             Wasm::WasmToWasmImportableFunction::LoadLocation entrypointLoadLocation = calleeGroup->entrypointLoadLocationFromFunctionIndexSpace(functionIndexSpace);
             Wasm::TypeIndex typeIndex = module->typeIndexFromFunctionIndexSpace(functionIndexSpace);
             const auto& signature = Wasm::TypeInformation::getFunctionSignature(typeIndex);
-            WebAssemblyFunction* function = WebAssemblyFunction::create(vm, globalObject, globalObject->webAssemblyFunctionStructure(), signature.argumentCount(), makeString(functionIndexSpace.rawIndex()), m_instance.get(), jsEntrypointCallee, wasmCallee, entrypointLoadLocation, typeIndex, Wasm::TypeInformation::getCanonicalRTT(typeIndex));
+            WebAssemblyFunction* function = WebAssemblyFunction::create(vm, globalObject, globalObject->webAssemblyFunctionStructure(), signature.argumentCount(), makeString(functionIndexSpace.rawIndex()), m_instance.get(), jsEntrypointCallee, *wasmCallee, entrypointLoadLocation, typeIndex, Wasm::TypeInformation::getCanonicalRTT(typeIndex));
             wrapper = function;
         }
 
@@ -572,13 +577,8 @@ void WebAssemblyModuleRecord::initializeExports(JSGlobalObject* globalObject)
                 ASSERT(initType == Wasm::TableInformation::FromRefNull);
             }
 
-            JSWebAssemblyTable* table = JSWebAssemblyTable::tryCreate(globalObject, vm, globalObject->webAssemblyTableStructure(), wasmTable.releaseNonNull());
-            // We should always be able to allocate a JSWebAssemblyTable we've defined.
-            // If it's defined to be too large, we should have thrown a validation error.
-            scope.assertNoException();
-            ASSERT(table);
+            JSWebAssemblyTable* table = JSWebAssemblyTable::create(vm, globalObject->webAssemblyTableStructure(), wasmTable.releaseNonNull());
             m_instance->setTable(vm, i, table);
-            RETURN_IF_EXCEPTION(scope, void());
 
             if (initType != Wasm::TableInformation::Default) {
                 if (!Wasm::tableFill(m_instance.get(), i, 0, initialBitsOrImportNumber, m_instance->table(i)->length()))
@@ -598,7 +598,6 @@ void WebAssemblyModuleRecord::initializeExports(JSGlobalObject* globalObject)
 
                 if (global.initializationType == Wasm::GlobalInformation::FromGlobalImport) {
                     ASSERT(global.initialBits.initialBitsOrImportNumber < m_instance->module().moduleInformation().globals.size());
-                    ASSERT_IMPLIES(!Options::useWasmGC(), global.initialBits.initialBitsOrImportNumber < moduleInformation.firstInternalGlobal);
                     initialVector = m_instance->loadV128Global(global.initialBits.initialBitsOrImportNumber);
                 } else if (global.initializationType == Wasm::GlobalInformation::FromExpression)
                     initialVector = global.initialBits.initialVector;
@@ -612,8 +611,7 @@ void WebAssemblyModuleRecord::initializeExports(JSGlobalObject* globalObject)
                 case Wasm::GlobalInformation::BindingMode::Portable: {
                     ASSERT(global.mutability == Wasm::Mutable);
                     Ref<Wasm::Global> globalRef = Wasm::Global::create(global.type, Wasm::Mutability::Mutable, initialVector);
-                    JSWebAssemblyGlobal* globalValue = JSWebAssemblyGlobal::tryCreate(globalObject, vm, globalObject->webAssemblyGlobalStructure(), WTFMove(globalRef));
-                    scope.assertNoException();
+                    JSWebAssemblyGlobal* globalValue = JSWebAssemblyGlobal::create(vm, globalObject->webAssemblyGlobalStructure(), WTFMove(globalRef));
                     m_instance->linkGlobal(vm, globalIndex, globalValue);
                     break;
                 }
@@ -625,7 +623,6 @@ void WebAssemblyModuleRecord::initializeExports(JSGlobalObject* globalObject)
             uint64_t initialBits = 0;
             if (global.initializationType == Wasm::GlobalInformation::FromGlobalImport) {
                 ASSERT(global.initialBits.initialBitsOrImportNumber < m_instance->module().moduleInformation().globals.size());
-                ASSERT_IMPLIES(!Options::useWasmGC(), global.initialBits.initialBitsOrImportNumber < moduleInformation.firstInternalGlobal);
                 initialBits = m_instance->loadI64Global(global.initialBits.initialBitsOrImportNumber);
             } else if (global.initializationType == Wasm::GlobalInformation::FromRefFunc) {
                 ASSERT(global.initialBits.initialBitsOrImportNumber < moduleInformation.functionIndexSpaceSize());
@@ -651,8 +648,7 @@ void WebAssemblyModuleRecord::initializeExports(JSGlobalObject* globalObject)
                 ASSERT(global.mutability == Wasm::Mutable);
                 // For reference types, set to 0 and set the real value via the instance afterwards.
                 Ref<Wasm::Global> globalRef = Wasm::Global::create(global.type, Wasm::Mutability::Mutable, Wasm::isRefType(global.type) ? 0 : initialBits);
-                JSWebAssemblyGlobal* globalValue = JSWebAssemblyGlobal::tryCreate(globalObject, vm, globalObject->webAssemblyGlobalStructure(), WTFMove(globalRef));
-                scope.assertNoException();
+                JSWebAssemblyGlobal* globalValue = JSWebAssemblyGlobal::create(vm, globalObject->webAssemblyGlobalStructure(), WTFMove(globalRef));
                 m_instance->linkGlobal(vm, globalIndex, globalValue);
                 if (Wasm::isRefType(global.type))
                     m_instance->setGlobal(globalIndex, JSValue::decode(initialBits));
@@ -712,8 +708,7 @@ void WebAssemblyModuleRecord::initializeExports(JSGlobalObject* globalObject)
                         uint64_t initialValue = m_instance->loadI64Global(exp.kindIndex);
                         globalRef = Wasm::Global::create(global.type, global.mutability, initialValue);
                     }
-                    exportedValue = JSWebAssemblyGlobal::tryCreate(globalObject, vm, globalObject->webAssemblyGlobalStructure(), globalRef.releaseNonNull());
-                    scope.assertNoException();
+                    exportedValue = JSWebAssemblyGlobal::create(vm, globalObject->webAssemblyGlobalStructure(), globalRef.releaseNonNull());
                 } else {
                     ASSERT(global.mutability == Wasm::Mutability::Mutable);
                     RefPtr<Wasm::Global> globalRef = m_instance->getGlobalBinding(exp.kindIndex);
@@ -770,9 +765,10 @@ void WebAssemblyModuleRecord::initializeExports(JSGlobalObject* globalObject)
             m_startFunction.set(vm, this, startFunction);
         } else {
             auto& jsEntrypointCallee = calleeGroup->jsEntrypointCalleeFromFunctionIndexSpace(startFunctionIndexSpace);
-            auto* wasmCallee = calleeGroup->wasmCalleeFromFunctionIndexSpace(startFunctionIndexSpace);
+            auto wasmCallee = calleeGroup->wasmCalleeFromFunctionIndexSpace(startFunctionIndexSpace);
+            ASSERT(wasmCallee);
             Wasm::WasmToWasmImportableFunction::LoadLocation entrypointLoadLocation = calleeGroup->entrypointLoadLocationFromFunctionIndexSpace(startFunctionIndexSpace);
-            WebAssemblyFunction* function = WebAssemblyFunction::create(vm, globalObject, globalObject->webAssemblyFunctionStructure(), signature.argumentCount(), "start"_s, m_instance.get(), jsEntrypointCallee, wasmCallee, entrypointLoadLocation, typeIndex, Wasm::TypeInformation::getCanonicalRTT(typeIndex));
+            WebAssemblyFunction* function = WebAssemblyFunction::create(vm, globalObject, globalObject->webAssemblyFunctionStructure(), signature.argumentCount(), "start"_s, m_instance.get(), jsEntrypointCallee, *wasmCallee, entrypointLoadLocation, typeIndex, Wasm::TypeInformation::getCanonicalRTT(typeIndex));
             m_startFunction.set(vm, this, function);
         }
     }
@@ -784,7 +780,7 @@ JSValue WebAssemblyModuleRecord::evaluateConstantExpression(JSGlobalObject* glob
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto evalResult = Wasm::evaluateExtendedConstExpr(constantExpression, m_instance.get(), info, expectedType);
-    if (UNLIKELY(!evalResult.has_value()))
+    if (!evalResult.has_value()) [[unlikely]]
         return JSValue(throwException(globalObject, scope, createJSWebAssemblyRuntimeError(globalObject, vm, makeString("couldn't evaluate constant expression: "_s, evalResult.error()))));
 
     result = evalResult.value();
@@ -874,7 +870,7 @@ JSValue WebAssemblyModuleRecord::evaluate(JSGlobalObject* globalObject)
     // Validation of all element ranges comes before all Table and Memory initialization.
     forEachActiveElement([&](const Wasm::Element& element, uint32_t tableIndex, uint32_t elementIndex) {
         int64_t lastWrittenIndex = static_cast<int64_t>(elementIndex) + static_cast<int64_t>(element.initTypes.size()) - 1;
-        if (UNLIKELY(lastWrittenIndex >= m_instance->table(tableIndex)->length())) {
+        if (lastWrittenIndex >= m_instance->table(tableIndex)->length()) [[unlikely]] {
             exception = JSValue(throwException(globalObject, scope, createJSWebAssemblyRuntimeError(globalObject, vm, "Element is trying to set an out of bounds table index"_s)));
             return IterationStatus::Done;
         }
@@ -883,16 +879,16 @@ JSValue WebAssemblyModuleRecord::evaluate(JSGlobalObject* globalObject)
         return IterationStatus::Continue;
     });
 
-    if (UNLIKELY(exception))
+    if (exception) [[unlikely]]
         return exception.value();
 
     // Validation of all segment ranges comes before all Table and Memory initialization.
     forEachActiveDataSegment([&](uint8_t* memory, uint64_t sizeInBytes, const Wasm::Segment::Ptr& segment, uint32_t offset) {
-        if (UNLIKELY(sizeInBytes < segment->sizeInBytes)) {
+        if (sizeInBytes < segment->sizeInBytes) [[unlikely]] {
             exception = dataSegmentFail(globalObject, vm, scope, sizeInBytes, segment->sizeInBytes, offset, ", segment is too big"_s);
             return IterationStatus::Done;
         }
-        if (UNLIKELY(offset > sizeInBytes - segment->sizeInBytes)) {
+        if (offset > sizeInBytes - segment->sizeInBytes) [[unlikely]] {
             exception = dataSegmentFail(globalObject, vm, scope, sizeInBytes, segment->sizeInBytes, offset, ", segment writes outside of memory"_s);
             return IterationStatus::Done;
         }
@@ -905,7 +901,7 @@ JSValue WebAssemblyModuleRecord::evaluate(JSGlobalObject* globalObject)
         return IterationStatus::Continue;
     });
 
-    if (UNLIKELY(exception))
+    if (exception) [[unlikely]]
         return exception.value();
 
     ASSERT(!exception);

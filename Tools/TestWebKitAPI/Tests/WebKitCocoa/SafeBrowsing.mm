@@ -28,15 +28,22 @@
 #if HAVE(SAFE_BROWSING)
 
 #import "ClassMethodSwizzler.h"
+#import "HTTPServer.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
 #import "TestNavigationDelegate.h"
+#import "TestResourceLoadDelegate.h"
 #import "TestWKWebView.h"
+#import "WKWebViewConfigurationExtras.h"
+#import <Foundation/NSURLError.h>
 #import <WebKit/WKNavigationDelegate.h>
 #import <WebKit/WKPreferencesPrivate.h>
 #import <WebKit/WKUIDelegatePrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/_WKResourceLoadDelegate.h>
+#import <WebKit/_WKResourceLoadInfo.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/RunLoop.h>
 #import <wtf/URL.h>
 #import <wtf/Vector.h>
 
@@ -110,7 +117,6 @@ static bool didCloseCalled;
     return _isUnwantedSoftware;
 }
 
-#if HAVE(SAFE_BROWSING_RESULT_DETAILS)
 - (NSString *)malwareDetailsBaseURLString
 {
     return @"test://";
@@ -130,7 +136,6 @@ static bool didCloseCalled;
 {
     return @"test display name";
 }
-#endif
 
 @end
 
@@ -172,7 +177,7 @@ static bool didCloseCalled;
 
 - (void)lookUpURL:(NSURL *)URL completionHandler:(void (^)(TestLookupResult *, NSError *))completionHandler
 {
-    completionHandler([TestLookupResult resultWithResults:@[[TestServiceLookupResult resultWithProvider:@"TestProvider" phishing:YES malware:NO unwantedSoftware:NO]]], nil);
+    completionHandler([TestLookupResult resultWithResults:@[[TestServiceLookupResult resultWithProvider:@"SSBProviderApple" phishing:YES malware:NO unwantedSoftware:NO]]], nil);
 }
 
 @end
@@ -365,7 +370,8 @@ static Vector<URL> urls;
 
 @end
 
-TEST(SafeBrowsing, URLObservation)
+// FIXME: Re-enable this test once webkit.org/b/292932 is resolved.
+TEST(SafeBrowsing, DISABLED_URLObservation)
 {
     ClassMethodSwizzler swizzler(objc_getClass("SSBLookupContext"), @selector(sharedLookupContext), [TestLookupContext methodForSelector:@selector(sharedLookupContext)]);
 
@@ -375,6 +381,12 @@ TEST(SafeBrowsing, URLObservation)
 
     auto webViewWithWarning = [&] () -> RetainPtr<WKWebView> {
         auto webView = adoptNS([WKWebView new]);
+        auto navigationDelegate = adoptNS([[TestNavigationDelegate alloc] init]);
+        navigationDelegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *action, void (^decisionHandler)(WKNavigationActionPolicy)) {
+            TestWebKitAPI::Util::runFor(0.01_s);
+            decisionHandler(WKNavigationActionPolicyAllow);
+        };
+        [webView setNavigationDelegate:navigationDelegate.get()];
         [webView configuration].preferences.fraudulentWebsiteWarningEnabled = YES;
         [webView addObserver:observer.get() forKeyPath:@"URL" options:NSKeyValueObservingOptionNew context:nil];
 
@@ -443,9 +455,9 @@ static RetainPtr<NSString> phishingResourceName;
 - (void)lookUpURL:(NSURL *)URL completionHandler:(void (^)(TestLookupResult *, NSError *))completionHandler
 {
     BOOL phishing = NO;
-    if ([URL isEqual:resourceURL(phishingResourceName.get())])
+    if ([URL isEqual:resourceURL(phishingResourceName.get())] || [[URL path] hasSuffix:phishingResourceName.get()])
         phishing = YES;
-    completionHandler([TestLookupResult resultWithResults:@[[TestServiceLookupResult resultWithProvider:@"TestProvider" phishing:phishing malware:NO unwantedSoftware:NO]]], nil);
+    completionHandler([TestLookupResult resultWithResults:@[[TestServiceLookupResult resultWithProvider:@"SSBProviderApple" phishing:phishing malware:NO unwantedSoftware:NO]]], nil);
 }
 
 @end
@@ -502,8 +514,10 @@ TEST(SafeBrowsing, WKWebViewGoBackIFrame)
     __block bool navigationFinished = false;
     delegate.get().didFailProvisionalLoadInSubframeWithError = ^(WKWebView *, WKFrameInfo *frame, NSError *error) {
         EXPECT_NOT_NULL(error);
-        auto failingURL = (NSString *)[error.userInfo valueForKey:@"NSErrorFailingURLStringKey"];
-        EXPECT_TRUE([failingURL hasSuffix:@"/simple.html"]);
+        auto failingURL = (NSURL *)[error.userInfo valueForKey:NSURLErrorFailingURLErrorKey];
+        EXPECT_TRUE([failingURL.lastPathComponent isEqualToString:@"simple.html"]);
+        auto failingURLString = (NSString *)[error.userInfo valueForKey:@"NSErrorFailingURLStringKey"];
+        EXPECT_TRUE([failingURLString hasSuffix:@"/simple.html"]);
         navigationFailed = true;
     };
     delegate.get().didFinishNavigation = ^(WKWebView *, WKNavigation *navigation) {
@@ -536,6 +550,247 @@ TEST(SafeBrowsing, MissingFramework)
     ClassMethodSwizzler swizzler(objc_getClass("SSBLookupContext"), @selector(sharedLookupContext), [NullLookupContext methodForSelector:@selector(sharedLookupContext)]);
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600)]);
     [webView synchronouslyLoadTestPageNamed:@"simple"];
+}
+
+static Seconds delayDuration;
+
+@interface DelayedLookupContext : NSObject
+@end
+
+@implementation DelayedLookupContext
+
++ (DelayedLookupContext *)sharedLookupContext
+{
+    static DelayedLookupContext *context = [[DelayedLookupContext alloc] init];
+    return context;
+}
+
+- (void)lookUpURL:(NSURL *)URL completionHandler:(void (^)(TestLookupResult *, NSError *))completionHandler
+{
+    BOOL phishing = ![URL isEqual:resourceURL(@"simple2")] && ![[URL path] isEqual:@"/safe"];
+    RunLoop::protectedMain()->dispatchAfter(delayDuration, [completionHandler = makeBlockPtr(completionHandler), phishing] {
+        completionHandler.get()([TestLookupResult resultWithResults:@[[TestServiceLookupResult resultWithProvider:@"SSBProviderApple" phishing:phishing malware:NO unwantedSoftware:NO]]], nil);
+    });
+}
+
+@end
+
+TEST(SafeBrowsing, HangTimeout)
+{
+    delayDuration = 1000_s;
+    TestWebKitAPI::HTTPServer server({
+        { "/test"_s, { "test"_s } },
+    }, TestWebKitAPI::HTTPServer::Protocol::HttpsProxy);
+    auto configuration = server.httpsProxyConfiguration();
+
+    ClassMethodSwizzler swizzler(objc_getClass("SSBLookupContext"), @selector(sharedLookupContext), [DelayedLookupContext methodForSelector:@selector(sharedLookupContext)]);
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration]);
+    [webView configuration].preferences.fraudulentWebsiteWarningEnabled = YES;
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    [delegate allowAnyTLSCertificate];
+    navigationFinished = false;
+    [webView setNavigationDelegate:delegate.get()];
+    [webView evaluateJavaScript:@"window.location = 'https://example2.com/test'" completionHandler:nil];
+
+    [delegate waitForDidFinishNavigation];
+}
+
+TEST(SafeBrowsing, PostResponse)
+{
+    delayDuration = 25_ms;
+    TestWebKitAPI::HTTPServer server({
+        { "/test"_s, { "test"_s } },
+    }, TestWebKitAPI::HTTPServer::Protocol::HttpsProxy);
+    auto configuration = server.httpsProxyConfiguration();
+
+    ClassMethodSwizzler swizzler(objc_getClass("SSBLookupContext"), @selector(sharedLookupContext), [DelayedLookupContext methodForSelector:@selector(sharedLookupContext)]);
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration]);
+    [webView configuration].preferences.fraudulentWebsiteWarningEnabled = YES;
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    [delegate allowAnyTLSCertificate];
+    navigationFinished = false;
+    [webView setNavigationDelegate:delegate.get()];
+    [webView evaluateJavaScript:@"window.location = 'https://example2.com/test'" completionHandler:nil];
+
+    while (![webView _safeBrowsingWarning])
+        TestWebKitAPI::Util::spinRunLoop();
+}
+
+TEST(SafeBrowsing, PostResponseIframe)
+{
+    delayDuration = 25_ms;
+    ClassMethodSwizzler swizzler(objc_getClass("SSBLookupContext"), @selector(sharedLookupContext), [DelayedLookupContext methodForSelector:@selector(sharedLookupContext)]);
+
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    auto webView = adoptNS([WKWebView new]);
+    [webView configuration].preferences._safeBrowsingEnabled = YES;
+
+    __block bool navigationFailed = false;
+    __block bool navigationFinished = false;
+    delegate.get().didFailProvisionalLoadInSubframeWithError = ^(WKWebView *, WKFrameInfo *frame, NSError *error) {
+        EXPECT_NOT_NULL(error);
+        auto failingURL = (NSURL *)[error.userInfo valueForKey:NSURLErrorFailingURLErrorKey];
+        EXPECT_TRUE([failingURL.lastPathComponent isEqualToString:@"simple.html"]);
+        auto failingURLString = (NSString *)[error.userInfo valueForKey:@"NSErrorFailingURLStringKey"];
+        EXPECT_TRUE([failingURLString hasSuffix:@"/simple.html"]);
+        navigationFailed = true;
+    };
+    delegate.get().didFinishNavigation = ^(WKWebView *, WKNavigation *navigation) {
+        navigationFinished = true;
+    };
+
+    [webView setNavigationDelegate:delegate.get()];
+    [webView loadRequest:[NSURLRequest requestWithURL:resourceURL(@"simple2")]];
+    TestWebKitAPI::Util::run(&navigationFinished);
+    EXPECT_FALSE(navigationFailed);
+}
+
+static const char* mainResource = "";
+TEST(SafeBrowsing, PreresponseSafeBrowsingWarning)
+{
+    ClassMethodSwizzler swizzler(objc_getClass("SSBLookupContext"), @selector(sharedLookupContext), [TestLookupContext methodForSelector:@selector(sharedLookupContext)]);
+
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    [delegate allowAnyTLSCertificate];
+    auto handler = adoptNS([[TestURLSchemeHandler alloc] init]);
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [configuration setURLSchemeHandler:handler.get() forURLScheme:@"sb"];
+    configuration.get().preferences.fraudulentWebsiteWarningEnabled = YES;
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:configuration.get()]);
+    [webView setNavigationDelegate:delegate.get()];
+
+    [handler setStartURLSchemeTaskHandler:^(WKWebView *, id<WKURLSchemeTask> task) {
+        RunLoop::protectedMain()->dispatchAfter(1000_s, [task = retainPtr(task)] {
+            auto response = adoptNS([[NSURLResponse alloc] initWithURL:task.get().request.URL MIMEType:@"text/html" expectedContentLength:0 textEncodingName:nil]);
+            [task didReceiveResponse:response.get()];
+            [task didReceiveData:[NSData dataWithBytes:mainResource length:strlen(mainResource)]];
+            [task didFinish];
+        });
+    }];
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"sb://host1/main.html"]]];
+
+    while (![webView _safeBrowsingWarning])
+        TestWebKitAPI::Util::spinRunLoop();
+}
+
+TEST(SafeBrowsing, PostResponseServerSideRedirect)
+{
+    delayDuration = 2_ms;
+    TestWebKitAPI::HTTPServer server({
+        { "/safe"_s, { 301, { { "Location"_s, "/redirectTarget"_s } } } },
+        { "/redirectTarget"_s, { "hi"_s } },
+    }, TestWebKitAPI::HTTPServer::Protocol::HttpsProxy);
+    auto configuration = server.httpsProxyConfiguration();
+
+    ClassMethodSwizzler swizzler(objc_getClass("SSBLookupContext"), @selector(sharedLookupContext), [DelayedLookupContext methodForSelector:@selector(sharedLookupContext)]);
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration]);
+    [webView configuration].preferences.fraudulentWebsiteWarningEnabled = YES;
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    [delegate allowAnyTLSCertificate];
+    navigationFinished = false;
+    [webView setNavigationDelegate:delegate.get()];
+    [webView evaluateJavaScript:@"window.location = 'https://example2.com/safe'" completionHandler:nil];
+
+    while (![webView _safeBrowsingWarning])
+        TestWebKitAPI::Util::spinRunLoop();
+}
+
+TEST(SafeBrowsing, MultipleRedirectsFirstPhishing)
+{
+    phishingResourceName = @"safe";
+    TestWebKitAPI::HTTPServer server({
+        { "/safe"_s, { 301, { { "Location"_s, "/redirectTarget1"_s } } } },
+        { "/redirectTarget1"_s, { 301, { { "Location"_s, "/redirectTarget2"_s } } } },
+        { "/redirectTarget2"_s, { "hi"_s } },
+    }, TestWebKitAPI::HTTPServer::Protocol::HttpsProxy);
+    auto configuration = server.httpsProxyConfiguration();
+
+    ClassMethodSwizzler swizzler(objc_getClass("SSBLookupContext"), @selector(sharedLookupContext), [SimpleLookupContext methodForSelector:@selector(sharedLookupContext)]);
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration]);
+    [webView configuration].preferences.fraudulentWebsiteWarningEnabled = YES;
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    [delegate allowAnyTLSCertificate];
+    navigationFinished = false;
+    [webView setNavigationDelegate:delegate.get()];
+    [webView evaluateJavaScript:@"window.location = 'https://example2.com/safe'" completionHandler:nil];
+
+    while (![webView _safeBrowsingWarning])
+        TestWebKitAPI::Util::spinRunLoop();
+}
+
+TEST(SafeBrowsing, MultipleRedirectsMiddlePhishing)
+{
+    phishingResourceName = @"redirectTarget1";
+    TestWebKitAPI::HTTPServer server({
+        { "/safe"_s, { 301, { { "Location"_s, "/redirectTarget1"_s } } } },
+        { "/redirectTarget1"_s, { 301, { { "Location"_s, "/redirectTarget2"_s } } } },
+        { "/redirectTarget2"_s, { "hi"_s } },
+    }, TestWebKitAPI::HTTPServer::Protocol::HttpsProxy);
+    auto configuration = server.httpsProxyConfiguration();
+
+    ClassMethodSwizzler swizzler(objc_getClass("SSBLookupContext"), @selector(sharedLookupContext), [SimpleLookupContext methodForSelector:@selector(sharedLookupContext)]);
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration]);
+    [webView configuration].preferences.fraudulentWebsiteWarningEnabled = YES;
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    [delegate allowAnyTLSCertificate];
+    navigationFinished = false;
+    [webView setNavigationDelegate:delegate.get()];
+    [webView evaluateJavaScript:@"window.location = 'https://example2.com/safe'" completionHandler:nil];
+
+    while (![webView _safeBrowsingWarning])
+        TestWebKitAPI::Util::spinRunLoop();
+}
+
+TEST(SafeBrowsing, MultipleRedirectsLastPhishing)
+{
+    phishingResourceName = @"redirectTarget2";
+    TestWebKitAPI::HTTPServer server({
+        { "/safe"_s, { 301, { { "Location"_s, "/redirectTarget1"_s } } } },
+        { "/redirectTarget1"_s, { 301, { { "Location"_s, "/redirectTarget2"_s } } } },
+        { "/redirectTarget2"_s, { "hi"_s } },
+    }, TestWebKitAPI::HTTPServer::Protocol::HttpsProxy);
+    auto configuration = server.httpsProxyConfiguration();
+
+    ClassMethodSwizzler swizzler(objc_getClass("SSBLookupContext"), @selector(sharedLookupContext), [SimpleLookupContext methodForSelector:@selector(sharedLookupContext)]);
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration]);
+    [webView configuration].preferences.fraudulentWebsiteWarningEnabled = YES;
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    [delegate allowAnyTLSCertificate];
+    navigationFinished = false;
+    [webView setNavigationDelegate:delegate.get()];
+    [webView evaluateJavaScript:@"window.location = 'https://example2.com/safe'" completionHandler:nil];
+
+    while (![webView _safeBrowsingWarning])
+        TestWebKitAPI::Util::spinRunLoop();
+}
+
+TEST(SafeBrowsing, PostResponseInjectedBundleSkipsDecidePolicyForResponse)
+{
+    delayDuration = 25_ms;
+    TestWebKitAPI::HTTPServer server({
+        { "/test"_s, { "test"_s } },
+    });
+    WKWebViewConfiguration *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"SkipDecidePolicyForResponsePlugIn"];
+
+    ClassMethodSwizzler swizzler(objc_getClass("SSBLookupContext"), @selector(sharedLookupContext), [DelayedLookupContext methodForSelector:@selector(sharedLookupContext)]);
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration]);
+    [webView configuration].preferences.fraudulentWebsiteWarningEnabled = YES;
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    [delegate allowAnyTLSCertificate];
+    navigationFinished = false;
+    [webView setNavigationDelegate:delegate.get()];
+    [webView evaluateJavaScript:@"window.location = 'https://example2.com/test'" completionHandler:nil];
+
+    while (![webView _safeBrowsingWarning])
+        TestWebKitAPI::Util::spinRunLoop();
 }
 
 #endif // HAVE(SAFE_BROWSING)

@@ -37,7 +37,6 @@ PASS RTCEncodedVideoFrame interface: existence and properties of interface proto
 PASS RTCEncodedVideoFrame interface: existence and properties of interface prototype object's "constructor" property
 PASS RTCEncodedVideoFrame interface: existence and properties of interface prototype object's @@unscopables property
 PASS RTCEncodedVideoFrame interface: attribute type
-PASS RTCEncodedVideoFrame interface: attribute timestamp
 PASS RTCEncodedVideoFrame interface: attribute data
 PASS RTCEncodedVideoFrame interface: operation getMetadata()
 PASS RTCEncodedAudioFrame interface: existence and properties of interface object
@@ -46,7 +45,6 @@ PASS RTCEncodedAudioFrame interface object name
 PASS RTCEncodedAudioFrame interface: existence and properties of interface prototype object
 PASS RTCEncodedAudioFrame interface: existence and properties of interface prototype object's "constructor" property
 PASS RTCEncodedAudioFrame interface: existence and properties of interface prototype object's @@unscopables property
-PASS RTCEncodedAudioFrame interface: attribute timestamp
 PASS RTCEncodedAudioFrame interface: attribute data
 PASS RTCEncodedAudioFrame interface: operation getMetadata()
 PASS RTCTransformEvent interface: existence and properties of interface object
@@ -57,6 +55,7 @@ PASS RTCRtpScriptTransform interface object name
 PASS RTCRtpScriptTransform interface: existence and properties of interface prototype object
 PASS RTCRtpScriptTransform interface: existence and properties of interface prototype object's "constructor" property
 PASS RTCRtpScriptTransform interface: existence and properties of interface prototype object's @@unscopables property
+PASS KeyFrameRequestEvent interface: existence and properties of interface object
 PASS RTCRtpSender interface: attribute transform
 FAIL RTCRtpSender interface: operation generateKeyFrame(optional sequence<DOMString>) assert_own_property: interface prototype object missing non-static operation expected property "generateKeyFrame" missing
 PASS RTCRtpSender interface: new RTCPeerConnection().addTransceiver('audio').sender must inherit property "transform" with the proper type

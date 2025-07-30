@@ -30,7 +30,6 @@
 
 @interface AppDelegate : NSObject <NSApplicationDelegate>
 + (instancetype)sharedAppDelegate;
-@property (nonatomic, strong) NSWindow *window;
 @end
 
 @implementation AppDelegate
@@ -43,15 +42,6 @@
         sharedAppDelegate = [[AppDelegate alloc] init];
     });
     return sharedAppDelegate;
-}
-
-- (void)applicationDidFinishLaunching:(NSNotification *)notification
-{
-    NSWindow *window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 800, 600) styleMask:NSWindowStyleMaskTitled backing:NSBackingStoreBuffered defer:NO];
-    window.title = @"TestWebKitAPI";
-    [window makeKeyAndOrderFront:nil];
-
-    self.window = window;
 }
 
 @end

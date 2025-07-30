@@ -74,6 +74,9 @@
 
 // Fails on 451.48 driver version
 40644748 D3D11 NVIDIA : dEQP-GLES3.functional.shaders.texture_functions.texturesize.* = FAIL
+// Fails on 546.01 driver version
+42267037 D3D11 NVIDIA : dEQP-GLES3.functional.rasterization.fbo.rbo_multisample_max.interpolation.lines = FAIL
+42267037 D3D11 NVIDIA : dEQP-GLES3.functional.rasterization.fbo.rbo_multisample_max.primitives.lines = FAIL
 
 42264508 WIN D3D11 NVIDIA : dEQP-GLES3.functional.texture.specification.texsubimage2d_pbo.pbo_bounds_2d = FAIL
 
@@ -85,6 +88,9 @@
 42262131 D3D9 : dEQP-GLES3.functional.attribute_location.bind_aliasing.max_cond* = FAIL
 42262131 D3D11 : dEQP-GLES3.functional.attribute_location.bind_aliasing.cond* = FAIL
 42262131 D3D11 : dEQP-GLES3.functional.attribute_location.bind_aliasing.max_cond* = FAIL
+
+// D3D11's depth component 32 does not have enough precision
+364069034 D3D11 : dEQP-GLES3.functional.fbo.completeness.renderable.texture.depth.depth_component32 = FAIL
 
 // Windows and Linux failures
 42260101 LINUX : dEQP-GLES3.functional.texture.mipmap.2d.projected.* = FAIL
@@ -233,6 +239,9 @@
 40096462 MAC INTEL : dEQP-GLES3.functional.fbo.color.repeated_clear.sample.tex2d.* = FAIL
 
 // Linux only failures
+
+388052193 LINUX UBSAN : dEQP-GLES3.functional.fragment_ops.interaction.basic_shader.* = SKIP
+
 
 // While loops with 'continue' seem flaky on Linux. (Possibly all GL renderers)
 42260333 LINUX OPENGL : dEQP-GLES3.functional.shaders.loops.while_constant_iterations.conditional_continue_vertex = FAIL
@@ -823,6 +832,53 @@ b/267953710 GALAXYS22 VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attrib
 42266598 GALAXYS23 VULKAN : dEQP-GLES3.functional.shaders.random.texture.* = SKIP
 42266598 GALAXYS23 VULKAN : dEQP-GLES3.functional.shaders.random.trigonometric.fragment.* = SKIP
 
+// Samsung Galaxy S24 (Xclipse)
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.draw.random.118 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.draw.random.124 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.draw.random.136 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.draw.random.138 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.first.int2_10_10_10.first24_offset16_stride32_quads256 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.first.int2_10_10_10.first24_offset16_stride32_quads5 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.first.int2_10_10_10.first24_offset16_stride8_quads256 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.first.int2_10_10_10.first24_offset16_stride8_quads5 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.first.int2_10_10_10.first6_offset16_stride32_quads256 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.first.int2_10_10_10.first6_offset16_stride32_quads5 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.first.int2_10_10_10.first6_offset16_stride8_quads256 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.first.int2_10_10_10.first6_offset16_stride8_quads5 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.normalize.int2_10_10_10.components4_quads1 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.normalize.int2_10_10_10.components4_quads256 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.normalize.usigned_int2_10_10_10.components4_quads1 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.normalize.usigned_int2_10_10_10.components4_quads256 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.offset.int2_10_10_10.offset32_stride32_quads1 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.offset.int2_10_10_10.offset32_stride32_quads256 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.offset.int2_10_10_10.offset32_stride4_quads1 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.offset.int2_10_10_10.offset32_stride4_quads256 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.offset.int2_10_10_10.offset4_stride32_quads1 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.offset.int2_10_10_10.offset4_stride32_quads256 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.offset.int2_10_10_10.offset4_stride4_quads1 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.offset.int2_10_10_10.offset4_stride4_quads256 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.output_types.int2_10_10_10.components4_vec2_quads1 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.output_types.int2_10_10_10.components4_vec2_quads256 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.output_types.int2_10_10_10.components4_vec3_quads1 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.output_types.int2_10_10_10.components4_vec3_quads256 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.output_types.int2_10_10_10.components4_vec4_quads1 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.output_types.int2_10_10_10.components4_vec4_quads256 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.output_types.usigned_int2_10_10_10.components4_vec2_quads1 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.output_types.usigned_int2_10_10_10.components4_vec2_quads256 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.output_types.usigned_int2_10_10_10.components4_vec3_quads1 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.output_types.usigned_int2_10_10_10.components4_vec3_quads256 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.output_types.usigned_int2_10_10_10.components4_vec4_quads1 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.output_types.usigned_int2_10_10_10.components4_vec4_quads256 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.strides.int2_10_10_10.buffer_stride16_components4_quads1 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.strides.int2_10_10_10.buffer_stride16_components4_quads256 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.strides.int2_10_10_10.buffer_stride32_components4_quads1 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.strides.int2_10_10_10.buffer_stride32_components4_quads256 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.strides.int2_10_10_10.user_ptr_stride16_components4_quads1 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.strides.int2_10_10_10.user_ptr_stride16_components4_quads256 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.strides.int2_10_10_10.user_ptr_stride17_components4_quads256 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.strides.int2_10_10_10.user_ptr_stride32_components4_quads1 = SKIP
+b/410630704 GALAXYS24EXYNOS VULKAN : dEQP-GLES3.functional.vertex_arrays.single_attribute.strides.int2_10_10_10.user_ptr_stride32_components4_quads256 = SKIP
+
 // Snapdragon 8 Gen3 Mobile Reference Device
 b/328156792 PINEAPPLE VULKAN : dEQP-GLES3.functional.fbo.blit.depth_stencil.*stencil* = SKIP
 b/328156792 PINEAPPLE VULKAN : dEQP-GLES3.functional.fbo.msaa.*_samples.*stencil* = SKIP
@@ -860,7 +916,6 @@ b/328156792 PINEAPPLE VULKAN : dEQP-GLES3.functional.uniform_api.value.assigned.
 42262773 VULKAN : dEQP-GLES3.functional.transform_feedback.random.* = FAIL
 
 // BGRA failures
-42267264 : dEQP-GLES3.functional.fbo.completeness.renderable.renderbuffer*bgra = FAIL
 42267264 MAC : dEQP-GLES3.functional.texture.filtering.2d_array.formats.bgra* = FAIL
 
 // Tests failing on SwS due to ES 3.2 being enabled for testing regardless of support.

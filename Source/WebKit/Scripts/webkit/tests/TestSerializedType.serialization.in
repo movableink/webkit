@@ -353,3 +353,13 @@ NSNull wrapped by CoreIPCNull
     bool bottom();
     bool left();
 }
+
+using WebCore::ConditionalVariant = Variant<
+    int,
+#if USE(CHAR)
+    char,
+#endif
+    double
+>;
+
+using WebCore::NonConditionalVariant = Variant<int, double>

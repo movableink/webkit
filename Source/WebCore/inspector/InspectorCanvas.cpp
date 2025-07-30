@@ -89,7 +89,6 @@
 #include <JavaScriptCore/IdentifiersFactory.h>
 #include <JavaScriptCore/ScriptCallStackFactory.h>
 #include <JavaScriptCore/TypedArrays.h>
-#include <variant>
 #include <wtf/Function.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Scope.h>
@@ -149,7 +148,7 @@ JSC::JSValue InspectorCanvas::resolveContext(JSC::JSGlobalObject* exec)
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-HashSet<Element*> InspectorCanvas::clientNodes() const
+UncheckedKeyHashSet<Element*> InspectorCanvas::clientNodes() const
 {
     return m_context->canvasBase().cssCanvasClients();
 }
@@ -1264,7 +1263,7 @@ Ref<Inspector::Protocol::Recording::InitialState> InspectorCanvas::buildInitialS
             else if (auto canvasPattern = state.strokeStyle.canvasPattern())
                 strokeStyleIndex = indexForData(canvasPattern);
             else
-                strokeStyleIndex = indexForData(state.strokeStyle.color());
+                strokeStyleIndex = indexForData(state.strokeStyle.colorString());
             statePayload->setInteger(stringIndexForKey("strokeStyle"_s), strokeStyleIndex);
 
             int fillStyleIndex;
@@ -1273,7 +1272,7 @@ Ref<Inspector::Protocol::Recording::InitialState> InspectorCanvas::buildInitialS
             else if (auto canvasPattern = state.fillStyle.canvasPattern())
                 fillStyleIndex = indexForData(canvasPattern);
             else
-                fillStyleIndex = indexForData(state.fillStyle.color());
+                fillStyleIndex = indexForData(state.fillStyle.colorString());
             statePayload->setInteger(stringIndexForKey("fillStyle"_s), fillStyleIndex);
 
             statePayload->setBoolean(stringIndexForKey("imageSmoothingEnabled"_s), state.imageSmoothingEnabled);
@@ -1395,12 +1394,8 @@ Ref<JSON::ArrayOf<JSON::Value>> InspectorCanvas::buildArrayForCanvasPattern(cons
 
 Ref<JSON::ArrayOf<JSON::Value>> InspectorCanvas::buildArrayForImageData(const ImageData& imageData)
 {
-    auto data = JSON::ArrayOf<int>::create();
-    for (size_t i = 0; i < imageData.data().length(); ++i)
-        data->addItem(imageData.data().item(i));
-
     auto array = JSON::ArrayOf<JSON::Value>::create();
-    array->addItem(WTFMove(data));
+    array->addItem(imageData.data().copyToJSONArray());
     array->addItem(imageData.width());
     array->addItem(imageData.height());
     return array;

@@ -35,6 +35,9 @@
 			{"value": "are constant failures"},
 			{"value": "tests consistently failing"}
 		],
+		"contents": [
+			{"value": "unreviewed test gardening"}
+		],
 		"paths": [
 			"LayoutTests/",
 			"Tools/TestWebKitAPI"

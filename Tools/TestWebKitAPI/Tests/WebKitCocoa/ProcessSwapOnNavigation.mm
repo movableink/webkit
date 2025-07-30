@@ -46,6 +46,7 @@
 #import <WebKit/WKURLSchemeHandler.h>
 #import <WebKit/WKURLSchemeTaskPrivate.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
+#import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/WKWebViewPrivateForTesting.h>
 #import <WebKit/WKWebpagePreferences.h>
 #import <WebKit/WKWebpagePreferencesPrivate.h>
@@ -64,6 +65,7 @@
 #import <wtf/RetainPtr.h>
 #import <wtf/RunLoop.h>
 #import <wtf/Vector.h>
+#import <wtf/cocoa/SpanCocoa.h>
 #import <wtf/text/MakeString.h>
 #import <wtf/text/StringHash.h>
 #import <wtf/text/WTFString.h>
@@ -330,7 +332,7 @@ static RetainPtr<WKWebView> createdWebView;
 
 - (void)addMappingFromURLString:(NSString *)urlString toData:(const char*)data
 {
-    _dataMappings.set(urlString, [NSData dataWithBytesNoCopy:(void*)data length:strlen(data) freeWhenDone:NO]);
+    _dataMappings.set(urlString, toNSDataNoCopy(unsafeSpan8(data), FreeWhenDone::No));
 }
 
 - (void)setShouldRespondAsynchronously:(BOOL)value
@@ -356,18 +358,18 @@ static RetainPtr<WKWebView> createdWebView;
         }).get());
     };
 
-    NSURL *finalURL = task.request.URL;
+    RetainPtr<NSURL> finalURL = task.request.URL;
     auto target = _redirects.get(task.request.URL.absoluteString);
     if (!target.isEmpty()) {
-        auto redirectResponse = adoptNS([[NSURLResponse alloc] initWithURL:task.request.URL MIMEType:nil expectedContentLength:0 textEncodingName:nil]);
+        RetainPtr redirectResponse = adoptNS([[NSURLResponse alloc] initWithURL:task.request.URL MIMEType:nil expectedContentLength:0 textEncodingName:nil]);
 
-        finalURL = [NSURL URLWithString:(NSString *)target];
-        auto request = adoptNS([[NSURLRequest alloc] initWithURL:finalURL]);
+        finalURL = adoptNS([[NSURL alloc] initWithString:target.createNSString().get()]);
+        auto request = adoptNS([[NSURLRequest alloc] initWithURL:finalURL.get()]);
 
         [(id<WKURLSchemeTaskPrivate>)task _didPerformRedirection:redirectResponse.get() newRequest:request.get()];
     }
 
-    doAsynchronouslyIfNecessary([finalURL = retainPtr(finalURL)](id <WKURLSchemeTask> task) {
+    doAsynchronouslyIfNecessary([finalURL](id <WKURLSchemeTask> task) {
         NSMutableDictionary* headerDictionary = [NSMutableDictionary dictionary];
         [headerDictionary setObject:@"text/html" forKey:@"Content-Type"];
         [headerDictionary setObject:@"1" forKey:@"Content-Length"];
@@ -376,11 +378,11 @@ static RetainPtr<WKWebView> createdWebView;
         [task didReceiveResponse:response.get()];
     }, 0.1);
 
-    doAsynchronouslyIfNecessary([self, finalURL = retainPtr(finalURL)](id <WKURLSchemeTask> task) {
+    doAsynchronouslyIfNecessary([self, finalURL](id <WKURLSchemeTask> task) {
         if (auto data = _dataMappings.get([finalURL absoluteString]))
             [task didReceiveData:data.get()];
         else if (_bytes) {
-            RetainPtr<NSData> data = adoptNS([[NSData alloc] initWithBytesNoCopy:(void *)_bytes length:strlen(_bytes) freeWhenDone:NO]);
+            RetainPtr data = toNSDataNoCopy(unsafeSpan8(_bytes), FreeWhenDone::No);
             [task didReceiveData:data.get()];
         } else
             [task didReceiveData:[@"Hello" dataUsingEncoding:NSUTF8StringEncoding]];
@@ -793,8 +795,8 @@ TEST(ProcessSwap, PSONRedirectionToExternal)
 
     [webView configuration].preferences.fraudulentWebsiteWarningEnabled = NO;
 
-    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:popupURL]];
-    [webView loadRequest:request];
+    RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:popupURL.createNSString().get()]).get()]);
+    [webView loadRequest:request.get()];
     done = false;
 
     __block BOOL isRedirection = NO;
@@ -1441,7 +1443,7 @@ TEST(ProcessSwap, CrossSiteWindowOpenWithOpener)
 
 enum class ExpectSwap : bool { No, Yes };
 enum class WindowHasName : bool { No, Yes };
-static void runSameSiteWindowOpenNoOpenerTest(WindowHasName windowHasName)
+static void runSameSiteWindowOpenNoOpenerTest(WindowHasName windowHasName, ExpectSwap expectSwap)
 {
     auto processPoolConfiguration = psonProcessPoolConfiguration();
     auto processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
@@ -1482,7 +1484,10 @@ static void runSameSiteWindowOpenNoOpenerTest(WindowHasName windowHasName)
     EXPECT_TRUE(!!pid2);
 
     // Since there is no opener, we process-swap, even though the navigation is same-site.
-    EXPECT_NE(pid1, pid2);
+    if (expectSwap == ExpectSwap::Yes)
+        EXPECT_NE(pid1, pid2);
+    else
+        EXPECT_EQ(pid1, pid2);
 
     done = false;
     request = [NSURLRequest requestWithURL:[NSURL URLWithString:@"pson://www.webkit.org/popup2.html"]];
@@ -1500,12 +1505,12 @@ static void runSameSiteWindowOpenNoOpenerTest(WindowHasName windowHasName)
 TEST(ProcessSwap, SameSiteWindowOpenNoOpener)
 {
     // We process-swap even though the navigation is same-site, because the popup has no opener.
-    runSameSiteWindowOpenNoOpenerTest(WindowHasName::No);
+    runSameSiteWindowOpenNoOpenerTest(WindowHasName::No, ExpectSwap::Yes);
 }
 
 TEST(ProcessSwap, SameSiteWindowOpenWithNameNoOpener)
 {
-    runSameSiteWindowOpenNoOpenerTest(WindowHasName::Yes);
+    runSameSiteWindowOpenNoOpenerTest(WindowHasName::Yes, ExpectSwap::No);
 }
 
 TEST(ProcessSwap, CrossSiteBlankTargetWithOpener)
@@ -3513,7 +3518,12 @@ TEST(ProcessSwap, PageCache1)
     EXPECT_EQ(2u, seenPIDs.size());
 }
 
+// rdar://137984168 (REGRESSION(277622@main?): [ iPad ] TestWebKitAPI.ProcessSwap.NavigateBackAfterCrossOriginClientRedirect is a near constant timeout (281513))
+#if PLATFORM(IOS)
+TEST(ProcessSwap, DISABLED_NavigateBackAfterCrossOriginClientRedirect)
+#else
 TEST(ProcessSwap, NavigateBackAfterCrossOriginClientRedirect)
+#endif
 {
     auto processPoolConfiguration = psonProcessPoolConfiguration();
     auto processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
@@ -4098,7 +4108,7 @@ TEST(ProcessSwap, NumberOfCachedProcesses)
 
     const unsigned maxSuspendedPageCount = [processPool _maximumSuspendedPageCount];
     for (unsigned i = 0; i < maxSuspendedPageCount + 2; i++)
-        [handler addMappingFromURLString:makeString("pson://www.domain-"_s, i, ".com"_s) toData:pageCache1Bytes];
+        [handler addMappingFromURLString:makeString("pson://www.domain-"_s, i, ".com"_s).createNSString().get() toData:pageCache1Bytes];
     [webViewConfiguration setURLSchemeHandler:handler.get() forURLScheme:@"PSON"];
 
     auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:webViewConfiguration.get()]);
@@ -4106,8 +4116,8 @@ TEST(ProcessSwap, NumberOfCachedProcesses)
     [webView setNavigationDelegate:delegate.get()];
 
     for (unsigned i = 0; i < maxSuspendedPageCount + 1; i++) {
-        NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:makeString("pson://www.domain-"_s, i, ".com"_s)]];
-        [webView loadRequest:request];
+        RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:makeString("pson://www.domain-"_s, i, ".com"_s).createNSString().get()]).get()]);
+        [webView loadRequest:request.get()];
         TestWebKitAPI::Util::run(&done);
         done = false;
 
@@ -4116,8 +4126,8 @@ TEST(ProcessSwap, NumberOfCachedProcesses)
         EXPECT_FALSE([processPool _hasPrewarmedWebProcess]);
     }
 
-    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:makeString("pson://www.domain-"_s, maxSuspendedPageCount + 1, ".com"_s)]];
-    [webView loadRequest:request];
+    RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:makeString("pson://www.domain-"_s, maxSuspendedPageCount + 1, ".com"_s).createNSString().get()]).get()]);
+    [webView loadRequest:request.get()];
     TestWebKitAPI::Util::run(&done);
     done = false;
 
@@ -4552,7 +4562,7 @@ TEST(ProcessSwap, CrossOriginBlobNavigation)
 
     finishedRunningScript = false;
     auto script = makeString("document.getElementById('link').href = '"_s, blobURL, '\'');
-    [webView _evaluateJavaScriptWithoutUserGesture:(NSString *)script completionHandler: [&] (id result, NSError *error) {
+    [webView _evaluateJavaScriptWithoutUserGesture:script.createNSString().get() completionHandler: [&] (id result, NSError *error) {
         finishedRunningScript = true;
     }];
     TestWebKitAPI::Util::run(&finishedRunningScript);
@@ -7539,11 +7549,11 @@ TEST(ProcessSwap, SameSiteWindowWithOpenerNavigateToFile)
 
     using namespace TestWebKitAPI;
     checkFrameTreesInProcesses(webView.get(), {
-        { "pson://www.webkit.org"_s }, { RemoteFrame }
+        { "pson://www.webkit.org"_s }
     });
 
     checkFrameTreesInProcesses(createdWebView.get(), {
-        { RemoteFrame }, { "file://"_s }
+        { "file://"_s }
     });
 
     [createdWebView goBack];
@@ -7777,6 +7787,74 @@ TEST(ProcessSwap, MainFrameURLAfterServerSideRedirectToCOOP)
     EXPECT_WK_STREQ(server.request("/destination.html"_s).URL.absoluteString, [[createdWebView _mainFrameURL] absoluteString]);
 }
 
+TEST(ProcessSwap, COOPAndCOEPOn304Response)
+{
+    using namespace TestWebKitAPI;
+    HTTPResponse response({ { { "Content-Type"_s, "text/html"_s }, { "Cross-Origin-Opener-Policy"_s, "same-origin"_s }, { "cross-origin-embedder-policy"_s, "require-corp"_s }, { "Etag"_s, "123456789"_s } }, "foo"_s });
+    response.setShouldRespondWith304ToConditionalRequests({ { "Cross-Origin-Opener-Policy"_s, "same-origin"_s }, { "cross-origin-embedder-policy"_s, "require-corp"_s } });
+    HTTPServer server({
+        { "/index.html"_s, WTFMove(response) },
+    }, HTTPServer::Protocol::Https);
+
+    auto processPoolConfiguration = psonProcessPoolConfiguration();
+    auto processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
+
+    auto webView1Configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [webView1Configuration setProcessPool:processPool.get()];
+    for (_WKFeature *feature in [WKPreferences _features]) {
+        if ([feature.key isEqualToString:@"CrossOriginOpenerPolicyEnabled"])
+            [[webView1Configuration preferences] _setEnabled:YES forFeature:feature];
+        else if ([feature.key isEqualToString:@"CrossOriginEmbedderPolicyEnabled"])
+            [[webView1Configuration preferences] _setEnabled:YES forFeature:feature];
+    }
+
+    auto webView1 = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:webView1Configuration.get()]);
+    auto navigationDelegate = adoptNS([[PSONNavigationDelegate alloc] init]);
+    [webView1 setNavigationDelegate:navigationDelegate.get()];
+
+    done = false;
+    [webView1 loadRequest:server.request("/index.html"_s)];
+    Util::run(&done);
+
+    done = false;
+    [webView1 _evaluateJavaScriptWithoutUserGesture:@"document.body.innerHTML" completionHandler:^(id result, NSError* error) {
+        NSString* resultString = result;
+        EXPECT_TRUE(!error);
+        EXPECT_WK_STREQ(resultString, @"foo");
+        done = true;
+    }];
+    Util::run(&done);
+    done = false;
+
+    auto webView2Configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [webView2Configuration setProcessPool:processPool.get()];
+    for (_WKFeature *feature in [WKPreferences _features]) {
+        if ([feature.key isEqualToString:@"CrossOriginOpenerPolicyEnabled"])
+            [[webView2Configuration preferences] _setEnabled:YES forFeature:feature];
+        else if ([feature.key isEqualToString:@"CrossOriginEmbedderPolicyEnabled"])
+            [[webView2Configuration preferences] _setEnabled:YES forFeature:feature];
+    }
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    webView2Configuration.get()._relatedWebView = webView1.get(); // webView2 will be related to webView1 and webView1's URL will be used for process swap decision.
+    ALLOW_DEPRECATED_DECLARATIONS_END
+    auto webView2 = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:webView2Configuration.get()]);
+    [webView2 setNavigationDelegate:navigationDelegate.get()];
+
+    done = false;
+    [webView2 loadRequest:server.request("/index.html"_s)];
+    Util::run(&done);
+
+    done = false;
+    [webView2 _evaluateJavaScriptWithoutUserGesture:@"document.body.innerHTML" completionHandler:^(id result, NSError* error) {
+        NSString* resultString = result;
+        EXPECT_TRUE(!error);
+        EXPECT_WK_STREQ(resultString, @"foo");
+        done = true;
+    }];
+    Util::run(&done);
+    done = false;
+}
+
 TEST(ProcessSwap, NavigateBackAfterNavigatingAwayFromCOOP)
 {
     using namespace TestWebKitAPI;
@@ -7894,6 +7972,85 @@ TEST(ProcessSwap, NavigateBackAfterNavigatingAwayFromCrossOriginOpenerPolicyUsin
     }];
     Util::run(&done);
     done = false;
+}
+
+TEST(ProcessSwap, MultitabCOOPSwapSameOriginProcessPool)
+{
+    using namespace TestWebKitAPI;
+
+    HTTPServer coopSiteServer({
+        { "/coopSite.html"_s, { { { "Content-Type"_s, "text/html"_s }, { "Cross-Origin-Opener-Policy"_s, "same-origin"_s } }, "<html><body>coopSite</body></html>"_s } },
+    }, HTTPServer::Protocol::Https);
+
+    HTTPServer nonCoopSiteServer({
+        { "/nonCoopSite.html"_s, { { { "Content-Type"_s, "text/html"_s } }, "<html><body>nonCoopSite</body></html>"_s } },
+    }, HTTPServer::Protocol::Https);
+
+    auto processPoolConfiguration = psonProcessPoolConfiguration();
+    auto processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
+
+    auto webViewConfiguration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [webViewConfiguration setProcessPool:processPool.get()];
+    for (_WKFeature *feature in [WKPreferences _features]) {
+        if ([feature.key isEqualToString:@"CrossOriginOpenerPolicyEnabled"])
+            [[webViewConfiguration preferences] _setEnabled:YES forFeature:feature];
+        else if ([feature.key isEqualToString:@"CrossOriginEmbedderPolicyEnabled"])
+            [[webViewConfiguration preferences] _setEnabled:YES forFeature:feature];
+    }
+
+    // ORIGINAL TAB
+    auto webView1 = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:webViewConfiguration.get()]);
+    auto navigationDelegate = adoptNS([[PSONNavigationDelegate alloc] init]);
+    [webView1 setNavigationDelegate:navigationDelegate.get()];
+
+    // 1: load coopSite
+    done = false;
+    [webView1 loadRequest:coopSiteServer.request("/coopSite.html"_s)];
+    Util::run(&done);
+    auto pid1 = [webView1 _webProcessIdentifier];
+
+    // 2: navigate to nonCoopSite (no COOP) => must swap
+    done = false;
+    [webView1 loadRequest:nonCoopSiteServer.request("/nonCoopSite.html"_s)];
+    Util::run(&done);
+    auto pid2 = [webView1 _webProcessIdentifier];
+    EXPECT_NE(pid1, pid2);
+
+    // 3: goBack() to coopSite => COOP destination + cross-origin => must swap again
+    done = false;
+    [webView1 goBack];
+    Util::run(&done);
+    auto pid3 = [webView1 _webProcessIdentifier];
+    EXPECT_NE(pid2, pid3);
+
+    // NEW TAB
+    auto webView2 = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:webViewConfiguration.get()]);
+    auto navigationDelegate2 = adoptNS([[PSONNavigationDelegate alloc] init]);
+    [webView2 setNavigationDelegate:navigationDelegate2.get()];
+
+    // 4: load coopSite again in new tab => COOP always spawns a fresh process
+    done = false;
+    [webView2 loadRequest:coopSiteServer.request("/coopSite.html"_s)];
+    Util::run(&done);
+    auto pid4 = [webView2 _webProcessIdentifier];
+    EXPECT_NE(pid2, pid4);
+    EXPECT_NE(pid3, pid4);
+
+    // 5: navigate away
+    done = false;
+    [webView2 loadRequest:nonCoopSiteServer.request("/nonCoopSite.html"_s)];
+    Util::run(&done);
+    auto pid5 = [webView2 _webProcessIdentifier];
+    EXPECT_NE(pid4, pid5);
+
+    // 6: goBack() to coopSite in new tab must swap again
+    done = false;
+    [webView2 goBack];
+    Util::run(&done);
+    auto pid6 = [webView2 _webProcessIdentifier];
+    EXPECT_NE(pid5, pid6);
+
+    EXPECT_NE(pid3, pid6);
 }
 
 TEST(ProcessSwap, NavigateBackAfterNavigatingAwayFromCrossOriginOpenerPolicyUsingBackForwardCache2)
@@ -8537,7 +8694,7 @@ static void checkSettingsControlledByLockdownMode(WKWebView *webView, ShouldBeEn
     auto runJSCheck = [&](const String& js) -> bool {
         bool finishedRunningScript = false;
         bool checkResult = false;
-        [webView evaluateJavaScript:js completionHandler:[&] (id result, NSError *error) {
+        [webView evaluateJavaScript:js.createNSString().get() completionHandler:[&] (id result, NSError *error) {
             EXPECT_NULL(error);
             checkResult = [result boolValue];
             finishedRunningScript = true;
@@ -8552,7 +8709,7 @@ static void checkSettingsControlledByLockdownMode(WKWebView *webView, ShouldBeEn
     EXPECT_EQ(runJSCheck("!!window.FileSystemHandle"_s), isShowingInitialEmptyDocument != IsShowingInitialEmptyDocument::Yes && shouldBeEnabled == ShouldBeEnabled::Yes); // File System Access.
     EXPECT_EQ(runJSCheck("!!window.HTMLModelElement"_s), shouldBeEnabled == ShouldBeEnabled::Yes); // AR (Model)
     EXPECT_EQ(runJSCheck("!!window.PictureInPictureEvent"_s), shouldBeEnabled == ShouldBeEnabled::Yes); // Picture in Picture API.
-    EXPECT_EQ(runJSCheck("!!window.SpeechRecognitionEvent"_s), shouldBeEnabled == ShouldBeEnabled::Yes); // Speech recognition.
+    EXPECT_EQ(runJSCheck("!!window.SpeechRecognitionEvent"_s), isShowingInitialEmptyDocument != IsShowingInitialEmptyDocument::Yes && shouldBeEnabled == ShouldBeEnabled::Yes); // Speech recognition.
 #if ENABLE(SPEECH_SYNTHESIS)
     EXPECT_EQ(runJSCheck("!!window.SpeechSynthesisEvent"_s), shouldBeEnabled == ShouldBeEnabled::Yes); // Speech synthesis.
 #endif
@@ -9315,7 +9472,7 @@ TEST(ProcessSwap, ChangeViewSizeDuringNavigationActionPolicyDecision)
         decisionHandler(WKNavigationActionPolicyAllow);
 
         constexpr auto estimatedDelayForWebProcessLaunch = 5_ms;
-        RunLoop::main().dispatchAfter(estimatedDelayForWebProcessLaunch, [webView] {
+        RunLoop::protectedMain()->dispatchAfter(estimatedDelayForWebProcessLaunch, [webView] {
             [webView setFrame:CGRectMake(0, 0, 320, 568)];
         });
     };

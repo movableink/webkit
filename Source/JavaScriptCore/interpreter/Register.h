@@ -42,7 +42,7 @@ namespace JSC {
     class JSScope;
 
     class Register {
-        WTF_MAKE_TZONE_ALLOCATED(Register);
+        WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(Register);
     public:
         Register();
 

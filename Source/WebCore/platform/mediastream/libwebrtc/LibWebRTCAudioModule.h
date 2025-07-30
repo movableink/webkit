@@ -33,15 +33,11 @@
 #include <wtf/MonotonicTime.h>
 #include <wtf/WorkQueue.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_COMMA_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 #include <webrtc/modules/audio_device/include/audio_device.h>
 
-ALLOW_UNUSED_PARAMETERS_END
-ALLOW_COMMA_END
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 namespace WebCore {
 class BaseAudioMediaStreamTrackRendererUnit;
@@ -163,7 +159,7 @@ private:
 #if PLATFORM(COCOA)
     uint64_t m_currentAudioSampleCount { 0 };
     std::atomic<uint64_t> m_isRenderingIncomingAudioCounter { 0 };
-    std::unique_ptr<IncomingAudioMediaStreamTrackRendererUnit> m_incomingAudioMediaStreamTrackRendererUnit;
+    const std::unique_ptr<IncomingAudioMediaStreamTrackRendererUnit> m_incomingAudioMediaStreamTrackRendererUnit;
 #endif
 };
 

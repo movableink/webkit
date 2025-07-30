@@ -273,17 +273,17 @@ class TestUpdateClang(BuildStepMixinAdditions, unittest.TestCase):
                         logEnviron=True,
                         timeout=1200,
                         env=self.ENV,
-                        command=['/bin/sh', '-c', 'rm -r build-new; mkdir build-new']) + 0,
+                        command=['/bin/bash', '--posix', '-o', 'pipefail', '-c', 'rm -r build-new; mkdir build-new']) + 0,
             ExpectShell(workdir=LLVM_DIR,
                         logEnviron=True,
                         timeout=1200,
                         env=self.ENV,
-                        command=['/bin/sh', '-c', 'cd build-new; xcrun cmake -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Release -G Ninja ../llvm -DCMAKE_MAKE_PROGRAM=$(xcrun --sdk macosx --find ninja)']) + 0,
+                        command=['/bin/bash', '--posix', '-o', 'pipefail', '-c', 'cd build-new; xcrun cmake -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Release -G Ninja ../llvm -DCMAKE_MAKE_PROGRAM=$(xcrun --sdk macosx --find ninja)']) + 0,
             ExpectShell(workdir=LLVM_DIR,
                         logEnviron=True,
                         timeout=1200,
                         env=self.ENV,
-                        command=['/bin/sh', '-c', 'cd build-new; ninja clang']) + 0,
+                        command=['/bin/bash', '--posix', '-o', 'pipefail', '-c', 'cd build-new; ninja clang']) + 0,
             ExpectShell(workdir=LLVM_DIR,
                         logEnviron=True,
                         timeout=1200,
@@ -377,7 +377,7 @@ class TestInstallNinja(BuildStepMixinAdditions, unittest.TestCase):
                         logEnviron=True,
                         timeout=1200,
                         env=self.ENV,
-                        command=['/bin/sh', '-c', 'cd ../; python3 build/Tools/CISupport/Shared/download-and-install-build-tools ninja'])
+                        command=['/bin/bash', '--posix', '-o', 'pipefail', '-c', 'cd ../; python3 build/Tools/CISupport/Shared/download-and-install-build-tools ninja'])
             + ExpectShell.log('stdio', stdout='1.12.1\n')
             + 0,
         )
@@ -391,7 +391,7 @@ class TestInstallNinja(BuildStepMixinAdditions, unittest.TestCase):
                         logEnviron=True,
                         timeout=1200,
                         env=self.ENV,
-                        command=['/bin/sh', '-c', 'cd ../; python3 build/Tools/CISupport/Shared/download-and-install-build-tools ninja'])
+                        command=['/bin/bash', '--posix', '-o', 'pipefail', '-c', 'cd ../; python3 build/Tools/CISupport/Shared/download-and-install-build-tools ninja'])
             + ExpectShell.log('stdio', stdout='ninja is already up to date... skipping download and installation.\n')
             + 0,
         )
@@ -405,7 +405,7 @@ class TestInstallNinja(BuildStepMixinAdditions, unittest.TestCase):
                         logEnviron=True,
                         timeout=1200,
                         env=self.ENV,
-                        command=['/bin/sh', '-c', 'cd ../; python3 build/Tools/CISupport/Shared/download-and-install-build-tools ninja'])
+                        command=['/bin/bash', '--posix', '-o', 'pipefail', '-c', 'cd ../; python3 build/Tools/CISupport/Shared/download-and-install-build-tools ninja'])
             + ExpectShell.log('stdio', stdout='zsh: command not found: ninja')
             + 1,
         )

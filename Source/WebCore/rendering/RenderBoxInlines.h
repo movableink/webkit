@@ -21,12 +21,11 @@
 
 #include "RenderBox.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderElementInlines.h"
+#include "RenderObjectInlines.h"
 
 namespace WebCore {
 
-inline LayoutUnit RenderBox::availableHeight() const { return writingMode().isHorizontal() ? availableLogicalHeight(AvailableLogicalHeightType::IncludeMarginBorderPadding) : availableLogicalWidth(); }
-inline LayoutUnit RenderBox::availableLogicalWidth() const { return contentLogicalWidth(); }
-inline LayoutUnit RenderBox::availableWidth() const { return writingMode().isHorizontal() ? availableLogicalWidth() : availableLogicalHeight(AvailableLogicalHeightType::IncludeMarginBorderPadding); }
 inline LayoutSize RenderBox::borderBoxLogicalSize() const { return logicalSize(); }
 inline LayoutRect RenderBox::clientBoxRect() const { return LayoutRect(clientLeft(), clientTop(), clientWidth(), clientHeight()); }
 inline LayoutUnit RenderBox::clientLeft() const { return borderLeft(); }
@@ -35,12 +34,14 @@ inline LayoutUnit RenderBox::clientLogicalHeight() const { return writingMode().
 inline LayoutUnit RenderBox::clientLogicalWidth() const { return writingMode().isHorizontal() ? clientWidth() : clientHeight(); }
 inline LayoutUnit RenderBox::clientTop() const { return borderTop(); }
 inline LayoutRect RenderBox::computedCSSContentBoxRect() const { return LayoutRect(borderLeft() + computedCSSPaddingLeft(), borderTop() + computedCSSPaddingTop(), paddingBoxWidth() - computedCSSPaddingLeft() - computedCSSPaddingRight()  - (style().scrollbarGutter().bothEdges ? verticalScrollbarWidth() : 0), paddingBoxHeight() - computedCSSPaddingTop() - computedCSSPaddingBottom() - (style().scrollbarGutter().bothEdges ? horizontalScrollbarHeight() : 0)); }
-inline LayoutUnit RenderBox::contentHeight() const { return std::max(0_lu, paddingBoxHeight() - paddingTop() - paddingBottom() - (style().scrollbarGutter().bothEdges ? horizontalScrollbarHeight() : 0)); }
-inline LayoutUnit RenderBox::contentLogicalHeight() const { return writingMode().isHorizontal() ? contentHeight() : contentWidth(); }
-inline LayoutSize RenderBox::contentLogicalSize() const { return writingMode().isHorizontal() ? contentSize() : contentSize().transposedSize(); }
-inline LayoutUnit RenderBox::contentLogicalWidth() const { return writingMode().isHorizontal() ? contentWidth() : contentHeight(); }
-inline LayoutSize RenderBox::contentSize() const { return { contentWidth(), contentHeight() }; }
-inline LayoutUnit RenderBox::contentWidth() const { return std::max(0_lu, paddingBoxWidth() - paddingLeft() - paddingRight() - (style().scrollbarGutter().bothEdges ? verticalScrollbarWidth() : 0)); }
+inline LayoutUnit RenderBox::contentBoxHeight() const { return std::max(0_lu, paddingBoxHeight() - paddingTop() - paddingBottom() - (style().scrollbarGutter().bothEdges ? horizontalScrollbarHeight() : 0)); }
+inline LayoutUnit RenderBox::contentBoxLogicalHeight() const { return writingMode().isHorizontal() ? contentBoxHeight() : contentBoxWidth(); }
+inline LayoutUnit RenderBox::contentBoxLogicalHeight(LayoutUnit overridingBorderBoxHeight) const { return std::max(0_lu, overridingBorderBoxHeight - borderAndPaddingLogicalHeight() - scrollbarLogicalHeight() - (style().scrollbarGutter().bothEdges ? scrollbarLogicalHeight() : 0)); }
+inline LayoutSize RenderBox::contentBoxLogicalSize() const { return writingMode().isHorizontal() ? contentBoxSize() : contentBoxSize().transposedSize(); }
+inline LayoutUnit RenderBox::contentBoxLogicalWidth() const { return writingMode().isHorizontal() ? contentBoxWidth() : contentBoxHeight(); }
+inline LayoutUnit RenderBox::contentBoxLogicalWidth(LayoutUnit overridingBorderBoxWidth) const { return std::max(LayoutUnit(), overridingBorderBoxWidth - borderAndPaddingLogicalWidth() - scrollbarLogicalWidth() - (style().scrollbarGutter().bothEdges ? scrollbarLogicalWidth() : 0)); }
+inline LayoutSize RenderBox::contentBoxSize() const { return { contentBoxWidth(), contentBoxHeight() }; }
+inline LayoutUnit RenderBox::contentBoxWidth() const { return std::max(0_lu, paddingBoxWidth() - paddingLeft() - paddingRight() - (style().scrollbarGutter().bothEdges ? verticalScrollbarWidth() : 0)); }
 inline std::optional<LayoutUnit> RenderBox::explicitIntrinsicInnerLogicalHeight() const { return writingMode().isHorizontal() ? explicitIntrinsicInnerHeight() : explicitIntrinsicInnerWidth(); }
 inline std::optional<LayoutUnit> RenderBox::explicitIntrinsicInnerLogicalWidth() const { return writingMode().isHorizontal() ? explicitIntrinsicInnerWidth() : explicitIntrinsicInnerHeight(); }
 inline bool RenderBox::hasHorizontalOverflow() const { return scrollWidth() != roundToInt(paddingBoxWidth()); }
@@ -59,8 +60,6 @@ inline LayoutUnit RenderBox::logicalRightVisualOverflow() const { return writing
 inline LayoutSize RenderBox::logicalSize() const { return writingMode().isHorizontal() ? m_frameRect.size() : m_frameRect.size().transposedSize(); }
 inline LayoutUnit RenderBox::logicalTop() const { return writingMode().isHorizontal() ? y() : x(); }
 inline LayoutUnit RenderBox::logicalWidth() const { return writingMode().isHorizontal() ? width() : height(); }
-inline LayoutUnit RenderBox::overridingContentLogicalHeight(LayoutUnit overridingLogicalHeight) const { return std::max(0_lu, overridingLogicalHeight - borderAndPaddingLogicalHeight() - scrollbarLogicalHeight() - (style().scrollbarGutter().bothEdges ? scrollbarLogicalHeight() : 0)); }
-inline LayoutUnit RenderBox::overridingContentLogicalWidth(LayoutUnit overridingLogicalWidth) const { return std::max(LayoutUnit(), overridingLogicalWidth - borderAndPaddingLogicalWidth() - scrollbarLogicalWidth() - (style().scrollbarGutter().bothEdges ? scrollbarLogicalWidth() : 0)); }
 inline LayoutUnit RenderBox::paddingBoxHeight() const { return std::max(0_lu, height() - borderTop() - borderBottom() - horizontalScrollbarHeight()); }
 inline LayoutUnit RenderBox::paddingBoxWidth() const { return std::max(0_lu, width() - borderLeft() - borderRight() - verticalScrollbarWidth()); }
 inline int RenderBox::scrollbarLogicalHeight() const { return writingMode().isHorizontal() ? horizontalScrollbarHeight() : verticalScrollbarWidth(); }
@@ -69,6 +68,23 @@ inline void RenderBox::setLogicalLocation(LayoutPoint location) { setLocation(wr
 inline void RenderBox::setLogicalSize(LayoutSize size) { setSize(writingMode().isHorizontal() ? size : size.transposedSize()); }
 inline bool RenderBox::shouldTrimChildMargin(MarginTrimType type, const RenderBox& child) const { return style().marginTrim().contains(type) && isChildEligibleForMarginTrim(type, child); }
 inline bool RenderBox::stretchesToViewport() const { return document().inQuirksMode() && style().logicalHeight().isAuto() && !isFloatingOrOutOfFlowPositioned() && (isDocumentElementRenderer() || isBody()) && !shouldComputeLogicalHeightFromAspectRatio() && !isInline(); }
+inline bool RenderBox::isColumnSpanner() const { return style().columnSpan() == ColumnSpan::All; }
+
+inline LayoutPoint RenderBox::topLeftLocation() const
+{
+    // This is inlined for speed, since it is used by updateLayerPosition() during scrolling.
+    if (!document().view() || !document().view()->hasFlippedBlockRenderers())
+        return location();
+    return topLeftLocationWithFlipping();
+}
+
+inline LayoutSize RenderBox::topLeftLocationOffset() const
+{
+    // This is inlined for speed, since it is used by updateLayerPosition() during scrolling.
+    if (!document().view() || !document().view()->hasFlippedBlockRenderers())
+        return locationOffset();
+    return toLayoutSize(topLeftLocationWithFlipping());
+}
 
 inline LayoutRect RenderBox::paddingBoxRectIncludingScrollbar() const
 {
@@ -157,6 +173,24 @@ inline LayoutUnit resolveHeightForRatio(LayoutUnit borderAndPaddingLogicalWidth,
     if (boxSizing == BoxSizing::BorderBox)
         return LayoutUnit((logicalWidth + borderAndPaddingLogicalWidth) * aspectRatio) - borderAndPaddingLogicalHeight;
     return LayoutUnit(logicalWidth * aspectRatio);
+}
+
+inline bool isSkippedContentRoot(const RenderBox& renderBox)
+{
+    return renderBox.element() && WebCore::isSkippedContentRoot(renderBox.style(), *renderBox.protectedElement());
+}
+
+inline bool RenderBox::backgroundIsKnownToBeObscured(const LayoutPoint& paintOffset)
+{
+    if (boxDecorationState() == BoxDecorationState::InvalidObscurationStatus) {
+        auto computedBoxDecorationState = [&] {
+            if (isSkippedContentRoot(*this))
+                return BoxDecorationState::MayBeVisible;
+            return computeBackgroundIsKnownToBeObscured(paintOffset) ? BoxDecorationState::IsKnownToBeObscured : BoxDecorationState::MayBeVisible;
+        };
+        setBoxDecorationState(computedBoxDecorationState());
+    }
+    return boxDecorationState() == BoxDecorationState::IsKnownToBeObscured;
 }
 
 } // namespace WebCore

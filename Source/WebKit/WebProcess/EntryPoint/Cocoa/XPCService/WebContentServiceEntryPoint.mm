@@ -30,6 +30,10 @@
 #import "WebProcess.h"
 #import "XPCServiceEntryPoint.h"
 
+#if USE(TZONE_MALLOC)
+#import <bmalloc/TZoneHeapManager.h>
+#endif
+
 #if PLATFORM(IOS_FAMILY)
 #import <WebCore/WebCoreThreadSystemInterface.h>
 #import <pal/spi/ios/GraphicsServicesSPI.h>
@@ -39,11 +43,14 @@ extern "C" WK_EXPORT void WEBCONTENT_SERVICE_INITIALIZER(xpc_connection_t connec
 
 void WEBCONTENT_SERVICE_INITIALIZER(xpc_connection_t connection, xpc_object_t initializerMessage)
 {
+#if USE(TZONE_MALLOC)
+    bmalloc::api::TZoneHeapManager::setBucketParams(4);
+#endif
     WTF::initializeMainThread();
 
     // Remove the WebProcessShim from the DYLD_INSERT_LIBRARIES environment variable so any processes spawned by
     // the this process don't try to insert the shim and crash.
-    WebKit::EnvironmentUtilities::removeValuesEndingWith("DYLD_INSERT_LIBRARIES", "/WebProcessShim.dylib");
+    WebKit::EnvironmentUtilities::removeValuesEndingWith("DYLD_INSERT_LIBRARIES"_s, "/WebProcessShim.dylib"_s);
 
 #if PLATFORM(IOS_FAMILY)
     GSInitialize();

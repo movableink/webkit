@@ -84,11 +84,13 @@ public:
     bool hasBlockAllMixedContentDirective() const { return m_hasBlockAllMixedContentDirective; }
     bool hasFrameAncestorsDirective() const { return !!m_frameAncestors; }
     bool requiresTrustedTypesForScript() const { return m_requireTrustedTypesForScript; }
+    bool trustedEvalEnabled() const { return m_trustedEvalEnabled; }
 
     const String& evalDisabledErrorMessage() const { return m_evalDisabledErrorMessage; }
     const String& webAssemblyDisabledErrorMessage() const { return m_webAssemblyDisabledErrorMessage; }
     bool isReportOnly() const { return m_reportOnly; }
     bool shouldReportSample(const String&) const;
+    HashAlgorithmSet reportHash() const;
     const Vector<String>& reportToTokens() const { return m_reportToTokens; }
     const Vector<String>& reportURIs() const { return m_reportURIs; }
 
@@ -113,6 +115,8 @@ private:
     void setUpgradeInsecureRequests(ParsedDirective&&);
     void setBlockAllMixedContentEnabled(ParsedDirective&&);
 
+    const ContentSecurityPolicySourceListDirective* hashReportDirectiveForScript() const;
+
     template <class CSPDirectiveType>
     void setCSPDirective(ParsedDirective&&, std::unique_ptr<CSPDirectiveType>&);
 
@@ -123,6 +127,7 @@ private:
 
     void setEvalDisabledErrorMessage(const String& errorMessage) { m_evalDisabledErrorMessage = errorMessage; }
     void setWebAssemblyDisabledErrorMessage(const String& errorMessage) { m_webAssemblyDisabledErrorMessage = errorMessage; }
+    void setTrustedEvalEnabled(const bool& enabled) { m_trustedEvalEnabled = enabled; }
 
     // FIXME: Make this a const reference once we teach applySandboxPolicy() to store its policy as opposed to applying it directly onto ContentSecurityPolicy.
     ContentSecurityPolicy& m_policy;
@@ -135,6 +140,7 @@ private:
     bool m_upgradeInsecureRequests { false };
     bool m_hasBlockAllMixedContentDirective { false };
     bool m_requireTrustedTypesForScript { false };
+    bool m_trustedEvalEnabled { false };
 
     std::unique_ptr<ContentSecurityPolicyMediaListDirective> m_pluginTypes;
     std::unique_ptr<ContentSecurityPolicySourceListDirective> m_baseURI;

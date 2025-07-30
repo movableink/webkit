@@ -82,6 +82,7 @@ public:
 
     std::optional<WebCore::FrameIdentifier> frameID() const final { return m_frameID; }
     std::optional<WebCore::PageIdentifier> pageID() const final { return m_pageID; }
+    std::optional<WebPageProxyIdentifier> webPageProxyID() const final { return m_webPageProxyID; }
 
     String description() const override;
 
@@ -116,6 +117,7 @@ private:
 
     bool m_isForMainResourceNavigationForAnyFrame { false };
     RefPtr<WebCore::SecurityOrigin> m_sourceOrigin;
+    uint64_t m_requiredCookiesVersion { 0 };
 };
 
 WebCore::Credential serverTrustCredential(const WebCore::AuthenticationChallenge&);

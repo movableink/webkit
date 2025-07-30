@@ -55,6 +55,12 @@ static bool stateDidChange;
     return self;
 }
 
+- (void)dealloc
+{
+    [_webView removeObserver:self forKeyPath:@"_isPlayingAudio"];
+    [super dealloc];
+}
+
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
 {
     if (context == audioStateObserverChangeKVOContext) {

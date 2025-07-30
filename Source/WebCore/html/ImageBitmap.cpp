@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,17 +50,22 @@
 #include "LocalFrameView.h"
 #include "RenderElement.h"
 #include "SVGImageElement.h"
+#include "ScriptExecutionContextInlines.h"
 #include "SharedBuffer.h"
 #include "WebCodecsVideoFrame.h"
 #include "WorkerClient.h"
 #include "WorkerGlobalScope.h"
-#include <variant>
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(OFFSCREEN_CANVAS)
 #include "OffscreenCanvas.h"
+#endif
+
+#if USE(SKIA)
+#include "GLFence.h"
+#include "GraphicsContextSkia.h"
 #endif
 
 namespace WebCore {
@@ -192,11 +197,12 @@ void ImageBitmap::close()
 void ImageBitmap::prepareForCrossThreadTransfer()
 {
     m_bitmap = ImageBuffer::sinkIntoImageBufferForCrossThreadTransfer(WTFMove(m_bitmap));
+    m_fence = m_bitmap->renderingMode() == RenderingMode::Accelerated ? GraphicsContextSkia::createAcceleratedRenderingFenceIfNeeded(m_bitmap->surface()) : nullptr;
 }
 
 void ImageBitmap::finalizeCrossThreadTransfer()
 {
-    m_bitmap = ImageBuffer::sinkIntoImageBufferAfterCrossThreadTransfer(WTFMove(m_bitmap));
+    m_bitmap = ImageBuffer::sinkIntoImageBufferAfterCrossThreadTransfer(WTFMove(m_bitmap), WTFMove(m_fence));
 }
 #endif
 
@@ -746,6 +752,7 @@ public:
 
     void imageFrameAvailable(const Image&, ImageAnimatingState, const IntRect* = nullptr, DecodingStatus = DecodingStatus::Invalid) override { }
     void changedInRect(const Image&, const IntRect* = nullptr) override { }
+    void imageContentChanged(const Image&) override { }
     void scheduleRenderingUpdate(const Image&) override { }
 
 private:
@@ -761,7 +768,7 @@ private:
 };
 
 class PendingImageBitmap final : public RefCounted<PendingImageBitmap>, public ActiveDOMObject, public FileReaderLoaderClient {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(PendingImageBitmap);
+    WTF_MAKE_TZONE_ALLOCATED(PendingImageBitmap);
 public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
@@ -845,6 +852,8 @@ private:
     RefPtr<PendingActivity<PendingImageBitmap>> m_pendingActivity;
 };
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PendingImageBitmap);
+
 void ImageBitmap::createFromBuffer(ScriptExecutionContext& scriptExecutionContext, Ref<ArrayBuffer>&& arrayBuffer, String mimeType, long long expectedContentLength, const URL& sourceURL, ImageBitmapOptions&& options, std::optional<IntRect> rect, ImageBitmapCompletionHandler&& completionHandler)
 {
     if (!arrayBuffer->byteLength()) {
@@ -927,7 +936,7 @@ void ImageBitmap::createCompletionHandler(ScriptExecutionContext& scriptExecutio
     const auto alphaPremultiplication = alphaPremultiplicationForPremultiplyAlpha(options.premultiplyAlpha);
     const bool premultiplyAlpha = alphaPremultiplication == AlphaPremultiplication::Premultiplied;
     if (sourceRectangle.returnValue().location().isZero() && sourceRectangle.returnValue().size() == imageData->size() && sourceRectangle.returnValue().size() == outputSize && options.orientation != ImageBitmapOptions::Orientation::FlipY) {
-        bitmapData->putPixelBuffer(imageData->pixelBuffer(), sourceRectangle.releaseReturnValue(), { }, alphaPremultiplication);
+        bitmapData->putPixelBuffer(imageData->pixelBuffer().get(), sourceRectangle.releaseReturnValue(), { }, alphaPremultiplication);
 
         auto imageBitmap = create(bitmapData.releaseNonNull(), originClean, premultiplyAlpha);
         completionHandler(WTFMove(imageBitmap));
@@ -941,7 +950,7 @@ void ImageBitmap::createCompletionHandler(ScriptExecutionContext& scriptExecutio
         completionHandler(createBlankImageBuffer(scriptExecutionContext, true));
         return;
     }
-    tempBitmapData->putPixelBuffer(imageData->pixelBuffer(), IntRect(0, 0, imageData->width(), imageData->height()), { }, alphaPremultiplication);
+    tempBitmapData->putPixelBuffer(imageData->pixelBuffer().get(), IntRect(0, 0, imageData->width(), imageData->height()), { }, alphaPremultiplication);
     FloatRect destRect(FloatPoint(), outputSize);
     bitmapData->context().drawImageBuffer(*tempBitmapData, destRect, sourceRectangle.releaseReturnValue(), { interpolationQualityForResizeQuality(options.resizeQuality), options.resolvedImageOrientation(ImageOrientation::Orientation::None) });
 

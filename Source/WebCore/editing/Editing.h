@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "PlatformLayerIdentifier.h"
 #include "Position.h"
 #include "TextIteratorBehavior.h"
 #include <wtf/Forward.h>
@@ -39,6 +40,7 @@ class HTMLImageElement;
 class HTMLSpanElement;
 class HTMLTextFormControlElement;
 class RenderBlock;
+class RenderLayer;
 class VisiblePosition;
 class VisibleSelection;
 
@@ -98,7 +100,6 @@ bool isEmptyTableCell(const Node*);
 bool isTableStructureNode(const Node&);
 bool isListHTMLElement(Node*);
 bool isListItem(const Node&);
-bool isNodeRendered(const Node&);
 bool isRenderedAsNonInlineTableImageOrHR(const Node*);
 bool isNonTableCellHTMLBlockElement(const Node*);
 
@@ -116,6 +117,15 @@ PositionRange positionsForRange(const SimpleRange&);
 WEBCORE_EXPORT HashSet<RefPtr<HTMLImageElement>> visibleImageElementsInRangeWithNonLoadedImages(const SimpleRange&);
 WEBCORE_EXPORT SimpleRange adjustToVisuallyContiguousRange(const SimpleRange&);
 
+struct EnclosingLayerInfomation {
+    CheckedPtr<RenderLayer> startLayer;
+    CheckedPtr<RenderLayer> endLayer;
+    CheckedPtr<RenderLayer> enclosingLayer;
+    std::optional<WebCore::PlatformLayerIdentifier> enclosingGraphicsLayerID;
+};
+
+WEBCORE_EXPORT EnclosingLayerInfomation computeEnclosingLayer(const SimpleRange&);
+
 // -------------------------------------------------------------------------
 // Position
 // -------------------------------------------------------------------------
@@ -128,7 +138,7 @@ Position nextVisuallyDistinctCandidate(const Position&, SkipDisplayContents = Sk
 Position previousVisuallyDistinctCandidate(const Position&);
 
 Position firstPositionInOrBeforeNode(Node*);
-Position lastPositionInOrAfterNode(Node*);
+inline Position lastPositionInOrAfterNode(Node*);
 
 Position firstEditablePositionAfterPositionInRoot(const Position&, ContainerNode* root);
 Position lastEditablePositionBeforePositionInRoot(const Position&, ContainerNode* root);
@@ -160,6 +170,14 @@ WEBCORE_EXPORT VisiblePosition visiblePositionForIndex(int index, Node* scope, T
 VisiblePosition visiblePositionForIndexUsingCharacterIterator(Node&, int index); // FIXME: Why do we need this version?
 
 WEBCORE_EXPORT VisiblePosition closestEditablePositionInElementForAbsolutePoint(const Element&, const IntPoint&);
+
+enum class SelectionExtentMovement : uint8_t {
+    Closest,
+    Left,
+    Right,
+};
+void adjustVisibleExtentPreservingVisualContiguity(const VisiblePosition& base, VisiblePosition& extent, SelectionExtentMovement);
+WEBCORE_EXPORT bool crossesBidiTextBoundaryInSameLine(const VisiblePosition&, const VisiblePosition& other);
 
 // -------------------------------------------------------------------------
 // HTMLElement
@@ -243,13 +261,6 @@ inline Position firstPositionInOrBeforeNode(Node* node)
     if (!node)
         return { };
     return editingIgnoresContent(*node) ? positionBeforeNode(node) : firstPositionInNode(node);
-}
-
-inline Position lastPositionInOrAfterNode(Node* node)
-{
-    if (!node)
-        return { };
-    return editingIgnoresContent(*node) ? positionAfterNode(node) : lastPositionInNode(node);
 }
 
 }

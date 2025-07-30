@@ -2,6 +2,25 @@
 a {
 }
 
+/* UNIVERSAL SELECTOR, EMPTY CONTENT */
+*:not(.foo) {
+}
+
+div > *:not(.foo) {
+}
+
+* :has(.foo) {
+}
+
+div > * :has(.foo) {
+}
+
+* > :is(.foo) {
+}
+
+div > * > :is(.foo) {
+}
+
 /* COMPLEX SELECTOR */
 div div > div#id.foo.bar:hover .something > .child ~ .sibling + .sibling:after {
     color: red;

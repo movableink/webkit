@@ -36,6 +36,7 @@
 #import "WebExtensionMenuItem.h"
 #import "WebExtensionMenuItemContextParameters.h"
 #import "WebExtensionMenuItemParameters.h"
+#import "WebExtensionPermission.h"
 #import "WebExtensionUtilities.h"
 
 namespace WebKit {
@@ -56,9 +57,9 @@ static bool isAncestorOrSelf(WebExtensionContext& context, const String& potenti
     return false;
 }
 
-bool WebExtensionContext::isMenusMessageAllowed()
+bool WebExtensionContext::isMenusMessageAllowed(IPC::Decoder& message)
 {
-    return isLoaded() && (hasPermission(WKWebExtensionPermissionContextMenus) || hasPermission(WKWebExtensionPermissionMenus));
+    return isLoadedAndPrivilegedMessage(message) && (hasPermission(WebExtensionPermission::contextMenus()) || hasPermission(WebExtensionPermission::menus()));
 }
 
 void WebExtensionContext::menusCreate(const WebExtensionMenuItemParameters& parameters, CompletionHandler<void(Expected<void, WebExtensionError>&&)>&& completionHandler)
@@ -66,17 +67,17 @@ void WebExtensionContext::menusCreate(const WebExtensionMenuItemParameters& para
     static NSString * const apiName = @"menus.create()";
 
     if (m_menuItems.contains(parameters.identifier)) {
-        completionHandler(toWebExtensionError(apiName, nil, @"identifier is already used"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"identifier is already used"));
         return;
     }
 
     if (parameters.parentIdentifier && !m_menuItems.contains(parameters.parentIdentifier.value())) {
-        completionHandler(toWebExtensionError(apiName, nil, @"parent menu item not found"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"parent menu item not found"));
         return;
     }
 
     if (parameters.parentIdentifier && isAncestorOrSelf(*this, parameters.parentIdentifier.value(), parameters.identifier)) {
-        completionHandler(toWebExtensionError(apiName, nil, @"parent menu item cannot be another ancestor"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"parent menu item cannot be another ancestor"));
         return;
     }
 
@@ -96,7 +97,7 @@ void WebExtensionContext::menusUpdate(const String& identifier, const WebExtensi
 
     RefPtr menuItem = this->menuItem(identifier);
     if (!menuItem) {
-        completionHandler(toWebExtensionError(apiName, nil, @"menu item not found"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"menu item not found"));
         return;
     }
 
@@ -106,12 +107,12 @@ void WebExtensionContext::menusUpdate(const String& identifier, const WebExtensi
     }
 
     if (parameters.parentIdentifier && !m_menuItems.contains(parameters.parentIdentifier.value())) {
-        completionHandler(toWebExtensionError(apiName, nil, @"parent menu item not found"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"parent menu item not found"));
         return;
     }
 
     if (parameters.parentIdentifier && isAncestorOrSelf(*this, parameters.parentIdentifier.value(), !parameters.identifier.isEmpty() ? parameters.identifier : identifier)) {
-        completionHandler(toWebExtensionError(apiName, nil, @"parent menu item cannot be itself or another ancestor"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"parent menu item cannot be itself or another ancestor"));
         return;
     }
 
@@ -124,12 +125,12 @@ void WebExtensionContext::menusRemove(const String& identifier, CompletionHandle
 {
     RefPtr menuItem = this->menuItem(identifier);
     if (!menuItem) {
-        completionHandler(toWebExtensionError(@"menus.remove()", nil, @"menu item not found"));
+        completionHandler(toWebExtensionError(@"menus.remove()", nullString(), @"menu item not found"));
         return;
     }
 
     Function<void(WebExtensionMenuItem&)> removeRecursive;
-    removeRecursive = [&](WebExtensionMenuItem& menuItem) {
+    removeRecursive = [this, protectedThis = Ref { *this }, &removeRecursive](WebExtensionMenuItem& menuItem) {
         for (auto& submenuItem : menuItem.submenuItems())
             removeRecursive(submenuItem);
 

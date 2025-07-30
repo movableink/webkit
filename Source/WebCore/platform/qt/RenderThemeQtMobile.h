@@ -23,6 +23,7 @@
 #define RenderThemeQtMobile_h
 
 #include "RenderThemeQt.h"
+#include "StylePadding.h"
 
 #include <QBrush>
 #include <QHash>
@@ -46,21 +47,21 @@ public:
 
     void adjustSliderThumbSize(RenderStyle&, const Element*) const final;
 
-    bool isControlStyled(const RenderStyle&, const RenderStyle&) const final;
+    bool isControlStyled(const RenderStyle&) const final;
 
-    LengthBox popupInternalPaddingBox(const RenderStyle&) const final;
+    Style::PaddingBox popupInternalPaddingBox(const RenderStyle&) const final;
 
     bool delegatesMenuListRendering() const final { return true; }
 
     // We don't want the focus ring to be drawn by the graphics context so we
     // always claim to support it in the theme.
     // FIXME: This could be a usability problem in the case of contenteditable divs.
-    bool supportsFocusRing(const RenderStyle&) const final { return true; }
+    bool supportsFocusRing(const RenderObject&, const RenderStyle&) const final { return true; }
 
 protected:
 
     void adjustButtonStyle(RenderStyle&, const Element*) const final;
-    bool paintButton(const RenderObject&, const PaintInfo&, const IntRect&) final;
+    bool paintButton(const RenderObject&, const PaintInfo&, const FloatRect&) final;
 
     bool paintTextField(const RenderObject&, const PaintInfo&, const FloatRect&) final;
     void adjustTextFieldStyle(RenderStyle&, const Element*) const final;
@@ -68,14 +69,14 @@ protected:
     bool paintMenuList(const RenderObject&, const PaintInfo&, const FloatRect&) final;
     void adjustMenuListStyle(RenderStyle&, const Element*) const final;
 
-    virtual bool paintMenuListButton(RenderObject&, const PaintInfo&, const IntRect&);
+    virtual bool paintMenuListButton(const RenderObject&, const PaintInfo&, const FloatRect&);
 
     // Returns the duration of the animation for the progress bar.
     Seconds animationDurationForProgressBar() const final;
-    bool paintProgressBar(const RenderObject&, const PaintInfo&, const IntRect&) final;
+    bool paintProgressBar(const RenderObject&, const PaintInfo&, const FloatRect&) final;
 
-    bool paintSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) final;
-    bool paintSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) final;
+    bool paintSliderTrack(const RenderObject&, const PaintInfo&, const FloatRect&) final;
+    bool paintSliderThumb(const RenderObject&, const PaintInfo&, const FloatRect&) final;
 
     void computeSizeBasedOnStyle(RenderStyle&) const final;
     QSharedPointer<StylePainter> getStylePainter(const PaintInfo&) final;

@@ -30,14 +30,14 @@ import json
 import os
 import unittest
 
-from webkitpy.common.host_mock import MockHost
-from webkitpy.common.system.filesystem_mock import MockFileSystem
-from webkitpy.common.system.executive_mock import MockExecutive2, ScriptError
-from webkitpy.port.test import TestPort
-from webkitpy.w3c.test_downloader import TestDownloader
-from webkitpy.w3c.test_importer import parse_args, TestImporter
-
 from webkitcorepy import OutputCapture
+from webkitscmpy.mocks.local import Git as Git_mock
+
+from webkitpy.common.host_mock import MockHost
+from webkitpy.common.system.executive_mock import MockExecutive2, ScriptError
+from webkitpy.common.system.filesystem_mock import MockFileSystem
+from webkitpy.port.test import TestPort
+from webkitpy.w3c.test_importer import TestImporter, parse_args
 
 FAKE_SOURCE_DIR = '/tests/csswg'
 FAKE_TEST_PATH = 'css-fake-1'
@@ -117,20 +117,9 @@ class TestImporterTest(unittest.TestCase):
         self.assertTrue(host.filesystem.getsize("/mock-checkout/LayoutTests/w3c/web-platform-tests/test1/__init__.py") > 0)
 
     def import_directory(self, args, files, test_paths):
-        host = MockHost()
-        port = host.port_factory.get()
-        fs = host.filesystem
-        for path, contents in files.items():
-            fs.write_binary_file(path, contents)
-
-        options, args = parse_args(args)
-        importer = TestImporter(port, test_paths, options)
-        importer.do_import()
-        return host.filesystem
+        return self.import_downloaded_tests(args + test_paths, files)
 
     def import_downloaded_tests(self, args, files, test_port=False):
-        # files are passed as parameter as we cannot clone/fetch/checkout a repo in mock system.
-
         host = MockHost()
         if test_port:
             port = TestPort(host)
@@ -142,8 +131,8 @@ class TestImporterTest(unittest.TestCase):
 
         options, test_paths = parse_args(args)
         importer = TestImporter(port, test_paths, options)
-        importer._test_downloader = TestDownloader(importer.tests_download_path, port, importer.options)
-        importer.do_import()
+        with Git_mock(fs.join(importer.tests_download_path, "web-platform-tests")):
+            importer.do_import()
         return host.filesystem
 
     def test_harnesslinks_conversion(self):

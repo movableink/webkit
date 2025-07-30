@@ -23,6 +23,7 @@
 #include "SVGTextLayoutEngine.h"
 
 #include "PathTraversalState.h"
+#include "RenderElementInlines.h"
 #include "RenderSVGTextPath.h"
 #include "RenderStyleInlines.h"
 #include "SVGElement.h"
@@ -428,7 +429,7 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(InlineIterator::SVGTextBoxItera
     bool applySpacingToNextCharacter = false;
 
     float lastAngle = 0;
-    float baselineShift = baselineLayout.calculateBaselineShift(svgStyle, lengthContext.get());
+    float baselineShift = baselineLayout.calculateBaselineShift(svgStyle);
     baselineShift -= baselineLayout.calculateAlignmentBaselineShift(m_isVerticalText, text);
 
     // Main layout algorithm.
@@ -460,7 +461,9 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(InlineIterator::SVGTextBoxItera
 
         float x = data.x;
         float y = data.y;
-        auto previousBoxOnLine = textBox->previousOnLine();
+        auto previousBoxOnLine = textBox->nextLineLeftwardOnLine();
+
+        bool hasXOrY = !SVGTextLayoutAttributes::isEmptyValue(x) || !SVGTextLayoutAttributes::isEmptyValue(y);
 
         // If we start a new chunk following an chunk that had a textLength set, use that
         // textLength to determine the chunk start position, instead of glyph advance values.
@@ -613,7 +616,7 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(InlineIterator::SVGTextBoxItera
         }
 
         // Determine whether we have to start a new fragment.
-        bool shouldStartNewFragment = m_dx || m_dy || m_isVerticalText || m_inPathLayout || angle || angle != lastAngle
+        bool shouldStartNewFragment = hasXOrY || m_dx || m_dy || m_isVerticalText || m_inPathLayout || angle || angle != lastAngle
             || orientationAngle || applySpacingToNextCharacter || definesTextLength;
 
         // If we already started a fragment, close it now.

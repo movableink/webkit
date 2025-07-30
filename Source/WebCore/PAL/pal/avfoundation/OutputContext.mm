@@ -32,11 +32,10 @@
 #include <mutex>
 #include <pal/spi/cocoa/AVFoundationSPI.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/text/StringBuilder.h>
+#include <wtf/text/MakeString.h>
+#include <wtf/text/StringConcatenate.h>
 
 #include <pal/cocoa/AVFoundationSoftLink.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace PAL {
 
@@ -76,18 +75,9 @@ String OutputContext::deviceName()
     if (!supportsMultipleOutputDevices())
         return [m_context deviceName];
 
-    StringBuilder builder;
-    auto devices = outputDevices();
-    auto iterator = devices.begin();
-
-    while (iterator != devices.end()) {
-        builder.append(iterator->name());
-
-        if (++iterator != devices.end())
-            builder.append(" + "_s);
-    }
-
-    return builder.toString();
+    return makeString(interleave(outputDevices(), [](auto& device) {
+        return device.name();
+    }, " + "_s));
 }
 
 Vector<OutputDevice> OutputContext::outputDevices() const
@@ -106,7 +96,5 @@ Vector<OutputDevice> OutputContext::outputDevices() const
 
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif

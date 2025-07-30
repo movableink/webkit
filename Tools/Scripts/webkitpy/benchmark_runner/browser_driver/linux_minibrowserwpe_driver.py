@@ -36,7 +36,6 @@ class WPEMiniBrowserDriver(LinuxBrowserDriver):
         if self.process_name.endswith('run-minibrowser'):
             self._default_browser_arguments.append('--wpe')
         self._default_browser_arguments.append('--')
-        self._default_browser_arguments.append('--use-wpe-platform-api')
         self._default_browser_arguments.append('--maximized')
         self._default_browser_arguments.append(url)
         super(WPEMiniBrowserDriver, self).launch_url(url, options, browser_build_path, browser_path)

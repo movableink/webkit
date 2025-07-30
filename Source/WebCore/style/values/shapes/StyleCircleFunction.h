@@ -35,7 +35,7 @@ namespace Style {
 struct Circle {
     using Extent = CSS::Circle::Extent;
     using Length = Style::LengthPercentage<CSS::Nonnegative>;
-    using RadialSize = std::variant<Length, Extent>;
+    using RadialSize = Variant<Length, Extent>;
 
     RadialSize radius;
     std::optional<Position> position;
@@ -68,4 +68,4 @@ template<> struct Blending<Circle> {
 } // namespace Style
 } // namespace WebCore
 
-STYLE_TUPLE_LIKE_CONFORMANCE(Circle, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::Circle, 2)

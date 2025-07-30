@@ -42,8 +42,8 @@ TEST(RenderStyleChangeTest, None)
     RenderStyle style2 = RenderStyle::create();
     FontCascadeDescription fontDescription2;
     style1.setFontDescription(WTFMove(fontDescription2));
-    Change change = determineChange(style1, style2);
-    EXPECT_EQ(change, Change::None);
+    auto changes = determineChanges(style1, style2);
+    EXPECT_EQ(changes, OptionSet<Change> { });
 }
 
 } // namespace TestWebKitAPI

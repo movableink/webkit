@@ -38,6 +38,10 @@ gl::ImageIndex GetImageIndex(EGLenum eglTarget, const egl::AttributeMap &attribs
     {
         return gl::ImageIndex::Make3D(mip, layer);
     }
+    else if (gl::IsCubeMapFaceTarget(target))
+    {
+        return gl::ImageIndex::MakeCubeMapFace(target, mip);
+    }
     else
     {
         ASSERT(layer == 0);
@@ -123,6 +127,11 @@ void ImageSibling::setSourceEGLImageInitState(gl::InitState initState) const
 {
     ASSERT(isEGLImageTarget());
     mTargetOf->setInitState(initState);
+}
+
+bool ImageSibling::isAttachmentSpecified(const gl::ImageIndex &imageIndex) const
+{
+    return !getAttachmentSize(imageIndex).empty();
 }
 
 bool ImageSibling::isRenderable(const gl::Context *context,
@@ -496,6 +505,11 @@ bool Image::hasProtectedContent() const
     return mState.hasProtectedContent;
 }
 
+bool Image::isFixedRatedCompression(const gl::Context *context) const
+{
+    return mImplementation->isFixedRatedCompression(context);
+}
+
 rx::ImageImpl *Image::getImplementation() const
 {
     return mImplementation;
@@ -524,7 +538,7 @@ Error Image::initialize(const Display *display, const gl::Context *context)
         if (!gl::ColorspaceFormatOverride(mState.colorspace, &nonLinearFormat))
         {
             // the colorspace format is not supported
-            return egl::EglBadMatch();
+            return egl::Error(EGL_BAD_MATCH);
         }
         mState.format = gl::Format(nonLinearFormat);
     }

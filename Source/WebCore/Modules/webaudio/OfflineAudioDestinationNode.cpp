@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
- * Copyright (C) 2020-2021, Apple Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,10 +42,9 @@
 #include <JavaScriptCore/JSGenericTypedArrayViewInlines.h>
 #include <algorithm>
 #include <wtf/MainThread.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/threads/BinarySemaphore.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -156,10 +155,6 @@ void OfflineAudioDestinationNode::startRendering(CompletionHandler<void(std::opt
 auto OfflineAudioDestinationNode::renderOnAudioThread() -> RenderResult
 {
     ASSERT(!isMainThread());
-    ASSERT(m_renderBus.get());
-
-    if (!m_renderBus.get())
-        return RenderResult::Failure;
 
     RELEASE_ASSERT(context().isInitialized());
 
@@ -182,14 +177,14 @@ auto OfflineAudioDestinationNode::renderOnAudioThread() -> RenderResult
             return RenderResult::Suspended;
 
         // Render one render quantum.
-        renderQuantum(m_renderBus.get(), AudioUtilities::renderQuantumSize, { });
+        renderQuantum(m_renderBus, AudioUtilities::renderQuantumSize, { });
         
         size_t framesAvailableToCopy = std::min(m_framesToProcess, AudioUtilities::renderQuantumSize);
         
         for (unsigned channelIndex = 0; channelIndex < numberOfChannels; ++channelIndex) {
-            const float* source = m_renderBus->channel(channelIndex)->data();
-            float* destination = m_renderTarget->channelData(channelIndex)->data();
-            memcpy(destination + m_destinationOffset, source, sizeof(float) * framesAvailableToCopy);
+            auto source = m_renderBus->channel(channelIndex)->span().first(framesAvailableToCopy);
+            auto destination = m_renderTarget->channelData(channelIndex)->typedMutableSpan();
+            memcpySpan(destination.subspan(m_destinationOffset), source);
         }
         
         m_destinationOffset += framesAvailableToCopy;
@@ -200,7 +195,5 @@ auto OfflineAudioDestinationNode::renderOnAudioThread() -> RenderResult
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

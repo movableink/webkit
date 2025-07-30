@@ -39,7 +39,7 @@ public:
     virtual ~BindGroup() = default;
 
     String label() const { return m_label; }
-    virtual bool updateExternalTextures(const ExternalTexture&) = 0;
+    virtual bool updateExternalTextures(ExternalTexture&) = 0;
 
     void setLabel(String&& label)
     {

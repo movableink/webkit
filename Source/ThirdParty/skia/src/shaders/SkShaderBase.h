@@ -163,7 +163,6 @@ private:
     M(Blend)              \
     M(CTM)                \
     M(Color)              \
-    M(Color4)             \
     M(ColorFilter)        \
     M(CoordClamp)         \
     M(Empty)              \
@@ -245,7 +244,7 @@ public:
                                                //   of fColors/fColorOffsets on input, and
                                                //   actual number of colors/offsets on
                                                //   output.
-        SkColor*    fColors        = nullptr;  //!< The colors in the gradient.
+        SkColor4f*  fColors        = nullptr;  //!< The colors in the gradient.
         SkScalar*   fColorOffsets  = nullptr;  //!< The unit offset for color transitions.
         SkPoint     fPoint[2];                 //!< Type specific, see above.
         SkScalar    fRadius[2];                //!< Type specific, see above.
@@ -423,7 +422,6 @@ inline const SkShaderBase* as_SB(const sk_sp<SkShader>& shader) {
 }
 
 void SkRegisterBlendShaderFlattenable();
-void SkRegisterColor4ShaderFlattenable();
 void SkRegisterColorShaderFlattenable();
 void SkRegisterCoordClampShaderFlattenable();
 void SkRegisterEmptyShaderFlattenable();

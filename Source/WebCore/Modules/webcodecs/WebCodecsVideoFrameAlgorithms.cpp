@@ -84,28 +84,6 @@ bool verifyRectOffsetAlignment(VideoPixelFormat format, const DOMRectInit& rect)
     return false;
 }
 
-// https://w3c.github.io/webcodecs/#videoframe-verify-rect-size-alignment
-bool verifyRectSizeAlignment(VideoPixelFormat format, const DOMRectInit& rect)
-{
-    switch (format) {
-    case VideoPixelFormat::I420:
-    case VideoPixelFormat::I420A:
-        return !(static_cast<unsigned>(rect.width) % 2) && !(static_cast<unsigned>(rect.height) % 2);
-    case VideoPixelFormat::I422:
-        return !(static_cast<unsigned>(rect.width) % 2) && !(static_cast<unsigned>(rect.height) % 2);
-    case VideoPixelFormat::I444:
-        return true;
-    case VideoPixelFormat::NV12:
-        return !(static_cast<unsigned>(rect.width) % 2) && !(static_cast<unsigned>(rect.height) % 2);
-    case VideoPixelFormat::RGBA:
-    case VideoPixelFormat::RGBX:
-    case VideoPixelFormat::BGRA:
-    case VideoPixelFormat::BGRX:
-        return true;
-    }
-    return false;
-}
-
 // https://w3c.github.io/webcodecs/#videoframe-parse-visible-rect
 ExceptionOr<DOMRectInit> parseVisibleRect(const DOMRectInit& defaultRect, const std::optional<DOMRectInit>& overrideRect, size_t codedWidth, size_t codedHeight, VideoPixelFormat format)
 {
@@ -189,6 +167,11 @@ size_t videoPixelFormatToSubSampling(VideoPixelFormat format, size_t planeNumber
     return 1;
 }
 
+static size_t divideAndRoundUpToNearestInteger(double value, size_t sampleHeight)
+{
+    return std::ceil(value / sampleHeight);
+}
+
 // https://w3c.github.io/webcodecs/#videoframe-compute-layout-and-allocation-size
 ExceptionOr<CombinedPlaneLayout> computeLayoutAndAllocationSize(const DOMRectInit& parsedRect, const std::optional<Vector<PlaneLayout>>& layout, VideoPixelFormat format)
 {
@@ -210,10 +193,10 @@ ExceptionOr<CombinedPlaneLayout> computeLayoutAndAllocationSize(const DOMRectIni
         auto sampleWidthBytes = sampleWidth * sampleBytes;
 
         ComputedPlaneLayout computedLayout;
-        computedLayout.sourceTop = parsedRect.y / sampleHeight;
-        computedLayout.sourceHeight = parsedRect.height / sampleHeight;
-        computedLayout.sourceLeftBytes = pixelSampleCount * parsedRect.x / sampleWidthBytes;
-        computedLayout.sourceWidthBytes = pixelSampleCount * parsedRect.width / sampleWidthBytes;
+        computedLayout.sourceTop = divideAndRoundUpToNearestInteger(parsedRect.y, sampleHeight);
+        computedLayout.sourceHeight = divideAndRoundUpToNearestInteger(parsedRect.height, sampleHeight);
+        computedLayout.sourceLeftBytes = pixelSampleCount * divideAndRoundUpToNearestInteger(parsedRect.x, sampleWidthBytes);
+        computedLayout.sourceWidthBytes = pixelSampleCount * divideAndRoundUpToNearestInteger(parsedRect.width, sampleWidthBytes);
         if (!computedLayout.sourceWidthBytes)
             return Exception { ExceptionCode::TypeError, "layout width bytes is zero"_s };
         if (layout) {
@@ -253,9 +236,6 @@ ExceptionOr<CombinedPlaneLayout> parseVideoFrameCopyToOptions(const WebCodecsVid
 {
     ASSERT(!frame.isDetached());
     ASSERT(frame.format());
-
-    if (options.rect && !verifyRectSizeAlignment(*frame.format(), *options.rect))
-        return Exception { ExceptionCode::TypeError, "rect size alignment is invalid"_s };
 
     auto& visibleRect = *frame.visibleRect();
     auto parsedRect = parseVisibleRect({ visibleRect.x(), visibleRect.y(), visibleRect.width(), visibleRect.height() }, options.rect, frame.codedWidth(), frame.codedHeight(), *frame.format());

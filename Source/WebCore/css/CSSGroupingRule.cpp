@@ -32,18 +32,13 @@
 #include "CSSGroupingRule.h"
 
 #include "CSSParser.h"
-#include "CSSParserImpl.h"
 #include "CSSRuleList.h"
 #include "CSSStyleSheet.h"
 #include "StylePropertiesInlines.h"
 #include "StyleRule.h"
-#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
-
-using CSSGroupingRuleLiveCSSRuleList = LiveCSSRuleList<CSSGroupingRule>;
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(CSSGroupingRuleLiveCSSRuleList);
 
 CSSGroupingRule::CSSGroupingRule(StyleRuleGroup& groupRule, CSSStyleSheet* parent)
     : CSSRule(parent)
@@ -61,6 +56,16 @@ CSSGroupingRule::~CSSGroupingRule()
     }
 }
 
+Ref<const StyleRuleGroup> CSSGroupingRule::protectedGroupRule() const
+{
+    return m_groupRule;
+}
+
+Ref<StyleRuleGroup> CSSGroupingRule::protectedGroupRule()
+{
+    return m_groupRule;
+}
+
 ExceptionOr<unsigned> CSSGroupingRule::insertRule(const String& ruleString, unsigned index)
 {
     ASSERT(m_childRuleCSSOMWrappers.size() == m_groupRule->childRules().size());
@@ -70,12 +75,22 @@ ExceptionOr<unsigned> CSSGroupingRule::insertRule(const String& ruleString, unsi
         return Exception { ExceptionCode::IndexSizeError };
     }
 
-    CSSStyleSheet* styleSheet = parentStyleSheet();
-    RefPtr newRule = CSSParser::parseRule(parserContext(), styleSheet ? &styleSheet->contents() : nullptr, ruleString, nestedContext());
+    RefPtr styleSheet = parentStyleSheet();
+    auto nestedContextWithCurrentRule = [&] -> CSSParserEnum::NestedContext {
+        if (m_groupRule->isStyleRule()) {
+            ASSERT_NOT_REACHED(); // This is handled in CSSStyleRule.
+            return CSSParserEnum::NestedContextType::Style;
+        }
+        if (m_groupRule->isScopeRule())
+            return CSSParserEnum::NestedContextType::Scope;
+        // Find the context in the ancestor chain.
+        return nestedContext();
+    }();
+    RefPtr newRule = CSSParser::parseRule(ruleString, parserContext(), styleSheet ? &styleSheet->contents() : nullptr, CSSParser::AllowedRules::ImportRules, nestedContextWithCurrentRule);
     if (!newRule) {
         if (!hasStyleRuleAncestor())
             return Exception { ExceptionCode::SyntaxError };
-        newRule = CSSParserImpl::parseNestedDeclarations(parserContext(), ruleString);
+        newRule = CSSParser::parseNestedDeclarations(parserContext(), ruleString);
         if (!newRule)
             return Exception { ExceptionCode::SyntaxError };
     }
@@ -118,7 +133,7 @@ ExceptionOr<void> CSSGroupingRule::deleteRule(unsigned index)
 
     if (m_childRuleCSSOMWrappers[index])
         m_childRuleCSSOMWrappers[index]->setParentRule(nullptr);
-    m_childRuleCSSOMWrappers.remove(index);
+    m_childRuleCSSOMWrappers.removeAt(index);
 
     return { };
 }
@@ -144,25 +159,26 @@ void CSSGroupingRule::appendCSSTextForItems(StringBuilder& builder) const
 void CSSGroupingRule::cssTextForRules(StringBuilder& rules) const
 {
     auto& childRules = m_groupRule->childRules();
-    for (unsigned index = 0; index < childRules.size(); index++) {
-        auto wrappedRule = item(index);
-        rules.append("\n  "_s, wrappedRule->cssText());
+    for (unsigned index = 0; index < childRules.size(); ++index) {
+        auto ruleText = item(index)->cssText();
+        if (!ruleText.isEmpty())
+            rules.append("\n  "_s, WTFMove(ruleText));
     }
 }
 
-void CSSGroupingRule::appendCSSTextWithReplacementURLsForItems(StringBuilder& builder, const UncheckedKeyHashMap<String, String>& replacementURLStrings, const UncheckedKeyHashMap<RefPtr<CSSStyleSheet>, String>& replacementURLStringsForCSSStyleSheet) const
+void CSSGroupingRule::appendCSSTextWithReplacementURLsForItems(StringBuilder& builder, const CSS::SerializationContext& context) const
 {
     StringBuilder rules;
-    cssTextForRulesWithReplacementURLs(rules, replacementURLStrings, replacementURLStringsForCSSStyleSheet);
+    cssTextForRulesWithReplacementURLs(rules, context);
     appendCSSTextForItemsInternal(builder, rules);
 }
 
-void CSSGroupingRule::cssTextForRulesWithReplacementURLs(StringBuilder& rules, const UncheckedKeyHashMap<String, String>& replacementURLStrings, const UncheckedKeyHashMap<RefPtr<CSSStyleSheet>, String>& replacementURLStringsForCSSStyleSheet) const
+void CSSGroupingRule::cssTextForRulesWithReplacementURLs(StringBuilder& rules, const CSS::SerializationContext& context) const
 {
     auto& childRules = m_groupRule->childRules();
     for (unsigned index = 0; index < childRules.size(); index++) {
         auto wrappedRule = item(index);
-        rules.append("\n  "_s, wrappedRule->cssTextWithReplacementURLs(replacementURLStrings, replacementURLStringsForCSSStyleSheet));
+        rules.append("\n  "_s, wrappedRule->cssText(context));
     }
 }
 
@@ -199,7 +215,7 @@ CSSRule* CSSGroupingRule::item(unsigned index) const
 CSSRuleList& CSSGroupingRule::cssRules() const
 {
     if (!m_ruleListCSSOMWrapper)
-        m_ruleListCSSOMWrapper = makeUniqueWithoutRefCountedCheck<LiveCSSRuleList<CSSGroupingRule>>(const_cast<CSSGroupingRule&>(*this));
+        lazyInitialize(m_ruleListCSSOMWrapper, makeUniqueWithoutRefCountedCheck<LiveCSSRuleList<CSSGroupingRule>>(const_cast<CSSGroupingRule&>(*this)));
     return *m_ruleListCSSOMWrapper;
 }
 

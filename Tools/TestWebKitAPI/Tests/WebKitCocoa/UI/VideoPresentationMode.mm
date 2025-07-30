@@ -1,0 +1,241 @@
+/*
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS''
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#import "config.h"
+
+#if PLATFORM(IOS)
+
+#import "PlatformUtilities.h"
+#import "TestWKWebView.h"
+#import <AVKit/AVKit.h>
+#import <WebKit/WebKit.h>
+
+static bool didEnterFullscreen;
+static bool didExitFullscreen;
+
+@interface VideoPresentationModeUIDelegate : NSObject <WKUIDelegate>
+@end
+
+@implementation VideoPresentationModeUIDelegate
+
+- (void)_webViewDidEnterFullscreen:(WKWebView *)webView
+{
+    didEnterFullscreen = true;
+}
+
+- (void)_webViewDidExitFullscreen:(WKWebView *)webView
+{
+    didExitFullscreen = true;
+}
+
+@end
+
+TEST(VideoPresentationMode, Fullscreen)
+{
+    // This test must run in TestWebKitAPI.app
+    if (![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"org.webkit.TestWebKitAPI"])
+        return;
+
+    didEnterFullscreen = false;
+    didExitFullscreen = false;
+
+    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [configuration setAllowsInlineMediaPlayback:YES];
+    RetainPtr uiDelegate = adoptNS([[VideoPresentationModeUIDelegate alloc] init]);
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    [webView setUIDelegate:uiDelegate.get()];
+
+    [webView synchronouslyLoadHTMLString:@"<video src=video-with-audio.mp4 playsinline loop controls></video>"];
+    [webView evaluateJavaScript:@"document.querySelector('video').play()" completionHandler:nil];
+    [webView evaluateJavaScript:@"document.querySelector('video').webkitSetPresentationMode('fullscreen')" completionHandler:nil];
+
+    TestWebKitAPI::Util::run(&didEnterFullscreen);
+
+    UIApplication *application = UIApplication.sharedApplication;
+    EXPECT_EQ(application.connectedScenes.count, 1U);
+
+    UIScene *scene = application.connectedScenes.anyObject;
+    RELEASE_ASSERT([scene isKindOfClass:UIWindowScene.class]);
+
+    UIViewController *fullScreenViewController = nil;
+    for (UIWindow *window in [(UIWindowScene *)scene windows]) {
+        UIViewController *presentedViewController = window.rootViewController.presentedViewController;
+        if ([presentedViewController isKindOfClass:NSClassFromString(@"AVFullScreenViewController")]) {
+            fullScreenViewController = presentedViewController;
+            break;
+        }
+    }
+    EXPECT_TRUE(!!fullScreenViewController);
+
+    UIView *fullScreenView = fullScreenViewController.viewIfLoaded;
+    EXPECT_TRUE(!!fullScreenView);
+
+    RetainPtr<UIView> playerLayerView;
+    RetainPtr viewStack = adoptNS([[NSMutableArray alloc] initWithObjects:fullScreenView, nil]);
+    while ([viewStack count]) {
+        RetainPtr view = (UIView *)[viewStack lastObject];
+        [viewStack removeLastObject];
+
+        if ([view isKindOfClass:NSClassFromString(@"WebAVPlayerLayerView")]) {
+            playerLayerView = WTFMove(view);
+            break;
+        }
+
+        [viewStack addObjectsFromArray:[view subviews]];
+    }
+    EXPECT_TRUE(!!playerLayerView);
+}
+
+TEST(VideoPresentationMode, Inline)
+{
+    // This test must run in TestWebKitAPI.app
+    if (![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"org.webkit.TestWebKitAPI"])
+        return;
+
+    didEnterFullscreen = false;
+    didExitFullscreen = false;
+
+    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [configuration setAllowsInlineMediaPlayback:YES];
+    RetainPtr uiDelegate = adoptNS([[VideoPresentationModeUIDelegate alloc] init]);
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    [webView setUIDelegate:uiDelegate.get()];
+
+    [webView synchronouslyLoadHTMLString:@"<video src=video-with-audio.mp4 playsinline loop controls></video>"];
+    [webView evaluateJavaScript:@"document.querySelector('video').play()" completionHandler:nil];
+    [webView evaluateJavaScript:@"document.querySelector('video').webkitSetPresentationMode('fullscreen')" completionHandler:nil];
+
+    TestWebKitAPI::Util::run(&didEnterFullscreen);
+
+    [webView evaluateJavaScript:@"document.querySelector('video').webkitSetPresentationMode('inline')" completionHandler:nil];
+
+    TestWebKitAPI::Util::run(&didExitFullscreen);
+
+    UIApplication *application = UIApplication.sharedApplication;
+    EXPECT_EQ(application.connectedScenes.count, 1U);
+
+    UIScene *scene = application.connectedScenes.anyObject;
+    RELEASE_ASSERT([scene isKindOfClass:UIWindowScene.class]);
+
+    UIViewController *fullScreenViewController = nil;
+    UIWindow *hostWindow = nil;
+    for (UIWindow *window in [(UIWindowScene *)scene windows]) {
+        UIViewController *presentedViewController = window.rootViewController.presentedViewController;
+        if ([presentedViewController isKindOfClass:NSClassFromString(@"AVFullScreenViewController")])
+            fullScreenViewController = presentedViewController;
+        if ([window isKindOfClass:NSClassFromString(@"TestWKWebViewHostWindow")])
+            hostWindow = window;
+    }
+    EXPECT_TRUE(!fullScreenViewController);
+    EXPECT_TRUE(!!hostWindow);
+
+    RetainPtr<UIView> playerLayerView;
+    RetainPtr viewStack = adoptNS([[NSMutableArray alloc] initWithObjects:hostWindow, nil]);
+    while ([viewStack count]) {
+        RetainPtr view = (UIView *)[viewStack lastObject];
+        [viewStack removeLastObject];
+
+        if ([view isKindOfClass:NSClassFromString(@"WebAVPlayerLayerView")]) {
+            playerLayerView = WTFMove(view);
+            break;
+        }
+
+        [viewStack addObjectsFromArray:[view subviews]];
+    }
+    EXPECT_TRUE(!!playerLayerView);
+}
+
+#if !PLATFORM(IOS_SIMULATOR)
+
+TEST(VideoPresentationMode, PictureInPicture)
+{
+    // This test must run in TestWebKitAPI.app
+    if (![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"org.webkit.TestWebKitAPI"])
+        return;
+
+    didEnterFullscreen = false;
+    didExitFullscreen = false;
+
+    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [configuration setAllowsInlineMediaPlayback:YES];
+    RetainPtr uiDelegate = adoptNS([[VideoPresentationModeUIDelegate alloc] init]);
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    [webView setUIDelegate:uiDelegate.get()];
+
+    [webView synchronouslyLoadHTMLString:@"<video src=video-with-audio.mp4 playsinline loop controls></video>"];
+    [webView evaluateJavaScript:@"document.querySelector('video').play()" completionHandler:nil];
+    [webView evaluateJavaScript:@"document.querySelector('video').webkitSetPresentationMode('picture-in-picture')" completionHandler:nil];
+
+    TestWebKitAPI::Util::run(&didEnterFullscreen);
+
+    UIApplication *application = UIApplication.sharedApplication;
+    EXPECT_EQ(application.connectedScenes.count, 1U);
+
+    UIScene *scene = application.connectedScenes.anyObject;
+    RELEASE_ASSERT([scene isKindOfClass:UIWindowScene.class]);
+
+    RetainPtr<UIViewController> playerViewController;
+    for (UIWindow *window in [(UIWindowScene *)scene windows]) {
+        UIViewController *rootViewController = window.rootViewController;
+        RetainPtr viewControllerStack = adoptNS([[NSMutableArray alloc] initWithObjects:rootViewController, nil]);
+        while ([viewControllerStack count]) {
+            RetainPtr viewController = (UIViewController *)[viewControllerStack lastObject];
+            [viewControllerStack removeLastObject];
+
+            if ([viewController isKindOfClass:AVPlayerViewController.class]) {
+                playerViewController = WTFMove(viewController);
+                break;
+            }
+
+            [viewControllerStack addObjectsFromArray:[viewController childViewControllers]];
+        }
+
+        if (!!playerViewController)
+            break;
+    }
+    EXPECT_TRUE(!!playerViewController);
+
+    UIView *playerView = [playerViewController viewIfLoaded];
+    EXPECT_TRUE(!!playerView);
+
+    RetainPtr<UIView> playerLayerView;
+    RetainPtr viewStack = adoptNS([[NSMutableArray alloc] initWithObjects:playerView, nil]);
+    while ([viewStack count]) {
+        RetainPtr view = (UIView *)[viewStack lastObject];
+        [viewStack removeLastObject];
+
+        if ([view isKindOfClass:NSClassFromString(@"WebAVPlayerLayerView")]) {
+            playerLayerView = WTFMove(view);
+            break;
+        }
+
+        [viewStack addObjectsFromArray:[view subviews]];
+    }
+    EXPECT_TRUE(!!playerLayerView);
+}
+
+#endif // !PLATFORM(IOS_SIMULATOR)
+
+#endif // PLATFORM(IOS)

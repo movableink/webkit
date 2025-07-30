@@ -483,7 +483,7 @@ SkPMColor4f GrSkSLFP::constantOutputForConstantInput(const SkPMColor4f& inputCol
         ConstantOutputForConstantInput_SkRPCallbacks callbacks;
         if (program->appendStages(&pipeline, &alloc, &callbacks, uniforms)) {
             SkPMColor4f outputColor;
-            SkRasterPipeline_MemoryCtx outputCtx = {&outputColor, 0};
+            SkRasterPipelineContexts::MemoryCtx outputCtx = {&outputColor, 0};
             pipeline.append(SkRasterPipelineOp::store_f32, &outputCtx);
             pipeline.run(0, 0, 1, 1);
             return outputColor;
@@ -508,7 +508,7 @@ std::unique_ptr<GrFragmentProcessor> GrSkSLFP::TestCreate(GrProcessorTestData* d
     auto filter = SkOverdrawColorFilter::MakeWithSkColors(colors);
     SkSurfaceProps props; // default props for testing
     auto [success, fp] = GrFragmentProcessors::Make(
-            d->context(), filter.get(), /*inputFP=*/nullptr, GrColorInfo{}, props);
+            d->surfaceDrawContext(), filter.get(), /*inputFP=*/nullptr, GrColorInfo{}, props);
     SkASSERT(success);
     return std::move(fp);
 }

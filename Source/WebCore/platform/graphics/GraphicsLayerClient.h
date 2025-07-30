@@ -108,16 +108,15 @@ public:
     virtual float pageScaleFactor() const { return 1; }
     virtual float zoomedOutPageScaleFactor() const { return 0; }
 
+    virtual FloatSize enclosingFrameViewVisibleSize() const { return { }; }
+
     virtual std::optional<float> customContentsScale(const GraphicsLayer*) const { return { }; }
 
     virtual float contentsScaleMultiplierForNewTiles(const GraphicsLayer*) const { return 1; }
     virtual bool paintsOpaquelyAtNonIntegralScales(const GraphicsLayer*) const { return false; }
 
+    virtual bool isFlushingLayers() const { return false; }
     virtual bool isTrackingRepaints() const { return false; }
-
-#if HAVE(HDR_SUPPORT)
-    virtual bool hdrForImagesEnabled() const { return false; }
-#endif
 
     virtual bool shouldSkipLayerInDump(const GraphicsLayer*, OptionSet<LayerTreeAsTextOptions>) const { return false; }
     virtual bool shouldDumpPropertyForLayer(const GraphicsLayer*, ASCIILiteral, OptionSet<LayerTreeAsTextOptions>) const { return true; }
@@ -138,9 +137,13 @@ public:
 
     virtual TransformationMatrix transformMatrixForProperty(AnimatedProperty) const { return { }; }
 
-    virtual bool layerContainsBitmapOnly(const GraphicsLayer*) const { return false; }
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+    virtual bool layerAllowsDynamicContentScaling(const GraphicsLayer*) const { return true; }
+#endif
 
     virtual bool layerNeedsPlatformContext(const GraphicsLayer*) const { return false; }
+
+    virtual bool backdropRootIsOpaque(const GraphicsLayer*) const { return false; }
 
 #ifndef NDEBUG
     // RenderLayerBacking overrides this to verify that it is not

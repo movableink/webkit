@@ -40,7 +40,6 @@ bool defaultAllowsInlineMediaPlayback();
 bool defaultAllowsInlineMediaPlaybackAfterFullscreen();
 bool defaultAllowsPictureInPictureMediaPlayback();
 bool defaultInlineMediaPlaybackRequiresPlaysInlineAttribute();
-bool defaultJavaScriptCanOpenWindowsAutomatically();
 bool defaultPassiveTouchListenersAsDefaultOnDocument();
 bool defaultRequiresUserGestureToLoadVideo();
 bool defaultShowModalDialogEnabled();
@@ -59,6 +58,7 @@ bool defaultNeedsFrameNameFallbackToIdQuirk();
 bool defaultNeedsKeyboardEventDisambiguationQuirks();
 #endif
 
+bool defaultMutationEventsEnabled();
 bool defaultAttachmentElementEnabled();
 bool defaultShouldRestrictBaseURLSchemes();
 bool defaultAllowDisplayOfInsecureContent();
@@ -69,6 +69,14 @@ bool defaultPopoverAttributeEnabled();
 #if PLATFORM(MAC)
 bool defaultPassiveWheelListenersAsDefaultOnDocument();
 bool defaultWheelEventGesturesBecomeNonBlocking();
+#endif
+
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+bool defaultMacStyleControlsOnCatalyst();
+#endif
+
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+bool defaultVectorBasedControlsOnMacEnabled();
 #endif
 
 #if ENABLE(MEDIA_SOURCE) && PLATFORM(IOS_FAMILY)

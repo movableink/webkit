@@ -35,8 +35,6 @@
 #include <wtf/text/TextBreakIterator.h>
 #include <wtf/unicode/CharacterNames.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 // https://www.w3.org/TR/css-counter-styles-3/#cyclic-system
@@ -178,14 +176,15 @@ static String counterForSystemCJK(int number, const std::array<UChar, 17>& table
 
     constexpr unsigned groupLength = 8; // 4 digits, 3 digit markers, and a group marker
     constexpr unsigned bufferLength = 4 * groupLength;
-    AbstractCJKCharacter buffer[bufferLength] = { NoChar };
+    std::array<AbstractCJKCharacter, bufferLength> buffer;
+    buffer.fill(NoChar);
 
     for (int i = 0; i < 4; ++i) {
         int groupValue = number % 10000;
         number /= 10000;
 
         // Process least-significant group first, but put it in the buffer last.
-        auto group = &buffer[(3 - i) * groupLength];
+        auto group = std::span { buffer }.subspan((3 - i) * groupLength);
 
         if (groupValue && i)
             group[7] = static_cast<AbstractCJKCharacter>(SecondGroupMarker - 1 + i);
@@ -223,7 +222,7 @@ static String counterForSystemCJK(int number, const std::array<UChar, 17>& table
 
     // Convert into characters, omitting consecutive runs of digit0 and trailing digit0.
     unsigned length = 0;
-    UChar characters[1 + bufferLength];
+    std::array<UChar, bufferLength + 1> characters;
     auto last = NoChar;
     if (needsNegativeSign)
         characters[length++] = table[NegativeSign - 1];
@@ -238,7 +237,7 @@ static String counterForSystemCJK(int number, const std::array<UChar, 17>& table
     if (last == Digit0)
         --length;
 
-    return std::span<const UChar> { characters, length };
+    return std::span<const UChar> { characters }.first(length);
 }
 
 String CSSCounterStyle::counterForSystemDisclosureClosed(WritingMode writingMode)
@@ -322,16 +321,16 @@ String CSSCounterStyle::counterForSystemEthiopicNumeric(unsigned value)
     }
 
     // Split the number into groups of two digits, starting with the least significant decimal digit.
-    uint8_t groups[5];
+    std::array<uint8_t, 5> groups;
     for (auto& group : groups) {
         group = value % 100;
         value /= 100;
     }
 
-    UChar buffer[std::size(groups) * 3];
+    std::array<UChar, groups.size() * 3> buffer;
     unsigned length = 0;
     bool isMostSignificantGroup = true;
-    for (int i = std::size(groups) - 1; i >= 0; --i) {
+    for (int i = groups.size() - 1; i >= 0; --i) {
         auto value = groups[i];
         bool isOddIndex = i & 1;
         // If the group has the value zero, or if the group is the most significant one and has the value 1,
@@ -351,7 +350,7 @@ String CSSCounterStyle::counterForSystemEthiopicNumeric(unsigned value)
             isMostSignificantGroup = false;
     }
 
-    return std::span<const UChar> { buffer, length };
+    return std::span<const UChar> { buffer }.first(length);
 }
 
 String CSSCounterStyle::initialRepresentation(int value, WritingMode writingMode) const
@@ -526,5 +525,3 @@ void CSSCounterStyle::extendAndResolve(const CSSCounterStyle& extendedCounterSty
         setSpeakAs(extendedCounterStyle.speakAs());
 }
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

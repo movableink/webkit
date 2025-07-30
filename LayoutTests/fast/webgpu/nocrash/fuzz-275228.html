@@ -1,3 +1,5 @@
+<!-- webkit-test-runner [ enableMetalShaderValidation=true ] -->
+<script src="../../../resources/js-test-pre.js"></script>
 <script>
 async function run() {
     let adapter = await navigator.gpu.requestAdapter();
@@ -28,7 +30,13 @@ async function run() {
     renderPassEncoder.setVertexBuffer(4, buffer);
     device.destroy();
     renderPassEncoder.drawIndexed(153);
+    await device.queue.onSubmittedWorkDone();
+    debug('Pass')
+    globalThis.testRunner?.notifyDone();
 }
+globalThis.testRunner?.dumpAsText();
 globalThis.testRunner?.waitUntilDone();
-run().finally(() => globalThis.testRunner?.notifyDone());
+
+run();
 </script>
+

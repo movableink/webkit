@@ -86,9 +86,7 @@ const TestFeatures& TestOptions::defaults()
             { "AppBadgeEnabled", true },
             { "AsyncFrameScrollingEnabled", false },
             { "AsyncOverflowScrollingEnabled", false },
-            { "BroadcastChannelOriginPartitioningEnabled", false },
             { "BuiltInNotificationsEnabled", false },
-            { "CSSOMViewScrollingAPIEnabled", true },
             { "CSSUnprefixedBackdropFilterEnabled", true },
             { "CaptureAudioInGPUProcessEnabled", captureAudioInGPUProcessEnabledValue },
             { "CaptureAudioInUIProcessEnabled", false },
@@ -108,6 +106,9 @@ const TestFeatures& TestOptions::defaults()
             { "GenericCueAPIEnabled", false },
             { "HiddenPageCSSAnimationSuspensionEnabled", false },
             { "HiddenPageDOMTimerThrottlingEnabled", false },
+#if ENABLE(CONTENT_EXTENSIONS)
+            { "IFrameResourceMonitoringEnabled", true },
+#endif
             { "InlineMediaPlaybackRequiresPlaysInlineAttribute", false },
             { "InputTypeDateEnabled", true },
             { "InputTypeDateTimeLocalEnabled", true },
@@ -129,6 +130,7 @@ const TestFeatures& TestOptions::defaults()
             { "NeedsStorageAccessFromFileURLsQuirk", false },
             { "PageVisibilityBasedProcessSuppressionEnabled", false },
             { "PeerConnectionVideoScalingAdaptationDisabled", true },
+            { "PerElementSpeakerSelectionEnabled", true },
             { "PDFJSViewerEnabled", false },
             { "PushAPIEnabled", true },
             { "RequiresUserGestureForAudioPlayback", false },
@@ -137,6 +139,8 @@ const TestFeatures& TestOptions::defaults()
             { "ScrollToTextFragmentIndicatorEnabled", false },
             { "ShowModalDialogEnabled", false },
             { "SpeakerSelectionRequiresUserGesture", false },
+            { "SupportHDRDisplayEnabled", true },
+            { "VerifyWindowOpenUserGestureFromUIProcess", false },
             { "TabsToLinks", false },
             { "TextAutosizingEnabled", false },
             { "TextAutosizingUsesIdempotentMode", false },
@@ -209,6 +213,7 @@ const TestFeatures& TestOptions::defaults()
             { "useHardwareKeyboardMode", false },
             { "enableMetalDebugDevice", false },
             { "enableMetalShaderValidation", false },
+            { "pageTopColorSamplingEnabled", false },
         };
         features.doubleTestRunnerFeatures = {
             { "contentInset.top", 0 },
@@ -284,6 +289,7 @@ const std::unordered_map<std::string, TestHeaderKeyType>& TestOptions::keyTypeMa
         { "useHardwareKeyboardMode", TestHeaderKeyType::BoolTestRunner },
         { "enableMetalDebugDevice", TestHeaderKeyType::BoolTestRunner },
         { "enableMetalShaderValidation", TestHeaderKeyType::BoolTestRunner },
+        { "pageTopColorSamplingEnabled", TestHeaderKeyType::BoolTestRunner },
 
         { "contentInset.top", TestHeaderKeyType::DoubleTestRunner },
         { "obscuredInset.top", TestHeaderKeyType::DoubleTestRunner },

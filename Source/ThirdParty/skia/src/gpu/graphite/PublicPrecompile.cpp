@@ -5,10 +5,9 @@
  * found in the LICENSE file.
  */
 
-#include "src/gpu/graphite/PublicPrecompile.h"
-
 #include "include/core/SkColorSpace.h"
 #include "include/core/SkColorType.h"
+#include "include/gpu/graphite/PrecompileContext.h"
 #include "include/gpu/graphite/precompile/Precompile.h"
 #include "include/gpu/graphite/precompile/PrecompileColorFilter.h"
 #include "src/gpu/graphite/Caps.h"
@@ -18,6 +17,8 @@
 #include "src/gpu/graphite/GraphicsPipelineDesc.h"
 #include "src/gpu/graphite/KeyContext.h"
 #include "src/gpu/graphite/Log.h"
+#include "src/gpu/graphite/PipelineData.h"
+#include "src/gpu/graphite/PrecompileContextPriv.h"
 #include "src/gpu/graphite/PrecompileInternal.h"
 #include "src/gpu/graphite/RenderPassDesc.h"
 #include "src/gpu/graphite/Renderer.h"
@@ -60,8 +61,8 @@ void compile(const RendererProvider* rendererProvider,
             SkASSERT(!s->performsShading() || s->emitsPrimitiveColor() == withPrimitiveBlender);
 
             UniquePaintParamsID paintID = s->performsShading() ? uniqueID
-                                                               : UniquePaintParamsID::InvalidID();
-            GraphicsPipelineDesc pipelineDesc(s, paintID);
+                                                               : UniquePaintParamsID::Invalid();
+            GraphicsPipelineDesc pipelineDesc(s->renderStepID(), paintID);
 
             sk_sp<GraphicsPipeline> pipeline = resourceProvider->findOrCreateGraphicsPipeline(
                     keyContext.rtEffectDict(),
@@ -80,46 +81,15 @@ void compile(const RendererProvider* rendererProvider,
 
 namespace skgpu::graphite {
 
-bool Precompile(Context* context,
-                RuntimeEffectDictionary* rteDict,
-                const GraphicsPipelineDesc& pipelineDesc,
-                const RenderPassDesc& renderPassDesc) {
-    ResourceProvider* resourceProvider = context->priv().resourceProvider();
-
-    sk_sp<GraphicsPipeline> pipeline = resourceProvider->findOrCreateGraphicsPipeline(
-            rteDict,
-            pipelineDesc,
-            renderPassDesc,
-            PipelineCreationFlags::kForPrecompilation);
-    if (!pipeline) {
-        SKGPU_LOG_W("Failed to create GraphicsPipeline in precompile!");
-        return false;
-    }
-
-    return true;
-}
-
-void Precompile(Context* context, const PaintOptions& options, DrawTypeFlags drawTypes,
+void Precompile(PrecompileContext* precompileContext,
+                const PaintOptions& options,
+                DrawTypeFlags drawTypes,
                 SkSpan<const RenderPassProperties> renderPassProperties) {
 
-    ShaderCodeDictionary* dict = context->priv().shaderCodeDictionary();
-    const Caps* caps = context->priv().caps();
+    ShaderCodeDictionary* dict = precompileContext->priv().shaderCodeDictionary();
+    const Caps* caps = precompileContext->priv().caps();
 
     auto rtEffectDict = std::make_unique<RuntimeEffectDictionary>();
-
-    // Here we are creating a ResourceProvider for each call to 'Precompile'. The issue is that
-    // 'Precompile' can be called from any number of threads but the ResourceProvider and
-    // its nested ResourceCache were never intended to be thread-safe. This allocation fixes
-    // the thread-safety issue but at the cost of excessive (re)allocations.
-    // TODO(b/373849852): implement a better solution to the Precompile thread-safety problem.
-    SharedContext* sharedContext = context->priv().sharedContext();
-    SingleOwner singleOwner;
-    static constexpr size_t kDefaultBudgetInBytes = 0;
-    std::unique_ptr<ResourceProvider> tmpResourceProvider = sharedContext->makeResourceProvider(
-            &singleOwner,
-            SK_InvalidGenID,
-            kDefaultBudgetInBytes,
-            /* avoidBufferAlloc= */ true);
 
     for (const RenderPassProperties& rpp : renderPassProperties) {
         // TODO: Allow the client to pass in mipmapping and protection too?
@@ -155,15 +125,17 @@ void Precompile(Context* context, const PaintOptions& options, DrawTypeFlags dra
                                          rpp.fDSFlags,
                                          /* clearColor= */ { .0f, .0f, .0f, .0f },
                                          rpp.fRequiresMSAA,
-                                         writeSwizzle);
+                                         writeSwizzle,
+                                         caps->getDstReadStrategy());
 
-            SkColorInfo ci(rpp.fDstCT, kPremul_SkAlphaType, nullptr);
+            SkColorInfo ci(rpp.fDstCT, kPremul_SkAlphaType, rpp.fDstCS);
             KeyContext keyContext(caps, dict, rtEffectDict.get(), ci);
 
             for (Coverage coverage : { Coverage::kNone, Coverage::kSingleChannel }) {
                 PrecompileCombinations(
-                        context->priv().rendererProvider(),
-                        tmpResourceProvider.get(), options, keyContext,
+                        precompileContext->priv().rendererProvider(),
+                        precompileContext->priv().resourceProvider(),
+                        options, keyContext,
                         static_cast<DrawTypeFlags>(drawTypes & ~(DrawTypeFlags::kBitmapText_Color |
                                                                  DrawTypeFlags::kBitmapText_LCD |
                                                                  DrawTypeFlags::kSDFText_LCD |
@@ -179,8 +151,8 @@ void Precompile(Context* context, const PaintOptions& options, DrawTypeFlags dra
                 tmp.setShaders({});
 
                 // ARGB text doesn't emit coverage and always has a primitive blender
-                PrecompileCombinations(context->priv().rendererProvider(),
-                                       tmpResourceProvider.get(),
+                PrecompileCombinations(precompileContext->priv().rendererProvider(),
+                                       precompileContext->priv().resourceProvider(),
                                        tmp,
                                        keyContext,
                                        DrawTypeFlags::kBitmapText_Color,
@@ -192,8 +164,9 @@ void Precompile(Context* context, const PaintOptions& options, DrawTypeFlags dra
             if (drawTypes & (DrawTypeFlags::kBitmapText_LCD | DrawTypeFlags::kSDFText_LCD)) {
                 // LCD-based text always emits LCD coverage but never has primitiveBlenders
                 PrecompileCombinations(
-                        context->priv().rendererProvider(),
-                        tmpResourceProvider.get(), options, keyContext,
+                        precompileContext->priv().rendererProvider(),
+                        precompileContext->priv().resourceProvider(),
+                        options, keyContext,
                         static_cast<DrawTypeFlags>(drawTypes & (DrawTypeFlags::kBitmapText_LCD |
                                                                 DrawTypeFlags::kSDFText_LCD)),
                         /* withPrimitiveBlender= */ false,
@@ -205,8 +178,9 @@ void Precompile(Context* context, const PaintOptions& options, DrawTypeFlags dra
                 // drawVertices w/ colors use a primitiveBlender while those w/o don't. It never
                 // emits coverage.
                 for (bool withPrimitiveBlender : { true, false }) {
-                    PrecompileCombinations(context->priv().rendererProvider(),
-                                           tmpResourceProvider.get(), options, keyContext,
+                    PrecompileCombinations(precompileContext->priv().rendererProvider(),
+                                           precompileContext->priv().resourceProvider(),
+                                           options, keyContext,
                                            DrawTypeFlags::kDrawVertices,
                                            withPrimitiveBlender,
                                            Coverage::kNone,

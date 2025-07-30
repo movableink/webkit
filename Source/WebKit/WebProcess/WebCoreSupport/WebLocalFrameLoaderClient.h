@@ -32,6 +32,11 @@
 #include <WebCore/LocalFrameLoaderClient.h>
 #include <pal/SessionID.h>
 
+namespace WebCore {
+struct BackForwardItemIdentifierType;
+using BackForwardItemIdentifier = ProcessQualified<ObjectIdentifier<BackForwardItemIdentifierType>>;
+}
+
 namespace WebKit {
 
 class PluginView;
@@ -77,6 +82,9 @@ private:
     
     void detachedFromParent2() final;
     void detachedFromParent3() final;
+
+    bool shouldSuppressLayoutMilestones() const final;
+    void fireLayoutRelatedMilestonesIfNeeded();
     
     void assignIdentifierToInitialRequest(WebCore::ResourceLoaderIdentifier, WebCore::IsMainResourceLoad, WebCore::DocumentLoader*, const WebCore::ResourceRequest&) final;
     
@@ -158,28 +166,15 @@ private:
     
     void updateGlobalHistory() final;
     void updateGlobalHistoryRedirectLinks() final;
-    
-    bool shouldGoToHistoryItem(WebCore::HistoryItem&) const final;
+
+    WebCore::ShouldGoToHistoryItem shouldGoToHistoryItem(WebCore::HistoryItem&, WebCore::IsSameDocumentNavigation, WebCore::ProcessSwapDisposition) const final;
+    bool supportsAsyncShouldGoToHistoryItem() const final;
+    void shouldGoToHistoryItemAsync(WebCore::HistoryItem&, CompletionHandler<void(WebCore::ShouldGoToHistoryItem)>&&) const final;
 
     void didDisplayInsecureContent() final;
     void didRunInsecureContent(WebCore::SecurityOrigin&) final;
 
     void didFinishServiceWorkerPageRegistration(bool success) final;
-
-    WebCore::ResourceError cancelledError(const WebCore::ResourceRequest&) const final;
-    WebCore::ResourceError blockedError(const WebCore::ResourceRequest&) const final;
-    WebCore::ResourceError blockedByContentBlockerError(const WebCore::ResourceRequest&) const final;
-    WebCore::ResourceError cannotShowURLError(const WebCore::ResourceRequest&) const final;
-    WebCore::ResourceError interruptedForPolicyChangeError(const WebCore::ResourceRequest&) const final;
-#if ENABLE(CONTENT_FILTERING)
-    WebCore::ResourceError blockedByContentFilterError(const WebCore::ResourceRequest&) const final;
-#endif
-    
-    WebCore::ResourceError cannotShowMIMETypeError(const WebCore::ResourceResponse&) const final;
-    WebCore::ResourceError fileDoesNotExistError(const WebCore::ResourceResponse&) const final;
-    WebCore::ResourceError httpsUpgradeRedirectLoopError(const WebCore::ResourceRequest&) const final;
-    WebCore::ResourceError httpNavigationWithHTTPSOnlyError(const WebCore::ResourceRequest&) const final;
-    WebCore::ResourceError pluginWillHandleLoadError(const WebCore::ResourceResponse&) const final;
     
     void loadStorageAccessQuirksIfNeeded() final;
 
@@ -198,7 +193,7 @@ private:
     void didFinishLoad() final;
     void prepareForDataSourceReplacement() final;
     
-    Ref<WebCore::DocumentLoader> createDocumentLoader(const WebCore::ResourceRequest&, const WebCore::SubstituteData&) final;
+    Ref<WebCore::DocumentLoader> createDocumentLoader(WebCore::ResourceRequest&&, WebCore::SubstituteData&&) final;
     void updateCachedDocumentLoader(WebCore::DocumentLoader&) final;
 
     void setTitle(const WebCore::StringWithDirection&, const URL&) final;
@@ -242,7 +237,7 @@ private:
     RemoteAXObjectRef accessibilityRemoteObject() final;
     WebCore::IntPoint accessibilityRemoteFrameOffset() final;
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    void setAXIsolatedTreeRoot(WebCore::AXCoreObject*) final;
+    void setIsolatedTree(Ref<WebCore::AXIsolatedTree>&&) final;
 #endif
     void willCacheResponse(WebCore::DocumentLoader*, WebCore::ResourceLoaderIdentifier, NSCachedURLResponse*, CompletionHandler<void(NSCachedURLResponse *)>&&) const final;
 
@@ -250,6 +245,7 @@ private:
 #endif
 
     void didChangeScrollOffset() final;
+    bool isWebLocalFrameLoaderClient() const final { return true; }
 
     bool allowScript(bool enabledPerSettings) final;
 
@@ -258,6 +254,7 @@ private:
     Ref<WebCore::FrameNetworkingContext> createNetworkingContext() final;
 
     void completePageTransitionIfNeeded() final;
+    void setDocumentVisualUpdatesAllowed(bool) final;
 
 #if USE(QUICK_LOOK)
     RefPtr<WebCore::LegacyPreviewLoaderClient> createPreviewLoaderClient(const String& fileName, const String& uti) final;
@@ -283,6 +280,12 @@ private:
 #endif
 
     bool siteIsolationEnabled() const;
+
+    Ref<WebCore::LocalFrame> protectedLocalFrame() const;
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    void didExceedNetworkUsageThreshold();
+#endif
 
 #if ENABLE(PDF_PLUGIN)
     RefPtr<PluginView> m_pluginView;
@@ -314,17 +317,12 @@ private:
     void dispatchLoadEventToOwnerElementInAnotherProcess() final;
 
     void frameNameChanged(const String&) final;
+
+    RefPtr<WebCore::HistoryItem> createHistoryItemTree(bool clipAtTarget, WebCore::BackForwardItemIdentifier) const final;
 };
 
-// As long as EmptyFrameLoaderClient exists in WebCore, this can return nullptr.
-inline WebLocalFrameLoaderClient* toWebLocalFrameLoaderClient(WebCore::LocalFrameLoaderClient& client)
-{
-    return client.isEmptyFrameLoaderClient() ? nullptr : static_cast<WebLocalFrameLoaderClient*>(&client);
-}
-
-inline const WebLocalFrameLoaderClient* toWebLocalFrameLoaderClient(const WebCore::LocalFrameLoaderClient& client)
-{
-    return client.isEmptyFrameLoaderClient() ? nullptr : static_cast<const WebLocalFrameLoaderClient*>(&client);
-}
-
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebLocalFrameLoaderClient)
+    static bool isType(const WebCore::LocalFrameLoaderClient& client) { return client.isWebLocalFrameLoaderClient(); }
+SPECIALIZE_TYPE_TRAITS_END()

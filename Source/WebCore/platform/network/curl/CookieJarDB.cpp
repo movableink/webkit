@@ -32,9 +32,9 @@
 #include "RegistrableDomain.h"
 #include "SQLiteFileSystem.h"
 #include <wtf/DateMath.h>
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/MonotonicTime.h>
-#include <wtf/Seconds.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 #include <wtf/Vector.h>
@@ -238,8 +238,6 @@ void CookieJarDB::flagDatabaseCorruption()
         return;
 
     auto handle = FileSystem::openFile(getCorruptionMarkerPath(), FileSystem::FileOpenMode::Truncate);
-    if (FileSystem::isHandleValid(handle))
-        FileSystem::closeFile(handle);
 }
 
 bool CookieJarDB::checkDatabaseCorruptionAndRemoveIfNeeded()
@@ -368,23 +366,23 @@ bool CookieJarDB::hasCookies(const URL& url)
     return statement.step() == SQLITE_ROW;
 }
 
-std::optional<Vector<Cookie>> CookieJarDB::searchCookies(const URL& firstParty, const URL& requestURL, std::optional<bool> httpOnly, std::optional<bool> secure, std::optional<bool> session)
+std::optional<Vector<Cookie>> CookieJarDB::searchCookies(const URL& firstParty, const URL& requestUrl, const std::optional<bool>& httpOnly, const std::optional<bool>& secure, const std::optional<bool>& session)
 {
     if (!isEnabled() || !m_database.isOpen())
         return std::nullopt;
 
-    String requestHost = requestURL.host().convertToASCIILowercase();
+    String requestHost = requestUrl.host().convertToASCIILowercase();
     if (requestHost.isEmpty())
         return std::nullopt;
 
-    if (!checkCookieAcceptPolicy(firstParty, requestURL))
+    if (!checkCookieAcceptPolicy(firstParty, requestUrl))
         return std::nullopt;
 
-    String requestPath = requestURL.path().toString();
+    String requestPath = requestUrl.path().toString();
     if (requestPath.isEmpty())
         requestPath = "/"_s;
 
-    RegistrableDomain registrableDomain { requestURL };
+    RegistrableDomain registrableDomain { requestUrl };
 
     auto pstmt = m_database.prepareStatement("SELECT name, value, domain, path, expires, httponly, secure, session FROM Cookie WHERE "\
         "(NOT ((session = 0) AND (expires < ?)))"
@@ -571,11 +569,6 @@ bool CookieJarDB::setCookie(const URL& firstParty, const URL& url, const String&
     }
 
     return setCookie(*cookie);
-}
-
-bool CookieJarDB::setCookie(const URL& firstParty, const URL& url, const String& body, CookieJarDB::Source source)
-{
-    return setCookie(firstParty, url, body, source, std::nullopt);
 }
 
 HashSet<String> CookieJarDB::allDomains()

@@ -35,9 +35,9 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ControlFactoryIOS);
 
-RefPtr<ControlFactory> ControlFactory::create()
+Ref<ControlFactory> ControlFactory::create()
 {
-    return adoptRef(new ControlFactoryIOS());
+    return adoptRef(*new ControlFactoryIOS());
 }
 
 std::unique_ptr<PlatformControl> ControlFactoryIOS::createPlatformButton(ButtonPart&)
@@ -46,13 +46,11 @@ std::unique_ptr<PlatformControl> ControlFactoryIOS::createPlatformButton(ButtonP
     return nullptr;
 }
 
-#if ENABLE(INPUT_TYPE_COLOR)
 std::unique_ptr<PlatformControl> ControlFactoryIOS::createPlatformColorWell(ColorWellPart&)
 {
     notImplemented();
     return nullptr;
 }
-#endif
 
 std::unique_ptr<PlatformControl> ControlFactoryIOS::createPlatformInnerSpinButton(InnerSpinButtonPart&)
 {

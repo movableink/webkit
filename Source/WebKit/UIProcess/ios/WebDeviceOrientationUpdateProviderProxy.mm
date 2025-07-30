@@ -57,8 +57,12 @@ WebDeviceOrientationUpdateProviderProxy::~WebDeviceOrientationUpdateProviderProx
         page->protectedLegacyMainFrameProcess()->removeMessageReceiver(Messages::WebDeviceOrientationUpdateProviderProxy::messageReceiverName(), page->webPageIDInMainFrameProcess());
 }
 
-void WebDeviceOrientationUpdateProviderProxy::startUpdatingDeviceOrientation()
+void WebDeviceOrientationUpdateProviderProxy::startUpdatingDeviceOrientation(const WebCore::SecurityOriginData& origin)
 {
+    RefPtr page = m_page.get();
+    if (!page || !page->originHasDeviceOrientationAndMotionAccess(origin))
+        return;
+
     [[WebCoreMotionManager sharedManager] addOrientationClient:this];
 }
 
@@ -67,8 +71,12 @@ void WebDeviceOrientationUpdateProviderProxy::stopUpdatingDeviceOrientation()
     [[WebCoreMotionManager sharedManager] removeOrientationClient:this];
 }
 
-void WebDeviceOrientationUpdateProviderProxy::startUpdatingDeviceMotion()
+void WebDeviceOrientationUpdateProviderProxy::startUpdatingDeviceMotion(const WebCore::SecurityOriginData& origin)
 {
+    RefPtr page = m_page.get();
+    if (!page || !page->originHasDeviceOrientationAndMotionAccess(origin))
+        return;
+
     [[WebCoreMotionManager sharedManager] addMotionClient:this];
 }
 
@@ -87,6 +95,11 @@ void WebDeviceOrientationUpdateProviderProxy::motionChanged(double xAcceleration
 {
     if (RefPtr page = m_page.get())
         page->protectedLegacyMainFrameProcess()->send(Messages::WebDeviceOrientationUpdateProvider::DeviceMotionChanged(xAcceleration, yAcceleration, zAcceleration, xAccelerationIncludingGravity, yAccelerationIncludingGravity, zAccelerationIncludingGravity, xRotationRate, yRotationRate, zRotationRate), m_page->webPageIDInMainFrameProcess());
+}
+
+std::optional<SharedPreferencesForWebProcess> WebDeviceOrientationUpdateProviderProxy::sharedPreferencesForWebProcess(IPC::Connection& connection) const
+{
+    return WebProcessProxy::fromConnection(connection)->sharedPreferencesForWebProcess();
 }
 
 } // namespace WebKit

@@ -234,7 +234,7 @@ UnlinkedFunctionExecutable* CodeCache::getUnlinkedGlobalFunctionExecutable(VM& v
 
     // This function assumes an input string that would result in a single function declaration.
     StatementNode* funcDecl = program->singleStatement();
-    if (UNLIKELY(!funcDecl)) {
+    if (!funcDecl) [[unlikely]] {
         JSToken token;
         error = ParserError(ParserError::SyntaxError, ParserError::SyntaxErrorIrrecoverable, token, "Parser error"_s, -1);
         return nullptr;
@@ -257,6 +257,9 @@ UnlinkedFunctionExecutable* CodeCache::getUnlinkedGlobalFunctionExecutable(VM& v
         functionExecutable->setSourceURLDirective(source.provider()->sourceURLDirective());
     if (!source.provider()->sourceMappingURLDirective().isNull())
         functionExecutable->setSourceMappingURLDirective(source.provider()->sourceMappingURLDirective());
+
+    // We initially start with hasCapturedVariables = false.
+    functionExecutable->recordParse(program->features(), metadata->lexicallyScopedFeatures(), /* hasCapturedVariables */ false);
 
     if (Options::useCodeCache())
         m_sourceCode.addCache(key, SourceCodeValue(vm, functionExecutable, m_sourceCode.age()));
@@ -303,10 +306,9 @@ SourceCodeKey sourceCodeKeyForSerializedModule(VM& vm, const SourceCode& sourceC
     return sourceCodeKeyForSerializedBytecode(vm, sourceCode, SourceCodeType::ModuleType, StrictModeLexicallyScopedFeature, scriptMode, { });
 }
 
-RefPtr<CachedBytecode> serializeBytecode(VM& vm, UnlinkedCodeBlock* codeBlock, const SourceCode& source, SourceCodeType codeType, LexicallyScopedFeatures lexicallyScopedFeatures, JSParserScriptMode scriptMode, FileSystem::PlatformFileHandle fd, BytecodeCacheError& error, OptionSet<CodeGenerationMode> codeGenerationMode)
+RefPtr<CachedBytecode> serializeBytecode(VM& vm, UnlinkedCodeBlock* codeBlock, const SourceCode& source, SourceCodeType codeType, LexicallyScopedFeatures lexicallyScopedFeatures, JSParserScriptMode scriptMode, FileSystem::FileHandle& fileHandle, BytecodeCacheError& error, OptionSet<CodeGenerationMode> codeGenerationMode)
 {
-    return encodeCodeBlock(vm,
-        sourceCodeKeyForSerializedBytecode(vm, source, codeType, lexicallyScopedFeatures, scriptMode, codeGenerationMode), codeBlock, fd, error);
+    return encodeCodeBlock(vm, sourceCodeKeyForSerializedBytecode(vm, source, codeType, lexicallyScopedFeatures, scriptMode, codeGenerationMode), codeBlock, fileHandle, error);
 }
 
 }

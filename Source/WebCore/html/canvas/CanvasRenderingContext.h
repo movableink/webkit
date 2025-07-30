@@ -57,13 +57,14 @@ class CanvasRenderingContext : public ScriptWrappable, public CanMakeWeakPtr<Can
 public:
     virtual ~CanvasRenderingContext();
 
-    static HashSet<CanvasRenderingContext*>& instances() WTF_REQUIRES_LOCK(instancesLock());
+    static UncheckedKeyHashSet<CanvasRenderingContext*>& instances() WTF_REQUIRES_LOCK(instancesLock());
     static Lock& instancesLock() WTF_RETURNS_LOCK(s_instancesLock);
 
     WEBCORE_EXPORT void ref() const;
     WEBCORE_EXPORT void deref() const;
 
     CanvasBase& canvasBase() const { return m_canvas; }
+    Ref<CanvasBase> protectedCanvasBase() const { return m_canvas.get(); }
 
     bool is2dBase() const { return is2d() || isOffscreen2d() || isPaint(); }
     bool is2d() const { return m_type == Type::CanvasElement2D; }
@@ -118,6 +119,10 @@ public:
     virtual bool willReadFrequently() const;
     virtual std::optional<RenderingMode> renderingModeForTesting() const { return std::nullopt; }
 
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+    bool isHDR() const { return pixelFormat() == ImageBufferPixelFormat::RGBA16F; }
+#endif
+
     void setIsInPreparationForDisplayOrFlush(bool flag) { m_isInPreparationForDisplayOrFlush = flag; }
     bool isInPreparationForDisplayOrFlush() const { return m_isInPreparationForDisplayOrFlush; }
 
@@ -145,8 +150,8 @@ protected:
 
     template<class T> void checkOrigin(const T* arg)
     {
-        if (m_canvas.originClean() && taintsOrigin(arg))
-            m_canvas.setOriginTainted();
+        if (m_canvas->originClean() && taintsOrigin(arg))
+            m_canvas->setOriginTainted();
     }
     void checkOrigin(const URL&);
     void checkOrigin(const CSSStyleImageValue&);
@@ -157,7 +162,7 @@ protected:
 private:
     static Lock s_instancesLock;
 
-    CanvasBase& m_canvas;
+    WeakRef<CanvasBase> m_canvas;
     const Type m_type;
 };
 

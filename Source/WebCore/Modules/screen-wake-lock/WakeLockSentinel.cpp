@@ -28,6 +28,7 @@
 
 #include "Document.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "Exception.h"
 #include "JSDOMPromiseDeferred.h"
 #include "WakeLockManager.h"

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google, Inc. All Rights Reserved.
- * Copyright (C) 2011-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #include "HTMLConstructionSite.h"
 
 #include "Comment.h"
+#include "ContainerNodeInlines.h"
 #include "CustomElementRegistry.h"
 #include "DocumentFragment.h"
 #include "DocumentType.h"
@@ -57,6 +58,7 @@
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include "Text.h"
+#include "UserScriptTypes.h"
 #include <unicode/ubrk.h>
 #include <wtf/text/TextBreakIterator.h>
 
@@ -267,10 +269,11 @@ HTMLConstructionSite::HTMLConstructionSite(Document& document, OptionSet<ParserC
 {
 }
 
-HTMLConstructionSite::HTMLConstructionSite(DocumentFragment& fragment, OptionSet<ParserContentPolicy> parserContentPolicy, unsigned maximumDOMTreeDepth)
+HTMLConstructionSite::HTMLConstructionSite(DocumentFragment& fragment, OptionSet<ParserContentPolicy> parserContentPolicy, unsigned maximumDOMTreeDepth, CustomElementRegistry* registry)
     : m_document(fragment.document())
     , m_attachmentRoot(fragment)
     , m_parserContentPolicy(parserContentPolicy)
+    , m_registry(registry)
     , m_isParsingFragment(true)
     , m_redirectAttachToFosterParent(false)
     , m_maximumDOMTreeDepth(maximumDOMTreeDepth)
@@ -329,7 +332,7 @@ void HTMLConstructionSite::mergeAttributesFromTokenIntoElement(AtomHTMLToken&& t
 
     for (auto& tokenAttribute : token.attributes()) {
         auto& attributeName = tokenAttribute.name();
-        if (UNLIKELY(attributeName == nonceAttr)) {
+        if (attributeName == nonceAttr) [[unlikely]] {
             if (element.hasAttributeWithoutSynchronization(nonceAttr) || !element.nonce().isEmpty())
                 continue;
             // Make sure the nonce attribute remains hidden.
@@ -379,7 +382,7 @@ void HTMLConstructionSite::setCompatibilityModeFromDoctype(const AtomString& nam
     // No Quirks - no quirks apply. Web pages will obey the specifications to the letter.
 
     bool isNameHTML = name == HTMLNames::htmlTag->localName();
-    if (LIKELY((isNameHTML && publicId.isEmpty() && systemId.isEmpty()) || document().isSrcdocDocument())) {
+    if ((isNameHTML && publicId.isEmpty() && systemId.isEmpty()) || document().isSrcdocDocument()) [[likely]] {
         setCompatibilityMode(DocumentCompatibilityMode::NoQuirksMode);
         return;
     }
@@ -476,7 +479,7 @@ void HTMLConstructionSite::insertDoctype(AtomHTMLToken&& token)
     String publicId = token.publicIdentifier();
     String systemId = token.systemIdentifier();
 
-    auto document = protectedDocument();
+    Ref document = m_document.get();
     attachLater(protectedAttachmentRoot(), DocumentType::create(document, token.name(), publicId, systemId));
 
     // DOCTYPE nodes are only processed when parsing fragments w/o contextElements, which
@@ -555,6 +558,8 @@ void HTMLConstructionSite::insertHTMLTemplateElement(AtomHTMLToken&& token)
         auto delegatesFocus = ShadowRootDelegatesFocus::No;
         auto clonable = ShadowRootClonable::No;
         auto serializable = ShadowRootSerializable::No;
+        String referenceTarget;
+        auto registryKind = Element::CustomElementRegistryKind::Window;
         for (auto& attribute : token.attributes()) {
             if (attribute.name() == HTMLNames::shadowrootmodeAttr) {
                 if (equalLettersIgnoringASCIICase(attribute.value(), "closed"_s))
@@ -567,9 +572,13 @@ void HTMLConstructionSite::insertHTMLTemplateElement(AtomHTMLToken&& token)
                 clonable = ShadowRootClonable::Yes;
             else if (attribute.name() == HTMLNames::shadowrootserializableAttr)
                 serializable = ShadowRootSerializable::Yes;
+            else if (document().settings().shadowRootReferenceTargetEnabled() && attribute.name() == HTMLNames::shadowrootreferencetargetAttr)
+                referenceTarget = AtomString(attribute.value());
+            else if (attribute.name() == HTMLNames::shadowrootcustomelementregistryAttr)
+                registryKind = Element::CustomElementRegistryKind::Null;
         }
         if (mode && is<Element>(currentNode())) {
-            auto exceptionOrShadowRoot = currentElement().attachDeclarativeShadow(*mode, delegatesFocus, clonable, serializable);
+            auto exceptionOrShadowRoot = currentElement().attachDeclarativeShadow(*mode, delegatesFocus, clonable, serializable, referenceTarget, registryKind);
             if (!exceptionOrShadowRoot.hasException()) {
                 Ref shadowRoot = exceptionOrShadowRoot.releaseReturnValue();
                 auto element = createHTMLElement(token);
@@ -585,7 +594,7 @@ void HTMLConstructionSite::insertHTMLTemplateElement(AtomHTMLToken&& token)
 std::unique_ptr<CustomElementConstructionData> HTMLConstructionSite::insertHTMLElementOrFindCustomElementInterface(AtomHTMLToken&& token)
 {
     auto [element, elementInterface, registry] = createHTMLElementOrFindCustomElementInterface(token);
-    if (UNLIKELY(elementInterface)) {
+    if (elementInterface) [[unlikely]] {
         RELEASE_ASSERT(registry);
         return makeUnique<CustomElementConstructionData>(elementInterface.releaseNonNull(), registry.releaseNonNull(), token.name(), WTFMove(token.attributes()));
     }
@@ -674,7 +683,7 @@ static ALWAYS_INLINE unsigned findBreakIndex(const String& string, unsigned curr
     ASSERT(currentPosition < proposedBreakIndex);
     ASSERT(proposedBreakIndex <= string.length());
 
-    if (LIKELY(proposedBreakIndex == string.length() || string.is8Bit()))
+    if (proposedBreakIndex == string.length() || string.is8Bit()) [[likely]]
         return proposedBreakIndex;
 
     return findBreakIndexSlow(string, currentPosition, proposedBreakIndex);
@@ -698,7 +707,7 @@ void HTMLConstructionSite::insertTextNode(const String& characters)
     if (task.nextChild)
         previousChild = task.nextChild->previousSibling();
     else {
-        if (auto templateParent = dynamicDowncast<HTMLTemplateElement>(task.parent.get()); UNLIKELY(templateParent)) {
+        if (auto templateParent = dynamicDowncast<HTMLTemplateElement>(task.parent.get()); templateParent) [[unlikely]] {
             auto parentNode = templateParent->contentIfAvailable();
             previousChild = parentNode ? parentNode->lastChild() : nullptr;
         } else
@@ -717,7 +726,7 @@ void HTMLConstructionSite::insertTextNode(const String& characters)
         unsigned proposedBreakIndex = std::min(currentPosition + lengthLimit, characters.length());
         unsigned breakIndex = findBreakIndex(characters, currentPosition, proposedBreakIndex);
         // If we couldn't find a break index (due to unbreakable characters), then we just don't split.
-        if (UNLIKELY(breakIndex == currentPosition))
+        if (breakIndex == currentPosition) [[unlikely]]
             breakIndex = characters.length();
 
         unsigned substringLength = breakIndex - currentPosition;
@@ -764,7 +773,7 @@ static inline QualifiedName qualifiedNameForTag(AtomHTMLToken& token, const Atom
 {
     auto nodeNamespace = findNamespace(namespaceURI);
     auto elementName = elementNameForTag(nodeNamespace, token.tagName());
-    if (LIKELY(elementName != ElementName::Unknown))
+    if (elementName != ElementName::Unknown) [[likely]]
         return qualifiedNameForNodeName(elementName);
     return { nullAtom(), token.name(), namespaceURI, nodeNamespace, elementName };
 }
@@ -772,14 +781,14 @@ static inline QualifiedName qualifiedNameForTag(AtomHTMLToken& token, const Atom
 static inline QualifiedName qualifiedNameForHTMLTag(const AtomHTMLToken& token)
 {
     auto elementName = elementNameForTag(Namespace::HTML, token.tagName());
-    if (LIKELY(elementName != ElementName::Unknown))
+    if (elementName != ElementName::Unknown) [[likely]]
         return qualifiedNameForNodeName(elementName);
     return { nullAtom(), token.name(), xhtmlNamespaceURI, Namespace::HTML, elementName };
 }
 
 Ref<Element> HTMLConstructionSite::createElement(AtomHTMLToken& token, const AtomString& namespaceURI)
 {
-    auto element = treeScopeForCurrentNode().createElement(qualifiedNameForTag(token, namespaceURI), true);
+    auto element = ownerDocumentForCurrentNode().createElement(qualifiedNameForTag(token, namespaceURI), true);
     setAttributes(element, token, m_parserContentPolicy);
     return element;
 }
@@ -798,6 +807,16 @@ inline Document& HTMLConstructionSite::ownerDocumentForCurrentNode()
     return currentNode().document();
 }
 
+static CustomElementRegistry* registryForCurrentNode(Node& currentNode, TreeScope& treeScope)
+{
+    if (auto* templateElement = dynamicDowncast<HTMLTemplateElement>(currentNode)) {
+        auto& templateFragmentTreeScope = templateElement->fragmentForInsertion().treeScope();
+        if (templateFragmentTreeScope.rootNode().usesNullCustomElementRegistry())
+            return nullptr;
+    }
+    return CustomElementRegistry::registryForNodeOrTreeScope(currentNode, treeScope);
+}
+
 std::tuple<RefPtr<HTMLElement>, RefPtr<JSCustomElementInterface>, RefPtr<CustomElementRegistry>> HTMLConstructionSite::createHTMLElementOrFindCustomElementInterface(AtomHTMLToken& token)
 {
     // FIXME: This can't use HTMLConstructionSite::createElement because we
@@ -806,16 +825,18 @@ std::tuple<RefPtr<HTMLElement>, RefPtr<JSCustomElementInterface>, RefPtr<CustomE
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/tree-construction.html#create-an-element-for-the-token
     Ref treeScope = treeScopeForCurrentNode();
     Ref ownerDocument = treeScope->documentScope();
-    bool insideTemplateElement = !ownerDocument->frame();
+    bool insideTemplateElement = m_openElements.containsTemplateElement();
     RefPtr element = HTMLElementFactory::createKnownElement(token.tagName(), ownerDocument, insideTemplateElement ? nullptr : form(), true);
-    if (UNLIKELY(!element)) {
-        RefPtr<CustomElementRegistry> registry = treeScope->customElementRegistry();
+    if (!element) [[unlikely]] {
+        RefPtr<CustomElementRegistry> registry = m_openElements.stackDepth() > 1 ? registryForCurrentNode(currentNode(), treeScope) : m_registry;
         auto* elementInterface = registry ? registry->findInterface(token.name()) : nullptr;
-        if (UNLIKELY(elementInterface)) {
+        if (elementInterface) [[unlikely]] {
             if (!m_isParsingFragment)
                 return { nullptr, elementInterface, WTFMove(registry) };
             ASSERT(qualifiedNameForHTMLTag(token) == elementInterface->name());
             element = elementInterface->createElement(ownerDocument);
+            if (registry->isScoped()) [[unlikely]]
+                CustomElementRegistry::addToScopedCustomElementRegistryMap(*element, *registry);
             element->setIsCustomElementUpgradeCandidate();
             element->enqueueToUpgrade(*elementInterface);
         } else {
@@ -826,6 +847,8 @@ std::tuple<RefPtr<HTMLElement>, RefPtr<JSCustomElementInterface>, RefPtr<CustomE
             } else
                 element = HTMLUnknownElement::create(qualifiedName, ownerDocument);
         }
+        if (!registry)
+            element->setUsesNullCustomElementRegistry();
     }
     ASSERT(element);
 

@@ -45,7 +45,7 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaSessionManageriOS);
 
-std::unique_ptr<PlatformMediaSessionManager> PlatformMediaSessionManager::create()
+const std::unique_ptr<PlatformMediaSessionManager> PlatformMediaSessionManager::create()
 {
     auto manager = std::unique_ptr<MediaSessionManageriOS>(new MediaSessionManageriOS);
     MediaSessionHelper::sharedHelper().addClient(*manager);
@@ -77,12 +77,12 @@ void MediaSessionManageriOS::resetRestrictions()
 
     if (ramSize() < systemMemoryRequiredForVideoInBackgroundTabs) {
         ALWAYS_LOG(LOGIDENTIFIER, "restricting video in background tabs because system memory = ", ramSize());
-        addRestriction(PlatformMediaSession::MediaType::Video, BackgroundTabPlaybackRestricted);
+        addRestriction(PlatformMediaSession::MediaType::Video, MediaSessionRestriction::BackgroundTabPlaybackRestricted);
     }
 
-    addRestriction(PlatformMediaSession::MediaType::Video, BackgroundProcessPlaybackRestricted);
-    addRestriction(PlatformMediaSession::MediaType::WebAudio, BackgroundProcessPlaybackRestricted);
-    addRestriction(PlatformMediaSession::MediaType::VideoAudio, ConcurrentPlaybackNotPermitted | BackgroundProcessPlaybackRestricted | SuspendedUnderLockPlaybackRestricted);
+    addRestriction(PlatformMediaSession::MediaType::Video, MediaSessionRestriction::BackgroundProcessPlaybackRestricted);
+    addRestriction(PlatformMediaSession::MediaType::WebAudio, MediaSessionRestriction::BackgroundProcessPlaybackRestricted);
+    addRestriction(PlatformMediaSession::MediaType::VideoAudio, { MediaSessionRestriction::ConcurrentPlaybackNotPermitted, MediaSessionRestriction::BackgroundProcessPlaybackRestricted, MediaSessionRestriction::SuspendedUnderLockPlaybackRestricted });
 }
 #endif
 
@@ -117,22 +117,29 @@ void MediaSessionManageriOS::configureWirelessTargetMonitoring()
 #endif
 }
 
-void MediaSessionManageriOS::providePresentingApplicationPIDIfNecessary()
+void MediaSessionManageriOS::providePresentingApplicationPIDIfNecessary(const std::optional<ProcessID>& pid)
 {
 #if HAVE(MEDIAEXPERIENCE_AVSYSTEMCONTROLLER)
-    if (m_havePresentedApplicationPID)
+    if (m_havePresentedApplicationPID || !pid)
         return;
     m_havePresentedApplicationPID = true;
-    MediaSessionHelper::sharedHelper().providePresentingApplicationPID(presentingApplicationPID());
+    MediaSessionHelper::sharedHelper().providePresentingApplicationPID(*pid);
+#else
+    UNUSED_PARAM(pid);
 #endif
 }
 
-void MediaSessionManageriOS::providePresentingApplicationPID()
+void MediaSessionManageriOS::updatePresentingApplicationPIDIfNecessary(ProcessID pid)
 {
-    MediaSessionHelper::sharedHelper().providePresentingApplicationPID(presentingApplicationPID());
+#if HAVE(MEDIAEXPERIENCE_AVSYSTEMCONTROLLER)
+    if (m_havePresentedApplicationPID)
+        MediaSessionHelper::sharedHelper().providePresentingApplicationPID(pid, MediaSessionHelper::ShouldOverride::Yes);
+#else
+    UNUSED_PARAM(pid);
+#endif
 }
 
-bool MediaSessionManageriOS::sessionWillBeginPlayback(PlatformMediaSession& session)
+bool MediaSessionManageriOS::sessionWillBeginPlayback(PlatformMediaSessionInterface& session)
 {
     if (!MediaSessionManagerCocoa::sessionWillBeginPlayback(session))
         return false;
@@ -145,12 +152,12 @@ bool MediaSessionManageriOS::sessionWillBeginPlayback(PlatformMediaSession& sess
     session.setShouldPlayToPlaybackTarget(playbackTargetSupportsAirPlayVideo);
 #endif
 
-    providePresentingApplicationPIDIfNecessary();
+    providePresentingApplicationPIDIfNecessary(session.presentingApplicationPID());
 
     return true;
 }
 
-void MediaSessionManageriOS::sessionWillEndPlayback(PlatformMediaSession& session, DelayCallingUpdateNowPlaying delayCallingUpdateNowPlaying)
+void MediaSessionManageriOS::sessionWillEndPlayback(PlatformMediaSessionInterface& session, DelayCallingUpdateNowPlaying delayCallingUpdateNowPlaying)
 {
     MediaSessionManagerCocoa::sessionWillEndPlayback(session, delayCallingUpdateNowPlaying);
 
@@ -218,7 +225,7 @@ void MediaSessionManageriOS::activeVideoRouteDidChange(SupportsAirPlayVideo supp
     m_playbackTargetSupportsAirPlayVideo = supportsAirPlayVideo == SupportsAirPlayVideo::Yes;
 #endif
 
-    CheckedPtr nowPlayingSession = nowPlayingEligibleSession().get();
+    RefPtr nowPlayingSession = nowPlayingEligibleSession().get();
     if (!nowPlayingSession)
         return;
 
@@ -226,7 +233,7 @@ void MediaSessionManageriOS::activeVideoRouteDidChange(SupportsAirPlayVideo supp
     nowPlayingSession->setShouldPlayToPlaybackTarget(supportsAirPlayVideo == SupportsAirPlayVideo::Yes);
 }
 
-void MediaSessionManageriOS::applicationWillEnterForeground(SuspendedUnderLock isSuspendedUnderLock)
+void MediaSessionManageriOS::uiApplicationWillEnterForeground(SuspendedUnderLock isSuspendedUnderLock)
 {
     if (willIgnoreSystemInterruptions())
         return;
@@ -234,7 +241,7 @@ void MediaSessionManageriOS::applicationWillEnterForeground(SuspendedUnderLock i
     MediaSessionManagerCocoa::applicationWillEnterForeground(isSuspendedUnderLock == SuspendedUnderLock::Yes);
 }
 
-void MediaSessionManageriOS::applicationDidBecomeActive()
+void MediaSessionManageriOS::uiApplicationDidBecomeActive()
 {
     if (willIgnoreSystemInterruptions())
         return;
@@ -242,7 +249,7 @@ void MediaSessionManageriOS::applicationDidBecomeActive()
     MediaSessionManagerCocoa::applicationDidBecomeActive();
 }
 
-void MediaSessionManageriOS::applicationDidEnterBackground(SuspendedUnderLock isSuspendedUnderLock)
+void MediaSessionManageriOS::uiApplicationDidEnterBackground(SuspendedUnderLock isSuspendedUnderLock)
 {
     if (willIgnoreSystemInterruptions())
         return;
@@ -250,7 +257,7 @@ void MediaSessionManageriOS::applicationDidEnterBackground(SuspendedUnderLock is
     MediaSessionManagerCocoa::applicationDidEnterBackground(isSuspendedUnderLock == SuspendedUnderLock::Yes);
 }
 
-void MediaSessionManageriOS::applicationWillBecomeInactive()
+void MediaSessionManageriOS::uiApplicationWillBecomeInactive()
 {
     if (willIgnoreSystemInterruptions())
         return;

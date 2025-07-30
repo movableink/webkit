@@ -26,11 +26,10 @@
 #pragma once
 
 #include "CalculationTree.h"
+#include <numbers>
 #include <numeric>
 #include <wtf/Forward.h>
 #include <wtf/MathExtras.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 namespace Calculation {
@@ -53,7 +52,10 @@ public:
     }
 
     struct const_iterator {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         const_iterator& operator++() { ++it; return *this; }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
         auto operator*() const { return transform(*it); }
 
         bool operator==(const const_iterator& other) const { return it == other.it; }
@@ -231,7 +233,7 @@ template<> struct OperatorExecutor<Clamp> {
         return std::max(min, std::min(val, max));
     }
 
-    template<std::floating_point T> T operator()(std::variant<T, None> min, T val, std::variant<T, None> max)
+    template<std::floating_point T> T operator()(Variant<T, None> min, T val, Variant<T, None> max)
     {
         bool minIsNone = std::holds_alternative<None>(min);
         bool maxIsNone = std::holds_alternative<None>(max);
@@ -360,11 +362,11 @@ template<> struct OperatorExecutor<Cos> {
 template<> struct OperatorExecutor<Tan> {
     double operator()(double a)
     {
-        double x = std::fmod(a, piDouble * 2);
+        double x = std::fmod(a, std::numbers::pi * 2);
         // std::fmod can return negative values.
-        x = x < 0 ? piDouble * 2 + x : x;
+        x = x < 0 ? std::numbers::pi * 2 + x : x;
         ASSERT(!(x < 0));
-        ASSERT(!(x > piDouble * 2));
+        ASSERT(!(x > std::numbers::pi * 2));
         if (x == piOverTwoDouble)
             return std::numeric_limits<double>::infinity();
         if (x == 3 * piOverTwoDouble)
@@ -487,7 +489,62 @@ template<> struct OperatorExecutor<Progress> {
     }
 };
 
+template<> struct OperatorExecutor<Random> {
+    double operator()(double randomBaseValue, double min, double max, std::optional<double> step)
+    {
+        if (std::isnan(min) || std::isnan(max))
+            return std::numeric_limits<double>::quiet_NaN();
+
+        if (std::isinf(min))
+            return min;
+
+        // If the maximum value is less than the minimum value, it behaves as if it’s equal to the minimum value.
+        if (max < min)
+            max = min;
+
+        auto range = max - min;
+        if (std::isinf(range))
+            return std::numeric_limits<double>::quiet_NaN();
+
+        if (!step)
+            return min + randomBaseValue * range;
+
+        if (std::isnan(*step))
+            return std::numeric_limits<double>::quiet_NaN();
+
+        if (*step <= 0)
+            return min + randomBaseValue * range;
+
+        // Let epsilon be step / 1000, or the smallest representable value greater than zero in the numeric type being used if epsilon would round to zero.
+        auto epsilon = *step / 1000.0;
+
+        // Let N be the largest integer such that min + N * step is less than or equal to max
+        auto N = std::floor(range / *step);
+        if (std::isinf(N))
+            return min + randomBaseValue * range;
+
+        // If N produces a value that is not within epsilon of max, but N+1 would produce a value within epsilon of max, set N to N+1.
+        auto distanceToMax = max - (min + (N * *step));
+        if (std::abs(distanceToMax) > epsilon) {
+            auto distanceToMaxPlus1 = max - (min + ((N + 1) * *step));
+            if (std::abs(distanceToMaxPlus1) < epsilon)
+                N = N + 1;
+        }
+
+        // Let step index be a random integer less than N+1, given R.
+        auto stepIndex = OperatorExecutor<RoundDown>{}(randomBaseValue * (N + 1.0), 1.0);
+
+        // Let value be min + step index * step.
+        auto value = min + stepIndex * *step;
+
+        // If step index is N and value is within epsilon of max, return max
+        if (stepIndex == N && std::abs(max - value) < epsilon)
+            return max;
+
+        // Otherwise, return value.
+        return value;
+    }
+};
+
 } // namespace Calculation
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

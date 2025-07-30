@@ -1,4 +1,5 @@
+CONSOLE MESSAGE: Blocked autofocusing on a form control in a cross-origin subframe.
 
 
-FAIL Autofocus should not work in the same origin grand child iframe assert_unreached: The grandchild iframe shouldn't get focus Reached unreachable code
+PASS Autofocus should not work in the same origin grand child iframe
 

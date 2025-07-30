@@ -168,7 +168,7 @@ bool DrawingArea::supportsGPUProcessRendering(DrawingAreaType type)
 
 WebCore::TiledBacking* DrawingArea::mainFrameTiledBacking() const
 {
-    RefPtr frameView = m_webPage->localMainFrameView();
+    RefPtr frameView = protectedWebPage()->localMainFrameView();
     return frameView ? frameView->tiledBacking() : nullptr;
 }
 
@@ -176,7 +176,7 @@ void DrawingArea::prepopulateRectForZoom(double scale, WebCore::FloatPoint origi
 {
     Ref webPage = m_webPage.get();
     double currentPageScale = webPage->totalScaleFactor();
-    auto* frameView = webPage->localMainFrameView();
+    RefPtr frameView = webPage->localMainFrameView();
     if (!frameView)
         return;
 
@@ -200,11 +200,12 @@ void DrawingArea::scaleViewToFitDocumentIfNeeded()
     Ref webPage = m_webPage.get();
     webPage->layoutIfNeeded();
 
-    if (!webPage->localMainFrameView() || !webPage->localMainFrameView()->renderView())
+    RefPtr frameView = webPage->localMainFrameView();
+    if (!frameView || !frameView->renderView())
         return;
 
     int viewWidth = webPage->size().width();
-    int documentWidth = webPage->localMainFrameView()->renderView()->unscaledDocumentRect().width();
+    int documentWidth = frameView->renderView()->unscaledDocumentRect().width();
 
     bool documentWidthChanged = m_lastDocumentSizeForScaleToFit.width() != documentWidth;
     bool viewWidthChanged = m_lastViewSizeForScaleToFit.width() != viewWidth;
@@ -228,7 +229,8 @@ void DrawingArea::scaleViewToFitDocumentIfNeeded()
                 viewScale = minimumViewScale;
                 documentWidth = std::ceil(viewWidth / viewScale);
             }
-            IntSize fixedLayoutSize(documentWidth, std::ceil((webPage->size().height() - webPage->corePage()->topContentInset()) / viewScale));
+            // FIXME: Account for left content insets.
+            IntSize fixedLayoutSize(documentWidth, std::ceil((webPage->size().height() - webPage->corePage()->obscuredContentInsets().top()) / viewScale));
             webPage->setFixedLayoutSize(fixedLayoutSize);
             webPage->scaleView(viewScale);
 
@@ -249,10 +251,11 @@ void DrawingArea::scaleViewToFitDocumentIfNeeded()
     webPage->setUseFixedLayout(false);
     webPage->layoutIfNeeded();
 
-    if (!webPage->localMainFrameView() || !webPage->localMainFrameView()->renderView())
+    frameView = webPage->localMainFrameView();
+    if (!frameView || !frameView->renderView())
         return;
 
-    IntSize documentSize = webPage->localMainFrameView()->renderView()->unscaledDocumentRect().size();
+    IntSize documentSize = frameView->renderView()->unscaledDocumentRect().size();
     m_lastViewSizeForScaleToFit = webPage->size();
     m_lastDocumentSizeForScaleToFit = documentSize;
 
@@ -273,7 +276,8 @@ void DrawingArea::scaleViewToFitDocumentIfNeeded()
             viewScale = minimumViewScale;
             documentWidth = std::ceil(viewWidth / viewScale);
         }
-        IntSize fixedLayoutSize(documentWidth, std::ceil((webPage->size().height() - webPage->corePage()->topContentInset()) / viewScale));
+        // FIXME: Account for left content insets.
+        IntSize fixedLayoutSize(documentWidth, std::ceil((webPage->size().height() - webPage->corePage()->obscuredContentInsets().top()) / viewScale));
         webPage->setFixedLayoutSize(fixedLayoutSize);
 
         LOG(Resize, "  using fixed layout at %dx%d. document width %d, scaled to %.4f to fit view width %d", fixedLayoutSize.width(), fixedLayoutSize.height(), documentWidth, viewScale, viewWidth);

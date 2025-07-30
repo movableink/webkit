@@ -38,6 +38,7 @@
 #if ENABLE(WEBGPU_SWIFT)
 #import "WebGPUSwiftInternal.h"
 #endif
+#import <simd/simd.h>
 #import <wtf/CheckedArithmetic.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/TZoneMallocInlines.h>
@@ -45,6 +46,7 @@
 namespace WebGPU {
 
 constexpr static auto largeBufferSize = 32 * 1024 * 1024;
+constexpr bool skipMemoryAttribution = true;
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(Queue);
 
@@ -55,6 +57,7 @@ Queue::Queue(id<MTLCommandQueue> commandQueue, Adapter& adapter, Device& device)
 {
     m_createdNotCommittedBuffers = [NSMutableOrderedSet orderedSet];
     m_openCommandEncoders = [NSMapTable strongToStrongObjectsMapTable];
+    m_retainedCounterSampleBuffers = [NSMutableDictionary dictionary];
 }
 
 Queue::Queue(Adapter& adapter, Device& device)
@@ -145,6 +148,10 @@ id<MTLCommandBuffer> Queue::commandBufferWithDescriptor(MTLCommandBufferDescript
     if (buffer)
         [m_createdNotCommittedBuffers addObject:buffer];
 
+    if (auto instance = m_instance.get()) {
+        if (auto device = m_device.get())
+            instance->retainDevice(*device, buffer);
+    }
     return buffer;
 }
 
@@ -247,6 +254,25 @@ void Queue::removeMTLCommandBufferInternal(id<MTLCommandBuffer> commandBuffer)
     [m_createdNotCommittedBuffers removeObject:commandBuffer];
 }
 
+void Queue::waitForAllCommitedWorkToComplete()
+{
+    id<MTLCommandBuffer> commandBuffer = nil;
+    do {
+        {
+            Locker locker { m_committedNotCompletedBuffersLock };
+            commandBuffer = m_committedNotCompletedBuffers.firstObject;
+        }
+        [commandBuffer waitUntilCompleted];
+    } while (commandBuffer);
+}
+
+template<unsigned errorCode>
+[[noreturn]] void crashGPUProcess(NSError* error, NSError* underlyingError)
+{
+    WTFLogAlways("Encountered fatal command buffer error %@, underlying error %@", error, underlyingError); // NOLINT
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
 void Queue::commitMTLCommandBuffer(id<MTLCommandBuffer> commandBuffer)
 {
     if (!commandBuffer || commandBuffer.status >= MTLCommandBufferStatusCommitted || !isValid()) {
@@ -269,11 +295,29 @@ void Queue::commitMTLCommandBuffer(id<MTLCommandBuffer> commandBuffer)
             loseTheDevice = !error || error.code != MTLCommandBufferErrorNotPermitted;
             if (loseTheDevice) {
                 NSError* underlyingError = error.userInfo[NSUnderlyingErrorKey];
-                if (underlyingError.code == 0x10a)
+                if (underlyingError.code == 0x10a || underlyingError.code == 0x5)
                     loseTheDevice = false;
-                else
-                    WTFLogAlways("Encountered fatal command buffer error %@, underlying error %@", error, underlyingError);
+                else {
+#define makeCase(N) case N: crashGPUProcess<N>(error, underlyingError);
+                    switch (underlyingError.code) {
+                        makeCase(9); // kIOGPUCommandBufferCallbackErrorInvalidResource = 9,
+                        makeCase(10); // kIOGPUCommandBufferCallbackErrorInvalidInput = 10,
+                        makeCase(11); // kIOGPUCommandBufferCallbackErrorPageFault = 11,
+                        makeCase(16); // kIOGPUCommandBufferCallbackErrorProtectionViolation = 16,
+                        makeCase(17); // kIOGPUCommandBufferCallbackErrorStackOverflow = 17,
+                        break;
+                    default:
+                        break;
+                    }
+#undef makeCase
+                    WTFLogAlways("Encountered non-fatal command buffer error %@, underlying error %@", error, underlyingError); // NOLINT
+                }
             }
+        }
+
+        {
+            Locker locker { protectedThis->m_committedNotCompletedBuffersLock };
+            [protectedThis->m_committedNotCompletedBuffers removeObject:mtlCommandBuffer];
         }
 
         protectedThis->scheduleWork([loseTheDevice, protectedThis = protectedThis.copyRef()]() {
@@ -289,6 +333,10 @@ void Queue::commitMTLCommandBuffer(id<MTLCommandBuffer> commandBuffer)
     }];
 
     [commandBuffer commit];
+    {
+        Locker locker { m_committedNotCompletedBuffersLock };
+        [m_committedNotCompletedBuffers addObject:commandBuffer];
+    }
     removeMTLCommandBufferInternal(commandBuffer);
     ++m_submittedCommandBufferCount;
 }
@@ -316,11 +364,13 @@ void Queue::submit(Vector<Ref<WebGPU::CommandBuffer>>&& commands)
     finalizeBlitCommandEncoder();
 
     NSMutableOrderedSet<id<MTLCommandBuffer>> *commandBuffersToSubmit = [NSMutableOrderedSet orderedSetWithCapacity:commands.size()];
+    HashMap<void*, RefPtr<CommandBuffer>> metalCommandBuffersReverseMap;
     NSString* validationError = nil;
     for (Ref command : commands) {
-        if (id<MTLCommandBuffer> mtlBuffer = command->commandBuffer(); mtlBuffer && ![commandBuffersToSubmit containsObject:mtlBuffer])
+        if (id<MTLCommandBuffer> mtlBuffer = command->commandBuffer(); mtlBuffer && ![commandBuffersToSubmit containsObject:mtlBuffer]) {
             [commandBuffersToSubmit addObject:mtlBuffer];
-        else {
+            metalCommandBuffersReverseMap.set((__bridge void*)mtlBuffer, RefPtr { command.ptr() });
+        } else {
             validationError = command->lastError() ?: @"Command buffer appears twice.";
             break;
         }
@@ -334,11 +384,46 @@ void Queue::submit(Vector<Ref<WebGPU::CommandBuffer>>&& commands)
         return;
     }
 
-    for (id<MTLCommandBuffer> commandBuffer in commandBuffersToSubmit)
+    for (id<MTLCommandBuffer> commandBuffer in commandBuffersToSubmit) {
+        RefPtr<CommandBuffer> apiCommandBuffer;
+        if (auto it = metalCommandBuffersReverseMap.find((__bridge void*)commandBuffer); it != metalCommandBuffersReverseMap.end())
+            apiCommandBuffer = it->value;
+#if ASSERT_ENABLED
+        if (!apiCommandBuffer)
+            ASSERT_NOT_REACHED("Always expect command buffer in the container");
+#endif
+        apiCommandBuffer->preCommitHandler();
         commitMTLCommandBuffer(commandBuffer);
+        apiCommandBuffer->postCommitHandler();
+    }
 
     if ([MTLCaptureManager sharedCaptureManager].isCapturing && device->shouldStopCaptureAfterSubmit())
         [[MTLCaptureManager sharedCaptureManager] stopCapture];
+}
+
+uint64_t Queue::retainCounterSampleBuffer(CommandEncoder& encoder)
+{
+    auto encoderHandle = encoder.uniqueId();
+    [m_retainedCounterSampleBuffers setObject:encoder.timestampBuffers() forKey:[NSNumber numberWithUnsignedLongLong:encoderHandle]];
+    return encoderHandle;
+}
+
+void Queue::releaseCounterSampleBuffer(uint64_t encoderHandle)
+{
+    scheduleWork([protectedThis = Ref { *this }, encoderHandle]() {
+        [protectedThis->m_retainedCounterSampleBuffers removeObjectForKey:[NSNumber numberWithUnsignedLongLong:encoderHandle]];
+    });
+}
+
+void Queue::retainTimestampsForOneUpdate(NSMutableSet<id<MTLCounterSampleBuffer>> *timestamps)
+{
+    // Workaround for rdar://143905417
+    if (!timestamps)
+        return;
+
+    scheduleWork([protectedThis = Ref { *this }, timestamps]() {
+        UNUSED_PARAM(timestamps);
+    });
 }
 
 bool Queue::validateWriteBuffer(const Buffer& buffer, uint64_t bufferOffset, size_t size) const
@@ -366,6 +451,74 @@ bool Queue::validateWriteBuffer(const Buffer& buffer, uint64_t bufferOffset, siz
     return true;
 }
 
+void Queue::synchronizeResourceAndWait(id<MTLBuffer> buffer)
+{
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
+    if (buffer.storageMode != MTLStorageModeManaged)
+        return;
+
+    ensureBlitCommandEncoder();
+    [m_blitCommandEncoder synchronizeResource:buffer];
+    id<MTLCommandBuffer> commandBuffer = m_commandBuffer;
+    finalizeBlitCommandEncoder();
+    [commandBuffer waitUntilCompleted];
+#else
+    UNUSED_PARAM(buffer);
+#endif
+}
+
+id<MTLIndirectCommandBuffer> Queue::trimICB(id<MTLIndirectCommandBuffer> dest, id<MTLIndirectCommandBuffer> src, NSUInteger newSize)
+{
+    ensureBlitCommandEncoder();
+    [m_blitCommandEncoder copyIndirectCommandBuffer:src sourceRange:NSMakeRange(0, newSize) destination:dest destinationIndex:0];
+
+    return dest;
+}
+
+static std::pair<uint32_t, uint16_t> maxIndexValueSlow(std::span<uint8_t> data)
+{
+    auto lengthUint32 = data.size() / 4;
+    std::span<uint32_t> dataUint = unsafeMakeSpan(static_cast<uint32_t*>(static_cast<void*>(data.data())), lengthUint32);
+    std::span<uint16_t> dataUshort = unsafeMakeSpan(static_cast<uint16_t*>(static_cast<void*>(data.data())), lengthUint32 * 2);
+    uint32_t maxValue = 0;
+    for (uint32_t dataUintV : dataUint) {
+        if (maxValue < dataUintV)
+            maxValue = dataUintV;
+    }
+    uint16_t maxUshort = 0;
+    for (uint16_t dataUshortV : dataUshort) {
+        if (maxUshort < dataUshortV)
+            maxUshort = dataUshortV;
+    }
+    return std::make_pair(maxValue, maxUshort);
+}
+
+static std::pair<uint32_t, uint16_t> maxIndexValue(std::span<uint8_t> data)
+{
+    constexpr auto blockSize = 64;
+    auto divResult = std::div(data.size(), blockSize);
+    auto lengthUint32 = divResult.quot;
+    if (!lengthUint32 || reinterpret_cast<uint64_t>(data.data()) % 64)
+        return maxIndexValueSlow(data);
+
+    std::span<simd::uint16> dataUint = unsafeMakeSpan(static_cast<simd::uint16*>(static_cast<void*>(data.data())), lengthUint32);
+    std::span<simd::ushort32> dataUshort = unsafeMakeSpan(static_cast<simd::ushort32*>(static_cast<void*>(data.data())), lengthUint32);
+    simd::uint16 maxValue = dataUint.front();
+    simd::ushort32 maxUshort = dataUshort.front();
+    for (auto dataUintV : dataUint)
+        maxValue = simd_max(maxValue, dataUintV);
+    for (auto dataUshortV : dataUshort)
+        maxUshort = simd_max(maxUshort, dataUshortV);
+
+    auto result = std::make_pair(simd_reduce_max(maxValue), simd_reduce_max(maxUshort));
+    if (divResult.rem) {
+        auto slowResult = maxIndexValueSlow(data.subspan(blockSize * divResult.quot));
+        result.first = std::max(result.first, slowResult.first);
+        result.second = std::max(result.second, slowResult.second);
+    }
+    return result;
+}
+
 void Queue::writeBuffer(Buffer& buffer, uint64_t bufferOffset, std::span<uint8_t> data)
 {
     auto device = m_device.get();
@@ -374,7 +527,8 @@ void Queue::writeBuffer(Buffer& buffer, uint64_t bufferOffset, std::span<uint8_t
 
     // https://gpuweb.github.io/gpuweb/#dom-gpuqueue-writebuffer
 
-    if (!validateWriteBuffer(buffer, bufferOffset, data.size()) || !isValidToUseWith(buffer, *this)) {
+    auto dataSize = data.size();
+    if (!validateWriteBuffer(buffer, bufferOffset, dataSize) || !isValidToUseWith(buffer, *this)) {
         device->generateAValidationError("Validation failure."_s);
         return;
     }
@@ -389,7 +543,15 @@ void Queue::writeBuffer(Buffer& buffer, uint64_t bufferOffset, std::span<uint8_t
 
     // FIXME(PERFORMANCE): Instead of checking whether or not the whole queue is idle,
     // we could detect whether this specific resource is idle, if we tracked every resource.
-    buffer.indirectBufferInvalidated();
+    bool needsInvalidation = true;
+
+    if (dataSize < 16*KB && (buffer.usage() & WGPUBufferUsage_Index) && !(buffer.usage() & WGPUBufferUsage_Indirect)) {
+        auto maxUnsignedUshortValue = maxIndexValue(data);
+        if (!buffer.needsIndexValidation(maxUnsignedUshortValue.first, maxUnsignedUshortValue.second))
+            needsInvalidation = false;
+    }
+    if (needsInvalidation)
+        buffer.indirectBufferInvalidated();
     if (isIdle()) {
         switch (buffer.buffer().storageMode) {
         case MTLStorageModeShared:
@@ -416,6 +578,33 @@ void Queue::writeBuffer(Buffer& buffer, uint64_t bufferOffset, std::span<uint8_t
 #endif
 }
 
+static std::span<uint8_t> span(id<MTLBuffer> buffer)
+{
+    return unsafeMakeSpan(static_cast<uint8_t*>(buffer.contents), buffer.length);
+}
+
+std::pair<id<MTLBuffer>, uint64_t> Queue::newTemporaryBufferWithBytes(std::span<uint8_t> dataSpan, bool noCopy)
+{
+    auto device = m_device.get();
+    if (!device)
+        return std::make_pair(nil, 0ull);
+
+    auto dataSize = dataSpan.size();
+    auto data = dataSpan.data();
+    if (noCopy)
+        return std::make_pair(device->newBufferWithBytesNoCopy(data, dataSize, MTLResourceStorageModeShared, skipMemoryAttribution), 0ull);
+
+    if (!m_temporaryBuffer || m_temporaryBufferOffset + dataSize > m_temporaryBuffer.length) {
+        m_temporaryBuffer = device->safeCreateBuffer(std::max(dataSize, 64 * KB), skipMemoryAttribution);
+        m_temporaryBufferOffset = 0;
+    }
+
+    auto priorOffset = m_temporaryBufferOffset;
+    m_temporaryBufferOffset += WTF::roundUpToMultipleOf(16, dataSize);
+    memcpySpan(span(m_temporaryBuffer).subspan(priorOffset), dataSpan);
+    return std::make_pair(m_temporaryBuffer, priorOffset);
+}
+
 void Queue::writeBuffer(id<MTLBuffer> buffer, uint64_t bufferOffset, std::span<uint8_t> data)
 {
     auto device = m_device.get();
@@ -423,10 +612,10 @@ void Queue::writeBuffer(id<MTLBuffer> buffer, uint64_t bufferOffset, std::span<u
         return;
 
     ensureBlitCommandEncoder();
-    // FIXME(PERFORMANCE): Suballocate, so the common case doesn't need to hit the kernel.
-    // FIXME(PERFORMANCE): Should this temporary buffer really be shared?
     bool noCopy = data.size() >= largeBufferSize;
-    id<MTLBuffer> temporaryBuffer = noCopy ? device->newBufferWithBytesNoCopy(data.data(), data.size(), MTLResourceStorageModeShared) : device->newBufferWithBytes(data.data(), data.size(), MTLResourceStorageModeShared);
+    auto bufferWithOffset = newTemporaryBufferWithBytes(data, noCopy);
+    id<MTLBuffer> temporaryBuffer = bufferWithOffset.first;
+    uint64_t temporaryBufferOffset = bufferWithOffset.second;
     if (!temporaryBuffer) {
         ASSERT_NOT_REACHED();
         return;
@@ -434,13 +623,23 @@ void Queue::writeBuffer(id<MTLBuffer> buffer, uint64_t bufferOffset, std::span<u
 
     [m_blitCommandEncoder
         copyFromBuffer:temporaryBuffer
-        sourceOffset:0
+        sourceOffset:temporaryBufferOffset
         toBuffer:buffer
         destinationOffset:bufferOffset
         size:data.size()];
 
     if (noCopy)
         finalizeBlitCommandEncoder();
+}
+
+void Queue::clearBuffer(id<MTLBuffer> buffer, NSUInteger offset, NSUInteger size)
+{
+    if (offset > buffer.length)
+        return;
+
+    ensureBlitCommandEncoder();
+    auto lengthMinusOffset = buffer.length - offset;
+    [m_blitCommandEncoder fillBuffer:buffer range:NSMakeRange(offset, std::min<NSUInteger>(lengthMinusOffset, size)) value:0];
 }
 
 bool Queue::isIdle() const
@@ -478,8 +677,8 @@ NSString* Queue::errorValidatingWriteTexture(const WGPUImageCopyTexture& destina
         aspectSpecificFormat = Texture::aspectSpecificFormat(texture.format(), destination.aspect);
     }
 
-    if (!Texture::validateLinearTextureData(dataLayout, dataByteSize, aspectSpecificFormat, size))
-        return ERROR_STRING(@"validateLinearTextureData failed");
+    if (NSString* errorString = Texture::errorValidatingLinearTextureData(dataLayout, dataByteSize, aspectSpecificFormat, size))
+        return ERROR_STRING(errorString);
 
 #undef ERROR_STRING
     return nil;
@@ -746,8 +945,7 @@ void Queue::writeTexture(const WGPUImageCopyTexture& destination, std::span<uint
         auto checkedNewBytesPerImageTimesMaxZ = checkedProduct<uint32_t>(newBytesPerImage, maxZ);
         if (checkedNewBytesPerImageTimesMaxZ.hasOverflowed())
             return;
-        newData.resize(checkedNewBytesPerImageTimesMaxZ.value());
-        memset(&newData[0], 0, newData.size());
+        newData = Vector<uint8_t>(checkedNewBytesPerImageTimesMaxZ.value(), 0);
         dataLayoutOffset = 0;
 
         auto verticalOffset = checkedProduct<uint64_t>(maxY ? (maxY - 1) : 0, bytesPerRow);
@@ -909,9 +1107,12 @@ void Queue::writeTexture(const WGPUImageCopyTexture& destination, std::span<uint
     // FIXME(PERFORMANCE): Should this temporary buffer really be shared?
     NSUInteger newBufferSize = dataByteSize - dataLayoutOffset;
     bool noCopy = newBufferSize >= largeBufferSize;
-    id<MTLBuffer> temporaryBuffer = noCopy ? device->newBufferWithBytesNoCopy(byteCast<char>(data.subspan(dataLayoutOffset).data()), static_cast<NSUInteger>(newBufferSize), MTLResourceStorageModeShared) : device->newBufferWithBytes(byteCast<char>(data.subspan(dataLayoutOffset).data()), static_cast<NSUInteger>(newBufferSize), MTLResourceStorageModeShared);
+    auto temporaryBufferWithOffset = newTemporaryBufferWithBytes(data.subspan(dataLayoutOffset), noCopy);
+    id<MTLBuffer> temporaryBuffer = temporaryBufferWithOffset.first;
+    auto temporaryBufferOffset = temporaryBufferWithOffset.second;
     if (!temporaryBuffer)
         return;
+    ASSERT(temporaryBuffer.length >= newBufferSize);
 
     switch (texture->dimension()) {
     case WGPUTextureDimension_1D: {
@@ -938,14 +1139,14 @@ void Queue::writeTexture(const WGPUImageCopyTexture& destination, std::span<uint
             auto sourceOffsetSum = checkedSum<NSUInteger>(sourceOffset, widthTimesBlockSize.value());
             if (sourceOffsetSum.hasOverflowed())
                 return;
-            if (sourceOffsetSum.value() > temporaryBuffer.length)
+            if (sourceOffsetSum.value() > newBufferSize)
                 continue;
             if (sourceOffset % blockSize)
                 continue;
 
             [m_blitCommandEncoder
                 copyFromBuffer:temporaryBuffer
-                sourceOffset:sourceOffset
+                sourceOffset:sourceOffset + temporaryBufferOffset
                 sourceBytesPerRow:0
                 sourceBytesPerImage:0
                 sourceSize:sourceSize
@@ -978,7 +1179,7 @@ void Queue::writeTexture(const WGPUImageCopyTexture& destination, std::span<uint
                 continue;
             [m_blitCommandEncoder
                 copyFromBuffer:temporaryBuffer
-                sourceOffset:sourceOffset
+                sourceOffset:sourceOffset + temporaryBufferOffset
                 sourceBytesPerRow:bytesPerRow
                 sourceBytesPerImage:0
                 sourceSize:sourceSize
@@ -998,7 +1199,7 @@ void Queue::writeTexture(const WGPUImageCopyTexture& destination, std::span<uint
 
         [m_blitCommandEncoder
             copyFromBuffer:temporaryBuffer
-            sourceOffset:0
+            sourceOffset:temporaryBufferOffset
             sourceBytesPerRow:bytesPerRow
             sourceBytesPerImage:bytesPerImage
             sourceSize:sourceSize
@@ -1020,7 +1221,7 @@ void Queue::writeTexture(const WGPUImageCopyTexture& destination, std::span<uint
 
 void Queue::setLabel(String&& label)
 {
-    m_commandQueue.label = label;
+    m_commandQueue.label = label.createNSString().get();
 }
 
 void Queue::scheduleWork(Instance::WorkItem&& workItem)

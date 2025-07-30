@@ -28,8 +28,9 @@
 #include "ActiveDOMObject.h"
 #include "BroadcastChannelIdentifier.h"
 #include "ClientOrigin.h"
+#include "ContextDestructionObserverInlines.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
+#include "EventTargetInterfaces.h"
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 
@@ -41,6 +42,7 @@ class JSValue;
 namespace WebCore {
 
 class SerializedScriptValue;
+template<typename> class ExceptionOr;
 
 class BroadcastChannel : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<BroadcastChannel>, public EventTarget, public ActiveDOMObject {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(BroadcastChannel);
@@ -84,9 +86,7 @@ private:
     void stop() final { close(); }
 
     class MainThreadBridge;
-    Ref<MainThreadBridge> protectedMainThreadBridge() const;
-
-    Ref<MainThreadBridge> m_mainThreadBridge;
+    const Ref<MainThreadBridge> m_mainThreadBridge;
     bool m_isClosed { false };
     bool m_hasRelevantEventListener { false };
 };

@@ -33,9 +33,9 @@
 #include "TextCombinerPadGStreamer.h"
 #include <wtf/glib/WTFGType.h>
 
-static GstStaticPadTemplate sinkTemplate = GST_STATIC_PAD_TEMPLATE("sink_%u", GST_PAD_SINK, GST_PAD_REQUEST, GST_STATIC_CAPS_ANY);
+static GstStaticPadTemplate combinerSinkTemplate = GST_STATIC_PAD_TEMPLATE("sink_%u", GST_PAD_SINK, GST_PAD_REQUEST, GST_STATIC_CAPS_ANY);
 
-static GstStaticPadTemplate srcTemplate = GST_STATIC_PAD_TEMPLATE("src", GST_PAD_SRC, GST_PAD_ALWAYS, GST_STATIC_CAPS_ANY);
+static GstStaticPadTemplate combinerSrcTemplate = GST_STATIC_PAD_TEMPLATE("src", GST_PAD_SRC, GST_PAD_ALWAYS, GST_STATIC_CAPS_ANY);
 
 GST_DEBUG_CATEGORY_STATIC(webkitTextCombinerDebug);
 #define GST_CAT_DEFAULT webkitTextCombinerDebug
@@ -44,7 +44,6 @@ struct _WebKitTextCombinerPrivate {
     GRefPtr<GstElement> combinerElement;
 };
 
-#define webkit_text_combiner_parent_class parent_class
 WEBKIT_DEFINE_TYPE_WITH_CODE(WebKitTextCombiner, webkit_text_combiner, GST_TYPE_BIN,
     GST_DEBUG_CATEGORY_INIT(webkitTextCombinerDebug, "webkittextcombiner", 0, "webkit text combiner"))
 
@@ -68,7 +67,7 @@ void webKitTextCombinerHandleCaps(WebKitTextCombiner* combiner, GstPad* pad, con
         // Caps are plain text, we want a WebVTT encoder between the ghostpad and the combinerElement.
         if (!target || gstElementFactoryEquals(targetParent.get(), "webvttenc"_s)) {
             GST_DEBUG_OBJECT(combiner, "Setting up a WebVTT encoder");
-            auto* encoder = makeGStreamerElement("webvttenc", nullptr);
+            auto* encoder = makeGStreamerElement("webvttenc"_s);
             ASSERT(encoder);
 
             gst_bin_add(GST_BIN_CAST(combiner), encoder);
@@ -87,7 +86,7 @@ void webKitTextCombinerHandleCaps(WebKitTextCombiner* combiner, GstPad* pad, con
             gst_pad_link(srcPad.get(), internalPad.get());
         } // Else: pipeline is already correct.
     } else if (gst_caps_can_intersect(cea608Caps.get(), caps)) {
-        if (!isGStreamerPluginAvailable("rsclosedcaption") || !isGStreamerPluginAvailable("closedcaption")) {
+        if (!isGStreamerPluginAvailable("rsclosedcaption"_s) || !isGStreamerPluginAvailable("closedcaption"_s)) {
             WTFLogAlways("GStreamer closedcaption plugins are missing. Please install gst-plugins-bad and gst-plugins-rs");
             return;
         }
@@ -95,9 +94,9 @@ void webKitTextCombinerHandleCaps(WebKitTextCombiner* combiner, GstPad* pad, con
         GST_DEBUG_OBJECT(combiner, "Converting CEA-608 closed captions to WebVTT.");
         auto* encoder = gst_bin_new(nullptr);
         auto* queue = gst_element_factory_make("queue", nullptr);
-        auto* converter = makeGStreamerElement("ccconverter", nullptr);
+        auto* converter = makeGStreamerElement("ccconverter"_s);
         auto* rawCapsFilter = gst_element_factory_make("capsfilter", nullptr);
-        auto* webvttEncoder = makeGStreamerElement("cea608tott", nullptr);
+        auto* webvttEncoder = makeGStreamerElement("cea608tott"_s);
         auto* vttCapsFilter = gst_element_factory_make("capsfilter", nullptr);
 
         auto rawCaps = adoptGRef(gst_caps_new_simple("closedcaption/x-cea-608", "format", G_TYPE_STRING, "raw", nullptr));
@@ -180,7 +179,7 @@ static void webkitTextCombinerReleasePad(GstElement* element, GstPad* pad)
 
 static void webKitTextCombinerConstructed(GObject* object)
 {
-    GST_CALL_PARENT(G_OBJECT_CLASS, constructed, (object));
+    G_OBJECT_CLASS(webkit_text_combiner_parent_class)->constructed(object);
 
     auto* combiner = WEBKIT_TEXT_COMBINER(object);
     auto* priv = combiner->priv;
@@ -204,8 +203,8 @@ static void webkit_text_combiner_class_init(WebKitTextCombinerClass* klass)
 
     objectClass->constructed = webKitTextCombinerConstructed;
 
-    gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&sinkTemplate));
-    gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&srcTemplate));
+    gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&combinerSinkTemplate));
+    gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&combinerSrcTemplate));
 
     gst_element_class_set_metadata(elementClass, "WebKit text combiner", "Generic",
         "A combiner that accepts any caps, but converts plain text to WebVTT",
@@ -218,7 +217,7 @@ static void webkit_text_combiner_class_init(WebKitTextCombinerClass* klass)
 GstElement* webkitTextCombinerNew()
 {
     // The combiner relies on webvttenc, fail early if it's not there.
-    if (!isGStreamerPluginAvailable("subenc")) {
+    if (!isGStreamerPluginAvailable("subenc"_s)) {
         WTFLogAlways("WebKit wasn't able to find a WebVTT encoder. Subtitles handling will be degraded unless gst-plugins-bad is installed.");
         return nullptr;
     }

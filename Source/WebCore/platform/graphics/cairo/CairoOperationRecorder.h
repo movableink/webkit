@@ -66,7 +66,7 @@ private:
     void strokeEllipse(const WebCore::FloatRect&) override;
     void clearRect(const WebCore::FloatRect&) override;
 
-    void drawGlyphs(const WebCore::Font&, const WebCore::GlyphBufferGlyph*, const WebCore::GlyphBufferAdvance*, unsigned numGlyphs, const WebCore::FloatPoint&, WebCore::FontSmoothingMode) override;
+    void drawGlyphs(const WebCore::Font&, std::span<const WebCore::GlyphBufferGlyph>, std::span<const WebCore::GlyphBufferAdvance>, const WebCore::FloatPoint&, WebCore::FontSmoothingMode) override;
     void drawDecomposedGlyphs(const WebCore::Font&, const WebCore::DecomposedGlyphs&) override;
 
     void drawImageBuffer(WebCore::ImageBuffer&, const WebCore::FloatRect& destination, const WebCore::FloatRect& source, WebCore::ImagePaintingOptions) override;
@@ -76,7 +76,7 @@ private:
 
     void drawRect(const WebCore::FloatRect&, float) override;
     void drawLine(const WebCore::FloatPoint&, const WebCore::FloatPoint&) override;
-    void drawLinesForText(const WebCore::FloatPoint&, float thickness, const WebCore::DashArray&, bool, bool, WebCore::StrokeStyle) override;
+    void drawLinesForText(const WebCore::FloatPoint&, float thickness, std::span<const WebCore::FloatSegment>, bool, bool, WebCore::StrokeStyle) override;
     void drawDotsForDocumentMarker(const WebCore::FloatRect&, WebCore::DocumentMarkerLineStyle) override;
     void drawEllipse(const WebCore::FloatRect&) override;
 

@@ -77,6 +77,9 @@ void CoordinatedPlatformLayerBufferHolePunch::notifyVideoPosition(const FloatRec
 #if USE(GSTREAMER)
     if (m_videoSink && m_quirksManager)
         m_quirksManager->setHolePunchVideoRectangle(m_videoSink.get(), enclosingIntRect(modelViewMatrix.mapRect(targetRect)));
+#else
+    UNUSED_PARAM(targetRect);
+    UNUSED_PARAM(modelViewMatrix);
 #endif
 }
 

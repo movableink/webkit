@@ -217,7 +217,7 @@ struct State {
 };
 
 class Context {
-    WTF_MAKE_TZONE_ALLOCATED(Context);
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(Context);
 public:
     using RegisterID = MacroAssembler::RegisterID;
     using SPRegisterID = MacroAssembler::SPRegisterID;

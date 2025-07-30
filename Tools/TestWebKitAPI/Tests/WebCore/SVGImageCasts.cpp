@@ -75,6 +75,10 @@ private:
     {
     }
 
+    void imageContentChanged(const Image&) final
+    {
+    }
+
     void scheduleRenderingUpdate(const Image&) final
     {
     }
@@ -82,8 +86,8 @@ private:
 
 TEST(SVGImageCasts, SVGImageForContainerIsNotSVGImage)
 {
-    auto imageObserver = TestImageObserver::create();
-    auto svgImage = SVGImage::create(imageObserver);
+    Ref imageObserver = TestImageObserver::create();
+    Ref svgImage = SVGImage::create(imageObserver.ptr());
     Image& svgImageBase = svgImage.get();
     EXPECT_TRUE(is<SVGImage>(svgImageBase));
     EXPECT_FALSE(is<SVGImageForContainer>(svgImageBase));

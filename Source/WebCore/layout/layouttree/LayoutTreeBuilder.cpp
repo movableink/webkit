@@ -43,14 +43,16 @@
 #include "LayoutPhase.h"
 #include "LayoutSize.h"
 #include "LayoutState.h"
+#include "PathOperation.h"
 #include "RenderBlock.h"
 #include "RenderBox.h"
 #include "RenderChildIterator.h"
 #include "RenderCombineText.h"
-#include "RenderElement.h"
+#include "RenderElementInlines.h"
 #include "RenderImage.h"
 #include "RenderInline.h"
 #include "RenderLineBreak.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleSetters.h"
 #include "RenderTable.h"
 #include "RenderTableCaption.h"
@@ -61,8 +63,6 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 namespace Layout {
@@ -93,10 +93,8 @@ static std::optional<LayoutSize> accumulatedOffsetForInFlowPositionedContinuatio
 template<typename CharacterType>
 static bool canUseSimplifiedTextMeasuringForCharacters(std::span<const CharacterType> characters, const FontCascade& fontCascade, bool whitespaceIsCollapsed)
 {
-    auto& primaryFont = fontCascade.primaryFont();
-    auto* rawCharacters = characters.data();
-    for (unsigned i = 0; i < characters.size(); ++i) {
-        auto character = rawCharacters[i]; // Not using characters[i] to bypass the bounds check.
+    Ref primaryFont = fontCascade.primaryFont();
+    for (auto character : characters) {
         if (!fontCascade.canUseSimplifiedTextMeasuring(character, AutoVariant, whitespaceIsCollapsed, primaryFont))
             return false;
     }
@@ -143,7 +141,7 @@ std::unique_ptr<Box> TreeBuilder::createTextBox(String text, bool isCombined, bo
 {
     auto contentCharacteristic = OptionSet<Layout::InlineTextBox::ContentCharacteristic> { };
     if (canUseSimpleFontCodePath)
-        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimpledFontCodepath);
+        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimpleFontCodepath);
     if (canUseSimplifiedTextMeasuring)
         contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimplifiedContentMeasuring);
     if (hasPositionDependentContentWidth)
@@ -217,15 +215,8 @@ std::unique_ptr<Box> TreeBuilder::createLayoutBox(const ElementBox& parentContai
             tableWrapperBoxStyle.setPosition(renderer.style().position());
             tableWrapperBoxStyle.setFloating(renderer.style().floating());
 
-            tableWrapperBoxStyle.setTop(Length { renderer.style().top() });
-            tableWrapperBoxStyle.setLeft(Length { renderer.style().left() });
-            tableWrapperBoxStyle.setBottom(Length { renderer.style().bottom() });
-            tableWrapperBoxStyle.setRight(Length { renderer.style().right() });
-
-            tableWrapperBoxStyle.setMarginTop(Length { renderer.style().marginTop() });
-            tableWrapperBoxStyle.setMarginLeft(Length { renderer.style().marginLeft() });
-            tableWrapperBoxStyle.setMarginBottom(Length { renderer.style().marginBottom() });
-            tableWrapperBoxStyle.setMarginRight(Length { renderer.style().marginRight() });
+            tableWrapperBoxStyle.setInsetBox(Style::InsetBox { renderer.style().insetBox() });
+            tableWrapperBoxStyle.setMarginBox(Style::MarginBox { renderer.style().marginBox() });
 
             childLayoutBox = createContainer(Box::ElementAttributes { Box::NodeType::TableWrapperBox, Box::IsAnonymous::Yes }, WTFMove(tableWrapperBoxStyle));
         } else if (auto* replacedRenderer = dynamicDowncast<RenderReplaced>(renderer)) {
@@ -242,8 +233,8 @@ std::unique_ptr<Box> TreeBuilder::createLayoutBox(const ElementBox& parentContai
         } else {
             if (displayType == DisplayType::Block) {
                 if (auto offset = accumulatedOffsetForInFlowPositionedContinuation(downcast<RenderBox>(renderer))) {
-                    clonedStyle.setTop({ offset->height(), LengthType::Fixed });
-                    clonedStyle.setLeft({ offset->width(), LengthType::Fixed });
+                    clonedStyle.setTop(Style::Length<> { offset->height() });
+                    clonedStyle.setLeft(Style::Length<> { offset->width() });
                     childLayoutBox = createContainer(elementAttributes(renderer), WTFMove(clonedStyle));
                 } else
                     childLayoutBox = createContainer(elementAttributes(renderer), WTFMove(clonedStyle));
@@ -578,7 +569,7 @@ void printLayoutTreeForLiveDocuments()
             continue;
         if (document->frame() && document->frame()->isMainFrame())
             fprintf(stderr, "----------------------main frame--------------------------\n");
-        fprintf(stderr, "%s\n", document->url().string().utf8().data());
+        SAFE_FPRINTF(stderr, "%s\n", document->url().string().utf8());
         // FIXME: Need to find a way to output geometry without layout context.
         auto& renderView = *document->renderView();
         auto layoutTree = TreeBuilder::buildLayoutTree(renderView);
@@ -592,5 +583,3 @@ void printLayoutTreeForLiveDocuments()
 
 }
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

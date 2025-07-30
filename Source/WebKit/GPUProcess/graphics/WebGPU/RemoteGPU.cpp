@@ -38,6 +38,7 @@
 #include "RemoteRenderingBackend.h"
 #include "StreamServerConnection.h"
 #include "WebGPUObjectHeap.h"
+#include <WebCore/GraphicsContext.h>
 #include <WebCore/NativeImage.h>
 #include <WebCore/RenderingResourceIdentifier.h>
 #include <WebCore/WebGPU.h>
@@ -91,8 +92,8 @@ void RemoteGPU::stopListeningForIPC()
 {
     assertIsMainRunLoop();
     Ref workQueue = m_workQueue;
-    workQueue->dispatch([this]() {
-        workQueueUninitialize();
+    workQueue->dispatch([protectedThis = Ref { *this }]() {
+        protectedThis->workQueueUninitialize();
     });
     workQueue->stopAndWaitForCompletion();
 }
@@ -195,6 +196,10 @@ void RemoteGPU::requestAdapter(const WebGPU::RequestAdapterOptions& options, Web
             limits->maxComputeWorkgroupSizeY(),
             limits->maxComputeWorkgroupSizeZ(),
             limits->maxComputeWorkgroupsPerDimension(),
+            limits->maxStorageBuffersInFragmentStage(),
+            limits->maxStorageTexturesInFragmentStage(),
+            limits->maxStorageBuffersInVertexStage(),
+            limits->maxStorageTexturesInVertexStage(),
         }, adapter->isFallbackAdapter() } });
     });
 }
@@ -241,9 +246,10 @@ void RemoteGPU::paintNativeImageToImageBuffer(WebCore::NativeImage& nativeImage,
 
     RefPtr gpu = m_backing.get();
     Ref renderingBackend = m_renderingBackend;
+    Ref protectedNativeImage = nativeImage;
     renderingBackend->dispatch([&]() mutable {
         if (auto imageBuffer = renderingBackend->imageBuffer(imageBufferIdentifier)) {
-            gpu->paintToCanvas(nativeImage, imageBuffer->backendSize(), imageBuffer->context());
+            gpu->paintToCanvas(protectedNativeImage, imageBuffer->backendSize(), imageBuffer->context());
             imageBuffer->flushDrawingContext();
         }
         semaphore.signal();

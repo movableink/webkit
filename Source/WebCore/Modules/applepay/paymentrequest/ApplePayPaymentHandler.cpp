@@ -499,7 +499,7 @@ ExceptionOr<void> ApplePayPaymentHandler::computePaymentMethodErrors(JSC::JSObje
     auto scope = DECLARE_THROW_SCOPE(context.vm());
 
     auto applePayErrors = convert<IDLSequence<IDLInterface<ApplePayError>>>(*context.globalObject(), paymentMethodErrors);
-    if (UNLIKELY(applePayErrors.hasException(scope)))
+    if (applePayErrors.hasException(scope)) [[unlikely]]
         return Exception { ExceptionCode::ExistingExceptionError };
 
     errors.appendVector(applePayErrors.releaseReturnValue());

@@ -108,7 +108,7 @@ namespace TestWebKitAPI {
 static IMP makeQueryParameterRequestHandler(NSArray<NSString *> *parameters, NSArray<NSString *> *domains, NSArray<NSString *> *paths, bool& didHandleRequest)
 {
     return imp_implementationWithBlock([&didHandleRequest, parameters = RetainPtr { parameters }, domains = RetainPtr { domains }, paths = RetainPtr { paths }](WPResources *, WPResourceRequestOptions *, void(^completion)(WPLinkFilteringData *, NSError *)) mutable {
-        RunLoop::main().dispatch([&didHandleRequest, parameters = WTFMove(parameters), domains = WTFMove(domains), paths = WTFMove(paths), completion = makeBlockPtr(completion)]() mutable {
+        RunLoop::protectedMain()->dispatch([&didHandleRequest, parameters = WTFMove(parameters), domains = WTFMove(domains), paths = WTFMove(paths), completion = makeBlockPtr(completion)]() mutable {
             auto data = adoptNS([PAL::allocWPLinkFilteringDataInstance() initWithQueryParameters:parameters.get()
 #if defined(HAS_WEB_PRIVACY_LINK_FILTERING_RULE_PATH)
                 domains:domains.get() paths:paths.get()
@@ -123,7 +123,7 @@ static IMP makeQueryParameterRequestHandler(NSArray<NSString *> *parameters, NSA
 static IMP makeAllowedLinkFilteringDataRequestHandler(NSArray<NSString *> *parameters)
 {
     return imp_implementationWithBlock([parameters = RetainPtr { parameters }](WPResources *, WPResourceRequestOptions *, void(^completion)(WPLinkFilteringData *, NSError *)) mutable {
-        RunLoop::main().dispatch([parameters = WTFMove(parameters), completion = makeBlockPtr(completion)]() mutable {
+        RunLoop::protectedMain()->dispatch([parameters = WTFMove(parameters), completion = makeBlockPtr(completion)]() mutable {
             auto data = adoptNS([PAL::allocWPLinkFilteringDataInstance() initWithQueryParameters:parameters.get()]);
             completion(data.get(), nil);
         });
@@ -468,6 +468,29 @@ TEST(AdvancedPrivacyProtections, RemoveTrackingQueryParametersForMainResourcesOn
     }
 }
 
+TEST(AdvancedPrivacyProtections, DoNotRemoveTrackingQueryParametersWith8BitValues)
+{
+    [TestProtocol registerWithScheme:@"https"];
+    QueryParameterRequestSwizzler swizzler { @[ @"foo" ], @[ @"" ], @[ @"" ] };
+    RetainPtr webView = createWebViewWithAdvancedPrivacyProtections(NO);
+
+    auto testURL = [&](NSString *urlString, NSString *expectedResult) {
+        [webView synchronouslyLoadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:urlString]]];
+        EXPECT_WK_STREQ(expectedResult, [webView URL].absoluteString);
+    };
+
+    testURL(@"https://bundle-file/simple.html?foo=0", @"https://bundle-file/simple.html");
+    testURL(@"https://bundle-file/simple.html?foo=256", @"https://bundle-file/simple.html");
+    testURL(@"https://bundle-file/simple.html?foo=aaa", @"https://bundle-file/simple.html");
+    testURL(@"https://bundle-file/simple.html?foo=-01", @"https://bundle-file/simple.html");
+    testURL(@"https://bundle-file/simple.html?foo=0000", @"https://bundle-file/simple.html");
+    testURL(@"https://bundle-file/simple.html?foo=1+&bar=2", @"https://bundle-file/simple.html?bar=2");
+    testURL(@"https://bundle-file/simple.html?foo=1%20&bar=2", @"https://bundle-file/simple.html?bar=2");
+    testURL(@"https://bundle-file/simple.html?foo=000", @"https://bundle-file/simple.html?foo=000");
+    testURL(@"https://bundle-file/simple.html?foo=010", @"https://bundle-file/simple.html?foo=010");
+    testURL(@"https://bundle-file/simple.html?foo=255", @"https://bundle-file/simple.html?foo=255");
+}
+
 TEST(AdvancedPrivacyProtections, ApplyNavigationalProtectionsAfterMultiplePSON)
 {
     QueryParameterRequestSwizzler swizzler { @[ @"foo", @"bar", @"baz" ], @[ @"", @"", @"" ], @[ @"", @"", @"" ] };
@@ -497,7 +520,7 @@ TEST(AdvancedPrivacyProtections, ApplyNavigationalProtectionsAfterMultiplePSON)
     };
     [webView setNavigationDelegate:navigationDelegate.get()];
 
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:makeString("http://localhost:"_s, server.port(), "/"_s)]]];
+    [webView loadRequest:adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:makeString("http://localhost:"_s, server.port(), "/"_s).createNSString().get()]).get()]).get()];
     Util::run(&didCallDecisionHandler);
     finishedSuccessfully = false;
     Util::run(&finishedSuccessfully);
@@ -507,6 +530,46 @@ TEST(AdvancedPrivacyProtections, ApplyNavigationalProtectionsAfterMultiplePSON)
 
     result = [webView objectByEvaluatingJavaScript:@"window.result"];
     EXPECT_WK_STREQ(@"", result);
+}
+
+TEST(AdvancedPrivacyProtections, DoNotHideReferrerInPopupWindow)
+{
+    HTTPServer server({ { "/popup"_s, { "<body><h1>popup</h1></body>"_s } } }, HTTPServer::Protocol::Http);
+    server.addResponse("/main"_s, { makeString("<body><h1>main</h1><script src='http://localhost:"_s, server.port(), "/show-popup.js'></script></body>"_s) });
+    server.addResponse("/show-popup.js"_s, { makeString("open('http://localhost:"_s, server.port(), "/popup', 'Popup', 'width=400,height=300')"_s) });
+
+    bool popupDidFinishNavigation = false;
+    RetainPtr popupNavigationDelegate = adoptNS([TestNavigationDelegate new]);
+    [popupNavigationDelegate setDidFinishNavigation:[&](WKWebView *, WKNavigation *) {
+        popupDidFinishNavigation = true;
+    }];
+
+    RetainPtr<TestWKWebView> popupWebView;
+    RetainPtr uiDelegate = adoptNS([TestUIDelegate new]);
+    [uiDelegate setCreateWebViewWithConfiguration:[&](WKWebViewConfiguration *configuration, WKNavigationAction *action, WKWindowFeatures *) -> WKWebView * {
+        popupWebView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 400, 300) configuration:configuration]);
+        [popupWebView setNavigationDelegate:popupNavigationDelegate.get()];
+        return popupWebView.get();
+    }];
+
+    RetainPtr preferences = adoptNS([WKWebpagePreferences new]);
+    [preferences _setPopUpPolicy:_WKWebsitePopUpPolicyAllow];
+
+    RetainPtr webView = createWebViewWithAdvancedPrivacyProtections(YES, WTFMove(preferences));
+    [webView setUIDelegate:uiDelegate.get()];
+
+    // Load the main page on 127.0.0.1, which opens a cross-origin popup window on localhost.
+    auto mainURLPrefix = "http://127.0.0.1:"_s;
+    [webView loadRequest:adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:makeString(mainURLPrefix, server.port(), "/main"_s).createNSString().get()]).get()]).get()];
+
+    // Wait for the popup window to finish loading.
+    Util::waitForConditionWithLogging([&] {
+        return popupDidFinishNavigation;
+    }, 5, @"Timed out while waiting for popup window to load");
+
+    // Confirm that the popup window has access to the document referrer.
+    String referrerFromPopup = [popupWebView stringByEvaluatingJavaScript:@"document.referrer"];
+    EXPECT_TRUE(referrerFromPopup.startsWith(mainURLPrefix));
 }
 
 static RetainPtr<TestWKWebView> setUpWebViewForTestingQueryParameterHiding(NSString *pageSource, NSString *requestURLString, NSString *referrer = @"https://webkit.org")
@@ -554,12 +617,12 @@ static RetainPtr<TestWKWebView> setUpWebViewForTestingQueryParameterHiding(NSStr
 
     [configuration setURLSchemeHandler:handler.get() forURLScheme:@"custom"];
 
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:configuration.get()]);
-    [webView synchronouslyLoadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"about:blank"]]];
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:configuration.get()]);
+    [webView synchronouslyLoadRequest:adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:@"about:blank"]).get()]).get()];
 
-    auto request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:requestURLString]];
+    RetainPtr request = adoptNS([[NSMutableURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:requestURLString]).get()]);
     [request setValue:referrer forHTTPHeaderField:@"referer"];
-    [webView synchronouslyLoadRequest:request];
+    [webView synchronouslyLoadRequest:request.get()];
     [webView callAsyncJavaScriptAndWait:@"return new Promise(resolve => setTimeout(resolve, 0))"];
 
     return webView;
@@ -653,6 +716,180 @@ TEST(AdvancedPrivacyProtections, DoNotHideQueryParametersAfterEffectiveSameSiteN
     EXPECT_WK_STREQ("thirdparty: custom://firstparty.co.uk/index.html?hello=123", results[0]);
 }
 
+static RetainPtr<TestWKWebView> setUpWebViewForTestingTrackerDomainBlocking(String nonTrackerFramePageSource, String subFramePageSource, NSString *requestURLString)
+{
+    HTTPServer httpsServer({
+        { "/"_s, { { }, nonTrackerFramePageSource } },
+        { "/subframe"_s, { { }, subFramePageSource } },
+        { "/initialize"_s, { { }, "initialize"_s } },
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto storeConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] initNonPersistentConfiguration]);
+    [storeConfiguration setProxyConfiguration:@{
+        (NSString *)kCFStreamPropertyHTTPSProxyHost: @"127.0.0.1",
+        (NSString *)kCFStreamPropertyHTTPSProxyPort: @(httpsServer.port())
+    }];
+    auto store = adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:storeConfiguration.get()]);;
+    store.get()._resourceLoadStatisticsEnabled = YES;
+
+    auto configuration = adoptNS([WKWebViewConfiguration new]);
+    [configuration setWebsiteDataStore:store.get()];
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:configuration.get()]);
+
+    RetainPtr navigationDelegate = adoptNS([TestNavigationDelegate new]);
+    [navigationDelegate allowAnyTLSCertificate];
+    [webView setNavigationDelegate:navigationDelegate.get()];
+
+    [webView loadRequest:adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:@"https://webkit.org/initialize"]).get()]).get()];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    [webView loadRequest:adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:requestURLString]).get()]).get()];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    [webView callAsyncJavaScriptAndWait:@"return new Promise(resolve => setTimeout(resolve, 0))"];
+
+    return webView;
+}
+
+TEST(AdvancedPrivacyProtections, DoNotBlockFirstPartyPartitionedCookiesFromTrackerDomain)
+{
+    auto webView = setUpWebViewForTestingTrackerDomainBlocking("<!DOCTYPE html>"
+        "<html>"
+        "    <head>"
+        "    <script>"
+        "        window.result = '';"
+        "        window.receivedMessage = 'no';"
+        "        window.addEventListener('message', (e) => {"
+        "            window.result = e.data;"
+        "            window.receivedMessage = 'yes';"
+        "        });"
+        "    </script>"
+        "    </head>"
+        "    <body>"
+        "    <iframe sandbox=\"allow-scripts allow-same-origin\" src=\"https://tracker.example/subframe\">"
+        "    </body>"
+        "</html>"_s,
+
+        "<!DOCTYPE html>"
+        "<html>"
+        "    <head>"
+        "        <script>"
+        "        document.cookie = `test=value;Secure;SameSite=None;Partitioned`;"
+        "        window.top.postMessage(document.cookie, '*');"
+        "        </script>"
+        "    </head>"
+        "    <body>Hello world</body>"
+        "</html>"_s,
+
+        @"https://tracker.example/");
+
+    NSString *receivedMessage = [webView objectByEvaluatingJavaScript:@"window.receivedMessage"];
+    while ([receivedMessage isEqualToString:@"no"]) {
+        TestWebKitAPI::Util::spinRunLoop(5000);
+        receivedMessage = [webView objectByEvaluatingJavaScript:@"window.receivedMessage"];
+    }
+
+    NSString *result = [webView objectByEvaluatingJavaScript:@"window.result"];
+
+    EXPECT_WK_STREQ(@"yes", receivedMessage);
+
+    EXPECT_NE(0U, result.length);
+    EXPECT_WK_STREQ(@"test=value", result);
+}
+
+TEST(AdvancedPrivacyProtections, DoNotBlockThirdPartyPartitionedCookiesFromSameSiteDomain)
+{
+    auto webView = setUpWebViewForTestingTrackerDomainBlocking("<!DOCTYPE html>"
+        "<html>"
+        "    <head>"
+        "    <script>"
+        "        window.result = '';"
+        "        window.receivedMessage = 'no';"
+        "        window.addEventListener('message', (e) => {"
+        "            window.result = e.data;"
+        "            window.receivedMessage = 'yes';"
+        "        });"
+        "    </script>"
+        "    </head>"
+        "    <body>"
+        "    <iframe sandbox=\"allow-scripts allow-same-origin\" src=\"https://subdomain.website.example/subframe\">"
+        "    </body>"
+        "</html>"_s,
+
+        "<!DOCTYPE html>"
+        "<html>"
+        "    <head>"
+        "        <script>"
+        "        document.cookie = `test=value;Secure;SameSite=None;Partitioned`;"
+        "        window.top.postMessage(document.cookie, '*');"
+        "        </script>"
+        "    </head>"
+        "    <body>Hello world</body>"
+        "</html>"_s,
+
+        @"https://website.example/");
+
+    NSString *receivedMessage = [webView objectByEvaluatingJavaScript:@"window.receivedMessage"];
+    while ([receivedMessage isEqualToString:@"no"]) {
+        TestWebKitAPI::Util::spinRunLoop(5000);
+        receivedMessage = [webView objectByEvaluatingJavaScript:@"window.receivedMessage"];
+    }
+
+    NSString *result = [webView objectByEvaluatingJavaScript:@"window.result"];
+
+    EXPECT_WK_STREQ(@"yes", receivedMessage);
+    EXPECT_NE(0U, result.length);
+    EXPECT_WK_STREQ(@"test=value", result);
+}
+
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+TEST(AdvancedPrivacyProtections, DoNotBlockThirdPartyPartitionedCookies)
+{
+    auto webView = setUpWebViewForTestingTrackerDomainBlocking("<!DOCTYPE html>"
+        "<html>"
+        "    <head>"
+        "    <script>"
+        "        window.result = '';"
+        "        window.receivedMessage = 'no';"
+        "        window.addEventListener('message', (e) => {"
+        "            window.result = e.data;"
+        "            window.receivedMessage = 'yes';"
+        "        });"
+        "    </script>"
+        "    </head>"
+        "    <body>"
+        "    <iframe sandbox=\"allow-scripts allow-same-origin\" src=\"https://websiteB.example/subframe\">"
+        "    </body>"
+        "</html>"_s,
+
+        "<!DOCTYPE html>"
+        "<html>"
+        "    <head>"
+        "        <script>"
+        "        document.cookie = `test=value;Secure;SameSite=None;Partitioned`;"
+        "        window.parent.postMessage(document.cookie, '*');"
+        "        </script>"
+        "    </head>"
+        "    <body>Hello world</body>"
+        "</html>"_s,
+
+        @"https://website.example/");
+
+    NSString *receivedMessage = [webView objectByEvaluatingJavaScript:@"window.receivedMessage"];
+    while ([receivedMessage isEqualToString:@"no"]) {
+        TestWebKitAPI::Util::spinRunLoop(5000);
+        receivedMessage = [webView objectByEvaluatingJavaScript:@"window.receivedMessage"];
+    }
+
+    NSString *result = [webView objectByEvaluatingJavaScript:@"window.result"];
+
+    EXPECT_WK_STREQ(@"yes", receivedMessage);
+    EXPECT_NE(0U, result.length);
+    EXPECT_WK_STREQ(@"test=value", result);
+}
+#endif
+
 TEST(AdvancedPrivacyProtections, LinkPreconnectUsesEnhancedPrivacy)
 {
     auto createMarkupString = [](unsigned serverPort) {
@@ -669,9 +906,9 @@ TEST(AdvancedPrivacyProtections, LinkPreconnectUsesEnhancedPrivacy)
     server.addResponse("/index.html"_s, { createMarkupString(server.port()) });
 
     auto webView = createWebViewWithAdvancedPrivacyProtections(YES, nil, WKWebsiteDataStore.defaultDataStore);
-    auto request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:[NSString stringWithFormat:@"http://localhost:%u/index.html", server.port()]]];
-    request._useEnhancedPrivacyMode = YES;
-    [webView synchronouslyLoadRequest:request];
+    RetainPtr request = adoptNS([[NSMutableURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:adoptNS([[NSString alloc] initWithFormat:@"http://localhost:%u/index.html", server.port()]).get()]).get()]);
+    request.get()._useEnhancedPrivacyMode = YES;
+    [webView synchronouslyLoadRequest:request.get()];
 
     do {
         Util::runFor(10_ms);
@@ -705,7 +942,7 @@ static RetainPtr<TestWKWebView> webViewAfterCrossSiteNavigationWithReducedPrivac
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:configuration.get()]);
     [webView setNavigationDelegate:navigationDelegate.get()];
 
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:initialURLString]]];
+    [webView loadRequest:adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:initialURLString]).get()]).get()];
     [navigationDelegate waitForDidFinishNavigation];
 
     [navigationDelegate setDecidePolicyForNavigationActionWithPreferences:[&](WKNavigationAction *action, WKWebpagePreferences *preferences, void (^decisionHandler)(WKNavigationActionPolicy, WKWebpagePreferences *)) {
@@ -729,7 +966,7 @@ TEST(AdvancedPrivacyProtections, DoNotHideReferrerAfterReducingPrivacyProtection
 
     server.addResponse("/index1.html"_s, { makeString("<a href='http://127.0.0.1:"_s, server.port(), "/index2.html'>Link</a>"_s) });
 
-    auto webView = webViewAfterCrossSiteNavigationWithReducedPrivacy(makeString("http://localhost:"_s, server.port(), "/index1.html"_s));
+    auto webView = webViewAfterCrossSiteNavigationWithReducedPrivacy(makeString("http://localhost:"_s, server.port(), "/index1.html"_s).createNSString().get());
 
     NSString *result = [webView objectByEvaluatingJavaScript:@"window.result"];
     NSString *expectedReferrer = [NSString stringWithFormat:@"http://localhost:%d/", server.port()];
@@ -745,7 +982,7 @@ TEST(AdvancedPrivacyProtections, DoNotHideReferrerAfterReducingPrivacyProtection
     server.addResponse("/source.html"_s, { makeString("<a href='http://127.0.0.1:"_s, server.port(), "/redirect.html'>Link</a>"_s) });
     server.addResponse("/redirect.html"_s, { makeString("<script>window.location = 'http://localhost:"_s, server.port(), "/destination.html';</script>"_s) });
 
-    auto webView = webViewAfterCrossSiteNavigationWithReducedPrivacy(makeString("http://localhost:"_s, server.port(), "/source.html"_s), true);
+    auto webView = webViewAfterCrossSiteNavigationWithReducedPrivacy(makeString("http://localhost:"_s, server.port(), "/source.html"_s).createNSString().get(), true);
 
     NSString *result = [webView objectByEvaluatingJavaScript:@"window.result"];
     NSString *expectedReferrer = [NSString stringWithFormat:@"http://127.0.0.1:%d/", server.port()];
@@ -761,7 +998,7 @@ TEST(AdvancedPrivacyProtections, DoNotHideReferrerAfterReducingPrivacyProtection
     server.addResponse("/source.html"_s, { makeString("<a href='http://127.0.0.1:"_s, server.port(), "/redirect'>Link</a>"_s) });
     server.addResponse("/redirect"_s, { 302, {{"Location"_s, makeString("http://localhost:"_s, server.port(), "/destination.html"_s) }}, "redirecting..."_s });
 
-    auto webView = webViewAfterCrossSiteNavigationWithReducedPrivacy(makeString("http://localhost:"_s, server.port(), "/source.html"_s));
+    auto webView = webViewAfterCrossSiteNavigationWithReducedPrivacy(makeString("http://localhost:"_s, server.port(), "/source.html"_s).createNSString().get());
 
     NSString *result = [webView objectByEvaluatingJavaScript:@"window.result"];
     NSString *expectedReferrer = [NSString stringWithFormat:@"http://localhost:%d/", server.port()];
@@ -787,7 +1024,7 @@ TEST(AdvancedPrivacyProtections, HideScreenMetricsFromBindings)
     auto webView = createWebViewWithAdvancedPrivacyProtections();
 
     [webView setUIDelegate:uiDelegate.get()];
-    [webView synchronouslyLoadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://bundle-file/simple-responsive-page.html"]]];
+    [webView synchronouslyLoadRequest:adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:@"https://bundle-file/simple-responsive-page.html"]).get()]).get()];
 
     auto bruteForceMediaQueryScript = [](NSString *key) -> NSString * {
         return [NSString stringWithFormat:@"(function() {"
@@ -920,7 +1157,7 @@ TEST(AdvancedPrivacyProtections, AddNoiseToWebAudioAPIsAfterMultiplePSON)
     };
     [webView setNavigationDelegate:navigationDelegate.get()];
 
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:makeString("http://localhost:"_s, server.port(), "/"_s)]]];
+    [webView loadRequest:adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:makeString("http://localhost:"_s, server.port(), "/"_s).createNSString().get()]).get()]).get()];
     Util::run(&didCallDecisionHandler);
     finishedSuccessfully = false;
     Util::run(&finishedSuccessfully);
@@ -956,7 +1193,7 @@ TEST(AdvancedPrivacyProtections, AddNoiseToWebAudioAPIsAfterReducingPrivacyProte
         decisionHandler(WKNavigationActionPolicyAllow, preferences);
     }];
 
-    auto webView = webViewAfterCrossSiteNavigationWithReducedPrivacy(makeString("http://localhost:"_s, server.port(), "/index1.html"_s));
+    auto webView = webViewAfterCrossSiteNavigationWithReducedPrivacy(makeString("http://localhost:"_s, server.port(), "/index1.html"_s).createNSString().get());
 
     [webView setNavigationDelegate:navigationDelegate.get()];
     [navigationDelegate waitForDidFinishNavigation];
@@ -1040,25 +1277,25 @@ TEST(AdvancedPrivacyProtections, VerifyPixelsFromNoisyCanvas2DAPI)
     [webViewWithPrivacyProtections2 loadFileRequest:[NSURLRequest requestWithURL:testURL] allowingReadAccessToURL:resourcesURL];
     [webViewWithPrivacyProtections2 _test_waitForDidFinishNavigation];
 
-    auto checkCanvasPixels = [&](NSString *functionName, size_t length, Function<void(NSDictionary *, NSDictionary *, int, int)> expect) {
+    auto checkCanvasPixels = [&](NSString *functionName, size_t length, Function<void(NSArray *, NSArray *, int, int)> expect) {
         // This is a larger tolerance than we'd like, but the lossy nature of the premultiplied conversion doesn't give us many options.
         constexpr auto maxPixelDifferenceTolerance = 8;
         auto scriptToRun = [NSString stringWithFormat:@"return %@(%zu)", functionName, length];
 
-        NSDictionary *arr1 = [webView1 callAsyncJavaScriptAndWait:scriptToRun];
-        NSDictionary *arr2 = [webView2 callAsyncJavaScriptAndWait:scriptToRun];
+        NSArray *arr1 = [webView1 callAsyncJavaScriptAndWait:scriptToRun];
+        NSArray *arr2 = [webView2 callAsyncJavaScriptAndWait:scriptToRun];
 
-        EXPECT_TRUE([arr1 isEqualToDictionary:arr2]);
+        EXPECT_TRUE([arr1 isEqualToArray:arr2]);
         EXPECT_NE(arr1.count, 0u);
         EXPECT_NE(arr2.count, 0u);
         EXPECT_EQ(arr1.count, arr2.count);
 
-        NSDictionary *arrWithPrivacyProtections1 = [webViewWithPrivacyProtections1 callAsyncJavaScriptAndWait:scriptToRun];
+        NSArray *arrWithPrivacyProtections1 = [webViewWithPrivacyProtections1 callAsyncJavaScriptAndWait:scriptToRun];
 
         expect(arr1, arrWithPrivacyProtections1, maxPixelDifferenceTolerance, __LINE__);
         EXPECT_NE(arrWithPrivacyProtections1.count, 0u);
 
-        NSDictionary *arrWithPrivacyProtections2 = [webViewWithPrivacyProtections2 callAsyncJavaScriptAndWait:scriptToRun];
+        NSArray *arrWithPrivacyProtections2 = [webViewWithPrivacyProtections2 callAsyncJavaScriptAndWait:scriptToRun];
 
         expect(arr1, arrWithPrivacyProtections2, maxPixelDifferenceTolerance, __LINE__);
         EXPECT_NE(arrWithPrivacyProtections2.count, 0u);
@@ -1067,43 +1304,39 @@ TEST(AdvancedPrivacyProtections, VerifyPixelsFromNoisyCanvas2DAPI)
     };
 
     auto checkCanvasPixelsEqual = [&](NSString *functionName, int length, int primaryLine) {
-        checkCanvasPixels(functionName, length, [primaryLine](NSDictionary *arr1, NSDictionary *arr2, int, int secondaryLine) {
-            EXPECT_TRUE([arr1 isEqualToDictionary:arr2]) << "Test at line " << primaryLine << " failed at line " << secondaryLine << "\narr1: " << arr1.description << "\narr2: " << arr2.description;
+        checkCanvasPixels(functionName, length, [primaryLine](NSArray *arr1, NSArray *arr2, int, int secondaryLine) {
+            EXPECT_TRUE([arr1 isEqualToArray:arr2]) << "Test at line " << primaryLine << " failed at line " << secondaryLine << "\narr1: " << arr1.description << "\narr2: " << arr2.description;
         });
     };
 
     auto checkCanvasPixelsNotEqual = [&](NSString *functionName, int length, int primaryLine) {
-        checkCanvasPixels(functionName, length, [primaryLine](NSDictionary *arr1, NSDictionary *arr2, int tolerance, int secondaryLine) {
-            EXPECT_FALSE([arr1 isEqualToDictionary:arr2]) << "Test at line " << primaryLine << " failed at line " << secondaryLine << "\narr1: " << arr1.description << "\narr2: " << arr2.description;
+        checkCanvasPixels(functionName, length, [primaryLine](NSArray *arr1, NSArray *arr2, int tolerance, int secondaryLine) {
+            EXPECT_FALSE([arr1 isEqualToArray:arr2]) << "Test at line " << primaryLine << " failed at line " << secondaryLine << "\narr1: " << arr1.description << "\narr2: " << arr2.description;
             for (auto i = 0u; i < arr1.count; i += 4) {
-                auto* idx = [NSString stringWithFormat:@"%d", i];
-                auto* idxPlus1 = [NSString stringWithFormat:@"%d", i + 1];
-                auto* idxPlus2 = [NSString stringWithFormat:@"%d", i + 2];
-                auto* idxPlus3 = [NSString stringWithFormat:@"%d", i + 3];
-                int alpha1 = [[arr1 valueForKey:idxPlus3] intValue];
-                int alpha2 = [[arr2 valueForKey:idxPlus3] intValue];
+                int alpha1 = [arr1[i + 3] intValue];
+                int alpha2 = [arr2[i + 3] intValue];
                 EXPECT_LE(std::abs(alpha1 - alpha2), (tolerance / 2)) << "Test at line " << primaryLine << " failed at line " << secondaryLine << "\nAlpha at index (+3): " << i << " is not within tolerance: " << (tolerance / 2) << ". arr1 value: " << alpha1 << ", arr2 value: " << alpha2;
 
-                auto red1 = [[arr1 valueForKey:idx] intValue];
-                auto red2 = [[arr2 valueForKey:idx] intValue];
+                auto red1 = [arr1[i] intValue];
+                auto red2 = [arr2[i] intValue];
                 EXPECT_LE(std::abs(std::round(static_cast<float>(red1 * alpha1) / 255) - std::round(static_cast<float>(red2 * alpha2) / 255)), tolerance) << "Test at line " << primaryLine << " failed at line " << secondaryLine << "\nindex: " << i << " is not within tolerance: " << tolerance << ". arr1 value: " << red1 << " (alpha: " << alpha1 << "), arr2 value: " << red2 << " (alpha: " << alpha2 << ")";
 
-                auto green1 = [[arr1 valueForKey:idxPlus1] intValue];
-                auto green2 = [[arr2 valueForKey:idxPlus1] intValue];
+                auto green1 = [arr1[i + 1] intValue];
+                auto green2 = [arr2[i + 1] intValue];
                 EXPECT_LE(std::abs(std::round(static_cast<float>(green1 * alpha1) / 255) - std::round(static_cast<float>(green2 * alpha2) / 255)), tolerance) << "Test at line " << primaryLine << " failed at line " << secondaryLine << "\nindex (+1): " << i << " is not within tolerance: " << tolerance << ". arr1 value: " << green1 << " (alpha: " << alpha1 << "), arr2 value: " << green2 << " (alpha: " << alpha2 << ")";
 
-                auto blue1 = [[arr1 valueForKey:idxPlus2] intValue];
-                auto blue2 = [[arr2 valueForKey:idxPlus2] intValue];
+                auto blue1 = [arr1[i + 2] intValue];
+                auto blue2 = [arr2[i + 2] intValue];
                 EXPECT_LE(std::abs(std::round(static_cast<float>(blue1 * alpha1) / 255) - std::round(static_cast<float>(blue2 * alpha2) / 255)), tolerance) << "Test at line " << primaryLine << " failed at line " << secondaryLine << "\nindex (+2): " << i << " is not within tolerance: " << tolerance << ". arr1 value: " << blue1 << " (alpha: " << alpha1 << "), arr2 value: " << blue2 << " (alpha: " << alpha2 << ")";
             }
         });
     };
 
-    checkCanvasPixelsEqual(@"initialTextCanvasImageDataAsObject", zeroPrefix * channelsPerPixel, __LINE__);
-    checkCanvasPixelsNotEqual(@"initialTextCanvasImageDataAsObject", 300 * 200 * channelsPerPixel, __LINE__);
+    checkCanvasPixelsEqual(@"initialTextCanvasImageDataAsArray", zeroPrefix * channelsPerPixel, __LINE__);
+    checkCanvasPixelsNotEqual(@"initialTextCanvasImageDataAsArray", 300 * 200 * channelsPerPixel, __LINE__);
 
-    checkCanvasPixelsEqual(@"initialHorizontalLinearGradientCanvasImageDataAsObject", 1 * channelsPerPixel, __LINE__);
-    checkCanvasPixelsNotEqual(@"initialHorizontalLinearGradientCanvasImageDataAsObject", 30 * 2 * channelsPerPixel, __LINE__);
+    checkCanvasPixelsEqual(@"initialHorizontalLinearGradientCanvasImageDataAsArray", 1 * channelsPerPixel, __LINE__);
+    checkCanvasPixelsNotEqual(@"initialHorizontalLinearGradientCanvasImageDataAsArray", 30 * 2 * channelsPerPixel, __LINE__);
 
     auto scriptToRun = @"return isHorizontalLinearGradientCanvasGradient()";
     EXPECT_TRUE([webView1 callAsyncJavaScriptAndWait:scriptToRun]);
@@ -1111,8 +1344,8 @@ TEST(AdvancedPrivacyProtections, VerifyPixelsFromNoisyCanvas2DAPI)
     EXPECT_TRUE([webViewWithPrivacyProtections1 callAsyncJavaScriptAndWait:scriptToRun]);
     EXPECT_TRUE([webViewWithPrivacyProtections2 callAsyncJavaScriptAndWait:scriptToRun]);
 
-    checkCanvasPixelsEqual(@"initialVerticalLinearGradientCanvasImageDataAsObject", 2, __LINE__);
-    checkCanvasPixelsNotEqual(@"initialVerticalLinearGradientCanvasImageDataAsObject", 2 * 30 * channelsPerPixel, __LINE__);
+    checkCanvasPixelsEqual(@"initialVerticalLinearGradientCanvasImageDataAsArray", 2, __LINE__);
+    checkCanvasPixelsNotEqual(@"initialVerticalLinearGradientCanvasImageDataAsArray", 2 * 30 * channelsPerPixel, __LINE__);
 
     scriptToRun = @"return isVerticalLinearGradientCanvasGradient()";
     EXPECT_TRUE([webView1 callAsyncJavaScriptAndWait:scriptToRun]);
@@ -1120,8 +1353,8 @@ TEST(AdvancedPrivacyProtections, VerifyPixelsFromNoisyCanvas2DAPI)
     EXPECT_TRUE([webViewWithPrivacyProtections1 callAsyncJavaScriptAndWait:scriptToRun]);
     EXPECT_TRUE([webViewWithPrivacyProtections2 callAsyncJavaScriptAndWait:scriptToRun]);
 
-    checkCanvasPixelsEqual(@"initialRadialGradientCanvasImageDataAsObject", 1 * channelsPerPixel, __LINE__);
-    checkCanvasPixelsNotEqual(@"initialRadialGradientCanvasImageDataAsObject", 300 * channelsPerPixel, __LINE__);
+    checkCanvasPixelsEqual(@"initialRadialGradientCanvasImageDataAsArray", 1 * channelsPerPixel, __LINE__);
+    checkCanvasPixelsNotEqual(@"initialRadialGradientCanvasImageDataAsArray", 300 * channelsPerPixel, __LINE__);
 }
 
 TEST(AdvancedPrivacyProtections, VerifyDataURLFromNoisyWebGLAPI)
@@ -1165,7 +1398,6 @@ TEST(AdvancedPrivacyProtections, VerifyDataURLFromNoisyWebGLAPI)
 
 TEST(AdvancedPrivacyProtections, Canvas2DQuirks)
 {
-    using namespace TestWebKitAPI;
     auto *script = @"let canvas = document.createElement(\"canvas\"); canvas.width = 280; canvas.height = 60; let ctx = canvas.getContext(\"2d\"); ctx.fillText(\"<@nv45. F1n63r,Pr1n71n6!\", 10, 40); canvas.toDataURL();";
     auto *paddedScript = [script stringByPaddingToLength:212053 withString:@" " startingAtIndex:0];
     EXPECT_NOT_NULL(paddedScript);
@@ -1202,7 +1434,7 @@ TEST(AdvancedPrivacyProtections, Canvas2DQuirks)
     };
     [webView setNavigationDelegate:delegate.get()];
 
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://site.example/"]]];
+    [webView loadRequest:adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:@"https://site.example/"]).get()]).get()];
 
     while (!finishedSuccessfully)
         TestWebKitAPI::Util::spinRunLoop(5);
@@ -1224,7 +1456,7 @@ TEST(AdvancedPrivacyProtections, Canvas2DQuirks)
     EXPECT_TRUE(finishedSuccessfully);
 
     finishedSuccessfully = false;
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://site.example/"]]];
+    [webView loadRequest:adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:@"https://site.example/"]).get()]).get()];
 
     while (!finishedSuccessfully)
         TestWebKitAPI::Util::spinRunLoop(5);

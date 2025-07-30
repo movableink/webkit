@@ -23,26 +23,8 @@
 #if ENABLE(GPU_PROCESS)
 
 struct WebKit::GPUProcessPreferences {
-#if ENABLE(OPUS)
-    std::optional<bool> opusDecoderEnabled;
-#endif
-#if ENABLE(VORBIS)
-    std::optional<bool> vorbisDecoderEnabled;
-#endif
-#if ENABLE(MEDIA_SOURCE) && ENABLE(VP9)
-    std::optional<bool> webMParserEnabled;
-#endif
 #if USE(MODERN_AVCONTENTKEYSESSION)
     std::optional<bool> shouldUseModernAVContentKeySession;
-#endif
-#if ENABLE(ALTERNATE_WEBM_PLAYER)
-    std::optional<bool> alternateWebMPlayerEnabled;
-#endif
-#if HAVE(SC_CONTENT_SHARING_PICKER)
-    std::optional<bool> useSCContentSharingPicker;
-#endif
-#if ENABLE(EXTENSION_CAPABILITIES)
-    std::optional<bool> mediaCapabilityGrantsEnabled;
 #endif
 #if ENABLE(VP9)
     std::optional<bool> vp9DecoderEnabled;

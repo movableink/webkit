@@ -29,6 +29,13 @@
 #include "LayoutBoxGeometry.h"
 
 namespace WebCore {
+
+namespace Style {
+struct InsetEdge;
+struct MarginEdge;
+struct PaddingEdge;
+}
+
 namespace Layout {
 
 struct ComputedHorizontalMargin;
@@ -67,7 +74,11 @@ public:
     ComputedHorizontalMargin computedHorizontalMargin(const Box&, const HorizontalConstraints&) const;
     ComputedVerticalMargin computedVerticalMargin(const Box&, const HorizontalConstraints&) const;
 
+    std::optional<LayoutUnit> computedValue(const Style::InsetEdge&, LayoutUnit containingBlockWidth) const;
+    std::optional<LayoutUnit> computedValue(const Style::MarginEdge&, LayoutUnit containingBlockWidth) const;
     std::optional<LayoutUnit> computedValue(const Length& geometryProperty, LayoutUnit containingBlockWidth) const;
+    std::optional<LayoutUnit> fixedValue(const Style::MarginEdge&) const;
+    std::optional<LayoutUnit> fixedValue(const Style::PaddingEdge&) const;
     std::optional<LayoutUnit> fixedValue(const Length& geometryProperty) const;
 
     std::optional<LayoutUnit> computedMinHeight(const Box&, std::optional<LayoutUnit> containingBlockHeight = std::nullopt) const;

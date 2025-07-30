@@ -25,7 +25,9 @@
 #include "config.h"
 #include "Range.h"
 
+#include "BoundaryPointInlines.h"
 #include "Comment.h"
+#include "ContainerNodeInlines.h"
 #include "CustomElementReactionQueue.h"
 #include "DOMRect.h"
 #include "DOMRectList.h"
@@ -43,6 +45,7 @@
 #include "NodeTraversal.h"
 #include "NodeWithIndex.h"
 #include "ProcessingInstruction.h"
+#include "RangeBoundaryPointInlines.h"
 #include "ScopedEventQueue.h"
 #include "ShadowRoot.h"
 #include "TextIterator.h"
@@ -197,7 +200,7 @@ ExceptionOr<short> Range::comparePoint(Node& container, unsigned offset) const
     auto ordering = treeOrder({ container, offset }, makeSimpleRange(*this));
     if (is_lt(ordering))
         return -1;
-    if (WebCore::is_eq(ordering))
+    if (is_eq(ordering))
         return 0;
     if (is_gt(ordering))
         return 1;
@@ -265,7 +268,7 @@ ExceptionOr<short> Range::compareBoundaryPoints(unsigned short how, const Range&
     auto ordering = treeOrder(makeBoundaryPoint(*thisPoint), makeBoundaryPoint(*otherPoint));
     if (is_lt(ordering))
         return -1;
-    if (WebCore::is_eq(ordering))
+    if (is_eq(ordering))
         return 0;
     if (is_gt(ordering))
         return 1;
@@ -448,7 +451,7 @@ ExceptionOr<RefPtr<DocumentFragment>> Range::processContents(ActionType action)
                 return result.releaseException();
         }
 
-        HashSet<Ref<Element>> elementSet;
+        UncheckedKeyHashSet<Ref<Element>> elementSet;
         for (Ref element : customElementsReactionHoldingTank.takeElements())
             elementSet.add(element.get());
         if (!elementSet.isEmpty()) {
@@ -748,7 +751,7 @@ String Range::toString() const
 }
 
 // https://w3c.github.io/DOM-Parsing/#widl-Range-createContextualFragment-DocumentFragment-DOMString-fragment
-ExceptionOr<Ref<DocumentFragment>> Range::createContextualFragment(std::variant<RefPtr<TrustedHTML>, String>&& markup)
+ExceptionOr<Ref<DocumentFragment>> Range::createContextualFragment(Variant<RefPtr<TrustedHTML>, String>&& markup)
 {
     Node& node = startContainer();
     auto stringValueHolder = trustedTypeCompliantString(*node.document().scriptExecutionContext(), WTFMove(markup), "Range createContextualFragment"_s);
@@ -966,7 +969,7 @@ void Range::nodeWillBeRemoved(Node& node)
 
 bool Range::parentlessNodeMovedToNewDocumentAffectsRange(Node& node)
 {
-    return node.containsIncludingShadowDOM(&m_start.container());
+    return node.isShadowIncludingInclusiveAncestorOf(&m_start.container());
 }
 
 void Range::updateRangeForParentlessNodeMovedToNewDocument(Node& node)
@@ -1187,7 +1190,7 @@ void Range::visitNodesConcurrently(JSC::AbstractSlotVisitor& visitor) const
 void showTree(const WebCore::Range* range)
 {
     if (range) {
-        range->startContainer().showTreeAndMark(&range->startContainer(), "S", &range->endContainer(), "E");
+        range->startContainer().showTreeAndMark(&range->startContainer(), "S"_s, &range->endContainer(), "E"_s);
         fprintf(stderr, "start offset: %d, end offset: %d\n", range->startOffset(), range->endOffset());
     }
 }

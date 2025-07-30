@@ -47,13 +47,13 @@ public:
     static Ref<AccessibilityTextMarker> create(const AccessibilityTextMarker&);
 
     ~AccessibilityTextMarker();
-    
+
     PlatformTextMarker platformTextMarker() const;
     virtual JSClassRef wrapperClass();
 
     static JSObjectRef makeJSAccessibilityTextMarker(JSContextRef, const AccessibilityTextMarker&);
     bool isEqual(AccessibilityTextMarker*);
-    
+
 private:
     AccessibilityTextMarker(PlatformTextMarker);
     AccessibilityTextMarker(const AccessibilityTextMarker&);
@@ -67,6 +67,20 @@ private:
 
 #if !PLATFORM(COCOA)
 inline bool AccessibilityTextMarker::isEqual(AccessibilityTextMarker*) { return false; }
+#endif
+
+#if PLATFORM(COCOA)
+#ifdef __OBJC__
+inline PlatformTextMarker AccessibilityTextMarker::platformTextMarker() const
+{
+    return m_textMarker.get();
+}
+#endif
+#else
+inline PlatformTextMarker AccessibilityTextMarker::platformTextMarker() const
+{
+    return m_textMarker;
+}
 #endif
 
 } // namespace WTR

@@ -112,7 +112,7 @@ ServiceWorkerFetchTask::ServiceWorkerFetchTask(WebSWServerConnection& swServerCo
     bool shouldDoNavigationPreload = session && isNavigationRequest(loader.parameters().options.destination) && m_currentRequest.httpMethod() == "GET"_s;
 
     if (shouldDoNavigationPreload && (!isWorkerReady || registration.navigationPreloadState().enabled)) {
-        NetworkLoadParameters parameters = loader.parameters();
+        NetworkLoadParameters parameters = loader.parameters().networkLoadParameters();
         parameters.request = m_currentRequest;
         m_preloader = makeUnique<ServiceWorkerNavigationPreloader>(*session, WTFMove(parameters), registration.navigationPreloadState(), loader.shouldCaptureExtraNetworkLoadMetrics());
         session->addNavigationPreloaderTask(*this);
@@ -135,13 +135,13 @@ ServiceWorkerFetchTask::~ServiceWorkerFetchTask()
     cancelPreloadIfNecessary();
 }
 
-template<typename Message> bool ServiceWorkerFetchTask::sendToServiceWorker(Message&& message)
+RefPtr<IPC::Connection> ServiceWorkerFetchTask::serviceWorkerConnection()
 {
     RefPtr serviceWorkerConnection = m_serviceWorkerConnection.get();
     if (!serviceWorkerConnection)
-        return false;
+        return { };
 
-    return serviceWorkerConnection->protectedIPCConnection()->send(std::forward<Message>(message), 0) == IPC::Error::NoError;
+    return serviceWorkerConnection->ipcConnection();
 }
 
 template<typename Message> bool ServiceWorkerFetchTask::sendToClient(Message&& message)
@@ -201,8 +201,10 @@ void ServiceWorkerFetchTask::startFetch()
     if (auto& identifier = loader->parameters().options.resultingClientIdentifier)
         resultingClientIdentifier = identifier->toString();
 
-    bool isSent = sendToServiceWorker(Messages::WebSWContextManagerConnection::StartFetch { *m_serverConnectionIdentifier, *m_serviceWorkerIdentifier, m_fetchIdentifier, request, options, IPC::FormDataReference { m_currentRequest.httpBody() }, referrer, m_preloader && m_preloader->isServiceWorkerNavigationPreloadEnabled(), clientIdentifier, resultingClientIdentifier });
-    ASSERT_UNUSED(isSent, isSent);
+    RefPtr connection = serviceWorkerConnection();
+    ASSERT(connection);
+    if (connection)
+        connection->send(Messages::WebSWContextManagerConnection::StartFetch { *m_serverConnectionIdentifier, *m_serviceWorkerIdentifier, m_fetchIdentifier, request, options, IPC::FormDataReference { m_currentRequest.httpBody() }, referrer, m_preloader && m_preloader->isServiceWorkerNavigationPreloadEnabled(), clientIdentifier, resultingClientIdentifier }, 0);
 
     if (m_preloader && m_preloader->didReceiveResponseOrError())
         sendNavigationPreloadUpdate();
@@ -286,7 +288,7 @@ void ServiceWorkerFetchTask::processResponse(ResourceResponse&& response, bool n
         loader->setResponse(WTFMove(response));
 }
 
-void ServiceWorkerFetchTask::didReceiveData(const IPC::SharedBufferReference& data, uint64_t encodedDataLength)
+void ServiceWorkerFetchTask::didReceiveData(const IPC::SharedBufferReference& data)
 {
     if (m_isDone)
         return;
@@ -297,13 +299,13 @@ void ServiceWorkerFetchTask::didReceiveData(const IPC::SharedBufferReference& da
     RefPtr buffer = data.unsafeBuffer();
     if (!buffer)
         return;
-    if (!protectedLoader()->continueAfterServiceWorkerReceivedData(*buffer, encodedDataLength))
+    if (!protectedLoader()->continueAfterServiceWorkerReceivedData(*buffer))
         return;
 #endif
-    sendToClient(Messages::WebResourceLoader::DidReceiveData { IPC::SharedBufferReference(data), encodedDataLength });
+    sendToClient(Messages::WebResourceLoader::DidReceiveData { IPC::SharedBufferReference(data), 0 });
 }
 
-void ServiceWorkerFetchTask::didReceiveDataFromPreloader(const WebCore::FragmentedSharedBuffer& data, uint64_t encodedDataLength)
+void ServiceWorkerFetchTask::didReceiveDataFromPreloader(const WebCore::FragmentedSharedBuffer& data)
 {
     if (m_isDone)
         return;
@@ -314,10 +316,10 @@ void ServiceWorkerFetchTask::didReceiveDataFromPreloader(const WebCore::Fragment
     RefPtr buffer = data.makeContiguous();
     if (!buffer)
         return;
-    if (!protectedLoader()->continueAfterServiceWorkerReceivedData(*buffer, encodedDataLength))
+    if (!protectedLoader()->continueAfterServiceWorkerReceivedData(*buffer))
         return;
 #endif
-    sendToClient(Messages::WebResourceLoader::DidReceiveData { IPC::SharedBufferReference(data), encodedDataLength });
+    sendToClient(Messages::WebResourceLoader::DidReceiveData { IPC::SharedBufferReference(data), 0 });
 }
 
 void ServiceWorkerFetchTask::didReceiveFormData(const IPC::FormDataReference& formData)
@@ -415,7 +417,8 @@ void ServiceWorkerFetchTask::cancelFromClient()
         return;
     }
 
-    sendToServiceWorker(Messages::WebSWContextManagerConnection::CancelFetch { *m_serverConnectionIdentifier, *m_serviceWorkerIdentifier, m_fetchIdentifier });
+    if (RefPtr connection = serviceWorkerConnection())
+        connection->send(Messages::WebSWContextManagerConnection::CancelFetch { *m_serverConnectionIdentifier, *m_serviceWorkerIdentifier, m_fetchIdentifier }, 0);
 }
 
 void ServiceWorkerFetchTask::continueDidReceiveFetchResponse()
@@ -425,7 +428,9 @@ void ServiceWorkerFetchTask::continueDidReceiveFetchResponse()
         loadBodyFromPreloader();
         return;
     }
-    sendToServiceWorker(Messages::WebSWContextManagerConnection::ContinueDidReceiveFetchResponse { *m_serverConnectionIdentifier, *m_serviceWorkerIdentifier, m_fetchIdentifier });
+
+    if (RefPtr connection = serviceWorkerConnection())
+        connection->send(Messages::WebSWContextManagerConnection::ContinueDidReceiveFetchResponse { *m_serverConnectionIdentifier, *m_serviceWorkerIdentifier, m_fetchIdentifier }, 0);
 }
 
 void ServiceWorkerFetchTask::continueFetchTaskWith(ResourceRequest&& request)
@@ -513,11 +518,16 @@ void ServiceWorkerFetchTask::preloadResponseIsReady()
 void ServiceWorkerFetchTask::sendNavigationPreloadUpdate()
 {
     ASSERT(!!m_serviceWorkerConnection);
+    RefPtr connection = serviceWorkerConnection();
+    if (!connection)
+        return;
 
-    if (!m_preloader->error().isNull())
-        sendToServiceWorker(Messages::WebSWContextManagerConnection::NavigationPreloadFailed { *m_serverConnectionIdentifier, *m_serviceWorkerIdentifier, m_fetchIdentifier, m_preloader->error() });
-    else
-        sendToServiceWorker(Messages::WebSWContextManagerConnection::NavigationPreloadIsReady { *m_serverConnectionIdentifier, *m_serviceWorkerIdentifier, m_fetchIdentifier, m_preloader->response() });
+    if (!m_preloader->error().isNull()) {
+        connection->send(Messages::WebSWContextManagerConnection::NavigationPreloadFailed { *m_serverConnectionIdentifier, *m_serviceWorkerIdentifier, m_fetchIdentifier, m_preloader->error() }, 0);
+        return;
+    }
+
+    connection->send(Messages::WebSWContextManagerConnection::NavigationPreloadIsReady { *m_serverConnectionIdentifier, *m_serviceWorkerIdentifier, m_fetchIdentifier, m_preloader->response() }, 0);
 }
 
 void ServiceWorkerFetchTask::loadBodyFromPreloader()
@@ -531,20 +541,20 @@ void ServiceWorkerFetchTask::loadBodyFromPreloader()
         return;
     }
 
-    m_preloader->waitForBody([this, weakThis = WeakPtr { *this }](auto&& chunk, uint64_t length) {
+    m_preloader->waitForBody([weakThis = WeakPtr { *this }](RefPtr<const WebCore::FragmentedSharedBuffer>&& chunk) {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
-        if (!m_preloader->error().isNull()) {
+        if (!protectedThis->m_preloader->error().isNull()) {
             // Let's copy the error as calling didFail might destroy m_preloader.
-            didFail(ResourceError { m_preloader->error() });
+            protectedThis->didFail(ResourceError { protectedThis->m_preloader->error() });
             return;
         }
         if (!chunk) {
-            didFinish(m_preloader->networkLoadMetrics());
+            protectedThis->didFinish(protectedThis->m_preloader->networkLoadMetrics());
             return;
         }
-        didReceiveDataFromPreloader(const_cast<WebCore::FragmentedSharedBuffer&>(*chunk), length);
+        protectedThis->didReceiveDataFromPreloader(chunk.releaseNonNull());
     });
 }
 
@@ -584,7 +594,7 @@ bool ServiceWorkerFetchTask::convertToDownload(DownloadManager& manager, Downloa
     // FIXME: We might want to keep the service worker alive until the download ends.
     RefPtr<ServiceWorkerDownloadTask> serviceWorkerDownloadTask;
     auto serviceWorkerDownloadLoad = NetworkLoad::create(*protectedLoader(), *session, [&](auto& client) {
-        serviceWorkerDownloadTask =  ServiceWorkerDownloadTask::create(*session, client, *serviceWorkerConnection, *m_serviceWorkerIdentifier, *m_serverConnectionIdentifier, m_fetchIdentifier, request, response, downloadID);
+        serviceWorkerDownloadTask = ServiceWorkerDownloadTask::create(*session, client, *serviceWorkerConnection, *m_serviceWorkerIdentifier, *m_serverConnectionIdentifier, m_fetchIdentifier, request, response, downloadID);
         return serviceWorkerDownloadTask.copyRef();
     });
 

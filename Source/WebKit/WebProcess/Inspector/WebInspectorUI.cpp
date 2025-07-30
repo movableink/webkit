@@ -105,7 +105,7 @@ void WebInspectorUI::windowObjectCleared()
         m_frontendHost->disconnectClient();
 
     m_frontendHost = InspectorFrontendHost::create(this, m_page->corePage());
-    m_frontendHost->addSelfToGlobalObjectInWorld(mainThreadNormalWorld());
+    m_frontendHost->addSelfToGlobalObjectInWorld(mainThreadNormalWorldSingleton());
 }
 
 void WebInspectorUI::frontendLoaded()

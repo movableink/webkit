@@ -69,6 +69,7 @@
 #include "Register.h"
 #include "RegisterAtOffsetList.h"
 #include "ScopedArguments.h"
+#include "SourceProfiler.h"
 #include "StackFrame.h"
 #include "StackVisitor.h"
 #include "StrictEvalActivation.h"
@@ -92,24 +93,22 @@
 
 namespace JSC {
 
-JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain, LexicallyScopedFeatures lexicallyScopedFeatures)
+static inline DirectEvalCodeCache::CacheLookupKey directEvalCacheKey(JSGlobalObject* globalObject, JSString* string, BytecodeIndex bytecodeIndex)
 {
-    CallFrame* callerFrame = callFrame->callerFrame();
-    CallSiteIndex callerCallSiteIndex = callerFrame->callSiteIndex();
-    CodeBlock* callerCodeBlock = callerFrame->codeBlock();
-    CodeBlock* callerBaselineCodeBlock = callerCodeBlock;
-    BytecodeIndex bytecodeIndex = callerCallSiteIndex.bytecodeIndex();
-#if ENABLE(DFG_JIT)
-    if (JSC::JITCode::isOptimizingJIT(callerCodeBlock->jitType())) {
-        CodeOrigin codeOrigin = callerCodeBlock->codeOrigin(callerCallSiteIndex);
-        callerBaselineCodeBlock = baselineCodeBlockForOriginAndBaselineCodeBlock(codeOrigin, callerCodeBlock->baselineAlternative());
-        bytecodeIndex = codeOrigin.bytecodeIndex();
+    if (string->isRope()) {
+        auto rope = string->asRope();
+        if (auto source = rope->tryGetLHS("()"_s))
+            return DirectEvalCodeCache::CacheLookupKey(source, bytecodeIndex, DirectEvalCodeCache::RopeSuffix::FunctionCall);
+        return DirectEvalCodeCache::CacheLookupKey(rope->resolveRope(globalObject).impl(), bytecodeIndex, DirectEvalCodeCache::RopeSuffix::None);
     }
-#endif
-    UnlinkedCodeBlock* callerUnlinkedCodeBlock = callerBaselineCodeBlock->unlinkedCodeBlock();
+    return DirectEvalCodeCache::CacheLookupKey(string->getValueImpl(), bytecodeIndex, DirectEvalCodeCache::RopeSuffix::None);
+}
+
+JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain, CodeBlock* callerBaselineCodeBlock, BytecodeIndex bytecodeIndex, LexicallyScopedFeatures lexicallyScopedFeatures)
+{
     JSGlobalObject* globalObject = callerBaselineCodeBlock->globalObject();
 
-    if (UNLIKELY(callFrame->guaranteedJSValueCallee() != globalObject->evalFunction()))
+    if (callFrame->guaranteedJSValueCallee() != globalObject->evalFunction()) [[unlikely]]
         return { };
 
     VM& vm = globalObject->vm();
@@ -122,82 +121,108 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
     if (!callFrame->argumentCount())
         return jsUndefined();
 
-    JSValue program = callFrame->argument(0);
+    JSValue program = callFrame->uncheckedArgument(0);
     JSString* programString = nullptr;
-    if (LIKELY(program.isString()))
+    bool isTrusted = false;
+    if (program.isString()) [[likely]]
         programString = asString(program);
-    else if (Options::useTrustedTypes()) {
-        auto code = globalObject->globalObjectMethodTable()->codeForEval(globalObject, program);
-        if (!code.isNull())
-            programString = jsString(vm, code);
+    else {
+        if (Options::useTrustedTypes() && program.isObject()) {
+            auto* structure = globalObject->trustedScriptStructure();
+            if (structure == asObject(program)->structure()) {
+                programString = program.toString(globalObject);
+                RETURN_IF_EXCEPTION(scope, { });
+                isTrusted = true;
+            } else {
+                auto code = globalObject->globalObjectMethodTable()->codeForEval(globalObject, program);
+                RETURN_IF_EXCEPTION(scope, { });
+                if (!code.isNull()) {
+                    programString = jsString(vm, code);
+                    isTrusted = true;
+                }
+            }
+        }
+
+        if (!programString) [[unlikely]]
+            return program;
     }
 
-    if (!programString)
-        return program;
-
-    auto programSource = programString->value(globalObject);
-    RETURN_IF_EXCEPTION(scope, JSValue());
-
-    if (Options::useTrustedTypes() && globalObject->requiresTrustedTypes() && !globalObject->globalObjectMethodTable()->canCompileStrings(globalObject, CompilationType::DirectEval, programSource, program)) {
-        throwException(globalObject, scope, createEvalError(globalObject, "Refused to evaluate a string as JavaScript because this document requires a 'Trusted Type' assignment."_s));
-        return { };
+    if (globalObject->trustedTypesEnforcement() != TrustedTypesEnforcement::None && !isTrusted) [[unlikely]] {
+        bool canCompileStrings = globalObject->globalObjectMethodTable()->canCompileStrings(globalObject, CompilationType::DirectEval, programString->value(globalObject).data, *vm.emptyList);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (!canCompileStrings) [[unlikely]] {
+            throwException(globalObject, scope, createEvalError(globalObject, "Refused to evaluate a string as JavaScript because this document requires a 'Trusted Type' assignment."_s));
+            return { };
+        }
     }
 
     TopCallFrameSetter topCallFrame(vm, callFrame);
-    if (!globalObject->evalEnabled()) {
-        globalObject->globalObjectMethodTable()->reportViolationForUnsafeEval(globalObject, programString);
+    if (!globalObject->evalEnabled() && globalObject->trustedTypesEnforcement() != TrustedTypesEnforcement::EnforcedWithEvalEnabled) [[unlikely]] {
+        globalObject->globalObjectMethodTable()->reportViolationForUnsafeEval(globalObject, programString->value(globalObject).data);
         throwException(globalObject, scope, createEvalError(globalObject, globalObject->evalDisabledErrorMessage()));
         return { };
     }
 
-    bool isArrowFunctionContext = callerUnlinkedCodeBlock->isArrowFunction() || callerUnlinkedCodeBlock->isArrowFunctionContext();
-
-    DerivedContextType derivedContextType = callerUnlinkedCodeBlock->derivedContextType();
-    if (!isArrowFunctionContext && callerUnlinkedCodeBlock->isClassContext()) {
-        derivedContextType = callerUnlinkedCodeBlock->isConstructor()
-            ? DerivedContextType::DerivedConstructorContext
-            : DerivedContextType::DerivedMethodContext;
-    }
-
-    EvalContextType evalContextType;
-    if (callerUnlinkedCodeBlock->parseMode() == SourceParseMode::ClassFieldInitializerMode)
-        evalContextType = EvalContextType::InstanceFieldEvalContext;
-    else if (isFunctionParseMode(callerUnlinkedCodeBlock->parseMode()))
-        evalContextType = EvalContextType::FunctionEvalContext;
-    else if (callerUnlinkedCodeBlock->codeType() == EvalCode)
-        evalContextType = callerUnlinkedCodeBlock->evalContextType();
-    else
-        evalContextType = EvalContextType::None;
-
-    DirectEvalExecutable* eval = callerBaselineCodeBlock->directEvalCodeCache().tryGet(programSource, bytecodeIndex);
+    auto cacheKey = directEvalCacheKey(globalObject, programString, bytecodeIndex);
+    RETURN_IF_EXCEPTION(scope, { });
+    DirectEvalExecutable* eval = callerBaselineCodeBlock->directEvalCodeCache().get(cacheKey);
     if (!eval) {
-        if (!(lexicallyScopedFeatures & StrictModeLexicallyScopedFeature)) {
-            if (programSource->is8Bit()) {
-                LiteralParser preparser(globalObject, programSource->span8(), SloppyJSON, callerBaselineCodeBlock);
-                if (JSValue parsedObject = preparser.tryLiteralParse())
-                    RELEASE_AND_RETURN(scope, parsedObject);
+        auto programSource = programString->value(globalObject).data;
+        if (SourceProfiler::g_profilerHook) [[unlikely]] {
+            SourceTaintedOrigin sourceTaintedOrigin = computeNewSourceTaintedOriginFromStack(vm, callFrame);
+            auto source = makeSource(programSource, callerBaselineCodeBlock->source().provider()->sourceOrigin(), sourceTaintedOrigin);
+            SourceProfiler::profile(SourceProfiler::Type::Eval, source);
+        }
 
+        if (!(lexicallyScopedFeatures & StrictModeLexicallyScopedFeature)) {
+            JSValue parsedValue;
+            if (programSource.is8Bit()) {
+                LiteralParser<LChar, JSONReviverMode::Disabled> preparser(globalObject, programSource.span8(), SloppyJSON, callerBaselineCodeBlock);
+                parsedValue = preparser.tryEval();
             } else {
-                LiteralParser preparser(globalObject, programSource->span16(), SloppyJSON, callerBaselineCodeBlock);
-                if (JSValue parsedObject = preparser.tryLiteralParse())
-                    RELEASE_AND_RETURN(scope, parsedObject);
+                LiteralParser<UChar, JSONReviverMode::Disabled> preparser(globalObject, programSource.span16(), SloppyJSON, callerBaselineCodeBlock);
+                parsedValue = preparser.tryEval();
 
             }
-            RETURN_IF_EXCEPTION(scope, JSValue());
+            RETURN_IF_EXCEPTION(scope, { });
+            if (parsedValue)
+                RELEASE_AND_RETURN(scope, parsedValue);
         }
         
         TDZEnvironment variablesUnderTDZ;
         PrivateNameEnvironment privateNameEnvironment;
         JSScope::collectClosureVariablesUnderTDZ(callerScopeChain, variablesUnderTDZ, privateNameEnvironment);
         SourceTaintedOrigin sourceTaintedOrigin = computeNewSourceTaintedOriginFromStack(vm, callFrame);
+
+        UnlinkedCodeBlock* callerUnlinkedCodeBlock = callerBaselineCodeBlock->unlinkedCodeBlock();
+
+        bool isArrowFunctionContext = callerUnlinkedCodeBlock->isArrowFunction() || callerUnlinkedCodeBlock->isArrowFunctionContext();
+
+        DerivedContextType derivedContextType = callerUnlinkedCodeBlock->derivedContextType();
+        if (!isArrowFunctionContext && callerUnlinkedCodeBlock->isClassContext()) {
+            derivedContextType = callerUnlinkedCodeBlock->isConstructor()
+                ? DerivedContextType::DerivedConstructorContext
+                : DerivedContextType::DerivedMethodContext;
+        }
+
+        EvalContextType evalContextType;
+        if (callerUnlinkedCodeBlock->parseMode() == SourceParseMode::ClassFieldInitializerMode)
+            evalContextType = EvalContextType::InstanceFieldEvalContext;
+        else if (isFunctionParseMode(callerUnlinkedCodeBlock->parseMode()))
+            evalContextType = EvalContextType::FunctionEvalContext;
+        else if (callerUnlinkedCodeBlock->codeType() == EvalCode)
+            evalContextType = callerUnlinkedCodeBlock->evalContextType();
+        else
+            evalContextType = EvalContextType::None;
+
         eval = DirectEvalExecutable::create(globalObject, makeSource(programSource, callerBaselineCodeBlock->source().provider()->sourceOrigin(), sourceTaintedOrigin), lexicallyScopedFeatures, derivedContextType, callerUnlinkedCodeBlock->needsClassFieldInitializer(), callerUnlinkedCodeBlock->privateBrandRequirement(), isArrowFunctionContext, callerBaselineCodeBlock->ownerExecutable()->isInsideOrdinaryFunction(), evalContextType, &variablesUnderTDZ, &privateNameEnvironment);
         EXCEPTION_ASSERT(!!scope.exception() == !eval);
-        if (!eval)
+        if (!eval) [[unlikely]]
             return { };
 
         // Skip the eval cache if tainted since another eval call could have a different taintedness.
         if (sourceTaintedOrigin == SourceTaintedOrigin::Untainted)
-            callerBaselineCodeBlock->directEvalCodeCache().set(globalObject, callerBaselineCodeBlock, programSource, bytecodeIndex, eval);
+            callerBaselineCodeBlock->directEvalCodeCache().set(globalObject, callerBaselineCodeBlock, cacheKey, eval);
     }
 
     RELEASE_AND_RETURN(scope, vm.interpreter.executeEval(eval, thisValue, callerScopeChain));
@@ -208,7 +233,7 @@ unsigned sizeOfVarargs(JSGlobalObject* globalObject, JSValue arguments, uint32_t
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!arguments.isCell())) {
+    if (!arguments.isCell()) [[unlikely]] {
         if (arguments.isUndefinedOrNull())
             return 0;
         
@@ -261,7 +286,7 @@ unsigned sizeFrameForForwardArguments(JSGlobalObject* globalObject, CallFrame* c
 
     unsigned length = callFrame->argumentCount();
     CallFrame* calleeFrame = calleeFrameForVarargs(callFrame, numUsedStackSlots, length + 1);
-    if (UNLIKELY(!vm.ensureStackCapacityFor(calleeFrame->registers())))
+    if (!vm.ensureStackCapacityFor(calleeFrame->registers())) [[unlikely]]
         throwStackOverflowError(globalObject, scope);
 
     return length;
@@ -275,7 +300,7 @@ unsigned sizeFrameForVarargs(JSGlobalObject* globalObject, CallFrame* callFrame,
     RETURN_IF_EXCEPTION(scope, 0);
 
     CallFrame* calleeFrame = calleeFrameForVarargs(callFrame, numUsedStackSlots, length + 1);
-    if (UNLIKELY(length > maxArguments || !vm.ensureStackCapacityFor(calleeFrame->registers()))) {
+    if (length > maxArguments || !vm.ensureStackCapacityFor(calleeFrame->registers())) [[unlikely]] {
         throwStackOverflowError(globalObject, scope);
         return 0;
     }
@@ -287,7 +312,9 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 void loadVarargs(JSGlobalObject* globalObject, JSValue* firstElementDest, JSValue arguments, uint32_t offset, uint32_t length)
 {
-    if (UNLIKELY(!arguments.isCell()) || !length)
+    if (!arguments.isCell()) [[unlikely]]
+        return;
+    if (!length)
         return;
 
     VM& vm = globalObject->vm();
@@ -478,7 +505,7 @@ private:
 
 void Interpreter::getStackTrace(JSCell* owner, Vector<StackFrame>& results, size_t framesToSkip, size_t maxStackSize, JSCell* caller, JSCell* ownerOfCallLinkInfo, CallLinkInfo* callLinkInfo)
 {
-    DisallowGC disallowGC;
+    AssertNoGC assertNoGC;
     VM& vm = this->vm();
     CallFrame* callFrame = vm.topCallFrame;
     if (!callFrame || !maxStackSize)
@@ -493,7 +520,7 @@ void Interpreter::getStackTrace(JSCell* owner, Vector<StackFrame>& results, size
         return false;
     };
 
-    // This is OK since we never cause GC inside it (see DisallowGC).
+    // This is OK since we never cause GC inside it (see AssertNoGC).
     Vector<std::tuple<CodeBlock*, BytecodeIndex>, 16> reconstructedFrames;
     auto countFrame = [&](CodeBlock* codeBlock, BytecodeIndex bytecodeIndex) {
         if (skippedFrames < framesToSkip) {
@@ -669,10 +696,11 @@ CatchInfo::CatchInfo(const Wasm::HandlerInfo* handler, const Wasm::Callee* calle
 
 class UnwindFunctor {
 public:
-    UnwindFunctor(VM& vm, CallFrame*& callFrame, bool isTermination, JSValue thrownValue, CodeBlock*& codeBlock, CatchInfo& handler, JSRemoteFunction*& seenRemoteFunction)
+    UnwindFunctor(VM& vm, CallFrame*& callFrame, Exception* exception, JSValue thrownValue, CodeBlock*& codeBlock, CatchInfo& handler, JSRemoteFunction*& seenRemoteFunction)
         : m_vm(vm)
         , m_callFrame(callFrame)
-        , m_isTermination(isTermination)
+        , m_exception(exception)
+        , m_isTermination(vm.isTerminationException(exception))
         , m_codeBlock(codeBlock)
         , m_handler(handler)
         , m_seenRemoteFunction(seenRemoteFunction)
@@ -686,6 +714,10 @@ public:
                 m_catchableFromWasm = error->isCatchableFromWasm();
             else
                 m_catchableFromWasm = true;
+
+            // https://webassembly.github.io/exception-handling/js-api/#create-a-host-function
+            if (!m_wasmTag)
+                m_wasmTag = &Wasm::Tag::jsExceptionTag();
         }
 #else
         UNUSED_PARAM(thrownValue);
@@ -718,9 +750,13 @@ public:
                     if (wasmCallee->hasExceptionHandlers()) {
                         JSWebAssemblyInstance* instance = m_callFrame->wasmInstance();
                         unsigned exceptionHandlerIndex = m_callFrame->callSiteIndex().bits();
-                        m_handler = { wasmCallee->handlerForIndex(*instance, exceptionHandlerIndex, m_wasmTag), wasmCallee };
-                        if (m_handler.m_valid)
+                        auto* wasmHandler = wasmCallee->handlerForIndex(*instance, exceptionHandlerIndex, m_wasmTag.get());
+                        m_handler = { wasmHandler, wasmCallee };
+                        if (m_handler.m_valid) {
+                            if (m_wasmTag == &Wasm::Tag::jsExceptionTag())
+                                m_exception->wrapValueForJSTag(instance->globalObject());
                             return IterationStatus::Done;
+                        }
                     }
                 }
 #endif
@@ -738,7 +774,8 @@ public:
             m_seenRemoteFunction = jsCast<JSRemoteFunction*>(m_callFrame->jsCallee());
         }
 
-        notifyDebuggerOfUnwinding(m_vm, m_callFrame);
+        JSGlobalObject* globalObject = m_callFrame->lexicalGlobalObject(m_vm);
+        notifyDebuggerOfUnwinding(globalObject, m_vm, m_callFrame);
 
         copyCalleeSavesToEntryFrameCalleeSavesBuffer(visitor);
 
@@ -800,11 +837,10 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
-    ALWAYS_INLINE static void notifyDebuggerOfUnwinding(VM& vm, CallFrame* callFrame)
+    ALWAYS_INLINE static void notifyDebuggerOfUnwinding(JSGlobalObject* globalObject, VM& vm, CallFrame* callFrame)
     {
-        JSGlobalObject* globalObject = callFrame->lexicalGlobalObject(vm);
         Debugger* debugger = globalObject->debugger();
-        if (LIKELY(!debugger))
+        if (!debugger) [[likely]]
             return;
 
         DeferTermination deferScope(vm);
@@ -821,11 +857,12 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     VM& m_vm;
     CallFrame*& m_callFrame;
+    Exception* m_exception;
     bool m_isTermination;
     CodeBlock*& m_codeBlock;
     CatchInfo& m_handler;
 #if ENABLE(WEBASSEMBLY)
-    const Wasm::Tag* m_wasmTag { nullptr };
+    mutable RefPtr<const Wasm::Tag> m_wasmTag;
     bool m_catchableFromWasm { false };
 #endif
 
@@ -903,7 +940,7 @@ NEVER_INLINE CatchInfo Interpreter::unwind(VM& vm, CallFrame*& callFrame, Except
     // Calculate an exception handler vPC, unwinding call frames as necessary.
     CatchInfo catchInfo;
     JSRemoteFunction* seenRemoteFunction = nullptr;
-    UnwindFunctor functor(vm, callFrame, vm.isTerminationException(exception), exceptionValue, codeBlock, catchInfo, seenRemoteFunction);
+    UnwindFunctor functor(vm, callFrame, exception, exceptionValue, codeBlock, catchInfo, seenRemoteFunction);
     StackVisitor::visit<StackVisitor::TerminateIfTopEntryFrameIsEmpty>(callFrame, vm, functor);
 
     if (seenRemoteFunction) {
@@ -962,6 +999,9 @@ JSValue Interpreter::executeProgram(const SourceCode& source, JSGlobalObject*, J
         vm.didEnterVM = true;
     });
 
+    if (SourceProfiler::g_profilerHook) [[unlikely]]
+        SourceProfiler::profile(SourceProfiler::Type::Program, source);
+
     ProgramExecutable* program = ProgramExecutable::create(globalObject, source);
     EXCEPTION_ASSERT(throwScope.exception() || program);
     RETURN_IF_EXCEPTION(throwScope, { });
@@ -972,10 +1012,10 @@ JSValue Interpreter::executeProgram(const SourceCode& source, JSGlobalObject*, J
     ASSERT(!vm.isCollectorBusyOnCurrentThread());
     RELEASE_ASSERT(vm.currentThreadIsHoldingAPILock());
 
-    if (UNLIKELY(!vm.isSafeToRecurseSoft()))
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]]
         return throwStackOverflowError(globalObject, throwScope);
 
-    if (UNLIKELY(vm.disallowVMEntryCount))
+    if (vm.disallowVMEntryCount) [[unlikely]]
         return checkVMEntryPermission();
 
     // First check if the "program" is actually just a JSON object. If so,
@@ -993,10 +1033,10 @@ JSValue Interpreter::executeProgram(const SourceCode& source, JSGlobalObject*, J
     if (programSource.isNull())
         return jsUndefined();
     if (programSource.is8Bit()) {
-        LiteralParser literalParser(globalObject, programSource.span8(), JSONP);
+        LiteralParser<LChar, JSONReviverMode::Disabled> literalParser(globalObject, programSource.span8(), JSONP);
         parseResult = literalParser.tryJSONPParse(JSONPData, globalObject->globalObjectMethodTable()->supportsRichSourceInfo(globalObject));
     } else {
-        LiteralParser literalParser(globalObject, programSource.span16(), JSONP);
+        LiteralParser<UChar, JSONReviverMode::Disabled> literalParser(globalObject, programSource.span16(), JSONP);
         parseResult = literalParser.tryJSONPParse(JSONPData, globalObject->globalObjectMethodTable()->supportsRichSourceInfo(globalObject));
     }
 
@@ -1010,7 +1050,7 @@ JSValue Interpreter::executeProgram(const SourceCode& source, JSGlobalObject*, J
             JSONPPath.swap(JSONPData[entry].m_path);
             JSValue JSONPValue = JSONPData[entry].m_value.get();
             if (JSONPPath.size() == 1 && JSONPPath[0].m_type == JSONPPathEntryTypeDeclareVar) {
-                if (UNLIKELY(!globalObject->isStructureExtensible()))
+                if (!globalObject->isStructureExtensible()) [[unlikely]]
                     goto failedJSONP;
                 globalObject->createGlobalVarBinding<BindingCreationContext::Global>(JSONPPath[0].m_pathEntryName);
                 RETURN_IF_EXCEPTION(throwScope, { });
@@ -1126,10 +1166,10 @@ failedJSONP:
     JSObject* error = program->initializeGlobalProperties(vm, globalObject, scope);
     EXCEPTION_ASSERT(!throwScope.exception() || !error || vm.hasPendingTerminationException());
     RETURN_IF_EXCEPTION(throwScope, throwScope.exception());
-    if (UNLIKELY(error))
+    if (error) [[unlikely]]
         return throwException(globalObject, throwScope, error);
 
-    if (UNLIKELY(vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents))) {
+    if (vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents)) [[unlikely]] {
         if (vm.hasExceptionsAfterHandlingTraps())
             return throwScope.exception();
     }
@@ -1152,7 +1192,7 @@ failedJSONP:
         }
 
         {
-            DisallowGC disallowGC; // Ensure no GC happens. GC can replace CodeBlock in Executable.
+            AssertNoGC assertNoGC; // Ensure no GC happens. GC can replace CodeBlock in Executable.
             jitCode = program->generatedJITCode();
             protoCallFrame.init(codeBlock, globalObject, globalCallee, thisObj, 1);
         }
@@ -1179,7 +1219,7 @@ JSValue Interpreter::executeBoundCall(VM& vm, JSBoundFunction* function, const A
     for (unsigned i = 0; i < args.size(); ++i)
         combinedArgs.append(args.at(i));
 
-    if (UNLIKELY(combinedArgs.hasOverflowed()))
+    if (combinedArgs.hasOverflowed()) [[unlikely]]
         return throwStackOverflowError(function->globalObject(), scope);
 
     JSObject* targetFunction = function->targetFunction();
@@ -1221,13 +1261,13 @@ ALWAYS_INLINE JSValue Interpreter::executeCallImpl(VM& vm, JSObject* function, c
     size_t argsCount = 1 + args.size(); // implicit "this" parameter
 
     VMEntryScope entryScope(vm, globalObject);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft() || args.size() > maxArguments))
+    if (!vm.isSafeToRecurseSoft() || args.size() > maxArguments) [[unlikely]]
         return throwStackOverflowError(globalObject, scope);
 
-    if (UNLIKELY(vm.disallowVMEntryCount))
+    if (vm.disallowVMEntryCount) [[unlikely]]
         return checkVMEntryPermission();
 
-    if (UNLIKELY(vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents))) {
+    if (vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents)) [[unlikely]] {
         if (vm.hasExceptionsAfterHandlingTraps())
             return scope.exception();
     }
@@ -1247,7 +1287,7 @@ ALWAYS_INLINE JSValue Interpreter::executeCallImpl(VM& vm, JSObject* function, c
         }
 
         {
-            DisallowGC disallowGC; // Ensure no GC happens. GC can replace CodeBlock in Executable.
+            AssertNoGC assertNoGC; // Ensure no GC happens. GC can replace CodeBlock in Executable.
             if (isJSCall)
                 jitCode = functionExecutable->generatedJITCodeForCall();
             protoCallFrame.init(newCodeBlock, globalObject, function, thisValue, argsCount, args.data());
@@ -1316,17 +1356,17 @@ JSObject* Interpreter::executeConstruct(JSObject* constructor, const CallData& c
     }
 
     VMEntryScope entryScope(vm, globalObject);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft() || args.size() > maxArguments)) {
+    if (!vm.isSafeToRecurseSoft() || args.size() > maxArguments) [[unlikely]] {
         throwStackOverflowError(globalObject, throwScope);
         return nullptr;
     }
 
-    if (UNLIKELY(vm.disallowVMEntryCount)) {
+    if (vm.disallowVMEntryCount) [[unlikely]] {
         checkVMEntryPermission();
         return globalObject->globalThis();
     }
 
-    if (UNLIKELY(vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents))) {
+    if (vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents)) [[unlikely]] {
         if (vm.hasExceptionsAfterHandlingTraps())
             return nullptr;
     }
@@ -1346,7 +1386,7 @@ JSObject* Interpreter::executeConstruct(JSObject* constructor, const CallData& c
         }
 
         {
-            DisallowGC disallowGC; // Ensure no GC happens. GC can replace CodeBlock in Executable.
+            AssertNoGC assertNoGC; // Ensure no GC happens. GC can replace CodeBlock in Executable.
             if (isJSConstruct)
                 jitCode = constructData.js.functionExecutable->generatedJITCodeForConstruct();
             protoCallFrame.init(newCodeBlock, globalObject, constructor, newTarget, argsCount, args.data());
@@ -1402,71 +1442,69 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
 
     JSGlobalObject* globalObject = scope->globalObject();
     VMEntryScope entryScope(vm, globalObject);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft()))
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]]
         return throwStackOverflowError(globalObject, throwScope);
 
-    if (UNLIKELY(vm.disallowVMEntryCount))
+    if (vm.disallowVMEntryCount) [[unlikely]]
         return checkVMEntryPermission();
 
-    unsigned numVariables = eval->numVariables();
-    unsigned numTopLevelFunctionDecls = eval->numTopLevelFunctionDecls();
-    unsigned numFunctionHoistingCandidates = eval->numFunctionHoistingCandidates();
-
-    JSScope* variableObject;
-    if ((numVariables || numTopLevelFunctionDecls) && eval->isInStrictContext()) {
-        scope = StrictEvalActivation::create(vm, globalObject->strictEvalActivationStructure(), scope);
-        variableObject = scope;
-    } else {
-        for (JSScope* node = scope; ; node = node->next()) {
-            RELEASE_ASSERT(node);
-            if (node->isGlobalObject()) {
-                variableObject = node;
-                break;
-            } 
-            if (node->isJSLexicalEnvironment()) {
-                JSLexicalEnvironment* lexicalEnvironment = jsCast<JSLexicalEnvironment*>(node);
-                if (lexicalEnvironment->symbolTable()->scopeType() == SymbolTable::ScopeType::VarScope) {
-                    variableObject = node;
-                    break;
-                }
-            }
-        }
-    }
-
-    if (UNLIKELY(vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents))) {
+    if (vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents)) [[unlikely]] {
         if (vm.hasExceptionsAfterHandlingTraps())
             return throwScope.exception();
     }
 
-    EvalCodeBlock* codeBlock;
-    {
-        CodeBlock* tempCodeBlock;
-        eval->prepareForExecution<EvalExecutable>(vm, nullptr, scope, CodeForCall, tempCodeBlock);
-        RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(throwScope, throwScope.exception());
-        codeBlock = jsCast<EvalCodeBlock*>(tempCodeBlock);
-        ASSERT(codeBlock && codeBlock->numParameters() == 1); // 1 parameter for 'this'.
-    }
-    UnlinkedEvalCodeBlock* unlinkedCodeBlock = codeBlock->unlinkedEvalCodeBlock();
+    auto topLevelFunctionDecls = eval->topLevelFunctionDecls();
+    auto variables = eval->variables();
+    auto functionHoistingCandidates = eval->functionHoistingCandidates();
 
-    if (variableObject->structure()->isUncacheableDictionary())
-        variableObject->flattenDictionaryObject(vm);
+    if (!variables.empty() || !topLevelFunctionDecls.empty() || !functionHoistingCandidates.empty()) {
+        JSScope* variableObject = nullptr;
+        if ((!variables.empty() || !topLevelFunctionDecls.empty()) && eval->isInStrictContext()) {
+            scope = StrictEvalActivation::create(vm, globalObject->strictEvalActivationStructure(), scope);
+            variableObject = scope;
+        } else {
+            for (JSScope* node = scope; ; node = node->next()) {
+                RELEASE_ASSERT(node);
+                if (node->isGlobalObject()) {
+                    variableObject = node;
+                    break;
+                }
+                if (node->isJSLexicalEnvironment()) {
+                    JSLexicalEnvironment* lexicalEnvironment = jsCast<JSLexicalEnvironment*>(node);
+                    if (lexicalEnvironment->symbolTable()->scopeType() == SymbolTable::ScopeType::VarScope) {
+                        variableObject = node;
+                        break;
+                    }
+                }
+            }
+            if (variableObject->structure()->isUncacheableDictionary())
+                variableObject->flattenDictionaryObject(vm);
+        }
 
-    if (numVariables || numTopLevelFunctionDecls || numFunctionHoistingCandidates) {
+        EvalCodeBlock* codeBlock = nullptr;
+        {
+            CodeBlock* tempCodeBlock;
+            eval->prepareForExecution<EvalExecutable>(vm, nullptr, scope, CodeForCall, tempCodeBlock);
+            RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(throwScope, throwScope.exception());
+            codeBlock = jsCast<EvalCodeBlock*>(tempCodeBlock);
+            ASSERT(codeBlock && codeBlock->numParameters() == 1); // 1 parameter for 'this'.
+        }
+
+        auto functionDecls = codeBlock->functionDecls();
         BatchedTransitionOptimizer optimizer(vm, variableObject);
         if (variableObject->next() && !eval->isInStrictContext())
             variableObject->globalObject()->varInjectionWatchpointSet().fireAll(vm, "Executed eval, fired VarInjection watchpoint");
 
         if (!eval->isInStrictContext()) {
-            for (unsigned i = 0; i < numVariables; ++i) {
-                const Identifier& ident = unlinkedCodeBlock->variable(i);
+            for (auto& ident : variables) {
                 JSValue resolvedScope = JSScope::resolveScopeForHoistingFuncDeclInEval(globalObject, scope, ident);
                 RETURN_IF_EXCEPTION(throwScope, throwScope.exception());
                 if (resolvedScope.isUndefined())
                     return throwSyntaxError(globalObject, throwScope, makeString("Can't create duplicate variable in eval: '"_s, StringView(ident.impl()), '\''));
             }
 
-            for (unsigned i = 0; i < numTopLevelFunctionDecls; ++i) {
-                FunctionExecutable* function = codeBlock->functionDecl(i);
+            for (auto& slot : functionDecls) {
+                FunctionExecutable* function = slot.get();
                 JSValue resolvedScope = JSScope::resolveScopeForHoistingFuncDeclInEval(globalObject, scope, function->name());
                 RETURN_IF_EXCEPTION(throwScope, throwScope.exception());
                 if (resolvedScope.isUndefined())
@@ -1476,8 +1514,8 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
 
         bool isGlobalVariableEnvironment = variableObject->isGlobalObject();
         if (isGlobalVariableEnvironment) {
-            for (unsigned i = 0; i < numTopLevelFunctionDecls; ++i) {
-                FunctionExecutable* function = codeBlock->functionDecl(i);
+            for (auto& slot : functionDecls) {
+                FunctionExecutable* function = slot.get();
                 bool canDeclare = jsCast<JSGlobalObject*>(variableObject)->canDeclareGlobalFunction(function->name());
                 throwScope.assertNoExceptionExceptTermination();
                 if (!canDeclare)
@@ -1485,8 +1523,7 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
             }
 
             if (!variableObject->isStructureExtensible()) {
-                for (unsigned i = 0; i < numVariables; ++i) {
-                    const Identifier& ident = unlinkedCodeBlock->variable(i);
+                for (auto& ident : variables) {
                     bool canDeclare = jsCast<JSGlobalObject*>(variableObject)->canDeclareGlobalVar(ident);
                     throwScope.assertNoExceptionExceptTermination();
                     if (!canDeclare)
@@ -1507,8 +1544,7 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
         };
 
         if (!eval->isInStrictContext()) {
-            for (unsigned i = 0; i < numFunctionHoistingCandidates; ++i) {
-                const Identifier& ident = unlinkedCodeBlock->functionHoistingCandidate(i);
+            for (auto& ident : functionHoistingCandidates) {
                 JSValue resolvedScope = JSScope::resolveScopeForHoistingFuncDeclInEval(globalObject, scope, ident);
                 RETURN_IF_EXCEPTION(throwScope, throwScope.exception());
                 if (!resolvedScope.isUndefined()) {
@@ -1525,8 +1561,8 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
             }
         }
 
-        for (unsigned i = 0; i < numTopLevelFunctionDecls; ++i) {
-            FunctionExecutable* function = codeBlock->functionDecl(i);
+        for (auto& slot : functionDecls) {
+            FunctionExecutable* function = slot.get();
             if (isGlobalVariableEnvironment) {
                 jsCast<JSGlobalObject*>(variableObject)->createGlobalFunctionBinding<BindingCreationContext::Eval>(function->name());
                 throwScope.assertNoExceptionExceptTermination();
@@ -1534,22 +1570,38 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
                 ensureBindingExists(function->name());
         }
 
-        for (unsigned i = 0; i < numVariables; ++i) {
-            const Identifier& ident = unlinkedCodeBlock->variable(i);
+        for (auto& ident : variables) {
             if (isGlobalVariableEnvironment) {
                 jsCast<JSGlobalObject*>(variableObject)->createGlobalVarBinding<BindingCreationContext::Eval>(ident);
                 throwScope.assertNoExceptionExceptTermination();
             } else
                 ensureBindingExists(ident);
         }
+
+        ensureStillAliveHere(codeBlock);
     }
 
-    JSCallee* callee = nullptr;
-    if (scope == globalObject->globalScope())
-        callee = globalObject->globalCallee();
-    else
-        callee = JSCallee::create(vm, globalObject, scope);
+    EvalCodeBlock* codeBlock = nullptr;
+    JSCallee* callee = globalObject->evalCallee();
+#if CPU(ARM64) && CPU(ADDRESS64) && !ENABLE(C_LOOP)
+    void* entry = nullptr;
+    {
+        DeferTraps deferTraps(vm); // We can't jettison this code if we're about to run it.
 
+        // Reload CodeBlock. It is possible that we replaced CodeBlock while setting up the environment.
+        {
+            CodeBlock* tempCodeBlock;
+            eval->prepareForExecution<EvalExecutable>(vm, nullptr, scope, CodeForCall, tempCodeBlock);
+            RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(throwScope, throwScope.exception());
+            codeBlock = jsCast<EvalCodeBlock*>(tempCodeBlock);
+            entry = codeBlock->jitCode()->addressForCall();
+            ASSERT(codeBlock && codeBlock->numParameters() == 1); // 1 parameter for 'this'.
+        }
+    }
+    callee->setScope(vm, scope);
+    EncodedJSValue result = vmEntryToJavaScriptWith0Arguments(entry, &vm, codeBlock, callee, thisValue);
+    callee->setScope(vm, globalObject->globalScope());
+#else
     RefPtr<JSC::JITCode> jitCode;
     ProtoCallFrame protoCallFrame;
     {
@@ -1565,7 +1617,7 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
         }
 
         {
-            DisallowGC disallowGC; // Ensure no GC happens. GC can replace CodeBlock in Executable.
+            AssertNoGC assertNoGC; // Ensure no GC happens. GC can replace CodeBlock in Executable.
             jitCode = eval->generatedJITCode();
             protoCallFrame.init(codeBlock, globalObject, callee, thisValue, 1);
         }
@@ -1574,7 +1626,15 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
     // Execute the code:
     throwScope.release();
     ASSERT(jitCode == eval->generatedJITCode().ptr());
-    return JSValue::decode(vmEntryToJavaScript(jitCode->addressForCall(), &vm, &protoCallFrame));
+    // eval code only uses scope at the beginning (op_enter).
+    // We can replace the current scope for the subsequent run.
+    callee->setScope(vm, scope);
+    EncodedJSValue result = vmEntryToJavaScript(jitCode->addressForCall(), &vm, &protoCallFrame);
+    callee->setScope(vm, globalObject->globalScope());
+#endif
+    ensureStillAliveHere(eval);
+    ensureStillAliveHere(codeBlock);
+    return JSValue::decode(result);
 }
 
 JSValue Interpreter::executeModuleProgram(JSModuleRecord* record, ModuleProgramExecutable* executable, JSGlobalObject* lexicalGlobalObject, JSModuleEnvironment* scope, JSValue sentValue, JSValue resumeMode)
@@ -1593,13 +1653,13 @@ JSValue Interpreter::executeModuleProgram(JSModuleRecord* record, ModuleProgramE
 
     JSGlobalObject* globalObject = scope->globalObject();
     VMEntryScope entryScope(vm, scope->globalObject());
-    if (UNLIKELY(!vm.isSafeToRecurseSoft()))
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]]
         return throwStackOverflowError(globalObject, throwScope);
 
-    if (UNLIKELY(vm.disallowVMEntryCount))
+    if (vm.disallowVMEntryCount) [[unlikely]]
         return checkVMEntryPermission();
 
-    if (UNLIKELY(vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents))) {
+    if (vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents)) [[unlikely]] {
         if (vm.hasExceptionsAfterHandlingTraps())
             return throwScope.exception();
     }
@@ -1633,7 +1693,7 @@ JSValue Interpreter::executeModuleProgram(JSModuleRecord* record, ModuleProgramE
         }
 
         {
-            DisallowGC disallowGC; // Ensure no GC happens. GC can replace CodeBlock in Executable.
+            AssertNoGC assertNoGC; // Ensure no GC happens. GC can replace CodeBlock in Executable.
             jitCode = executable->generatedJITCode();
 
             // The |this| of the module is always `undefined`.
@@ -1651,14 +1711,16 @@ JSValue Interpreter::executeModuleProgram(JSModuleRecord* record, ModuleProgramE
     return JSValue::decode(vmEntryToJavaScript(jitCode->addressForCall(), &vm, &protoCallFrame));
 }
 
-NEVER_INLINE void Interpreter::debug(CallFrame* callFrame, DebugHookType debugHookType)
+NEVER_INLINE void Interpreter::debug(CallFrame* callFrame, DebugHookType debugHookType, JSValue data)
 {
     VM& vm = this->vm();
     DeferTermination deferScope(vm);
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    if (UNLIKELY(Options::debuggerTriggersBreakpointException()) && debugHookType == DidReachDebuggerStatement)
-        WTFBreakpointTrap();
+    if (Options::debuggerTriggersBreakpointException()) [[unlikely]] {
+        if (debugHookType == DidReachDebuggerStatement)
+            WTFBreakpointTrap();
+    }
 
     Debugger* debugger = callFrame->lexicalGlobalObject(vm)->debugger();
     if (!debugger)
@@ -1679,6 +1741,12 @@ NEVER_INLINE void Interpreter::debug(CallFrame* callFrame, DebugHookType debugHo
             break;
         case WillExecuteExpression:
             debugger->atExpression(callFrame);
+            break;
+        case WillAwait:
+            debugger->willAwait(callFrame, data);
+            break;
+        case DidAwait:
+            debugger->didAwait(callFrame, data);
             break;
         case WillExecuteProgram:
             debugger->willExecuteProgram(callFrame);
@@ -1720,6 +1788,12 @@ void printInternal(PrintStream& out, JSC::DebugHookType type)
         return;
     case JSC::WillExecuteExpression:
         out.print("WillExecuteExpression");
+        return;
+    case JSC::WillAwait:
+        out.print("WillAwait");
+        return;
+    case JSC::DidAwait:
+        out.print("DidAwait");
         return;
     }
 }

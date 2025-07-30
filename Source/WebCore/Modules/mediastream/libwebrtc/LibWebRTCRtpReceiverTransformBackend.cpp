@@ -56,10 +56,12 @@ void LibWebRTCRtpReceiverTransformBackend::setTransformableFrameCallback(Callbac
     m_rtcReceiver->SetDepacketizerToDecoderFrameTransformer(rtc::scoped_refptr<webrtc::FrameTransformerInterface>(this));
 }
 
-void LibWebRTCRtpReceiverTransformBackend::requestKeyFrame()
+bool LibWebRTCRtpReceiverTransformBackend::requestKeyFrame(const String& rid)
 {
     ASSERT(mediaType() == MediaType::Video);
+    ASSERT_UNUSED(rid, rid.isEmpty());
     m_rtcReceiver->GenerateKeyFrame();
+    return true;
 }
 
 } // namespace WebCore

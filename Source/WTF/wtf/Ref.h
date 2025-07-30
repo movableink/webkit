@@ -45,7 +45,7 @@ inline void adopted(const void*) { }
 template<typename T> struct DefaultRefDerefTraits {
     static ALWAYS_INLINE T* refIfNotNull(T* ptr)
     {
-        if (LIKELY(ptr))
+        if (ptr) [[likely]]
             ptr->ref();
         return ptr;
     }
@@ -58,7 +58,7 @@ template<typename T> struct DefaultRefDerefTraits {
 
     static ALWAYS_INLINE void derefIfNotNull(T* ptr)
     {
-        if (LIKELY(ptr))
+        if (ptr) [[likely]]
             ptr->deref();
     }
 };

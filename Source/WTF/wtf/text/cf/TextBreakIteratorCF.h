@@ -78,7 +78,7 @@ public:
     }
 
 private:
-    using BackingVariant = std::variant<TextBreakIteratorCFCharacterCluster, TextBreakIteratorCFStringTokenizer>;
+    using BackingVariant = Variant<TextBreakIteratorCFCharacterCluster, TextBreakIteratorCFStringTokenizer>;
 
     static BackingVariant mapModeToBackingIterator(StringView string, StringView priorContext, Mode mode, const AtomString& locale)
     {

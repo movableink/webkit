@@ -31,6 +31,7 @@
 #include "ApplePayPaymentHandler.h"
 #include "Document.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "JSDOMPromise.h"
 #include "JSDOMPromiseDeferred.h"
@@ -49,6 +50,7 @@
 #include "PaymentRequestUtilities.h"
 #include "PaymentValidationErrors.h"
 #include "ScriptController.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <JavaScriptCore/JSONObject.h>
 #include <JavaScriptCore/ThrowScope.h>
 #include <wtf/ASCIICType.h>
@@ -472,8 +474,8 @@ void PaymentRequest::closeActivePaymentHandler()
 void PaymentRequest::stop()
 {
     closeActivePaymentHandler();
-    queueTaskKeepingObjectAlive(*this, TaskSource::Payment, [this] {
-        settleShowPromise(Exception { ExceptionCode::AbortError });
+    queueTaskKeepingObjectAlive(*this, TaskSource::Payment, [](auto& request) {
+        request.settleShowPromise(Exception { ExceptionCode::AbortError });
     });
 }
 
@@ -549,30 +551,30 @@ std::optional<PaymentShippingType> PaymentRequest::shippingType() const
 
 void PaymentRequest::shippingAddressChanged(Ref<PaymentAddress>&& shippingAddress)
 {
-    whenDetailsSettled([this, protectedThis = Ref { *this }, shippingAddress = WTFMove(shippingAddress)]() mutable {
-        m_shippingAddress = WTFMove(shippingAddress);
-        dispatchAndCheckUpdateEvent(PaymentRequestUpdateEvent::create(eventNames().shippingaddresschangeEvent));
+    whenDetailsSettled([protectedThis = Ref { *this }, shippingAddress = WTFMove(shippingAddress)]() mutable {
+        protectedThis->m_shippingAddress = WTFMove(shippingAddress);
+        protectedThis->dispatchAndCheckUpdateEvent(PaymentRequestUpdateEvent::create(eventNames().shippingaddresschangeEvent));
     });
 }
 
 void PaymentRequest::shippingOptionChanged(const String& shippingOption)
 {
-    whenDetailsSettled([this, protectedThis = Ref { *this }, shippingOption]() mutable {
-        m_shippingOption = shippingOption;
-        dispatchAndCheckUpdateEvent(PaymentRequestUpdateEvent::create(eventNames().shippingoptionchangeEvent));
+    whenDetailsSettled([protectedThis = Ref { *this }, shippingOption]() mutable {
+        protectedThis->m_shippingOption = shippingOption;
+        protectedThis->dispatchAndCheckUpdateEvent(PaymentRequestUpdateEvent::create(eventNames().shippingoptionchangeEvent));
     });
 }
 
 void PaymentRequest::paymentMethodChanged(const String& methodName, PaymentMethodChangeEvent::MethodDetailsFunction&& methodDetailsFunction)
 {
-    whenDetailsSettled([this, protectedThis = Ref { *this }, methodName, methodDetailsFunction = WTFMove(methodDetailsFunction)]() mutable {
+    whenDetailsSettled([protectedThis = Ref { *this }, methodName, methodDetailsFunction = WTFMove(methodDetailsFunction)]() mutable {
         auto& eventName = eventNames().paymentmethodchangeEvent;
-        if (hasEventListeners(eventName)) {
-            dispatchAndCheckUpdateEvent(PaymentMethodChangeEvent::create(eventName, methodName, WTFMove(methodDetailsFunction)));
+        if (protectedThis->hasEventListeners(eventName)) {
+            protectedThis->dispatchAndCheckUpdateEvent(PaymentMethodChangeEvent::create(eventName, methodName, WTFMove(methodDetailsFunction)));
             return;
         }
 
-        Ref activePaymentHandler = *this->activePaymentHandler();
+        Ref activePaymentHandler = *protectedThis->activePaymentHandler();
         activePaymentHandler->detailsUpdated(UpdateReason::PaymentMethodChanged, { }, { }, { }, { });
     });
 }
@@ -589,8 +591,8 @@ ExceptionOr<void> PaymentRequest::updateWith(UpdateReason reason, Ref<DOMPromise
 
     ASSERT(!m_detailsPromise);
     m_detailsPromise = WTFMove(promise);
-    m_detailsPromise->whenSettled([this, protectedThis = Ref { *this }, reason]() {
-        settleDetailsPromise(reason);
+    m_detailsPromise->whenSettled([protectedThis = Ref { *this }, reason]() {
+        protectedThis->settleDetailsPromise(reason);
     });
 
     return { };
@@ -605,19 +607,19 @@ ExceptionOr<void> PaymentRequest::completeMerchantValidation(Event& event, Ref<D
     event.stopImmediatePropagation();
 
     m_merchantSessionPromise = WTFMove(merchantSessionPromise);
-    m_merchantSessionPromise->whenSettled([this, protectedThis = Ref { *this }]() {
-        if (m_state != State::Interactive)
+    m_merchantSessionPromise->whenSettled([protectedThis = Ref { *this }]() {
+        if (protectedThis->m_state != State::Interactive)
             return;
 
-        if (m_merchantSessionPromise->status() == DOMPromise::Status::Rejected) {
-            abortWithException(Exception { ExceptionCode::AbortError });
+        if (protectedThis->m_merchantSessionPromise->status() == DOMPromise::Status::Rejected) {
+            protectedThis->abortWithException(Exception { ExceptionCode::AbortError });
             return;
         }
 
-        Ref activePaymentHandler = *this->activePaymentHandler();
-        auto exception = activePaymentHandler->merchantValidationCompleted(m_merchantSessionPromise->result());
+        Ref activePaymentHandler = *protectedThis->activePaymentHandler();
+        auto exception = activePaymentHandler->merchantValidationCompleted(protectedThis->m_merchantSessionPromise->result());
         if (exception.hasException()) {
-            abortWithException(exception.releaseException());
+            protectedThis->abortWithException(exception.releaseException());
             return;
         }
     });
@@ -713,8 +715,8 @@ void PaymentRequest::whenDetailsSettled(std::function<void()>&& callback)
         return;
     }
 
-    m_detailsPromise->whenSettled([this, protectedThis = Ref { *this }, whenSettledFunction = WTFMove(whenSettledFunction)] {
-        if (m_state == State::Interactive)
+    m_detailsPromise->whenSettled([protectedThis = Ref { *this }, whenSettledFunction = WTFMove(whenSettledFunction)] {
+        if (protectedThis->m_state == State::Interactive)
             whenSettledFunction();
     });
 }

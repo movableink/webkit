@@ -3,8 +3,10 @@
 <p>Test worker invalid url exceptions. Should print one "PASS" statement.</p>
 <div id=result></div>
 <script>
-if (window.testRunner)
+if (window.testRunner) {
     testRunner.dumpAsText();
+    testRunner.waitUntilDone();
+}
 
 function log(message)
 {
@@ -12,13 +14,15 @@ function log(message)
 }
 
 try {
-    new Worker("http://example.com/worker.js");
-    log("FAIL: No exception thrown when accessing a worker from another domain.");
+    const worker = new Worker("http://example.com/worker.js");
+    log("PASS: No exception thrown when accessing a worker from another domain.");
+    worker.onerror = () => {
+        log("PASS: Got error event");
+        if (window.testRunner)
+            testRunner.notifyDone();
+    }
 } catch (error) {
-    if (error.code == 18)
-        log("PASS: Got security error.");
-    else
-        log("FAIL: Got error code " + error.code + ". Expected error code 18.");
+    log("FAIL: Got error code " + error.code + ". Expected error code 18.");
 }
 </script>
 </body>

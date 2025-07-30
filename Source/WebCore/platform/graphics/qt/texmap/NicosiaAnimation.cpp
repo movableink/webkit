@@ -20,6 +20,7 @@
 #include "config.h"
 #include "NicosiaAnimation.h"
 
+#include "AnimationUtilities.h"
 #include "LayoutSize.h"
 #include "TranslateTransformOperation.h"
 #include <wtf/Scope.h>
@@ -30,7 +31,7 @@ using namespace WebCore;
 
 static RefPtr<FilterOperation> blendFunc(FilterOperation* fromOp, FilterOperation& toOp, double progress, const FloatSize&, bool blendToPassthrough = false)
 {
-    return toOp.blend(fromOp, progress, blendToPassthrough);
+    return toOp.blend(fromOp, BlendingContext(progress), blendToPassthrough);
 }
 
 static FilterOperations applyFilterAnimation(const FilterOperations& from, const FilterOperations& to, double progress, const FloatSize& boxSize)
@@ -135,7 +136,7 @@ static TransformationMatrix applyTransformAnimation(const TransformOperations& f
         return matrix;
     }
 
-    to.blend(from, progress, LayoutSize { boxSize }).apply(matrix, boxSize);
+    to.blend(from, BlendingContext(progress), LayoutSize { boxSize }).apply(matrix, boxSize);
     return matrix;
 }
 

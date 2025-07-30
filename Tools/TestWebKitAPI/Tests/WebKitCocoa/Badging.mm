@@ -64,8 +64,6 @@ function checkNavigatorProperty(property)
 
 result += checkNavigatorProperty('setAppBadge');
 result += checkNavigatorProperty('clearAppBadge');
-result += checkNavigatorProperty('setClientBadge');
-result += checkNavigatorProperty('clearClientBadge');
 return result;
 )SWRESOURCE"_s;
 
@@ -75,14 +73,7 @@ window.navigator.setAppBadge(1);
 window.navigator.setAppBadge(Number.MAX_SAFE_INTEGER);
 window.navigator.setAppBadge();
 
-window.navigator.setClientBadge(0);
-window.navigator.setClientBadge(1);
-window.navigator.setClientBadge(Number.MAX_SAFE_INTEGER);
-window.navigator.setClientBadge();
-
 window.navigator.clearAppBadge();
-window.navigator.clearClientBadge();
-
 
 window.navigator.setAppBadge(-10).then(() => {
     window.webkit.messageHandlers.sw.postMessage("SUCCEEDED");
@@ -94,26 +85,13 @@ window.navigator.setAppBadge('a').then(() => {
 }).catch((e) => {
     window.webkit.messageHandlers.sw.postMessage("CAUGHT ERROR");
 });
-window.navigator.setClientBadge(-10).then(() => {
-    window.webkit.messageHandlers.sw.postMessage("SUCCEEDED");
-}).catch((e) => {
-    window.webkit.messageHandlers.sw.postMessage("CAUGHT ERROR");
-});
-window.navigator.setClientBadge('a').then(() => {
-    window.webkit.messageHandlers.sw.postMessage("SUCCEEDED");
-}).catch((e) => {
-    window.webkit.messageHandlers.sw.postMessage("CAUGHT ERROR");
-});
-
 
 return "DONE";
 )SWRESOURCE"_s;
 
 @interface BadgeDelegate : NSObject<WKUIDelegatePrivate, _WKWebsiteDataStoreDelegate>
 @property (readwrite) int appBadgeIndex;
-@property (readwrite) int clientBadgeIndex;
 @property (readwrite, copy) NSArray *expectedAppBadgeSequence;
-@property (readwrite, copy) NSArray *expectedClientBadgeSequence;
 @property (readwrite, copy) NSURL *serverURL;
 @property (readwrite) BOOL shouldAllowOriginViolations;
 @property (readonly) int originViolationCount;
@@ -141,21 +119,6 @@ return "DONE";
     [self updatedAppBadge:badge fromOrigin:origin];
 }
 
-- (void)_webView:(WKWebView *)webView updatedClientBadge:(NSNumber *)badge fromSecurityOrigin:(WKSecurityOrigin *)origin
-{
-    id innerBadge = badge;
-    if (!innerBadge)
-        innerBadge = [NSNull null];
-    EXPECT_TRUE([_expectedClientBadgeSequence[_clientBadgeIndex++] isEqual :innerBadge]);
-
-    if (_serverURL) {
-        if (!_shouldAllowOriginViolations)
-            EXPECT_TRUE([origin isSameSiteAsURL:_serverURL]);
-        else
-            ++_originViolationCount;
-    }
-}
-
 - (void)websiteDataStore:(WKWebsiteDataStore *)dataStore workerOrigin:(WKSecurityOrigin *)workerOrigin updatedAppBadge:(NSNumber *)badge
 {
     [self updatedAppBadge:badge fromOrigin:workerOrigin];
@@ -173,7 +136,7 @@ TEST(Badging, APIWindow)
 
     static bool messagesDone = false;
     static int messageCount = 0;
-    static const int expectedMessages = 4;
+    static const int expectedMessages = 2;
 
     auto testMessageHandler = adoptNS([[TestMessageHandler alloc] init]);
     [[configuration userContentController] addScriptMessageHandler:testMessageHandler.get() name:@"sw"];
@@ -192,7 +155,6 @@ TEST(Badging, APIWindow)
     auto badgeDelegate = adoptNS([BadgeDelegate new]);
     badgeDelegate.get().serverURL = server.request("/"_s).URL;
     badgeDelegate.get().expectedAppBadgeSequence = @[@0, @1, @9007199254740991, [NSNull null], @0];
-    badgeDelegate.get().expectedClientBadgeSequence = @[@0, @1, @9007199254740991, [NSNull null], @0];
 
     webView.get().UIDelegate = badgeDelegate.get();
     [webView synchronouslyLoadRequest:server.request("/"_s)];
@@ -200,43 +162,40 @@ TEST(Badging, APIWindow)
     NSString *nsCheckForBadgeFunctions = [NSString stringWithUTF8String:checkForBadgeFunctions];
     static bool done = false;
     [webView callAsyncJavaScript:nsCheckForBadgeFunctions arguments:nil inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *error) {
-        EXPECT_TRUE([result isEqualToString:@"0 0 0 0 "]);
+        EXPECT_TRUE([result isEqualToString:@"0 0 "]);
         EXPECT_NULL(error);
         done = true;
     }];
     TestWebKitAPI::Util::run(&done);
 
     webView.get().configuration.preferences._appBadgeEnabled = YES;
-    webView.get().configuration.preferences._clientBadgeEnabled = NO;
     [webView synchronouslyLoadRequest:server.request("/"_s)];
 
     done = false;
     [webView callAsyncJavaScript:nsCheckForBadgeFunctions arguments:nil inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *error) {
-        EXPECT_TRUE([result isEqualToString:@"1 1 0 0 "]);
+        EXPECT_TRUE([result isEqualToString:@"1 1 "]);
         EXPECT_NULL(error);
         done = true;
     }];
     TestWebKitAPI::Util::run(&done);
 
     webView.get().configuration.preferences._appBadgeEnabled = NO;
-    webView.get().configuration.preferences._clientBadgeEnabled = YES;
     [webView synchronouslyLoadRequest:server.request("/"_s)];
 
     done = false;
     [webView callAsyncJavaScript:nsCheckForBadgeFunctions arguments:nil inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *error) {
-        EXPECT_TRUE([result isEqualToString:@"0 0 1 1 "]);
+        EXPECT_TRUE([result isEqualToString:@"0 0 "]);
         EXPECT_NULL(error);
         done = true;
     }];
     TestWebKitAPI::Util::run(&done);
 
     webView.get().configuration.preferences._appBadgeEnabled = YES;
-    webView.get().configuration.preferences._clientBadgeEnabled = YES;
     [webView synchronouslyLoadRequest:server.request("/"_s)];
 
     done = false;
     [webView callAsyncJavaScript:nsCheckForBadgeFunctions arguments:nil inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *error) {
-        EXPECT_TRUE([result isEqualToString:@"1 1 1 1 "]);
+        EXPECT_TRUE([result isEqualToString:@"1 1 "]);
         EXPECT_NULL(error);
         done = true;
     }];
@@ -253,7 +212,6 @@ TEST(Badging, APIWindow)
     TestWebKitAPI::Util::run(&messagesDone);
 
     EXPECT_EQ(badgeDelegate.get().appBadgeIndex, 5);
-    EXPECT_EQ(badgeDelegate.get().clientBadgeIndex, 5);
 }
 
 static constexpr auto workerMainBytes = R"TESTRESOURCE(
@@ -323,7 +281,6 @@ TEST(Badging, DedicatedWorker)
     TestWebKitAPI::Util::run(&badgingDone);
 
     EXPECT_EQ(badgeDelegate.get().appBadgeIndex, 2);
-    EXPECT_EQ(badgeDelegate.get().clientBadgeIndex, 0);
 }
 
 static constexpr auto sharedWorkerMainBytes = R"TESTRESOURCE(
@@ -394,7 +351,6 @@ TEST(Badging, SharedWorker)
     TestWebKitAPI::Util::run(&badgingDone);
 
     EXPECT_EQ(badgeDelegate.get().appBadgeIndex, 2);
-    EXPECT_EQ(badgeDelegate.get().clientBadgeIndex, 0);
 }
 
 static constexpr auto serviceWorkerMainBytes = R"SWRESOURCE(
@@ -480,7 +436,6 @@ TEST(Badging, ServiceWorker)
     TestWebKitAPI::Util::run(&badgingDone);
 
     EXPECT_EQ(badgeDelegate.get().appBadgeIndex, 2);
-    EXPECT_EQ(badgeDelegate.get().clientBadgeIndex, 0);
 }
 
 static constexpr auto originMainFrameBytes = R"SWRESOURCE(
@@ -567,7 +522,7 @@ TEST(Badging, ServiceWorkerOverride)
     NSString *nsCheckForBadgeFunctions = [NSString stringWithUTF8String:checkForBadgeFunctions];
     static bool done = false;
     [webView callAsyncJavaScript:nsCheckForBadgeFunctions arguments:nil inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *error) {
-        EXPECT_TRUE([result isEqualToString:@"0 0 0 0 "]);
+        EXPECT_TRUE([result isEqualToString:@"0 0 "]);
         EXPECT_NULL(error);
         done = true;
     }];
@@ -582,5 +537,4 @@ TEST(Badging, ServiceWorkerOverride)
     TestWebKitAPI::Util::run(&badgingDone);
 
     EXPECT_EQ(badgeDelegate.get().appBadgeIndex, 2);
-    EXPECT_EQ(badgeDelegate.get().clientBadgeIndex, 0);
 }

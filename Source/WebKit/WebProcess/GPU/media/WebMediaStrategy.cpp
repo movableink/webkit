@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "GPUProcessConnection.h"
 #include "RemoteAudioDestinationProxy.h"
 #include "RemoteCDMFactory.h"
+#include "RemoteVideoFrameObjectHeapProxy.h"
 #include "WebProcess.h"
 #include <WebCore/AudioDestination.h>
 #include <WebCore/AudioIOCallback.h>
@@ -39,6 +40,7 @@
 #include <WebCore/SharedAudioDestination.h>
 
 #if PLATFORM(COCOA)
+#include "RemoteMediaRecorderPrivateWriter.h"
 #include <WebCore/MediaSessionManagerCocoa.h>
 #endif
 
@@ -47,21 +49,21 @@
 #endif
 
 namespace WebKit {
+using namespace WebCore;
 
 WebMediaStrategy::~WebMediaStrategy() = default;
 
 #if ENABLE(WEB_AUDIO)
-Ref<WebCore::AudioDestination> WebMediaStrategy::createAudioDestination(WebCore::AudioIOCallback& callback, const String& inputDeviceId,
-    unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate)
+Ref<WebCore::AudioDestination> WebMediaStrategy::createAudioDestination(const WebCore::AudioDestinationCreationOptions& options)
 {
     ASSERT(isMainRunLoop());
 #if ENABLE(GPU_PROCESS)
     if (m_useGPUProcess)
-        return WebCore::SharedAudioDestination::create(callback, numberOfOutputChannels, sampleRate, [inputDeviceId, numberOfInputChannels, numberOfOutputChannels, sampleRate] (WebCore::AudioIOCallback& callback) {
-            return RemoteAudioDestinationProxy::create(callback, inputDeviceId, numberOfInputChannels, numberOfOutputChannels, sampleRate);
+        return WebCore::SharedAudioDestination::create(options, [] (auto& options) {
+            return RemoteAudioDestinationProxy::create(options);
         });
 #endif
-    return WebCore::AudioDestination::create(callback, inputDeviceId, numberOfInputChannels, numberOfOutputChannels, sampleRate);
+    return WebCore::AudioDestination::create(options);
 }
 #endif
 
@@ -117,6 +119,33 @@ void WebMediaStrategy::enableMockMediaSource()
     }
 #endif
     WebCore::MediaStrategy::addMockMediaSourceEngine();
+}
+#endif
+
+#if PLATFORM(COCOA) && ENABLE(MEDIA_RECORDER)
+std::unique_ptr<MediaRecorderPrivateWriter> WebMediaStrategy::createMediaRecorderPrivateWriter(MediaRecorderContainerType type, WebCore::MediaRecorderPrivateWriterListener& listener) const
+{
+    ASSERT(isMainRunLoop());
+#if ENABLE(GPU_PROCESS)
+    if (type != MediaRecorderContainerType::Mp4)
+        return nullptr;
+    if (m_useGPUProcess) {
+        Ref connection = WebProcess::singleton().ensureGPUProcessConnection();
+        return RemoteMediaRecorderPrivateWriter::create(connection, listener);
+    }
+#else
+    UNUSED_PARAM(type);
+    UNUSED_PARAM(listener);
+#endif
+    return nullptr;
+}
+#endif
+
+#if PLATFORM(COCOA) && ENABLE(VIDEO)
+void WebMediaStrategy::nativeImageFromVideoFrame(const WebCore::VideoFrame& frame, CompletionHandler<void(std::optional<RefPtr<WebCore::NativeImage>>&&)>&& completionHandler)
+{
+    // FIMXE: Move out of sync IPC.
+    completionHandler(WebProcess::singleton().ensureProtectedGPUProcessConnection()->protectedVideoFrameObjectHeapProxy()->getNativeImage(frame));
 }
 #endif
 

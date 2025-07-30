@@ -23,6 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
+DECLARE_SYSTEM_HEADER
+
 #import <wtf/Platform.h>
 
 #if USE(APPKIT)
@@ -33,21 +37,15 @@
 #import <AppKit/NSView_Private.h>
 #else
 
-#if USE(NSVIEW_SEMANTICCONTEXT)
-
 typedef NS_ENUM(NSInteger, NSViewSemanticContext) {
     NSViewSemanticContextForm = 8,
 };
-
-#endif
 
 @interface NSView ()
 
 - (NSView *)_findLastViewInKeyViewLoop;
 
-#if USE(NSVIEW_SEMANTICCONTEXT)
 @property (nonatomic, setter=_setSemanticContext:) NSViewSemanticContext _semanticContext;
-#endif
 
 #if !HAVE(NSVIEW_CLIPSTOBOUNDS_API)
 @property BOOL clipsToBounds;

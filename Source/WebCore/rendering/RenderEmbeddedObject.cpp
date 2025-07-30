@@ -46,12 +46,12 @@
 #include "Page.h"
 #include "PaintInfo.h"
 #include "Path.h"
-#include "PlatformMouseEvent.h"
 #include "PluginViewBase.h"
 #include "RenderBoxInlines.h"
 #include "RenderLayoutState.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
+#include "RenderWidgetInlines.h"
 #include "Settings.h"
 #include "SystemFontDatabase.h"
 #include "Text.h"
@@ -183,24 +183,10 @@ void RenderEmbeddedObject::setPluginUnavailabilityReason(PluginUnavailabilityRea
 #if PLATFORM(IOS_FAMILY)
     UNUSED_PARAM(pluginUnavailabilityReason);
 #else
-    setPluginUnavailabilityReasonWithDescription(pluginUnavailabilityReason, unavailablePluginReplacementText(pluginUnavailabilityReason));
-#endif
-}
-
-void RenderEmbeddedObject::setPluginUnavailabilityReasonWithDescription(PluginUnavailabilityReason pluginUnavailabilityReason, const String& description)
-{
-#if PLATFORM(IOS_FAMILY)
-    UNUSED_PARAM(pluginUnavailabilityReason);
-    UNUSED_PARAM(description);
-#else
     ASSERT(!m_isPluginUnavailable);
     m_isPluginUnavailable = true;
     m_pluginUnavailabilityReason = pluginUnavailabilityReason;
-
-    if (description.isEmpty())
-        m_unavailablePluginReplacementText = unavailablePluginReplacementText(pluginUnavailabilityReason);
-    else
-        m_unavailablePluginReplacementText = description;
+    m_unavailablePluginReplacementText = unavailablePluginReplacementText(pluginUnavailabilityReason);
 #endif
 }
 
@@ -255,7 +241,9 @@ static void drawReplacementArrow(GraphicsContext& context, const FloatRect& insi
 
 void RenderEmbeddedObject::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (!showsUnavailablePluginIndicator())
+    ASSERT(!isSkippedContentRoot(*this));
+
+    if (!isPluginUnavailable())
         return;
 
     if (paintInfo.phase == PaintPhase::Selection)
@@ -310,15 +298,6 @@ void RenderEmbeddedObject::paintReplaced(PaintInfo& paintInfo, const LayoutPoint
     }
 }
 
-void RenderEmbeddedObject::setUnavailablePluginIndicatorIsHidden(bool hidden)
-{
-    auto newState = hidden ? UnavailablePluginIndicatorState::Hidden : UnavailablePluginIndicatorState::Visible;
-    if (m_isUnavailablePluginIndicatorState == newState)
-        return;
-    m_isUnavailablePluginIndicatorState = newState;
-    repaint();
-}
-
 LayoutRect RenderEmbeddedObject::getReplacementTextGeometry(const LayoutPoint& accumulatedOffset) const
 {
     FloatRect contentRect;
@@ -361,11 +340,6 @@ void RenderEmbeddedObject::getReplacementTextGeometry(const LayoutPoint& accumul
         arrowRect.setWidth(arrowRect.height());
         indicatorRect.unite(arrowRect);
     }
-}
-
-LayoutRect RenderEmbeddedObject::unavailablePluginIndicatorBounds(const LayoutPoint& accumulatedOffset) const
-{
-    return getReplacementTextGeometry(accumulatedOffset);
 }
 
 void RenderEmbeddedObject::layout()
@@ -482,7 +456,7 @@ void RenderEmbeddedObject::handleUnavailablePluginIndicatorEvent(Event* event)
 
 CursorDirective RenderEmbeddedObject::getCursor(const LayoutPoint& point, Cursor& cursor) const
 {
-    if (showsUnavailablePluginIndicator() && shouldUnavailablePluginMessageBeButton(page(), m_pluginUnavailabilityReason) && isInUnavailablePluginIndicator(point)) {
+    if (isPluginUnavailable() && shouldUnavailablePluginMessageBeButton(page(), m_pluginUnavailabilityReason) && isInUnavailablePluginIndicator(point)) {
         cursor = handCursor();
         return SetCursor;
     }

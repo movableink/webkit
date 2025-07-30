@@ -27,6 +27,7 @@
 
 #import "ScriptTelemetry.h"
 #import <wtf/CompletionHandler.h>
+#import <wtf/ContinuousApproximateTime.h>
 #import <wtf/Function.h>
 #import <wtf/Ref.h>
 #import <wtf/RetainPtr.h>
@@ -45,6 +46,7 @@
 
 OBJC_CLASS WKWebPrivacyNotificationListener;
 OBJC_CLASS NSURLSession;
+OBJC_CLASS WKContentRuleList;
 
 namespace WebKit {
 
@@ -53,6 +55,7 @@ namespace WebKit {
 enum class RestrictedOpenerType : uint8_t;
 
 void configureForAdvancedPrivacyProtections(NSURLSession *);
+bool isKnownTrackerAddressOrDomain(StringView host);
 void requestLinkDecorationFilteringData(CompletionHandler<void(Vector<WebCore::LinkDecorationFilteringData>&&)>&&);
 
 class ListDataObserver : public RefCountedAndCanMakeWeakPtr<ListDataObserver> {
@@ -84,10 +87,9 @@ public:
 
 protected:
     virtual bool hasCachedListData() const = 0;
+    virtual void didUpdateCachedListData() { }
     virtual void updateList(CompletionHandler<void()>&&) = 0;
-#ifdef __OBJC__
-    virtual WPResourceType resourceType() const = 0;
-#endif
+    virtual unsigned resourceTypeValue() const = 0;
 
     RetainPtr<WKWebPrivacyNotificationListener> m_notificationListener;
     WeakHashSet<ListDataObserver> m_observers;
@@ -99,7 +101,7 @@ class ListDataController : public ListDataControllerBase {
 public:
     static DerivedType& sharedSingleton()
     {
-        static MainThreadNeverDestroyed<DerivedType> sharedInstance;
+        static MainRunLoopNeverDestroyed<DerivedType> sharedInstance;
         return sharedInstance.get();
     }
 
@@ -115,7 +117,7 @@ public:
     const BackingDataType& cachedListData() const { return m_cachedListData; }
 
 protected:
-    friend class NeverDestroyed<DerivedType, MainThreadAccessTraits>;
+    friend class NeverDestroyed<DerivedType, MainRunLoopAccessTraits>;
 
     void setCachedListData(BackingDataType&& data)
     {
@@ -123,7 +125,6 @@ protected:
         didUpdateCachedListData();
     }
 
-    virtual void didUpdateCachedListData() { }
     bool hasCachedListData() const final { return !m_cachedListData.isEmpty(); }
 
     BackingDataType m_cachedListData;
@@ -135,34 +136,30 @@ public:
 
 private:
     void didUpdateCachedListData() final { m_cachedListData.shrinkToFit(); }
-#ifdef __OBJC__
-    WPResourceType resourceType() const final;
-#endif
+    unsigned resourceTypeValue() const final;
 };
 
 class StorageAccessPromptQuirkController : public ListDataController<StorageAccessPromptQuirkController, Vector<WebCore::OrganizationStorageAccessPromptQuirk>> {
 private:
     void updateList(CompletionHandler<void()>&&) final;
     void didUpdateCachedListData() final;
-#ifdef __OBJC__
-    WPResourceType resourceType() const final;
-#endif
+    unsigned resourceTypeValue() const final;
 };
 
 class StorageAccessUserAgentStringQuirkController : public ListDataController<StorageAccessUserAgentStringQuirkController, HashMap<WebCore::RegistrableDomain, String>> {
 private:
     void updateList(CompletionHandler<void()>&&) final;
-#ifdef __OBJC__
-    WPResourceType resourceType() const final;
-#endif
+    unsigned resourceTypeValue() const final;
 };
 
 class ScriptTelemetryController : public ListDataController<ScriptTelemetryController, ScriptTelemetryRules> {
 private:
     void updateList(CompletionHandler<void()>&&) final;
     void didUpdateCachedListData() final;
+    unsigned resourceTypeValue() const final;
 #ifdef __OBJC__
-    WPResourceType resourceType() const final;
+    // FIXME: Remove when WebPrivacyHelpersAdditions.mm no longer depends on it.
+    WPResourceType resourceType() const;
 #endif
 };
 
@@ -173,15 +170,29 @@ public:
     RestrictedOpenerType lookup(const WebCore::RegistrableDomain&) const;
 
 private:
-    friend class NeverDestroyed<RestrictedOpenerDomainsController, MainThreadAccessTraits>;
+    friend class NeverDestroyed<RestrictedOpenerDomainsController, MainRunLoopAccessTraits>;
     RestrictedOpenerDomainsController();
-    void scheduleNextUpdate(uint64_t);
+    void scheduleNextUpdate(ContinuousApproximateTime);
     void update();
 
     RetainPtr<WKWebPrivacyNotificationListener> m_notificationListener;
     HashMap<WebCore::RegistrableDomain, RestrictedOpenerType> m_restrictedOpenerTypes;
-    uint64_t m_nextScheduledUpdateTime { 0 };
+    ContinuousApproximateTime m_nextScheduledUpdateTime;
 };
+
+class ResourceMonitorURLsController {
+public:
+    static ResourceMonitorURLsController& singleton();
+
+    void prepare(CompletionHandler<void(WKContentRuleList *, bool)>&&);
+    void getSource(CompletionHandler<void(String&&)>&&);
+
+private:
+    friend class NeverDestroyed<ResourceMonitorURLsController, MainRunLoopAccessTraits>;
+    ResourceMonitorURLsController() = default;
+};
+
+#define HAVE_RESOURCE_MONITOR_URLS_GET_SOURCE 1
 
 #endif // ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
 

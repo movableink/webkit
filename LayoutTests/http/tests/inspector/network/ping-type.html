@@ -4,9 +4,6 @@
 <meta charset="utf-8">
 <script src="../resources/inspector-test.js"></script>
 <script>
-if (window.testRunner && window.internals)
-    internals.settings.setHyperlinkAuditingEnabled(true);
-
 async function clickElement(element) {
     let x = element.offsetLeft + 2;
     let y = element.offsetTop + 2;

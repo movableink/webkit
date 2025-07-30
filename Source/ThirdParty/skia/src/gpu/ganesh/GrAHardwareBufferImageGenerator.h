@@ -12,6 +12,7 @@
 
 class GrGpuResource;
 class GrSurfaceProxyView;
+class SkRecorder;
 
 extern "C" {
     typedef struct AHardwareBuffer AHardwareBuffer;
@@ -30,7 +31,7 @@ extern "C" {
  */
 class GrAHardwareBufferImageGenerator : public GrTextureGenerator {
 public:
-    static std::unique_ptr<SkImageGenerator> Make(AHardwareBuffer*, SkAlphaType,
+    static std::unique_ptr<GrAHardwareBufferImageGenerator> Make(AHardwareBuffer*, SkAlphaType,
                                                   sk_sp<SkColorSpace>, GrSurfaceOrigin);
 
     ~GrAHardwareBufferImageGenerator() override;
@@ -43,6 +44,7 @@ private:
                                     GrSurfaceOrigin surfaceOrigin);
 
     bool onIsValid(GrRecordingContext*) const override;
+    bool onIsValid(SkRecorder*) const override;
 
     GrSurfaceProxyView onGenerateTexture(GrRecordingContext*,
                                          const SkImageInfo&,

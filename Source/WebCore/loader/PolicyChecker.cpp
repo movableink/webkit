@@ -46,11 +46,14 @@
 #include "HTMLFrameOwnerElement.h"
 #include "HTMLPlugInElement.h"
 #include "HitTestResult.h"
+#include "LoaderStrategy.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
 #include "Logging.h"
 #include "Navigation.h"
+#include "PlatformStrategies.h"
+#include "ResourceLoadInfo.h"
 #include "ThreadableBlobRegistry.h"
 #include "URLKeepingBlobAlive.h"
 #include <wtf/CompletionHandler.h>
@@ -60,8 +63,9 @@
 #endif
 
 #define PAGE_ID (m_frame->pageID() ? m_frame->pageID()->toUInt64() : 0)
-#define FRAME_ID (m_frame->loader().frameID().object().toUInt64())
+#define FRAME_ID (m_frame->loader().frameID().toUInt64())
 #define POLICYCHECKER_RELEASE_LOG(fmt, ...) RELEASE_LOG(Loading, "%p - [pageID=%" PRIu64 ", frameID=%" PRIu64 "] PolicyChecker::" fmt, this, PAGE_ID, FRAME_ID, ##__VA_ARGS__)
+#define POLICYCHECKER_RELEASE_LOG_FORWARDABLE(fmt, ...) RELEASE_LOG_FORWARDABLE(Loading, fmt, PAGE_ID, FRAME_ID, ##__VA_ARGS__)
 
 namespace WebCore {
 
@@ -117,6 +121,7 @@ void PolicyChecker::checkNavigationPolicy(ResourceRequest&& request, const Resou
     Ref frame = m_frame.get();
     if (action.isEmpty()) {
         action = NavigationAction { frame->protectedDocument().releaseNonNull(), request, InitiatedByMainFrame::Unknown, loader->isRequestFromClientOrUserInput(), NavigationType::Other, loader->shouldOpenExternalURLsPolicyToPropagate() };
+        action.setIsContentExtensionRedirect(loader->isContentExtensionRedirect());
         loader->setTriggeringAction(NavigationAction { action });
     }
 
@@ -243,22 +248,22 @@ void PolicyChecker::checkNavigationPolicy(ResourceRequest&& request, const Resou
                 frameLoader->client().startDownload(request, suggestedFilename, fromDownloadAttribute);
             } else if (RefPtr document = frame->document())
                 document->addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Not allowed to download due to sandboxing"_s);
-            FALLTHROUGH;
+            [[fallthrough]];
         case PolicyAction::Ignore:
             POLICYCHECKER_RELEASE_LOG("checkNavigationPolicy: ignoring because policyAction from dispatchDecidePolicyForNavigationAction is Ignore");
             return function({ }, nullptr, NavigationPolicyDecision::IgnoreLoad);
         case PolicyAction::LoadWillContinueInAnotherProcess:
-            POLICYCHECKER_RELEASE_LOG("checkNavigationPolicy: stopping because policyAction from dispatchDecidePolicyForNavigationAction is LoadWillContinueInAnotherProcess");
+            POLICYCHECKER_RELEASE_LOG_FORWARDABLE(POLICYCHECKIER_CHECKNAVIGATIONPOLICY_CONTINUE_LOAD_IN_ANOTHER_PROCESS);
             function({ }, nullptr, NavigationPolicyDecision::LoadWillContinueInAnotherProcess);
             return;
         case PolicyAction::Use:
             if (!requestIsJavaScriptURL && !frameLoader->client().canHandleRequest(request)) {
-                handleUnimplementablePolicy(frameLoader->client().cannotShowURLError(request));
+                handleUnimplementablePolicy(platformStrategies()->loaderStrategy()->cannotShowURLError(request));
                 POLICYCHECKER_RELEASE_LOG("checkNavigationPolicy: ignoring because frame loader client can't handle the request");
                 return function({ }, { }, NavigationPolicyDecision::IgnoreLoad);
             }
             if (isInitialEmptyDocumentLoad)
-                POLICYCHECKER_RELEASE_LOG("checkNavigationPolicy: continuing because this is an initial empty document");
+                POLICYCHECKER_RELEASE_LOG_FORWARDABLE(POLICYCHECKIER_CHECKNAVIGATIONPOLICY_CONTINUE_INITIAL_EMPTY_DOCUMENT);
             else
                 POLICYCHECKER_RELEASE_LOG("checkNavigationPolicy: continuing because this policyAction from dispatchDecidePolicyForNavigationAction is Use");
             return function(WTFMove(request), formState, NavigationPolicyDecision::ContinueLoad);
@@ -292,6 +297,16 @@ void PolicyChecker::checkNavigationPolicy(ResourceRequest&& request, const Resou
     bool hasOpener = !!frame->opener();
     auto sandboxFlags = frame->effectiveSandboxFlags();
     auto isPerformingHTTPFallback = frameLoader->isHTTPFallbackInProgress() ? IsPerformingHTTPFallback::Yes : IsPerformingHTTPFallback::No;
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    if (frame->loader().documentLoader() && frame->loader().documentLoader()->hasActiveContentRuleListActions()) {
+        if (RefPtr page = frame->page()) {
+            auto resourceType = frame->isMainFrame() ? ContentExtensions::ResourceType::TopDocument : ContentExtensions::ResourceType::ChildDocument;
+            auto results = page->protectedUserContentProvider()->processContentRuleListsForLoad(*page, request.url(), resourceType, *frame->loader().documentLoader());
+            ContentExtensions::applyResultsToRequest(WTFMove(results), page.get(), request);
+        }
+    }
+#endif
 
     if (isInitialEmptyDocumentLoad) {
         // We ignore the response from the client for initial empty document loads and proceed with the load synchronously.
@@ -335,7 +350,7 @@ void PolicyChecker::checkNewWindowPolicy(NavigationAction&& navigationAction, Re
                 frame->protectedLoader()->client().startDownload(request);
             else if (RefPtr document = frame->document())
                 document->addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Not allowed to download due to sandboxing"_s);
-            FALLTHROUGH;
+            [[fallthrough]];
         case PolicyAction::Ignore:
             function({ }, nullptr, { }, { }, ShouldContinuePolicyCheck::No);
             return;
@@ -344,7 +359,7 @@ void PolicyChecker::checkNewWindowPolicy(NavigationAction&& navigationAction, Re
             function({ }, nullptr, { }, { }, ShouldContinuePolicyCheck::No);
             return;
         case PolicyAction::Use:
-            function(request, formState, frameName, navigationAction, ShouldContinuePolicyCheck::Yes);
+            function(WTFMove(request), formState, frameName, navigationAction, ShouldContinuePolicyCheck::Yes);
             return;
         }
         ASSERT_NOT_REACHED();
@@ -359,7 +374,7 @@ void PolicyChecker::stopCheck()
 
 void PolicyChecker::cannotShowMIMEType(const ResourceResponse& response)
 {
-    handleUnimplementablePolicy(protectedFrame()->protectedLoader()->client().cannotShowMIMETypeError(response));
+    handleUnimplementablePolicy(platformStrategies()->loaderStrategy()->cannotShowMIMETypeError(response));
 }
 
 void PolicyChecker::handleUnimplementablePolicy(const ResourceError& error)

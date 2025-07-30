@@ -36,6 +36,7 @@ class ButtonControlMac : public ControlMac {
     WTF_MAKE_TZONE_ALLOCATED(ButtonControlMac);
 public:
     ButtonControlMac(ControlPart&, ControlFactoryMac&, NSButtonCell *);
+    ~ButtonControlMac();
 
 protected:
     void updateCellStates(const FloatRect&, const ControlStyle&) override;

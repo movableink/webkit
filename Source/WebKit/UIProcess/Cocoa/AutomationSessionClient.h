@@ -51,10 +51,17 @@ private:
     void requestRestoreWindowOfPage(WebKit::WebAutomationSession&, WebKit::WebPageProxy&, CompletionHandler<void()>&&) override;
     void requestMaximizeWindowOfPage(WebKit::WebAutomationSession&, WebKit::WebPageProxy&, CompletionHandler<void()>&&) override;
 
+#if ENABLE(WK_WEB_EXTENSIONS_IN_WEBDRIVER)
+    void loadWebExtensionWithOptions(WebKit::WebAutomationSession&, API::AutomationSessionWebExtensionResourceOptions, const String& resource, CompletionHandler<void(const String&)>&&) override;
+    void unloadWebExtension(WebKit::WebAutomationSession&, const String& identifier, CompletionHandler<void(bool)>&&) override;
+#endif
+
     bool isShowingJavaScriptDialogOnPage(WebAutomationSession&, WebPageProxy&) override;
     void dismissCurrentJavaScriptDialogOnPage(WebAutomationSession&, WebPageProxy&) override;
     void acceptCurrentJavaScriptDialogOnPage(WebAutomationSession&, WebPageProxy&) override;
-    String messageOfCurrentJavaScriptDialogOnPage(WebAutomationSession&, WebPageProxy&) override;
+    std::optional<String> messageOfCurrentJavaScriptDialogOnPage(WebAutomationSession&, WebPageProxy&) override;
+    std::optional<String> defaultTextOfCurrentJavaScriptDialogOnPage(WebAutomationSession&, WebPageProxy&) override;
+    std::optional<String> userInputOfCurrentJavaScriptDialogOnPage(WebAutomationSession&, WebPageProxy&) override;
     void setUserInputForCurrentJavaScriptPromptOnPage(WebAutomationSession&, WebPageProxy&, const String&) override;
     std::optional<API::AutomationSessionClient::JavaScriptDialogType> typeOfCurrentJavaScriptDialogOnPage(WebAutomationSession&, WebPageProxy&) override;
     API::AutomationSessionClient::BrowsingContextPresentation currentPresentationOfPage(WebAutomationSession&, WebPageProxy&) override;
@@ -73,9 +80,13 @@ private:
         bool dismissCurrentJavaScriptDialogForWebView : 1;
         bool acceptCurrentJavaScriptDialogForWebView : 1;
         bool messageOfCurrentJavaScriptDialogForWebView : 1;
+        bool defaultTextOfCurrentJavaScriptDialogForWebView : 1;
+        bool userInputOfCurrentJavaScriptDialogForWebView : 1;
         bool setUserInputForCurrentJavaScriptPromptForWebView : 1;
         bool typeOfCurrentJavaScriptDialogForWebView : 1;
         bool currentPresentationForWebView : 1;
+        bool loadWebExtensionWithOptions : 1;
+        bool unloadWebExtension : 1;
     } m_delegateMethods;
 };
 

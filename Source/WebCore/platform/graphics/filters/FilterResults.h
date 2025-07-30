@@ -45,7 +45,7 @@ public:
     ImageBufferAllocator& allocator() const { return *m_allocator; }
 
     FilterImage* effectResult(FilterEffect&) const;
-    void setEffectResult(FilterEffect&, const FilterImageVector& inputs, Ref<FilterImage>&& result);
+    void setEffectResult(FilterEffect&, std::span<const Ref<FilterImage>> inputs, Ref<FilterImage>&& result);
     void clearEffectResult(FilterEffect&);
 
 private:
@@ -55,7 +55,7 @@ private:
     UncheckedKeyHashMap<Ref<FilterEffect>, Ref<FilterImage>> m_results;
 
     // The value is a list of FilterEffects, whose FilterImages depend on the key FilterImage.
-    using FilterEffectSet = HashSet<Ref<FilterEffect>>;
+    using FilterEffectSet = UncheckedKeyHashSet<Ref<FilterEffect>>;
     UncheckedKeyHashMap<Ref<FilterImage>, FilterEffectSet> m_resultReferences;
 
     std::unique_ptr<ImageBufferAllocator> m_allocator;

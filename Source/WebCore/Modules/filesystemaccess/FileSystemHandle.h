@@ -69,7 +69,7 @@ private:
     Kind m_kind { Kind::File };
     String m_name;
     FileSystemHandleIdentifier m_identifier;
-    Ref<FileSystemStorageConnection> m_connection;
+    const Ref<FileSystemStorageConnection> m_connection;
     bool m_isClosed { false };
 };
 

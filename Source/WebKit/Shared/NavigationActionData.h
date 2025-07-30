@@ -64,6 +64,8 @@ struct NavigationActionData {
     bool openedByDOMWithOpener { false };
     bool hasOpener { false };
     bool isPerformingHTTPFallback { false };
+    bool isInitialFrameSrcLoad { false };
+    bool isContentExtensionRedirect { false };
     String openedMainFrameName;
     WebCore::SecurityOriginData requesterOrigin;
     WebCore::SecurityOriginData requesterTopOrigin;

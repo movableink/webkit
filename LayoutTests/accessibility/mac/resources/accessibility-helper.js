@@ -14,6 +14,14 @@ function elementAtStartMarkerOfSelectedTextMarkerRange(webArea) {
     return element;
 }
 
+function characterAtStartMarkerOfSelectedTextMarkerRange(webArea) {
+    var range = webArea.selectedTextMarkerRange();
+    var start = webArea.startTextMarkerForTextMarkerRange(range);
+    var end = webArea.nextTextMarker(start);
+    var characterRange = webArea.textMarkerRangeForMarkers(start, end);
+    return webArea.stringForTextMarkerRange(characterRange);
+}
+
 function caretBrowsingEnabled(webArea) {
     return webArea.boolAttributeValue("AXCaretBrowsingEnabled");
 }

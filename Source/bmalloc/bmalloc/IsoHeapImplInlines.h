@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if !BUSE(TZONE)
+
 #include "IsoHeapImpl.h"
 #include "IsoTLSDeallocatorEntry.h"
 #include "IsoSharedHeapInlines.h"
@@ -269,7 +271,7 @@ AllocationMode IsoHeapImpl<Config>::updateAllocationMode()
             //     }
             if (m_numberOfAllocationsFromSharedInOneCycle <= IsoPage<Config>::numObjects)
                 return AllocationMode::Shared;
-            BFALLTHROUGH;
+            [[fallthrough]];
 
         case AllocationMode::Fast: {
             // The allocation pattern may change. We should check the allocation rate and decide which mode is more appropriate.
@@ -329,3 +331,4 @@ void* IsoHeapImpl<Config>::allocateFromShared(const LockHolder&, bool abortOnFai
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)

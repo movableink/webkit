@@ -60,12 +60,17 @@
 #include <wtf/text/WTFString.h>
 
 #if USE(GSTREAMER)
-#include "GUniquePtrGStreamer.h"
+#include <gst/gststructure.h>
 #include <wtf/glib/GRefPtr.h>
 #endif
 
 namespace WebCore {
 class RealtimeMediaSourceObserver;
+
+#if PLATFORM(COCOA)
+class ImageRotationSessionVT;
+#endif
+
 }
 
 namespace WTF {
@@ -140,7 +145,7 @@ public:
         virtual void videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata) = 0;
 
 #if USE(GSTREAMER_WEBRTC)
-        virtual GUniquePtr<GstStructure> queryAdditionalStats() { return nullptr; }
+        virtual /* transfer full */ GstStructure* queryAdditionalStats() { return nullptr; }
 #endif
     };
 
@@ -150,6 +155,7 @@ public:
     virtual Ref<RealtimeMediaSource> clone() { return *this; }
 
     const String& hashedId() const;
+    const String& hashedGroupId() const;
     const MediaDeviceHashSalts& deviceIDHashSalts() const;
 
     const String& persistentID() const { return m_device.persistentId(); }
@@ -224,6 +230,8 @@ public:
     bool echoCancellation() const { return m_echoCancellation; }
     void setEchoCancellation(bool);
 
+    virtual const AudioStreamDescription* audioStreamDescription() const;
+
     virtual const RealtimeMediaSourceCapabilities& capabilities() = 0;
     virtual const RealtimeMediaSourceSettings& settings() = 0;
 
@@ -286,7 +294,7 @@ public:
     virtual void delaySamples(Seconds) { };
     virtual void setInterruptedForTesting(bool);
 
-    virtual bool setShouldApplyRotation(bool) { return false; }
+    virtual bool setShouldApplyRotation();
     virtual void setIsInBackground(bool);
 
     std::optional<PageIdentifier> pageIdentifier() const { return m_pageIdentifier.asOptional(); }
@@ -304,6 +312,12 @@ public:
 #if USE(GSTREAMER)
     virtual std::pair<GstClockTime, GstClockTime> queryCaptureLatency() const;
 #endif
+
+#if PLATFORM(COCOA)
+    void setCanUseIOSurface();
+#endif
+
+    virtual void configurationChanged();
 
 protected:
     RealtimeMediaSource(const CaptureDevice&, MediaDeviceHashSalts&& hashSalts = { }, std::optional<PageIdentifier> = std::nullopt);
@@ -340,8 +354,8 @@ protected:
     void videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata);
     void audioSamplesAvailable(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t);
 
-    void forEachObserver(const Function<void(RealtimeMediaSourceObserver&)>&);
-    void forEachVideoFrameObserver(const Function<void(VideoFrameObserver&)>&);
+    void forEachObserver(NOESCAPE const Function<void(RealtimeMediaSourceObserver&)>&);
+    void forEachVideoFrameObserver(NOESCAPE const Function<void(VideoFrameObserver&)>&);
 
     void end(RealtimeMediaSourceObserver* = nullptr);
 
@@ -366,7 +380,7 @@ private:
     virtual double observedFrameRate() const { return 0.0; }
 
     void updateHasStartedProducingData();
-    void initializePersistentId();
+    void initializeIds();
 
 #if !RELEASE_LOG_DISABLED
     RefPtr<const Logger> m_logger;
@@ -379,17 +393,23 @@ private:
     MediaDeviceHashSalts m_idHashSalts;
     String m_hashedID;
     String m_ephemeralHashedID;
+    String m_hashedGroupId;
     Type m_type;
     String m_name;
     WeakHashSet<RealtimeMediaSourceObserver> m_observers;
 
     mutable Lock m_audioSampleObserversLock;
-    HashSet<CheckedPtr<AudioSampleObserver>> m_audioSampleObservers WTF_GUARDED_BY_LOCK(m_audioSampleObserversLock);
+    UncheckedKeyHashSet<CheckedPtr<AudioSampleObserver>> m_audioSampleObservers WTF_GUARDED_BY_LOCK(m_audioSampleObserversLock);
 
     mutable Lock m_videoFrameObserversLock;
     HashMap<VideoFrameObserver*, std::unique_ptr<VideoFrameAdaptor>> m_videoFrameObservers WTF_GUARDED_BY_LOCK(m_videoFrameObserversLock);
 
     CaptureDevice m_device;
+
+#if PLATFORM(COCOA)
+    std::unique_ptr<ImageRotationSessionVT> m_rotationSession;
+    std::atomic<bool> m_canUseIOSurface { false };
+#endif
 
     // Set on the main thread from constraints.
     IntSize m_size;
@@ -413,6 +433,7 @@ private:
     bool m_captureDidFailed { false };
     bool m_isEnded { false };
     bool m_hasStartedProducingData { false };
+    std::atomic<bool> m_shouldApplyRotation { false };
 
     unsigned m_videoFrameObserversWithAdaptors { 0 };
 };
@@ -469,6 +490,23 @@ inline bool RealtimeMediaSource::isProducingData() const
 
 inline void RealtimeMediaSource::setIsInBackground(bool)
 {
+}
+
+inline const String& RealtimeMediaSource::hashedGroupId() const
+{
+    return m_hashedGroupId;
+}
+
+#if PLATFORM(COCOA)
+inline void RealtimeMediaSource::setCanUseIOSurface()
+{
+    m_canUseIOSurface = true;
+}
+#endif
+
+inline const AudioStreamDescription* RealtimeMediaSource::audioStreamDescription() const
+{
+    return nullptr;
 }
 
 } // namespace WebCore

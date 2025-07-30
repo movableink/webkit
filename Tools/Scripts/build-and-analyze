@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2023-2024 Apple Inc. All rights reserved.
+# Copyright (C) 2023-2025 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -23,6 +23,7 @@
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 
@@ -69,6 +70,14 @@ def make_analyzer_flags(output_dir, args):
             'optin.cplusplus.VirtualCall',
         ])
 
+    if args.disable_checkers:
+        delimiters = re.compile(r'[\s,]+')
+        checkers = [ value for value in delimiters.split(args.disable_checkers) if value ]
+        analyzer_flags.extend([
+            '-analyzer-disable-checker',
+            ','.join(checkers),
+        ])
+
     if args.enable_webkit_checkers:
         additional_checkers.extend([
             'webkit.NoUncountedMemberChecker',
@@ -79,13 +88,25 @@ def make_analyzer_flags(output_dir, args):
             'alpha.webkit.UncountedLocalVarsChecker'
         ])
 
+    if args.enable_checkers:
+        delimiters = re.compile(r'[\s,]+')
+        checkers = [ value for value in delimiters.split(args.enable_checkers) if value ]
+        additional_checkers.extend(checkers)
+
     if args.only_smart_pointers:
         additional_checkers.extend([
+            'alpha.webkit.ForwardDeclChecker',
+            'alpha.webkit.MemoryUnsafeCastChecker',
             'alpha.webkit.NoUncheckedPtrMemberChecker',
+            'alpha.webkit.NoUnretainedMemberChecker',
+            'alpha.webkit.RetainPtrCtorAdoptChecker',
             'alpha.webkit.UncheckedCallArgsChecker',
             'alpha.webkit.UncheckedLocalVarsChecker',
             'alpha.webkit.UncountedCallArgsChecker',
             'alpha.webkit.UncountedLocalVarsChecker',
+            'alpha.webkit.UnretainedCallArgsChecker',
+            'alpha.webkit.UnretainedLambdaCapturesChecker',
+            'alpha.webkit.UnretainedLocalVarsChecker',
             'webkit.NoUncountedMemberChecker',
             'webkit.RefCntblBaseVirtualDtor',
             'webkit.UncountedLambdaCapturesChecker',
@@ -155,6 +176,8 @@ def main(args):
         make_command.extend(['CC={}'.format(analyzer_path), 'CPLUSPLUS={}'.format(analyzer_path)])
     if args.preprocessor_additions:
         make_command.extend(['GCC_PREPROCESSOR_ADDITIONS={}'.format(args.preprocessor_additions)])
+    if args.scheme:
+        make_command.extend(['SCHEME={}'.format(args.scheme)])
 
     commands = [
         [set_webkit_config_path, '--{}'.format(args.configuration)],
@@ -163,6 +186,8 @@ def main(args):
     ]
 
     if args.dry_run:
+        env_vars_to_show = ['ANALYZER_EXEC', 'ANALYZER_FLAGS', 'ANALYZER_OUTPUT']
+        print('\n'.join(f'{key}="{value}"' for key, value in os.environ.items() if key in env_vars_to_show))
         for command in commands:
             print('\n' + ' '.join(command))
         return 0
@@ -184,12 +209,16 @@ def parse_args():
     parser.add_argument('--analyzer-path', dest='analyzer_path',
                         type=str, default=None,
                         help='Override path to clang static analyzer in scan-build and set CC/CPLUSPLUS for Xcode.')
+    parser.add_argument('--disable-checkers', dest='disable_checkers',
+                        help='Disable specific checkers listed.')
     parser.add_argument('--disable-default-checkers', dest='disable_default_checkers',
                         action='store_true', default=False,
                         help='Disable all checkers by default to run only specific checkers.')
     parser.add_argument('--enable-webkit-checkers', dest='enable_webkit_checkers',
                         action='store_true', default=False,
                         help='Enable all WebKit-specific checkers.')
+    parser.add_argument('--enable-checkers', dest='enable_checkers',
+                        help='Enable specific checkers listed.')
     parser.add_argument('--only-smart-pointers', dest='only_smart_pointers',
                         action='store_true', default=False,
                         help='Enable only WebKit-specific checkers for Smart Pointers. '
@@ -200,6 +229,8 @@ def parse_args():
                         help='SDKROOT to use (default: macosx).')
     parser.add_argument('--scan-build-path', dest='scan_build_path_arg', default=None,
                         help='Path to scan-build for OpenSource.')
+    parser.add_argument('--scheme', dest='scheme', default=None,
+                        help='Xcode scheme to use when performing Build and Analyze.')
     parser.add_argument('--preprocessor-additions', default=None,
                         help='Additional preprocessor macros.')
     parser.add_argument('--dry-run', default=False,

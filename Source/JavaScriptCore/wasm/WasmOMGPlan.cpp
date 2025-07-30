@@ -78,9 +78,9 @@ FunctionAllowlist& OMGPlan::ensureGlobalOMGAllowlist()
 void OMGPlan::dumpDisassembly(CompilationContext& context, LinkBuffer& linkBuffer, FunctionCodeIndex functionIndex, const TypeDefinition& signature, FunctionSpaceIndex functionIndexSpace)
 {
     dataLogLnIf(context.procedure->shouldDumpIR() || shouldDumpDisassemblyFor(CompilationMode::OMGMode), "Generated OMG code for WebAssembly OMG function[", functionIndex, "] ", signature.toString().ascii().data(), " name ", makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data());
-    if (UNLIKELY(shouldDumpDisassemblyFor(CompilationMode::OMGMode))) {
+    if (shouldDumpDisassemblyFor(CompilationMode::OMGMode)) [[unlikely]] {
         ScopedPrintStream out;
-        HashSet<B3::Value*> printedValues;
+        UncheckedKeyHashSet<B3::Value*> printedValues;
         auto* disassembler = context.procedure->code().disassembler();
 
         const char* b3Prefix = "b3    ";
@@ -120,7 +120,7 @@ void OMGPlan::dumpDisassembly(CompilationContext& context, LinkBuffer& linkBuffe
     }
 }
 
-void OMGPlan::work(CompilationEffort)
+void OMGPlan::work()
 {
     ASSERT(m_calleeGroup->runnable());
     ASSERT(m_calleeGroup.ptr() == m_module->calleeGroupFor(mode()));
@@ -138,7 +138,7 @@ void OMGPlan::work(CompilationEffort)
     auto parseAndCompileResult = parseAndCompileOMG(context, callee.get(), function, signature, unlinkedCalls, m_calleeGroup.get(), m_moduleInformation.get(), m_mode, CompilationMode::OMGMode, m_functionIndex, m_hasExceptionHandlers, UINT32_MAX);
     endCompilerSignpost(callee.get());
 
-    if (UNLIKELY(!parseAndCompileResult)) {
+    if (!parseAndCompileResult) [[unlikely]] {
         Locker locker { m_lock };
         fail(makeString(parseAndCompileResult.error(), "when trying to tier up "_s, m_functionIndex.rawIndex()), Plan::Error::Parse);
         return;
@@ -146,7 +146,7 @@ void OMGPlan::work(CompilationEffort)
 
     Entrypoint omgEntrypoint;
     LinkBuffer linkBuffer(*context.wasmEntrypointJIT, callee.ptr(), LinkBuffer::Profile::WasmOMG, JITCompilationCanFail);
-    if (UNLIKELY(linkBuffer.didFailToAllocate())) {
+    if (linkBuffer.didFailToAllocate()) [[unlikely]] {
         Locker locker { m_lock };
         Base::fail(makeString("Out of executable memory while tiering up function at index "_s, m_functionIndex.rawIndex()), Plan::Error::OutOfMemory);
         return;
@@ -156,8 +156,7 @@ void OMGPlan::work(CompilationEffort)
     Vector<CodeLocationLabel<ExceptionHandlerPtrTag>> exceptionHandlerLocations;
     computeExceptionHandlerLocations(exceptionHandlerLocations, internalFunction, context, linkBuffer);
 
-    computePCToCodeOriginMap(context, linkBuffer);
-
+    auto samplingProfilerMap = callee->materializePCToOriginMap(context.procedure->releasePCToOriginMap(), linkBuffer);
     {
         ScopedPrintStream out;
         dumpDisassembly(context, linkBuffer, m_functionIndex, signature, functionIndexSpace);
@@ -174,8 +173,8 @@ void OMGPlan::work(CompilationEffort)
         callee->setEntrypoint(WTFMove(omgEntrypoint), WTFMove(unlinkedCalls), WTFMove(internalFunction->stackmaps), WTFMove(internalFunction->exceptionHandlers), WTFMove(exceptionHandlerLocations));
         entrypoint = callee->entrypoint();
 
-        if (context.pcToCodeOriginMap)
-            NativeCalleeRegistry::singleton().addPCToCodeOriginMap(callee.ptr(), WTFMove(context.pcToCodeOriginMap));
+        if (samplingProfilerMap)
+            NativeCalleeRegistry::singleton().addPCToCodeOriginMap(callee.ptr(), WTFMove(samplingProfilerMap));
 
         // We want to make sure we publish our callee at the same time as we link our callsites. This enables us to ensure we
         // always call the fastest code. Any function linked after us will see our new code and the new callsites, which they
@@ -189,18 +188,18 @@ void OMGPlan::work(CompilationEffort)
 
         for (auto& call : callee->wasmToWasmCallsites()) {
             CodePtr<WasmEntryPtrTag> entrypoint;
-            Wasm::Callee* calleeCallee = nullptr;
+            RefPtr<Wasm::Callee> calleeCallee;
             if (call.functionIndexSpace < m_module->moduleInformation().importFunctionCount())
                 entrypoint = m_calleeGroup->m_wasmToWasmExitStubs[call.functionIndexSpace].code();
             else {
-                calleeCallee = &m_calleeGroup->wasmEntrypointCalleeFromFunctionIndexSpace(locker, call.functionIndexSpace);
-                entrypoint = m_calleeGroup->wasmEntrypointCalleeFromFunctionIndexSpace(locker, call.functionIndexSpace).entrypoint().retagged<WasmEntryPtrTag>();
+                calleeCallee = m_calleeGroup->wasmEntrypointCalleeFromFunctionIndexSpace(locker, call.functionIndexSpace);
+                entrypoint = calleeCallee->entrypoint().retagged<WasmEntryPtrTag>();
             }
 
             // FIXME: This does an icache flush for each of these... which doesn't make any sense since this code isn't runnable here
             // and any stale cache will be evicted when updateCallsitesToCallUs is called.
             MacroAssembler::repatchNearCall(call.callLocation, CodeLocationLabel<WasmEntryPtrTag>(entrypoint));
-            MacroAssembler::repatchPointer(call.calleeLocation, CalleeBits::boxNativeCalleeIfExists(calleeCallee));
+            MacroAssembler::repatchPointer(call.calleeLocation, CalleeBits::boxNativeCalleeIfExists(calleeCallee.get()));
         }
 
         m_calleeGroup->updateCallsitesToCallUs(locker, CodeLocationLabel<WasmEntryPtrTag>(entrypoint), m_functionIndex);
@@ -208,7 +207,7 @@ void OMGPlan::work(CompilationEffort)
 
         {
             WTF::storeStoreFence();
-            if (BBQCallee* bbqCallee = m_calleeGroup->bbqCallee(locker, m_functionIndex)) {
+            if (RefPtr bbqCallee = m_calleeGroup->bbqCallee(locker, m_functionIndex)) {
                 Locker locker { bbqCallee->tierUpCounter().getLock() };
                 bbqCallee->tierUpCounter().setCompilationStatusForOMG(mode(), TierUpCount::CompilationStatus::Compiled);
             }
@@ -224,10 +223,6 @@ void OMGPlan::work(CompilationEffort)
             }
         }
     }
-
-    auto* jsEntrypointCallee = m_calleeGroup->m_jsEntrypointCallees.get(m_functionIndex);
-    if (jsEntrypointCallee)
-        jsEntrypointCallee->setReplacementTarget(entrypoint);
 
     if (Options::freeRetiredWasmCode()) {
         WTF::storeStoreFence();

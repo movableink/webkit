@@ -74,17 +74,18 @@ void RemoteLayerBackingStoreCollection::prepareBackingStoresForDisplay(RemoteLay
     Vector<WeakPtr<RemoteLayerWithRemoteRenderingBackingStore>> backingStoreList;
     backingStoreList.reserveInitialCapacity(m_backingStoresNeedingDisplay.computeSize());
 
-    Ref remoteRenderingBackend = layerTreeContext().ensureRemoteRenderingBackendProxy();
+    Ref remoteRenderingBackend = protectedLayerTreeContext()->ensureRemoteRenderingBackendProxy();
 
     for (CheckedRef backingStore : m_backingStoresNeedingDisplay) {
-        backingStore->layer().properties().notePropertiesChanged(LayerChange::BackingStoreChanged);
-        transaction.layerPropertiesChanged(backingStore->layer());
+        Ref layer = backingStore->layer();
+        layer->properties().notePropertiesChanged(LayerChange::BackingStoreChanged);
+        transaction.layerPropertiesChanged(layer);
 
         if (CheckedPtr remoteBackingStore = dynamicDowncast<RemoteLayerWithRemoteRenderingBackingStore>(backingStore.get())) {
             if (remoteBackingStore->performDelegatedLayerDisplay())
                 continue;
 
-            auto bufferSet = remoteBackingStore->protectedBufferSet();
+            RefPtr bufferSet = remoteBackingStore->bufferSet();
             if (!bufferSet)
                 continue;
 
@@ -238,7 +239,7 @@ bool RemoteLayerBackingStoreCollection::backingStoreWillBeDisplayedWithRendering
 void RemoteLayerBackingStoreCollection::purgeFrontBufferForTesting(RemoteLayerBackingStore& backingStore)
 {
     if (CheckedPtr remoteBackingStore = dynamicDowncast<RemoteLayerWithRemoteRenderingBackingStore>(&backingStore)) {
-        if (RefPtr bufferSet = remoteBackingStore->protectedBufferSet()) {
+        if (RefPtr bufferSet = remoteBackingStore->bufferSet()) {
             Vector<std::pair<Ref<RemoteImageBufferSetProxy>, OptionSet<BufferInSetType>>> identifiers;
             OptionSet<BufferInSetType> bufferTypes { BufferInSetType::Front };
             identifiers.append(std::make_pair(Ref { *bufferSet }, bufferTypes));
@@ -253,7 +254,7 @@ void RemoteLayerBackingStoreCollection::purgeFrontBufferForTesting(RemoteLayerBa
 void RemoteLayerBackingStoreCollection::purgeBackBufferForTesting(RemoteLayerBackingStore& backingStore)
 {
     if (CheckedPtr remoteBackingStore = dynamicDowncast<RemoteLayerWithRemoteRenderingBackingStore>(&backingStore)) {
-        if (RefPtr bufferSet = remoteBackingStore->protectedBufferSet()) {
+        if (RefPtr bufferSet = remoteBackingStore->bufferSet()) {
             Vector<std::pair<Ref<RemoteImageBufferSetProxy>, OptionSet<BufferInSetType>>> identifiers;
             OptionSet<BufferInSetType> bufferTypes { BufferInSetType::Back, BufferInSetType::SecondaryBack };
             identifiers.append(std::make_pair(Ref { *bufferSet }, bufferTypes));
@@ -269,7 +270,7 @@ void RemoteLayerBackingStoreCollection::purgeBackBufferForTesting(RemoteLayerBac
 void RemoteLayerBackingStoreCollection::markFrontBufferVolatileForTesting(RemoteLayerBackingStore& backingStore)
 {
     if (CheckedPtr remoteBackingStore = dynamicDowncast<RemoteLayerWithRemoteRenderingBackingStore>(&backingStore)) {
-        if (RefPtr bufferSet = remoteBackingStore->protectedBufferSet()) {
+        if (RefPtr bufferSet = remoteBackingStore->bufferSet()) {
             Vector<std::pair<Ref<RemoteImageBufferSetProxy>, OptionSet<BufferInSetType>>> identifiers;
             OptionSet<BufferInSetType> bufferTypes { BufferInSetType::Front };
             identifiers.append(std::make_pair(Ref { *bufferSet }, bufferTypes));
@@ -438,7 +439,7 @@ void RemoteLayerBackingStoreCollection::gpuProcessConnectionWasDestroyed()
 bool RemoteLayerBackingStoreCollection::collectRemoteRenderingBackingStoreBufferIdentifiersToMarkVolatile(RemoteLayerWithRemoteRenderingBackingStore& backingStore, OptionSet<VolatilityMarkingBehavior> markingBehavior, MonotonicTime now, Vector<std::pair<Ref<RemoteImageBufferSetProxy>, OptionSet<BufferInSetType>>>& identifiers)
 {
     ASSERT(!m_inLayerFlush);
-    auto bufferSet = backingStore.protectedBufferSet();
+    RefPtr bufferSet = backingStore.bufferSet();
     if (!bufferSet)
         return true;
 
@@ -483,7 +484,7 @@ bool RemoteLayerBackingStoreCollection::collectAllRemoteRenderingBufferIdentifie
 
 void RemoteLayerBackingStoreCollection::sendMarkBuffersVolatile(Vector<std::pair<Ref<RemoteImageBufferSetProxy>, OptionSet<BufferInSetType>>>&& identifiers, CompletionHandler<void(bool)>&& completionHandler, bool forcePurge)
 {
-    Ref remoteRenderingBackend = m_layerTreeContext->ensureRemoteRenderingBackendProxy();
+    Ref remoteRenderingBackend = protectedLayerTreeContext()->ensureRemoteRenderingBackendProxy();
 
     remoteRenderingBackend->markSurfacesVolatile(WTFMove(identifiers), [completionHandler = WTFMove(completionHandler)](bool markedAllVolatile) mutable {
         LOG_WITH_STREAM(RemoteLayerBuffers, stream << "RemoteLayerBackingStoreCollection::sendMarkBuffersVolatile: marked all volatile " << markedAllVolatile);
@@ -494,6 +495,11 @@ void RemoteLayerBackingStoreCollection::sendMarkBuffersVolatile(Vector<std::pair
 RemoteLayerTreeContext& RemoteLayerBackingStoreCollection::layerTreeContext() const
 {
     return m_layerTreeContext.get();
+}
+
+Ref<RemoteLayerTreeContext> RemoteLayerBackingStoreCollection::protectedLayerTreeContext() const
+{
+    return layerTreeContext();
 }
 
 } // namespace WebKit

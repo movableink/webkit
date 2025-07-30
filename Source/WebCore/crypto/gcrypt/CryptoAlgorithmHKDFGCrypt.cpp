@@ -30,6 +30,7 @@
 
 #include "CryptoAlgorithmHkdfParams.h"
 #include "CryptoKeyRaw.h"
+#include "ExceptionOr.h"
 #include "GCryptUtilities.h"
 
 namespace WebCore {

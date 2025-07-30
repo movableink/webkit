@@ -360,6 +360,48 @@ function shouldBecomeEqual(_a, _b, completionHandler)
   setTimeout(_waitForCondition, 0, condition, completionHandler);
 }
 
+function shouldBecomeCloseTo(_to_eval, _target, _tolerance, completionHandler)
+{
+  if (typeof _to_eval != "string") {
+    testFailed("shouldBecomeCloseTo() requires string argument _to_eval. was type " + typeof _to_eval);
+    completionHandler();
+    return;
+  }
+  if (typeof _target != "number") {
+    testFailed("shouldBecomeCloseTo() requires numeric argument _target. was type " + typeof _target);
+    completionHandler();
+    return;
+  }
+  if (typeof _tolerance != "number") {
+    testFailed("shouldBecomeCloseTo() requires numeric argument _tolerance. was type " + typeof _tolerance);
+    completionHandler();
+    return;
+  }
+
+  function condition() {
+    var exception;
+    var _result;
+    try {
+      _result = eval(_to_eval);
+    } catch (e) {
+      exception = e;
+    }
+    if (typeof(_result) != typeof(_target)) {
+      testFailed(_to_eval + " should be of type " + typeof _target
+                 + " but was of type " + typeof _result);
+    } else if (Math.abs(_result - _target) <= _tolerance) {
+      testPassed(_to_eval + " became within " + _tolerance + " of " + _target);
+      return true;
+    }
+    return false;
+  }
+
+  if (!completionHandler)
+    return new Promise(resolve => setTimeout(_waitForCondition, 0, condition, resolve));
+
+  setTimeout(_waitForCondition, 0, condition, completionHandler);
+}
+
 function shouldBecomeEqualToString(value, reference, completionHandler)
 {
   if (typeof value !== "string" || typeof reference !== "string")

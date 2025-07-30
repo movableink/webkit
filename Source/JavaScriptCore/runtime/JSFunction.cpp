@@ -162,7 +162,7 @@ JSObject* JSFunction::prototypeForConstruction(VM& vm, JSGlobalObject* globalObj
     auto scope = DECLARE_CATCH_SCOPE(vm);
     JSValue prototype = get(globalObject, vm.propertyNames->prototype);
     scope.releaseAssertNoException();
-    if (LIKELY(prototype.isObject()))
+    if (prototype.isObject()) [[likely]]
         return asObject(prototype);
     if (isHostOrBuiltinFunction())
         return this->globalObject()->objectPrototype();
@@ -226,7 +226,7 @@ String JSFunction::name(VM& vm)
 
 String JSFunction::nameWithoutGC(VM& vm)
 {
-    DisallowGC disallowGC;
+    AssertNoGC assertNoGC;
     if (isHostFunction()) {
         if (this->inherits<JSBoundFunction>())
             return jsCast<JSBoundFunction*>(this)->nameStringWithoutGC(vm);
@@ -404,7 +404,7 @@ bool JSFunction::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName pr
             if (!isValidOffset(thisObject->getDirectOffset(vm, propertyName))) {
                 // For class constructors, prototype object is initialized from bytecode via defineOwnProperty().
                 ASSERT(!thisObject->jsExecutable()->isClassConstructorFunction());
-                if (UNLIKELY(slot.thisValue() != thisObject))
+                if (slot.thisValue() != thisObject) [[unlikely]]
                     RELEASE_AND_RETURN(scope, JSObject::definePropertyOnReceiver(globalObject, propertyName, value, slot));
                 thisObject->putDirect(vm, propertyName, value, prototypeAttributesForNonClass);
                 return true;

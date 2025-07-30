@@ -41,9 +41,9 @@ protected:
     Texture(const SharedContext*,
             SkISize dimensions,
             const TextureInfo& info,
+            bool isTransient,
             sk_sp<MutableTextureState> mutableState,
-            Ownership,
-            skgpu::Budgeted);
+            Ownership);
 
     MutableTextureState* mutableState() const;
 

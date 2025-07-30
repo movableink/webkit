@@ -31,9 +31,11 @@
 namespace WebCore {
 namespace Style {
 
+using namespace CSS::Literals;
+
 // MARK: - Conversion
 
-auto ToStyle<CSS::Rect>::operator()(const CSS::Rect& value, const BuilderState& state, const CSSCalcSymbolTable& symbolTable) -> Inset
+auto ToStyle<CSS::Rect>::operator()(const CSS::Rect& value, const BuilderState& state) -> Inset
 {
     // "An auto value makes the edge of the box coincide with the corresponding edge of the
     //  reference box: it’s equivalent to 0% as the first (top) or fourth (left) value, and
@@ -43,24 +45,24 @@ auto ToStyle<CSS::Rect>::operator()(const CSS::Rect& value, const BuilderState& 
     // Conversion applies reflection to the trailing (right/bottom) edges to convert from rect()
     // form to inset() form. This means that all the `auto` values are converted to 0%.
 
-    auto convertLeadingEdge = [&](const std::variant<CSS::LengthPercentage<>, CSS::Keyword::Auto>& edge) -> LengthPercentage<> {
+    auto convertLeadingEdge = [&](const Variant<CSS::LengthPercentage<>, CSS::Keyword::Auto>& edge) -> LengthPercentage<> {
         return WTF::switchOn(edge,
             [&](const CSS::LengthPercentage<>& value) -> LengthPercentage<> {
-                return toStyle(value, state, symbolTable);
+                return toStyle(value, state);
             },
             [&](const CSS::Keyword::Auto&) -> LengthPercentage<> {
-                return { Percentage<> { 0 } };
+                return 0_css_percentage;
             }
         );
     };
 
-    auto convertTrailingEdge = [&](const std::variant<CSS::LengthPercentage<>, CSS::Keyword::Auto>& edge) -> LengthPercentage<> {
+    auto convertTrailingEdge = [&](const Variant<CSS::LengthPercentage<>, CSS::Keyword::Auto>& edge) -> LengthPercentage<> {
         return WTF::switchOn(edge,
             [&](const CSS::LengthPercentage<>& value) -> LengthPercentage<> {
-                return reflect(toStyle(value, state, symbolTable));
+                return reflect(toStyle(value, state));
             },
             [&](const CSS::Keyword::Auto&) -> LengthPercentage<> {
-                return { Percentage<> { 0 } };
+                return 0_css_percentage;
             }
         );
     };
@@ -72,13 +74,13 @@ auto ToStyle<CSS::Rect>::operator()(const CSS::Rect& value, const BuilderState& 
             convertTrailingEdge(value.edges.bottom()),
             convertLeadingEdge(value.edges.left()),
         },
-        .radii = toStyle(value.radii, state, symbolTable)
+        .radii = toStyle(value.radii, state)
     };
 }
 
-auto ToStyle<CSS::RectFunction>::operator()(const CSS::RectFunction& value, const BuilderState& state, const CSSCalcSymbolTable& symbolTable) -> InsetFunction
+auto ToStyle<CSS::RectFunction>::operator()(const CSS::RectFunction& value, const BuilderState& state) -> InsetFunction
 {
-    return { toStyle(value.parameters, state, symbolTable) };
+    return { toStyle(value.parameters, state) };
 }
 
 } // namespace Style

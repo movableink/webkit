@@ -109,9 +109,10 @@ void* prepareOSREntry(
         }
         if (reconstructedValue && valueOnStack == reconstructedValue.value())
             continue;
-        dataLog("Mismatch between reconstructed values and the value on the stack for argument arg", argument, " for ", *entryCodeBlock, " at ", bytecodeIndex, ":\n");
-        dataLog("    Value on stack: ", valueOnStack, "\n");
-        dataLog("    Reconstructed value: ", reconstructedValue, "\n");
+        dataLogLn(
+            "Mismatch between reconstructed values and the value on the stack for argument arg", argument, " for ", *entryCodeBlock, " at ", bytecodeIndex, ":\n",
+            "    Value on stack: ", valueOnStack, "\n",
+            "    Reconstructed value: ", reconstructedValue);
         RELEASE_ASSERT_NOT_REACHED();
     }
     
@@ -129,7 +130,7 @@ void* prepareOSREntry(
     }
     
     int stackFrameSize = entryCode->common.requiredRegisterCountForExecutionAndExit();
-    if (UNLIKELY(!vm.ensureStackCapacityFor(&callFrame->registers()[virtualRegisterForLocal(stackFrameSize - 1).offset()]))) {
+    if (!vm.ensureStackCapacityFor(&callFrame->registers()[virtualRegisterForLocal(stackFrameSize - 1).offset()])) [[unlikely]] {
         dataLogLnIf(Options::verboseOSR(), "    OSR failed because stack growth failed.");
         return nullptr;
     }

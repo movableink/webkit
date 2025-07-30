@@ -31,8 +31,6 @@
 #include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueArray.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 class MutableCSSSelector;
@@ -47,6 +45,10 @@ public:
     explicit CSSSelectorList(MutableCSSSelectorList&&);
     explicit CSSSelectorList(UniqueArray<CSSSelector>&& array)
         : m_selectorArray(WTFMove(array)) { }
+
+    static CSSSelectorList makeCopyingSimpleSelector(const CSSSelector&);
+    static CSSSelectorList makeCopyingComplexSelector(const CSSSelector&);
+    static CSSSelectorList makeJoining(const CSSSelectorList&, const CSSSelectorList&);
 
     bool isEmpty() const { return !m_selectorArray; }
     const CSSSelector* first() const { return m_selectorArray.get(); }
@@ -82,8 +84,8 @@ public:
     private:
         pointer m_ptr = nullptr;
     };
-    const_iterator begin() const { return { first() }; };
-    const_iterator end() const { return { }; }
+    const_iterator begin() const LIFETIME_BOUND { return { first() }; };
+    const_iterator end() const LIFETIME_BOUND { return { }; }
 
     bool hasExplicitNestingParent() const;
     bool hasOnlyNestingSelector() const;
@@ -102,6 +104,7 @@ private:
     UniqueArray<CSSSelector> m_selectorArray;
 };
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 inline const CSSSelector* CSSSelectorList::next(const CSSSelector* current)
 {
     // Skip subparts of compound selectors.
@@ -109,7 +112,6 @@ inline const CSSSelector* CSSSelectorList::next(const CSSSelector* current)
         current++;
     return current->isLastInSelectorList() ? 0 : current + 1;
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

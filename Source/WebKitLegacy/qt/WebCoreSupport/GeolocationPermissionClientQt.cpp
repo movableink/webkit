@@ -35,6 +35,7 @@
 #include "qwebkitglobal.h"
 
 #include <WebCore/Frame.h>
+#include <WebCore/FrameInlines.h>
 #include <WebCore/Page.h>
 #include <WebCore/Geolocation.h>
 

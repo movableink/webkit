@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,6 +46,7 @@
 #include <pal/SessionID.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
+#include <wtf/Function.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/MemoryPressureHandler.h>
@@ -106,6 +107,7 @@ class RegistrableDomain;
 class Site;
 enum class EventMakesGamepadsVisible : bool;
 enum class GamepadHapticEffectType : uint8_t;
+enum class ProcessSwapDisposition : uint8_t;
 struct GamepadEffectParameters;
 struct MockMediaDevice;
 #if PLATFORM(COCOA)
@@ -121,6 +123,7 @@ class SuspendedPageProxy;
 class UIGamepad;
 class WebAutomationSession;
 class WebBackForwardCache;
+class WebCompiledContentRuleList;
 class WebContextSupplement;
 class WebPageGroup;
 class WebPageProxy;
@@ -171,7 +174,6 @@ public:
     void deref() const final { API::ObjectImpl<API::Object::Type::ProcessPool>::deref(); }
 
     API::ProcessPoolConfiguration& configuration() { return m_configuration.get(); }
-    Ref<API::ProcessPoolConfiguration> protectedConfiguration() { return m_configuration; }
 
     static Vector<Ref<WebProcessPool>> allProcessPools();
 
@@ -228,7 +230,7 @@ public:
     // null checks in WebPageProxy.
     WebProcessProxy* dummyProcessProxy(PAL::SessionID sessionID) const { return m_dummyProcessProxies.get(sessionID).get(); }
 
-    void forEachProcessForSession(PAL::SessionID, const Function<void(WebProcessProxy&)>&);
+    void forEachProcessForSession(PAL::SessionID, NOESCAPE const Function<void(WebProcessProxy&)>&);
     template<typename T> void sendToAllProcesses(const T& message);
     template<typename T> void sendToAllProcessesForSession(const T& message, PAL::SessionID);
 
@@ -250,7 +252,7 @@ public:
 
     const String& injectedBundlePath() const { return m_configuration->injectedBundlePath(); }
 
-    Ref<DownloadProxy> download(WebsiteDataStore&, WebPageProxy* initiatingPage, const WebCore::ResourceRequest&, const String& suggestedFilename = { });
+    Ref<DownloadProxy> download(WebsiteDataStore&, WebPageProxy* initiatingPage, const WebCore::ResourceRequest&, const std::optional<FrameInfoData>&, const String& suggestedFilename = { });
     Ref<DownloadProxy> resumeDownload(WebsiteDataStore&, WebPageProxy* initiatingPage, const API::Data& resumeData, const String& path, CallDownloadDidStart);
 
     void setInjectedBundleInitializationUserData(RefPtr<API::Object>&& userData) { m_injectedBundleInitializationUserData = WTFMove(userData); }
@@ -318,7 +320,7 @@ public:
     void setEnhancedAccessibility(bool);
     
     // Downloads.
-    Ref<DownloadProxy> createDownloadProxy(WebsiteDataStore&, const WebCore::ResourceRequest&, WebPageProxy* originatingPage, const FrameInfoData&);
+    Ref<DownloadProxy> createDownloadProxy(WebsiteDataStore&, const WebCore::ResourceRequest&, WebPageProxy* originatingPage, const std::optional<FrameInfoData>&);
 
     API::LegacyContextHistoryClient& historyClient() { return *m_historyClient; }
     WebContextClient& client() { return m_client; }
@@ -334,6 +336,7 @@ public:
     void sendNetworkProcessPrepareToSuspendForTesting(CompletionHandler<void()>&&);
     void sendNetworkProcessWillSuspendImminentlyForTesting();
     void sendNetworkProcessDidResume();
+    void terminateServiceWorkersForSession(PAL::SessionID);
     void terminateServiceWorkers();
 
     void setShouldMakeNextWebProcessLaunchFailForTesting(bool value) { m_shouldMakeNextWebProcessLaunchFailForTesting = value; }
@@ -341,7 +344,7 @@ public:
 
     void reportWebContentCPUTime(Seconds cpuTime, uint64_t activityState);
 
-    Ref<WebProcessProxy> processForSite(WebsiteDataStore&, const std::optional<WebCore::Site>&, WebProcessProxy::LockdownMode, const API::PageConfiguration&); // Will return an existing one if limit is met or due to caching.
+    Ref<WebProcessProxy> processForSite(WebsiteDataStore&, const std::optional<WebCore::Site>&, WebProcessProxy::LockdownMode, const API::PageConfiguration&, WebCore::ProcessSwapDisposition); // Will return an existing one if limit is met or due to caching.
 
     void prewarmProcess();
 
@@ -493,7 +496,7 @@ public:
     bool hasForegroundWebProcesses() const { return m_foregroundWebProcessCounter.value(); }
     bool hasBackgroundWebProcesses() const { return m_backgroundWebProcessCounter.value(); }
 
-    void processForNavigation(WebPageProxy&, WebFrameProxy&, const API::Navigation&, const URL& sourceURL, ProcessSwapRequestedByClient, WebProcessProxy::LockdownMode, const FrameInfoData&, Ref<WebsiteDataStore>&&, CompletionHandler<void(Ref<WebProcessProxy>&&, SuspendedPageProxy*, ASCIILiteral)>&&);
+    void processForNavigation(WebPageProxy&, WebFrameProxy&, const API::Navigation&, const URL& sourceURL, ProcessSwapRequestedByClient, WebProcessProxy::LockdownMode, LoadedWebArchive, const FrameInfoData&, Ref<WebsiteDataStore>&&, CompletionHandler<void(Ref<WebProcessProxy>&&, SuspendedPageProxy*, ASCIILiteral)>&&);
 
     void didReachGoodTimeToPrewarm();
     bool hasPrewarmedProcess() const { return m_prewarmedProcess.get(); }
@@ -612,6 +615,23 @@ public:
     void updateWebProcessSuspensionDelayWithPacing(WeakHashSet<WebProcessProxy>&&);
 #endif
 
+#if ENABLE(CONTENT_EXTENSIONS)
+    WebCompiledContentRuleList* cachedResourceMonitorRuleList(bool forTesting);
+    void setResourceMonitorURLsForTesting(const String& rulesText, CompletionHandler<void()>&&);
+#endif
+
+#if PLATFORM(COCOA)
+    void registerUserInstalledFonts(WebProcessProxy&);
+    void registerAssetFonts(WebProcessProxy&);
+#endif
+
+    void markHasReceivedAXRequestInUIProcess() { m_hasReceivedAXRequestInUIProcess = true; }
+    bool hasReceivedAXRequestInUIProcess() const { return m_hasReceivedAXRequestInUIProcess; }
+
+#if PLATFORM(MAC)
+    void registerAdditionalFonts(NSArray *fontNames);
+#endif
+
 private:
     enum class NeedsGlobalStaticInitialization : bool { No, Yes };
     void platformInitialize(NeedsGlobalStaticInitialization);
@@ -620,7 +640,7 @@ private:
     void platformInvalidateContext();
 
     std::tuple<Ref<WebProcessProxy>, RefPtr<SuspendedPageProxy>, ASCIILiteral> processForNavigationInternal(WebPageProxy&, const API::Navigation&, Ref<WebProcessProxy>&& sourceProcess, const URL& sourceURL, ProcessSwapRequestedByClient, WebProcessProxy::LockdownMode, const FrameInfoData&, Ref<WebsiteDataStore>&&);
-    void prepareProcessForNavigation(Ref<WebProcessProxy>&&, WebPageProxy&, SuspendedPageProxy*, ASCIILiteral reason, const WebCore::Site&, const API::Navigation&, WebProcessProxy::LockdownMode, Ref<WebsiteDataStore>&&, CompletionHandler<void(Ref<WebProcessProxy>&&, SuspendedPageProxy*, ASCIILiteral)>&&, unsigned previousAttemptsCount = 0);
+    void prepareProcessForNavigation(Ref<WebProcessProxy>&&, WebPageProxy&, SuspendedPageProxy*, ASCIILiteral reason, const WebCore::Site&, const API::Navigation&, WebProcessProxy::LockdownMode, LoadedWebArchive, Ref<WebsiteDataStore>&&, CompletionHandler<void(Ref<WebProcessProxy>&&, SuspendedPageProxy*, ASCIILiteral)>&&, unsigned previousAttemptsCount = 0);
 
     RefPtr<WebProcessProxy> tryTakePrewarmedProcess(WebsiteDataStore&, WebProcessProxy::LockdownMode, const API::PageConfiguration&);
 
@@ -636,6 +656,11 @@ private:
     void stopGamepadEffects(unsigned gamepadIndex, const String& gamepadID, CompletionHandler<void()>&&);
 
     void processStoppedUsingGamepads(WebProcessProxy&);
+#endif
+
+#if ENABLE(MODEL_PROCESS)
+    void startedPlayingModels(IPC::Connection&);
+    void stoppedPlayingModels(IPC::Connection&);
 #endif
 
     void updateProcessAssertions();
@@ -654,6 +679,10 @@ private:
 
     void registerNotificationObservers();
     void unregisterNotificationObservers();
+
+#if ENABLE(NOTIFY_BLOCKING)
+    void setNotifyState(const String&, int, uint64_t);
+#endif
 #endif
 
     void setApplicationIsActive(bool);
@@ -723,9 +752,18 @@ private:
 
 #if ENABLE(MODEL_PROCESS)
     ModelProcessProxy& ensureModelProcess();
+    void terminateAllWebContentProcessesWithModelPlayers();
 #endif
 
-    Ref<API::ProcessPoolConfiguration> m_configuration;
+#if ENABLE(CONTENT_EXTENSIONS)
+    void loadOrUpdateResourceMonitorRuleList();
+
+    void platformLoadResourceMonitorRuleList(CompletionHandler<void(RefPtr<WebCompiledContentRuleList>)>&&);
+    void platformCompileResourceMonitorRuleList(const String& rulesText, CompletionHandler<void(RefPtr<WebCompiledContentRuleList>)>&&);
+    String platformResourceMonitorRuleListSourceForTesting();
+#endif
+
+    const Ref<API::ProcessPoolConfiguration> m_configuration;
 
     IPC::MessageReceiverMap m_messageReceiverMap;
 
@@ -745,9 +783,10 @@ private:
 #endif
 #if ENABLE(MODEL_PROCESS)
     RefPtr<ModelProcessProxy> m_modelProcess;
+    WeakHashSet<WebProcessProxy> m_processesWithModelPlayers;
 #endif
 
-    Ref<WebPageGroup> m_defaultPageGroup;
+    const Ref<WebPageGroup> m_defaultPageGroup;
 
     RefPtr<API::Object> m_injectedBundleInitializationUserData;
     std::unique_ptr<API::InjectedBundleClient> m_injectedBundleClient;
@@ -759,7 +798,7 @@ private:
 
     RefPtr<WebAutomationSession> m_automationSession;
 
-    Ref<VisitedLinkStore> m_visitedLinkStore;
+    const Ref<VisitedLinkStore> m_visitedLinkStore;
     bool m_visitedLinksPopulated { false };
 
     HashSet<String> m_schemesToRegisterAsEmptyDocument;
@@ -808,6 +847,7 @@ private:
     RetainPtr<NSObject> m_activationObserver;
     RetainPtr<NSObject> m_accessibilityEnabledObserver;
     RetainPtr<NSObject> m_applicationLaunchObserver;
+    RetainPtr<NSObject> m_finishedMobileAssetFontDownloadObserver;
 
     RetainPtr<WKProcessPoolWeakObserver> m_weakObserver;
 #endif
@@ -925,6 +965,7 @@ private:
     Vector<int> m_openDirectoryNotifyTokens;
 #endif
 #if ENABLE(NOTIFY_BLOCKING)
+    HashMap<String, uint64_t> m_notifyState;
     Vector<int> m_notifyTokens;
     Vector<RetainPtr<NSObject>> m_notificationObservers;
 #endif
@@ -936,6 +977,7 @@ private:
 #if PLATFORM(IOS_FAMILY)
     bool m_processesShouldSuspend { false };
     HardwareKeyboardState m_hardwareKeyboardState;
+    String m_cachedWebContentTempDirectory;
 #endif
 
 #if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
@@ -947,13 +989,27 @@ private:
     bool m_webProcessStateUpdatesForPageClientEnabled { false };
 
 #if ENABLE(WEB_PROCESS_SUSPENSION_DELAY)
-    ApproximateTime m_lastCriticalMemoryPressureStatusTime;
+    ApproximateTime m_lastMemoryPressureStatusTime;
     RunLoop::Timer m_checkMemoryPressureStatusTimer;
+#endif
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    RefPtr<WebCompiledContentRuleList> m_resourceMonitorRuleListCache;
+    bool m_resourceMonitorRuleListLoading { false };
+    bool m_resourceMonitorRuleListFailed { false };
+    RunLoop::Timer m_resourceMonitorRuleListRefreshTimer;
+#endif
+
+#if PLATFORM(COCOA)
+    std::optional<Vector<URL>> m_assetFontURLs;
+    std::optional<Vector<URL>> m_userInstalledFontURLs;
 #endif
 
 #if ENABLE(IPC_TESTING_API)
     const Ref<IPCTester> m_ipcTester;
 #endif
+
+    bool m_hasReceivedAXRequestInUIProcess { false };
 };
 
 template<typename T>
@@ -994,3 +1050,7 @@ inline Ref<WebProcessPool> WebProcessProxy::protectedProcessPool() const
 }
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebProcessPool)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::ProcessPool; }
+SPECIALIZE_TYPE_TRAITS_END()

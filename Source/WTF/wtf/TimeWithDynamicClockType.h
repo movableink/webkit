@@ -27,6 +27,8 @@
 
 #include <wtf/ApproximateTime.h>
 #include <wtf/ClockType.h>
+#include <wtf/ContinuousApproximateTime.h>
+#include <wtf/ContinuousTime.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/WallTime.h>
 
@@ -57,6 +59,18 @@ public:
     {
     }
 
+    TimeWithDynamicClockType(ContinuousTime time)
+        : m_value(time.secondsSinceEpoch().value())
+        , m_type(ClockType::Continuous)
+    {
+    }
+
+    TimeWithDynamicClockType(ContinuousApproximateTime time)
+        : m_value(time.secondsSinceEpoch().value())
+        , m_type(ClockType::ContinuousApproximate)
+    {
+    }
+
     static TimeWithDynamicClockType fromRawSeconds(double value, ClockType type)
     {
         TimeWithDynamicClockType result;
@@ -81,7 +95,9 @@ public:
     WTF_EXPORT_PRIVATE WallTime wallTime() const;
     WTF_EXPORT_PRIVATE MonotonicTime monotonicTime() const;
     WTF_EXPORT_PRIVATE ApproximateTime approximateTime() const;
-    
+    WTF_EXPORT_PRIVATE ContinuousTime continuousTime() const;
+    WTF_EXPORT_PRIVATE ContinuousApproximateTime continuousApproximateTime() const;
+
     WTF_EXPORT_PRIVATE WallTime approximateWallTime() const;
     WTF_EXPORT_PRIVATE MonotonicTime approximateMonotonicTime() const;
     
@@ -123,10 +139,7 @@ public:
     friend bool operator==(const TimeWithDynamicClockType&, const TimeWithDynamicClockType&) = default;
     
     // To do relative comparisons, you must be using times with the same clock type.
-    WTF_EXPORT_PRIVATE bool operator<(const TimeWithDynamicClockType&) const;
-    WTF_EXPORT_PRIVATE bool operator>(const TimeWithDynamicClockType&) const;
-    WTF_EXPORT_PRIVATE bool operator<=(const TimeWithDynamicClockType&) const;
-    WTF_EXPORT_PRIVATE bool operator>=(const TimeWithDynamicClockType&) const;
+    WTF_EXPORT_PRIVATE friend std::partial_ordering operator<=>(const TimeWithDynamicClockType&, const TimeWithDynamicClockType&);
     
     WTF_EXPORT_PRIVATE void dump(PrintStream&) const;
     

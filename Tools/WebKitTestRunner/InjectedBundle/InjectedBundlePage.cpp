@@ -52,9 +52,6 @@
 #include <wtf/RunLoop.h>
 #include <wtf/URL.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/MakeString.h>
-#include <wtf/text/StringBuilder.h>
-#include <wtf/unicode/CharacterNames.h>
 
 #if USE(CF) && !PLATFORM(QT)
 #include "WebArchiveDumpSupport.h"
@@ -156,11 +153,6 @@ static WTF::String styleDecToStr(WKBundleCSSStyleDeclarationRef)
     return "<DOMCSSStyleDeclaration ADDRESS>"_s;
 }
 
-static WTF::String string(WKSecurityOriginRef origin)
-{
-    return makeString('{', adoptWK(WKSecurityOriginCopyProtocol(origin)).get(), ", "_s, adoptWK(WKSecurityOriginCopyHost(origin)).get(), ", "_s, WKSecurityOriginGetPort(origin), '}');
-}
-
 static WTF::String string(WKBundleFrameRef frame)
 {
     auto name = adoptWK(WKBundleFrameCopyName(frame));
@@ -194,7 +186,7 @@ WTF::String pathSuitableForTestResult(WKURLRef fileURL)
         mainFrameURL = adoptWK(WKBundleFrameCopyProvisionalURL(mainFrame));
 
     String pathString = toWTFString(adoptWK(WKURLCopyPath(fileURL)));
-    String mainFrameURLPathString = toWTFString(adoptWK(WKURLCopyPath(mainFrameURL.get())));
+    String mainFrameURLPathString = mainFrameURL ? toWTFString(adoptWK(WKURLCopyPath(mainFrameURL.get()))) : ""_s;
     auto basePath = StringView(mainFrameURLPathString).left(mainFrameURLPathString.reverseFind(divider) + 1);
     
     if (!basePath.isEmpty() && pathString.startsWith(basePath))
@@ -284,31 +276,6 @@ InjectedBundlePage::InjectedBundlePage(WKBundlePageRef page)
     };
     WKBundlePageSetResourceLoadClient(m_page, &resourceLoadClient.base);
 
-    WKBundlePageUIClientV2 uiClient = {
-        { 2, this },
-        willAddMessageToConsole,
-        willSetStatusbarText,
-        willRunJavaScriptAlert,
-        willRunJavaScriptConfirm,
-        willRunJavaScriptPrompt,
-        0, /*mouseDidMoveOverElement*/
-        0, /*pageDidScroll*/
-        0, /*paintCustomOverhangArea*/
-        0, /*shouldGenerateFileForUpload*/
-        0, /*generateFileForUpload*/
-        0, /*shouldRubberBandInDirection*/
-        0, /*statusBarIsVisible*/
-        0, /*menuBarIsVisible*/
-        0, /*toolbarsAreVisible*/
-        0, /*didReachApplicationCacheOriginQuota*/
-        didExceedDatabaseQuota,
-        0, /*plugInStartLabelTitle*/
-        0, /*plugInStartLabelSubtitle*/
-        0, /*plugInExtraStyleSheet*/
-        0, /*plugInExtraScript*/
-    };
-    WKBundlePageSetUIClient(m_page, &uiClient.base);
-
     WKBundlePageEditorClientV1 editorClient = {
         { 1, this },
         shouldBeginEditing,
@@ -328,19 +295,6 @@ InjectedBundlePage::InjectedBundlePage(WKBundlePageRef page)
         0, /* performTwoStepDrop */
     };
     WKBundlePageSetEditorClient(m_page, &editorClient.base);
-
-#if ENABLE(FULLSCREEN_API)
-    WKBundlePageFullScreenClientV1 fullScreenClient = {
-        { 1, this },
-        supportsFullScreen,
-        enterFullScreenForElement,
-        exitFullScreenForElement,
-        beganEnterFullScreen,
-        beganExitFullScreen,
-        closeFullScreen,
-    };
-    WKBundlePageSetFullScreenClient(m_page, &fullScreenClient.base);
-#endif
 }
 
 InjectedBundlePage::~InjectedBundlePage()
@@ -837,6 +791,8 @@ void InjectedBundlePage::didClearWindowForFrame(WKBundleFrameRef frame, WKBundle
         return;
 
     auto context = WKBundleFrameGetJavaScriptContextForWorld(frame, world);
+    if (!context)
+        return;
 
     if (WKBundleScriptWorldNormalWorld() != world) {
         setGlobalObjectProperty(context, "__worldID", TestRunner::worldIDForWorld(world));
@@ -1127,162 +1083,6 @@ bool InjectedBundlePage::shouldCacheResponse(WKBundlePageRef, WKBundleFrameRef, 
     return true;
 }
 
-// UI Client Callbacks
-
-void InjectedBundlePage::willAddMessageToConsole(WKBundlePageRef page, WKStringRef message, uint32_t /* lineNumber */, const void *clientInfo)
-{
-    static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->willAddMessageToConsole(message);
-}
-
-void InjectedBundlePage::willSetStatusbarText(WKBundlePageRef page, WKStringRef statusbarText, const void *clientInfo)
-{
-    static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->willSetStatusbarText(statusbarText);
-}
-
-void InjectedBundlePage::willRunJavaScriptAlert(WKBundlePageRef page, WKStringRef message, WKBundleFrameRef frame, const void *clientInfo)
-{
-    static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->willRunJavaScriptAlert(message, frame);
-}
-
-void InjectedBundlePage::willRunJavaScriptConfirm(WKBundlePageRef page, WKStringRef message, WKBundleFrameRef frame, const void *clientInfo)
-{
-    return static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->willRunJavaScriptConfirm(message, frame);
-}
-
-void InjectedBundlePage::willRunJavaScriptPrompt(WKBundlePageRef page, WKStringRef message, WKStringRef defaultValue, WKBundleFrameRef frame, const void *clientInfo)
-{
-    static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->willRunJavaScriptPrompt(message, defaultValue, frame);
-}
-
-uint64_t InjectedBundlePage::didExceedDatabaseQuota(WKBundlePageRef page, WKSecurityOriginRef origin, WKStringRef databaseName, WKStringRef databaseDisplayName, uint64_t currentQuotaBytes, uint64_t currentOriginUsageBytes, uint64_t currentDatabaseUsageBytes, uint64_t expectedUsageBytes, const void* clientInfo)
-{
-    return static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->didExceedDatabaseQuota(origin, databaseName, databaseDisplayName, currentQuotaBytes, currentOriginUsageBytes, currentDatabaseUsageBytes, expectedUsageBytes);
-}
-
-static WTF::String stripTrailingSpacesAddNewline(const WTF::String& string)
-{
-    StringBuilder builder;
-    for (auto line : StringView(string).splitAllowingEmptyEntries('\n')) {
-        while (line.endsWith(' '))
-            line = line.left(line.length() - 1);
-        builder.append(line, '\n');
-    }
-    return builder.toString();
-}
-
-static WTF::String addLeadingSpaceStripTrailingSpacesAddNewline(const WTF::String& string)
-{
-    auto result = stripTrailingSpacesAddNewline(string);
-    return (result.isEmpty() || result.startsWith('\n')) ? result : makeString(' ', result);
-}
-
-static StringView lastFileURLPathComponent(StringView path)
-{
-    auto pos = path.find("file://"_s);
-    ASSERT(WTF::notFound != pos);
-
-    auto tmpPath = path.substring(pos + 7);
-    if (tmpPath.length() < 2) // Keep the lone slash to avoid empty output.
-        return tmpPath;
-
-    // Remove the trailing delimiter
-    if (tmpPath[tmpPath.length() - 1] == '/')
-        tmpPath = tmpPath.left(tmpPath.length() - 1);
-
-    pos = tmpPath.reverseFind('/');
-    if (WTF::notFound != pos)
-        return tmpPath.substring(pos + 1);
-
-    return tmpPath;
-}
-
-void InjectedBundlePage::willAddMessageToConsole(WKStringRef message)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    if (!injectedBundle.isTestRunning())
-        return;
-
-    auto messageString = toWTFString(message);
-    messageString = messageString.left(messageString.find(nullCharacter));
-
-    size_t fileProtocolStart = messageString.find("file://"_s);
-    if (fileProtocolStart != WTF::notFound) {
-        StringView messageStringView { messageString };
-        // FIXME: The code below does not handle additional text after url nor multiple urls. This matches DumpRenderTree implementation.
-        messageString = makeString(messageStringView.left(fileProtocolStart), lastFileURLPathComponent(messageStringView.substring(fileProtocolStart)));
-    }
-    messageString = makeString("CONSOLE MESSAGE:"_s, addLeadingSpaceStripTrailingSpacesAddNewline(messageString));
-    if (injectedBundle.dumpJSConsoleLogInStdErr())
-        injectedBundle.dumpToStdErr(messageString);
-    else
-        injectedBundle.outputText(messageString);
-}
-
-void InjectedBundlePage::willSetStatusbarText(WKStringRef statusbarText)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    RefPtr testRunner = injectedBundle.testRunner();
-    if (!testRunner)
-        return;
-
-    if (!testRunner->shouldDumpStatusCallbacks())
-        return;
-
-    injectedBundle.outputText(makeString("UI DELEGATE STATUS CALLBACK: setStatusText:"_s, statusbarText, '\n'));
-}
-
-void InjectedBundlePage::willRunJavaScriptAlert(WKStringRef message, WKBundleFrameRef)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    if (!injectedBundle.isTestRunning())
-        return;
-
-    injectedBundle.outputText(makeString("ALERT:"_s, addLeadingSpaceStripTrailingSpacesAddNewline(toWTFString(message))));
-}
-
-void InjectedBundlePage::willRunJavaScriptConfirm(WKStringRef message, WKBundleFrameRef)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    if (!injectedBundle.isTestRunning())
-        return;
-
-    injectedBundle.outputText(makeString("CONFIRM:"_s, addLeadingSpaceStripTrailingSpacesAddNewline(toWTFString(message))));
-}
-
-void InjectedBundlePage::willRunJavaScriptPrompt(WKStringRef message, WKStringRef defaultValue, WKBundleFrameRef)
-{
-    InjectedBundle::singleton().outputText(makeString("PROMPT: "_s, message, ", default text:"_s, addLeadingSpaceStripTrailingSpacesAddNewline(toWTFString(defaultValue))));
-}
-
-uint64_t InjectedBundlePage::didExceedDatabaseQuota(WKSecurityOriginRef origin, WKStringRef databaseName, WKStringRef databaseDisplayName, uint64_t currentQuotaBytes, uint64_t currentOriginUsageBytes, uint64_t currentDatabaseUsageBytes, uint64_t expectedUsageBytes)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    RefPtr testRunner = injectedBundle.testRunner();
-    if (!testRunner) {
-        ASSERT_NOT_REACHED();
-        return 0;
-    }
-
-    if (testRunner->shouldDumpDatabaseCallbacks())
-        injectedBundle.outputText(makeString("UI DELEGATE DATABASE CALLBACK: exceededDatabaseQuotaForSecurityOrigin:"_s, string(origin), " database:"_s, databaseName, '\n'));
-
-    uint64_t defaultQuota = 5 * 1024 * 1024;
-    double testDefaultQuota = testRunner->databaseDefaultQuota();
-    if (testDefaultQuota >= 0)
-        defaultQuota = testDefaultQuota;
-
-    unsigned long long newQuota = defaultQuota;
-
-    double maxQuota = testRunner->databaseMaxQuota();
-    if (maxQuota >= 0) {
-        if (defaultQuota < expectedUsageBytes && expectedUsageBytes <= maxQuota) {
-            newQuota = expectedUsageBytes;
-            injectedBundle.outputText(makeString("UI DELEGATE DATABASE CALLBACK: increased quota to "_s, newQuota, '\n'));
-        }
-    }
-    return newQuota;
-}
-
 // Editor Client Callbacks
 
 bool InjectedBundlePage::shouldBeginEditing(WKBundlePageRef page, WKBundleRangeHandleRef range, const void* clientInfo)
@@ -1509,143 +1309,6 @@ void InjectedBundlePage::didChangeSelection(WKStringRef notificationName)
     injectedBundle.outputText(makeString("EDITING DELEGATE: webViewDidChangeSelection:"_s, notificationName, '\n'));
 }
 
-#if ENABLE(FULLSCREEN_API)
-bool InjectedBundlePage::supportsFullScreen(WKBundlePageRef pageRef, WKFullScreenKeyboardRequestType requestType)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    RefPtr testRunner = injectedBundle.testRunner();
-    if (!testRunner)
-        return true;
-    if (testRunner->shouldDumpFullScreenCallbacks())
-        injectedBundle.outputText("supportsFullScreen() == true\n"_s);
-    return true;
-}
-
-void InjectedBundlePage::enterFullScreenForElement(WKBundlePageRef pageRef, WKBundleNodeHandleRef elementRef)
-{
-    ASSERT(bundlePageMap().contains(pageRef));
-    if (auto* injectedBundlePage = bundlePageMap().get(pageRef))
-        injectedBundlePage->enterFullScreenForElement(elementRef);
-}
-
-void InjectedBundlePage::enterFullScreenForElement(WKBundleNodeHandleRef elementRef)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    RefPtr testRunner = injectedBundle.testRunner();
-    if (!testRunner)
-        return;
-
-    if (testRunner->shouldDumpFullScreenCallbacks())
-        injectedBundle.outputText("enterFullScreenForElement()\n"_s);
-
-    if (m_fullscreenState == EnteringFullscreen)
-        return;
-    m_fullscreenState = EnteringFullscreen;
-
-    if (!testRunner->hasCustomFullScreenBehavior()) {
-        WKBundlePageWillEnterFullScreen(m_page);
-        if (m_fullscreenState != EnteringFullscreen)
-            return;
-
-        WKBundlePageDidEnterFullScreen(m_page);
-        if (m_fullscreenState != EnteringFullscreen)
-            return;
-
-    } else
-        testRunner->callEnterFullscreenForElementCallback();
-
-    m_fullscreenState = InFullscreen;
-}
-
-void InjectedBundlePage::exitFullScreenForElement(WKBundlePageRef pageRef, WKBundleNodeHandleRef elementRef)
-{
-    ASSERT(bundlePageMap().contains(pageRef));
-    if (auto* injectedBundlePage = bundlePageMap().get(pageRef))
-        injectedBundlePage->exitFullScreenForElement(elementRef);
-}
-
-void InjectedBundlePage::exitFullScreenForElement(WKBundleNodeHandleRef elementRef)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    RefPtr testRunner = injectedBundle.testRunner();
-    if (!testRunner)
-        return;
-
-    if (testRunner->shouldDumpFullScreenCallbacks())
-        injectedBundle.outputText("exitFullScreenForElement()\n"_s);
-
-    if (m_fullscreenState == ExitingFullscreen)
-        return;
-    m_fullscreenState = ExitingFullscreen;
-
-    if (!testRunner->hasCustomFullScreenBehavior()) {
-        WKBundlePageWillExitFullScreen(m_page);
-        if (m_fullscreenState != ExitingFullscreen)
-            return;
-
-        WKBundlePageDidExitFullScreen(m_page);
-        if (m_fullscreenState != ExitingFullscreen)
-            return;
-    } else
-        testRunner->callExitFullscreenForElementCallback();
-
-    m_fullscreenState = NotInFullscreen;
-}
-
-void InjectedBundlePage::beganEnterFullScreen(WKBundlePageRef, WKRect initialRect, WKRect finalRect)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    RefPtr testRunner = injectedBundle.testRunner();
-    if (!testRunner)
-        return;
-
-    if (!testRunner->shouldDumpFullScreenCallbacks())
-        return;
-
-    injectedBundle.outputText(makeString("beganEnterFullScreen() - initialRect.size: {"_s,
-        initialRect.size.width, ", "_s,
-        initialRect.size.height,
-        "}, finalRect.size: {"_s,
-        finalRect.size.width, ", "_s,
-        finalRect.size.height,
-        "}\n"_s));
-}
-
-void InjectedBundlePage::beganExitFullScreen(WKBundlePageRef, WKRect initialRect, WKRect finalRect)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    RefPtr testRunner = injectedBundle.testRunner();
-    if (!testRunner)
-        return;
-    if (!testRunner->shouldDumpFullScreenCallbacks())
-        return;
-
-    injectedBundle.outputText(makeString("beganExitFullScreen() - initialRect.size: {"_s,
-        initialRect.size.width, ", "_s,
-        initialRect.size.height,
-        "}, finalRect.size: {"_s,
-        finalRect.size.width, ", "_s,
-        finalRect.size.height,
-        "}\n"_s));
-}
-
-void InjectedBundlePage::closeFullScreen(WKBundlePageRef pageRef)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    RefPtr testRunner = injectedBundle.testRunner();
-    if (!testRunner)
-        return;
-
-    if (testRunner->shouldDumpFullScreenCallbacks())
-        injectedBundle.outputText("closeFullScreen()\n"_s);
-
-    if (!testRunner->hasCustomFullScreenBehavior()) {
-        WKBundlePageWillExitFullScreen(pageRef);
-        WKBundlePageDidExitFullScreen(pageRef);
-    }
-}
-#endif
-
 String InjectedBundlePage::dumpHistory()
 {
     return makeString(
@@ -1679,7 +1342,7 @@ static void dumpAfterWaitAttributeIsRemoved(WKBundlePageRef page)
     if (hasTestWaitAttribute(page)) {
         WKRetain(page);
         // Use a 1ms interval between tries to allow lower priority run loop sources with zero delays to run.
-        RunLoop::current().dispatchAfter(1_ms, [page] {
+        RunLoop::currentSingleton().dispatchAfter(1_ms, [page] {
             WKBundlePageCallAfterTasksAndTimers(page, [] (void* typelessPage) {
                 auto page = static_cast<WKBundlePageRef>(typelessPage);
                 dumpAfterWaitAttributeIsRemoved(page);

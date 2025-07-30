@@ -53,9 +53,6 @@
     
     if(resizeDelta > 0.0){
         NSSize newSize = NSMakeSize((originalSize.width * resizeDelta), (originalSize.height * resizeDelta));
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        [self setScalesWhenResized:YES];
-ALLOW_DEPRECATED_DECLARATIONS_END
         [self setSize:newSize];
     }
 }

@@ -7,13 +7,16 @@
 
 #include "include/effects/SkTableMaskFilter.h"
 
+#include "include/core/SkColorFilter.h"
 #include "include/core/SkFlattenable.h"
+#include "include/core/SkImageFilter.h"
 #include "include/core/SkMaskFilter.h"
 #include "include/core/SkPoint.h"
 #include "include/core/SkRect.h"
 #include "include/core/SkRefCnt.h"
 #include "include/core/SkScalar.h"
 #include "include/core/SkTypes.h"
+#include "include/effects/SkImageFilters.h"
 #include "include/private/base/SkAlign.h"
 #include "include/private/base/SkFixed.h"
 #include "include/private/base/SkFloatingPoint.h"
@@ -26,8 +29,10 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <utility>
 
 class SkMatrix;
+class SkPaint;
 
 class SkTableMaskFilterImpl : public SkMaskFilterBase {
 public:
@@ -36,6 +41,8 @@ public:
     SkMask::Format getFormat() const override;
     bool filterMask(SkMaskBuilder*, const SkMask&, const SkMatrix&, SkIPoint*) const override;
     SkMaskFilterBase::Type type() const override { return SkMaskFilterBase::Type::kTable; }
+    std::pair<sk_sp<SkImageFilter>, bool> asImageFilter(const SkMatrix&,
+                                                        const SkPaint&) const override;
 
 protected:
     ~SkTableMaskFilterImpl() override;
@@ -50,6 +57,8 @@ private:
     uint8_t fTable[256];
 
     using INHERITED = SkMaskFilter;
+
+    friend class SkTableMaskFilter;
 };
 
 SkTableMaskFilterImpl::SkTableMaskFilterImpl() {
@@ -122,6 +131,14 @@ sk_sp<SkFlattenable> SkTableMaskFilterImpl::CreateProc(SkReadBuffer& buffer) {
     return sk_sp<SkFlattenable>(SkTableMaskFilter::Create(table));
 }
 
+std::pair<sk_sp<SkImageFilter>, bool> SkTableMaskFilterImpl::asImageFilter(const SkMatrix&,
+                                                                           const SkPaint&) const {
+    sk_sp<SkColorFilter> colorFilter = SkColorFilters::TableARGB(fTable,
+                                                                 nullptr,
+                                                                 nullptr,
+                                                                 nullptr);
+    return std::make_pair(SkImageFilters::ColorFilter(colorFilter, nullptr), false);
+}
 ///////////////////////////////////////////////////////////////////////////////
 
 SkMaskFilter* SkTableMaskFilter::Create(const uint8_t table[256]) {
@@ -184,4 +201,10 @@ void SkTableMaskFilter::MakeClipTable(uint8_t table[256], uint8_t min,
     }
     SkDebugf("\n\n");
 #endif
+}
+
+void SkTableMaskFilter::RegisterFlattenables() {
+    SK_REGISTER_FLATTENABLE(SkTableMaskFilterImpl);
+    // Previous name
+    SkFlattenable::Register("SkTableMF", SkTableMaskFilterImpl::CreateProc);
 }

@@ -19,7 +19,6 @@ function test() {
     if (!testCalled) {
         if (window.testRunner && window.internals) {
             testRunner.dumpAsText();
-            internals.settings.setHyperlinkAuditingEnabled(true);
             testRunner.waitUntilDone();
         }
         testCalled = true;

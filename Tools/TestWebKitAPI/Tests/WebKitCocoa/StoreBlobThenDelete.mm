@@ -73,7 +73,7 @@ TEST(IndexedDB, StoreBlobThenRemoveData)
     }];
     TestWebKitAPI::Util::run(&readyToContinue);
     RetainPtr originDirectory = [NSURL fileURLWithPath:originDirectoryString.get() isDirectory:YES];
-    RetainPtr databaseDirectory = [originDirectory URLByAppendingPathComponent:hash];
+    RetainPtr databaseDirectory = [originDirectory URLByAppendingPathComponent:hash.createNSString().get()];
     RetainPtr blobFileURL = [databaseDirectory URLByAppendingPathComponent:@"1.blob"];
     RetainPtr databaseFileURL = [databaseDirectory URLByAppendingPathComponent:@"IndexedDB.sqlite3"];
 
@@ -87,7 +87,7 @@ TEST(IndexedDB, StoreBlobThenRemoveData)
     // 2 - Move -wal and -shm files into that directory
     // 3 - Make sure the entire directory is deleted
     String fakeHash = WebCore::SQLiteFileSystem::computeHashForFileName("FakeDatabasePath"_s);
-    RetainPtr fakeDatabaseDirectory = [originDirectory URLByAppendingPathComponent:fakeHash];
+    RetainPtr fakeDatabaseDirectory = [originDirectory URLByAppendingPathComponent:fakeHash.createNSString().get()];
     RetainPtr fakeShmURL = [fakeDatabaseDirectory URLByAppendingPathComponent:@"IndexedDB.sqlite3-wal"];
     RetainPtr fakeWalURL = [fakeDatabaseDirectory URLByAppendingPathComponent:@"IndexedDB.sqlite3-shm"];
     [[NSFileManager defaultManager] createDirectoryAtURL:fakeDatabaseDirectory.get() withIntermediateDirectories:YES attributes:nil error:nil];
@@ -152,7 +152,7 @@ TEST(IndexedDB, StoreBlobThenDeleteDatabase)
     }];
     TestWebKitAPI::Util::run(&readyToContinue);
     RetainPtr originDirectory = [NSURL fileURLWithPath:originDirectoryString.get() isDirectory:YES];
-    RetainPtr databaseDirectory = [originDirectory URLByAppendingPathComponent:hash];
+    RetainPtr databaseDirectory = [originDirectory URLByAppendingPathComponent:hash.createNSString().get()];
     RetainPtr blobFileURL = [databaseDirectory URLByAppendingPathComponent:@"1.blob"];
     RetainPtr databaseFileURL = [databaseDirectory URLByAppendingPathComponent:@"IndexedDB.sqlite3"];
 

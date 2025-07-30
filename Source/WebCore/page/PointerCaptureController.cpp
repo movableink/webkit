@@ -31,11 +31,14 @@
 #include "Element.h"
 #include "EventHandler.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "EventTarget.h"
 #include "HitTestResult.h"
+#include "MouseEventTypes.h"
 #include "Page.h"
 #include "PointerEvent.h"
 #include "Quirks.h"
+#include <algorithm>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -181,7 +184,7 @@ void PointerCaptureController::reset()
 
 void PointerCaptureController::updateHaveAnyCapturingElement()
 {
-    m_haveAnyCapturingElement = WTF::anyOf(m_activePointerIdsToCapturingData.values(), [&](auto& capturingData) {
+    m_haveAnyCapturingElement = std::ranges::any_of(m_activePointerIdsToCapturingData.values(), [&](auto& capturingData) {
         return capturingData->hasAnyElement();
     });
 }
@@ -562,7 +565,7 @@ void PointerCaptureController::cancelPointer(PointerID pointerId, const IntPoint
         if (capturingData->targetOverride)
             return capturingData->targetOverride;
         constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::DisallowUserAgentShadowContent, HitTestRequest::Type::AllowChildFrameContent };
-        RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+        RefPtr localMainFrame = page->localMainFrame();
         if (!localMainFrame)
             return nullptr;
         return localMainFrame->checkedEventHandler()->hitTestResultAtPoint(documentPoint, hitType).innerNonSharedElement();

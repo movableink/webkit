@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008, 2010 Nokia Corporation and/or its subsidiary(-ies)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -88,7 +88,7 @@ private:
     void addMessageToConsole(JSC::MessageSource, JSC::MessageLevel, const String& message, unsigned lineNumber, unsigned columnNumber, const String& sourceURL) final;
 
     bool canRunBeforeUnloadConfirmPanel() final;
-    bool runBeforeUnloadConfirmPanel(const String& message, WebCore::LocalFrame&) final;
+    bool runBeforeUnloadConfirmPanel(String&& message, WebCore::LocalFrame&) final;
 
     void closeWindow() final;
 
@@ -105,6 +105,7 @@ private:
     void scroll(const WebCore::IntSize& scrollDelta, const WebCore::IntRect& rectToScroll, const WebCore::IntRect& clipRect) final;
 
     WebCore::IntPoint screenToRootView(const WebCore::IntPoint&) const final;
+    WebCore::IntPoint rootViewToScreen(const WebCore::IntPoint&) const final;
     WebCore::IntRect rootViewToScreen(const WebCore::IntRect&) const final;
 
     WebCore::IntPoint accessibilityScreenToRootView(const WebCore::IntPoint&) const final;
@@ -128,7 +129,7 @@ private:
     void exceededDatabaseQuota(WebCore::LocalFrame&, const String& databaseName, WebCore::DatabaseDetails) final;
 
     void runOpenPanel(WebCore::LocalFrame&, WebCore::FileChooser&) override;
-    void showShareSheet(WebCore::ShareDataWithParsedURL&, CompletionHandler<void(bool)>&&) override;
+    void showShareSheet(WebCore::ShareDataWithParsedURL&&, CompletionHandler<void(bool)>&&) override;
 
     void loadIconForFiles(const Vector<String>&, WebCore::FileIconLoader&) final;
     RefPtr<WebCore::Icon> createIconForFiles(const Vector<String>& filenames) override;
@@ -138,20 +139,15 @@ private:
     void setCursorHiddenUntilMouseMoves(bool) final;
 #endif
 
-#if ENABLE(INPUT_TYPE_COLOR)
     RefPtr<WebCore::ColorChooser> createColorChooser(WebCore::ColorChooserClient&, const WebCore::Color&) final;
-#endif
 
-#if ENABLE(DATALIST_ELEMENT)
     RefPtr<WebCore::DataListSuggestionPicker> createDataListSuggestionPicker(WebCore::DataListSuggestionsClient&) final;
     bool canShowDataListSuggestionLabels() const final { return false; }
-#endif
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     RefPtr<WebCore::DateTimeChooser> createDateTimeChooser(WebCore::DateTimeChooserClient&) final;
-#endif
 
     void setTextIndicator(const WebCore::TextIndicatorData&) const final;
+    void updateTextIndicator(const WebCore::TextIndicatorData&) const final;
 
 #if ENABLE(POINTER_LOCK)
     bool requestPointerLock() final;
@@ -215,8 +211,8 @@ private:
 
 #if ENABLE(FULLSCREEN_API)
     bool supportsFullScreenForElement(const WebCore::Element&, bool withKeyboard) final;
-    void enterFullScreenForElement(WebCore::Element&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode = WebCore::HTMLMediaElementEnums::VideoFullscreenModeStandard) final;
-    void exitFullScreenForElement(WebCore::Element*) final;
+    void enterFullScreenForElement(WebCore::Element&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode, CompletionHandler<void(WebCore::ExceptionOr<void>)>&&, CompletionHandler<bool(bool)>&&) final;
+    void exitFullScreenForElement(WebCore::Element*, CompletionHandler<void()>&&) final;
 #endif
 
     bool selectItemWritingDirectionIsNatural() override;
@@ -227,7 +223,7 @@ private:
     void wheelEventHandlersChanged(bool) final { }
 
 #if ENABLE(SERVICE_CONTROLS)
-    void handleSelectionServiceClick(WebCore::FrameSelection&, const Vector<String>& telephoneNumbers, const WebCore::IntPoint&) final;
+    void handleSelectionServiceClick(WebCore::FrameIdentifier, WebCore::FrameSelection&, const Vector<String>& telephoneNumbers, const WebCore::IntPoint&) final;
     bool hasRelevantSelectionServices(bool isTextOnly) const final;
 #endif
 

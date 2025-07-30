@@ -86,7 +86,7 @@ static RefPtr<ShareableBitmap> convertDragImageToBitmap(DragImage image, const I
     return bitmap;
 }
 
-void WebDragClient::startDrag(DragItem dragItem, DataTransfer&, Frame& frame)
+void WebDragClient::startDrag(DragItem dragItem, DataTransfer&, Frame& frame, const std::optional<ElementIdentifier>& elementID)
 {
     auto& image = dragItem.image;
 
@@ -103,7 +103,7 @@ void WebDragClient::startDrag(DragItem dragItem, DataTransfer&, Frame& frame)
         return;
 
     m_page->willStartDrag();
-    m_page->send(Messages::WebPageProxy::StartDrag(dragItem, WTFMove(*handle)));
+    m_page->send(Messages::WebPageProxy::StartDrag(dragItem, WTFMove(*handle), elementID));
 }
 
 void WebDragClient::didConcludeEditDrag()
@@ -143,12 +143,12 @@ void WebDragClient::declareAndWriteDragImage(const String& pasteboardName, Eleme
     if (title.isEmpty()) {
         title = url.lastPathComponent().toString();
         if (title.isEmpty())
-            title = WTF::userVisibleString(url);
+            title = WTF::userVisibleString(url.createNSURL().get());
     }
 
     auto archive = LegacyWebArchive::create(element);
 
-    NSURLResponse *response = image->response().nsURLResponse();
+    RetainPtr response = image->response().nsURLResponse();
     
     auto imageBuffer = image->image()->data();
 
@@ -180,7 +180,7 @@ void WebDragClient::declareAndWriteDragImage(const String& pasteboardName, Eleme
             filename = downloadFilename;
     }
 
-    m_page->send(Messages::WebPageProxy::SetPromisedDataForImage(pasteboardName, WTFMove(*imageHandle), filename, extension, title, String([[response URL] absoluteString]), WTF::userVisibleString(url), WTFMove(*archiveHandle), element.document().originIdentifierForPasteboard()));
+    m_page->send(Messages::WebPageProxy::SetPromisedDataForImage(pasteboardName, WTFMove(*imageHandle), filename, extension, title, String([[response URL] absoluteString]), WTF::userVisibleString(url.createNSURL().get()), WTFMove(*archiveHandle), element.document().originIdentifierForPasteboard()));
 }
 
 #else

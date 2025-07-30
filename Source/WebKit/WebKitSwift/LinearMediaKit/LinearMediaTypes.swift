@@ -23,8 +23,13 @@
 
 #if os(visionOS)
 
-import LinearMediaKit
 import WebKitSwift
+
+#if canImport(AVKit, _version: 1270)
+@_spi(LinearMediaKit) import AVKit
+#else
+import LinearMediaKit
+#endif
 
 // MARK: Objective-C Implementations
 
@@ -149,6 +154,8 @@ extension WKSLinearMediaPresentationState: CustomStringConvertible {
             return "fullscreen"
         case .exitingFullscreen:
             return "exitingFullscreen"
+        case .external:
+            return "external"
         @unknown default:
             fatalError()
         }
@@ -228,17 +235,13 @@ extension WKSLinearMediaTimeRange {
     }
 }
 
-#if canImport(LinearMediaKit, _version: 205)
-extension WKSLinearMediaTrack: @retroactive Track {
+@_spi(Internal) extension WKSLinearMediaTrack: @retroactive Track {
 }
-#endif
 
 extension WKSLinearMediaSpatialVideoMetadata {
-#if canImport(LinearMediaKit, _version: 211.60.3)
     var metadata: SpatialVideoMetadata {
         return SpatialVideoMetadata(width: self.width, height: self.height, horizontalFOVDegrees: self.horizontalFOVDegrees, baseline: self.baseline, disparityAdjustment: self.disparityAdjustment, isRecommendedForImmersive: true)
     }
-#endif
 }
 
 #endif // os(visionOS)

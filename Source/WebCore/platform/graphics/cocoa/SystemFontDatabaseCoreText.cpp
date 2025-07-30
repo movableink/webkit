@@ -32,15 +32,14 @@
 #include "FontMetricsNormalization.h"
 
 #include <pal/system/ios/UserInterfaceIdiom.h>
+#include <ranges>
 #include <wtf/cf/TypeCastsCF.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
 SystemFontDatabaseCoreText& SystemFontDatabaseCoreText::forCurrentThread()
 {
-    return FontCache::forCurrentThread().systemFontDatabaseCoreText();
+    return FontCache::forCurrentThread()->systemFontDatabaseCoreText();
 }
 
 SystemFontDatabase& SystemFontDatabase::singleton()
@@ -210,19 +209,20 @@ static CGFloat mapWeight(FontSelectionValue weight)
 
 static CGFloat mapWidth(FontSelectionValue width)
 {
-    struct {
+    struct PiecewisePoint {
         FontSelectionValue input;
         CGFloat output;
-    } piecewisePoints[] = {
-        {FontSelectionValue(37.5f), kCTFontWidthUltraCompressed},
-        {FontSelectionValue(50), kCTFontWidthExtraCompressed}, // ultra condensed
-        {FontSelectionValue(62.5f), kCTFontWidthExtraCondensed},
-        {FontSelectionValue(75), kCTFontWidthCondensed},
-        {FontSelectionValue(87.5f), kCTFontWidthSemiCondensed},
-        {FontSelectionValue(100), kCTFontWidthStandard},
-        {FontSelectionValue(112.5f), kCTFontWidthSemiExpanded},
-        {FontSelectionValue(125), kCTFontWidthExpanded},
-        {FontSelectionValue(150), kCTFontWidthExtraExpanded},
+    };
+    static const std::array piecewisePoints {
+        PiecewisePoint { FontSelectionValue(37.5f), kCTFontWidthUltraCompressed },
+        PiecewisePoint { FontSelectionValue(50), kCTFontWidthExtraCompressed }, // ultra condensed
+        PiecewisePoint { FontSelectionValue(62.5f), kCTFontWidthExtraCondensed },
+        PiecewisePoint { FontSelectionValue(75), kCTFontWidthCondensed },
+        PiecewisePoint { FontSelectionValue(87.5f), kCTFontWidthSemiCondensed },
+        PiecewisePoint { FontSelectionValue(100), kCTFontWidthStandard },
+        PiecewisePoint { FontSelectionValue(112.5f), kCTFontWidthSemiExpanded },
+        PiecewisePoint { FontSelectionValue(125), kCTFontWidthExpanded },
+        PiecewisePoint { FontSelectionValue(150), kCTFontWidthExtraExpanded },
     };
     for (size_t i = 0; i < std::size(piecewisePoints) - 1; ++i) {
         auto& previous = piecewisePoints[i];
@@ -243,7 +243,7 @@ SystemFontDatabaseCoreText::CascadeListParameters SystemFontDatabaseCoreText::sy
     result.allowUserInstalledFonts = allowUserInstalledFonts;
 
     result.weight = mapWeight(description.weight());
-    result.width = mapWidth(description.stretch());
+    result.width = mapWidth(description.width());
 
     switch (systemFontKind) {
     case SystemFontKind::SystemUI: {
@@ -312,10 +312,10 @@ std::optional<SystemFontKind> SystemFontDatabaseCoreText::matchSystemFontUse(con
             kCTUIFontTextStyleTitle0,
             kCTUIFontTextStyleTitle4,
         };
-        std::sort(m_textStyles.begin(), m_textStyles.end(), compareAsPointer);
+        std::ranges::sort(m_textStyles, compareAsPointer);
     }
 
-    if (std::binary_search(m_textStyles.begin(), m_textStyles.end(), string, compareAsPointer))
+    if (std::ranges::binary_search(m_textStyles, string, compareAsPointer))
         return SystemFontKind::TextStyle;
 
     return std::nullopt;
@@ -466,5 +466,3 @@ auto SystemFontDatabase::platformSystemFontShorthandInfo(FontShorthand fontShort
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

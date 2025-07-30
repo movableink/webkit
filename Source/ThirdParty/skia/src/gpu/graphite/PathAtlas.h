@@ -112,32 +112,41 @@ protected:
     // The 'transform' has been adjusted to draw the Shape into a logical image from (0,0) to
     // 'maskSize'. The actual rendering into the returned TextureProxy will need to be further
     // translated by the value written to 'outPos', which is the responsibility of subclasses.
-    virtual const TextureProxy* onAddShape(const Shape&,
-                                           const Transform& transform,
+    virtual sk_sp<TextureProxy> onAddShape(const Shape&,
+                                           const Transform& localToDevice,
                                            const SkStrokeRec&,
+                                           skvx::half2 maskOrigin,
                                            skvx::half2 maskSize,
+                                           SkIVector transformedMaskOffset,
                                            skvx::half2* outPos) = 0;
 
     // Wrapper class to manage DrawAtlas and associated caching operations
     class DrawAtlasMgr : public AtlasGenerationCounter, public PlotEvictionCallback {
     public:
-        const TextureProxy* findOrCreateEntry(Recorder* recorder,
-                                              const Shape& shape,
-                                              const Transform& transform,
-                                              const SkStrokeRec& strokeRec,
+        // Adds to the DrawAtlas and shape cache.
+        // If successful, returns a ref for the caller to use.
+        sk_sp<TextureProxy> findOrCreateEntry(Recorder* recorder,
+                                              const Shape&,
+                                              const Transform& localToDevice,
+                                              const SkStrokeRec&,
+                                              skvx::half2 maskOrigin,
                                               skvx::half2 maskSize,
+                                              SkIVector transformedMaskOffset,
                                               skvx::half2* outPos);
-        // Adds to DrawAtlas but not the cache
-        const TextureProxy* addToAtlas(Recorder* recorder,
-                                       const Shape& shape,
-                                       const Transform& transform,
-                                       const SkStrokeRec& strokeRec,
+        // Adds to DrawAtlas but not the cache.
+        // If successful, returns a ref for the caller to use.
+        sk_sp<TextureProxy> addToAtlas(Recorder* recorder,
+                                       const Shape&,
+                                       const Transform& localToDevice,
+                                       const SkStrokeRec&,
                                        skvx::half2 maskSize,
+                                       SkIVector transformedMaskOffset,
                                        skvx::half2* outPos,
                                        AtlasLocator* locator);
         bool recordUploads(DrawContext*, Recorder*);
         void evict(PlotLocator) override;
-        void compact(Recorder*, bool forceCompact);
+        void compact(Recorder*);
+        void freeGpuResources(Recorder*);
 
         void evictAll();
 
@@ -148,9 +157,10 @@ protected:
                      std::string_view label, const Caps*);
 
         bool virtual onAddToAtlas(const Shape&,
-                                  const Transform& transform,
+                                  const Transform& localToDevice,
                                   const SkStrokeRec&,
                                   SkIRect shapeBounds,
+                                  SkIVector transformedMaskOffset,
                                   const AtlasLocator&) = 0;
 
         std::unique_ptr<DrawAtlas> fDrawAtlas;

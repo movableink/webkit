@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,15 +26,10 @@
 
 #pragma once
 
-#include <wtf/Compiler.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 #include <JavaScriptCore/JSGlobalObject.h>
 #include <JavaScriptCore/WeakGCMap.h>
+#include <wtf/Compiler.h>
 #include <wtf/Forward.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 namespace JSC {
 
@@ -52,7 +47,7 @@ class DOMWrapperWorld;
 class ScriptExecutionContext;
 
 using JSDOMStructureMap = UncheckedKeyHashMap<const JSC::ClassInfo*, JSC::WriteBarrier<JSC::Structure>>;
-using DOMGuardedObjectSet = HashSet<DOMGuardedObject*>;
+using DOMGuardedObjectSet = UncheckedKeyHashSet<DOMGuardedObject*>;
 
 class WEBCORE_EXPORT JSDOMGlobalObject : public JSC::JSGlobalObject {
 public:
@@ -83,9 +78,12 @@ public:
     inline JSDOMStructureMap& structures(NoLockingNecessaryTag);
     inline DOMGuardedObjectSet& guardedObjects(NoLockingNecessaryTag);
 
+    RefPtr<ScriptExecutionContext> protectedScriptExecutionContext() const;
     ScriptExecutionContext* scriptExecutionContext() const;
 
-    static bool canCompileStrings(JSC::JSGlobalObject*, JSC::CompilationType, String, JSC::JSValue);
+    static String codeForEval(JSC::JSGlobalObject*, JSC::JSValue);
+    static bool canCompileStrings(JSC::JSGlobalObject*, JSC::CompilationType, String, const JSC::ArgList&);
+    static JSC::Structure* trustedScriptStructure(JSC::JSGlobalObject*);
 
     // https://tc39.es/ecma262/#sec-agent-clusters
     String agentClusterID() const;
@@ -141,7 +139,7 @@ protected:
     DOMGuardedObjectSet m_guardedObjects WTF_GUARDED_BY_LOCK(m_gcLock);
     std::unique_ptr<DOMConstructors> m_constructors;
 
-    Ref<DOMWrapperWorld> m_world;
+    const Ref<DOMWrapperWorld> m_world;
     uint8_t m_worldIsNormal;
     Lock m_gcLock;
     JSC::WriteBarrier<JSC::JSGlobalProxy> m_proxy;

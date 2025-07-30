@@ -59,7 +59,7 @@ void NullImageBufferBackend::getPixelBuffer(const IntRect&, PixelBuffer& destina
     destination.zeroFill();
 }
 
-void NullImageBufferBackend::putPixelBuffer(const PixelBuffer&, const IntRect&, const IntPoint&, AlphaPremultiplication)
+void NullImageBufferBackend::putPixelBuffer(const PixelBufferSourceView&, const IntRect&, const IntPoint&, AlphaPremultiplication)
 {
 }
 

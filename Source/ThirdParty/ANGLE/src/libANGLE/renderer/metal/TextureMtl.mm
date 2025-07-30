@@ -19,6 +19,7 @@
 #include "common/mathutil.h"
 #include "image_util/imageformats.h"
 #include "image_util/loadimage.h"
+#include "libANGLE/ErrorStrings.h"
 #include "libANGLE/Surface.h"
 #include "libANGLE/renderer/Format.h"
 #include "libANGLE/renderer/metal/BufferMtl.h"
@@ -516,7 +517,7 @@ angle::Result UploadPackedDepthStencilTextureContentsWithStagingBuffer(
             stagingStencilBufferFormatId = angle::FormatID::S8_UINT;
             break;
         default:
-            ANGLE_MTL_UNREACHABLE(contextMtl);
+            ANGLE_GL_UNREACHABLE(contextMtl);
     }
 
     const angle::Format &angleStagingDepthFormat = angle::Format::Get(stagingDepthBufferFormatId);
@@ -684,7 +685,7 @@ GLenum OverrideSwizzleValue(const gl::Context *context,
     if (format.actualAngleFormat().hasDepthOrStencilBits())
     {
         ASSERT(!format.swizzled);
-        if (context->getState().getClientMajorVersion() >= 3 && glInternalFormat.sized)
+        if (context->getState().getClientVersion() >= gl::ES_3_0 && glInternalFormat.sized)
         {
             // ES 3.1 spec: treat depth and stencil textures as red textures during sampling.
             if (swizzle == GL_GREEN || swizzle == GL_BLUE)
@@ -969,7 +970,7 @@ angle::Result TextureMtl::ensureNativeStorageCreated(const gl::Context *context)
     // Create actual texture object:
     GLuint mips        = mState.getMipmapMaxLevel() - mState.getEffectiveBaseLevel() + 1;
     gl::ImageDesc desc = mState.getBaseLevelDesc();
-    ANGLE_MTL_CHECK(contextMtl, desc.format.valid(), GL_INVALID_OPERATION);
+    ANGLE_CHECK(contextMtl, desc.format.valid(), gl::err::kInternalError, GL_INVALID_OPERATION);
     angle::FormatID angleFormatId =
         angle::Format::InternalFormatToID(desc.format.info->sizedInternalFormat);
     mFormat = contextMtl->getPixelFormat(angleFormatId);
@@ -1109,7 +1110,7 @@ angle::Result TextureMtl::ensureSamplerStateCreated(const gl::Context *context)
     // for cube maps so that texture wrap modes are ignored.
     if ((mState.getType() == gl::TextureType::CubeMap ||
          mState.getType() == gl::TextureType::CubeMapArray) &&
-        context->getState().getClientMajorVersion() >= 3)
+        context->getState().getClientVersion() >= gl::ES_3_0)
     {
         samplerDesc.rAddressMode = MTLSamplerAddressModeClampToEdge;
         samplerDesc.sAddressMode = MTLSamplerAddressModeClampToEdge;
@@ -1379,7 +1380,7 @@ angle::Result TextureMtl::getRenderTarget(ContextMtl *context,
     if (implicitSamples > 1 && !rtt.getImplicitMSTexture())
     {
         // This format must supports implicit resolve
-        ANGLE_MTL_CHECK(context, mFormat.getCaps().resolve, GL_INVALID_VALUE);
+        ANGLE_CHECK(context, mFormat.getCaps().resolve, gl::err::kInternalError, GL_INVALID_VALUE);
         mtl::TextureRef &msTexture = mImplicitMSTextures[imageIndex][renderToTextureIndex];
         if (!msTexture)
         {
@@ -1701,7 +1702,8 @@ angle::Result TextureMtl::generateMipmapCPU(const gl::Context *context)
     ContextMtl *contextMtl           = mtl::GetImpl(context);
     const angle::Format &angleFormat = mFormat.actualAngleFormat();
     // This format must have mip generation function.
-    ANGLE_MTL_TRY(contextMtl, angleFormat.mipGenerationFunction);
+    ANGLE_CHECK(contextMtl, angleFormat.mipGenerationFunction, gl::err::kInternalError,
+                GL_INVALID_OPERATION);
 
     for (uint32_t slice = 0; slice < mSlices; ++slice)
     {
@@ -1741,9 +1743,10 @@ angle::Result TextureMtl::generateMipmapCPU(const gl::Context *context)
             }
 
             // Generate mip level
-            angleFormat.mipGenerationFunction(
-                prevLevelWidth, prevLevelHeight, 1, prevLevelData.get(), prevLevelRowPitch,
-                prevLevelDepthPitch, dstLevelData.get(), dstRowPitch, dstDepthPitch);
+            angleFormat.mipGenerationFunction(prevLevelWidth, prevLevelHeight, prevLevelDepth,
+                                              prevLevelData.get(), prevLevelRowPitch,
+                                              prevLevelDepthPitch, dstLevelData.get(), dstRowPitch,
+                                              dstDepthPitch);
 
             mtl::MipmapNativeLevel nativeLevel = mViewFromBaseToMaxLevel->getNativeLevel(glLevel);
 
@@ -1835,7 +1838,7 @@ angle::Result TextureMtl::getAttachmentRenderTarget(const gl::Context *context,
     ANGLE_TRY(ensureNativeStorageCreated(context));
 
     ContextMtl *contextMtl = mtl::GetImpl(context);
-    ANGLE_MTL_TRY(contextMtl, mNativeTextureStorage);
+    ANGLE_CHECK(contextMtl, mNativeTextureStorage, gl::err::kInternalError, GL_INVALID_OPERATION);
 
     RenderTargetMtl *rtt;
     ANGLE_TRY(getRenderTarget(contextMtl, imageIndex, samples, &rtt));
@@ -1947,12 +1950,12 @@ angle::Result TextureMtl::bindToShader(const gl::Context *context,
                 {
                     format = MTLPixelFormatX32_Stencil8;
                 }
-#    if TARGET_OS_OSX || TARGET_OS_MACCATALYST
+#if TARGET_OS_OSX || TARGET_OS_MACCATALYST
                 else if (format == MTLPixelFormatDepth24Unorm_Stencil8)
                 {
                     format = MTLPixelFormatX24_Stencil8;
                 }
-#    endif
+#endif
             }
 
             mSwizzleStencilSamplingView = mNativeTextureStorage->createMipsSwizzleView(
@@ -2304,8 +2307,7 @@ angle::Result TextureMtl::setPerSliceSubImage(const gl::Context *context,
                               "The current kernel can handle up to 65536 blocks per dimension.");
 
                 // Current command buffer implementation does not support 64-bit offsets.
-                ANGLE_MTL_CHECK(contextMtl, offset <= std::numeric_limits<uint32_t>::max(),
-                                GL_INVALID_OPERATION);
+                ANGLE_CHECK_GL_MATH(contextMtl, offset <= std::numeric_limits<uint32_t>::max());
 
                 mtl::BufferRef stagingBuffer;
                 ANGLE_TRY(
@@ -2332,9 +2334,7 @@ angle::Result TextureMtl::setPerSliceSubImage(const gl::Context *context,
             else if (pixelsAngleFormat.id == angle::FormatID::D32_FLOAT)
             {
                 // Current command buffer implementation does not support 64-bit offsets.
-                ANGLE_MTL_CHECK(contextMtl, offset <= std::numeric_limits<uint32_t>::max(),
-                                GL_INVALID_OPERATION);
-
+                ANGLE_CHECK_GL_MATH(contextMtl, offset <= std::numeric_limits<uint32_t>::max());
                 mtl::BufferRef stagingBuffer;
                 ANGLE_TRY(
                     mtl::Buffer::MakeBuffer(contextMtl, pixelsDepthPitch, nullptr, &stagingBuffer));
@@ -2384,15 +2384,15 @@ angle::Result TextureMtl::convertAndSetPerSliceSubImage(const gl::Context *conte
 
     if (unpackBuffer)
     {
-        ANGLE_MTL_CHECK(contextMtl,
-                        reinterpret_cast<uintptr_t>(pixels) <= std::numeric_limits<uint32_t>::max(),
-                        GL_INVALID_OPERATION);
+        ANGLE_CHECK_GL_MATH(contextMtl, reinterpret_cast<uintptr_t>(pixels) <=
+                                            std::numeric_limits<uint32_t>::max());
 
         uint32_t offset = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(pixels));
 
         BufferMtl *unpackBufferMtl = mtl::GetImpl(unpackBuffer);
-        if (!mFormat.getCaps().writable || mFormat.hasDepthOrStencilBits() ||
-            mFormat.intendedAngleFormat().isBlock)
+        if (!mFormat.getCaps().isRenderable() || mFormat.hasDepthOrStencilBits() ||
+            mFormat.intendedAngleFormat().isBlock ||
+            !contextMtl->getDisplay()->getUtils().isPixelsUnpackSupported(pixelsAngleFormat))
         {
             // Unsupported format, use CPU path.
             const uint8_t *clientData = unpackBufferMtl->getBufferDataReadOnly(contextMtl);
@@ -2403,27 +2403,33 @@ angle::Result TextureMtl::convertAndSetPerSliceSubImage(const gl::Context *conte
         }
         else
         {
-            // Use compute shader
+            // Use shaders
             mtl::CopyPixelsFromBufferParams params;
             params.buffer            = unpackBufferMtl->getCurrentBuffer();
             params.bufferStartOffset = offset;
             params.bufferRowPitch    = static_cast<uint32_t>(pixelsRowPitch);
             params.bufferDepthPitch  = static_cast<uint32_t>(pixelsDepthPitch);
             params.texture           = image;
-            params.textureArea       = mtl::MTLRegionToGLBox(mtlArea);
+            params.textureArea       = mtl::MTLRegionToGLRect(mtlArea);
 
             // If texture is not array, slice must be zero, if texture is array, mtlArea.origin.z
             // must be zero.
             // This is because this function uses Metal convention: where slice is only used for
             // array textures, and z layer of mtlArea.origin is only used for 3D textures.
-            ASSERT(slice == 0 || params.textureArea.z == 0);
+            ASSERT(slice == 0 || mtlArea.origin.z == 0);
 
             // For mtl::RenderUtils we convert to OpenGL convention: z layer is used as either array
             // texture's slice or 3D texture's layer index.
-            params.textureArea.z += slice;
+            params.textureSliceOrDepth = std::max(slice, static_cast<int>(mtlArea.origin.z));
 
-            ANGLE_TRY(contextMtl->getDisplay()->getUtils().unpackPixelsFromBufferToTexture(
-                contextMtl, pixelsAngleFormat, params));
+            for (uint32_t z = 0; z < static_cast<uint32_t>(mtlArea.size.depth); ++z)
+            {
+                ANGLE_TRY(contextMtl->getDisplay()->getUtils().unpackPixelsWithDraw(
+                    context, pixelsAngleFormat, params));
+
+                params.textureSliceOrDepth++;
+                params.bufferStartOffset += params.bufferDepthPitch;
+            }
         }
     }  // if (unpackBuffer)
     else
@@ -2520,7 +2526,7 @@ angle::Result TextureMtl::convertAndSetPerSliceSubImage(const gl::Context *conte
                 }
             }
         }  // if (mFormat.intendedAngleFormat().isBlock)
-    }      // if (unpackBuffer)
+    }  // if (unpackBuffer)
 
     return angle::Result::Continue;
 }

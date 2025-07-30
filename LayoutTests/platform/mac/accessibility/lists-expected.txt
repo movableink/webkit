@@ -11,8 +11,6 @@ meaning 2
 
 
 
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXList
 AXSubrole: AXContentList
 AXRoleDescription: content list
@@ -42,16 +40,14 @@ AXFocusableAncestor: <AXList>
 AXEditableAncestor: (null)
 AXHighestEditableAncestor: (null)
 AXVisibleCharacterRange: NSRange: {0, 14}
+AXElementBusy: 0
 AXActiveElement: (null)
 AXSelectedChildren: (null)
 AXVisibleChildren: <array of size 2>
 AXOrientation: AXVerticalOrientation
 AXActiveElement: (null)
-AXElementBusy: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXList
 AXSubrole: AXContentList
 AXRoleDescription: content list
@@ -81,16 +77,14 @@ AXFocusableAncestor: <AXList>
 AXEditableAncestor: (null)
 AXHighestEditableAncestor: (null)
 AXVisibleCharacterRange: NSRange: {0, 14}
+AXElementBusy: 0
 AXActiveElement: (null)
 AXSelectedChildren: (null)
 AXVisibleChildren: <array of size 2>
 AXOrientation: AXVerticalOrientation
 AXActiveElement: (null)
-AXElementBusy: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXList
 AXSubrole: AXDescriptionList
 AXRoleDescription: description list
@@ -120,17 +114,15 @@ AXFocusableAncestor: <AXList>
 AXEditableAncestor: (null)
 AXHighestEditableAncestor: (null)
 AXVisibleCharacterRange: NSRange: {0, 44}
+AXElementBusy: 0
 AXActiveElement: (null)
 AXSelectedChildren: (null)
 AXVisibleChildren: <array of size 5>
 AXOrientation: AXVerticalOrientation
-AXElementBusy: 0
 
 ------------
 
 
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: (null)
 AXRoleDescription: group
@@ -160,12 +152,10 @@ AXFocusableAncestor: <AXGroup>
 AXEditableAncestor: (null)
 AXHighestEditableAncestor: (null)
 AXVisibleCharacterRange: NSRange: {0, 6}
-AXInlineText: 0
 AXElementBusy: 0
+AXInlineText: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: (null)
 AXRoleDescription: group
@@ -195,14 +185,12 @@ AXFocusableAncestor: <AXGroup>
 AXEditableAncestor: (null)
 AXHighestEditableAncestor: (null)
 AXVisibleCharacterRange: NSRange: {0, 6}
-AXInlineText: 0
 AXElementBusy: 0
+AXInlineText: 0
 
 ------------
 
 
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: (null)
 AXRoleDescription: group
@@ -232,12 +220,10 @@ AXFocusableAncestor: <AXGroup>
 AXEditableAncestor: (null)
 AXHighestEditableAncestor: (null)
 AXVisibleCharacterRange: NSRange: {0, 6}
-AXInlineText: 0
 AXElementBusy: 0
+AXInlineText: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: (null)
 AXRoleDescription: group
@@ -267,14 +253,12 @@ AXFocusableAncestor: <AXGroup>
 AXEditableAncestor: (null)
 AXHighestEditableAncestor: (null)
 AXVisibleCharacterRange: NSRange: {0, 6}
-AXInlineText: 0
 AXElementBusy: 0
+AXInlineText: 0
 
 ------------
 
 
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: AXTerm
 AXRoleDescription: term
@@ -307,8 +291,6 @@ AXVisibleCharacterRange: NSRange: {0, 6}
 AXElementBusy: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: AXDescription
 AXRoleDescription: description
@@ -341,8 +323,6 @@ AXVisibleCharacterRange: NSRange: {0, 9}
 AXElementBusy: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: AXTerm
 AXRoleDescription: term
@@ -375,8 +355,6 @@ AXVisibleCharacterRange: NSRange: {0, 6}
 AXElementBusy: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: AXDescription
 AXRoleDescription: description
@@ -409,8 +387,6 @@ AXVisibleCharacterRange: NSRange: {0, 9}
 AXElementBusy: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: AXDescription
 AXRoleDescription: description

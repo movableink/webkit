@@ -33,11 +33,12 @@ SYNCHRONOUS_ATTRIBUTE = 'Synchronous'
 STREAM_ATTRIBUTE = "Stream"
 
 class MessageReceiver(object):
-    def __init__(self, name, superclass, attributes, receiver_enabled_by, receiver_enabled_by_conjunction, receiver_dispatched_from, receiver_dispatched_to, shared_preferences_needs_connection, messages, condition, namespace):
+    def __init__(self, name, superclass, attributes, receiver_enabled_by, receiver_enabled_by_exception, receiver_enabled_by_conjunction, receiver_dispatched_from, receiver_dispatched_to, shared_preferences_needs_connection, messages, condition, namespace, wants_send_cancel_reply):
         self.name = name
         self.superclass = superclass
         self.attributes = frozenset(attributes or [])
         self.receiver_enabled_by = receiver_enabled_by
+        self.receiver_enabled_by_exception = receiver_enabled_by_exception
         self.receiver_enabled_by_conjunction = receiver_enabled_by_conjunction
         self.receiver_dispatched_from = receiver_dispatched_from
         self.receiver_dispatched_to = receiver_dispatched_to
@@ -45,6 +46,7 @@ class MessageReceiver(object):
         self.messages = messages
         self.condition = condition
         self.namespace = namespace
+        self.wants_send_cancel_reply = wants_send_cancel_reply
 
     def iterparameters(self):
         return itertools.chain((parameter for message in self.messages for parameter in message.parameters),
@@ -55,7 +57,7 @@ class MessageReceiver(object):
 
 
 class Message(object):
-    def __init__(self, name, parameters, reply_parameters, attributes, condition, validator=None, enabled_by=None, enabled_by_conjunction=None, coalescing_key_indices=None):
+    def __init__(self, name, parameters, reply_parameters, attributes, condition, validator=None, enabled_by=None, enabled_by_exception=False, enabled_by_conjunction=None, coalescing_key_indices=None):
         self.name = name
         self.parameters = parameters
         self.reply_parameters = reply_parameters
@@ -63,6 +65,7 @@ class Message(object):
         self.condition = condition
         self.validator = validator
         self.enabled_by = enabled_by
+        self.enabled_by_exception = enabled_by_exception
         self.enabled_by_conjunction = enabled_by_conjunction
         self.coalescing_key_indices = coalescing_key_indices
 
@@ -82,7 +85,7 @@ class Parameter(object):
         return attribute in self.attributes
 
 
-ipc_receiver = MessageReceiver(name="IPC", superclass=None, attributes=[BUILTIN_ATTRIBUTE], receiver_enabled_by=None, receiver_enabled_by_conjunction=None, receiver_dispatched_from=None, receiver_dispatched_to=None, shared_preferences_needs_connection=False, messages=[
+ipc_receiver = MessageReceiver(name="IPC", superclass=None, attributes=[BUILTIN_ATTRIBUTE], receiver_enabled_by=None, receiver_enabled_by_exception=False, receiver_enabled_by_conjunction=None, receiver_dispatched_from=None, receiver_dispatched_to=None, shared_preferences_needs_connection=False, messages=[
     Message('WrappedAsyncMessageForTesting', [], [], attributes=[BUILTIN_ATTRIBUTE, SYNCHRONOUS_ATTRIBUTE, ALLOWEDWHENWAITINGFORSYNCREPLY_ATTRIBUTE], condition=None),
     Message('SyncMessageReply', [], [], attributes=[BUILTIN_ATTRIBUTE], condition=None),
     Message('CancelSyncMessageReply', [], [], attributes=[BUILTIN_ATTRIBUTE], condition=None),
@@ -90,7 +93,7 @@ ipc_receiver = MessageReceiver(name="IPC", superclass=None, attributes=[BUILTIN_
     Message('LegacySessionState', [], [], attributes=[BUILTIN_ATTRIBUTE], condition=None),
     Message('SetStreamDestinationID', [], [], attributes=[BUILTIN_ATTRIBUTE], condition=None),
     Message('ProcessOutOfStreamMessage', [], [], attributes=[BUILTIN_ATTRIBUTE], condition=None),
-], condition=None, namespace="WebKit")
+], condition=None, namespace="WebKit", wants_send_cancel_reply=False)
 
 
 def check_global_model_inputs(receivers):
@@ -124,6 +127,6 @@ def generate_global_model(receivers):
         for message in receiver.messages:
             if message.reply_parameters is not None and not message.has_attribute(SYNCHRONOUS_ATTRIBUTE):
                 async_reply_messages.append(Message(name='%s_%sReply' % (receiver.name, message.name), parameters=message.reply_parameters, reply_parameters=[], attributes=None, condition=message.condition))
-    async_reply_receiver = MessageReceiver(name='AsyncReply', superclass='None', attributes=[BUILTIN_ATTRIBUTE], receiver_enabled_by=None, receiver_enabled_by_conjunction=None, receiver_dispatched_from=None, receiver_dispatched_to=None, shared_preferences_needs_connection=False, messages=async_reply_messages, condition=None, namespace='WebKit')
+    async_reply_receiver = MessageReceiver(name='AsyncReply', superclass='None', attributes=[BUILTIN_ATTRIBUTE], receiver_enabled_by=None, receiver_enabled_by_exception=False, receiver_enabled_by_conjunction=None, receiver_dispatched_from=None, receiver_dispatched_to=None, shared_preferences_needs_connection=False, messages=async_reply_messages, condition=None, namespace='WebKit', wants_send_cancel_reply=False)
 
     return [ipc_receiver, async_reply_receiver] + receivers

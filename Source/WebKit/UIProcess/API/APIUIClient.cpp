@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,16 +26,13 @@
 #include "config.h"
 #include "APIUIClient.h"
 
-#include "UserMediaPermissionCheckProxy.h"
 #include "UserMediaPermissionRequestProxy.h"
 #include "WebPageProxy.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace API {
 
-void UIClient::checkUserMediaPermissionForOrigin(WebKit::WebPageProxy&, WebKit::WebFrameProxy&, SecurityOrigin&, SecurityOrigin&, WebKit::UserMediaPermissionCheckProxy& request)
-{
-    request.deny();
-}
+WTF_MAKE_TZONE_ALLOCATED_IMPL(UIClient);
 
 void UIClient::decidePolicyForUserMediaPermissionRequest(WebKit::WebPageProxy&, WebKit::WebFrameProxy&, SecurityOrigin&, SecurityOrigin&, WebKit::UserMediaPermissionRequestProxy& request)
 {

@@ -27,6 +27,7 @@
 
 #if ENABLE(APPLE_PAY_REMOTE_UI)
 
+#import "DeprecatedGlobalValues.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
 #import "TestNavigationDelegate.h"

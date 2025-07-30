@@ -42,7 +42,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderTreeBuilder, SVG);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::SVG);
 
 RenderTreeBuilder::SVG::SVG(RenderTreeBuilder& builder)
     : m_builder(builder)

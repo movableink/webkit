@@ -29,7 +29,6 @@
 #if ENABLE(PDF_PLUGIN)
 
 #import "PDFAnnotationTypeHelpers.h"
-#import "PDFPlugin.h"
 #import "PDFPluginBase.h"
 #import "PDFPluginChoiceAnnotation.h"
 #import "PDFPluginTextAnnotation.h"
@@ -41,6 +40,7 @@
 #import <WebCore/Event.h>
 #import <WebCore/EventLoop.h>
 #import <WebCore/EventNames.h>
+#import <WebCore/ExceptionOr.h>
 #import <WebCore/HTMLInputElement.h>
 #import <WebCore/HTMLNames.h>
 #import <WebCore/HTMLOptionElement.h>
@@ -59,10 +59,8 @@ RefPtr<PDFPluginAnnotation> PDFPluginAnnotation::create(PDFAnnotation *annotatio
 {
     if (annotationIsWidgetOfType(annotation, WidgetType::Text))
         return PDFPluginTextAnnotation::create(annotation, plugin);
-#if PLATFORM(MAC)
     if (annotationIsWidgetOfType(annotation, WidgetType::Choice))
         return PDFPluginChoiceAnnotation::create(annotation, plugin);
-#endif
 
     return nullptr;
 }
@@ -111,7 +109,7 @@ void PDFPluginAnnotation::updateGeometry()
 {
     auto annotationRect = m_plugin->pluginBoundsForAnnotation(m_annotation);
 
-    StyledElement* styledElement = static_cast<StyledElement*>(element());
+    Ref styledElement = downcast<StyledElement>(*element());
     styledElement->setInlineStyleProperty(CSSPropertyWidth, annotationRect.size.width, CSSUnitType::CSS_PX);
     styledElement->setInlineStyleProperty(CSSPropertyHeight, annotationRect.size.height, CSSUnitType::CSS_PX);
     styledElement->setInlineStyleProperty(CSSPropertyLeft, annotationRect.origin.x, CSSUnitType::CSS_PX);

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Google, Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -64,7 +65,7 @@ String CachedResourceRequest::splitFragmentIdentifierFromRequestURL(ResourceRequ
     URL url = request.url();
     auto fragmentIdentifier = url.fragmentIdentifier().toString();
     url.removeFragmentIdentifier();
-    request.setURL(url);
+    request.setURL(WTFMove(url));
     return fragmentIdentifier;
 }
 
@@ -111,7 +112,7 @@ void upgradeInsecureResourceRequestIfNeeded(ResourceRequest& request, Document& 
     if (url == request.url())
         return;
 
-    request.setURL(url);
+    request.setURL(WTFMove(url));
 }
 
 void CachedResourceRequest::upgradeInsecureRequestIfNeeded(Document& document, ContentSecurityPolicy::AlwaysUpgradeRequest alwaysUpgradeRequest)
@@ -257,7 +258,7 @@ void CachedResourceRequest::removeFragmentIdentifierIfNeeded()
 {
     URL url = MemoryCache::removeFragmentIdentifierIfNeeded(m_resourceRequest.url());
     if (url.string() != m_resourceRequest.url())
-        m_resourceRequest.setURL(url);
+        m_resourceRequest.setURL(WTFMove(url));
 }
 
 #if ENABLE(CONTENT_EXTENSIONS)

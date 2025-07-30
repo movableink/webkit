@@ -51,4 +51,11 @@
 
 @end
 
+@interface UserMediaCaptureUIDelegateWithDeviceChange : NSObject<WKNavigationDelegate, WKUIDelegate> {
+    bool _wasPrompted;
+}
+-(void)addDefaultCamera:(WKWebViewConfiguration*)configuration;
+-(void)addDefaultMicrophone:(WKWebViewConfiguration*)configuration;
+
+@end
 #endif // ENABLE(MEDIA_STREAM)

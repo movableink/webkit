@@ -45,7 +45,6 @@ struct _WebKitTextSinkPrivate {
     std::optional<TrackID> streamId;
 };
 
-#define webkit_text_sink_parent_class parent_class
 WEBKIT_DEFINE_TYPE_WITH_CODE(WebKitTextSink, webkit_text_sink, GST_TYPE_BIN,
     GST_DEBUG_CATEGORY_INIT(webkitTextSinkDebug, "webkittextsink", 0, "webkit text sink"))
 
@@ -57,7 +56,7 @@ static void webkitTextSinkHandleSample(WebKitTextSink* self, GRefPtr<GstSample>&
         priv->streamId = getStreamIdFromPad(pad.get());
     }
 
-    if (UNLIKELY(!priv->streamId)) {
+    if (!priv->streamId) [[unlikely]] {
         GST_WARNING_OBJECT(self, "Unable to handle sample with no stream start event.");
         return;
     }
@@ -75,12 +74,12 @@ static void webkitTextSinkHandleSample(WebKitTextSink* self, GRefPtr<GstSample>&
 
 static void webkitTextSinkConstructed(GObject* object)
 {
-    GST_CALL_PARENT(G_OBJECT_CLASS, constructed, (object));
+    G_OBJECT_CLASS(webkit_text_sink_parent_class)->constructed(object);
 
     auto* sink = WEBKIT_TEXT_SINK(object);
     auto* priv = sink->priv;
 
-    priv->appSink = makeGStreamerElement("appsink", nullptr);
+    priv->appSink = makeGStreamerElement("appsink"_s);
     gst_bin_add(GST_BIN_CAST(sink), priv->appSink.get());
 
     auto pad = adoptGRef(gst_element_get_static_pad(priv->appSink.get(), "sink"));
@@ -112,7 +111,7 @@ static gboolean webkitTextSinkQuery(GstElement* element, GstQuery* query)
         // Ignore duration and position because we don't want the seek bar to be based on where the cues are.
         return false;
     default:
-        return GST_CALL_PARENT_WITH_DEFAULT(GST_ELEMENT_CLASS, query, (element, query), FALSE);
+        return GST_ELEMENT_CLASS(webkit_text_sink_parent_class)->query(element, query);
     }
 }
 

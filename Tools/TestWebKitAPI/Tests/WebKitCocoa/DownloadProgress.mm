@@ -46,7 +46,6 @@
 enum class DownloadStartType {
     ConvertLoadToDownload,
     StartFromNavigationAction,
-    StartInProcessPool,
 };
 
 @interface DownloadProgressTestRunner : NSObject <WKNavigationDelegate, _WKDownloadDelegate>
@@ -256,9 +255,6 @@ static void* progressObservingContext = &progressObservingContext;
     case DownloadStartType::StartFromNavigationAction:
         [m_webView loadRequest:request.get()];
         break;
-    case DownloadStartType::StartInProcessPool:
-        [m_webView.get().configuration.processPool _downloadURLRequest:request.get() websiteDataStore:[WKWebsiteDataStore defaultDataStore] originatingWebView:nullptr];
-        break;
     }
 
     TestWebKitAPI::Util::run(&m_downloadStarted);
@@ -392,7 +388,7 @@ static void* progressObservingContext = &progressObservingContext;
 {
     EXPECT_EQ(download, m_download.get());
 
-    RetainPtr<NSString> path = (NSString *)FileSystem::createTemporaryFile("TestWebKitAPI"_s);
+    RetainPtr path = FileSystem::createTemporaryFile("TestWebKitAPI"_s).createNSString();
     EXPECT_TRUE(path && [path.get() length]);
 
     completionHandler(YES, path.get());
@@ -432,21 +428,6 @@ TEST(DownloadProgress, StartDownloadFromNavigationAction)
     auto testRunner = adoptNS([[DownloadProgressTestRunner alloc] init]);
 
     [testRunner.get() startDownload:DownloadStartType::StartFromNavigationAction expectedLength:100];
-    [testRunner.get() publishProgress];
-    [testRunner.get() subscribeAndWaitForProgress];
-    [testRunner.get() receiveData:100];
-    [testRunner.get() finishDownloadTask];
-    [testRunner.get() waitForDownloadFinished];
-    [testRunner.get() waitToLoseProgress];
-
-    [testRunner.get() tearDown];
-}
-
-TEST(DownloadProgress, StartDownloadInProcessPool)
-{
-    auto testRunner = adoptNS([[DownloadProgressTestRunner alloc] init]);
-
-    [testRunner.get() startDownload:DownloadStartType::StartInProcessPool expectedLength:100];
     [testRunner.get() publishProgress];
     [testRunner.get() subscribeAndWaitForProgress];
     [testRunner.get() receiveData:100];

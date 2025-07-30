@@ -32,8 +32,6 @@
 #include "WebKitAudioSinkGStreamer.h"
 #include <wtf/OptionSet.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
-
 namespace WebCore {
 
 GST_DEBUG_CATEGORY_STATIC(webkit_rialto_quirks_debug);
@@ -47,7 +45,7 @@ GStreamerQuirkRialto::GStreamerQuirkRialto()
 
     for (const auto* sink : rialtoSinks) {
         auto sinkFactory = adoptGRef(gst_element_factory_find(sink));
-        if (UNLIKELY(!sinkFactory))
+        if (!sinkFactory) [[unlikely]]
             continue;
 
         gst_object_unref(gst_plugin_feature_load(GST_PLUGIN_FEATURE(sinkFactory.get())));
@@ -70,6 +68,14 @@ GStreamerQuirkRialto::GStreamerQuirkRialto()
     }
 }
 
+bool GStreamerQuirkRialto::isPlatformSupported() const
+{
+    auto sinkFactory = adoptGRef(gst_element_factory_find("rialtomsevideosink"));
+    if (!sinkFactory)
+        return false;
+    return gst_plugin_feature_get_rank(GST_PLUGIN_FEATURE(sinkFactory.get())) > GST_RANK_MARGINAL;
+}
+
 void GStreamerQuirkRialto::configureElement(GstElement* element, const OptionSet<ElementRuntimeCharacteristics>&)
 {
     if (!g_strcmp0(G_OBJECT_TYPE_NAME(G_OBJECT(element)), "GstURIDecodeBin3")) {
@@ -83,7 +89,7 @@ void GStreamerQuirkRialto::configureElement(GstElement* element, const OptionSet
 
 GstElement* GStreamerQuirkRialto::createAudioSink()
 {
-    auto sink = makeGStreamerElement("rialtomseaudiosink", nullptr);
+    auto sink = makeGStreamerElement("rialtomseaudiosink"_s);
     RELEASE_ASSERT_WITH_MESSAGE(sink, "rialtomseaudiosink should be available in the system but it is not");
     return sink;
 }
@@ -93,14 +99,15 @@ GstElement* GStreamerQuirkRialto::createWebAudioSink()
     if (GstElement* sink = webkitAudioSinkNew())
         return sink;
 
-    auto sink = makeGStreamerElement("rialtowebaudiosink", nullptr);
+    auto sink = makeGStreamerElement("rialtowebaudiosink"_s);
     RELEASE_ASSERT_WITH_MESSAGE(sink, "rialtowebaudiosink should be available in the system but it is not");
     return sink;
 }
 
 std::optional<bool> GStreamerQuirkRialto::isHardwareAccelerated(GstElementFactory* factory)
 {
-    if (g_str_has_prefix(GST_OBJECT_NAME(factory), "rialto"))
+    auto view = StringView::fromLatin1(GST_OBJECT_NAME(factory));
+    if (view.startsWith("rialto"_s))
         return true;
 
     return std::nullopt;
@@ -109,7 +116,5 @@ std::optional<bool> GStreamerQuirkRialto::isHardwareAccelerated(GstElementFactor
 #undef GST_CAT_DEFAULT
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // USE(GSTREAMER)

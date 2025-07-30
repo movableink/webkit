@@ -452,6 +452,7 @@ static void bindOpenGL(Vector<CString>& args)
     }));
 }
 
+#if PLATFORM(WPE)
 static void bindV4l(Vector<CString>& args)
 {
     args.appendVector(Vector<CString>({
@@ -463,6 +464,7 @@ static void bindV4l(Vector<CString>& args)
         "--dev-bind-try", "/dev/media0", "/dev/media0",
     }));
 }
+#endif
 
 static bool enableDebugPermissions()
 {
@@ -894,8 +896,20 @@ GRefPtr<GSubprocess> bubblewrapSpawn(GSubprocessLauncher* launcher, const Proces
         bindFonts(sandboxArgs);
         bindGStreamerData(sandboxArgs);
         bindOpenGL(sandboxArgs);
-        // FIXME: This is also fixed by Pipewire once in use.
+
+        // NOTE: We don't bind v4l2 devices in the sandbox for WebKitGTK builds. We expect the
+        // WebKitGTK Application/UIProcess to be packaged as a Flatpak so that Camera access can be
+        // managed via the DesktopPortal. Our fake WebProcess .flatpak-info file is not sufficient
+        // for this, at least on GNOME hosts, where GNOME-Shell expects the Window/UIProcess to also
+        // have a .flatpak-info file mapped in /proc/<pid>/root/.flatpak-info in order to show the
+        // camera access permission popup.
+        //
+        // For WPEWebKit applications, we expect to find no DesktopPortal at runtime, so we bind the
+        // v4l2 devices in the sandbox.
+#if PLATFORM(WPE)
         bindV4l(sandboxArgs);
+#endif
+
 #if USE(ATSPI)
         auto accessibilityBusAddress = launchOptions.extraInitializationData.get("accessibilityBusAddress"_s);
         auto sandboxedAccessibilityBusAddress = launchOptions.extraInitializationData.get("sandboxedAccessibilityBusAddress"_s);

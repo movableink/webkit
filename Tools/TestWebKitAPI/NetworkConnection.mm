@@ -27,10 +27,13 @@
 #import "NetworkConnection.h"
 
 #import "HTTPServer.h"
+#import <pal/spi/cocoa/NetworkSPI.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/SHA1.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/Base64.h>
+#import <wtf/text/StringToIntegerConversion.h>
 
 namespace TestWebKitAPI {
 
@@ -68,10 +71,10 @@ void Connection::receiveHTTPRequest(CompletionHandler<void(Vector<char>&&)>&& co
 {
     receiveBytes([connection = *this, completionHandler = WTFMove(completionHandler), buffer = WTFMove(buffer)](Vector<uint8_t>&& bytes) mutable {
         buffer.appendVector(WTFMove(bytes));
-        if (auto* doubleNewline = strnstr(buffer.data(), "\r\n\r\n", buffer.size())) {
-            if (auto* contentLengthBegin = strnstr(buffer.data(), "Content-Length", buffer.size())) {
-                size_t contentLength = atoi(contentLengthBegin + strlen("Content-Length: "));
-                size_t headerLength = doubleNewline - buffer.data() + strlen("\r\n\r\n");
+        if (size_t doubleNewlineIndex = find(buffer.span(), "\r\n\r\n"_span); doubleNewlineIndex != notFound) {
+            if (size_t contentLengthBeginIndex = find(buffer.span(), "Content-Length"_span); contentLengthBeginIndex != notFound) {
+                size_t contentLength = parseIntegerAllowingTrailingJunk<int>(buffer.span().subspan(contentLengthBeginIndex + strlen("Content-Length: "))).value_or(0);
+                size_t headerLength = doubleNewlineIndex + strlen("\r\n\r\n");
                 if (buffer.size() - headerLength < contentLength)
                     return connection.receiveHTTPRequest(WTFMove(completionHandler), WTFMove(buffer));
             }
@@ -163,16 +166,17 @@ void Connection::webSocketHandshake(CompletionHandler<void()>&& connectionHandle
     receiveHTTPRequest([connection = Connection(*this), connectionHandler = WTFMove(connectionHandler)] (Vector<char>&& request) mutable {
 
         auto webSocketAcceptValue = [] (const Vector<char>& request) {
-            constexpr auto* keyHeaderField = "Sec-WebSocket-Key: ";
-            const char* keyBegin = strnstr(request.data(), keyHeaderField, request.size()) + strlen(keyHeaderField);
-            ASSERT(keyBegin);
-            const char* keyEnd = strnstr(keyBegin, "\r\n", request.size() + (keyBegin - request.data()));
-            ASSERT(keyEnd);
+            constexpr auto keyHeaderField = "Sec-WebSocket-Key: "_s;
+            size_t keyBegin = find(request.span(), keyHeaderField.span());
+            ASSERT(keyBegin != notFound);
+            auto keySpan = request.subspan(keyBegin + keyHeaderField.length());
+            size_t keyEnd = find(keySpan, "\r\n"_span);
+            ASSERT(keyEnd != notFound);
 
-            const auto webSocketKeyGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"_span;
+            constexpr auto webSocketKeyGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"_s;
             SHA1 sha1;
-            sha1.addBytes(byteCast<uint8_t>(std::span { keyBegin, keyEnd }));
-            sha1.addBytes(webSocketKeyGUID);
+            sha1.addBytes(byteCast<uint8_t>(keySpan.first(keyEnd)));
+            sha1.addBytes(webSocketKeyGUID.span());
             SHA1::Digest hash;
             sha1.computeHash(hash);
             return base64EncodeToString(hash);
@@ -195,5 +199,70 @@ void Connection::terminate(CompletionHandler<void()>&& completionHandler)
     }).get());
     nw_connection_cancel(m_connection.get());
 }
+
+#if HAVE(WEB_TRANSPORT)
+
+struct ConnectionGroup::Data : public RefCounted<ConnectionGroup::Data> {
+    static Ref<Data> create(nw_connection_group_t group) { return adoptRef(*new Data(group)); }
+    Data(nw_connection_group_t group)
+        : group(group) { }
+
+    RetainPtr<nw_connection_group_t> group;
+    CompletionHandler<void(Connection)> connectionHandler;
+    Vector<Connection> connections;
+};
+
+ConnectionGroup::ConnectionGroup(nw_connection_group_t group)
+    : m_data(Data::create(group)) { }
+
+ConnectionGroup::~ConnectionGroup() = default;
+
+ConnectionGroup::ConnectionGroup(const ConnectionGroup&) = default;
+
+Connection ConnectionGroup::createWebTransportConnection(ConnectionType type) const
+{
+    RetainPtr webtransportOptions = adoptNS(nw_webtransport_create_options());
+    ASSERT(webtransportOptions);
+    nw_webtransport_options_set_is_unidirectional(webtransportOptions.get(), type == ConnectionType::Unidirectional);
+    nw_webtransport_options_set_is_datagram(webtransportOptions.get(), type == ConnectionType::Datagram);
+
+    RetainPtr connection = adoptNS(nw_connection_group_extract_connection(m_data->group.get(), nil, webtransportOptions.get()));
+    ASSERT(connection);
+    nw_connection_set_queue(connection.get(), dispatch_get_main_queue());
+    nw_connection_start(connection.get());
+    return Connection(connection.get());
+}
+
+void ReceiveIncomingConnectionOperation::await_suspend(std::coroutine_handle<> handle)
+{
+    m_group.receiveIncomingConnection([this, handle](Connection result) mutable {
+        m_result = WTFMove(result);
+        handle();
+    });
+}
+
+ReceiveIncomingConnectionOperation ConnectionGroup::receiveIncomingConnection() const
+{
+    return { *this };
+}
+
+void ConnectionGroup::receiveIncomingConnection(CompletionHandler<void(Connection)>&& connectionHandler)
+{
+    m_data->connectionHandler = WTFMove(connectionHandler);
+}
+
+void ConnectionGroup::receiveIncomingConnection(Connection connection)
+{
+    m_data->connections.append(connection);
+    nw_connection_set_state_changed_handler(connection.m_connection.get(), [connection, data = m_data] (nw_connection_state_t state, nw_error_t error) mutable {
+        if (state != nw_connection_state_ready)
+            return;
+        data->connectionHandler(connection);
+    });
+    nw_connection_set_queue(connection.m_connection.get(), dispatch_get_main_queue());
+    nw_connection_start(connection.m_connection.get());
+}
+
+#endif // HAVE(WEB_TRANSPORT)
 
 } // namespace TestWebKitAPI

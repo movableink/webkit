@@ -26,15 +26,14 @@
 
 #include "CSSPropertyNames.h"
 #include "CounterDirectives.h"
-#include "FillLayer.h"
 #include "GapLength.h"
 #include "LengthPoint.h"
 #include "LineClampValue.h"
+#include "NameScope.h"
 #include "NinePieceImage.h"
 #include "OffsetRotation.h"
-#include "PathOperation.h"
-#include "RotateTransformOperation.h"
-#include "ScaleTransformOperation.h"
+#include "PositionArea.h"
+#include "PositionTryFallback.h"
 #include "ScopedName.h"
 #include "ScrollAxis.h"
 #include "ScrollTimeline.h"
@@ -43,22 +42,22 @@
 #include "ShapeValue.h"
 #include "StyleColor.h"
 #include "StyleContentAlignmentData.h"
+#include "StylePrimitiveNumericTypes.h"
+#include "StyleScrollMargin.h"
+#include "StyleScrollPadding.h"
 #include "StyleScrollSnapPoints.h"
 #include "StyleSelfAlignmentData.h"
 #include "StyleTextEdge.h"
 #include "TextDecorationThickness.h"
-#include "TimelineScope.h"
 #include "TouchAction.h"
 #include "TranslateTransformOperation.h"
 #include "ViewTimeline.h"
 #include "ViewTransitionName.h"
-#include "WebAnimationTypes.h"
-#include "WillChangeData.h"
 #include <memory>
 #include <wtf/DataRef.h>
+#include <wtf/FixedVector.h>
 #include <wtf/Markable.h>
 #include <wtf/OptionSet.h>
-#include <wtf/Vector.h>
 
 namespace WTF {
 class TextStream;
@@ -66,9 +65,13 @@ class TextStream;
 
 namespace WebCore {
 
+using namespace CSS::Literals;
+
 class AnimationList;
 class ContentData;
-class ShadowData;
+class PathOperation;
+class RotateTransformOperation;
+class ScaleTransformOperation;
 class StyleCustomPropertyData;
 class StyleDeprecatedFlexibleBoxData;
 class StyleFilterData;
@@ -79,6 +82,7 @@ class StyleMultiColData;
 class StyleReflection;
 class StyleResolver;
 class StyleTransformData;
+class WillChangeData;
 
 struct LengthSize;
 struct StyleMarqueeData;
@@ -114,6 +118,16 @@ public:
 
     bool hasBackdropFilters() const;
 
+    bool hasScrollTimelines() const
+    {
+        return scrollTimelines.size() || scrollTimelineNames.size();
+    }
+
+    bool hasViewTimelines() const
+    {
+        return viewTimelines.size() || viewTimelineNames.size();
+    }
+
     OptionSet<Containment> usedContain() const;
 
     Markable<Length> containIntrinsicWidth;
@@ -123,10 +137,16 @@ public:
     Length perspectiveOriginY;
 
     LineClampValue lineClamp; // An Apple extension.
-    
+
+    float zoom;
+
     size_t maxLines { 0 };
 
     OverflowContinue overflowContinue { OverflowContinue::Auto };
+
+    OptionSet<TouchAction> touchActions;
+    OptionSet<MarginTrimType> marginTrim;
+    OptionSet<Containment> contain;
 
     IntSize initialLetter;
 
@@ -137,9 +157,11 @@ public:
     DataRef<StyleGridData> grid;
     DataRef<StyleGridItemData> gridItem;
 
+    // Only meaningful when `hasClip` is true.
     LengthBox clip;
-    LengthBox scrollMargin { 0, 0, 0, 0 };
-    LengthBox scrollPadding { Length(LengthType::Auto), Length(LengthType::Auto), Length(LengthType::Auto), Length(LengthType::Auto) };
+
+    Style::ScrollMarginBox scrollMargin { 0_css_px };
+    Style::ScrollPaddingBox scrollPadding { CSS::Keyword::Auto { } };
 
     CounterDirectiveMap counterDirectives;
 
@@ -162,16 +184,16 @@ public:
     Style::Color textDecorationColor;
 
     DataRef<StyleCustomPropertyData> customProperties;
-    HashSet<AtomString> customPaintWatchedProperties;
+    UncheckedKeyHashSet<AtomString> customPaintWatchedProperties;
 
     RefPtr<RotateTransformOperation> rotate;
     RefPtr<ScaleTransformOperation> scale;
     RefPtr<TranslateTransformOperation> translate;
     RefPtr<PathOperation> offsetPath;
 
-    Vector<Style::ScopedName> containerNames;
+    FixedVector<Style::ScopedName> containerNames;
 
-    Vector<Style::ScopedName> viewTransitionClasses;
+    FixedVector<Style::ScopedName> viewTransitionClasses;
     Style::ViewTransitionName viewTransitionName;
 
     GapLength columnGap;
@@ -184,33 +206,30 @@ public:
 
     TextDecorationThickness textDecorationThickness;
 
-    OptionSet<TouchAction> touchActions;
-    OptionSet<MarginTrimType> marginTrim;
-    OptionSet<Containment> contain;
+    FixedVector<Ref<ScrollTimeline>> scrollTimelines;
+    FixedVector<ScrollAxis> scrollTimelineAxes;
+    FixedVector<AtomString> scrollTimelineNames;
+
+    FixedVector<Ref<ViewTimeline>> viewTimelines;
+    FixedVector<ScrollAxis> viewTimelineAxes;
+    FixedVector<ViewTimelineInsets> viewTimelineInsets;
+    FixedVector<AtomString> viewTimelineNames;
+
+    NameScope timelineScope;
+
+    ScrollbarGutter scrollbarGutter;
 
     ScrollSnapType scrollSnapType;
     ScrollSnapAlign scrollSnapAlign;
     ScrollSnapStop scrollSnapStop { ScrollSnapStop::Normal };
 
-    Vector<Ref<ScrollTimeline>> scrollTimelines;
-    Vector<ScrollAxis> scrollTimelineAxes;
-    Vector<AtomString> scrollTimelineNames;
-
-    Vector<Ref<ViewTimeline>> viewTimelines;
-    Vector<ScrollAxis> viewTimelineAxes;
-    Vector<ViewTimelineInsets> viewTimelineInsets;
-    Vector<AtomString> viewTimelineNames;
-
-    TimelineScope timelineScope;
-
-    ScrollbarGutter scrollbarGutter;
-    ScrollbarWidth scrollbarWidth { ScrollbarWidth::Auto };
-
-    float zoom;
     AtomString pseudoElementNameArgument;
 
-    Vector<Style::ScopedName> anchorNames;
+    FixedVector<Style::ScopedName> anchorNames;
+    NameScope anchorScope;
     std::optional<Style::ScopedName> positionAnchor;
+    std::optional<PositionArea> positionArea;
+    FixedVector<Style::PositionTryFallback> positionTryFallbacks;
 
     std::optional<Length> blockStepSize;
     unsigned blockStepAlign : 2; // BlockStepAlign
@@ -236,6 +255,8 @@ public:
     unsigned effectiveBlendMode: 5; // BlendMode
     unsigned isolation : 1; // Isolation
 
+    unsigned inputSecurity : 1; // InputSecurity
+
 #if ENABLE(APPLE_PAY)
     unsigned applePayButtonStyle : 2; // ApplePayButtonStyle
     unsigned applePayButtonType : 4; // ApplePayButtonType
@@ -245,8 +266,6 @@ public:
     unsigned breakAfter : 4; // BreakBetween
     unsigned breakInside : 3; // BreakInside
 
-    unsigned inputSecurity : 1; // InputSecurity
-
     unsigned containIntrinsicWidthType : 2; // ContainIntrinsicSizeType
     unsigned containIntrinsicHeightType : 2; // ContainIntrinsicSizeType
 
@@ -254,13 +273,27 @@ public:
 
     unsigned textBoxTrim : 2; // TextBoxTrim
 
-    unsigned overflowAnchor : 1; // Scroll Anchoring- OverflowAnchor
+    unsigned overflowAnchor : 1; // Scroll Anchoring - OverflowAnchor
 
     bool hasClip : 1;
 
     unsigned positionTryOrder : 3; // Style::PositionTryOrder; 5 values so 3 bits.
+    unsigned positionVisibility : 3; // OptionSet<PositionVisibilty>
 
-    FieldSizing fieldSizing { FieldSizing::Fixed };
+    unsigned fieldSizing : 1; // FieldSizing
+
+    unsigned nativeAppearanceDisabled : 1;
+
+#if HAVE(CORE_MATERIAL)
+    unsigned appleVisualEffect : 5; // AppleVisualEffect
+#endif
+
+    unsigned scrollbarWidth : 2; // ScrollbarWidth
+
+    unsigned usesAnchorFunctions : 1;
+    unsigned usesTreeCountingFunctions : 1;
+
+    unsigned isPopoverInvoker : 1;
 
 private:
     StyleRareNonInheritedData();

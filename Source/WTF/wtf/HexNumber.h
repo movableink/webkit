@@ -21,6 +21,7 @@
 #pragma once
 
 #include <array>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/StringImpl.h>
 
 namespace WTF {
@@ -41,7 +42,7 @@ WTF_EXPORT_PRIVATE std::span<LChar> appendHex(std::span<LChar> buffer, std::uint
 template<size_t arraySize, typename NumberType>
 inline std::span<LChar> appendHex(std::array<LChar, arraySize>& buffer, NumberType number, unsigned minimumDigits, HexConversionMode mode)
 {
-    return appendHex(std::span<LChar> { buffer }, static_cast<typename std::make_unsigned<NumberType>::type>(number), minimumDigits, mode);
+    return appendHex(std::span<LChar> { buffer }, unsignedCast(number), minimumDigits, mode);
 }
 
 } // namespace Internal
@@ -79,7 +80,7 @@ public:
 
     unsigned length() const { return m_buffer.length; }
     bool is8Bit() const { return true; }
-    template<typename CharacterType> void writeTo(std::span<CharacterType> destination) const { StringImpl::copyCharacters(destination.data(), m_buffer.span()); }
+    template<typename CharacterType> void writeTo(std::span<CharacterType> destination) const { StringImpl::copyCharacters(destination, m_buffer.span()); }
 
 private:
     const HexNumberBuffer& m_buffer;

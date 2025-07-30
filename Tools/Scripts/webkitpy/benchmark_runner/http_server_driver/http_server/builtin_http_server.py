@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from http.server import SimpleHTTPRequestHandler, HTTPServer
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import argparse
 import logging
 import sys
@@ -36,6 +36,11 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_response(200)
         self.end_headers()
         self.server_shutdown()
+
+    def end_headers(self):
+        self.send_header('Cross-Origin-Embedder-Policy', 'require-corp')
+        self.send_header('Cross-Origin-Opener-Policy', 'same-origin')
+        super().end_headers()
 
     def do_POST(self):
         report_path = self.web_root + '/report'
@@ -75,6 +80,6 @@ if __name__ == '__main__':
     logging.basicConfig(datefmt='%Y-%m-%d %H:%M:%S',
                         format='%(asctime)s [%(levelname)s]: %(message)s', filename=args.log_path, level=logging.INFO)
     Handler.web_root = args.web_root
-    HTTPServer.address_family = family_type
-    httpd = HTTPServer(addr_pair, Handler)
+    ThreadingHTTPServer.address_family = family_type
+    httpd = ThreadingHTTPServer(addr_pair, Handler)
     httpd.serve_forever()

@@ -35,8 +35,6 @@
 namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MathICGenerationState);
-WTF_MAKE_TZONE_ALLOCATED_IMPL(JSInterfaceJIT);
-WTF_MAKE_TZONE_ALLOCATED_IMPL(SpecializedThunkJIT);
 
 } // namespace JSC
 

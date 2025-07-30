@@ -22,6 +22,7 @@
 
 #include "FrameLoaderClientQt.h"
 #include <WebCore/Document.h>
+#include <WebCore/FrameTreeSyncData.h>
 #include <WebCore/LocalFrame.h>
 #include <WebCore/FrameLoader.h>
 #include <WebCore/HTMLFormElement.h>
@@ -40,7 +41,7 @@ QWebFrameData::QWebFrameData(WebCore::Page* parentPage, WebCore::HTMLFrameOwnerE
     } else {
         frame = LocalFrame::createSubframe(*page, [] (auto&, auto& frameLoader) {
             return WTF::makeUniqueRefWithoutRefCountedCheck<FrameLoaderClientQt>(frameLoader);
-        }, WebCore::FrameIdentifier::generate(), { }, *ownerElement);
+        }, WebCore::FrameIdentifier::generate(), { }, *ownerElement, WebCore::FrameTreeSyncData::create());
     }
     frameLoaderClient = static_cast<FrameLoaderClientQt*>(&frame->loader().client());
 

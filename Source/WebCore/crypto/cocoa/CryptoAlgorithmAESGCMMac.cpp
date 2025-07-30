@@ -38,14 +38,13 @@
 
 namespace WebCore {
 
-#if !HAVE(SWIFT_CPP_INTEROP)
 static ExceptionOr<Vector<uint8_t>> encryptAESGCM(const Vector<uint8_t>& iv, const Vector<uint8_t>& key, const Vector<uint8_t>& plainText, const Vector<uint8_t>& additionalData, size_t desiredTagLengthInBytes)
 {
     Vector<uint8_t> cipherText(plainText.size() + desiredTagLengthInBytes); // Per section 5.2.1.2: http://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38d.pdf
     Vector<uint8_t> tag(desiredTagLengthInBytes);
     // tagLength is actual an input <rdar://problem/30660074>
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    CCCryptorStatus status = CCCryptorGCM(kCCEncrypt, kCCAlgorithmAES, key.data(), key.size(), iv.data(), iv.size(), additionalData.data(), additionalData.size(), plainText.data(), plainText.size(), cipherText.data(), tag.data(), &desiredTagLengthInBytes);
+    CCCryptorStatus status = CCCryptorGCM(kCCEncrypt, kCCAlgorithmAES, key.span().data(), key.size(), iv.span().data(), iv.size(), additionalData.span().data(), additionalData.size(), plainText.span().data(), plainText.size(), cipherText.mutableSpan().data(), tag.mutableSpan().data(), &desiredTagLengthInBytes);
 ALLOW_DEPRECATED_DECLARATIONS_END
     if (status)
         return Exception { ExceptionCode::OperationError };
@@ -53,7 +52,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     return WTFMove(cipherText);
 }
-#else
+
+#if HAVE(SWIFT_CPP_INTEROP)
 static ExceptionOr<Vector<uint8_t>> encryptCryptoKitAESGCM(const Vector<uint8_t>& iv, const Vector<uint8_t>& key, const Vector<uint8_t>& plainText, const Vector<uint8_t>& additionalData, size_t desiredTagLengthInBytes)
 {
     auto rv = PAL::AesGcm::encrypt(key.span(), iv.span(), additionalData.span(), plainText.span(), desiredTagLengthInBytes);
@@ -70,7 +70,7 @@ static ExceptionOr<Vector<uint8_t>> decyptAESGCM(const Vector<uint8_t>& iv, cons
     size_t offset = cipherText.size() - desiredTagLengthInBytes;
     // tagLength is actual an input <rdar://problem/30660074>
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    CCCryptorStatus status = CCCryptorGCM(kCCDecrypt, kCCAlgorithmAES, key.data(), key.size(), iv.data(), iv.size(), additionalData.data(), additionalData.size(), cipherText.data(), offset, plainText.data(), tag.data(), &desiredTagLengthInBytes);
+    CCCryptorStatus status = CCCryptorGCM(kCCDecrypt, kCCAlgorithmAES, key.span().data(), key.size(), iv.span().data(), iv.size(), additionalData.span().data(), additionalData.size(), cipherText.span().data(), offset, plainText.mutableSpan().data(), tag.mutableSpan().data(), &desiredTagLengthInBytes);
 ALLOW_DEPRECATED_DECLARATIONS_END
     if (status)
         return Exception { ExceptionCode::OperationError };
@@ -86,7 +86,10 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 ExceptionOr<Vector<uint8_t>> CryptoAlgorithmAESGCM::platformEncrypt(const CryptoAlgorithmAesGcmParams& parameters, const CryptoKeyAES& key, const Vector<uint8_t>& plainText)
 {
 #if HAVE(SWIFT_CPP_INTEROP)
-    return encryptCryptoKitAESGCM(parameters.ivVector(), key.key(), plainText, parameters.additionalDataVector(), parameters.tagLength.value_or(0) / 8);
+    if (parameters.ivVector().size() >= 12)
+        return encryptCryptoKitAESGCM(parameters.ivVector(), key.key(), plainText, parameters.additionalDataVector(), parameters.tagLength.value_or(0) / 8);
+    return encryptAESGCM(parameters.ivVector(), key.key(), plainText, parameters.additionalDataVector(), parameters.tagLength.value_or(0) / 8);
+
 #else
     return encryptAESGCM(parameters.ivVector(), key.key(), plainText, parameters.additionalDataVector(), parameters.tagLength.value_or(0) / 8);
 #endif

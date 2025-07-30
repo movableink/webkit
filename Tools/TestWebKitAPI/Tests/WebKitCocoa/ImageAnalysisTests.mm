@@ -39,6 +39,7 @@
 #import "WKWebViewConfigurationExtras.h"
 #import <WebCore/LocalizedStrings.h>
 #import <WebKit/WKPreferencesPrivate.h>
+#import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/WKWebViewPrivateForTesting.h>
 #import <WebKit/_WKFeature.h>
@@ -361,7 +362,7 @@ static void invokeRemoveBackgroundAction(TestWKWebView *webView)
 
     auto menuBuilder = adoptNS([[TestUIMenuBuilder alloc] init]);
     [webView buildMenuWithBuilder:menuBuilder.get()];
-    [[menuBuilder actionWithTitle:WebCore::contextMenuItemTitleRemoveBackground()] performWithSender:nil target:nil];
+    [[menuBuilder actionWithTitle:WebCore::contextMenuItemTitleRemoveBackground().createNSString().get()] performWithSender:nil target:nil];
     [webView waitForNextPresentationUpdate];
 }
 
@@ -378,7 +379,7 @@ TEST(ImageAnalysisTests, RemoveBackgroundUsingContextMenu)
 
     auto menuBuilder = adoptNS([[TestUIMenuBuilder alloc] init]);
     [webView buildMenuWithBuilder:menuBuilder.get()];
-    EXPECT_NOT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTitleRemoveBackground()]);
+    EXPECT_NOT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTitleRemoveBackground().createNSString().get()]);
 }
 
 TEST(ImageAnalysisTests, MenuControllerItems)
@@ -401,7 +402,7 @@ TEST(ImageAnalysisTests, MenuControllerItems)
 
     auto menuBuilder = adoptNS([[TestUIMenuBuilder alloc] init]);
     [webView buildMenuWithBuilder:menuBuilder.get()];
-    EXPECT_NOT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTitleRemoveBackground()]);
+    EXPECT_NOT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTitleRemoveBackground().createNSString().get()]);
 
     [webView selectAll:nil];
     [webView waitForNextPresentationUpdate];
@@ -409,7 +410,7 @@ TEST(ImageAnalysisTests, MenuControllerItems)
 
     [menuBuilder reset];
     [webView buildMenuWithBuilder:menuBuilder.get()];
-    EXPECT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTitleRemoveBackground()]);
+    EXPECT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTitleRemoveBackground().createNSString().get()]);
 
     [webView objectByEvaluatingJavaScript:@"getSelection().setBaseAndExtent(document.body, 0, image.parentNode, nodeIndex + 1);"];
     [webView waitForNextPresentationUpdate];
@@ -417,7 +418,7 @@ TEST(ImageAnalysisTests, MenuControllerItems)
 
     [menuBuilder reset];
     [webView buildMenuWithBuilder:menuBuilder.get()];
-    EXPECT_NOT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTitleRemoveBackground()]);
+    EXPECT_NOT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTitleRemoveBackground().createNSString().get()]);
 }
 
 static RetainPtr<TestWKWebView> runMarkupTest(NSString *testPage, NSString *scriptToSelectText, Function<void(TestWKWebView *, NSString *)>&& checkWebView = { })
@@ -482,7 +483,7 @@ TEST(ImageAnalysisTests, AllowRemoveBackgroundOnce)
     auto menuBuilder = adoptNS([TestUIMenuBuilder new]);
     [webView buildMenuWithBuilder:menuBuilder.get()];
 
-    EXPECT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTitleRemoveBackground()]);
+    EXPECT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTitleRemoveBackground().createNSString().get()]);
 }
 
 #endif // ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS) && PLATFORM(IOS_FAMILY)
@@ -505,7 +506,7 @@ TEST(ImageAnalysisTests, RemoveBackgroundItemInServicesMenu)
     RetainPtr timer = [NSTimer timerWithTimeInterval:0.1 repeats:YES block:^(NSTimer *) {
         NSMenu *menu = [webView _activeMenu];
         for (NSMenuItem *item in menu.itemArray) {
-            if ([item.title isEqualToString:WebCore::contextMenuItemTitleRemoveBackground()]) {
+            if ([item.title isEqualToString:WebCore::contextMenuItemTitleRemoveBackground().createNSString().get()]) {
                 foundRemoveBackgroundItem = true;
                 [menu cancelTracking];
                 break;

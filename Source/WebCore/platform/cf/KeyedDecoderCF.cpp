@@ -28,9 +28,8 @@
 
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/cf/TypeCastsCF.h>
+#include <wtf/cf/VectorCF.h>
 #include <wtf/text/WTFString.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -43,7 +42,7 @@ std::unique_ptr<KeyedDecoder> KeyedDecoder::decoder(std::span<const uint8_t> dat
 
 KeyedDecoderCF::KeyedDecoderCF(std::span<const uint8_t> data)
 {
-    auto cfData = adoptCF(CFDataCreateWithBytesNoCopy(kCFAllocatorDefault, data.data(), data.size(), kCFAllocatorNull));
+    auto cfData = toCFDataNoCopy(data, kCFAllocatorNull);
     auto cfPropertyList = adoptCF(CFPropertyListCreateWithData(kCFAllocatorDefault, cfData.get(), kCFPropertyListImmutable, nullptr, nullptr));
 
     if (dynamic_cf_cast<CFDictionaryRef>(cfPropertyList.get()))
@@ -67,7 +66,7 @@ bool KeyedDecoderCF::decodeBytes(const String& key, std::span<const uint8_t>& by
     if (!data)
         return false;
 
-    bytes = { CFDataGetBytePtr(data), static_cast<size_t>(CFDataGetLength(data)) };
+    bytes = span(data);
     return true;
 }
 
@@ -191,5 +190,3 @@ void KeyedDecoderCF::endArray()
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

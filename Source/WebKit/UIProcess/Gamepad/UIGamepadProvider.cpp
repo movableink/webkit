@@ -114,8 +114,8 @@ void UIGamepadProvider::platformGamepadConnected(PlatformGamepad& gamepad, Event
 
     scheduleGamepadStateSync();
 
-    for (auto& pool : m_processPoolsUsingGamepads)
-        pool.gamepadConnected(*m_gamepads[gamepad.index()], eventVisibility);
+    for (Ref pool : m_processPoolsUsingGamepads)
+        pool->gamepadConnected(*m_gamepads[gamepad.index()], eventVisibility);
 }
 
 void UIGamepadProvider::platformGamepadDisconnected(PlatformGamepad& gamepad)
@@ -127,8 +127,8 @@ void UIGamepadProvider::platformGamepadDisconnected(PlatformGamepad& gamepad)
 
     scheduleGamepadStateSync();
 
-    for (auto& pool : m_processPoolsUsingGamepads)
-        pool.gamepadDisconnected(*disconnectedGamepad);
+    for (Ref pool : m_processPoolsUsingGamepads)
+        pool->gamepadDisconnected(*disconnectedGamepad);
 }
 
 void UIGamepadProvider::platformGamepadInputActivity(EventMakesGamepadsVisible eventVisibility)
@@ -190,7 +190,7 @@ void UIGamepadProvider::viewBecameInactive(WebPageProxy& page)
 #endif
 
     RefPtr pageForGamepadInput = platformWebPageProxyForGamepadInput();
-    if (pageForGamepadInput == &page)
+    if (!pageForGamepadInput || pageForGamepadInput == &page)
         platformStopMonitoringInput();
 }
 
@@ -224,7 +224,7 @@ Vector<std::optional<GamepadData>> UIGamepadProvider::snapshotGamepads()
     });
 }
 
-#if !PLATFORM(COCOA) && !(USE(MANETTE) && OS(LINUX)) && !USE(LIBWPE)
+#if !PLATFORM(COCOA) && !(USE(MANETTE) && OS(LINUX)) && !USE(LIBWPE) && !USE(WPE_PLATFORM)
 
 void UIGamepadProvider::platformSetDefaultGamepadProvider()
 {
@@ -245,7 +245,7 @@ void UIGamepadProvider::platformStartMonitoringInput()
 {
 }
 
-#endif // !PLATFORM(COCOA) && !(USE(MANETTE) && OS(LINUX))
+#endif // !PLATFORM(COCOA) && !(USE(MANETTE) && OS(LINUX)) && !USE(LIBWPE) && !USE(WPE_PLATFORM)
 
 }
 

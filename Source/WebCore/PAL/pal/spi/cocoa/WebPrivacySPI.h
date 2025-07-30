@@ -25,6 +25,8 @@
 
 #pragma once
 
+DECLARE_SYSTEM_HEADER
+
 #if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
 
 #if HAVE(WEB_PRIVACY_FRAMEWORK)
@@ -162,6 +164,21 @@ typedef void (^WPRestrictedOpenerDomainsCompletionHandler)(NSArray<WPRestrictedO
 @property (nonatomic, readonly) NSArray<NSString *> *triggerPages;
 @end
 #endif
+
+@class WKContentRuleList;
+@class WKContentRuleListStore;
+
+typedef void (^WKWPResourcesPrepareCompletionHandler)(WKContentRuleList *, bool, NSError *);
+
+@interface WPResources (Staging_141646051)
+- (void)prepareResourceMonitorRulesForStore:(WKContentRuleListStore *)store completionHandler:(WKWPResourcesPrepareCompletionHandler)completionHandler;
+@end
+
+typedef void (^WKWPResourcesGetSourceCompletionHandler)(NSString *, NSError *);
+
+@interface WPResources (Staging_146076707)
+- (void)requestResourceMonitorRulesSource:(WPResourceRequestOptions *)options completionHandler:(WKWPResourcesGetSourceCompletionHandler)completion;
+@end
 
 WTF_EXTERN_C_BEGIN
 

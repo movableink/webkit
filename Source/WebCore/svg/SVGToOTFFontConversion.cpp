@@ -39,6 +39,7 @@
 #include "SVGPathParser.h"
 #include "SVGPathStringViewSource.h"
 #include "SVGVKernElement.h"
+#include <ranges>
 #include <wtf/Vector.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/text/StringView.h>
@@ -232,9 +233,9 @@ private:
 
     Vector<char> transcodeGlyphPaths(float width, const SVGElement& glyphOrMissingGlyphElement, std::optional<FloatRect>& boundingBox) const;
 
-    void addCodepointRanges(const UnicodeRanges&, HashSet<Glyph>& glyphSet) const;
-    void addCodepoints(const HashSet<String>& codepoints, HashSet<Glyph>& glyphSet) const;
-    void addGlyphNames(const HashSet<String>& glyphNames, HashSet<Glyph>& glyphSet) const;
+    void addCodepointRanges(const UnicodeRanges&, UncheckedKeyHashSet<Glyph>& glyphSet) const;
+    void addCodepoints(const UncheckedKeyHashSet<String>& codepoints, UncheckedKeyHashSet<Glyph>& glyphSet) const;
+    void addGlyphNames(const UncheckedKeyHashSet<String>& glyphNames, UncheckedKeyHashSet<Glyph>& glyphSet) const;
     void addKerningPair(Vector<KerningData>&, SVGKerningPair&&) const;
     template<typename T> size_t appendKERNSubtable(std::optional<SVGKerningPair> (T::*buildKerningPair)() const, uint16_t coverage);
     size_t finishAppendingKERNSubtable(Vector<KerningData>, uint16_t coverage);
@@ -538,7 +539,7 @@ void SVGToOTFFontConverter::appendOS2Table()
         }
     }
     if (numPanoseBytes != panoseSize)
-        memset(panoseBytes.data(), 0, panoseSize);
+        panoseBytes.fill(0);
     m_result.append(std::span<char> { panoseBytes });
 
     for (int i = 0; i < 4; ++i)
@@ -754,7 +755,7 @@ void SVGToOTFFontConverter::appendLigatureSubtable(size_t subtableRecordLocation
     }
     if (ligaturePairs.size() > std::numeric_limits<uint16_t>::max())
         ligaturePairs.clear();
-    std::sort(ligaturePairs.begin(), ligaturePairs.end(), [](auto& lhs, auto& rhs) {
+    std::ranges::sort(ligaturePairs, [](auto& lhs, auto& rhs) {
         return lhs.first[0] < rhs.first[0];
     });
     Vector<size_t> overlappingFirstGlyphSegmentLengths;
@@ -1018,7 +1019,7 @@ Vector<Glyph, 1> SVGToOTFFontConverter::glyphsForCodepoint(char32_t codepoint) c
     return m_codepointsToIndicesMap.get(codepointToString(codepoint));
 }
 
-void SVGToOTFFontConverter::addCodepointRanges(const UnicodeRanges& unicodeRanges, HashSet<Glyph>& glyphSet) const
+void SVGToOTFFontConverter::addCodepointRanges(const UnicodeRanges& unicodeRanges, UncheckedKeyHashSet<Glyph>& glyphSet) const
 {
     for (auto& unicodeRange : unicodeRanges) {
         for (auto codepoint = unicodeRange.first; codepoint <= unicodeRange.second; ++codepoint) {
@@ -1028,7 +1029,7 @@ void SVGToOTFFontConverter::addCodepointRanges(const UnicodeRanges& unicodeRange
     }
 }
 
-void SVGToOTFFontConverter::addCodepoints(const HashSet<String>& codepoints, HashSet<Glyph>& glyphSet) const
+void SVGToOTFFontConverter::addCodepoints(const UncheckedKeyHashSet<String>& codepoints, UncheckedKeyHashSet<Glyph>& glyphSet) const
 {
     for (auto& codepointString : codepoints) {
         for (auto index : m_codepointsToIndicesMap.get(codepointString))
@@ -1036,7 +1037,7 @@ void SVGToOTFFontConverter::addCodepoints(const HashSet<String>& codepoints, Has
     }
 }
 
-void SVGToOTFFontConverter::addGlyphNames(const HashSet<String>& glyphNames, HashSet<Glyph>& glyphSet) const
+void SVGToOTFFontConverter::addGlyphNames(const UncheckedKeyHashSet<String>& glyphNames, UncheckedKeyHashSet<Glyph>& glyphSet) const
 {
     for (auto& glyphName : glyphNames) {
         if (Glyph glyph = m_glyphNameToIndexMap.get(glyphName))
@@ -1046,8 +1047,8 @@ void SVGToOTFFontConverter::addGlyphNames(const HashSet<String>& glyphNames, Has
 
 void SVGToOTFFontConverter::addKerningPair(Vector<KerningData>& data, SVGKerningPair&& kerningPair) const
 {
-    HashSet<Glyph> glyphSet1;
-    HashSet<Glyph> glyphSet2;
+    UncheckedKeyHashSet<Glyph> glyphSet1;
+    UncheckedKeyHashSet<Glyph> glyphSet2;
 
     addCodepointRanges(kerningPair.unicodeRange1, glyphSet1);
     addCodepointRanges(kerningPair.unicodeRange2, glyphSet2);
@@ -1075,7 +1076,7 @@ template<typename T> inline size_t SVGToOTFFontConverter::appendKERNSubtable(std
 
 size_t SVGToOTFFontConverter::finishAppendingKERNSubtable(Vector<KerningData> kerningData, uint16_t coverage)
 {
-    std::sort(kerningData.begin(), kerningData.end(), [](auto& a, auto& b) {
+    std::ranges::sort(kerningData, [](auto& a, auto& b) {
         return a.glyph1 < b.glyph1 || (a.glyph1 == b.glyph1 && a.glyph2 < b.glyph2);
     });
 
@@ -1307,8 +1308,8 @@ void SVGToOTFFontConverter::processGlyphElement(const SVGElement& glyphOrMissing
 
 void SVGToOTFFontConverter::appendLigatureGlyphs()
 {
-    HashSet<uint32_t> ligatureCodepoints;
-    HashSet<uint32_t> nonLigatureCodepoints;
+    UncheckedKeyHashSet<uint32_t> ligatureCodepoints;
+    UncheckedKeyHashSet<uint32_t> nonLigatureCodepoints;
     for (auto& glyph : m_glyphs) {
         auto codePoints = StringView(glyph.codepoints).codePoints();
         auto codePointsIterator = codePoints.begin();
@@ -1395,7 +1396,7 @@ SVGToOTFFontConverter::SVGToOTFFontConverter(const SVGFontElement& fontElement)
         m_xHeight = scaleUnitsPerEm(m_fontFaceElement->xHeight());
         m_capHeight = scaleUnitsPerEm(m_fontFaceElement->capHeight());
 
-        // Some platforms, including OS X, use 0 ascent and descent to mean that the platform should synthesize
+        // Some platforms, including macOS, use 0 ascent and descent to mean that the platform should synthesize
         // a value based on a heuristic. However, SVG fonts can legitimately have 0 for ascent or descent.
         // Specifing a single FUnit gets us as close to 0 as we can without triggering the synthesis.
         if (!m_ascent)
@@ -1434,7 +1435,7 @@ SVGToOTFFontConverter::SVGToOTFFontConverter(const SVGFontElement& fontElement)
         return;
     }
 
-    std::sort(m_glyphs.begin(), m_glyphs.end(), &compareCodepointsLexicographically);
+    std::ranges::sort(m_glyphs, &compareCodepointsLexicographically);
 
     for (Glyph i = 0; i < m_glyphs.size(); ++i) {
         GlyphData& glyph = m_glyphs[i];

@@ -54,6 +54,4 @@ template<size_t I> const auto& get(const DropShadow& value)
 } // namespace CSS
 } // namespace WebCore
 
-CSS_TUPLE_LIKE_CONFORMANCE(DropShadow, 3)
-
-template<> inline constexpr ASCIILiteral WebCore::SerializationSeparator<WebCore::CSS::DropShadow> = " "_s;
+DEFINE_SPACE_SEPARATED_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::DropShadow, 3)

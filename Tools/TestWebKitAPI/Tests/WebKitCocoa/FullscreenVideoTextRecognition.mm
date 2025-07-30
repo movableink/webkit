@@ -45,7 +45,7 @@
 
 static void swizzledPresentViewController(UIViewController *, SEL, UIViewController *, BOOL, dispatch_block_t completion)
 {
-    RunLoop::main().dispatch([completion = makeBlockPtr(completion)] {
+    RunLoop::protectedMain()->dispatch([completion = makeBlockPtr(completion)] {
         if (completion)
             completion();
     });
@@ -237,7 +237,8 @@ static void swizzledSetAnalysis(VKCImageAnalysisInteraction *, SEL, VKCImageAnal
 namespace TestWebKitAPI {
 
 // FIXME: Re-enable this test for iOS once webkit.org/b/248094 is resolved
-#if PLATFORM(IOS) || PLATFORM(VISION)
+// FIXME: Re-enable this test in Sonoma once webkit.org/b/289025 is resolved.
+#if PLATFORM(IOS) || PLATFORM(VISION) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED > 140000 && __MAC_OS_X_VERSION_MIN_REQUIRED < 150000)
 TEST(FullscreenVideoTextRecognition, DISABLED_TogglePlaybackInElementFullscreen)
 #else
 TEST(FullscreenVideoTextRecognition, TogglePlaybackInElementFullscreen)
@@ -275,7 +276,8 @@ TEST(FullscreenVideoTextRecognition, AddVideoAfterEnteringFullscreen)
 
 // FIXME: Re-enable this test for iOS once webkit.org/b/248094 is resolved
 // FIXME: Re-enable this test once webkit.org/b/248093 is resolved.
-#if PLATFORM(IOS) || PLATFORM(VISION) || !defined(NDEBUG)
+// FIXME: Re-enable this test in Sonoma once webkit.org/b/289025 is resolved.
+#if PLATFORM(IOS) || PLATFORM(VISION) || !defined(NDEBUG) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED > 140000 && __MAC_OS_X_VERSION_MIN_REQUIRED < 150000)
 TEST(FullscreenVideoTextRecognition, DISABLED_DoNotAnalyzeVideoAfterExitingFullscreen)
 #else
 TEST(FullscreenVideoTextRecognition, DoNotAnalyzeVideoAfterExitingFullscreen)
@@ -295,7 +297,7 @@ TEST(FullscreenVideoTextRecognition, DoNotAnalyzeVideoAfterExitingFullscreen)
     [webView pause];
 
     bool doneWaiting = false;
-    RunLoop::main().dispatchAfter(300_ms, [&] {
+    RunLoop::protectedMain()->dispatchAfter(300_ms, [&] {
         EXPECT_FALSE([webView hasActiveImageAnalysis]);
         doneWaiting = true;
     });

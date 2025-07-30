@@ -86,7 +86,7 @@ WebCore::Color resolve(const RelativeColorResolver<Descriptor>& relative, const 
 template<typename Descriptor>
 WebCore::Color resolveNoConversionDataRequired(const RelativeColorResolver<Descriptor>& relative)
 {
-    ASSERT(!requiresConversionData(relative.components));
+    ASSERT(!componentsRequireConversionData<Descriptor>(relative.components));
 
     auto originColor = relative.origin;
     auto originColorAsColorType = originColor.template toColorTypeLossy<GetColorType<Descriptor>>();

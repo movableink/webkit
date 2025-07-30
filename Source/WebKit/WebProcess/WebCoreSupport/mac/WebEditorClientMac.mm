@@ -76,8 +76,8 @@ static void changeWordCase(WebPage* page, NSString *(*changeCase)(NSString *))
 
     frame->editor().command("selectWord"_s).execute();
 
-    NSString *selectedString = frame->displayStringModifiedByEncoding(frame->editor().selectedText());
-    page->replaceSelectionWithText(frame.get(), changeCase(selectedString));
+    RetainPtr selectedString = frame->displayStringModifiedByEncoding(frame->editor().selectedText()).createNSString();
+    page->replaceSelectionWithText(frame.get(), changeCase(selectedString.get()));
 }
 
 void WebEditorClient::uppercaseWord()

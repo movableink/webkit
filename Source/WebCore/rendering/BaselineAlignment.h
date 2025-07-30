@@ -56,8 +56,8 @@ public:
     void update(const RenderBox&, LayoutUnit ascent);
     LayoutUnit maxAscent() const { return m_maxAscent; }
     int computeSize() const { return m_items.computeSize(); }
-    auto begin() { return m_items.begin(); }
-    auto end() { return m_items.end(); }
+    auto begin() LIFETIME_BOUND { return m_items.begin(); }
+    auto end() LIFETIME_BOUND { return m_items.end(); }
 
 private:
     friend class BaselineAlignmentState;

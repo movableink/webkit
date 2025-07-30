@@ -94,7 +94,7 @@ static WTF::Function<void(CompletionHandler<void()>&&)> convert(WGPUOnSubmittedW
 
 RefPtr<PresentationContext> GPUImpl::createPresentationContext(const PresentationContextDescriptor& presentationContextDescriptor)
 {
-    auto& compositorIntegration = m_convertToBackingContext->convertToBacking(presentationContextDescriptor.compositorIntegration);
+    auto& compositorIntegration = m_convertToBackingContext->convertToBacking(Ref { presentationContextDescriptor.compositorIntegration }.get());
 
     auto registerCallbacksBlock = makeBlockPtr([&](WGPURenderBuffersWereRecreatedBlockCallback renderBuffersWereRecreatedCallback, WGPUOnSubmittedWorkScheduledCallback onSubmittedWorkScheduledCallback) {
         compositorIntegration.registerCallbacks(makeBlockPtr(WTFMove(renderBuffersWereRecreatedCallback)), convert(WTFMove(onSubmittedWorkScheduledCallback)));

@@ -46,15 +46,16 @@ class AuthenticatorAssertionResponse;
 namespace WebKit {
 
 class Authenticator;
-using AuthenticatorObserverRespond = std::variant<Ref<WebCore::AuthenticatorResponse>, WebCore::ExceptionData>;
+using AuthenticatorObserverRespond = Variant<Ref<WebCore::AuthenticatorResponse>, WebCore::ExceptionData>;
 
 class AuthenticatorObserver : public AbstractRefCountedAndCanMakeWeakPtr<AuthenticatorObserver> {
 public:
     virtual ~AuthenticatorObserver() = default;
     virtual void respondReceived(AuthenticatorObserverRespond&&) = 0;
-    virtual void downgrade(Authenticator* id, Ref<Authenticator>&& downgradedAuthenticator) = 0;
+    virtual void downgrade(Authenticator& id, Ref<Authenticator>&& downgradedAuthenticator) = 0;
     virtual void authenticatorStatusUpdated(WebAuthenticationStatus) = 0;
     virtual void requestPin(uint64_t retries, CompletionHandler<void(const WTF::String&)>&&) = 0;
+    virtual void requestNewPin(uint64_t minLength, CompletionHandler<void(const WTF::String&)>&&) = 0;
     virtual void selectAssertionResponse(Vector<Ref<WebCore::AuthenticatorAssertionResponse>>&&, WebAuthenticationSource, CompletionHandler<void(WebCore::AuthenticatorAssertionResponse*)>&&) = 0;
     virtual void decidePolicyForLocalAuthenticator(CompletionHandler<void(LocalAuthenticatorPolicy)>&&) = 0;
     virtual void requestLAContextForUserVerification(CompletionHandler<void(LAContext *)>&&) = 0;
@@ -74,6 +75,7 @@ protected:
     Authenticator() = default;
 
     AuthenticatorObserver* observer() const { return m_observer.get(); }
+    RefPtr<AuthenticatorObserver> protectedObserver() const { return m_observer.get(); }
     const WebAuthenticationRequestData& requestData() const { return m_pendingRequestData; }
 
     void receiveRespond(AuthenticatorObserverRespond&&) const;

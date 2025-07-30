@@ -28,17 +28,15 @@
 
 #include <compression.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace PAL {
 
-Vector<LChar> gunzip(const unsigned char* data, size_t length)
+Vector<LChar> gunzip(std::span<const uint8_t> data)
 {
     Vector<LChar> result;
 
     // Parse the gzip header.
     auto checks = [&]() {
-        return length >= 10 && data[0] == 0x1f && data[1] == 0x8b && data[2] == 0x8 && data[3] == 0x0;
+        return data.size() >= 10 && data[0] == 0x1f && data[1] == 0x8b && data[2] == 0x8 && data[3] == 0x0;
     };
     ASSERT(checks());
     if (!checks())
@@ -51,10 +49,10 @@ Vector<LChar> gunzip(const unsigned char* data, size_t length)
     ASSERT(status == COMPRESSION_STATUS_OK);
     if (status != COMPRESSION_STATUS_OK)
         return { };
-    stream.dst_ptr = result.data();
+    stream.dst_ptr = result.mutableSpan().data();
     stream.dst_size = result.size();
-    stream.src_ptr = data + ignoredByteCount;
-    stream.src_size = length - ignoredByteCount;
+    stream.src_ptr = data.subspan(ignoredByteCount).data();
+    stream.src_size = data.size() - ignoredByteCount;
     size_t offset = 0;
 
     do {
@@ -68,7 +66,7 @@ Vector<LChar> gunzip(const unsigned char* data, size_t length)
             // FIXME: We can get better performance if we, instead of resizing the buffer, we allocate distinct chunks and have a postprocessing step which concatenates the chunks together.
             if (newSize > result.size())
                 result.grow(newSize);
-            stream.dst_ptr = result.data() + offset;
+            stream.dst_ptr = result.mutableSpan().subspan(offset).data();
             stream.dst_size = result.size() - offset;
             break;
         }
@@ -76,7 +74,7 @@ Vector<LChar> gunzip(const unsigned char* data, size_t length)
             status = compression_stream_destroy(&stream);
             ASSERT(status == COMPRESSION_STATUS_OK);
             if (status == COMPRESSION_STATUS_OK) {
-                result.shrink(stream.dst_ptr - result.data());
+                result.shrink(stream.dst_ptr - result.span().data());
                 return result;
             }
             return { };
@@ -90,5 +88,3 @@ Vector<LChar> gunzip(const unsigned char* data, size_t length)
 }
 
 } // namespace WTF
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

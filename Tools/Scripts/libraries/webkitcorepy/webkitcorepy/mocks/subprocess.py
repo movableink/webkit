@@ -21,8 +21,9 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import re
-
 from functools import cmp_to_key
+from unittest.mock import patch
+
 from webkitcorepy import string_utils, unicode
 from webkitcorepy.mocks import ContextStack
 
@@ -154,7 +155,6 @@ class Subprocess(ContextStack):
             return candidates
 
         raise FileNotFoundError("No such file or directory: '{path}': '{path}'".format(path=program))
-        raise OSError('[Errno 2] No such file or directory')
 
     @classmethod
     def completion_for(cls, *args, **kwargs):
@@ -187,7 +187,5 @@ class Subprocess(ContextStack):
 
         super(Subprocess, self).__init__(cls=Subprocess)
 
-        # Allow mock to be managed via autoinstall
-        from mock import patch
         from webkitcorepy.mocks.popen import Popen
         self.patches.append(patch('subprocess.Popen', new=Popen))

@@ -25,6 +25,8 @@
 
 #pragma once
 
+DECLARE_SYSTEM_HEADER
+
 #if HAVE(SKADNETWORK_v4)
 #if USE(APPLE_INTERNAL_SDK)
 
@@ -65,7 +67,7 @@ NS_ASSUME_NONNULL_END
 #if HAVE(AD_ATTRIBUTION_KIT_PRIVATE_BROWSING)
 NS_ASSUME_NONNULL_BEGIN
 @interface ASDInstallWebAttributionService (Staging_for_137446922)
-- (void)removeInstallWebAttributionParamsFromPrivateBrowsingSessionId:(NSUUID *)sessionId completionHandler:(nullable void (^)(NSError *__nullable error))completionHandler;
+- (void)removeInstallWebAttributionParamsFromPrivateBrowsingSessionID:(NSUUID *)sessionId completionHandler:(nullable void (^)(NSError *__nullable error))completionHandler;
 @end
 @interface ASDInstallWebAttributionParamsConfig (Staging_for_137446922)
 @property (nullable, nonatomic, strong) NSUUID *privateBrowsingSessionId;

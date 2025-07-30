@@ -24,7 +24,7 @@ import unittest
 from unittest.mock import patch
 from urllib.error import URLError
 
-from webkitcorepy import autoinstall
+from webkitcorepy import autoinstall, OutputCapture
 from webkitcorepy.autoinstall import AutoInstall, Package
 from webkitcorepy.version import Version
 
@@ -36,9 +36,10 @@ class ArchiveTest(unittest.TestCase):
     )
     @patch.object(AutoInstall, "times_to_retry", new=3)
     def test_retry(self, mock_urlopen, mock_verify_index):
-        archive = Package.Archive(
-            "dummy", "http://example.example/dummy-1.0-py3-none-any.whl", Version(1, 0)
-        )
-        with self.assertRaises(URLError):
-            archive.download()
-        self.assertEqual(mock_urlopen.call_count, 4)
+        with OutputCapture():
+            archive = Package.Archive(
+                "dummy", "http://example.example/dummy-1.0-py3-none-any.whl", Version(1, 0)
+            )
+            with self.assertRaises(URLError):
+                archive.download()
+            self.assertEqual(mock_urlopen.call_count, 4)

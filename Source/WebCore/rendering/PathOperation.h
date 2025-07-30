@@ -34,6 +34,7 @@
 #include "RenderStyleConstants.h"
 #include "StyleBasicShape.h"
 #include "StyleRayFunction.h"
+#include "StyleURL.h"
 #include "TransformOperationData.h"
 #include <wtf/RefCounted.h>
 #include <wtf/TypeCasts.h>
@@ -87,12 +88,12 @@ protected:
 
 class ReferencePathOperation final : public PathOperation {
 public:
-    static Ref<ReferencePathOperation> create(const String& url, const AtomString& fragment, const RefPtr<SVGElement>);
+    static Ref<ReferencePathOperation> create(const Style::URL&, const AtomString& fragment, const RefPtr<SVGElement>);
     WEBCORE_EXPORT static Ref<ReferencePathOperation> create(std::optional<Path>&&);
 
     Ref<PathOperation> clone() const final;
 
-    const String& url() const { return m_url; }
+    const Style::URL& url() const { return m_url; }
     const AtomString& fragment() const { return m_fragment; }
 
     std::optional<Path> getPath(const TransformOperationData&) const final { return m_path; }
@@ -107,10 +108,10 @@ private:
         return m_url == referenceClip.m_url;
     }
 
-    ReferencePathOperation(const String& url, const AtomString& fragment, const RefPtr<SVGElement>);
+    ReferencePathOperation(const Style::URL&, const AtomString& fragment, const RefPtr<SVGElement>);
     ReferencePathOperation(std::optional<Path>&&);
 
-    String m_url;
+    Style::URL m_url;
     AtomString m_fragment;
     std::optional<Path> m_path;
 };

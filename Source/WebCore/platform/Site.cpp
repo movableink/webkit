@@ -30,17 +30,38 @@
 
 namespace WebCore {
 
+static const String& invalidProtocol()
+{
+    // Valid protocols from canonicalized URLs are always lower case.
+    static NeverDestroyed<String> protocol { "invalidProtocol"_s };
+    return protocol.get();
+}
+
+static String nonEmptyProtocol(String&& protocol)
+{
+    if (protocol.isEmpty())
+        return invalidProtocol();
+    return String(WTFMove(protocol));
+}
+
 Site::Site(const URL& url)
-    : m_protocol(url.protocol().toString())
+    : m_protocol(nonEmptyProtocol(url.protocol().toString()))
     , m_domain(url) { }
 
 Site::Site(String&& protocol, RegistrableDomain&& domain)
-    : m_protocol(WTFMove(protocol))
+    : m_protocol(nonEmptyProtocol(WTFMove(protocol)))
     , m_domain(WTFMove(domain)) { }
 
 Site::Site(const SecurityOriginData& data)
-    : m_protocol(data.protocol())
+    : m_protocol(nonEmptyProtocol(String(data.protocol())))
     , m_domain(data) { }
+
+const String& Site::protocol() const
+{
+    if (m_protocol == invalidProtocol()) [[unlikely]]
+        return emptyString();
+    return m_protocol;
+}
 
 unsigned Site::hash() const
 {
@@ -52,9 +73,15 @@ bool Site::matches(const URL& url) const
     return url.protocol() == m_protocol && m_domain.matches(url);
 }
 
-String Site::string() const
+String Site::toString() const
 {
     return isEmpty() ? emptyString() : makeString(m_protocol, "://"_s, m_domain.string());
+}
+
+TextStream& operator<<(TextStream& ts, const Site& site)
+{
+    ts << site.toString();
+    return ts;
 }
 
 } // namespace WebKit

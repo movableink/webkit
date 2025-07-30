@@ -58,7 +58,9 @@ if __name__ == "__main__":
     option_parser = optparse.OptionParser(usage='usage: %prog [options] [test...]')
     add_options(option_parser);
     option_parser.add_option('--display-server', choices=['headless', 'wayland'], default='headless',
-                             help='"headless": Use headless view backend. "wayland": Use the current wayland session.'),
+                             help='"headless": Use headless view backend. "wayland": Use the current wayland session.')
+    option_parser.add_option('--wpe-legacy-api', action="store_true", default=False,
+                             help='Use WPE legacy API.')
 
     args = sys.argv[1:]
     if flatpakutils.is_sandboxed():

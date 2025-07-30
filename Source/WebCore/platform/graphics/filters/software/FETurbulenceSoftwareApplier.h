@@ -45,7 +45,7 @@ public:
     using Base::Base;
 
 private:
-    bool apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const final;
+    bool apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const final;
 
     // Produces results in the range [1, 2**31 - 2]. Algorithm is:
     // r = (a * r) mod m where a = s_randAmplitude = 16807 and
@@ -81,8 +81,8 @@ private:
         bool stitchTiles;
         IntSize paintingSize;
 
-        int latticeSelector[2 * s_blockSize + 2];
-        float gradient[4][2 * s_blockSize + 2][2];
+        std::array<int, 2 * s_blockSize + 2> latticeSelector;
+        std::array<std::array<std::array<float, 2>, 2 * s_blockSize + 2>, 4> gradient;
     };
 
     struct StitchData {
@@ -95,7 +95,7 @@ private:
     struct ApplyParameters {
         IntRect filterRegion;
         FloatSize filterScale;
-        PixelBuffer* pixelBuffer;
+        RefPtr<PixelBuffer> pixelBuffer;
         PaintingData* paintingData;
         StitchData stitchData;
         int startY;

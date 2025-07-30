@@ -79,7 +79,7 @@ enum class Behavior : uint8_t {
 };
 using Behaviors = OptionSet<Behavior>;
 
-using BreakTarget = std::variant<
+using BreakTarget = Variant<
     AST::SwitchStatement*,
     AST::LoopStatement*,
     AST::ForStatement*,
@@ -204,6 +204,7 @@ private:
     const Type* infer(AST::Expression&, Evaluation, DiscardResult = DiscardResult::No);
     const Type* resolve(AST::Expression&);
     const Type* lookupType(const AST::Identifier&);
+    void validateF16Usage(const SourceSpan&, const Type*);
     void inferred(const Type*);
     bool unify(const Type*, const Type*) WARN_UNUSED_RETURN;
     bool isBottom(const Type*) const;
@@ -250,6 +251,7 @@ private:
     Vector<Error> m_errors;
     Vector<BreakTarget> m_breakTargetStack;
     HashMap<String, OverloadedDeclaration> m_overloadedOperations;
+    HashMap<String, AST::IdentifierExpression*> m_arrayCountOverrides;
 };
 
 TypeChecker::TypeChecker(ShaderModule& shaderModule)
@@ -294,17 +296,17 @@ TypeChecker::TypeChecker(ShaderModule& shaderModule)
             if (isBottom(elementType))
                 return m_types.bottomType();
 
-            if (UNLIKELY(!elementType->isStorable())) {
+            if (!elementType->isStorable()) [[unlikely]] {
                 typeError(InferBottom::No, type.span(), '\'', *elementType, "' cannot be used as the store type of a pointer"_s);
                 return m_types.bottomType();
             }
 
-            if (UNLIKELY(std::holds_alternative<Types::Atomic>(*elementType) && addressSpace != AddressSpace::Storage && addressSpace != AddressSpace::Workgroup)) {
+            if (std::holds_alternative<Types::Atomic>(*elementType) && addressSpace != AddressSpace::Storage && addressSpace != AddressSpace::Workgroup) [[unlikely]] {
                 typeError(InferBottom::No, type.span(), '\'', *elementType, "' atomic variables must have <storage> or <workgroup> address space"_s);
                 return m_types.bottomType();
             }
 
-            if (UNLIKELY(elementType->containsRuntimeArray() && addressSpace != AddressSpace::Storage)) {
+            if (elementType->containsRuntimeArray() && addressSpace != AddressSpace::Storage) [[unlikely]] {
                 typeError(InferBottom::No, type.span(), "runtime-sized arrays can only be used in the <storage> address space"_s);
                 return m_types.bottomType();
             }
@@ -449,7 +451,6 @@ std::optional<FailedCheck> TypeChecker::check()
     if (m_errors.isEmpty())
         return std::nullopt;
 
-    // FIXME: add support for warnings
     Vector<Warning> warnings { };
     return FailedCheck { WTFMove(m_errors), WTFMove(warnings) };
 }
@@ -465,13 +466,19 @@ void TypeChecker::visit(AST::Structure& structure)
         visitAttributes(member.attributes());
         auto* memberType = resolve(member.type());
 
-        if (UNLIKELY(std::holds_alternative<Types::Bottom>(*memberType))) {
+        if (std::holds_alternative<Types::Bottom>(*memberType)) [[unlikely]] {
             introduceType(structure.name(), m_types.bottomType());
             return;
         }
-        if (UNLIKELY(!memberType->hasCreationFixedFootprint())) {
+        if (!memberType->hasCreationFixedFootprint()) [[unlikely]] {
             if (!memberType->containsRuntimeArray()) {
                 typeError(InferBottom::No, member.span(), "type '"_s, *memberType, "' cannot be used as a struct member because it does not have creation-fixed footprint"_s);
+                introduceType(structure.name(), m_types.bottomType());
+                return;
+            }
+
+            if (!std::holds_alternative<Types::Array>(*memberType)) {
+                typeError(InferBottom::No, member.span(), "a struct that contains a runtime array cannot be nested inside another struct"_s);
                 introduceType(structure.name(), m_types.bottomType());
                 return;
             }
@@ -856,6 +863,10 @@ void TypeChecker::visit(AST::CompoundAssignmentStatement& statement)
     }
 
     binaryExpression(statement.span(), nullptr, statement.operation(), statement.leftExpression(), statement.rightExpression());
+
+    if (m_inferredType != referenceType->element)
+        typeError(InferBottom::No, statement.span(), "cannot assign '"_s, *m_inferredType, "' to '"_s, *referenceType->element, '\'');
+
     // Reset the inferred type since this is a statement
     m_inferredType = nullptr;
 }
@@ -904,8 +915,6 @@ void TypeChecker::visit(AST::IfStatement& statement)
 void TypeChecker::visit(AST::PhonyAssignmentStatement& statement)
 {
     infer(statement.rhs(), Evaluation::Runtime);
-    // There is nothing to unify with since result of the right-hand side is
-    // discarded.
 }
 
 void TypeChecker::visit(AST::ReturnStatement& statement)
@@ -1206,17 +1215,17 @@ void TypeChecker::binaryExpression(const SourceSpan& span, AST::Expression* expr
 void TypeChecker::visit(AST::IdentifierExpression& identifier)
 {
     auto* binding = readVariable(identifier.identifier());
-    if (UNLIKELY(!binding)) {
+    if (!binding) [[unlikely]] {
         typeError(identifier.span(), "unresolved identifier '"_s, identifier.identifier(), '\'');
         return;
     }
 
-    if (UNLIKELY(binding->kind != Binding::Value)) {
+    if (binding->kind != Binding::Value) [[unlikely]] {
         typeError(identifier.span(), "cannot use "_s, bindingKindToString(binding->kind), " '"_s, identifier.identifier(), "' as value"_s);
         return;
     }
 
-    if (UNLIKELY(binding->evaluation > m_evaluation)) {
+    if (binding->evaluation > m_evaluation) [[unlikely]] {
         typeError(identifier.span(), "cannot use "_s, evaluationToString(binding->evaluation), " value in "_s, evaluationToString(m_evaluation), " expression"_s);
         return;
     }
@@ -1249,6 +1258,7 @@ void TypeChecker::visit(AST::CallExpression& call)
     if (targetBinding) {
         target.m_inferredType = targetBinding->type;
         if (targetBinding->kind == Binding::Type) {
+            validateF16Usage(call.span(), targetBinding->type);
             call.m_isConstructor = true;
             if (auto* structType = std::get_if<Types::Struct>(targetBinding->type)) {
                 if (!targetBinding->type->isConstructible()) {
@@ -1256,7 +1266,7 @@ void TypeChecker::visit(AST::CallExpression& call)
                     return;
                 }
 
-                if (UNLIKELY(m_discardResult == DiscardResult::Yes)) {
+                if (m_discardResult == DiscardResult::Yes) [[unlikely]] {
                     typeError(call.span(), "value constructor evaluated but not used"_s);
                     return;
                 }
@@ -1322,16 +1332,22 @@ void TypeChecker::visit(AST::CallExpression& call)
 
             if (std::holds_alternative<Types::Primitive>(*targetBinding->type))
                 targetName = targetBinding->type->toString();
+
+            if (std::holds_alternative<Types::Array>(*targetBinding->type)) {
+                isNamedType = false;
+                isParameterizedType = false;
+                isArrayType = true;
+            }
         } else if (targetBinding->kind == Binding::Function) {
             auto& functionType = std::get<Types::Function>(*targetBinding->type);
             auto numberOfArguments = call.arguments().size();
             auto numberOfParameters = functionType.parameters.size();
-            if (UNLIKELY(m_evaluation < Evaluation::Runtime)) {
+            if (m_evaluation < Evaluation::Runtime) [[unlikely]] {
                 typeError(call.span(), "cannot call function from "_s, evaluationToString(m_evaluation), " context"_s);
                 return;
             }
 
-            if (UNLIKELY(numberOfArguments != numberOfParameters)) {
+            if (numberOfArguments != numberOfParameters) [[unlikely]] {
                 auto errorKind = numberOfArguments < numberOfParameters ? "few"_s : "many"_s;
                 typeError(call.span(), "funtion call has too "_s, errorKind, " arguments: expected "_s, numberOfParameters, ", found "_s, numberOfArguments);
                 return;
@@ -1339,6 +1355,8 @@ void TypeChecker::visit(AST::CallExpression& call)
 
             if (m_discardResult == DiscardResult::Yes && functionType.mustUse)
                 typeError(InferBottom::No, call.span(), "ignoring return value of function '"_s, targetName, "' annotated with @must_use"_s);
+            else if (m_discardResult == DiscardResult::No && isPrimitive(functionType.result, Types::Primitive::Void))
+                typeError(InferBottom::No, call.span(), "function '"_s, targetName, "' does not return a value"_s);
 
             for (unsigned i = 0; i < numberOfArguments; ++i) {
                 auto& argument = call.arguments()[i];
@@ -1368,7 +1386,7 @@ void TypeChecker::visit(AST::CallExpression& call)
             if (isBottom(result))
                 return;
 
-            // FIXME: this will go away once we track used intrinsics properly
+            // FIXME: <rdar://150366527> this will go away once we track used intrinsics properly
             if (targetName == "workgroupUniformLoad"_s)
                 m_shaderModule.setUsesWorkgroupUniformLoad();
             else if (targetName == "frexp"_s)
@@ -1391,6 +1409,8 @@ void TypeChecker::visit(AST::CallExpression& call)
                 m_shaderModule.setUsesDot4U8Packed();
             else if (targetName == "extractBits"_s)
                 m_shaderModule.setUsesExtractBits();
+            else if (targetName == "insertBits"_s)
+                m_shaderModule.setUsesInsertBits();
             else if (
                 targetName == "textureGather"_s
                 || targetName == "textureGatherCompare"_s
@@ -1438,7 +1458,7 @@ void TypeChecker::visit(AST::CallExpression& call)
             return;
         }
 
-        // FIXME: similarly to above: this shouldn't be a string check
+        // FIXME: <rdar://150366527> similarly to above: this shouldn't be a string check
         if (targetName == "bitcast"_s) {
             bitcast(call, typeArguments);
             return;
@@ -1449,17 +1469,19 @@ void TypeChecker::visit(AST::CallExpression& call)
     }
 
     RELEASE_ASSERT(isArrayType);
-    auto& array = uncheckedDowncast<AST::ArrayTypeExpression>(target);
+    auto* array = dynamicDowncast<AST::ArrayTypeExpression>(target);
+    const Types::Array* arrayType = targetBinding ? std::get_if<Types::Array>(targetBinding->type) : nullptr;
     const Type* elementType = nullptr;
     unsigned elementCount;
 
-    if (array.maybeElementType()) {
-        if (!array.maybeElementCount()) {
+    if ((array && array->maybeElementType()) || arrayType) {
+        if ((array && !array->maybeElementCount()) || (arrayType && arrayType->isRuntimeSized())) {
             typeError(call.span(), "cannot construct a runtime-sized array"_s);
             return;
         }
-        elementType = resolve(*array.maybeElementType());
-        auto* elementCountType = infer(*array.maybeElementCount(), m_evaluation);
+
+        elementType = arrayType ? arrayType->element : resolve(*array->maybeElementType());
+        const Type* elementCountType = arrayType ? m_types.u32Type() : infer(*array->maybeElementCount(), m_evaluation);
 
         if (isBottom(elementType) || isBottom(elementCountType)) {
             inferred(m_types.bottomType());
@@ -1467,16 +1489,23 @@ void TypeChecker::visit(AST::CallExpression& call)
         }
 
         if (!unify(m_types.i32Type(), elementCountType) && !unify(m_types.u32Type(), elementCountType)) {
-            typeError(array.span(), "array count must be an i32 or u32 value, found '"_s, *elementCountType, '\'');
+            typeError(array->span(), "array count must be an i32 or u32 value, found '"_s, *elementCountType, '\'');
             return;
         }
 
         if (!elementType->isConstructible()) {
-            typeError(array.span(), '\'', *elementType, "' cannot be used as an element type of an array"_s);
+            typeError(array->span(), '\'', *elementType, "' cannot be used as an element type of an array"_s);
             return;
         }
 
-        auto constantValue = array.maybeElementCount()->constantValue();
+        std::optional<ConstantValue> constantValue;
+        if (!arrayType)
+            constantValue = array->maybeElementCount()->constantValue();
+        else {
+            auto* maybeConstant = std::get_if<unsigned>(&arrayType->size);
+            constantValue = maybeConstant ? std::optional(ConstantValue(*maybeConstant)) : std::nullopt;
+        }
+
         if (!constantValue) {
             typeError(call.span(), "array must have constant size in order to be constructed"_s);
             return;
@@ -1509,7 +1538,7 @@ void TypeChecker::visit(AST::CallExpression& call)
             argument.m_inferredType = elementType;
         }
     } else {
-        ASSERT(!array.maybeElementCount());
+        ASSERT(!array->maybeElementCount());
         elementCount = call.arguments().size();
         if (!elementCount) {
             typeError(call.span(), "cannot infer array element type from constructor"_s);
@@ -1524,7 +1553,7 @@ void TypeChecker::visit(AST::CallExpression& call)
                 elementType = argumentType;
 
                 if (!elementType->isConstructible()) {
-                    typeError(array.span(), '\'', *elementType, "' cannot be used as an element type of an array"_s);
+                    typeError(array->span(), '\'', *elementType, "' cannot be used as an element type of an array"_s);
                     return;
                 }
 
@@ -1562,7 +1591,7 @@ void TypeChecker::visit(AST::CallExpression& call)
         if (argumentCount) {
             // https://www.w3.org/TR/WGSL/#limits
             constexpr unsigned maximumConstantArraySize = 2047;
-            if (UNLIKELY(argumentCount > maximumConstantArraySize))
+            if (argumentCount > maximumConstantArraySize) [[unlikely]]
                 typeError(InferBottom::No, call.span(), "constant array cannot have more than "_s, String::number(maximumConstantArraySize), " elements"_s);
             setConstantValue(call, result, ConstantArray(WTFMove(arguments)));
         } else
@@ -1582,7 +1611,7 @@ void TypeChecker::bitcast(AST::CallExpression& call, const Vector<const Type*>& 
         return;
     }
 
-    if (UNLIKELY(m_discardResult == DiscardResult::Yes)) {
+    if (m_discardResult == DiscardResult::Yes) [[unlikely]] {
         typeError(call.span(), "cannot discard the result of bitcast"_s);
         return;
     }
@@ -1769,12 +1798,18 @@ void TypeChecker::visit(AST::ArrayTypeExpression& array)
             }
             size = { static_cast<unsigned>(elementCount) };
         } else {
-            m_shaderModule.addOverrideValidation(*array.maybeElementCount(), [&](const ConstantValue& elementCount) -> std::optional<String> {
+            auto* countExpression = array.maybeElementCount();
+            if (auto* identifier = dynamicDowncast<AST::IdentifierExpression>(countExpression)) {
+                auto result = m_arrayCountOverrides.add(identifier->identifier().id(), identifier);
+                countExpression = result.iterator->value;
+            }
+
+            m_shaderModule.addOverrideValidation(*countExpression, [&](const ConstantValue& elementCount) -> std::optional<String> {
                 if (elementCount.integerValue() < 1)
                     return { "array count must be greater than 0"_s };
                 return std::nullopt;
             });
-            size = { array.maybeElementCount() };
+            size = { countExpression };
         }
     }
 
@@ -1794,7 +1829,23 @@ const Type* TypeChecker::lookupType(const AST::Identifier& name)
         return m_types.bottomType();
     }
 
+    validateF16Usage(name.span(), binding->type);
+
     return binding->type;
+}
+
+void TypeChecker::validateF16Usage(const SourceSpan& span, const Type* type)
+{
+    if (m_shaderModule.enabledExtensions().contains(Extension::F16))
+        return;
+
+    if (auto* matrix = std::get_if<Types::Matrix>(type))
+        type = matrix->element;
+    else if (auto* vector = std::get_if<Types::Vector>(type))
+        type = vector->element;
+
+    if (type == m_types.f16Type())
+        typeError(InferBottom::No, span, "f16 type used without f16 extension enabled"_s);
 }
 
 void TypeChecker::visit(AST::ElaboratedTypeExpression& type)
@@ -1977,6 +2028,9 @@ const Type* TypeChecker::chooseOverload(ASCIILiteral kind, const SourceSpan& spa
             auto& call = uncheckedDowncast<AST::CallExpression>(*expression);
             call.m_isConstructor = it->value.kind == OverloadedDeclaration::Constructor;
             call.m_visibility = it->value.visibility;
+
+            if (call.isFloatToIntConversion(overload->result))
+                m_shaderModule.setUsesFtoi();
         }
 
         unsigned argumentCount = callArguments.size();
@@ -2085,10 +2139,13 @@ Behaviors TypeChecker::analyze(AST::Statement& statement)
         return Behavior::Return;
     case AST::NodeKind::ContinueStatement: {
         bool hasLoopTarget = false;
+        bool hasSwitchTarget = false;
         for (int i = m_breakTargetStack.size() - 1; i >= 0; --i) {
             auto& target = m_breakTargetStack[i];
-            if (std::holds_alternative<AST::SwitchStatement*>(target))
+            if (std::holds_alternative<AST::SwitchStatement*>(target)) {
+                hasSwitchTarget = true;
                 continue;
+            }
 
             hasLoopTarget = true;
 
@@ -2098,7 +2155,7 @@ Behaviors TypeChecker::analyze(AST::Statement& statement)
             }
 
             if (auto** loop = std::get_if<AST::LoopStatement*>(&target)) {
-                if ((*loop)->continuing().has_value()) {
+                if (hasSwitchTarget && (*loop)->continuing().has_value()) {
                     (*loop)->setContainsSwitch();
                     auto& continueStatement = downcast<AST::ContinueStatement>(statement);
                     continueStatement.setIsFromSwitchToContinuing();
@@ -2186,7 +2243,7 @@ Behaviors TypeChecker::analyze(AST::LoopStatement& statement)
         m_breakTargetStack.append(&continuing.value());
         behaviors.add(analyzeStatements(continuing->body));
         m_breakTargetStack.removeLast();
-        if (auto* breakIf = continuing->breakIf)
+        if (continuing->breakIf)
             behaviors.add({ Behavior::Break, Behavior::Continue });
     }
     m_breakTargetStack.removeLast();
@@ -2325,7 +2382,7 @@ bool TypeChecker::convertValue(const SourceSpan& span, const Type* type, std::op
         return false;
     }
 
-    if (UNLIKELY(!convertValueImpl(span, type, *value))) {
+    if (!convertValueImpl(span, type, *value)) [[unlikely]] {
         StringPrintStream valueString;
         value->dump(valueString);
         typeError(InferBottom::No, span, "value "_s, valueString.toString(), " cannot be represented as '"_s, *type, '\'');

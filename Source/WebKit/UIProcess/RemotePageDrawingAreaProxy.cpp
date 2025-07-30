@@ -55,8 +55,8 @@ RemotePageDrawingAreaProxy::~RemotePageDrawingAreaProxy()
 {
     for (auto& name : m_names)
         protectedProcess()->removeMessageReceiver(name, m_identifier);
-    if (m_drawingArea)
-        m_drawingArea->removeRemotePageDrawingAreaProxy(*this);
+    if (RefPtr drawingArea = m_drawingArea.get())
+        drawingArea->removeRemotePageDrawingAreaProxy(*this);
 }
 
 Ref<WebProcessProxy> RemotePageDrawingAreaProxy::protectedProcess()
@@ -66,14 +66,14 @@ Ref<WebProcessProxy> RemotePageDrawingAreaProxy::protectedProcess()
 
 void RemotePageDrawingAreaProxy::didReceiveMessage(IPC::Connection& connection, IPC::Decoder& decoder)
 {
-    if (m_drawingArea)
-        m_drawingArea->didReceiveMessage(connection, decoder);
+    if (RefPtr drawingArea = m_drawingArea.get())
+        drawingArea->didReceiveMessage(connection, decoder);
 }
 
 bool RemotePageDrawingAreaProxy::didReceiveSyncMessage(IPC::Connection& connection, IPC::Decoder& decoder, UniqueRef<IPC::Encoder>& encoder)
 {
-    if (m_drawingArea)
-        return m_drawingArea->didReceiveSyncMessage(connection, decoder, encoder);
+    if (RefPtr drawingArea = m_drawingArea.get())
+        return drawingArea->didReceiveSyncMessage(connection, decoder, encoder);
     ASSERT_NOT_REACHED();
     return false;
 }

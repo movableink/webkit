@@ -85,7 +85,6 @@ class WebPaymentCoordinatorProxy final
     , public PaymentAuthorizationPresenter::Client
     , public RefCounted<WebPaymentCoordinatorProxy> {
     WTF_MAKE_TZONE_ALLOCATED(WebPaymentCoordinatorProxy);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WebPaymentCoordinatorProxy);
 public:
     USING_CAN_MAKE_WEAKPTR(MessageReceiver);
 
@@ -200,6 +199,8 @@ private:
     RetainPtr<PKPaymentRequest> platformPaymentRequest(const URL& originatingURL, const Vector<URL>& linkIconURLs, const WebCore::ApplePaySessionPaymentRequest&);
     void platformSetPaymentRequestUserAgent(PKPaymentRequest *, const String& userAgent);
 #endif
+
+    RefPtr<PaymentAuthorizationPresenter> protectedAuthorizationPresenter() { return m_authorizationPresenter; }
 
     WeakPtr<Client> m_client;
     std::optional<WebCore::PageIdentifier> m_destinationID;

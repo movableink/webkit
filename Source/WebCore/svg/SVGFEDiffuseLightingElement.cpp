@@ -21,6 +21,7 @@
 #include "config.h"
 #include "SVGFEDiffuseLightingElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "FEDiffuseLighting.h"
 #include "NodeName.h"
 #include "RenderElement.h"

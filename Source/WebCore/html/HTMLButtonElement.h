@@ -40,11 +40,19 @@ public:
     
     const AtomString& value() const;
 
+    const AtomString& command() const;
+    void setCommand(const AtomString&);
+
+    RefPtr<Element> commandForElement() const;
+    CommandType commandType() const;
+
     bool willRespondToMouseClickEventsWithEditability(Editability) const final;
 
     RenderButton* renderer() const;
 
     bool isExplicitlySetSubmitButton() const;
+
+    bool isDevolvableWidget() const override { return true; }
 
 private:
     HTMLButtonElement(const QualifiedName& tagName, Document&, HTMLFormElement*);
@@ -60,6 +68,8 @@ private:
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void defaultEventHandler(Event&) final;
+
+    void handleCommand();
 
     bool appendFormData(DOMFormData&) final;
 
@@ -80,6 +90,8 @@ private:
     bool computeWillValidate() const final;
 
     bool isSubmitButton() const final;
+
+    void computeType(const AtomString& typeAttrValue);
 
     Type m_type;
     bool m_isActivatedSubmit;

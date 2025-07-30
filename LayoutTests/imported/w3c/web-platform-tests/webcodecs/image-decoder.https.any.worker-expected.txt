@@ -31,7 +31,7 @@ FAIL Test WEBP image YUV 4:2:0 decoding. Can't find variable: ImageDecoder
 FAIL Test invalid mime type rejects decode() requests promise_test: Unhandled rejection with value: object "ReferenceError: Can't find variable: ImageDecoder"
 FAIL Test invalid mime type rejects decodeMetadata() requests promise_test: Unhandled rejection with value: object "ReferenceError: Can't find variable: ImageDecoder"
 FAIL Test out of range index returns RangeError Can't find variable: ImageDecoder
-FAIL Test partial decoding without a frame results in an error Can't find variable: ImageDecoder
+FAIL Test decoding a partial ArrayBuffer results in EncodingError Can't find variable: ImageDecoder
 FAIL Test completed property on fully buffered decode Can't find variable: ImageDecoder
 FAIL Test decode, decodeMetadata after no track selected. Can't find variable: ImageDecoder
 FAIL Test track selection in multi track image. Can't find variable: ImageDecoder

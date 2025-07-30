@@ -37,7 +37,7 @@ static void checkTitle(WebViewTest* test, GDBusProxy* proxy, const char* expecte
     GRefPtr<GVariant> result = adoptGRef(g_dbus_proxy_call_sync(
         proxy,
         "GetTitle",
-        g_variant_new("(t)", webkit_web_view_get_page_id(test->m_webView)),
+        g_variant_new("(t)", webkit_web_view_get_page_id(test->webView())),
         G_DBUS_CALL_FLAGS_NONE,
         -1, 0, 0));
     g_assert_nonnull(result);
@@ -80,7 +80,7 @@ static void testWebProcessExtensionInputElementIsUserEdited(WebViewTest* test, g
 
     auto proxy = test->extensionProxy();
 
-    uint64_t pageID = webkit_web_view_get_page_id(test->m_webView);
+    uint64_t pageID = webkit_web_view_get_page_id(test->webView());
     g_assert_false(inputElementIsUserEdited(proxy.get(), pageID, "input"));
     test->runJavaScriptAndWaitUntilFinished("document.getElementById('input').focus()", nullptr);
     test->keyStroke(GDK_KEY_a);
@@ -148,7 +148,7 @@ static void testWebKitWebViewProcessCrashed(WebViewTest* test, gconstpointer)
     test->loadHtml("<html></html>", nullptr);
     test->waitUntilLoadFinished();
 
-    g_signal_connect_after(test->m_webView, "web-process-terminated",
+    g_signal_connect_after(test->webView(), "web-process-terminated",
         G_CALLBACK(webProcessTerminatedCallback), test);
 
     test->m_expectedWebProcessCrash = true;
@@ -185,7 +185,7 @@ static void testWebProcessExtensionIsolatedWorld(WebViewTest* test, gconstpointe
     test->loadHtml("<html><header></header><body><div id='console'></div></body></html>", 0);
     test->waitUntilLoadFinished();
 
-    gulong scriptDialogID = g_signal_connect(test->m_webView, "script-dialog", G_CALLBACK(scriptDialogCallback), nullptr);
+    gulong scriptDialogID = g_signal_connect(test->webView(), "script-dialog", G_CALLBACK(scriptDialogCallback), nullptr);
 
     static const char* mainWorldScript =
         "top.foo = 'Foo';\n"
@@ -207,7 +207,7 @@ static void testWebProcessExtensionIsolatedWorld(WebViewTest* test, gconstpointe
     auto proxy = test->extensionProxy();
     g_dbus_proxy_call(proxy.get(),
         "RunJavaScriptInIsolatedWorld",
-        g_variant_new("(t&s)", webkit_web_view_get_page_id(test->m_webView), isolatedWorldScript),
+        g_variant_new("(t&s)", webkit_web_view_get_page_id(test->webView()), isolatedWorldScript),
         G_DBUS_CALL_FLAGS_NONE,
         -1, 0,
         reinterpret_cast<GAsyncReadyCallback>(runJavaScriptInIsolatedWorldFinishedCallback),
@@ -221,7 +221,7 @@ static void testWebProcessExtensionIsolatedWorld(WebViewTest* test, gconstpointe
     valueString.reset(WebViewTest::javascriptResultToCString(value));
     g_assert_cmpstr(valueString.get(), ==, "undefined");
 
-    g_signal_handler_disconnect(test->m_webView, scriptDialogID);
+    g_signal_handler_disconnect(test->webView(), scriptDialogID);
 }
 
 static void didAssociateFormControlsCallback(GDBusConnection*, const char*, const char*, const char*, const char*, GVariant* result, GUniqueOutPtr<char>* formIds)
@@ -412,38 +412,38 @@ static void webViewPageIDChanged(WebKitWebView* webView, GParamSpec*, bool* page
 
 static void testWebProcessExtensionPageID(WebViewTest* test, gconstpointer)
 {
-    auto pageID = webkit_web_view_get_page_id(test->m_webView);
+    auto pageID = webkit_web_view_get_page_id(test->webView());
     g_assert_cmpuint(pageID, >=, 1);
 
     bool pageIDChangedEmitted = false;
-    g_signal_connect(test->m_webView, "notify::page-id", G_CALLBACK(webViewPageIDChanged), &pageIDChangedEmitted);
+    g_signal_connect(test->webView(), "notify::page-id", G_CALLBACK(webViewPageIDChanged), &pageIDChangedEmitted);
 
     test->loadHtml("<html><head><title>Title1</title></head><body></body></html>", "http://foo.com");
     test->waitUntilLoadFinished();
     g_assert_false(pageIDChangedEmitted);
-    g_assert_cmpuint(pageID, ==, webkit_web_view_get_page_id(test->m_webView));
+    g_assert_cmpuint(pageID, ==, webkit_web_view_get_page_id(test->webView()));
     auto proxy = test->extensionProxy();
     checkTitle(test, proxy.get(), "Title1");
 
     test->loadHtml("<html><head><title>Title2</title></head><body></body></html>", "http://foo.com/bar");
     test->waitUntilLoadFinished();
     g_assert_false(pageIDChangedEmitted);
-    g_assert_cmpuint(pageID, ==, webkit_web_view_get_page_id(test->m_webView));
+    g_assert_cmpuint(pageID, ==, webkit_web_view_get_page_id(test->webView()));
     checkTitle(test, proxy.get(), "Title2");
 
     test->loadHtml("<html><head><title>Title3</title></head><body></body></html>", "http://bar.com");
     test->waitUntilLoadFinished();
     g_assert_true(pageIDChangedEmitted);
     pageIDChangedEmitted = false;
-    g_assert_cmpuint(pageID, <, webkit_web_view_get_page_id(test->m_webView));
-    pageID = webkit_web_view_get_page_id(test->m_webView);
+    g_assert_cmpuint(pageID, <, webkit_web_view_get_page_id(test->webView()));
+    pageID = webkit_web_view_get_page_id(test->webView());
     proxy = test->extensionProxy();
     checkTitle(test, proxy.get(), "Title3");
 
     test->loadHtml("<html><head><title>Title4</title></head><body></body></html>", "http://bar.com/foo");
     test->waitUntilLoadFinished();
     g_assert_false(pageIDChangedEmitted);
-    g_assert_cmpuint(pageID, ==, webkit_web_view_get_page_id(test->m_webView));
+    g_assert_cmpuint(pageID, ==, webkit_web_view_get_page_id(test->webView()));
     checkTitle(test, proxy.get(), "Title4");
 
     // Register a custom URI scheme to test history navigation.
@@ -460,8 +460,8 @@ static void testWebProcessExtensionPageID(WebViewTest* test, gconstpointer)
     test->waitUntilLoadFinished();
     g_assert_true(pageIDChangedEmitted);
     pageIDChangedEmitted = false;
-    g_assert_cmpuint(pageID, <, webkit_web_view_get_page_id(test->m_webView));
-    pageID = webkit_web_view_get_page_id(test->m_webView);
+    g_assert_cmpuint(pageID, <, webkit_web_view_get_page_id(test->webView()));
+    pageID = webkit_web_view_get_page_id(test->webView());
     proxy = test->extensionProxy();
     checkTitle(test, proxy.get(), "Title5");
 
@@ -469,8 +469,8 @@ static void testWebProcessExtensionPageID(WebViewTest* test, gconstpointer)
     test->waitUntilLoadFinished();
     g_assert_false(pageIDChangedEmitted);
     pageIDChangedEmitted = false;
-    g_assert_cmpuint(pageID, ==, webkit_web_view_get_page_id(test->m_webView));
-    pageID = webkit_web_view_get_page_id(test->m_webView);
+    g_assert_cmpuint(pageID, ==, webkit_web_view_get_page_id(test->webView()));
+    pageID = webkit_web_view_get_page_id(test->webView());
     proxy = test->extensionProxy();
     checkTitle(test, proxy.get(), "Title6");
 
@@ -478,8 +478,8 @@ static void testWebProcessExtensionPageID(WebViewTest* test, gconstpointer)
     test->waitUntilLoadFinished();
     g_assert_false(pageIDChangedEmitted);
     pageIDChangedEmitted = false;
-    g_assert_cmpuint(pageID, ==, webkit_web_view_get_page_id(test->m_webView));
-    pageID = webkit_web_view_get_page_id(test->m_webView);
+    g_assert_cmpuint(pageID, ==, webkit_web_view_get_page_id(test->webView()));
+    pageID = webkit_web_view_get_page_id(test->webView());
     proxy = test->extensionProxy();
     checkTitle(test, proxy.get(), "Title5");
 
@@ -487,8 +487,8 @@ static void testWebProcessExtensionPageID(WebViewTest* test, gconstpointer)
     test->waitUntilLoadFinished();
     g_assert_false(pageIDChangedEmitted);
     pageIDChangedEmitted = false;
-    g_assert_cmpuint(pageID, ==, webkit_web_view_get_page_id(test->m_webView));
-    pageID = webkit_web_view_get_page_id(test->m_webView);
+    g_assert_cmpuint(pageID, ==, webkit_web_view_get_page_id(test->webView()));
+    pageID = webkit_web_view_get_page_id(test->webView());
     proxy = test->extensionProxy();
     checkTitle(test, proxy.get(), "Title6");
 }
@@ -510,22 +510,22 @@ public:
     UserMessageTest()
     {
         g_signal_connect(m_webContext.get(), "user-message-received", G_CALLBACK(webContextUserMessageReceivedCallback), this);
-        g_signal_connect(m_webView, "user-message-received", G_CALLBACK(webViewUserMessageReceivedCallback), this);
+        g_signal_connect(m_webView.get(), "user-message-received", G_CALLBACK(webViewUserMessageReceivedCallback), this);
     }
 
     ~UserMessageTest()
     {
         g_signal_handlers_disconnect_matched(m_webContext.get(), G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, this);
-        g_signal_handlers_disconnect_matched(m_webView, G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, this);
+        g_signal_handlers_disconnect_matched(m_webView.get(), G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, this);
     }
 
     WebKitUserMessage* sendMessage(WebKitUserMessage* message, GError** error = nullptr)
     {
         assertObjectIsDeletedWhenTestFinishes(G_OBJECT(message));
         m_receivedViewMessages = { };
-        webkit_web_view_send_message_to_page(m_webView, message, nullptr, [](GObject*, GAsyncResult* result, gpointer userData) {
+        webkit_web_view_send_message_to_page(m_webView.get(), message, nullptr, [](GObject*, GAsyncResult* result, gpointer userData) {
             auto* test = static_cast<UserMessageTest*>(userData);
-            test->m_receivedViewMessages.append(adoptGRef(webkit_web_view_send_message_to_page_finish(test->m_webView, result, &test->m_receivedError.outPtr())));
+            test->m_receivedViewMessages.append(adoptGRef(webkit_web_view_send_message_to_page_finish(test->webView(), result, &test->m_receivedError.outPtr())));
             if (auto receivedMessage = test->m_receivedViewMessages.first())
                 test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(receivedMessage.get()));
             else
@@ -719,7 +719,7 @@ static void testWebProcessExtensionUserMessages(UserMessageTest* test, gconstpoi
     g_assert_error(messageError, WEBKIT_USER_MESSAGE_ERROR, WEBKIT_USER_MESSAGE_UNHANDLED_MESSAGE);
 
     // Message that is never replied.
-    auto webView = Test::adoptView(Test::createWebView(test->m_webContext.get()));
+    auto webView = test->createWebView();
     webkit_web_view_send_message_to_page(webView.get(), webkit_user_message_new("Test.Infinite", nullptr), nullptr,
         [](GObject* object, GAsyncResult* result, gpointer userData) {
             auto* test = static_cast<UserMessageTest*>(userData);
@@ -737,7 +737,7 @@ static void testWebProcessExtensionUserMessages(UserMessageTest* test, gconstpoi
     g_assert_cmpstr(webkit_user_message_get_name(message), ==, "DocumentLoaded");
 
     // Reply to a message received from the web process.
-    webkit_web_view_send_message_to_page(test->m_webView, webkit_user_message_new("Test.AsyncPing", nullptr), nullptr, nullptr, nullptr);
+    webkit_web_view_send_message_to_page(test->webView(), webkit_user_message_new("Test.AsyncPing", nullptr), nullptr, nullptr, nullptr);
     message = test->waitUntilViewMessageReceived("Test.Ping");
     g_assert_true(WEBKIT_IS_USER_MESSAGE(message));
     g_assert_cmpstr(webkit_user_message_get_name(message), ==, "Test.Ping");
@@ -747,7 +747,7 @@ static void testWebProcessExtensionUserMessages(UserMessageTest* test, gconstpoi
     g_assert_cmpstr(webkit_user_message_get_name(message), ==, "Test.AsyncPong");
 
     // Create a new page and wait for page created message.
-    webView = Test::adoptView(Test::createWebView(test->m_webContext.get()));
+    webView = test->createWebView();
     webkit_web_view_load_html(webView.get(), "<html><body></body></html>", nullptr);
     message = test->waitUntilContextMessageReceived("PageCreated");
     g_assert_true(WEBKIT_IS_USER_MESSAGE(message));

@@ -66,6 +66,24 @@ public:
 #endif
     }
 
+    bool haveSecureCodingRequest() const
+    {
+#if HAVE(WK_SECURE_CODING_NSURLREQUEST)
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    bool haveSecureCodingDataDetectors() const
+    {
+#if HAVE(WK_SECURE_CODING_DATA_DETECTORS)
+        return true;
+#else
+        return false;
+#endif
+    }
+
     bool keyboardAppearsOverContent() const
     {
 #if PLATFORM(VISION)
@@ -103,19 +121,17 @@ public:
 
     // Other dumping.
     void dumpBackForwardList();
-    void dumpChildFrameScrollPositions() { m_shouldDumpAllFrameScrollPositions = true; }
+    void dumpChildFrameScrollPositions();
     void dumpEditingCallbacks() { m_dumpEditingCallbacks = true; }
     void dumpSelectionRect() { m_dumpSelectionRect = true; }
-    void dumpStatusCallbacks() { m_dumpStatusCallbacks = true; }
     void dumpTitleChanges() { m_dumpTitleChanges = true; }
-    void dumpFullScreenCallbacks() { m_dumpFullScreenCallbacks = true; }
+    void dumpFullScreenCallbacks();
     void dumpFrameLoadCallbacks() { setShouldDumpFrameLoadCallbacks(true); }
     void dumpProgressFinishedCallback() { setShouldDumpProgressFinishedCallback(true); }
     void dumpResourceLoadCallbacks() { m_dumpResourceLoadCallbacks = true; }
     void dumpResourceResponseMIMETypes() { m_dumpResourceResponseMIMETypes = true; }
     void dumpWillCacheResponse() { m_dumpWillCacheResponse = true; }
     void dumpApplicationCacheDelegateCallbacks() { m_dumpApplicationCacheDelegateCallbacks = true; }
-    void dumpDatabaseCallbacks() { m_dumpDatabaseCallbacks = true; }
     void dumpDOMAsWebArchive() { setWhatToDump(WhatToDump::DOMAsWebArchive); }
     void dumpPolicyDelegateCallbacks();
     void dumpResourceLoadStatistics();
@@ -166,7 +182,7 @@ public:
     void addUserStyleSheet(JSStringRef source, bool allFrames);
 
     // Text search testing.
-    bool findString(JSContextRef, JSStringRef, JSValueRef optionsArray);
+    void findString(JSContextRef, JSStringRef, JSValueRef optionsArray, JSValueRef callback);
     void findStringMatchesInPage(JSContextRef, JSStringRef, JSValueRef optionsArray);
     void replaceFindMatchesAtIndices(JSContextRef, JSValueRef matchIndices, JSStringRef replacementText, bool selectionOnly);
 
@@ -175,6 +191,8 @@ public:
     void setDatabaseQuota(uint64_t);
     JSRetainPtr<JSStringRef> pathToLocalResource(JSStringRef);
     void syncLocalStorage();
+
+    void clearStorage();
 
     void clearDOMCache(JSStringRef origin);
     void clearDOMCaches();
@@ -210,21 +228,18 @@ public:
     WhatToDump whatToDump() const;
     void setWhatToDump(WhatToDump);
 
-    bool shouldDumpAllFrameScrollPositions() const { return m_shouldDumpAllFrameScrollPositions; }
+    bool shouldDumpAllFrameScrollPositions() const;
     bool shouldDumpBackForwardListsForAllWindows() const;
     bool shouldDumpEditingCallbacks() const { return m_dumpEditingCallbacks; }
     bool shouldDumpMainFrameScrollPosition() const { return whatToDump() == WhatToDump::RenderTree; }
-    bool shouldDumpStatusCallbacks() const { return m_dumpStatusCallbacks; }
     bool shouldDumpTitleChanges() const { return m_dumpTitleChanges; }
     bool shouldDumpPixels() const;
-    bool shouldDumpFullScreenCallbacks() const { return m_dumpFullScreenCallbacks; }
     bool shouldDumpFrameLoadCallbacks();
     bool shouldDumpProgressFinishedCallback() const { return m_dumpProgressFinishedCallback; }
     bool shouldDumpResourceLoadCallbacks() const { return m_dumpResourceLoadCallbacks; }
     bool shouldDumpResourceResponseMIMETypes() const { return m_dumpResourceResponseMIMETypes; }
     bool shouldDumpWillCacheResponse() const { return m_dumpWillCacheResponse; }
     bool shouldDumpApplicationCacheDelegateCallbacks() const { return m_dumpApplicationCacheDelegateCallbacks; }
-    bool shouldDumpDatabaseCallbacks() const { return m_dumpDatabaseCallbacks; }
     bool shouldDumpSelectionRect() const { return m_dumpSelectionRect; }
 
     bool didReceiveServerRedirectForProvisionalNavigation() const;
@@ -295,14 +310,6 @@ public:
     void setOnlyAcceptFirstPartyCookies(bool);
     void removeAllCookies(JSContextRef, JSValueRef callback);
 
-    // Custom full screen behavior.
-    void setHasCustomFullScreenBehavior(bool value) { m_customFullScreenBehavior = value; }
-    bool hasCustomFullScreenBehavior() const { return m_customFullScreenBehavior; }
-    void setEnterFullscreenForElementCallback(JSContextRef, JSValueRef);
-    void callEnterFullscreenForElementCallback();
-    void setExitFullscreenForElementCallback(JSContextRef, JSValueRef);
-    void callExitFullscreenForElementCallback();
-
     // Web notifications.
     void grantWebNotificationPermission(JSStringRef origin);
     void denyWebNotificationPermission(JSStringRef origin);
@@ -336,9 +343,9 @@ public:
     void setMicrophonePermission(bool);
     void setUserMediaPermission(bool);
     void resetUserMediaPermission();
-    void setUserMediaPersistentPermissionForOrigin(bool permission, JSStringRef origin, JSStringRef parentOrigin);
-    unsigned userMediaPermissionRequestCountForOrigin(JSStringRef origin, JSStringRef parentOrigin) const;
-    void resetUserMediaPermissionRequestCountForOrigin(JSStringRef origin, JSStringRef parentOrigin);
+    void delayUserMediaRequestDecision();
+    unsigned userMediaPermissionRequestCount() const;
+    void resetUserMediaPermissionRequestCount();
     bool isDoingMediaCapture() const;
 
     void setPageVisibility(JSStringRef state);
@@ -455,7 +462,7 @@ public:
     void setStatisticsCacheMaxAgeCap(double seconds);
     bool hasStatisticsIsolatedSession(JSStringRef hostName);
     void setStatisticsShouldDowngradeReferrer(JSContextRef, bool, JSValueRef callback);
-    void setStatisticsShouldBlockThirdPartyCookies(JSContextRef, bool value, JSValueRef callback, bool onlyOnSitesWithoutUserInteraction);
+    void setStatisticsShouldBlockThirdPartyCookies(JSContextRef, bool value, JSValueRef callback, bool onlyOnSitesWithoutUserInteraction, bool onlyUnpartitionedCookies);
     void setStatisticsFirstPartyWebsiteDataRemovalMode(JSContextRef, bool value, JSValueRef callback);
     void statisticsSetToSameSiteStrictCookies(JSContextRef, JSStringRef hostName, JSValueRef callback);
     void statisticsSetFirstPartyHostCNAMEDomain(JSContextRef, JSStringRef firstPartyURLString, JSStringRef cnameURLString, JSValueRef completionHandler);
@@ -507,7 +514,7 @@ public:
     void setMockCameraOrientation(unsigned, JSStringRef persistentId);
     bool isMockRealtimeMediaSourceCenterEnabled();
     void setMockCaptureDevicesInterrupted(bool isCameraInterrupted, bool isMicrophoneInterrupted);
-    void triggerMockCaptureConfigurationChange(bool forMicrophone, bool forDisplay);
+    void triggerMockCaptureConfigurationChange(bool forCamera, bool forMicrophone, bool forDisplay);
     void setCaptureState(bool cameraState, bool microphoneState, bool displayState);
 
     bool hasAppBoundSession();
@@ -554,15 +561,30 @@ public:
     void takeViewPortSnapshot(JSContextRef, JSValueRef callback);
 
     void flushConsoleLogs(JSContextRef, JSValueRef callback);
+    void updatePresentation(JSContextRef, JSValueRef callback);
+    void scrollDuringEnterFullscreen();
+    void waitBeforeFinishingFullscreenExit();
+    void finishFullscreenExit();
+    void requestExitFullscreenFromUIProcess();
 
     // Reporting API
     void generateTestReport(JSContextRef, JSStringRef message, JSStringRef group);
 
     void getAndClearReportedWindowProxyAccessDomains(JSContextRef, JSValueRef);
 
-    void setTopContentInset(JSContextRef, double, JSValueRef);
+    void setObscuredContentInsets(JSContextRef, double top, double right, double bottom, double left, JSValueRef);
 
     void setPageScaleFactor(JSContextRef, double scaleFactor, long x, long y, JSValueRef callback);
+
+    bool canModifyResourceMonitorList() const
+    {
+#if PLATFORM(COCOA)
+        return true;
+#else
+        return false;
+#endif
+    }
+    void setResourceMonitorList(JSContextRef, JSStringRef rulesText, JSValueRef callback);
 
 private:
     TestRunner();
@@ -588,21 +610,17 @@ private:
     size_t m_userMediaPermissionRequestCount { 0 };
 
     unsigned m_renderTreeDumpOptions { 0 };
-    bool m_shouldDumpAllFrameScrollPositions { false };
     bool m_shouldAllowEditing { true };
 
     bool m_dumpEditingCallbacks { false };
-    bool m_dumpStatusCallbacks { false };
     bool m_dumpTitleChanges { false };
     bool m_dumpPixels { false };
     bool m_dumpSelectionRect { false };
-    bool m_dumpFullScreenCallbacks { false };
     bool m_dumpProgressFinishedCallback { false };
     bool m_dumpResourceLoadCallbacks { false };
     bool m_dumpResourceResponseMIMETypes { false };
     bool m_dumpWillCacheResponse { false };
     bool m_dumpApplicationCacheDelegateCallbacks { false };
-    bool m_dumpDatabaseCallbacks { false };
 
     bool m_testRepaint { false };
     bool m_testRepaintSweepHorizontally { false };
@@ -614,7 +632,6 @@ private:
     bool m_shouldStopProvisionalFrameLoads { false };
 
     bool m_globalFlag { false };
-    bool m_customFullScreenBehavior { false };
 
     bool m_shouldDecideNavigationPolicyAfterDelay { false };
     bool m_shouldDecideResponsePolicyAfterDelay { false };

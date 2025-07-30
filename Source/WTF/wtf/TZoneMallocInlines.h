@@ -35,40 +35,24 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #include <wtf/FastMalloc.h>
 
 #define WTF_MAKE_TZONE_ALLOCATED_INLINE(typeName) WTF_MAKE_FAST_ALLOCATED
-#define WTF_MAKE_TZONE_ALLOCATED_IMPL(typeName) struct WTFTzoneMallocSemicolonifier##typeName { }
-#define WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(outerType, innerType) \
-    struct WTFTzoneMallocSemicolonifier ## outerType ## innerType { }
-#define WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED_2X(outerOuterType, outerType, innerType) \
-    struct WTFTzoneMallocSemicolonifier ## outerOuterType ## outerType ## innerType { }
-#define WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(typeName) struct WTFTzoneMallocSemicolonifier##typeName { }
-#define WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED_TEMPLATE(outerType, innerType) \
-    struct WTFTzoneMallocSemicolonifier ## outerType ## innerType { }
-#define WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED_2X_TEMPLATE(outerOuterType, outerType, innerType) \
-    struct WTFTzoneMallocSemicolonifier ## outerOuterType ## outerType ## innerType { }
 
-#define WTF_MAKE_COMPACT_TZONE_ALLOCATED_IMPL(typeName) struct WTFTzoneMallocSemicolonifier##typeName { }
-#define WTF_MAKE_COMPACT_TZONE_ALLOCATED_IMPL_NESTED(otherType, innerType) struct WTFTzoneMallocSemicolonifier ## outerType ## innerType { }
-#define WTF_MAKE_COMPACT_TZONE_ALLOCATED_IMPL_TEMPLATE(typeName) struct WTFTzoneMallocSemicolonifier##typeName { }
-#define WTF_MAKE_COMPACT_TZONE_ALLOCATED_IMPL_NESTED_TEMPLATE(outerType, innerType) struct WTFTzoneMallocSemicolonifier ## outerType ## innerType { }
+#define WTF_MAKE_TZONE_ALLOCATED_IMPL(typeName) using __makeTZoneMallocedMacroSemicolonifier UNUSED_TYPE_ALIAS = int
+
+#define WTF_MAKE_COMPACT_TZONE_ALLOCATED_IMPL(typeName) using __makeTZoneMallocedMacroSemicolonifier UNUSED_TYPE_ALIAS = int
 
 #define WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(typeName) WTF_MAKE_TZONE_ALLOCATED_IMPL(typeName)
-#define WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL_NESTED(outerType, innerType) WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(outerType, innerType)
 
 #if USE(SYSTEM_MALLOC) || !USE(ISO_MALLOC)
 
-#define WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(name) struct WTFIsoMallocSemicolonifier##name { }
-#define WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL_TEMPLATE(name) struct WTFIsoMallocSemicolonifier##name { }
-#define WTF_MAKE_COMPACT_TZONE_OR_ISO_ALLOCATED_IMPL(name) struct WTFIsoMallocSemicolonifier##name { }
-#define WTF_MAKE_COMPACT_TZONE_OR_ISO_ALLOCATED_IMPL_TEMPLATE(name) struct WTFIsoMallocSemicolonifier##name { }
+#define WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(name) using __makeTZoneMallocedMacroSemicolonifier UNUSED_TYPE_ALIAS = int
+#define WTF_MAKE_COMPACT_TZONE_OR_ISO_ALLOCATED_IMPL(name) using __makeTZoneMallocedMacroSemicolonifier UNUSED_TYPE_ALIAS = int
 
 #else // !USE(SYSTEM_MALLOC) && USE(ISO_MALLOC) && !USE(TZONE_MALLOC)
 
 #include <bmalloc/IsoHeapInlines.h>
 
 #define WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(name) MAKE_BISO_MALLOCED_IMPL(name, IsoHeap)
-#define WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL_TEMPLATE(name) MAKE_BISO_MALLOCED_IMPL_TEMPLATE(name, IsoHeap)
 #define WTF_MAKE_COMPACT_TZONE_OR_ISO_ALLOCATED_IMPL(name) MAKE_BISO_MALLOCED_IMPL(name, CompactIsoHeap)
-#define WTF_MAKE_COMPACT_TZONE_OR_ISO_ALLOCATED_IMPL_TEMPLATE(name) MAKE_BISO_MALLOCED_IMPL_TEMPLATE(name, IsoHeap)
 
 #endif
 
@@ -80,34 +64,17 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #error "TZones enabled in WTF, but not enabled in bmalloc"
 #endif
 
-#define WTF_MAKE_TZONE_ALLOCATED_INLINE(typeName) MAKE_BTZONE_MALLOCED_INLINE(typeName, TZoneHeap)
-#define WTF_MAKE_TZONE_ALLOCATED_IMPL(type) MAKE_BTZONE_MALLOCED_IMPL(type, TZoneHeap)
-#define WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(outerType, innerType) \
-    MAKE_BTZONE_MALLOCED_IMPL_NESTED(outerType ## innerType, outerType::innerType, TZoneHeap)
-#define WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED_2X(outerOuterType, outerType, innerType) \
-    MAKE_BTZONE_MALLOCED_IMPL_NESTED(outerOuterType ## outerType ## innerType, outerOuterType::outerType::innerType, TZoneHeap)
-#define WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(typeName) MAKE_BTZONE_MALLOCED_IMPL_TEMPLATE(typeName, TZoneHeap)
-#define WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED_TEMPLATE(outerType, innerType) \
-    MAKE_BTZONE_MALLOCED_IMPL_NESTED_TEMPLATE(outerType ## innerType, outerType::innerType, TZoneHeap)
-#define WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED_2X_TEMPLATE(outerOuterType, outerType, innerType) \
-    MAKE_BTZONE_MALLOCED_IMPL_NESTED_TEMPLATE(outerOuterType ## outerType ## innerType, outerOuterType::outerType::innerType, TZoneHeap)
+#define WTF_MAKE_TZONE_ALLOCATED_INLINE(type) MAKE_BTZONE_MALLOCED_INLINE(type, NonCompact)
 
-#define WTF_MAKE_COMPACT_TZONE_ALLOCATED_IMPL(type) MAKE_BTZONE_MALLOCED_IMPL(type, CompactTZoneHeap)
-#define WTF_MAKE_COMPACT_TZONE_ALLOCATED_IMPL_NESTED(outerType, innerType) \
-    MAKE_BTZONE_MALLOCED_IMPL_NESTED(outerType ## innerType, outerType::innerType, CompactTZoneHeap)
-#define WTF_MAKE_COMPACT_TZONE_ALLOCATED_IMPL_TEMPLATE(typeName) MAKE_BTZONE_MALLOCED_IMPL_TEMPLATE(typeName, CompactTZoneHeap)
-#define WTF_MAKE_COMPACT_TZONE_ALLOCATED_IMPL_NESTED_TEMPLATE(outerType, innerType) \
-    MAKE_BTZONE_MALLOCED_IMPL_NESTED_TEMPLATE(outerType ## innerType, outerType::innerType, CompactTZoneHeap)
+#define WTF_MAKE_TZONE_ALLOCATED_IMPL(type) MAKE_BTZONE_MALLOCED_IMPL(type, NonCompact)
+
+#define WTF_MAKE_COMPACT_TZONE_ALLOCATED_IMPL(type) MAKE_BTZONE_MALLOCED_IMPL(type, Compact)
 
 #define WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(typeName) \
-    MAKE_BTZONE_MALLOCED_IMPL(typeName, TZoneHeap)
-#define WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL_NESTED(outerType, innerType) \
-    MAKE_BTZONE_MALLOCED_IMPL_NESTED(outerType ## innerType, outerType::innerType, TZoneHeap)
+    MAKE_BTZONE_MALLOCED_IMPL(typeName, NonCompact)
 
-#define WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(name) MAKE_BTZONE_MALLOCED_IMPL(name, TZoneHeap)
-#define WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL_TEMPLATE(name) MAKE_BTZONE_MALLOCED_IMPL_TEMPLATE(name, TZoneHeap)
-#define WTF_MAKE_COMPACT_TZONE_OR_ISO_ALLOCATED_IMPL(name) MAKE_BTZONE_MALLOCED_IMPL(name, CompactTZoneHeap)
-#define WTF_MAKE_COMPACT_TZONE_OR_ISO_ALLOCATED_IMPL_TEMPLATE(name) MAKE_BTZONE_MALLOCED_IMPL_NESTED_TEMPLATE(name, CompactTZoneHeap)
+#define WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(name) MAKE_BTZONE_MALLOCED_IMPL(name, NonCompact)
+#define WTF_MAKE_COMPACT_TZONE_OR_ISO_ALLOCATED_IMPL(name) MAKE_BTZONE_MALLOCED_IMPL(name, Compact)
 
 #endif
 

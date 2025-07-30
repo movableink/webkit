@@ -63,7 +63,7 @@ FunctionAllowlist::FunctionAllowlist(const char* filename)
 
         // Get rid of newlines at the ends of the strings.
         size_t length = strlen(line);
-        if (line[length - 1] == '\n') {
+        if (length && line[length - 1] == '\n') {
             line[length - 1] = '\0';
             length--;
         }
@@ -92,7 +92,7 @@ bool FunctionAllowlist::contains(CodeBlock* codeBlock) const
     if (m_entries.contains(name))
         return true;
 
-    String hash = String::fromUTF8(codeBlock->hashAsStringIfPossible().span());
+    String hash = makeString(codeBlock->hash());
     if (m_entries.contains(hash))
         return true;
 

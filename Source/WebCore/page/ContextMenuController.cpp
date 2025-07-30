@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Igalia S.L
  *
  * Redistribution and use in source and binary forms, with or without
@@ -185,9 +185,12 @@ static void prepareContextForQRCode(ContextMenuContext& context)
     if (result.image() || !result.absoluteLinkURL().isEmpty())
         return;
 
-    RefPtr<Element> element;
     RefPtr nodeElement = dynamicDowncast<Element>(*node);
-    for (auto& lineage : lineageOfType<Element>(nodeElement ? *nodeElement : *node->protectedParentElement())) {
+    if (!nodeElement && !(nodeElement = node->parentOrShadowHostElement()))
+        return;
+
+    RefPtr<Element> element;
+    for (auto& lineage : lineageOfType<Element>(*nodeElement)) {
         if (is<HTMLTableElement>(lineage) || is<HTMLCanvasElement>(lineage) || is<HTMLImageElement>(lineage) || is<SVGSVGElement>(lineage)) {
             element = &lineage;
             break;
@@ -267,7 +270,7 @@ static void openNewWindow(const URL& urlToLoad, LocalFrame& frame, Event* event,
     if (!oldPage)
         return;
 
-    FrameLoadRequest frameLoadRequest { frame.protectedDocument().releaseNonNull(), frame.document()->protectedSecurityOrigin(), ResourceRequest(urlToLoad, frame.loader().outgoingReferrer()), { }, InitiatedByMainFrame::Unknown };
+    FrameLoadRequest frameLoadRequest { frame.protectedDocument().releaseNonNull(), frame.document()->protectedSecurityOrigin(), ResourceRequest(URL { urlToLoad }, frame.loader().outgoingReferrer()), { }, InitiatedByMainFrame::Unknown };
     frameLoadRequest.setShouldOpenExternalURLsPolicy(shouldOpenExternalURLsPolicy);
     frameLoadRequest.setNewFrameOpenerPolicy(NewFrameOpenerPolicy::Suppress);
 
@@ -288,7 +291,7 @@ static void insertUnicodeCharacter(UChar character, LocalFrame& frame)
         return;
 
     ASSERT(frame.document());
-    TypingCommand::insertText(*frame.protectedDocument(), text, { }, TypingCommand::TextCompositionType::None);
+    TypingCommand::insertText(*frame.protectedDocument(), text, nullptr, { }, TypingCommand::TextCompositionType::None);
 }
 
 #endif
@@ -661,7 +664,10 @@ void ContextMenuController::contextMenuItemSelected(ContextMenuAction action, co
         break;
 
     case ContextMenuItemTagWritingTools:
-        // The Writing Tools context menu item action is handled in the client layer.
+    case ContextMenuItemTagProofread:
+    case ContextMenuItemTagRewrite:
+    case ContextMenuItemTagSummarize:
+        // Writing Tools context menu item actions are handled at the client layer.
         RELEASE_ASSERT_NOT_REACHED();
         break;
 
@@ -723,18 +729,16 @@ void ContextMenuController::createAndAppendFontSubMenu(ContextMenuItem& fontMenu
 #if PLATFORM(COCOA)
     ContextMenuItem styles(ContextMenuItemType::Action, ContextMenuItemTagStyles, contextMenuItemTagStyles());
     ContextMenuItem showColors(ContextMenuItemType::Action, ContextMenuItemTagShowColors, contextMenuItemTagShowColors());
-#endif
-
-#if PLATFORM(COCOA)
     appendItem(showFonts, &fontMenu);
+    appendItem(*separatorItem(), &fontMenu);
 #endif
     appendItem(bold, &fontMenu);
     appendItem(italic, &fontMenu);
     appendItem(underline, &fontMenu);
+    appendItem(*separatorItem(), &fontMenu);
     appendItem(outline, &fontMenu);
 #if PLATFORM(COCOA)
     appendItem(styles, &fontMenu);
-    appendItem(*separatorItem(), &fontMenu);
     appendItem(showColors, &fontMenu);
 #endif
 
@@ -1059,6 +1063,10 @@ void ContextMenuController::populate()
         appendItem(translateItem, m_contextMenu.get());
 #endif
 
+#if PLATFORM(COCOA)
+        appendItem(*separatorItem(), m_contextMenu.get());
+#endif
+
 #if !PLATFORM(GTK)
         appendItem(SearchWebItem, m_contextMenu.get());
         appendItem(*separatorItem(), m_contextMenu.get());
@@ -1093,8 +1101,9 @@ void ContextMenuController::populate()
     if (!m_context.hitTestResult().isContentEditable()) {
         Ref loader = frame->loader();
         URL linkURL = m_context.hitTestResult().absoluteLinkURL();
-        if (!linkURL.isEmpty()) {
-            if (loader->client().canHandleRequest(ResourceRequest(linkURL))) {
+        const bool linkURLEmpty = linkURL.isEmpty();
+        if (!linkURLEmpty) {
+            if (loader->client().canHandleRequest(ResourceRequest(WTFMove(linkURL)))) {
                 appendItem(OpenLinkItem, m_contextMenu.get());
                 appendItem(OpenLinkInNewWindowItem, m_contextMenu.get());
                 appendItem(DownloadFileItem, m_contextMenu.get());
@@ -1108,7 +1117,7 @@ void ContextMenuController::populate()
 
         URL imageURL = m_context.hitTestResult().absoluteImageURL();
         if (!imageURL.isEmpty()) {
-            if (!linkURL.isEmpty())
+            if (!linkURLEmpty)
                 appendItem(*separatorItem(), m_contextMenu.get());
 
             appendItem(OpenImageInNewWindowItem, m_contextMenu.get());
@@ -1147,8 +1156,9 @@ void ContextMenuController::populate()
         }
 
         URL mediaURL = m_context.hitTestResult().absoluteMediaURL();
-        if (!mediaURL.isEmpty()) {
-            if (!linkURL.isEmpty() || !imageURL.isEmpty())
+        const bool mediaURLEmpty = mediaURL.isEmpty();
+        if (!mediaURLEmpty) {
+            if (!linkURLEmpty || !imageURL.isEmpty())
                 appendItem(*separatorItem(), m_contextMenu.get());
 
             appendItem(MediaPlayPause, m_contextMenu.get());
@@ -1165,7 +1175,7 @@ void ContextMenuController::populate()
             appendItem(ToggleVideoEnhancedFullscreen, m_contextMenu.get());
             appendItem(ToggleVideoViewer, m_contextMenu.get());
 #endif
-            if (m_context.hitTestResult().isDownloadableMedia() && loader->client().canHandleRequest(ResourceRequest(mediaURL))) {
+            if (m_context.hitTestResult().isDownloadableMedia() && loader->client().canHandleRequest(ResourceRequest(WTFMove(mediaURL)))) {
                 appendItem(*separatorItem(), m_contextMenu.get());
                 appendItem(CopyMediaLinkItem, m_contextMenu.get());
                 appendItem(OpenMediaInNewWindowItem, m_contextMenu.get());
@@ -1175,7 +1185,7 @@ void ContextMenuController::populate()
 
         auto selectedRange = frame->selection().selection().range();
         bool selectionIsInsideImageOverlay = selectedRange && ImageOverlay::isInsideOverlay(*selectedRange);
-        if (selectionIsInsideImageOverlay || (linkURL.isEmpty() && mediaURL.isEmpty() && imageURL.isEmpty())) {
+        if (selectionIsInsideImageOverlay || (linkURLEmpty && mediaURLEmpty && imageURL.isEmpty())) {
             if (!imageURL.isEmpty())
                 appendItem(*separatorItem(), m_contextMenu.get());
             
@@ -1208,6 +1218,11 @@ void ContextMenuController::populate()
                 appendItem(*separatorItem(), m_contextMenu.get());
                 ContextMenuItem writingToolsItem(ContextMenuItemType::Action, ContextMenuItemTagWritingTools, contextMenuItemTagWritingTools());
                 appendItem(writingToolsItem, m_contextMenu.get());
+#if ENABLE(TOP_LEVEL_WRITING_TOOLS_CONTEXT_MENU_ITEMS)
+                ContextMenuItem summarizeItem(ContextMenuItemType::Action, ContextMenuItemTagSummarize, contextMenuItemTagSummarize());
+                appendItem(summarizeItem, m_contextMenu.get());
+                appendItem(*separatorItem(), m_contextMenu.get());
+#endif
 #endif
 
                 ContextMenuItem SpeechMenuItem(ContextMenuItemType::Submenu, ContextMenuItemTagSpeechMenu, contextMenuItemTagSpeechMenu());
@@ -1336,7 +1351,7 @@ void ContextMenuController::populate()
         Ref loader = frame->loader();
         URL linkURL = m_context.hitTestResult().absoluteLinkURL();
         if (!linkURL.isEmpty()) {
-            if (loader->client().canHandleRequest(ResourceRequest(linkURL))) {
+            if (loader->client().canHandleRequest(ResourceRequest(WTFMove(linkURL)))) {
                 appendItem(OpenLinkItem, m_contextMenu.get());
                 appendItem(OpenLinkInNewWindowItem, m_contextMenu.get());
                 appendItem(DownloadFileItem, m_contextMenu.get());
@@ -1369,6 +1384,22 @@ void ContextMenuController::populate()
             appendItem(*separatorItem(), m_contextMenu.get());
             ContextMenuItem writingToolsItem(ContextMenuItemType::Action, ContextMenuItemTagWritingTools, contextMenuItemTagWritingTools());
             appendItem(writingToolsItem, m_contextMenu.get());
+#if ENABLE(TOP_LEVEL_WRITING_TOOLS_CONTEXT_MENU_ITEMS)
+            bool editorHasText = [&] {
+                if (auto range = frame->editor().contextRangeForCandidateRequest())
+                    return !plainText(*range).isEmpty();
+
+                return false;
+            }();
+
+            if (editorHasText) {
+                ContextMenuItem proofreadItem(ContextMenuItemType::Action, ContextMenuItemTagProofread, contextMenuItemTagProofread());
+                appendItem(proofreadItem, m_contextMenu.get());
+                ContextMenuItem rewriteItem(ContextMenuItemType::Action, ContextMenuItemTagRewrite, contextMenuItemTagRewrite());
+                appendItem(rewriteItem, m_contextMenu.get());
+            }
+            appendItem(*separatorItem(), m_contextMenu.get());
+#endif
 #endif
 
 #if !PLATFORM(GTK)
@@ -1852,6 +1883,9 @@ void ContextMenuController::checkOrEnableIfNeeded(ContextMenuItem& item) const
         case ContextMenuItemTagLookUpImage:
         case ContextMenuItemTagTranslate:
         case ContextMenuItemTagWritingTools:
+        case ContextMenuItemTagProofread:
+        case ContextMenuItemTagRewrite:
+        case ContextMenuItemTagSummarize:
             break;
     }
 

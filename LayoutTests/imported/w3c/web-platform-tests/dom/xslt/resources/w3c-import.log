@@ -16,4 +16,7 @@ None
 List of files:
 /LayoutTests/imported/w3c/web-platform-tests/dom/xslt/resources/large_CDATA.xml
 /LayoutTests/imported/w3c/web-platform-tests/dom/xslt/resources/large_CDATA_ref.html
+/LayoutTests/imported/w3c/web-platform-tests/dom/xslt/resources/reqLine.xsl
+/LayoutTests/imported/w3c/web-platform-tests/dom/xslt/resources/test.xml
+/LayoutTests/imported/w3c/web-platform-tests/dom/xslt/resources/testu1LINE.xml
 /LayoutTests/imported/w3c/web-platform-tests/dom/xslt/resources/xml2html.xsl

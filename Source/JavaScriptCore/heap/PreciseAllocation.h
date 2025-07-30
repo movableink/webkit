@@ -44,7 +44,7 @@ class SlotVisitor;
 class PreciseAllocation : public BasicRawSentinelNode<PreciseAllocation> {
 public:
     friend class LLIntOffsetsExtractor;
-    friend class IsoSubspace;
+    friend class MarkedSpace;
 
     static PreciseAllocation* tryCreate(Heap&, size_t, Subspace*, unsigned indexInSpace);
     static PreciseAllocation* tryCreateForLowerTierPrecise(Heap&, size_t, Subspace*, uint8_t lowerTierPreciseIndex);

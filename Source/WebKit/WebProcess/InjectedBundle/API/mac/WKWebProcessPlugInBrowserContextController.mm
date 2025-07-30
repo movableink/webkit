@@ -62,8 +62,10 @@
 #import <WebCore/DocumentFragment.h>
 #import <WebCore/HTMLFormElement.h>
 #import <WebCore/HTMLInputElement.h>
-#import <WebCore/LocalFrame.h>
+#import <WebCore/LocalFrameInlines.h>
 #import <WebCore/WebCoreObjCExtras.h>
+#import <wtf/AlignedStorage.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/WeakObjCPtr.h>
 #import <wtf/cocoa/VectorCocoa.h>
@@ -73,7 +75,7 @@
 @end
 
 @implementation WKWebProcessPlugInBrowserContextController {
-    API::ObjectStorage<WebKit::WebPage> _page;
+    AlignedStorage<WebKit::WebPage> _page;
     WeakObjCPtr<id <WKWebProcessPlugInLoadDelegate>> _loadDelegate;
     WeakObjCPtr<id <WKWebProcessPlugInFormDelegatePrivate>> _formDelegate;
     WeakObjCPtr<id <WKWebProcessPlugInEditingDelegate>> _editingDelegate;
@@ -254,7 +256,7 @@ static void didHandleOnloadEventsForFrame(WKBundlePageRef page, WKBundleFrameRef
 static void setUpPageLoaderClient(WKWebProcessPlugInBrowserContextController *contextController, WebKit::WebPage& page)
 {
     WKBundlePageLoaderClientV11 client;
-    memset(&client, 0, sizeof(client));
+    zeroBytes(client);
 
     client.base.version = 11;
     client.base.clientInfo = (__bridge void*)contextController;
@@ -287,18 +289,18 @@ static WKURLRequestRef willSendRequestForFrame(WKBundlePageRef, WKBundleFrameRef
     auto loadDelegate = pluginContextController->_loadDelegate.get();
 
     if ([loadDelegate respondsToSelector:@selector(webProcessPlugInBrowserContextController:frame:willSendRequestForResource:request:redirectResponse:)]) {
-        NSURLRequest *originalRequest = wrapper(*WebKit::toImpl(request));
+        RetainPtr originalRequest = wrapper(*WebKit::toImpl(request));
         RetainPtr<NSURLRequest> substituteRequest = [loadDelegate webProcessPlugInBrowserContextController:pluginContextController frame:wrapper(*WebKit::toImpl(frame)) willSendRequestForResource:resourceIdentifier
-            request:originalRequest redirectResponse:WebKit::toImpl(redirectResponse)->resourceResponse().nsURLResponse()];
+            request:originalRequest.get() redirectResponse:WebKit::toImpl(redirectResponse)->resourceResponse().nsURLResponse()];
 
-        if (substituteRequest != originalRequest)
+        if (substituteRequest != originalRequest.get())
             return substituteRequest ? WKURLRequestCreateWithNSURLRequest(substituteRequest.get()) : nullptr;
     } else if ([loadDelegate respondsToSelector:@selector(webProcessPlugInBrowserContextController:frame:willSendRequest:redirectResponse:)]) {
-        NSURLRequest *originalRequest = wrapper(*WebKit::toImpl(request));
-        RetainPtr<NSURLRequest> substituteRequest = [loadDelegate webProcessPlugInBrowserContextController:pluginContextController frame:wrapper(*WebKit::toImpl(frame)) willSendRequest:originalRequest
+        RetainPtr originalRequest = wrapper(*WebKit::toImpl(request));
+        RetainPtr<NSURLRequest> substituteRequest = [loadDelegate webProcessPlugInBrowserContextController:pluginContextController frame:wrapper(*WebKit::toImpl(frame)) willSendRequest:originalRequest.get()
             redirectResponse:WebKit::toImpl(redirectResponse)->resourceResponse().nsURLResponse()];
 
-        if (substituteRequest != originalRequest)
+        if (substituteRequest != originalRequest.get())
             return substituteRequest ? WKURLRequestCreateWithNSURLRequest(substituteRequest.get()) : nullptr;
     }
 
@@ -351,7 +353,7 @@ static void didFailLoadForResource(WKBundlePageRef, WKBundleFrameRef frame, uint
 static void setUpResourceLoadClient(WKWebProcessPlugInBrowserContextController *contextController, WebKit::WebPage& page)
 {
     WKBundlePageResourceLoadClientV1 client;
-    memset(&client, 0, sizeof(client));
+    zeroBytes(client);
 
     client.base.version = 1;
     client.base.clientInfo = (__bridge void*) contextController;
@@ -490,7 +492,7 @@ static void setUpResourceLoadClient(WKWebProcessPlugInBrowserContextController *
             if ([formDelegate respondsToSelector:@selector(_webProcessPlugInBrowserContextController:willSendSubmitEventToForm:inFrame:targetFrame:values:)]) {
                 auto valueMap = adoptNS([[NSMutableDictionary alloc] initWithCapacity:values.size()]);
                 for (const auto& pair : values)
-                    [valueMap setObject:pair.second forKey:pair.first];
+                    [valueMap setObject:pair.second.createNSString().get() forKey:pair.first.createNSString().get()];
                 [formDelegate _webProcessPlugInBrowserContextController:controller.get() willSendSubmitEventToForm:wrapper(*WebKit::InjectedBundleNodeHandle::getOrCreate(formElement).get())
                     inFrame:wrapper(*sourceFrame) targetFrame:wrapper(*targetFrame) values:valueMap.get()];
             }
@@ -506,7 +508,7 @@ static void setUpResourceLoadClient(WKWebProcessPlugInBrowserContextController *
             if ([formDelegate respondsToSelector:@selector(_webProcessPlugInBrowserContextController:willSubmitForm:toFrame:fromFrame:withValues:)]) {
                 auto valueMap = adoptNS([[NSMutableDictionary alloc] initWithCapacity:values.size()]);
                 for (const auto& pair : values)
-                    [valueMap setObject:pair.second forKey:pair.first];
+                    [valueMap setObject:pair.second.createNSString().get() forKey:pair.first.createNSString().get()];
                 userData = API::Object::fromNSObject([formDelegate _webProcessPlugInBrowserContextController:controller.get() willSubmitForm:wrapper(*WebKit::InjectedBundleNodeHandle::getOrCreate(formElement).get()) toFrame:wrapper(*frame) fromFrame:wrapper(*sourceFrame) withValues:valueMap.get()]);
             }
         }
@@ -602,7 +604,7 @@ static inline WKEditorInsertAction toWK(WebCore::EditorInsertAction action)
     public:
         explicit Client(WKWebProcessPlugInBrowserContextController *controller)
             : m_controller { controller }
-            , m_delegateMethods { m_controller->_editingDelegate.get() }
+            , m_delegateMethods { controller->_editingDelegate.get() }
         {
         }
 
@@ -612,7 +614,8 @@ static inline WKEditorInsertAction toWK(WebCore::EditorInsertAction action)
             if (!m_delegateMethods.shouldInsertText)
                 return true;
 
-            return [m_controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:m_controller shouldInsertText:text replacingRange:wrapper(*WebKit::createHandle(rangeToReplace)) givenAction:toWK(action)];
+            RetainPtr controller = m_controller.get();
+            return [controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:controller.get() shouldInsertText:text.createNSString().get() replacingRange:wrapper(*WebKit::createHandle(rangeToReplace)) givenAction:toWK(action)];
         }
 
         bool shouldChangeSelectedRange(WebKit::WebPage&, const std::optional<WebCore::SimpleRange>& fromRange, const std::optional<WebCore::SimpleRange>& toRange, WebCore::Affinity affinity, bool stillSelecting) final
@@ -634,7 +637,8 @@ static inline WKEditorInsertAction toWK(WebCore::EditorInsertAction action)
             NSSelectionAffinity apiAffinity = affinity == WebCore::Affinity::Upstream ? NSSelectionAffinityUpstream : NSSelectionAffinityDownstream;
 #endif
 
-            return [m_controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:m_controller shouldChangeSelectedRange:apiFromRange.get() toRange:apiToRange.get() affinity:apiAffinity stillSelecting:stillSelecting];
+            RetainPtr controller = m_controller.get();
+            return [controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:controller.get() shouldChangeSelectedRange:apiFromRange.get() toRange:apiToRange.get() affinity:apiAffinity stillSelecting:stillSelecting];
         }
 
         void didChange(WebKit::WebPage&, const String&) final
@@ -642,7 +646,8 @@ static inline WKEditorInsertAction toWK(WebCore::EditorInsertAction action)
             if (!m_delegateMethods.didChange)
                 return;
 
-            [m_controller->_editingDelegate.get() _webProcessPlugInBrowserContextControllerDidChangeByEditing:m_controller];
+            RetainPtr controller = m_controller.get();
+            [controller->_editingDelegate.get() _webProcessPlugInBrowserContextControllerDidChangeByEditing:controller.get()];
         }
 
         void willWriteToPasteboard(WebKit::WebPage&, const std::optional<WebCore::SimpleRange>& range) final
@@ -650,7 +655,8 @@ static inline WKEditorInsertAction toWK(WebCore::EditorInsertAction action)
             if (!m_delegateMethods.willWriteToPasteboard)
                 return;
 
-            [m_controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:m_controller willWriteRangeToPasteboard:wrapper(WebKit::createHandle(range).get())];
+            RetainPtr controller = m_controller.get();
+            [controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:controller.get() willWriteRangeToPasteboard:wrapper(WebKit::createHandle(range).get())];
         }
 
         void getPasteboardDataForRange(WebKit::WebPage&, const std::optional<WebCore::SimpleRange>& range, Vector<String>& pasteboardTypes, Vector<RefPtr<WebCore::SharedBuffer>>& pasteboardData) final
@@ -658,10 +664,11 @@ static inline WKEditorInsertAction toWK(WebCore::EditorInsertAction action)
             if (!m_delegateMethods.getPasteboardDataForRange)
                 return;
 
-            auto dataByType = [m_controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:m_controller pasteboardDataForRange:wrapper(WebKit::createHandle(range).get())];
-            for (NSString *type in dataByType) {
+            RetainPtr controller = m_controller.get();
+            RetainPtr dataByType = [controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:controller.get() pasteboardDataForRange:wrapper(WebKit::createHandle(range).get())];
+            for (NSString *type in dataByType.get()) {
                 pasteboardTypes.append(type);
-                pasteboardData.append(WebCore::SharedBuffer::create(dataByType[type]));
+                pasteboardData.append(WebCore::SharedBuffer::create(dataByType.get()[type]));
             };
         }
 
@@ -670,7 +677,8 @@ static inline WKEditorInsertAction toWK(WebCore::EditorInsertAction action)
             if (!m_delegateMethods.didWriteToPasteboard)
                 return;
 
-            [m_controller->_editingDelegate.get() _webProcessPlugInBrowserContextControllerDidWriteToPasteboard:m_controller];
+            RetainPtr controller = m_controller.get();
+            [controller->_editingDelegate.get() _webProcessPlugInBrowserContextControllerDidWriteToPasteboard:controller.get()];
         }
 
         bool performTwoStepDrop(WebKit::WebPage&, WebCore::DocumentFragment& fragment, const WebCore::SimpleRange& range, bool isMove) final
@@ -680,10 +688,11 @@ static inline WKEditorInsertAction toWK(WebCore::EditorInsertAction action)
 
             auto rangeHandle = WebKit::createHandle(range);
             auto nodeHandle = WebKit::InjectedBundleNodeHandle::getOrCreate(&fragment);
-            return [m_controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:m_controller performTwoStepDrop:wrapper(*nodeHandle) atDestination:wrapper(*rangeHandle) isMove:isMove];
+            RetainPtr controller = m_controller.get();
+            return [controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:controller.get() performTwoStepDrop:wrapper(*nodeHandle) atDestination:wrapper(*rangeHandle) isMove:isMove];
         }
 
-        WKWebProcessPlugInBrowserContextController *m_controller;
+        WeakObjCPtr<WKWebProcessPlugInBrowserContextController> m_controller;
         const struct DelegateMethods {
             DelegateMethods(RetainPtr<id <WKWebProcessPlugInEditingDelegate>> delegate)
                 : shouldInsertText([delegate respondsToSelector:@selector(_webProcessPlugInBrowserContextController:shouldInsertText:replacingRange:givenAction:)])
@@ -728,7 +737,7 @@ static inline WKEditorInsertAction toWK(WebCore::EditorInsertAction action)
 
 - (NSString *)_groupIdentifier
 {
-    return _page->pageGroup()->identifier();
+    return _page->pageGroup()->identifier().createNSString().autorelease();
 }
 
 @end

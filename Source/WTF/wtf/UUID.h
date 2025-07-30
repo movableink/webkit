@@ -66,7 +66,7 @@ public:
     WTF_EXPORT_PRIVATE static UUID createVersion5(UUID, std::span<const uint8_t>);
 
 #ifdef __OBJC__
-    WTF_EXPORT_PRIVATE operator NSUUID *() const;
+    WTF_EXPORT_PRIVATE RetainPtr<NSUUID> createNSUUID() const;
     WTF_EXPORT_PRIVATE static std::optional<UUID> fromNSUUID(NSUUID *);
 #endif
 
@@ -75,13 +75,13 @@ public:
 
     explicit UUID(std::span<const uint8_t, 16> span)
     {
-        memcpy(&m_data, span.data(), 16);
+        memcpySpan(asMutableByteSpan(m_data), span);
     }
 
     explicit UUID(std::span<const uint8_t> span)
     {
         RELEASE_ASSERT(span.size() == 16);
-        memcpy(&m_data, span.data(), 16);
+        memcpySpan(asMutableByteSpan(m_data), span);
     }
 
     explicit constexpr UUID(UInt128 data)
@@ -95,7 +95,7 @@ public:
         RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!isHashTableDeletedValue());
     }
 
-    std::span<const uint8_t, 16> span() const
+    std::span<const uint8_t, 16> span() const LIFETIME_BOUND
     {
         return asByteSpan<UInt128, 16>(m_data);
     }
@@ -110,6 +110,12 @@ public:
     explicit constexpr UUID(HashTableEmptyValueType)
         : m_data(emptyValue)
     {
+    }
+
+    static bool isValid(uint64_t high, uint64_t low)
+    {
+        auto data = (static_cast<UInt128>(high) << 64) | low;
+        return data != deletedValue && data != emptyValue;
     }
 
     constexpr bool isHashTableDeletedValue() const { return m_data == deletedValue; }

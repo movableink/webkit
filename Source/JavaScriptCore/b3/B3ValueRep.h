@@ -34,6 +34,7 @@
 #include "RegisterSet.h"
 #include "ValueRecovery.h"
 #include <wtf/PrintStream.h>
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/TZoneMalloc.h>
 #if ENABLE(WEBASSEMBLY)
 #include "WasmValueLocation.h"
@@ -51,7 +52,7 @@ namespace B3 {
 // output.
 
 class ValueRep {
-    WTF_MAKE_TZONE_ALLOCATED(ValueRep);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(ValueRep);
 public:
     enum Kind : uint8_t {
         // As an input representation, this means that B3 can pick any representation. As an output
@@ -364,7 +365,9 @@ private:
 
         U()
         {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
             memset(static_cast<void*>(this), 0, sizeof(*this));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         }
     } u;
     Kind m_kind;

@@ -23,6 +23,10 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
+DECLARE_SYSTEM_HEADER
+
 #ifndef PAL_PASSKIT_SPI_GUARD_AGAINST_INDIRECT_INCLUSION
 #error "Please #include <pal/spi/cocoa/PassKitSPI.h> instead of this file directly."
 #endif

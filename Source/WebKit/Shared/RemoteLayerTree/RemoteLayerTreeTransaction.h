@@ -33,6 +33,7 @@
 #include "RemoteLayerBackingStore.h"
 #include "TransactionID.h"
 #include <WebCore/Color.h>
+#include <WebCore/FixedContainerEdges.h>
 #include <WebCore/FloatPoint3D.h>
 #include <WebCore/FloatSize.h>
 #include <WebCore/HTMLMediaElementIdentifier.h>
@@ -58,6 +59,10 @@
 
 #if ENABLE(MODEL_ELEMENT)
 #include <WebCore/Model.h>
+#endif
+
+#if ENABLE(MODEL_PROCESS)
+#include <WebCore/ModelContext.h>
 #endif
 
 namespace WebKit {
@@ -92,11 +97,14 @@ public:
             WebCore::FloatSize initialSize;
             WebCore::FloatSize naturalSize;
         };
-        using AdditionalData = std::variant<
+        using AdditionalData = Variant<
             NoAdditionalData, // PlatformCALayerRemote and PlatformCALayerRemoteTiledBacking
             CustomData, // PlatformCALayerRemoteCustom
 #if ENABLE(MODEL_ELEMENT)
             Ref<WebCore::Model>, // PlatformCALayerRemoteModelHosting
+#if ENABLE(MODEL_PROCESS)
+            Ref<WebCore::ModelContext>, // PlatformCALayerRemoteCustom
+#endif
 #endif
             WebCore::LayerHostingContextIdentifier // PlatformCALayerRemoteHost
         >;
@@ -115,9 +123,13 @@ public:
         uint32_t hostingContextID() const;
         bool preservesFlip() const;
         float hostingDeviceScaleFactor() const;
+
+#if ENABLE(MODEL_PROCESS)
+        RefPtr<WebCore::ModelContext> modelContext() const;
+#endif
     };
 
-    explicit RemoteLayerTreeTransaction();
+    explicit RemoteLayerTreeTransaction(TransactionID);
     ~RemoteLayerTreeTransaction();
     RemoteLayerTreeTransaction(RemoteLayerTreeTransaction&&);
     RemoteLayerTreeTransaction& operator=(RemoteLayerTreeTransaction&&);
@@ -188,7 +200,10 @@ public:
 
     std::optional<WebCore::PlatformLayerIdentifier> scrolledContentsLayerID() const { return m_scrolledContentsLayerID.asOptional(); }
     void setScrolledContentsLayerID(std::optional<WebCore::PlatformLayerIdentifier> layerID) { m_scrolledContentsLayerID = layerID; }
-#endif
+
+    std::optional<WebCore::PlatformLayerIdentifier> mainFrameClipLayerID() const { return m_mainFrameClipLayerID.asOptional(); }
+    void setMainFrameClipLayerID(std::optional<WebCore::PlatformLayerIdentifier> layerID) { m_mainFrameClipLayerID = layerID; }
+#endif // PLATFORM(MAC)
 
     uint64_t renderTreeSize() const { return m_renderTreeSize; }
     void setRenderTreeSize(uint64_t renderTreeSize) { m_renderTreeSize = renderTreeSize; }
@@ -221,7 +236,6 @@ public:
     void setAvoidsUnsafeArea(bool avoidsUnsafeArea) { m_avoidsUnsafeArea = avoidsUnsafeArea; }
 
     TransactionID transactionID() const { return m_transactionID; }
-    void setTransactionID(TransactionID transactionID) { m_transactionID = transactionID; }
 
     ActivityStateChangeID activityStateChangeID() const { return m_activityStateChangeID; }
     void setActivityStateChangeID(ActivityStateChangeID activityStateChangeID) { m_activityStateChangeID = activityStateChangeID; }
@@ -247,8 +261,14 @@ public:
     void setAcceleratedTimelineTimeOrigin(Seconds timeOrigin) { m_acceleratedTimelineTimeOrigin = timeOrigin; }
 #endif
 
+    const std::optional<WebCore::FixedContainerEdges>& fixedContainerEdges() const { return m_fixedContainerEdges; }
+    void setFixedContainerEdges(const WebCore::FixedContainerEdges& edges) { m_fixedContainerEdges = edges; }
+
 private:
     friend struct IPC::ArgumentCoder<RemoteLayerTreeTransaction, void>;
+
+    // Do not use, IPC constructor only
+    explicit RemoteLayerTreeTransaction();
 
     Markable<WebCore::PlatformLayerIdentifier> m_rootLayerID;
     ChangedLayers m_changedLayers;
@@ -271,10 +291,12 @@ private:
     WebCore::Color m_themeColor;
     WebCore::Color m_pageExtendedBackgroundColor;
     WebCore::Color m_sampledPageTopColor;
+    std::optional<WebCore::FixedContainerEdges> m_fixedContainerEdges;
 
 #if PLATFORM(MAC)
     Markable<WebCore::PlatformLayerIdentifier> m_pageScalingLayerID; // Only used for non-delegated scaling.
     Markable<WebCore::PlatformLayerIdentifier> m_scrolledContentsLayerID;
+    Markable<WebCore::PlatformLayerIdentifier> m_mainFrameClipLayerID;
 #endif
 
     double m_pageScaleFactor { 1 };

@@ -27,6 +27,7 @@
 
 #if ENABLE(DARK_MODE_CSS)
 
+#include "CSSColorSchemeValue.h"
 #include "CSSToLengthConversionData.h"
 #include "CSSValueKeywords.h"
 #include <wtf/text/TextStream.h>
@@ -46,14 +47,33 @@ OptionSet<WebCore::ColorScheme> ColorScheme::colorScheme() const
     return result;
 }
 
+Ref<CSSValue> CSSValueCreation<ColorScheme>::operator()(CSSValuePool&, const RenderStyle& style, const ColorScheme& value)
+{
+    return CSSColorSchemeValue::create(toCSS(value, style));
+}
+
+void Serialize<ColorScheme>::operator()(StringBuilder& builder, const CSS::SerializationContext& context, const RenderStyle& style, const ColorScheme& value)
+{
+    if (value.isNormal()) {
+        serializationForCSS(builder, context, style, CSS::Keyword::Normal { });
+        return;
+    }
+
+    serializationForCSS(builder, context, style, value.schemes);
+    if (value.only) {
+        builder.append(' ');
+        serializationForCSS(builder, context, style, *value.only);
+    }
+}
+
 WTF::TextStream& operator<<(WTF::TextStream& ts, const ColorScheme& value)
 {
     if (value.isNormal())
-        return ts << "normal";
+        return ts << "normal"_s;
 
     ts << value.schemes.value;
     if (value.only)
-        ts << " only";
+        ts << " only"_s;
 
     return ts;
 }

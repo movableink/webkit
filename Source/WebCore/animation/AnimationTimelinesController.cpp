@@ -27,6 +27,7 @@
 #include "AnimationTimelinesController.h"
 
 #include "AnimationEventBase.h"
+#include "CSSAnimation.h"
 #include "CSSTransition.h"
 #include "Document.h"
 #include "DocumentTimeline.h"
@@ -38,11 +39,13 @@
 #include "Page.h"
 #include "ScrollTimeline.h"
 #include "Settings.h"
+#include "StyleOriginatedTimelinesController.h"
 #include "ViewTimeline.h"
 #include "WebAnimation.h"
 #include "WebAnimationTypes.h"
-#include <JavaScriptCore/VM.h>
+#include <ranges>
 #include <wtf/HashSet.h>
+#include <wtf/Ref.h>
 #include <wtf/text/TextStream.h>
 
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
@@ -80,12 +83,15 @@ void AnimationTimelinesController::removeTimeline(AnimationTimeline& timeline)
 
 void AnimationTimelinesController::detachFromDocument()
 {
-    m_currentTimeClearingTaskCancellationGroup.cancel();
+    m_pendingAnimationsProcessingTaskCancellationGroup.cancel();
 
-    while (!m_timelines.isEmptyIgnoringNullReferences()) {
-        Ref timeline = *m_timelines.begin();
+    while (RefPtr timeline = m_timelines.takeAny())
         timeline->detachFromDocument();
-    }
+}
+
+void AnimationTimelinesController::addPendingAnimation(WebAnimation& animation)
+{
+    m_pendingAnimations.add(animation);
 }
 
 void AnimationTimelinesController::updateAnimationsAndSendEvents(ReducedResolutionSeconds timestamp)
@@ -96,7 +102,7 @@ void AnimationTimelinesController::updateAnimationsAndSendEvents(ReducedResoluti
     std::optional<FramesPerSecond> defaultTimelineFrameRate;
     // This will hold the frame rate used for this timeline until now.
     std::optional<FramesPerSecond> previousTimelineFrameRate;
-    if (RefPtr page = m_document.page()) {
+    if (RefPtr page = m_document->page()) {
         defaultTimelineFrameRate = page->preferredRenderingUpdateFramesPerSecond({ Page::PreferredRenderingUpdateOption::IncludeThrottlingReasons });
         previousTimelineFrameRate = page->preferredRenderingUpdateFramesPerSecond({
             Page::PreferredRenderingUpdateOption::IncludeThrottlingReasons,
@@ -118,6 +124,7 @@ void AnimationTimelinesController::updateAnimationsAndSendEvents(ReducedResoluti
     m_frameRateAligner.beginUpdate(timestamp, previousTimelineFrameRate);
 
     // 1. Update the current time of all timelines associated with document passing now as the timestamp.
+    ASSERT(m_updatedScrollTimelines.isEmpty());
     Vector<Ref<AnimationTimeline>> timelinesToUpdate;
     Vector<Ref<WebAnimation>> animationsToRemove;
     Vector<Ref<CSSTransition>> completedTransitions;
@@ -127,6 +134,10 @@ void AnimationTimelinesController::updateAnimationsAndSendEvents(ReducedResoluti
             continue;
 
         timelinesToUpdate.append(timeline.copyRef());
+
+        // https://drafts.csswg.org/scroll-animations-1/#event-loop
+        if (RefPtr scrollTimeline = dynamicDowncast<ScrollTimeline>(timeline))
+            m_updatedScrollTimelines.append(*scrollTimeline);
 
         for (auto& animation : copyToVector(timeline->relevantAnimations())) {
             if (animation->isSkippedContentAnimation())
@@ -179,7 +190,7 @@ void AnimationTimelinesController::updateAnimationsAndSendEvents(ReducedResoluti
 
     // Ensure the timeline updates at the maximum frame rate we've encountered for our animations.
     if (previousMaximumAnimationFrameRate != maximumAnimationFrameRate) {
-        if (RefPtr page = m_document.page()) {
+        if (RefPtr page = m_document->page()) {
             if (previousTimelineFrameRate != maximumAnimationFrameRate)
                 page->timelineControllerMaximumAnimationFrameRateDidChange(*this);
         }
@@ -195,24 +206,23 @@ void AnimationTimelinesController::updateAnimationsAndSendEvents(ReducedResoluti
     }
 
     // 3. Perform a microtask checkpoint.
-    Ref { m_document }->eventLoop().performMicrotaskCheckpoint();
+    protectedDocument()->eventLoop().performMicrotaskCheckpoint();
 
-    // 4. Let events to dispatch be a copy of doc's pending animation event queue.
-    // 5. Clear doc's pending animation event queue.
-    AnimationEvents events;
-    for (auto& timeline : timelinesToUpdate) {
-        if (RefPtr documentTimeline = dynamicDowncast<DocumentTimeline>(timeline))
-            events.appendVector(documentTimeline->prepareForPendingAnimationEventsDispatch());
+    if (RefPtr documentTimeline = m_document->existingTimeline()) {
+        // FIXME: pending animation events should be owned by this controller rather
+        // than the document timeline.
+
+        // 4. Let events to dispatch be a copy of doc's pending animation event queue.
+        // 5. Clear doc's pending animation event queue.
+        auto events = documentTimeline->prepareForPendingAnimationEventsDispatch();
+
+        // 6. Perform a stable sort of the animation events in events to dispatch as follows.
+        std::ranges::stable_sort(events, compareAnimationEventsByCompositeOrder);
+
+        // 7. Dispatch each of the events in events to dispatch at their corresponding target using the order established in the previous step.
+        for (auto& event : events)
+            event->target()->dispatchEvent(event);
     }
-
-    // 6. Perform a stable sort of the animation events in events to dispatch as follows.
-    std::stable_sort(events.begin(), events.end(), [] (const Ref<AnimationEventBase>& lhs, const Ref<AnimationEventBase>& rhs) {
-        return compareAnimationEventsByCompositeOrder(lhs.get(), rhs.get());
-    });
-
-    // 7. Dispatch each of the events in events to dispatch at their corresponding target using the order established in the previous step.
-    for (auto& event : events)
-        event->target()->dispatchEvent(event);
 
     // This will cancel any scheduled invalidation if we end up removing all animations.
     for (auto& animation : animationsToRemove) {
@@ -236,6 +246,14 @@ void AnimationTimelinesController::updateAnimationsAndSendEvents(ReducedResoluti
         if (RefPtr documentTimeline = dynamicDowncast<DocumentTimeline>(timeline))
             documentTimeline->documentDidUpdateAnimationsAndSendEvents();
     }
+}
+
+void AnimationTimelinesController::updateStaleScrollTimelines()
+{
+    // https://drafts.csswg.org/scroll-animations-1/#event-loop
+    auto scrollTimelines = std::exchange(m_updatedScrollTimelines, { });
+    for (auto scrollTimeline : scrollTimelines)
+        scrollTimeline->updateCurrentTimeIfStale();
 }
 
 std::optional<Seconds> AnimationTimelinesController::timeUntilNextTickForAnimationsWithFrameRate(FramesPerSecond frameRate) const
@@ -274,12 +292,12 @@ void AnimationTimelinesController::resumeAnimations()
 
 ReducedResolutionSeconds AnimationTimelinesController::liveCurrentTime() const
 {
-    return m_document.domWindow()->nowTimestamp();
+    return m_document->domWindow()->nowTimestamp();
 }
 
 std::optional<Seconds> AnimationTimelinesController::currentTime()
 {
-    if (!m_document.domWindow())
+    if (!m_document->domWindow())
         return std::nullopt;
 
     if (!m_cachedCurrentTime)
@@ -290,313 +308,54 @@ std::optional<Seconds> AnimationTimelinesController::currentTime()
 
 void AnimationTimelinesController::cacheCurrentTime(ReducedResolutionSeconds newCurrentTime)
 {
+    if (m_cachedCurrentTime == newCurrentTime)
+        return;
+
+    // We can get in a situation where the event loop will not run a task that had been enqueued.
+    // If that is the case, we must clear the task group and run the callback prior to adding a
+    // new task.
+    if (m_pendingAnimationsProcessingTaskCancellationGroup.hasPendingTask() && m_cachedCurrentTime) {
+        m_pendingAnimationsProcessingTaskCancellationGroup.cancel();
+        processPendingAnimations();
+    }
+
     m_cachedCurrentTime = newCurrentTime;
-    // We want to be sure to keep this time cached until we've both finished running JS and finished updating
-    // animations, so we schedule the invalidation task and register a whenIdle callback on the VM, which will
-    // fire syncronously if no JS is running.
-    m_waitingOnVMIdle = true;
-    if (!m_currentTimeClearingTaskCancellationGroup.hasPendingTask()) {
-        CancellableTask task(m_currentTimeClearingTaskCancellationGroup, std::bind(&AnimationTimelinesController::maybeClearCachedCurrentTime, this));
-        m_document.eventLoop().queueTask(TaskSource::InternalAsyncTask, WTFMove(task));
-    }
-    // We extent the associated Document's lifecycle until the VM became idle since the AnimationTimelinesController
-    // is owned by the Document.
-    m_document.vm().whenIdle([this, protectedDocument = Ref { m_document }]() {
-        m_waitingOnVMIdle = false;
-        maybeClearCachedCurrentTime();
-    });
-}
 
-void AnimationTimelinesController::maybeClearCachedCurrentTime()
-{
-    // We want to make sure we only clear the cached current time if we're not currently running
-    // JS or waiting on all current animation updating code to have completed. This is so that
-    // we're guaranteed to have a consistent current time reported for all work happening in a given
-    // JS frame or throughout updating animations in WebCore.
-    if (!m_isSuspended && !m_waitingOnVMIdle && !m_currentTimeClearingTaskCancellationGroup.hasPendingTask())
-        m_cachedCurrentTime = std::nullopt;
-}
-
-static Element* originatingElement(const Ref<ScrollTimeline>& timeline)
-{
-    if (RefPtr viewTimeline = dynamicDowncast<ViewTimeline>(timeline))
-        return viewTimeline->subject();
-    return timeline->source();
-}
-
-static Element* originatingElementIncludingTimelineScope(const Ref<ScrollTimeline>& timeline)
-{
-    if (WeakPtr element = timeline->timelineScopeDeclaredElement())
-        return element.get();
-    return originatingElement(timeline);
-}
-
-static Element* originatingElementExcludingTimelineScope(const Ref<ScrollTimeline>& timeline)
-{
-    return timeline->timelineScopeDeclaredElement() ? nullptr : originatingElement(timeline);
-}
-
-Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>> AnimationTimelinesController::relatedTimelineScopeElements(const AtomString& name)
-{
-    Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>> timelineScopeElements;
-    for (auto& scope : m_timelineScopeEntries) {
-        if (scope.second && (scope.first.type == TimelineScope::Type::All || (scope.first.type == TimelineScope::Type::Ident && scope.first.scopeNames.contains(name))))
-            timelineScopeElements.append(scope.second);
-    }
-    return timelineScopeElements;
-}
-
-static ScrollTimeline* determineTreeOrder(const Vector<Ref<ScrollTimeline>>& ancestorTimelines, const Element& matchElement, const Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>>& timelineScopeElements)
-{
-    RefPtr element = &matchElement;
-    while (element) {
-        Vector<Ref<ScrollTimeline>> matchedTimelines;
-        for (auto& timeline : ancestorTimelines) {
-            if (element == originatingElementIncludingTimelineScope(timeline))
-                matchedTimelines.append(timeline);
-        }
-        if (!matchedTimelines.isEmpty()) {
-            if (timelineScopeElements.contains(element.get())) {
-                if (matchedTimelines.size() == 1)
-                    return matchedTimelines.first().ptr();
-                // Naming conflict due to timeline-scope
-                return nullptr;
-            }
-            ASSERT(matchedTimelines.size() <= 2);
-            // Favor scroll timelines in case of conflict
-            if (!is<ViewTimeline>(matchedTimelines.first()))
-                return matchedTimelines.first().ptr();
-            return matchedTimelines.last().ptr();
-        }
-        // Has blocking timeline scope element
-        if (timelineScopeElements.contains(element.get()))
-            return nullptr;
-        element = element->parentElement();
-    }
-
-    ASSERT_NOT_REACHED();
-    return nullptr;
-}
-
-static ScrollTimeline* determineTimelineForElement(const Vector<Ref<ScrollTimeline>>& timelines, const Element& element, const Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>>& timelineScopeElements)
-{
-    // https://drafts.csswg.org/scroll-animations-1/#timeline-scoping
-    // A named scroll progress timeline or view progress timeline is referenceable by:
-    // 1. the name-declaring element itself
-    // 2. that element’s descendants
-    // If multiple elements have declared the same timeline name, the matching timeline is the one declared on the nearest element in tree order.
-    // In case of a name conflict on the same element, names declared later in the naming property (scroll-timeline-name, view-timeline-name) take
-    // precedence, and scroll progress timelines take precedence over view progress timelines.
-    Vector<Ref<ScrollTimeline>> matchedTimelines;
-    for (auto& timeline : timelines) {
-        if (originatingElementIncludingTimelineScope(timeline) == &element || element.isDescendantOf(originatingElementIncludingTimelineScope(timeline)))
-            matchedTimelines.append(timeline);
-    }
-    if (matchedTimelines.isEmpty())
-        return nullptr;
-    return determineTreeOrder(matchedTimelines, element, timelineScopeElements);
-}
-
-Vector<Ref<ScrollTimeline>>& AnimationTimelinesController::timelinesForName(const AtomString& name)
-{
-    return m_nameToTimelineMap.ensure(name, [] {
-        return Vector<Ref<ScrollTimeline>> { };
-    }).iterator->value;
-}
-
-void AnimationTimelinesController::updateTimelineForTimelineScope(const Ref<ScrollTimeline>& timeline, const AtomString& name)
-{
-    WeakHashSet<Element, WeakPtrImplWithEventTargetData> matchedTimelineScopeElements;
-    RefPtr timelineElement = originatingElementExcludingTimelineScope(timeline);
-    for (auto& entry : m_timelineScopeEntries) {
-        if (WeakPtr entryElement = entry.second) {
-            if (timelineElement->isDescendantOf(*entryElement) && (entry.first.type == TimelineScope::Type::All ||  entry.first.scopeNames.contains(name)))
-                matchedTimelineScopeElements.add(*entryElement);
-        }
-    }
-    while (timelineElement) {
-        if (matchedTimelineScopeElements.contains(*timelineElement)) {
-            timeline->setTimelineScopeElement(*timelineElement);
-            return;
-        }
-        timelineElement = timelineElement->parentElement();
+    // As we've advanced to a new current time, we want all animations created during this run
+    // loop to have this newly-cached current time as their start time. To that end, we schedule
+    // a task to set that current time on all animations created until then as their pending
+    // start time.
+    if (!m_pendingAnimationsProcessingTaskCancellationGroup.hasPendingTask()) {
+        CancellableTask task(m_pendingAnimationsProcessingTaskCancellationGroup, std::bind(&AnimationTimelinesController::processPendingAnimations, this));
+        m_document->eventLoop().queueTask(TaskSource::InternalAsyncTask, WTFMove(task));
     }
 }
 
-void AnimationTimelinesController::registerNamedScrollTimeline(const AtomString& name, const Element& source, ScrollAxis axis)
+void AnimationTimelinesController::processPendingAnimations()
 {
-    auto& timelines = timelinesForName(name);
-
-    auto existingTimelineIndex = timelines.findIf([&](auto& timeline) {
-        return !is<ViewTimeline>(timeline) && timeline->source() == &source;
-    });
-
-    if (existingTimelineIndex != notFound) {
-        Ref existingScrollTimeline = timelines[existingTimelineIndex].get();
-        existingScrollTimeline->setAxis(axis);
-    } else {
-        auto newScrollTimeline = ScrollTimeline::create(name, axis);
-        newScrollTimeline->setSource(&source);
-        updateTimelineForTimelineScope(newScrollTimeline, name);
-        timelines.append(WTFMove(newScrollTimeline));
-    }
-    attachPendingOperations();
-}
-
-void AnimationTimelinesController::attachPendingOperations()
-{
-    auto queries = std::exchange(m_pendingAttachOperations, { });
-    for (auto& operation : queries) {
-        if (WeakPtr animation = operation.animation) {
-            if (WeakPtr element = operation.element)
-                setTimelineForName(operation.name, *element, *animation);
-        }
-    }
-}
-
-void AnimationTimelinesController::registerNamedViewTimeline(const AtomString& name, const Element& subject, ScrollAxis axis, ViewTimelineInsets&& insets)
-{
-    auto& timelines = timelinesForName(name);
-
-    auto existingTimelineIndex = timelines.findIf([&](auto& timeline) {
-        if (RefPtr viewTimeline = dynamicDowncast<ViewTimeline>(timeline))
-            return viewTimeline->subject() == &subject;
-        return false;
-    });
-
-    if (existingTimelineIndex != notFound) {
-        Ref existingViewTimeline = downcast<ViewTimeline>(timelines[existingTimelineIndex].get());
-        existingViewTimeline->setAxis(axis);
-        existingViewTimeline->setInsets(WTFMove(insets));
-    } else {
-        auto newViewTimeline = ViewTimeline::create(name, axis, WTFMove(insets));
-        newViewTimeline->setSubject(&subject);
-        updateTimelineForTimelineScope(newViewTimeline, name);
-        timelines.append(WTFMove(newViewTimeline));
-    }
-    attachPendingOperations();
-}
-
-void AnimationTimelinesController::unregisterNamedTimeline(const AtomString& name, const Element& element)
-{
-    auto it = m_nameToTimelineMap.find(name);
-    if (it == m_nameToTimelineMap.end())
+    if (m_isSuspended || !m_cachedCurrentTime)
         return;
 
-    auto& timelines = it->value;
+    ASSERT(!m_pendingAnimationsProcessingTaskCancellationGroup.hasPendingTask());
 
-    auto i = timelines.findIf([&] (auto& entry) {
-        return originatingElement(entry) == &element;
-    });
-
-    if (i == notFound)
-        return;
-
-    auto& timeline = timelines.at(i);
-
-    for (Ref animation : timeline->relevantAnimations()) {
-        if (RefPtr effect = dynamicDowncast<KeyframeEffect>(animation->effect()))
-            m_pendingAttachOperations.append(TimelineMapAttachOperation { effect->target(), name, animation });
+    auto pendingAnimations = std::exchange(m_pendingAnimations, { });
+    for (Ref pendingAnimation : pendingAnimations) {
+        if (pendingAnimation->timeline() && pendingAnimation->timeline()->isMonotonic())
+            pendingAnimation->setPendingStartTime(*m_cachedCurrentTime);
     }
-    timelines.remove(i);
-
-    if (timelines.isEmpty())
-        m_nameToTimelineMap.remove(it);
-    attachPendingOperations();
-}
-
-void AnimationTimelinesController::setTimelineForName(const AtomString& name, const Element& element, WebAnimation& animation)
-{
-    auto it = m_nameToTimelineMap.find(name);
-    if (it == m_nameToTimelineMap.end()) {
-        m_pendingAttachOperations.append({ element, name, animation });
-        return;
-    }
-
-    auto& timelines = it->value;
-    if (RefPtr timeline = determineTimelineForElement(timelines, element, relatedTimelineScopeElements(name))) {
-        animation.setTimeline(WTFMove(timeline));
-        return;
-    }
-    animation.setTimeline(nullptr);
-
-    m_pendingAttachOperations.append({ element, name, animation });
-}
-
-static void updateTimelinesForTimelineScope(Vector<Ref<ScrollTimeline>> entries, const Element& element)
-{
-    for (auto& entry : entries) {
-        if (RefPtr entryElement = originatingElementExcludingTimelineScope(entry)) {
-            if (entryElement->isDescendantOf(element))
-                entry->setTimelineScopeElement(element);
-        }
-    }
-}
-
-void AnimationTimelinesController::updateNamedTimelineMapForTimelineScope(const TimelineScope& scope, const Element& element)
-{
-    // https://drafts.csswg.org/scroll-animations-1/#timeline-scope
-    // This property declares the scope of the specified timeline names to extend across this element’s subtree. This allows a named timeline
-    // (such as a named scroll progress timeline or named view progress timeline) to be referenced by elements outside the timeline-defining element’s
-    // subtree—​for example, by siblings, cousins, or ancestors.
-    switch (scope.type) {
-    case TimelineScope::Type::None:
-        for (auto& entry : m_nameToTimelineMap) {
-            for (auto& timeline : entry.value) {
-                if (timeline->timelineScopeDeclaredElement() == &element)
-                    timeline->clearTimelineScopeDeclaredElement();
-            }
-        }
-        m_timelineScopeEntries.removeAllMatching([&] (const std::pair<TimelineScope, WeakPtr<Element, WeakPtrImplWithEventTargetData>>& entry) {
-            return entry.second == &element;
-        });
-        break;
-    case TimelineScope::Type::All:
-        for (auto& entry : m_nameToTimelineMap)
-            updateTimelinesForTimelineScope(entry.value, element);
-        m_timelineScopeEntries.append(std::make_pair(scope, WeakPtr { &element }));
-        break;
-    case TimelineScope::Type::Ident:
-        for (auto& name : scope.scopeNames) {
-            auto it = m_nameToTimelineMap.find(name);
-            if (it != m_nameToTimelineMap.end())
-                updateTimelinesForTimelineScope(it->value, element);
-        }
-        m_timelineScopeEntries.append(std::make_pair(scope, WeakPtr { &element }));
-        break;
-    }
-    attachPendingOperations();
 }
 
 bool AnimationTimelinesController::isPendingTimelineAttachment(const WebAnimation& animation) const
 {
-    return m_pendingAttachOperations.containsIf([&] (auto& entry) {
-        return entry.animation.ptr() == &animation;
-    });
-}
-
-void AnimationTimelinesController::unregisterNamedTimelinesAssociatedWithElement(const Element& element)
-{
-    HashSet<AtomString> namesToClear;
-
-    for (auto& entry : m_nameToTimelineMap) {
-        auto& timelines = entry.value;
-        timelines.removeAllMatching([&] (const auto& timeline) {
-            return originatingElement(timeline) == &element;
-        });
-        if (timelines.isEmpty())
-            namesToClear.add(entry.key);
-    }
-
-    for (auto& name : namesToClear)
-        m_nameToTimelineMap.remove(name);
+    CheckedPtr styleOriginatedTimelinesController = protectedDocument()->styleOriginatedTimelinesController();
+    return styleOriginatedTimelinesController && styleOriginatedTimelinesController->isPendingTimelineAttachment(animation);
 }
 
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
 AcceleratedEffectStackUpdater& AnimationTimelinesController::acceleratedEffectStackUpdater()
 {
     if (!m_acceleratedEffectStackUpdater)
-        m_acceleratedEffectStackUpdater = makeUnique<AcceleratedEffectStackUpdater>(m_document);
+        m_acceleratedEffectStackUpdater = makeUnique<AcceleratedEffectStackUpdater>(m_document.get());
     return *m_acceleratedEffectStackUpdater;
 }
 #endif

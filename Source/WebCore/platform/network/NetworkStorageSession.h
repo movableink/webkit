@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,8 +33,10 @@
 #include "ShouldRelaxThirdPartyCookieBlocking.h"
 #include <optional>
 #include <pal/SessionID.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/CompletionHandler.h>
+#include <wtf/Deque.h>
 #include <wtf/Function.h>
 #include <wtf/HashMap.h>
 #include <wtf/RobinHoodHashMap.h>
@@ -54,6 +56,7 @@
 #include <wtf/Function.h>
 #include <wtf/glib/GRefPtr.h>
 typedef struct _SoupCookieJar SoupCookieJar;
+typedef struct _SoupCookie SoupCookie;
 #endif
 
 #if USE(CURL)
@@ -69,6 +72,7 @@ typedef struct _SoupCookieJar SoupCookieJar;
 #include "CookieStorageObserver.h"
 OBJC_CLASS NSArray;
 OBJC_CLASS NSHTTPCookie;
+OBJC_CLASS NSHTTPCookieStorage;
 OBJC_CLASS NSMutableSet;
 #endif
 
@@ -80,12 +84,6 @@ namespace WebCore {
 class CookieChangeObserver;
 class CookiesEnabledStateObserver;
 class NetworkStorageSession;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::CookieChangeObserver> : std::true_type { };
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::CookiesEnabledStateObserver> : std::true_type { };
 }
 
 namespace WebCore {
@@ -103,15 +101,32 @@ struct SameSiteInfo;
 enum class HTTPCookieAcceptPolicy : uint8_t;
 enum class IncludeSecureCookies : bool;
 enum class IncludeHttpOnlyCookies : bool;
-enum class ThirdPartyCookieBlockingMode : uint8_t { All, AllExceptBetweenAppBoundDomains, AllExceptManagedDomains, AllOnSitesWithoutUserInteraction, OnlyAccordingToPerDomainPolicy };
-enum class ThirdPartyCookieBlockingDecision : uint8_t { None, All, AllExceptPartitioned };
+enum class ShouldPartitionCookie : bool;
+enum class ThirdPartyCookieBlockingMode : uint8_t {
+    All,
+    AllExceptBetweenAppBoundDomains,
+    AllExceptManagedDomains,
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+    AllExceptPartitioned,
+#endif
+    AllOnSitesWithoutUserInteraction,
+    OnlyAccordingToPerDomainPolicy
+};
+enum class ThirdPartyCookieBlockingDecision : uint8_t {
+    None,
+    All,
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+    AllExceptPartitioned
+#endif
+};
 enum class SameSiteStrictEnforcementEnabled : bool { No, Yes };
 enum class FirstPartyWebsiteDataRemovalMode : uint8_t { AllButCookies, None, AllButCookiesLiveOnTestingTimeout, AllButCookiesReproTestingTimeout };
 enum class ApplyTrackingPrevention : bool { No, Yes };
 enum class ScriptWrittenCookiesOnly : bool { No, Yes };
+enum class RequiresScriptTelemetry : bool { No, Yes };
 
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
-class CookieChangeObserver : public CanMakeWeakPtr<CookieChangeObserver> {
+class CookieChangeObserver : public AbstractRefCountedAndCanMakeWeakPtr<CookieChangeObserver> {
 public:
     virtual ~CookieChangeObserver() { }
     virtual void cookiesAdded(const String& host, const Vector<Cookie>&) = 0;
@@ -120,7 +135,7 @@ public:
 };
 #endif
 
-class CookiesEnabledStateObserver : public CanMakeWeakPtr<CookiesEnabledStateObserver> {
+class CookiesEnabledStateObserver : public AbstractRefCountedAndCanMakeWeakPtr<CookiesEnabledStateObserver> {
 public:
     virtual ~CookiesEnabledStateObserver() { }
     virtual void cookieEnabledStateMayHaveChanged() = 0;
@@ -142,26 +157,25 @@ public:
     PAL::SessionID sessionID() const { return m_sessionID; }
     CredentialStorage& credentialStorage() { return m_credentialStorage; }
 
-#ifdef __OBJC__
-    WEBCORE_EXPORT RetainPtr<NSHTTPCookieStorage> nsCookieStorage() const;
-#endif
-
-#if PLATFORM(COCOA)
-    WEBCORE_EXPORT ~NetworkStorageSession();
+#if PLATFORM(COCOA) || USE(SOUP)
+    enum class IsInMemoryCookieStore : bool { No, Yes };
 #endif
 
 #if PLATFORM(COCOA)
     enum class ShouldDisableCFURLCache : bool { No, Yes };
     WEBCORE_EXPORT static RetainPtr<CFURLStorageSessionRef> createCFStorageSessionForIdentifier(CFStringRef identifier, ShouldDisableCFURLCache = ShouldDisableCFURLCache::No);
-    enum class IsInMemoryCookieStore : bool { No, Yes };
     WEBCORE_EXPORT NetworkStorageSession(PAL::SessionID, RetainPtr<CFURLStorageSessionRef>&&, RetainPtr<CFHTTPCookieStorageRef>&&, IsInMemoryCookieStore = IsInMemoryCookieStore::No);
     WEBCORE_EXPORT explicit NetworkStorageSession(PAL::SessionID);
+    WEBCORE_EXPORT ~NetworkStorageSession();
+
+    WEBCORE_EXPORT RetainPtr<NSHTTPCookieStorage> nsCookieStorage() const;
 
     // May be null, in which case a Foundation default should be used.
     CFURLStorageSessionRef platformSession() { return m_platformSession.get(); }
     WEBCORE_EXPORT RetainPtr<CFHTTPCookieStorageRef> cookieStorage() const;
+    CookieStorageObserver& cookieStorageObserver() const;
 #elif USE(SOUP)
-    WEBCORE_EXPORT explicit NetworkStorageSession(PAL::SessionID);
+    WEBCORE_EXPORT explicit NetworkStorageSession(PAL::SessionID, IsInMemoryCookieStore = IsInMemoryCookieStore::No);
     ~NetworkStorageSession();
 
     SoupCookieJar* cookieStorage() const { return m_cookieStorage.get(); }
@@ -201,11 +215,15 @@ public:
 
     WEBCORE_EXPORT HTTPCookieAcceptPolicy cookieAcceptPolicy() const;
     WEBCORE_EXPORT void setCookie(const Cookie&);
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+    WEBCORE_EXPORT void setCookie(const URL& firstParty, const Cookie&, ShouldPartitionCookie);
+#endif
+    WEBCORE_EXPORT void setCookie(const Cookie&, const URL&, const URL& mainDocumentURL);
     WEBCORE_EXPORT void setCookies(const Vector<Cookie>&, const URL&, const URL& mainDocumentURL);
-    WEBCORE_EXPORT void setCookiesFromDOM(const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ApplyTrackingPrevention, const String& cookieString, ShouldRelaxThirdPartyCookieBlocking) const;
-    WEBCORE_EXPORT bool setCookieFromDOM(const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ApplyTrackingPrevention, const Cookie&, ShouldRelaxThirdPartyCookieBlocking) const;
+    WEBCORE_EXPORT void setCookiesFromDOM(const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ApplyTrackingPrevention, RequiresScriptTelemetry, const String& cookieString, ShouldRelaxThirdPartyCookieBlocking) const;
+    WEBCORE_EXPORT bool setCookieFromDOM(const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ApplyTrackingPrevention, RequiresScriptTelemetry, const Cookie&, ShouldRelaxThirdPartyCookieBlocking) const;
     WEBCORE_EXPORT void deleteCookie(const Cookie&, CompletionHandler<void()>&&);
-    WEBCORE_EXPORT void deleteCookie(const URL&, const String&, CompletionHandler<void()>&&) const;
+    WEBCORE_EXPORT void deleteCookie(const URL& firstParty, const URL&, const String&, CompletionHandler<void()>&&) const;
     WEBCORE_EXPORT void deleteAllCookies(CompletionHandler<void()>&&);
     WEBCORE_EXPORT void deleteAllCookiesModifiedSince(WallTime, CompletionHandler<void()>&&);
     WEBCORE_EXPORT void deleteCookies(const ClientOrigin&, CompletionHandler<void()>&&);
@@ -222,7 +240,7 @@ public:
     WEBCORE_EXPORT std::pair<String, bool> cookieRequestHeaderFieldValue(const CookieRequestHeaderFieldProxy&) const;
     WEBCORE_EXPORT bool cookiesEnabled(const URL& firstParty, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ShouldRelaxThirdPartyCookieBlocking) const;
 
-    WEBCORE_EXPORT Vector<Cookie> domCookiesForHost(const String& host);
+    WEBCORE_EXPORT Vector<Cookie> domCookiesForHost(const URL&);
 
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
     WEBCORE_EXPORT bool startListeningForCookieChangeNotifications(CookieChangeObserver&, const URL&, const URL& firstParty, FrameIdentifier, PageIdentifier, ShouldRelaxThirdPartyCookieBlocking);
@@ -235,7 +253,7 @@ public:
     WEBCORE_EXPORT void setTrackingPreventionEnabled(bool);
     WEBCORE_EXPORT bool trackingPreventionEnabled() const;
     WEBCORE_EXPORT void setTrackingPreventionDebugLoggingEnabled(bool);
-    WEBCORE_EXPORT bool trackingPreventionDebugLoggingEnabled() const;
+    bool trackingPreventionDebugLoggingEnabled() const { return m_isTrackingPreventionDebugLoggingEnabled; }
     WEBCORE_EXPORT ThirdPartyCookieBlockingDecision thirdPartyCookieBlockingDecisionForRequest(const ResourceRequest&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ShouldRelaxThirdPartyCookieBlocking) const;
     ThirdPartyCookieBlockingDecision thirdPartyCookieBlockingDecisionForRequest(const URL& firstPartyForCookies, const URL& resource, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ShouldRelaxThirdPartyCookieBlocking) const;
     WEBCORE_EXPORT bool shouldBlockCookies(const ResourceRequest&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ShouldRelaxThirdPartyCookieBlocking) const;
@@ -246,7 +264,10 @@ public:
     WEBCORE_EXPORT static String cookiePartitionIdentifier(const ResourceRequest&);
     static String cookiePartitionIdentifier(const URL&);
 #if PLATFORM(COCOA)
-    WEBCORE_EXPORT static NSHTTPCookie *capExpiryOfPersistentCookie(NSHTTPCookie *, Seconds cap);
+    WEBCORE_EXPORT static RetainPtr<NSHTTPCookie> capExpiryOfPersistentCookie(NSHTTPCookie *, Seconds cap);
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+    WEBCORE_EXPORT static NSHTTPCookie *setCookiePartition(NSHTTPCookie *, NSString*);
+#endif
 #endif
     WEBCORE_EXPORT bool hasHadUserInteractionAsFirstParty(const RegistrableDomain&) const;
     WEBCORE_EXPORT void setPrevalentDomainsToBlockAndDeleteCookiesFor(const Vector<RegistrableDomain>&);
@@ -268,7 +289,10 @@ public:
     WEBCORE_EXPORT void resetCrossSiteLoadsWithLinkDecorationForTesting();
     WEBCORE_EXPORT void setThirdPartyCookieBlockingMode(ThirdPartyCookieBlockingMode);
     WEBCORE_EXPORT void setOptInCookiePartitioningEnabled(bool);
+
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
     bool isOptInCookiePartitioningEnabled() const { return m_isOptInCookiePartitioningEnabled; }
+#endif
 
     WEBCORE_EXPORT const static HashMap<RegistrableDomain, HashSet<RegistrableDomain>>& storageAccessQuirks();
     WEBCORE_EXPORT static void updateStorageAccessPromptQuirks(Vector<OrganizationStorageAccessPromptQuirk>&&);
@@ -289,32 +313,45 @@ public:
     WEBCORE_EXPORT void resetManagedDomains();
 #endif
 
+    uint64_t cookiesVersion() const { return m_cookiesVersion; }
+    WEBCORE_EXPORT void setCookiesVersion(uint64_t);
+    struct CookieVersionChangeCallback {
+        enum class Reason : uint8_t { VersionChange, SessionClose };
+        uint64_t version;
+        CompletionHandler<void(Reason)> callback;
+    };
+    WEBCORE_EXPORT void addCookiesVersionChangeCallback(CookieVersionChangeCallback&&);
+
 private:
 #if PLATFORM(COCOA)
     enum IncludeHTTPOnlyOrNot { DoNotIncludeHTTPOnly, IncludeHTTPOnly };
     std::pair<String, bool> cookiesForSession(const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, IncludeHTTPOnlyOrNot, IncludeSecureCookies, ApplyTrackingPrevention, ShouldRelaxThirdPartyCookieBlocking) const;
     std::optional<Vector<Cookie>> cookiesForSessionAsVector(const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, IncludeHTTPOnlyOrNot, IncludeSecureCookies, ApplyTrackingPrevention, ShouldRelaxThirdPartyCookieBlocking, CookieStoreGetOptions&&) const;
     RetainPtr<NSArray> httpCookies(CFHTTPCookieStorageRef) const;
-    RetainPtr<NSArray> httpCookiesForURL(CFHTTPCookieStorageRef, NSURL *firstParty, const std::optional<SameSiteInfo>&, NSURL *) const;
+    RetainPtr<NSArray> httpCookiesForURL(CFHTTPCookieStorageRef, NSURL *firstParty, const std::optional<SameSiteInfo>&, NSURL *, ThirdPartyCookieBlockingDecision) const;
     RetainPtr<NSArray> cookiesForURL(const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ApplyTrackingPrevention, ShouldRelaxThirdPartyCookieBlocking) const;
     void setHTTPCookiesForURL(CFHTTPCookieStorageRef, NSArray *cookies, NSURL *, NSURL *mainDocumentURL, const SameSiteInfo&) const;
     void deleteHTTPCookie(CFHTTPCookieStorageRef, NSHTTPCookie *, CompletionHandler<void()>&&) const;
-    void deleteCookiesMatching(const Function<bool(NSHTTPCookie *)>& matches, CompletionHandler<void()>&&);
+    void deleteCookiesMatching(NOESCAPE const Function<bool(NSHTTPCookie *)>& matches, CompletionHandler<void()>&&);
 #endif
 
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
     void registerCookieChangeListenersIfNecessary();
     void unregisterCookieChangeListenersIfNecessary();
 #endif
+    void clearCookiesVersionChangeCallbacks();
 
     PAL::SessionID m_sessionID;
+
+#if PLATFORM(COCOA) || USE(SOUP)
+    const bool m_isInMemoryCookieStore { false };
+#endif
 
 #if PLATFORM(COCOA)
     RetainPtr<CFURLStorageSessionRef> m_platformSession;
     RetainPtr<CFHTTPCookieStorageRef> m_platformCookieStorage;
-    const bool m_isInMemoryCookieStore { false };
 #elif USE(SOUP)
-    static void cookiesDidChange(NetworkStorageSession*);
+    static void cookiesDidChange(NetworkStorageSession*, SoupCookie* oldCookie, SoupCookie* newCookie, SoupCookieJar*);
 
     HTTPCookieAcceptPolicy m_cookieAcceptPolicy;
     GRefPtr<SoupCookieJar> m_cookieStorage;
@@ -329,18 +366,26 @@ private:
 #endif
 
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
-    bool m_didRegisterCookieListeners { false };
+#if PLATFORM(COCOA)
     RetainPtr<NSMutableSet> m_subscribedDomainsForCookieChanges;
-    MemoryCompactRobinHoodHashMap<String, WeakHashSet<CookieChangeObserver>> m_cookieChangeObservers;
+    bool m_didRegisterCookieListeners { false };
+#elif USE(SOUP)
+    void notifyCookie(SoupCookie*, bool added);
+    void notifyCookieAdded(SoupCookie*);
+    void notifyCookieDeleted(SoupCookie*);
 #endif
+    MemoryCompactRobinHoodHashMap<String, WeakHashSet<CookieChangeObserver>> m_cookieChangeObservers;
+#endif // HAVE(COOKIE_CHANGE_LISTENER_API)
     WeakHashSet<CookiesEnabledStateObserver> m_cookiesEnabledStateObservers;
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
     bool m_isOptInCookiePartitioningEnabled { false };
+#endif
 
     CredentialStorage m_credentialStorage;
 
     bool m_isTrackingPreventionEnabled = false;
     bool m_isTrackingPreventionDebugLoggingEnabled = false;
-    std::optional<Seconds> clientSideCookieCap(const TopFrameDomain&, std::optional<PageIdentifier>) const;
+    std::optional<Seconds> clientSideCookieCap(const TopFrameDomain&, RequiresScriptTelemetry, std::optional<PageIdentifier>) const;
     bool shouldExemptDomainPairFromThirdPartyCookieBlocking(const TopFrameDomain&, const SubResourceDomain&) const;
     HashSet<RegistrableDomain> m_registrableDomainsToBlockAndDeleteCookiesFor;
     HashSet<RegistrableDomain> m_registrableDomainsToBlockButKeepCookiesFor;
@@ -351,6 +396,7 @@ private:
     std::optional<Seconds> m_cacheMaxAgeCapForPrevalentResources;
     std::optional<Seconds> m_ageCapForClientSideCookies;
     std::optional<Seconds> m_ageCapForClientSideCookiesShort;
+    std::optional<Seconds> m_ageCapForClientSideCookiesForScriptTelemetry;
 #if ENABLE(JS_COOKIE_CHECKING)
     std::optional<Seconds> m_ageCapForClientSideCookiesForLinkDecorationTargetPage;
 #endif
@@ -361,12 +407,11 @@ private:
     HashSet<RegistrableDomain> m_managedDomains;
 
 #if PLATFORM(COCOA)
-public:
-    CookieStorageObserver& cookieStorageObserver() const;
-
-private:
     mutable std::unique_ptr<CookieStorageObserver> m_cookieStorageObserver;
 #endif
+    uint64_t m_cookiesVersion { 0 };
+    Deque<CookieVersionChangeCallback> m_cookiesVersionChangeCallbacks;
+
     static bool m_processMayUseCookieAPI;
 };
 

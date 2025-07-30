@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <unicode/umachine.h>
 #include <wtf/text/AtomStringImpl.h>
 
 namespace JSC {
@@ -46,10 +47,10 @@ public:
     using Cache = std::array<Slot, capacity>;
 
     template<typename CharacterType>
-    ALWAYS_INLINE Ref<AtomStringImpl> makeIdentifier(std::span<const CharacterType> characters)
-    {
-        return make(characters);
-    }
+    ALWAYS_INLINE Ref<AtomStringImpl> makeIdentifier(std::span<const CharacterType> characters);
+
+    template<typename CharacterType>
+    ALWAYS_INLINE AtomStringImpl* existingIdentifier(std::span<const CharacterType> characters);
 
     ALWAYS_INLINE void clear()
     {
@@ -59,9 +60,6 @@ public:
     VM& vm() const;
 
 private:
-    template<typename CharacterType>
-    Ref<AtomStringImpl> make(std::span<const CharacterType>);
-
     ALWAYS_INLINE Slot& cacheSlot(UChar firstCharacter, UChar lastCharacter, UChar length)
     {
         unsigned hash = (firstCharacter << 6) ^ ((lastCharacter << 14) ^ firstCharacter);

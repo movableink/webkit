@@ -32,16 +32,11 @@
 #include "DocumentLoader.h"
 #include "OriginAccessPatterns.h"
 #include "Page.h"
+#include "Quirks.h"
 #include "Settings.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
-
-// https://drafts.csswg.org/css-values/#url-local-url-flag
-bool ResolvedURL::isLocalURL() const
-{
-    return specifiedURLString.startsWith('#');
-}
 
 const CSSParserContext& strictCSSParserContext()
 {
@@ -49,21 +44,28 @@ const CSSParserContext& strictCSSParserContext()
     return strictContext;
 }
 
+static void applyUASheetBehaviorsToContext(CSSParserContext& context)
+{
+    // FIXME: We should turn all of the features on from their WebCore Settings defaults.
+    context.cssAppearanceBaseEnabled = true;
+    context.cssTextUnderlinePositionLeftRightEnabled = true;
+    context.popoverAttributeEnabled = true;
+    context.propertySettings.cssInputSecurityEnabled = true;
+    context.propertySettings.supportHDRDisplayEnabled = true;
+    context.propertySettings.viewTransitionsEnabled = true;
+    context.propertySettings.cssFieldSizingEnabled = true;
+#if HAVE(CORE_MATERIAL)
+    context.propertySettings.useSystemAppearance = true;
+#endif
+    context.thumbAndTrackPseudoElementsEnabled = true;
+}
+
 CSSParserContext::CSSParserContext(CSSParserMode mode, const URL& baseURL)
     : baseURL(baseURL)
     , mode(mode)
 {
-    // FIXME: We should turn all of the features on from their WebCore Settings defaults.
-    if (isUASheetBehavior(mode)) {
-        cssAppearanceBaseEnabled = true;
-        cssTextUnderlinePositionLeftRightEnabled = true;
-        lightDarkColorEnabled = true;
-        popoverAttributeEnabled = true;
-        propertySettings.cssInputSecurityEnabled = true;
-        propertySettings.cssCounterStyleAtRulesEnabled = true;
-        propertySettings.viewTransitionsEnabled = true;
-        thumbAndTrackPseudoElementsEnabled = true;
-    }
+    if (isUASheetBehavior(mode))
+        applyUASheetBehaviorsToContext(*this);
 
     StaticCSSValuePool::init();
 }
@@ -79,7 +81,7 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
     , mode { document.inQuirksMode() ? HTMLQuirksMode : HTMLStandardMode }
     , isHTMLDocument { document.isHTMLDocument() }
     , hasDocumentSecurityOrigin { sheetBaseURL.isNull() || document.protectedSecurityOrigin()->canRequest(baseURL, OriginAccessPatternsForWebProcess::singleton()) }
-    , useSystemAppearance { document.page() ? document.page()->useSystemAppearance() : false }
+    , useSystemAppearance { document.settings().useSystemAppearance() }
     , counterStyleAtRuleImageSymbolsEnabled { document.settings().cssCounterStyleAtRuleImageSymbolsEnabled() }
     , springTimingFunctionEnabled { document.settings().springTimingFunctionEnabled() }
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
@@ -87,12 +89,8 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
 #endif
     , masonryEnabled { document.settings().masonryEnabled() }
     , cssAppearanceBaseEnabled { document.settings().cssAppearanceBaseEnabled() }
-    , cssNestingEnabled { document.settings().cssNestingEnabled() }
     , cssPaintingAPIEnabled { document.settings().cssPaintingAPIEnabled() }
-    , cssScopeAtRuleEnabled { document.settings().cssScopeAtRuleEnabled() }
     , cssShapeFunctionEnabled { document.settings().cssShapeFunctionEnabled() }
-    , cssStartingStyleAtRuleEnabled { document.settings().cssStartingStyleAtRuleEnabled() }
-    , cssStyleQueriesEnabled { document.settings().cssStyleQueriesEnabled() }
     , cssTextUnderlinePositionLeftRightEnabled { document.settings().cssTextUnderlinePositionLeftRightEnabled() }
     , cssBackgroundClipBorderAreaEnabled  { document.settings().cssBackgroundClipBorderAreaEnabled() }
     , cssWordBreakAutoPhraseEnabled { document.settings().cssWordBreakAutoPhraseEnabled() }
@@ -104,11 +102,19 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
     , imageControlsEnabled { document.settings().imageControlsEnabled() }
 #endif
     , colorLayersEnabled { document.settings().cssColorLayersEnabled() }
-    , lightDarkColorEnabled { document.settings().cssLightDarkEnabled() }
     , contrastColorEnabled { document.settings().cssContrastColorEnabled() }
     , targetTextPseudoElementEnabled { document.settings().targetTextPseudoElementEnabled() }
     , viewTransitionTypesEnabled { document.settings().viewTransitionsEnabled() && document.settings().viewTransitionTypesEnabled() }
     , cssProgressFunctionEnabled { document.settings().cssProgressFunctionEnabled() }
+    , cssMediaProgressFunctionEnabled { document.settings().cssMediaProgressFunctionEnabled() }
+    , cssContainerProgressFunctionEnabled { document.settings().cssContainerProgressFunctionEnabled() }
+    , cssRandomFunctionEnabled { document.settings().cssRandomFunctionEnabled() }
+    , cssTreeCountingFunctionsEnabled { document.settings().cssTreeCountingFunctionsEnabled() }
+    , cssURLModifiersEnabled { document.settings().cssURLModifiersEnabled() }
+    , cssAxisRelativePositionKeywordsEnabled { document.settings().cssAxisRelativePositionKeywordsEnabled() }
+    , cssDynamicRangeLimitMixEnabled { document.settings().cssDynamicRangeLimitMixEnabled() }
+    , cssConstrainedDynamicRangeLimitEnabled { document.settings().cssConstrainedDynamicRangeLimitEnabled() }
+    , webkitMediaTextTrackDisplayQuirkEnabled { document.quirks().needsWebKitMediaTextTrackDisplayQuirk() }
     , propertySettings { CSSPropertySettings { document.settings() } }
 {
 }
@@ -117,7 +123,7 @@ void add(Hasher& hasher, const CSSParserContext& context)
 {
     uint32_t bits = context.isHTMLDocument                  << 0
         | context.hasDocumentSecurityOrigin                 << 1
-        | context.isContentOpaque                           << 2
+        | static_cast<bool>(context.loadedFromOpaqueSource) << 2
         | context.useSystemAppearance                       << 3
         | context.springTimingFunctionEnabled               << 4
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
@@ -125,61 +131,38 @@ void add(Hasher& hasher, const CSSParserContext& context)
 #endif
         | context.masonryEnabled                            << 6
         | context.cssAppearanceBaseEnabled                  << 7
-        | context.cssNestingEnabled                         << 8
-        | context.cssPaintingAPIEnabled                     << 9
-        | context.cssScopeAtRuleEnabled                     << 10
-        | context.cssShapeFunctionEnabled                   << 11
-        | context.cssTextUnderlinePositionLeftRightEnabled  << 12
-        | context.cssBackgroundClipBorderAreaEnabled        << 13
-        | context.cssWordBreakAutoPhraseEnabled             << 14
-        | context.popoverAttributeEnabled                   << 15
-        | context.sidewaysWritingModesEnabled               << 16
-        | context.cssTextWrapPrettyEnabled                  << 17
-        | context.thumbAndTrackPseudoElementsEnabled        << 18
+        | context.cssPaintingAPIEnabled                     << 8
+        | context.cssShapeFunctionEnabled                   << 9
+        | context.cssTextUnderlinePositionLeftRightEnabled  << 10
+        | context.cssBackgroundClipBorderAreaEnabled        << 11
+        | context.cssWordBreakAutoPhraseEnabled             << 12
+        | context.popoverAttributeEnabled                   << 13
+        | context.sidewaysWritingModesEnabled               << 14
+        | context.cssTextWrapPrettyEnabled                  << 15
+        | context.thumbAndTrackPseudoElementsEnabled        << 16
 #if ENABLE(SERVICE_CONTROLS)
-        | context.imageControlsEnabled                      << 19
+        | context.imageControlsEnabled                      << 17
 #endif
-        | context.colorLayersEnabled                        << 20
-        | context.lightDarkColorEnabled                     << 21
-        | context.contrastColorEnabled                      << 22
-        | context.targetTextPseudoElementEnabled            << 23
-        | context.viewTransitionTypesEnabled                << 24
-        | context.cssProgressFunctionEnabled                << 25
-        | (uint32_t)context.mode                            << 26; // This is multiple bits, so keep it last.
-    add(hasher, context.baseURL, context.charset, context.propertySettings, bits);
+        | context.colorLayersEnabled                        << 18
+        | context.contrastColorEnabled                      << 19
+        | context.targetTextPseudoElementEnabled            << 20
+        | context.viewTransitionTypesEnabled                << 21
+        | context.cssProgressFunctionEnabled                << 22
+        | context.cssMediaProgressFunctionEnabled           << 23
+        | context.cssContainerProgressFunctionEnabled       << 24
+        | context.cssRandomFunctionEnabled                  << 25
+        | context.cssTreeCountingFunctionsEnabled           << 26
+        | context.cssURLModifiersEnabled                    << 27
+        | context.cssAxisRelativePositionKeywordsEnabled    << 28
+        | context.cssDynamicRangeLimitMixEnabled            << 29
+        | context.cssConstrainedDynamicRangeLimitEnabled    << 30;
+    add(hasher, context.baseURL, context.charset, context.propertySettings, context.mode, bits);
 }
 
-ResolvedURL CSSParserContext::completeURL(const String& string) const
+void CSSParserContext::setUASheetMode()
 {
-    auto result = [&] () -> ResolvedURL {
-        // See also Document::completeURL(const String&), but note that CSS always uses UTF-8 for URLs
-        if (string.isNull())
-            return { };
-
-        if (CSSValue::isCSSLocalURL(string))
-            return { string, URL { string } };
-
-        return { string, { baseURL, string } };
-    }();
-
-    if (mode == WebVTTMode && !result.resolvedURL.protocolIsData())
-        return { };
-
-    return result;
+    mode = UASheetMode;
+    applyUASheetBehaviorsToContext(*this);
 }
 
-bool mayDependOnBaseURL(const ResolvedURL& resolved)
-{
-    if (resolved.specifiedURLString.isEmpty())
-        return false;
-
-    if (CSSValue::isCSSLocalURL(resolved.specifiedURLString))
-        return false;
-
-    if (protocolIs(resolved.specifiedURLString, "data"_s))
-        return false;
-
-    return true;
-}
-
-}
+} // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include "AudioMediaStreamTrackRendererInternalUnitIdentifier.h"
 #include "GPUProcessConnection.h"
 #include "IPCSemaphore.h"
+#include "Logging.h"
 #include "RemoteAudioMediaStreamTrackRendererInternalUnitManagerMessages.h"
 #include "SharedCARingBuffer.h"
 #include "WebProcess.h"
@@ -73,6 +74,7 @@ private:
     void close() { stopThread(); }
 
     void retrieveFormatDescription(CompletionHandler<void(std::optional<WebCore::CAAudioStreamDescription>)>&&) final;
+    void setLastDeviceUsed(const String&) final;
 
     void initialize(const WebCore::CAAudioStreamDescription&, size_t frameChunkSize);
     void storageChanged(WebCore::SharedMemory*, const WebCore::CAAudioStreamDescription&, size_t);
@@ -223,14 +225,20 @@ void AudioMediaStreamTrackRendererInternalUnitManagerProxy::retrieveFormatDescri
     callback(m_description);
 }
 
+void AudioMediaStreamTrackRendererInternalUnitManagerProxy::setLastDeviceUsed(const String& deviceID)
+{
+    WebProcess::singleton().ensureGPUProcessConnection().connection().send(Messages::RemoteAudioMediaStreamTrackRendererInternalUnitManager::SetLastDeviceUsed { deviceID }, 0);
+}
+
 void AudioMediaStreamTrackRendererInternalUnitManagerProxy::stopThread()
 {
-    if (!m_thread)
+    RefPtr thread = m_thread;
+    if (!thread)
         return;
 
     m_shouldStopThread = true;
     m_semaphore->signal();
-    m_thread->waitForCompletion();
+    thread->waitForCompletion();
     m_thread = nullptr;
 }
 

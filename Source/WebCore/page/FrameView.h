@@ -45,7 +45,7 @@ public:
     WEBCORE_EXPORT int headerHeight() const final;
     WEBCORE_EXPORT int footerHeight() const final;
 
-    WEBCORE_EXPORT float topContentInset(TopContentInsetType = TopContentInsetType::WebCoreContentInset) const final;
+    WEBCORE_EXPORT FloatBoxExtent obscuredContentInsets(InsetType = InsetType::WebCoreInset) const final;
 
     float visibleContentScaleFactor() const final;
 
@@ -105,6 +105,9 @@ private:
     ScrollableArea* enclosingScrollableArea() const final;
 
     bool scrollAnimatorEnabled() const final;
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    bool vectorBasedControlsEnabled() const final;
+#endif
 };
 
 }

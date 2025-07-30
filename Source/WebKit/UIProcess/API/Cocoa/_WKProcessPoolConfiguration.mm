@@ -56,7 +56,7 @@
 
 - (NSURL *)injectedBundleURL
 {
-    return [NSURL fileURLWithPath:_processPoolConfiguration->injectedBundlePath()];
+    return [NSURL fileURLWithPath:_processPoolConfiguration->injectedBundlePath().createNSString().get()];
 }
 
 - (void)setInjectedBundleURL:(NSURL *)injectedBundleURL
@@ -335,7 +335,7 @@
 
 - (NSString *)description
 {
-    NSString *description = [NSString stringWithFormat:@"<%@: %p", NSStringFromClass(self.class), self];
+    RetainPtr description = adoptNS([[NSString alloc] initWithFormat:@"<%@: %p", NSStringFromClass(self.class), self]);
 
     if (!_processPoolConfiguration->injectedBundlePath().isEmpty())
         return [description stringByAppendingFormat:@"; injectedBundleURL: \"%@\">", [self injectedBundleURL]];
@@ -369,7 +369,7 @@
 
 - (NSString *)timeZoneOverride
 {
-    return _processPoolConfiguration->timeZoneOverride();
+    return _processPoolConfiguration->timeZoneOverride().createNSString().autorelease();
 }
 
 - (void)setTimeZoneOverride:(NSString *)timeZone
@@ -405,19 +405,19 @@
     _processPoolConfiguration->setMemoryFootprintNotificationThresholds(WTFMove(sizes));
 }
 
-- (BOOL)suspendsWebProcessesAggressivelyOnCriticalMemoryPressure
+- (BOOL)suspendsWebProcessesAggressivelyOnMemoryPressure
 {
 #if ENABLE(WEB_PROCESS_SUSPENSION_DELAY)
-    return _processPoolConfiguration->suspendsWebProcessesAggressivelyOnCriticalMemoryPressure();
+    return _processPoolConfiguration->suspendsWebProcessesAggressivelyOnMemoryPressure();
 #else
     return NO;
 #endif
 }
 
-- (void)setSuspendsWebProcessesAggressivelyOnCriticalMemoryPressure:(BOOL)enabled
+- (void)setSuspendsWebProcessesAggressivelyOnMemoryPressure:(BOOL)enabled
 {
 #if ENABLE(WEB_PROCESS_SUSPENSION_DELAY)
-    _processPoolConfiguration->setSuspendsWebProcessesAggressivelyOnCriticalMemoryPressure(enabled);
+    _processPoolConfiguration->setSuspendsWebProcessesAggressivelyOnMemoryPressure(enabled);
 #endif
 }
 

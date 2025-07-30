@@ -168,8 +168,10 @@ class PullRequest(Command):
             return 1
         log.info('Amending commit...' if will_amend else 'Creating commit...')
         env = os.environ
-        env['COMMIT_MESSAGE_TITLE'] = getattr(args, '_title', None) or ''
-        env['COMMIT_MESSAGE_BUG'] = bug_urls
+        if getattr(args, '_title', None):
+            env['COMMIT_MESSAGE_TITLE'] = getattr(args, '_title')
+        if bug_urls:
+            env['COMMIT_MESSAGE_BUG'] = bug_urls
         if run(
             [repository.executable(), 'commit', '--date=now'] + (['--amend'] if will_amend else []),
             cwd=repository.root_path,
@@ -251,10 +253,7 @@ class PullRequest(Command):
             source_remote = repository.source_remotes()[-1]
             args.remote = source_remote
 
-        if not repository.dev_branches.match(repository.branch) and (repository.branch is None or repository.branch in repository.DEFAULT_BRANCHES or
-                repository.PROD_BRANCHES.match(repository.branch) or \
-                repository.branch in repository.branches_for(remote=source_remote)):
-
+        if not repository.is_suitable_branch_for_pull_request(repository.branch, source_remote):
             if not args.issue:
                 head = repository.commit(include_log=True, include_identifier=False)
                 if run([
@@ -327,7 +326,7 @@ class PullRequest(Command):
         return existing_pr
 
     @classmethod
-    def pre_pr_checks(cls, repository, attempts=3, add_edits=True):
+    def pre_pr_checks(cls, repository, add_edits=True):
         num_checks = 0
         log.info('Running pre-PR checks...')
         for key, path in repository.config().items():
@@ -336,7 +335,7 @@ class PullRequest(Command):
             num_checks += 1
             name = key.split('.')[-1]
             log.info('    Running {}...'.format(name))
-            for attempt in range(attempts):
+            while True:
                 command_line = path.split(' ')
                 if command_line[0] == 'python3' and os.name == 'nt':
                     command_line[0] = sys.executable
@@ -347,7 +346,7 @@ class PullRequest(Command):
                 options = ['Yes', 'Retry', 'No']
                 response = Terminal.choose(
                     '{} failed!\nRetry will amend the commit with your changes. Continue uploading pull request?'.format(name),
-                    options=(options[0], options[2]) if attempt + 1 == attempts else options,
+                    options=options,
                     default='No',
                 )
                 if response == 'No':
@@ -404,6 +403,20 @@ class PullRequest(Command):
         for issue in commit.issues:
             issue.open(why='Reverted by {}'.format(pr.url))
         return 0
+
+    @classmethod
+    def add_comment_to_issue(cls, issue, pr):
+        log.info('Checking issue assignee...')
+        if issue.assignee != issue.tracker.me():
+            issue.assign(issue.tracker.me())
+            print('Assigning associated issue to {}'.format(issue.tracker.me()))
+        log.info('Checking for pull request link in associated issue...')
+        if pr.url and not any([pr.url in comment.content for comment in issue.comments]):
+            if issue.opened:
+                issue.add_comment('Pull request: {}'.format(pr.url))
+            else:
+                issue.open(why='Re-opening for pull request {}'.format(pr.url))
+            print('Posted pull request link to {}'.format(issue.link))
 
     @classmethod
     def create_pull_request(cls, repository, args, branch_point, callback=None, unblock=True, update_issue=None):
@@ -698,18 +711,10 @@ class PullRequest(Command):
             if cls.is_revert_commit(commits[0]) and update_issue:
                 cls.add_comment_to_reverted_commit_bug_tracker(repository, args, pr, commits[0])
 
-        if issue and update_issue:
-            log.info('Checking issue assignee...')
-            if issue.assignee != issue.tracker.me():
-                issue.assign(issue.tracker.me())
-                print('Assigning associated issue to {}'.format(issue.tracker.me()))
-            log.info('Checking for pull request link in associated issue...')
-            if pr.url and not any([pr.url in comment.content for comment in issue.comments]):
-                if issue.opened:
-                    issue.add_comment('Pull request: {}'.format(pr.url))
-                else:
-                    issue.open(why='Re-opening for pull request {}'.format(pr.url))
-                print('Posted pull request link to {}'.format(issue.link))
+        if issue and update_issue and isinstance(issue.tracker, radar.Tracker) and not_radar:
+            cls.add_comment_to_issue(not_radar, pr)
+        elif issue and update_issue:
+            cls.add_comment_to_issue(issue, pr)
 
         if issue and pr._metadata and pr._metadata.get('issue'):
             log.info('Syncing PR labels with issue component...')

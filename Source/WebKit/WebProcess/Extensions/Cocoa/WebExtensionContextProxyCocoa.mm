@@ -48,28 +48,29 @@
 
 namespace WebKit {
 
-static HashMap<WebExtensionContextIdentifier, WeakRef<WebExtensionContextProxy>>& webExtensionContextProxies()
+static HashMap<WebExtensionContextIdentifier, WeakPtr<WebExtensionContextProxy>>& webExtensionContextProxies()
 {
-    static MainThreadNeverDestroyed<HashMap<WebExtensionContextIdentifier, WeakRef<WebExtensionContextProxy>>> contexts;
+    static MainRunLoopNeverDestroyed<HashMap<WebExtensionContextIdentifier, WeakPtr<WebExtensionContextProxy>>> contexts;
     return contexts;
 }
 
 RefPtr<WebExtensionContextProxy> WebExtensionContextProxy::get(WebExtensionContextIdentifier identifier)
 {
-    return webExtensionContextProxies().get(identifier);
+    return webExtensionContextProxies().get(identifier).get();
 }
 
 WebExtensionContextProxy::WebExtensionContextProxy(const WebExtensionContextParameters& parameters)
-    : m_identifier(parameters.identifier)
+    : m_unprivilegedIdentifier(parameters.unprivilegedIdentifier)
 {
-    ASSERT(!get(m_identifier));
-    webExtensionContextProxies().add(m_identifier, *this);
+    ASSERT(!get(m_unprivilegedIdentifier));
+    webExtensionContextProxies().add(m_unprivilegedIdentifier, *this);
 
-    WebProcess::singleton().addMessageReceiver(Messages::WebExtensionContextProxy::messageReceiverName(), m_identifier, *this);
+    WebProcess::singleton().addMessageReceiver(Messages::WebExtensionContextProxy::messageReceiverName(), m_unprivilegedIdentifier, *this);
 }
 
 WebExtensionContextProxy::~WebExtensionContextProxy()
 {
+    webExtensionContextProxies().remove(m_unprivilegedIdentifier);
     WebProcess::singleton().removeMessageReceiver(*this);
 }
 
@@ -82,9 +83,13 @@ Ref<WebExtensionContextProxy> WebExtensionContextProxy::getOrCreate(const WebExt
         context.m_unsupportedAPIs = parameters.unsupportedAPIs;
         context.m_grantedPermissions = parameters.grantedPermissions;
         context.m_localization = parseLocalization(parameters.localizationJSON, parameters.baseURL);
-        context.m_manifest = parseJSON(*parameters.manifestJSON);
+        Ref manifestJSON = *parameters.manifestJSON;
+        context.m_manifest = parseJSON(manifestJSON);
         context.m_manifestVersion = parameters.manifestVersion;
         context.m_isSessionStorageAllowedInContentScripts = parameters.isSessionStorageAllowedInContentScripts;
+
+        if (parameters.privilegedIdentifier)
+            context.m_privilegedIdentifier = parameters.privilegedIdentifier;
 
         if (parameters.backgroundPageIdentifier) {
             if (newPage && parameters.backgroundPageIdentifier.value() == newPage->identifier())
@@ -121,7 +126,7 @@ Ref<WebExtensionContextProxy> WebExtensionContextProxy::getOrCreate(const WebExt
         });
     };
 
-    if (RefPtr context = get(parameters.identifier)) {
+    if (RefPtr context = get(parameters.unprivilegedIdentifier)) {
         updateProperties(*context);
         return *context;
     }
@@ -180,7 +185,7 @@ RefPtr<WebExtensionLocalization> WebExtensionContextProxy::parseLocalization(Ref
     return nullptr;
 }
 
-WebCore::DOMWrapperWorld& WebExtensionContextProxy::toDOMWrapperWorld(WebExtensionContentWorldType contentWorldType) const
+Ref<WebCore::DOMWrapperWorld> WebExtensionContextProxy::toDOMWrapperWorld(WebExtensionContentWorldType contentWorldType) const
 {
     switch (contentWorldType) {
     case WebExtensionContentWorldType::Main:

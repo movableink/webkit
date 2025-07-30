@@ -77,8 +77,7 @@ TextureCaps GenerateMinimumTextureCaps(GLenum sizedInternalFormat,
     caps.sampleCounts.insert(0);
     if (internalFormatInfo.isRequiredRenderbufferFormat(clientVersion))
     {
-        if ((clientVersion.major >= 3 && clientVersion.minor >= 1) ||
-            (clientVersion.major >= 3 && !internalFormatInfo.isInt()))
+        if (clientVersion >= ES_3_1 || (clientVersion == ES_3_0 && !internalFormatInfo.isInt()))
         {
             caps.sampleCounts.insert(4);
         }
@@ -266,6 +265,31 @@ static bool DetermineRGBA8TextureSupport(const TextureCapsMap &textureCaps)
     return GetFormatSupport(textureCaps, requiredFormats, false, false, false, true, false);
 }
 
+// Checks for GL_OES_required_internalformat support
+static bool DetermineRequiredInternalFormatTextureSupport(const TextureCapsMap &textureCaps)
+{
+    constexpr GLenum requiredTexturingFormats[] = {
+        GL_ALPHA8_OES,
+        GL_LUMINANCE8_OES,
+        GL_LUMINANCE8_ALPHA8_OES,
+        GL_LUMINANCE4_ALPHA4_OES,
+        GL_RGB565_OES,
+        GL_RGB8_OES,
+        GL_RGBA4_OES,
+        GL_RGB5_A1_OES,
+        GL_RGBA8_OES,
+    };
+
+    constexpr GLenum requiredRenderingFormats[] = {
+        GL_RGB565_OES, GL_RGB8_OES, GL_RGBA4_OES, GL_RGB5_A1_OES, GL_RGBA8_OES,
+    };
+
+    return GetFormatSupport(textureCaps, requiredTexturingFormats, true, false, false, false,
+                            false) &&
+           GetFormatSupport(textureCaps, requiredRenderingFormats, false, false, false, true,
+                            false);
+}
+
 // Checks for GL_OES_rgb8_rgba8 support
 static bool DetermineRGB8TextureSupport(const TextureCapsMap &textureCaps)
 {
@@ -280,6 +304,7 @@ static bool DetermineRGB8TextureSupport(const TextureCapsMap &textureCaps)
 static bool DetermineBGRA8TextureSupport(const TextureCapsMap &textureCaps)
 {
     constexpr GLenum requiredFormats[] = {
+        GL_BGRA_EXT,
         GL_BGRA8_EXT,
     };
 
@@ -414,7 +439,7 @@ static bool DetermineTextureFormat2101010Support(const TextureCapsMap &textureCa
     // GL_EXT_texture_type_2_10_10_10_REV specifies both RGBA and RGB support.
     constexpr GLenum requiredFormats[] = {
         GL_RGB10_A2,
-        GL_RGB10_UNORM_ANGLEX,
+        GL_RGB10_EXT,
     };
 
     return GetFormatSupport(textureCaps, requiredFormats, true, true, false, false, false);
@@ -855,7 +880,8 @@ static bool DetermineRenderSharedExponentSupport(const TextureCapsMap &textureCa
     return GetFormatSupport(textureCaps, requiredFormats, false, false, true, true, true);
 }
 
-static bool DetermineRenderSnormSupport(const TextureCapsMap &textureCaps, bool textureNorm16EXT)
+// Check for GL_EXT_render_snorm support
+bool DetermineRenderSnormSupport(const TextureCapsMap &textureCaps, bool textureNorm16EXT)
 {
     constexpr GLenum requiredSnorm8Formats[] = {
         GL_R8_SNORM,
@@ -890,6 +916,7 @@ void Extensions::setTextureExtensionSupport(const TextureCapsMap &textureCaps)
     readDepthNV              = DetermineReadDepthSupport(textureCaps);
     readStencilNV            = DetermineReadStencilSupport(textureCaps);
     depthBufferFloat2NV      = DetermineDepthBufferFloat2Support(textureCaps);
+    requiredInternalformatOES = DetermineRequiredInternalFormatTextureSupport(textureCaps);
     textureFormatBGRA8888EXT = DetermineBGRA8TextureSupport(textureCaps);
     readFormatBgraEXT        = DetermineBGRAReadFormatSupport(textureCaps);
     textureHalfFloatOES      = DetermineHalfFloatTextureSupport(textureCaps);
@@ -1371,6 +1398,9 @@ std::vector<std::string> DisplayExtensions::getStrings() const
     InsertExtensionString("EGL_KHR_partial_update",                              partialUpdateKHR,                   &extensionStrings);
     InsertExtensionString("EGL_ANGLE_metal_shared_event_sync",                   mtlSyncSharedEventANGLE,            &extensionStrings);
     InsertExtensionString("EGL_ANGLE_global_fence_sync",                         globalFenceSyncANGLE,               &extensionStrings);
+    InsertExtensionString("EGL_ANGLE_memory_usage_report",                       memoryUsageReportANGLE,             &extensionStrings);
+    InsertExtensionString("EGL_EXT_surface_compression",                         surfaceCompressionEXT,              &extensionStrings);
+    InsertExtensionString("EGL_ANGLE_webgpu_texture_client_buffer",              webgpuTextureClientBuffer,          &extensionStrings);
     // clang-format on
 
     return extensionStrings;
@@ -1392,6 +1422,7 @@ std::vector<std::string> DeviceExtensions::getStrings() const
     InsertExtensionString("EGL_ANGLE_device_vulkan",                       deviceVulkan,                   &extensionStrings);
     InsertExtensionString("EGL_EXT_device_drm",                            deviceDrmEXT,                   &extensionStrings);
     InsertExtensionString("EGL_EXT_device_drm_render_node",                deviceDrmRenderNodeEXT,         &extensionStrings);
+    InsertExtensionString("EGL_ANGLE_device_webgpu",                       deviceWebGPU,                   &extensionStrings);
 
     // clang-format on
 
@@ -1424,6 +1455,7 @@ std::vector<std::string> ClientExtensions::getStrings() const
     InsertExtensionString("EGL_ANGLE_platform_angle_null",                    platformANGLENULL,                  &extensionStrings);
     InsertExtensionString("EGL_ANGLE_platform_angle_webgpu",                  platformANGLEWebgpu,                &extensionStrings);
     InsertExtensionString("EGL_ANGLE_platform_angle_vulkan",                  platformANGLEVulkan,                &extensionStrings);
+    InsertExtensionString("EGL_ANGLE_platform_angle_vulkan_device_uuid",      platformANGLEVulkanDeviceUUID,      &extensionStrings);
     InsertExtensionString("EGL_ANGLE_platform_angle_metal",                   platformANGLEMetal,                 &extensionStrings);
     InsertExtensionString("EGL_ANGLE_platform_device_context_volatile_cgl",   platformANGLEDeviceContextVolatileCgl, &extensionStrings);
     InsertExtensionString("EGL_ANGLE_platform_angle_device_id",               platformANGLEDeviceId,              &extensionStrings);

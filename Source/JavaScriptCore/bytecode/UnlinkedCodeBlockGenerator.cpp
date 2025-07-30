@@ -90,7 +90,7 @@ void UnlinkedCodeBlockGenerator::finalize(std::unique_ptr<JSInstructionStream> i
             m_codeBlock->m_rareData->m_constantIdentifierSets = WTFMove(m_constantIdentifierSets);
         }
 
-        if (UNLIKELY(Options::returnEarlyFromInfiniteLoopsForFuzzing()))
+        if (Options::returnEarlyFromInfiniteLoopsForFuzzing()) [[unlikely]]
             m_codeBlock->initializeLoopHintExecutionCounter();
     }
     m_vm.writeBarrier(m_codeBlock.get());

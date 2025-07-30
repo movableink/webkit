@@ -175,7 +175,7 @@ public:
 
     uint64_t rendererCount() const { return m_rendererCount; }
     void didCreateRenderer() { ++m_rendererCount; }
-    void didDestroyRenderer() { --m_rendererCount; }
+    void willDestroyRenderer() { --m_rendererCount; }
 
     void updateVisibleViewportRect(const IntRect&);
     void registerForVisibleInViewportCallback(RenderElement&);
@@ -212,18 +212,22 @@ public:
     void unregisterAnchor(const RenderBoxModelObject&);
     const SingleThreadWeakHashSet<const RenderBoxModelObject>& anchors() const { return m_anchors; }
 
-    SingleThreadWeakPtr<RenderElement> viewTransitionRoot() const;
-    void setViewTransitionRoot(RenderElement& renderer);
+    void registerPositionTryBox(const RenderBox&);
+    void unregisterPositionTryBox(const RenderBox&);
+    const SingleThreadWeakHashSet<const RenderBox>& positionTryBoxes() const { return m_positionTryBoxes; }
 
-    void addViewTransitionGroup(const AtomString&, RenderElement&);
+    SingleThreadWeakPtr<RenderBlockFlow> viewTransitionContainingBlock() const;
+    void setViewTransitionContainingBlock(RenderBlockFlow& renderer);
+
+    void addViewTransitionGroup(const AtomString&, RenderBox&);
     void removeViewTransitionGroup(const AtomString&);
-    RenderElement* viewTransitionGroupForName(const AtomString&);
+    RenderBox* viewTransitionGroupForName(const AtomString&);
 
 private:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
     void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const override;
-    const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
+    const RenderElement* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
     void mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode>, TransformState&) const override;
     bool requiresColumns(int desiredColumnCount) const override;
 
@@ -287,9 +291,10 @@ private:
     SingleThreadWeakHashSet<const RenderBox> m_boxesWithScrollSnapPositions;
     SingleThreadWeakHashSet<const RenderBox> m_containerQueryBoxes;
     SingleThreadWeakHashSet<const RenderBoxModelObject> m_anchors;
+    SingleThreadWeakHashSet<const RenderBox> m_positionTryBoxes;
 
-    SingleThreadWeakPtr<RenderElement> m_viewTransitionRoot;
-    HashMap<AtomString, SingleThreadWeakPtr<RenderElement>> m_viewTransitionGroups;
+    SingleThreadWeakPtr<RenderBlockFlow> m_viewTransitionContainingBlock;
+    HashMap<AtomString, SingleThreadWeakPtr<RenderBox>> m_viewTransitionGroups;
 };
 
 } // namespace WebCore

@@ -84,9 +84,9 @@ TEST(U2fCommandConstructorTest, TestConvertCtapMakeCredentialToU2fRegister)
 
     EXPECT_TRUE(isConvertibleToU2fRegisterCommand(makeCredentialParam));
 
-    const auto u2fRegisterCommand = convertToU2fRegisterCommand(convertBytesToVector(TestData::kClientDataHash, sizeof(TestData::kClientDataHash)), makeCredentialParam);
+    const auto u2fRegisterCommand = convertToU2fRegisterCommand(std::span { TestData::kClientDataHash }, makeCredentialParam);
     ASSERT_TRUE(u2fRegisterCommand);
-    EXPECT_EQ(*u2fRegisterCommand, convertBytesToVector(TestData::kU2fRegisterCommandApdu, sizeof(TestData::kU2fRegisterCommandApdu)));
+    EXPECT_EQ(*u2fRegisterCommand, Vector<uint8_t>(TestData::kU2fRegisterCommandApdu));
 }
 
 TEST(U2fCommandConstructorTest, TestConvertCtapMakeCredentialToU2fCheckOnlySign)
@@ -100,9 +100,9 @@ TEST(U2fCommandConstructorTest, TestConvertCtapMakeCredentialToU2fCheckOnlySign)
     makeCredentialParam.excludeCredentials = WTFMove(excludeList);
     EXPECT_TRUE(isConvertibleToU2fRegisterCommand(makeCredentialParam));
 
-    const auto u2fCheckOnlySign = convertToU2fCheckOnlySignCommand(convertBytesToVector(TestData::kClientDataHash, sizeof(TestData::kClientDataHash)), makeCredentialParam, credentialDescriptor);
+    const auto u2fCheckOnlySign = convertToU2fCheckOnlySignCommand(std::array { TestData::kClientDataHash }, makeCredentialParam, credentialDescriptor);
     ASSERT_TRUE(u2fCheckOnlySign);
-    EXPECT_EQ(*u2fCheckOnlySign, convertBytesToVector(TestData::kU2fCheckOnlySignCommandApdu, sizeof(TestData::kU2fCheckOnlySignCommandApdu)));
+    EXPECT_EQ(*u2fCheckOnlySign, Vector<uint8_t> { TestData::kU2fCheckOnlySignCommandApdu });
 }
 
 TEST(U2fCommandConstructorTest, TestConvertCtapMakeCredentialToU2fCheckOnlySignWithInvalidCredentialType)
@@ -116,7 +116,7 @@ TEST(U2fCommandConstructorTest, TestConvertCtapMakeCredentialToU2fCheckOnlySignW
     makeCredentialParam.excludeCredentials = WTFMove(excludeList);
     EXPECT_TRUE(isConvertibleToU2fRegisterCommand(makeCredentialParam));
 
-    const auto u2fCheckOnlySign = convertToU2fCheckOnlySignCommand(convertBytesToVector(TestData::kClientDataHash, sizeof(TestData::kClientDataHash)), makeCredentialParam, credentialDescriptor);
+    const auto u2fCheckOnlySign = convertToU2fCheckOnlySignCommand(std::span { TestData::kClientDataHash }, makeCredentialParam, credentialDescriptor);
     EXPECT_FALSE(u2fCheckOnlySign);
 }
 
@@ -175,9 +175,9 @@ TEST(U2fCommandConstructorTest, TestConvertCtapGetAssertionToU2fSignRequest)
     getAssertionReq.allowCredentials = WTFMove(allowedList);
     EXPECT_TRUE(isConvertibleToU2fSignCommand(getAssertionReq));
 
-    const auto u2fSignCommand = convertToU2fSignCommand(convertBytesToVector(TestData::kClientDataHash, sizeof(TestData::kClientDataHash)), getAssertionReq, WebCore::toBufferSource(TestData::kU2fSignKeyHandle));
+    const auto u2fSignCommand = convertToU2fSignCommand(std::span { TestData::kClientDataHash }, getAssertionReq, WebCore::toBufferSource(TestData::kU2fSignKeyHandle));
     ASSERT_TRUE(u2fSignCommand);
-    EXPECT_EQ(*u2fSignCommand, convertBytesToVector(TestData::kU2fSignCommandApdu, sizeof(TestData::kU2fSignCommandApdu)));
+    EXPECT_EQ(*u2fSignCommand, Vector<uint8_t> { TestData::kU2fSignCommandApdu });
 }
 
 TEST(U2fCommandConstructorTest, TestConvertCtapGetAssertionWithAppIDToU2fSignRequest)
@@ -196,9 +196,9 @@ TEST(U2fCommandConstructorTest, TestConvertCtapGetAssertionWithAppIDToU2fSignReq
     extensions.appid = "https://www.example.com/appid"_s;
     getAssertionReq.extensions = WTFMove(extensions);
 
-    const auto u2fSignCommand = convertToU2fSignCommand(convertBytesToVector(TestData::kClientDataHash, sizeof(TestData::kClientDataHash)), getAssertionReq, WebCore::toBufferSource(TestData::kU2fSignKeyHandle), true);
+    const auto u2fSignCommand = convertToU2fSignCommand(std::span { TestData::kClientDataHash }, getAssertionReq, WebCore::toBufferSource(TestData::kU2fSignKeyHandle), true);
     ASSERT_TRUE(u2fSignCommand);
-    EXPECT_EQ(*u2fSignCommand, convertBytesToVector(TestData::kU2fAppIDSignCommandApdu, sizeof(TestData::kU2fAppIDSignCommandApdu)));
+    EXPECT_EQ(*u2fSignCommand, Vector<uint8_t> { TestData::kU2fAppIDSignCommandApdu });
 }
 
 TEST(U2fCommandConstructorTest, TestU2fSignAllowListRequirement)
@@ -233,17 +233,17 @@ TEST(U2fCommandConstructorTest, TestCreateSignWithIncorrectKeyHandle)
     ASSERT_TRUE(isConvertibleToU2fSignCommand(getAssertionReq));
 
     Vector<uint8_t> keyHandle(kMaxKeyHandleLength, 0xff);
-    const auto validSignCommand = convertToU2fSignCommand(convertBytesToVector(TestData::kClientDataHash, sizeof(TestData::kClientDataHash)), getAssertionReq, WebCore::toBufferSource(keyHandle.span()));
+    const auto validSignCommand = convertToU2fSignCommand(std::span { TestData::kClientDataHash }, getAssertionReq, WebCore::toBufferSource(keyHandle.span()));
     EXPECT_TRUE(validSignCommand);
 
     keyHandle.append(0xff);
-    const auto invalidSignCommand = convertToU2fSignCommand(convertBytesToVector(TestData::kClientDataHash, sizeof(TestData::kClientDataHash)), getAssertionReq, WebCore::toBufferSource(keyHandle.span()));
+    const auto invalidSignCommand = convertToU2fSignCommand(std::span { TestData::kClientDataHash }, getAssertionReq, WebCore::toBufferSource(keyHandle.span()));
     EXPECT_FALSE(invalidSignCommand);
 }
 
 TEST(U2fCommandConstructorTest, TestConstructBogusU2fRegistrationCommand)
 {
-    EXPECT_EQ(constructBogusU2fRegistrationCommand(), convertBytesToVector(TestData::kU2fFakeRegisterCommand, sizeof(TestData::kU2fFakeRegisterCommand)));
+    EXPECT_EQ(constructBogusU2fRegistrationCommand(), Vector<uint8_t> { TestData::kU2fFakeRegisterCommand });
 }
 
 } // namespace TestWebKitAPI

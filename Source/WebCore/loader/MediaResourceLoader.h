@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 Igalia S.L
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -66,6 +67,8 @@ public:
     WEBCORE_EXPORT Vector<ResourceResponse> responsesForTesting() const;
     void addResponseForTesting(const ResourceResponse&);
 
+    bool verifyMediaResponse(const URL& requestURL, const ResourceResponse&, const SecurityOrigin*);
+
 private:
     WEBCORE_EXPORT MediaResourceLoader(Document&, Element&, const String& crossOriginMode, FetchOptions::Destination);
 
@@ -77,6 +80,13 @@ private:
     SingleThreadWeakHashSet<MediaResource> m_resources WTF_GUARDED_BY_CAPABILITY(mainThread);
     Vector<ResourceResponse> m_responsesForTesting WTF_GUARDED_BY_CAPABILITY(mainThread);
     FetchOptions::Destination m_destination WTF_GUARDED_BY_CAPABILITY(mainThread);
+
+    struct ValidationInformation {
+        RefPtr<const SecurityOrigin> origin;
+        bool usedOpaqueResponse { false };
+        bool usedServiceWorker { false };
+    };
+    HashMap<URL, ValidationInformation> m_validationLoadInformations WTF_GUARDED_BY_CAPABILITY(mainThread);
 };
 
 class MediaResource : public PlatformMediaResource, public CachedRawResourceClient {
@@ -90,7 +100,7 @@ public:
     bool didPassAccessControlCheck() const override { return m_didPassAccessControlCheck.load(); }
 
     // CachedRawResourceClient
-    void responseReceived(CachedResource&, const ResourceResponse&, CompletionHandler<void()>&&) override;
+    void responseReceived(const CachedResource&, const ResourceResponse&, CompletionHandler<void()>&&) override;
     void redirectReceived(CachedResource&, ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&) override;
     bool shouldCacheResponse(CachedResource&, const ResourceResponse&) override;
     void dataSent(CachedResource&, unsigned long long, unsigned long long) override;

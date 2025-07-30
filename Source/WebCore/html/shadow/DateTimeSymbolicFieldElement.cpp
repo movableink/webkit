@@ -27,8 +27,6 @@
 #include "config.h"
 #include "DateTimeSymbolicFieldElement.h"
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
 #include "EventNames.h"
 #include "FontCascade.h"
 #include "KeyboardEvent.h"
@@ -99,9 +97,11 @@ void DateTimeSymbolicFieldElement::stepUp()
     setValueAsInteger(newValue, DispatchInputAndChangeEvents);
 }
 
-String DateTimeSymbolicFieldElement::value() const
+ValueOrReference<String> DateTimeSymbolicFieldElement::value() const
 {
-    return hasValue() ? m_symbols[m_selectedIndex] : emptyString();
+    if (hasValue())
+        return m_symbols[m_selectedIndex];
+    return emptyString();
 }
 
 String DateTimeSymbolicFieldElement::placeholderValue() const
@@ -138,5 +138,3 @@ String DateTimeSymbolicFieldElement::optionAtIndex(int index) const
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(DATE_AND_TIME_INPUT_TYPES)

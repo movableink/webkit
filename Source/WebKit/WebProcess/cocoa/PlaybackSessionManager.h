@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,9 @@
 #include "PlaybackSessionContextIdentifier.h"
 #include <WebCore/EventListener.h>
 #include <WebCore/HTMLMediaElementEnums.h>
+#if HAVE(PIP_SKIP_PREROLL)
+#include <WebCore/MediaSession.h>
+#endif
 #include <WebCore/PlatformCALayer.h>
 #include <WebCore/PlatformMediaSession.h>
 #include <WebCore/PlaybackSessionModelMediaElement.h>
@@ -88,7 +91,7 @@ private:
     void bufferedTimeChanged(double) final;
     void playbackStartedTimeChanged(double playbackStartedTime) final;
     void rateChanged(OptionSet<WebCore::PlaybackSessionModel::PlaybackState>, double playbackRate, double defaultPlaybackRate) final;
-    void seekableRangesChanged(const WebCore::TimeRanges&, double lastModifiedTime, double liveUpdateInterval) final;
+    void seekableRangesChanged(const WebCore::PlatformTimeRanges&, double lastModifiedTime, double liveUpdateInterval) final;
     void canPlayFastReverseChanged(bool value) final;
     void audioMediaSelectionOptionsChanged(const Vector<WebCore::MediaSelectionOption>& options, uint64_t selectedIndex) final;
     void legibleMediaSelectionOptionsChanged(const Vector<WebCore::MediaSelectionOption>& options, uint64_t selectedIndex) final;
@@ -100,9 +103,8 @@ private:
     void volumeChanged(double) final;
     void isPictureInPictureSupportedChanged(bool) final;
     void isInWindowFullscreenActiveChanged(bool) final;
-#if ENABLE(LINEAR_MEDIA_PLAYER)
     void spatialVideoMetadataChanged(const std::optional<WebCore::SpatialVideoMetadata>&) final;
-#endif
+    void videoProjectionMetadataChanged(const std::optional<WebCore::VideoProjectionMetadata>&) final;
 
     PlaybackSessionInterfaceContext(PlaybackSessionManager&, PlaybackSessionContextIdentifier);
 
@@ -110,7 +112,14 @@ private:
     PlaybackSessionContextIdentifier m_contextId;
 };
 
-class PlaybackSessionManager : public RefCounted<PlaybackSessionManager>, private IPC::MessageReceiver, public CanMakeCheckedPtr<PlaybackSessionManager> {
+class PlaybackSessionManager
+    : public RefCounted<PlaybackSessionManager>
+    , private IPC::MessageReceiver
+    , public CanMakeCheckedPtr<PlaybackSessionManager>
+#if HAVE(PIP_SKIP_PREROLL)
+    , public WebCore::MediaSessionObserver
+#endif
+    {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PlaybackSessionManager);
 public:
@@ -129,7 +138,12 @@ public:
     void mediaEngineChanged(WebCore::HTMLMediaElement&);
     PlaybackSessionContextIdentifier contextIdForMediaElement(WebCore::HTMLMediaElement&);
 
+    WebCore::HTMLMediaElement* mediaElementWithContextId(PlaybackSessionContextIdentifier) const;
     WebCore::HTMLMediaElement* currentPlaybackControlsElement() const;
+
+#if HAVE(PIP_SKIP_PREROLL)
+    void actionHandlersChanged() final;
+#endif
 
 #if !RELEASE_LOG_DISABLED
     void sendLogIdentifierForMediaElement(WebCore::HTMLMediaElement&);
@@ -149,6 +163,9 @@ private:
     void removeContext(PlaybackSessionContextIdentifier);
     void addClientForContext(PlaybackSessionContextIdentifier);
     void removeClientForContext(PlaybackSessionContextIdentifier);
+#if HAVE(PIP_SKIP_PREROLL)
+    void setMediaSessionAndRegisterAsObserver();
+#endif
 
     // Interface to PlaybackSessionInterfaceContext
     void durationChanged(PlaybackSessionContextIdentifier, double);
@@ -156,7 +173,7 @@ private:
     void bufferedTimeChanged(PlaybackSessionContextIdentifier, double bufferedTime);
     void playbackStartedTimeChanged(PlaybackSessionContextIdentifier, double playbackStartedTime);
     void rateChanged(PlaybackSessionContextIdentifier, OptionSet<WebCore::PlaybackSessionModel::PlaybackState>, double playbackRate, double defaultPlaybackRate);
-    void seekableRangesChanged(PlaybackSessionContextIdentifier, const WebCore::TimeRanges&, double lastModifiedTime, double liveUpdateInterval);
+    void seekableRangesChanged(PlaybackSessionContextIdentifier, const WebCore::PlatformTimeRanges&, double lastModifiedTime, double liveUpdateInterval);
     void canPlayFastReverseChanged(PlaybackSessionContextIdentifier, bool value);
     void audioMediaSelectionOptionsChanged(PlaybackSessionContextIdentifier, const Vector<WebCore::MediaSelectionOption>& options, uint64_t selectedIndex);
     void legibleMediaSelectionOptionsChanged(PlaybackSessionContextIdentifier, const Vector<WebCore::MediaSelectionOption>& options, uint64_t selectedIndex);
@@ -169,6 +186,10 @@ private:
     void isPictureInPictureSupportedChanged(PlaybackSessionContextIdentifier, bool);
     void isInWindowFullscreenActiveChanged(PlaybackSessionContextIdentifier, bool);
     void spatialVideoMetadataChanged(PlaybackSessionContextIdentifier, const std::optional<WebCore::SpatialVideoMetadata>&);
+    void videoProjectionMetadataChanged(PlaybackSessionContextIdentifier, const std::optional<WebCore::VideoProjectionMetadata>&);
+#if HAVE(PIP_SKIP_PREROLL)
+    void canSkipAdChanged(PlaybackSessionContextIdentifier, bool);
+#endif
 
     // Messages from PlaybackSessionManagerProxy
     void play(PlaybackSessionContextIdentifier);
@@ -188,6 +209,7 @@ private:
     void handleControlledElementIDRequest(PlaybackSessionContextIdentifier);
     void togglePictureInPicture(PlaybackSessionContextIdentifier);
     void enterFullscreen(PlaybackSessionContextIdentifier);
+    void setPlayerIdentifierForVideoElement(PlaybackSessionContextIdentifier);
     void exitFullscreen(PlaybackSessionContextIdentifier);
     void enterInWindow(PlaybackSessionContextIdentifier);
     void exitInWindow(PlaybackSessionContextIdentifier);
@@ -197,6 +219,9 @@ private:
     void setPlayingOnSecondScreen(PlaybackSessionContextIdentifier, bool value);
     void sendRemoteCommand(PlaybackSessionContextIdentifier, WebCore::PlatformMediaSession::RemoteControlCommandType, const WebCore::PlatformMediaSession::RemoteCommandArgument&);
     void setSoundStageSize(PlaybackSessionContextIdentifier, WebCore::AudioSessionSoundStageSize);
+#if HAVE(PIP_SKIP_PREROLL)
+    void skipAd(PlaybackSessionContextIdentifier);
+#endif
 
 #if HAVE(SPATIAL_TRACKING_LABEL)
     void setSpatialTrackingLabel(PlaybackSessionContextIdentifier, const String&);
@@ -216,9 +241,13 @@ private:
     HashMap<PlaybackSessionContextIdentifier, ModelInterfaceTuple> m_contextMap;
     Markable<PlaybackSessionContextIdentifier> m_controlsManagerContextId;
     HashCountedSet<PlaybackSessionContextIdentifier> m_clientCounts;
+#if HAVE(PIP_SKIP_PREROLL)
+    WeakPtr<WebCore::MediaSession> m_mediaSession;
+    bool m_canSkipAd { false };
+#endif
 
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
 #endif
 };

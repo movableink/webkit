@@ -31,6 +31,7 @@
 #import <wtf/BlockPtr.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/cocoa/Entitlements.h>
+#import <wtf/darwin/XPCExtras.h>
 #import <wtf/spi/cocoa/SecuritySPI.h>
 
 namespace WebKit {
@@ -125,15 +126,15 @@ void LaunchServicesDatabaseObserver::handleEvent(xpc_connection_t connection, xp
         Locker locker { m_connectionsLock };
         for (size_t i = 0; i < m_connections.size(); i++) {
             if (m_connections[i].get() == connection) {
-                m_connections.remove(i);
+                m_connections.removeAt(i);
                 break;
             }
         }
         return;
     }
     if (xpc_get_type(event) == XPC_TYPE_DICTIONARY) {
-        auto* messageName = xpc_dictionary_get_string(event, xpcMessageNameKey);
-        if (LaunchServicesDatabaseXPCConstants::xpcRequestLaunchServicesDatabaseUpdateMessageName != messageName)
+        String messageName = xpcDictionaryGetString(event, xpcMessageNameKey);
+        if (messageName != LaunchServicesDatabaseXPCConstants::xpcRequestLaunchServicesDatabaseUpdateMessageName)
             return;
         startObserving(connection);
     }

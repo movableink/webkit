@@ -194,6 +194,10 @@ public:
     operator QPointF() const;
 #endif
 
+#if PLATFORM(WIN)
+    WEBCORE_EXPORT FloatPoint(const POINT&);
+#endif
+
     WEBCORE_EXPORT FloatPoint matrixTransform(const TransformationMatrix&) const;
     WEBCORE_EXPORT FloatPoint matrixTransform(const AffineTransform&) const;
 
@@ -323,9 +327,9 @@ inline FloatPoint toFloatPoint(const FloatSize& a)
     return FloatPoint(a.width(), a.height());
 }
 
-inline bool areEssentiallyEqual(const FloatPoint& a, const FloatPoint& b)
+inline bool areEssentiallyEqual(const FloatPoint& a, const FloatPoint& b, float epsilon = std::numeric_limits<float>::epsilon())
 {
-    return WTF::areEssentiallyEqual(a.x(), b.x()) && WTF::areEssentiallyEqual(a.y(), b.y());
+    return WTF::areEssentiallyEqual(a.x(), b.x(), epsilon) && WTF::areEssentiallyEqual(a.y(), b.y(), epsilon);
 }
 
 inline void add(Hasher& hasher, const FloatPoint& point)

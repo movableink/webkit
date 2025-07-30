@@ -258,7 +258,7 @@ macro doVMEntry(makeCall)
         move t5, vm
         jmp _llint_throw_stack_overflow_error_from_vm_entry
     else
-        bpb t3, VM::m_softStackLimit[vm], _llint_throw_stack_overflow_error_from_vm_entry
+        bplteq t3, VM::m_softStackLimit[vm], _llint_throw_stack_overflow_error_from_vm_entry
     end
 
 .stackHeightOK:
@@ -728,9 +728,9 @@ macro functionArityCheck(opcodeName, doneLabel)
     subp cfr, t3, t5
     loadp CodeBlock::m_vm[t1], t0
     if C_LOOP
-        bpbeq VM::m_cloopStackLimit[t0], t5, .stackHeightOK
+        bplteq VM::m_cloopStackLimit[t0], t5, .stackHeightOK
     else
-        bpbeq VM::m_softStackLimit[t0], t5, .stackHeightOK
+        bplteq VM::m_softStackLimit[t0], t5, .stackHeightOK
     end
 
     prepareStateForCCall()
@@ -2609,7 +2609,7 @@ macro nativeCallTrampoline(executableOffsetToFunction)
     btpz a2, (constexpr JSFunction::rareDataTag), .isExecutable
     loadp (FunctionRareData::m_executable - (constexpr JSFunction::rareDataTag))[a2], a2
 .isExecutable:
-    loadp JSFunction::m_scope[a0], a0
+    loadp JSCallee::m_scope[a0], a0
     loadp JSGlobalObject::m_vm[a0], a1
     storep cfr, VM::topCallFrame[a1]
     move cfr, a1
@@ -2622,7 +2622,7 @@ macro nativeCallTrampoline(executableOffsetToFunction)
     end
 
     loadp Callee + PayloadOffset[cfr], t3
-    loadp JSFunction::m_scope[t3], t3
+    loadp JSCallee::m_scope[t3], t3
     loadp JSGlobalObject::m_vm[t3], t3
 
     addp 8, sp

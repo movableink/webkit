@@ -31,17 +31,17 @@
 TEST(WTF, NSUUIDConversionForDeletedValue)
 {
     WTF::UUID deletedUUID { WTF::UUID::deletedValue };
-    NSUUID *deletedNSUUID = deletedUUID;
-    EXPECT_STREQ("00000000-0000-0000-0000-000000000001", [[deletedUUID UUIDString] UTF8String]);
-    auto uuid = WTF::UUID::fromNSUUID(deletedNSUUID);
+    RetainPtr deletedNSUUID = deletedUUID.createNSUUID();
+    EXPECT_STREQ("00000000-0000-0000-0000-000000000001", [[deletedNSUUID UUIDString] UTF8String]);
+    auto uuid = WTF::UUID::fromNSUUID(deletedNSUUID.get());
     EXPECT_FALSE(uuid);
 }
 
 TEST(WTF, NSUUIDConversionForEmptyValue)
 {
     WTF::UUID emptyUUID { WTF::UUID::emptyValue };
-    NSUUID *emptyNSUUID = emptyUUID;
+    RetainPtr emptyNSUUID = emptyUUID.createNSUUID();
     EXPECT_STREQ("00000000-0000-0000-0000-000000000000", [[emptyNSUUID UUIDString] UTF8String]);
-    auto uuid = WTF::UUID::fromNSUUID(emptyNSUUID);
+    auto uuid = WTF::UUID::fromNSUUID(emptyNSUUID.get());
     EXPECT_FALSE(uuid);
 }

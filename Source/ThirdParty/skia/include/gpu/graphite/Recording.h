@@ -9,11 +9,15 @@
 #define skgpu_graphite_Recording_DEFINED
 
 #include "include/core/SkRefCnt.h"
+#include "include/private/base/SkAPI.h"
 #include "include/private/base/SkTArray.h"
-
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <unordered_set>
 #include <vector>
+
+struct SkISize;
 
 namespace skgpu {
 class RefCntedCallback;
@@ -21,6 +25,7 @@ class RefCntedCallback;
 
 namespace skgpu::graphite {
 
+class Caps;
 class CommandBuffer;
 class RecordingPriv;
 class Resource;
@@ -44,7 +49,8 @@ private:
     // replay, and it handles the target proxy's instantiation with the provided target.
     class LazyProxyData {
     public:
-        LazyProxyData(const TextureInfo&);
+        LazyProxyData(const Caps*, SkISize dimensions, const TextureInfo&);
+        ~LazyProxyData();
 
         TextureProxy* lazyProxy();
         sk_sp<TextureProxy> refLazyProxy();
@@ -70,7 +76,7 @@ private:
     bool addCommands(CommandBuffer*, ResourceProvider*);
     void addResourceRef(sk_sp<Resource>);
 
-    // Used to verify ordering
+    // Used to verify ordering if recorder ID is not SK_InvalidGenID
     uint32_t fUniqueID;
     uint32_t fRecorderID;
 

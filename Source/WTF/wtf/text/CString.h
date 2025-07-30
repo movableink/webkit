@@ -44,8 +44,8 @@ class CStringBuffer final : public RefCounted<CStringBuffer> {
 public:
     size_t length() const { return m_length; }
 
-    std::span<const LChar> span() const { return unsafeMakeSpan(byteCast<LChar>(data()), m_length); }
-    std::span<const char> spanIncludingNullCharacter() const { return unsafeMakeSpan(data(), m_length + 1); }
+    std::span<const char> span() const LIFETIME_BOUND { return unsafeMakeSpan(m_data, m_length); }
+    std::span<const char> spanIncludingNullTerminator() const LIFETIME_BOUND { return unsafeMakeSpan(m_data, m_length + 1); }
 
 private:
     friend class CString;
@@ -53,51 +53,53 @@ private:
     static Ref<CStringBuffer> createUninitialized(size_t length);
 
     CStringBuffer(size_t length) : m_length(length) { }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    const char* data() const { return reinterpret_cast_ptr<const char*>(this + 1); }
-    char* mutableData() { return reinterpret_cast_ptr<char*>(this + 1); }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-    std::span<char> mutableSpan() { return unsafeMakeSpan(mutableData(), m_length); }
-    std::span<char> mutableSpanIncludingNullCharacter() { return unsafeMakeSpan(mutableData(), m_length + 1); }
+    std::span<char> mutableSpan() LIFETIME_BOUND { return unsafeMakeSpan(m_data, m_length); }
+    std::span<char> mutableSpanIncludingNullTerminator() LIFETIME_BOUND { return unsafeMakeSpan(m_data, m_length + 1); }
 
     const size_t m_length;
+    char m_data[0];
 };
 
-// A container for a null-terminated char array supporting copy-on-write assignment.
-// The contained char array may be null.
+// NOTE: Prefer using String.
+
+// A null-terminated, nullable, copy-on-write char array. Useful for interacting with C-style APIs.
+
+// Like const char*, CString does not know its encoding. The caller must apply the right encoding when extracting characters.
 class CString final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     CString() { }
-    WTF_EXPORT_PRIVATE CString(const char*);
-    WTF_EXPORT_PRIVATE CString(std::span<const char>);
-    CString(std::span<const LChar>);
-    CString(std::span<const char8_t> characters) : CString(byteCast<LChar>(characters)) { }
+    WTF_EXPORT_PRIVATE CString(ASCIILiteral);
+    WTF_EXPORT_PRIVATE CString(const char*); // Any encoding
+    WTF_EXPORT_PRIVATE CString(std::span<const char>); // Any encoding
+    CString(std::span<const LChar>); // Latin1
+    CString(std::span<const char8_t> characters) : CString(byteCast<LChar>(characters)) { } // UTF-8
     CString(CStringBuffer* buffer) : m_buffer(buffer) { }
     WTF_EXPORT_PRIVATE static CString newUninitialized(size_t length, std::span<char>& characterBuffer);
     CString(HashTableDeletedValueType) : m_buffer(HashTableDeletedValue) { }
 
-    const char* data() const;
+    const char* data() const LIFETIME_BOUND; // Any encoding
 
-    std::string toStdString() const { return m_buffer ? std::string(m_buffer->data()) : std::string(); }
+    std::string toStdString() const { return m_buffer ? std::string(m_buffer->spanIncludingNullTerminator().data()) : std::string(); }
 
-    std::span<const LChar> span() const;
-    std::span<const char> spanIncludingNullTerminator() const;
+    std::span<const char> span() const LIFETIME_BOUND; // Any encoding
+    std::span<const char> spanIncludingNullTerminator() const LIFETIME_BOUND; // Any encoding
 
-    WTF_EXPORT_PRIVATE char* mutableData();
+    // Copy-on-write
+    WTF_EXPORT_PRIVATE std::span<char> mutableSpan() LIFETIME_BOUND;
+    WTF_EXPORT_PRIVATE std::span<char> mutableSpanIncludingNullTerminator() LIFETIME_BOUND;
+    WTF_EXPORT_PRIVATE void grow(size_t newLength);
+
     size_t length() const;
 
     bool isNull() const { return !m_buffer; }
     bool isSafeToSendToAnotherThread() const;
 
-    CStringBuffer* buffer() const { return m_buffer.get(); }
+    CStringBuffer* buffer() const LIFETIME_BOUND { return m_buffer.get(); }
 
     bool isHashTableDeletedValue() const { return m_buffer.isHashTableDeletedValue(); }
 
     WTF_EXPORT_PRIVATE unsigned hash() const;
-
-    // Useful if you want your CString to hold dynamic data.
-    WTF_EXPORT_PRIVATE void grow(size_t newLength);
 
 private:
     void copyBufferIfNeeded();
@@ -106,7 +108,6 @@ private:
 };
 
 WTF_EXPORT_PRIVATE bool operator==(const CString&, const CString&);
-WTF_EXPORT_PRIVATE bool operator==(const CString&, const char*);
 WTF_EXPORT_PRIVATE bool operator<(const CString&, const CString&);
 
 struct CStringHash {
@@ -128,10 +129,10 @@ inline CString::CString(std::span<const LChar> bytes)
 
 inline const char* CString::data() const
 {
-    return m_buffer ? m_buffer->data() : nullptr;
+    return m_buffer ? m_buffer->spanIncludingNullTerminator().data() : nullptr;
 }
 
-inline std::span<const LChar> CString::span() const
+inline std::span<const char> CString::span() const
 {
     if (m_buffer)
         return m_buffer->span();
@@ -141,7 +142,7 @@ inline std::span<const LChar> CString::span() const
 inline std::span<const char> CString::spanIncludingNullTerminator() const
 {
     if (m_buffer)
-        return m_buffer->spanIncludingNullCharacter();
+        return m_buffer->spanIncludingNullTerminator();
     return { };
 }
 
@@ -149,6 +150,9 @@ inline size_t CString::length() const
 {
     return m_buffer ? m_buffer->length() : 0;
 }
+
+// CString is null terminated
+inline const char* safePrintfType(const CString& cstring) { return cstring.data(); }
 
 } // namespace WTF
 

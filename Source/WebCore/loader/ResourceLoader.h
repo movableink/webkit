@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,6 +60,10 @@ class LegacyPreviewLoader;
 class LocalFrame;
 class NetworkLoadMetrics;
 
+#if ENABLE(CONTENT_EXTENSIONS)
+class ResourceMonitor;
+#endif
+
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ResourceLoader);
 class ResourceLoader : public RefCountedAndCanMakeWeakPtr<ResourceLoader>, protected ResourceHandleClient {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ResourceLoader);
@@ -70,7 +74,7 @@ public:
 
     virtual void init(ResourceRequest&&, CompletionHandler<void(bool)>&&);
 
-    void deliverResponseAndData(const ResourceResponse&, RefPtr<FragmentedSharedBuffer>&&);
+    void deliverResponseAndData(ResourceResponse&&, RefPtr<FragmentedSharedBuffer>&&);
 
 #if PLATFORM(IOS_FAMILY)
     virtual void startLoading()
@@ -113,7 +117,7 @@ public:
 
     virtual void willSendRequest(ResourceRequest&&, const ResourceResponse& redirectResponse, CompletionHandler<void(ResourceRequest&&)>&& callback);
     virtual void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent);
-    virtual void didReceiveResponse(const ResourceResponse&, CompletionHandler<void()>&& policyCompletionHandler);
+    virtual void didReceiveResponse(ResourceResponse&&, CompletionHandler<void()>&& policyCompletionHandler);
     virtual void didReceiveData(const SharedBuffer&, long long encodedDataLength, DataPayloadType);
     virtual void didReceiveBuffer(const FragmentedSharedBuffer&, long long encodedDataLength, DataPayloadType);
     virtual void didFinishLoading(const NetworkLoadMetrics&);
@@ -129,7 +133,7 @@ public:
 
 #if USE(QUICK_LOOK)
     bool isQuickLookResource() const;
-    virtual void didReceivePreviewResponse(const ResourceResponse&) { };
+    virtual void didReceivePreviewResponse(ResourceResponse&&) { };
 #endif
 
     const URL& url() const { return m_request.url(); }
@@ -160,7 +164,7 @@ public:
     void unschedule(WTF::SchedulePair&);
 #endif
 
-    LocalFrame* frame() const { return m_frame.get(); }
+    WEBCORE_EXPORT LocalFrame* frame() const;
     RefPtr<LocalFrame> protectedFrame() const;
 
     const ResourceLoaderOptions& options() const { return m_options; }
@@ -169,6 +173,10 @@ public:
     ResourceRequest takeDeferredRequest() { return std::exchange(m_deferredRequest, { }); }
 
     bool isPDFJSResourceLoad() const;
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    WEBCORE_EXPORT ResourceMonitor* resourceMonitorIfExists();
+#endif
 
 protected:
     ResourceLoader(LocalFrame&, ResourceLoaderOptions);
@@ -188,7 +196,7 @@ protected:
     virtual void willSendRequestInternal(ResourceRequest&&, const ResourceResponse& redirectResponse, CompletionHandler<void(ResourceRequest&&)>&&);
 
     RefPtr<ResourceHandle> m_handle;
-    RefPtr<LocalFrame> m_frame;
+    WeakPtr<LocalFrame> m_frame;
     RefPtr<DocumentLoader> m_documentLoader;
     ResourceResponse m_response;
     ResourceLoadTiming m_loadTiming;

@@ -105,7 +105,7 @@ void LLIntPlan::compileFunction(FunctionCodeIndex functionIndex)
     auto parseAndCompileResult = parseAndCompileBytecode(function.data, signature, m_moduleInformation.get(), functionIndex);
     endCompilerSignpost(CompilationMode::LLIntMode, functionIndexSpace);
 
-    if (UNLIKELY(!parseAndCompileResult)) {
+    if (!parseAndCompileResult) [[unlikely]] {
         Locker locker { m_lock };
         if (!m_errorMessage) {
             // Multiple compiles could fail simultaneously. We arbitrarily choose the first.
@@ -116,10 +116,11 @@ void LLIntPlan::compileFunction(FunctionCodeIndex functionIndex)
     }
 
     if (Options::useWasmTailCalls()) {
-        Locker locker { m_lock };
-
-        for (auto successor : parseAndCompileResult->get()->tailCallSuccessors())
-            addTailCallEdge(m_moduleInformation->importFunctionCount() + parseAndCompileResult->get()->functionIndex(), successor);
+        if (parseAndCompileResult->get()->hasTailCallSuccessors()) {
+            Locker locker { m_lock };
+            for (auto successor : parseAndCompileResult->get()->tailCallSuccessors())
+                addTailCallEdge(m_moduleInformation->importFunctionCount() + parseAndCompileResult->get()->functionIndex(), successor);
+        }
 
         if (parseAndCompileResult->get()->tailCallClobbersInstance()) {
             ASSERT(functionIndexSpace == m_moduleInformation->importFunctionCount() + parseAndCompileResult->get()->functionIndex());
@@ -128,7 +129,7 @@ void LLIntPlan::compileFunction(FunctionCodeIndex functionIndex)
     }
 
     m_wasmInternalFunctions[functionIndex] = WTFMove(*parseAndCompileResult);
-    if (UNLIKELY(Options::dumpGeneratedWasmBytecodes()))
+    if (Options::dumpGeneratedWasmBytecodes()) [[unlikely]]
         BytecodeDumper::dumpBlock(m_wasmInternalFunctions[functionIndex].get(), m_moduleInformation, WTF::dataFile());
 
     LLIntCallee* llintCallee = nullptr;
@@ -136,7 +137,7 @@ void LLIntPlan::compileFunction(FunctionCodeIndex functionIndex)
         auto callee = LLIntCallee::create(*m_wasmInternalFunctions[functionIndex], functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace));
         ASSERT(!callee->entrypoint());
 
-        if (Options::useWasmJIT()) {
+        if (Options::useWasmJIT() && Options::useBBQJIT()) {
 #if ENABLE(JIT)
             if (m_moduleInformation->usesSIMD(functionIndex))
                 callee->setEntrypoint(LLInt::wasmFunctionEntryThunkSIMD().retaggedCode<WasmEntryPtrTag>());
@@ -183,7 +184,7 @@ void LLIntPlan::didCompleteCompilation()
 
     unsigned functionCount = m_wasmInternalFunctions.size();
     if (!m_callees && functionCount) {
-        m_callees = m_calleesVector.data();
+        m_callees = m_calleesVector.span().data();
         if (!m_moduleInformation->clobberingTailCalls().isEmpty())
             computeTransitiveTailCalls();
     }
@@ -242,11 +243,11 @@ void LLIntPlan::didFailInStreaming(String&& message)
         fail(WTFMove(message));
 }
 
-void LLIntPlan::work(CompilationEffort effort)
+void LLIntPlan::work()
 {
     switch (m_state) {
     case State::Prepared:
-        compileFunctions(effort);
+        compileFunctions();
         break;
     case State::Compiled:
         break;
@@ -272,7 +273,7 @@ void LLIntPlan::addTailCallEdge(uint32_t callerIndex, uint32_t calleeIndex)
 void LLIntPlan::computeTransitiveTailCalls() const
 {
     // FIXME: Use FunctionCodeIndex -> FunctionSpaceIndex by adding the right HashTraits.
-    GraphNodeWorklist<uint32_t, HashSet<uint32_t, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>> worklist;
+    GraphNodeWorklist<uint32_t, UncheckedKeyHashSet<uint32_t, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>> worklist;
 
     for (auto clobberingTailCall : m_moduleInformation->clobberingTailCalls())
         worklist.push(clobberingTailCall);

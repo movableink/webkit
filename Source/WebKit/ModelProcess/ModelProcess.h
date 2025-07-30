@@ -30,7 +30,7 @@
 #include "AuxiliaryProcess.h"
 #include "SandboxExtension.h"
 #include "SharedPreferencesForWebProcess.h"
-#include "WebPageProxyIdentifier.h"
+#include <WebCore/ProcessIdentifier.h>
 #include <WebCore/Timer.h>
 #include <pal/SessionID.h>
 #include <wtf/Function.h>
@@ -38,6 +38,12 @@
 #include <wtf/MonotonicTime.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
+
+#if PLATFORM(VISION) && ENABLE(GPU_PROCESS)
+namespace IPC {
+class SharedFileHandle;
+}
+#endif
 
 namespace WebKit {
 
@@ -71,7 +77,12 @@ public:
 
     const String& applicationVisibleName() const { return m_applicationVisibleName; }
 
+#if PLATFORM(VISION) && ENABLE(GPU_PROCESS)
+    void requestSharedSimulationConnection(WebCore::ProcessIdentifier, CompletionHandler<void(std::optional<IPC::SharedFileHandle>)>&&);
+#endif
+
     void webProcessConnectionCountForTesting(CompletionHandler<void(uint64_t)>&&);
+    void modelPlayerCountForTesting(CompletionHandler<void(uint64_t)>&&);
 
 private:
     void lowMemoryHandler(Critical, Synchronous);
@@ -90,7 +101,7 @@ private:
 
     // Message Handlers
     void initializeModelProcess(ModelProcessCreationParameters&&, CompletionHandler<void()>&&);
-    void createModelConnectionToWebProcess(WebCore::ProcessIdentifier, PAL::SessionID, IPC::Connection::Handle&&, ModelProcessConnectionParameters&&, CompletionHandler<void()>&&);
+    void createModelConnectionToWebProcess(WebCore::ProcessIdentifier, PAL::SessionID, IPC::Connection::Handle&&, ModelProcessConnectionParameters&&, const std::optional<String>& attributionTaskID, CompletionHandler<void()>&&);
     void sharedPreferencesForWebProcessDidChange(WebCore::ProcessIdentifier, SharedPreferencesForWebProcess&&, CompletionHandler<void()>&&);
     void addSession(PAL::SessionID);
     void removeSession(PAL::SessionID);

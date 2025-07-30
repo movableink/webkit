@@ -55,6 +55,19 @@ class AtomicSerial : angle::NonCopyable
     std::atomic<uint64_t> mValue{0};
 };
 
+class AtomicCommandBufferError : angle::NonCopyable
+{
+  public:
+    void store(MTLCommandBufferError value) { mValue.store(value, std::memory_order_release); }
+    MTLCommandBufferError pop()
+    {
+        return mValue.exchange(MTLCommandBufferErrorNone, std::memory_order_acq_rel);
+    }
+
+  private:
+    std::atomic<MTLCommandBufferError> mValue{MTLCommandBufferErrorNone};
+};
+
 class CommandQueue final : public WrappedObject<id<MTLCommandQueue>>, angle::NonCopyable
 {
   public:
@@ -93,7 +106,7 @@ class CommandQueue final : public WrappedObject<id<MTLCommandQueue>>, angle::Non
         return *this;
     }
 
-    AutoObjCPtr<id<MTLCommandBuffer>> makeMetalCommandBuffer(uint64_t *queueSerialOut);
+    angle::ObjCPtr<id<MTLCommandBuffer>> makeMetalCommandBuffer(uint64_t *queueSerialOut);
     void onCommandBufferCommitted(id<MTLCommandBuffer> buf, uint64_t serial);
 
     uint64_t getNextRenderPassEncoderSerial();
@@ -103,6 +116,7 @@ class CommandQueue final : public WrappedObject<id<MTLCommandQueue>>, angle::Non
     void setActiveTimeElapsedEntry(uint64_t id);
     bool isTimeElapsedEntryComplete(uint64_t id);
     double getTimeElapsedEntryInSeconds(uint64_t id);
+    MTLCommandBufferError popCmdBufferError() { return mCmdBufferError.pop(); }
 
     bool isDeviceLost() const { return mIsDeviceLost; }
 
@@ -114,7 +128,7 @@ class CommandQueue final : public WrappedObject<id<MTLCommandQueue>>, angle::Non
 
     struct CmdBufferQueueEntry
     {
-        AutoObjCPtr<id<MTLCommandBuffer>> buffer;
+        angle::ObjCPtr<id<MTLCommandBuffer>> buffer;
         uint64_t serial;
     };
     std::deque<CmdBufferQueueEntry> mMetalCmdBuffers;
@@ -143,6 +157,8 @@ class CommandQueue final : public WrappedObject<id<MTLCommandQueue>>, angle::Non
 
     mutable std::mutex mLock;
     mutable std::condition_variable mCompletedBufferSerialCv;
+
+    AtomicCommandBufferError mCmdBufferError;
 
     void addCommandBufferToTimeElapsedEntry(std::lock_guard<std::mutex> &lg, uint64_t id);
     void recordCommandBufferTimeElapsed(std::lock_guard<std::mutex> &lg,
@@ -177,7 +193,7 @@ class CommandBuffer final : public WrappedObject<id<MTLCommandBuffer>>, angle::N
     uint64_t queueEventSignal(id<MTLEvent> event, uint64_t value);
     void serverWaitEvent(id<MTLEvent> event, uint64_t value);
 
-    void insertDebugSign(const std::string &marker);
+    void insertDebugSignpost(const std::string &marker);
     void pushDebugGroup(const std::string &marker);
     void popDebugGroup();
 
@@ -228,10 +244,10 @@ class CommandBuffer final : public WrappedObject<id<MTLCommandBuffer>>, angle::N
 
     mutable std::mutex mLock;
 
-    std::vector<std::string> mPendingDebugSigns;
+    std::vector<std::string> mPendingDebugSignposts;
     struct PendingEvent
     {
-        AutoObjCPtr<id<MTLEvent>> event;
+        angle::ObjCPtr<id<MTLEvent>> event;
         uint64_t signalValue = 0;
     };
     std::vector<PendingEvent> mPendingSignalEvents;
@@ -263,7 +279,7 @@ class CommandEncoder : public WrappedObject<id<MTLCommandEncoder>>, angle::NonCo
     CommandEncoder &markResourceBeingWrittenByGPU(const BufferRef &buffer);
     CommandEncoder &markResourceBeingWrittenByGPU(const TextureRef &texture);
 
-    void insertDebugSign(NSString *label);
+    void insertDebugSignpost(NSString *label);
 
     virtual void pushDebugGroup(NSString *label);
     virtual void popDebugGroup();
@@ -278,7 +294,7 @@ class CommandEncoder : public WrappedObject<id<MTLCommandEncoder>>, angle::NonCo
 
     void set(id<MTLCommandEncoder> metalCmdEncoder);
 
-    virtual void insertDebugSignImpl(NSString *marker);
+    virtual void insertDebugSignpostImpl(NSString *marker);
 
   private:
     bool isRenderEncoder() const { return getType() == Type::RENDER; }
@@ -424,8 +440,7 @@ class RenderCommandEncoder final : public CommandEncoder
     RenderCommandEncoder &setStencilRefVals(uint32_t frontRef, uint32_t backRef);
     RenderCommandEncoder &setStencilRefVal(uint32_t ref);
 
-    RenderCommandEncoder &setViewport(const MTLViewport &viewport,
-                                      id<MTLRasterizationRateMap> map);
+    RenderCommandEncoder &setViewport(const MTLViewport &viewport, id<MTLRasterizationRateMap> map);
     RenderCommandEncoder &setScissorRect(const MTLScissorRect &rect,
                                          id<MTLRasterizationRateMap> map);
 
@@ -492,13 +507,13 @@ class RenderCommandEncoder final : public CommandEncoder
                                             uint32_t offset,
                                             uint32_t index);
     RenderCommandEncoder &setBytes(gl::ShaderType shaderType,
-                                   const uint8_t *bytes,
+                                   const void *bytes,
                                    size_t size,
                                    uint32_t index);
-    template <typename T>
+    template <typename T, typename = std::enable_if_t<!std::is_pointer_v<T>>>
     RenderCommandEncoder &setData(gl::ShaderType shaderType, const T &data, uint32_t index)
     {
-        return setBytes(shaderType, reinterpret_cast<const uint8_t *>(&data), sizeof(T), index);
+        return setBytes(shaderType, &data, sizeof(data), index);
     }
     RenderCommandEncoder &setSamplerState(gl::ShaderType shaderType,
                                           id<MTLSamplerState> state,
@@ -597,7 +612,7 @@ class RenderCommandEncoder final : public CommandEncoder
     {
         return static_cast<id<MTLRenderCommandEncoder>>(CommandEncoder::get());
     }
-    void insertDebugSignImpl(NSString *label) override;
+    void insertDebugSignpostImpl(NSString *label) override;
 
     void initAttachmentWriteDependencyAndScissorRect(const RenderPassAttachmentDesc &attachment);
     void initWriteDependency(const TextureRef &texture);
@@ -617,9 +632,9 @@ class RenderCommandEncoder final : public CommandEncoder
 
     RenderPassDesc mRenderPassDesc;
     // Cached Objective-C render pass desc to avoid re-allocate every frame.
-    mtl::AutoObjCObj<MTLRenderPassDescriptor> mCachedRenderPassDescObjC;
+    angle::ObjCPtr<MTLRenderPassDescriptor> mCachedRenderPassDescObjC;
 
-    mtl::AutoObjCObj<NSString> mLabel;
+    angle::ObjCPtr<NSString> mLabel;
 
     MTLScissorRect mRenderPassMaxScissorRect;
 
@@ -718,11 +733,11 @@ class ComputeCommandEncoder final : public CommandEncoder
     ComputeCommandEncoder &setBufferForWrite(const BufferRef &buffer,
                                              uint32_t offset,
                                              uint32_t index);
-    ComputeCommandEncoder &setBytes(const uint8_t *bytes, size_t size, uint32_t index);
+    ComputeCommandEncoder &setBytes(const void *bytes, size_t size, uint32_t index);
     template <typename T>
     ComputeCommandEncoder &setData(const T &data, uint32_t index)
     {
-        return setBytes(reinterpret_cast<const uint8_t *>(&data), sizeof(T), index);
+        return setBytes(&data, sizeof(data), index);
     }
     ComputeCommandEncoder &setSamplerState(id<MTLSamplerState> state,
                                            float lodMinClamp,

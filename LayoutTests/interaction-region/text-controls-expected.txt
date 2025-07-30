@@ -12,12 +12,9 @@
         (rect (0,0) width=800 height=600)
 
       (interaction regions [
-        (interaction (9,9) width=211 height=204)
-        (cornerRadius 5.00),
-        (interaction (225,177) width=332 height=57)
-        (cornerRadius 5.00),
-        (interaction (8,234) width=350 height=75)
-        (cornerRadius 5.00)])
+        (interaction (9,9) width=211 height=204),
+        (interaction (225,177) width=332 height=57),
+        (interaction (8,234) width=350 height=75)])
       )
     )
   )

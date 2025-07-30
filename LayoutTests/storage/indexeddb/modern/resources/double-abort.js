@@ -1,17 +1,13 @@
 description("This test aborts the same transaction twice, making the appropriate exception is thrown.");
 
+var openRequest = null;
 indexedDBTest(prepareDatabase);
-
-
-function done()
-{
-    finishJSTest();
-}
 
 function prepareDatabase(event)
 {
     debug("Initial upgrade needed: Old version - " + event.oldVersion + " New version - " + event.newVersion);
 
+    openRequest = event.target;
     var versionTransaction = event.target.transaction;
     var database = event.target.result;
 
@@ -23,17 +19,16 @@ function prepareDatabase(event)
     }
 
     versionTransaction.onabort = function(event) {
-        debug("Initial upgrade versionchange transaction aborted");
-        done();
+        // Set event handler to null to avoid unexpected error message being printed.
+        openRequest.onerror = null;
+        endTestWithLog("Initial upgrade versionchange transaction aborted");
     }
 
     versionTransaction.oncomplete = function(event) {
-        debug("Initial upgrade versionchange transaction unexpected complete");
-        done();
+        endTestWithLog("Initial upgrade versionchange transaction unexpected complete");
     }
 
     versionTransaction.onerror = function(event) {
-        debug("Initial upgrade versionchange transaction unexpected error" + event);
-        done();
+        endTestWithLog("Initial upgrade versionchange transaction unexpected error" + event);
     }
 }

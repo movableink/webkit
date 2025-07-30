@@ -47,26 +47,6 @@ bool defaultTextAutosizingUsesIdempotentMode()
 
 #endif
 
-#if !PLATFORM(MACCATALYST) && !PLATFORM(WATCHOS)
-static std::optional<bool>& cachedAllowsRequest()
-{
-    static NeverDestroyed<std::optional<bool>> allowsRequest;
-    return allowsRequest;
-}
-
-bool allowsDeprecatedSynchronousXMLHttpRequestDuringUnload()
-{
-    if (!cachedAllowsRequest())
-        cachedAllowsRequest() = [(MCProfileConnection *)[PAL::getMCProfileConnectionClass() sharedConnection] effectiveBoolValueForSetting:@"allowDeprecatedWebKitSynchronousXHRLoads"] == MCRestrictedBoolExplicitYes;
-    return *cachedAllowsRequest();
-}
-
-void setAllowsDeprecatedSynchronousXMLHttpRequestDuringUnload(bool allowsRequest)
-{
-    cachedAllowsRequest() = allowsRequest;
-}
-#endif
-
 #if ENABLE(MEDIA_SOURCE)
 
 bool defaultMediaSourceEnabled()
@@ -124,6 +104,19 @@ bool defaultAutomaticLiveResizeEnabled()
     return false;
 #endif
 }
+
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WebPreferencesDefaultValuesIOSAdditions.mm>)
+#import <WebKitAdditions/WebPreferencesDefaultValuesIOSAdditions.mm>
+#else
+bool defaultVisuallyContiguousBidiTextSelectionEnabled()
+{
+    return false;
+}
+bool defaultBidiContentAwarePasteEnabled()
+{
+    return false;
+}
+#endif
 
 } // namespace WebKit
 

@@ -165,25 +165,12 @@ private:
     void updateGlobalHistory() final;
     void updateGlobalHistoryRedirectLinks() final;
 
-    bool shouldGoToHistoryItem(WebCore::HistoryItem&) const final;
+    WebCore::ShouldGoToHistoryItem shouldGoToHistoryItem(WebCore::HistoryItem&, WebCore::IsSameDocumentNavigation, WebCore::ProcessSwapDisposition) const final;
+    bool supportsAsyncShouldGoToHistoryItem() const final;
+    void shouldGoToHistoryItemAsync(WebCore::HistoryItem&, CompletionHandler<void(WebCore::ShouldGoToHistoryItem)>&&) const final;
 
     void didDisplayInsecureContent() final;
     void didRunInsecureContent(WebCore::SecurityOrigin&) final;
-
-    WebCore::ResourceError cancelledError(const WebCore::ResourceRequest&) const final;
-    WebCore::ResourceError blockedError(const WebCore::ResourceRequest&) const final;
-    WebCore::ResourceError blockedByContentBlockerError(const WebCore::ResourceRequest&) const final;
-    WebCore::ResourceError cannotShowURLError(const WebCore::ResourceRequest&) const final;
-    WebCore::ResourceError interruptedForPolicyChangeError(const WebCore::ResourceRequest&) const final;
-#if ENABLE(CONTENT_FILTERING)
-    WebCore::ResourceError blockedByContentFilterError(const WebCore::ResourceRequest&) const final;
-#endif
-
-    WebCore::ResourceError cannotShowMIMETypeError(const WebCore::ResourceResponse&) const final;
-    WebCore::ResourceError fileDoesNotExistError(const WebCore::ResourceResponse&) const final;
-    WebCore::ResourceError httpsUpgradeRedirectLoopError(const WebCore::ResourceRequest&) const final;
-    WebCore::ResourceError httpNavigationWithHTTPSOnlyError(const WebCore::ResourceRequest&) const final;
-    WebCore::ResourceError pluginWillHandleLoadError(const WebCore::ResourceResponse&) const final;
 
     void loadStorageAccessQuirksIfNeeded() final { }
 
@@ -212,7 +199,7 @@ private:
     void provisionalLoadStarted() final;
     void didFinishLoad() final;
     void prepareForDataSourceReplacement() final;
-    Ref<WebCore::DocumentLoader> createDocumentLoader(const WebCore::ResourceRequest&, const WebCore::SubstituteData&) final;
+    Ref<WebCore::DocumentLoader> createDocumentLoader(WebCore::ResourceRequest&&, WebCore::SubstituteData&&) final;
     void updateCachedDocumentLoader(WebCore::DocumentLoader&) final { }
 
     void setTitle(const WebCore::StringWithDirection&, const URL&) final;
@@ -234,7 +221,7 @@ private:
     RemoteAXObjectRef accessibilityRemoteObject() final { return 0; }
     WebCore::IntPoint accessibilityRemoteFrameOffset() final { return { }; }
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    void setAXIsolatedTreeRoot(WebCore::AXCoreObject*) final { }
+    void setIsolatedTree(Ref<WebCore::AXIsolatedTree>&&) final { }
 #endif
 
     RetainPtr<WebFramePolicyListener> setUpPolicyListener(WebCore::FramePolicyFunction&&, WebCore::PolicyAction defaultPolicy, NSURL *appLinkURL, NSURL* referrerURL);
@@ -262,6 +249,8 @@ private:
     void finishedLoadingIcon(WebCore::FragmentedSharedBuffer*);
 
     void dispatchLoadEventToOwnerElementInAnotherProcess() final { };
+
+    RefPtr<WebCore::HistoryItem> createHistoryItemTree(bool clipAtTarget, WebCore::BackForwardItemIdentifier) const final;
 
 #if !PLATFORM(IOS_FAMILY)
     bool m_loadingIcon { false };

@@ -85,16 +85,19 @@
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/FileSystem.h>
 #include <wtf/MainThread.h>
+#include <wtf/MallocSpan.h>
 #include <wtf/ProcessPrivilege.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RunLoop.h>
 #include <wtf/SetForScope.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/UUID.h>
 #include <wtf/UniqueArray.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/WTFProcess.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/unicode/CharacterNames.h>
 
 #if PLATFORM(COCOA)
 #include <WebKit/WKContextPrivateMac.h>
@@ -124,6 +127,8 @@ static constexpr auto pathSeparator = '/';
 
 const WTF::Seconds TestController::defaultShortTimeout = 5_s;
 const WTF::Seconds TestController::noTimeout = -1_s;
+
+static const double ZoomMultiplierRatio = 1.2;
 
 static WKURLRef blankURL()
 {
@@ -318,12 +323,17 @@ static void decidePolicyForUserMediaPermissionRequest(WKPageRef, WKFrameRef fram
 
 static void runJavaScriptAlert(WKPageRef page, WKStringRef alertText, WKFrameRef frame, WKSecurityOriginRef securityOrigin, WKPageRunJavaScriptAlertResultListenerRef listener, const void *clientInfo)
 {
-    TestController::singleton().handleJavaScriptAlert(listener);
+    TestController::singleton().handleJavaScriptAlert(alertText, listener);
 }
 
-static void checkUserMediaPermissionForOrigin(WKPageRef, WKFrameRef frame, WKSecurityOriginRef userMediaDocumentOrigin, WKSecurityOriginRef topLevelDocumentOrigin, WKUserMediaPermissionCheckRef checkRequest, const void*)
+static void runJavaScriptPrompt(WKPageRef page, WKStringRef message, WKStringRef defaultValue, WKFrameRef frame, WKSecurityOriginRef securityOrigin, WKPageRunJavaScriptPromptResultListenerRef listener, const void *clientInfo)
 {
-    TestController::singleton().handleCheckOfUserMediaPermissionForOrigin(frame, userMediaDocumentOrigin, topLevelDocumentOrigin, checkRequest);
+    TestController::singleton().handleJavaScriptPrompt(message, defaultValue, listener);
+}
+
+static void runJavaScriptConfirm(WKPageRef page, WKStringRef message, WKFrameRef frame, WKSecurityOriginRef securityOrigin, WKPageRunJavaScriptConfirmResultListenerRef listener, const void *clientInfo)
+{
+    TestController::singleton().handleJavaScriptConfirm(message, listener);
 }
 
 static void requestPointerLock(WKPageRef page, const void*)
@@ -373,6 +383,32 @@ static void queryPermission(WKStringRef string, WKSecurityOriginRef securityOrig
 
 void TestController::handleQueryPermission(WKStringRef string, WKSecurityOriginRef securityOrigin, WKQueryPermissionResultCallbackRef callback)
 {
+    if (toWTFString(string) == "camera"_s) {
+        if (!m_isCameraPermissionAllowed) {
+            WKQueryPermissionResultCallbackCompleteWithPrompt(callback);
+            return;
+        }
+        if (!*m_isCameraPermissionAllowed) {
+            WKQueryPermissionResultCallbackCompleteWithDenied(callback);
+            return;
+        }
+        WKQueryPermissionResultCallbackCompleteWithGranted(callback);
+        return;
+    }
+
+    if (toWTFString(string) == "microphone"_s) {
+        if (!m_isMicrophonePermissionAllowed) {
+            WKQueryPermissionResultCallbackCompleteWithPrompt(callback);
+            return;
+        }
+        if (!*m_isMicrophonePermissionAllowed) {
+            WKQueryPermissionResultCallbackCompleteWithDenied(callback);
+            return;
+        }
+        WKQueryPermissionResultCallbackCompleteWithGranted(callback);
+        return;
+    }
+
     if (toWTFString(string) == "notifications"_s) {
         auto permissionState = m_webNotificationProvider.permissionState(securityOrigin);
         if (permissionState) {
@@ -421,12 +457,57 @@ static void unlockScreenOrientationCallback(WKPageRef)
 }
 #endif
 
+static StringView lastFileURLPathComponent(StringView path)
+{
+    auto pos = path.find("file://"_s);
+    ASSERT(WTF::notFound != pos);
+
+    auto tmpPath = path.substring(pos + 7);
+    if (tmpPath.length() < 2) // Keep the lone slash to avoid empty output.
+        return tmpPath;
+
+    // Remove the trailing delimiter
+    if (tmpPath[tmpPath.length() - 1] == '/')
+        tmpPath = tmpPath.left(tmpPath.length() - 1);
+
+    pos = tmpPath.reverseFind('/');
+    if (WTF::notFound != pos)
+        return tmpPath.substring(pos + 1);
+
+    return tmpPath;
+}
+
+static void addMessageToConsole(WKPageRef, WKStringRef message, const void*)
+{
+    auto messageString = toWTFString(message);
+    messageString = messageString.left(messageString.find(nullCharacter));
+
+    size_t fileProtocolStart = messageString.find("file://"_s);
+    if (fileProtocolStart != WTF::notFound) {
+        StringView messageStringView { messageString };
+        // FIXME: The code below does not handle additional text after url nor multiple urls. This matches DumpRenderTree implementation.
+        messageString = makeString(messageStringView.left(fileProtocolStart), lastFileURLPathComponent(messageStringView.substring(fileProtocolStart)));
+    }
+    messageString = makeString("CONSOLE MESSAGE:"_s, addLeadingSpaceStripTrailingSpacesAddNewline(messageString));
+
+    RefPtr invocation = TestController::singleton().currentInvocation();
+    if (!invocation || invocation->gotFinalMessage())
+        return;
+    if (invocation->shouldDumpJSConsoleLogInStdErr()) {
+        if (auto string = messageString.tryGetUTF8())
+            SAFE_FPRINTF(stderr, "%s", *string);
+        else
+            SAFE_FPRINTF(stderr, "Out of memory\n");
+    } else
+        invocation->outputText(messageString);
+}
+
 void TestController::closeOtherPage(WKPageRef page, PlatformWebView* view)
 {
     WKPageClose(page);
     auto index = m_auxiliaryWebViews.findIf([view](auto& auxiliaryWebView) { return auxiliaryWebView.ptr() == view; });
     if (index != notFound)
-        m_auxiliaryWebViews.remove(index);
+        m_auxiliaryWebViews.removeAt(index);
 }
 
 WKPageRef TestController::createOtherPage(WKPageRef, WKPageConfigurationRef configuration, WKNavigationActionRef navigationAction, WKWindowFeaturesRef windowFeatures, const void *clientInfo)
@@ -440,10 +521,104 @@ WKPageRef TestController::createOtherPage(PlatformWebView* parentView, WKPageCon
     auto* platformWebView = createOtherPlatformWebView(parentView, configuration, navigationAction, windowFeatures);
     if (!platformWebView)
         return nullptr;
+    auto preferences = WKPageConfigurationGetPreferences(configuration);
+    if (WKPreferencesGetVerifyUserGestureInUIProcessEnabled(preferences) && !WKNavigationActionHasUnconsumedUserGesture(navigationAction))
+        return nullptr;
 
     auto* page = platformWebView->page();
     WKRetain(page);
     return page;
+}
+
+void TestController::willEnterFullScreen(WKPageRef page, WKCompletionListenerRef listener, const void* clientInfo)
+{
+    return static_cast<TestController*>(const_cast<void*>(clientInfo))->willEnterFullScreen(page, listener);
+}
+
+void TestController::willEnterFullScreen(WKPageRef page, WKCompletionListenerRef listener)
+{
+    if (m_dumpFullScreenCallbacks)
+        protectedCurrentInvocation()->outputText("supportsFullScreen() == true\nenterFullScreenForElement()\n"_s);
+    if (!m_scrollDuringEnterFullscreen)
+        return WKCompletionListenerComplete(listener);
+
+    // The amount we scroll isn't important, but it should be nonzero to verify it is gone after restoring scroll position.
+    WKPageEvaluateJavaScriptInMainFrame(page, toWK("scrollBy(5,7)").get(), (void*)WKRetain(listener), [] (WKTypeRef, WKErrorRef, void* context) {
+        auto listener = (WKCompletionListenerRef)context;
+        WKCompletionListenerComplete(listener);
+        WKRelease(listener);
+    });
+}
+
+void TestController::beganEnterFullScreen(WKPageRef page, WKRect initialFrame, WKRect finalFrame, const void* clientInfo)
+{
+    static_cast<TestController*>(const_cast<void*>(clientInfo))->beganEnterFullScreen(page, initialFrame, finalFrame);
+}
+
+void TestController::beganEnterFullScreen(WKPageRef page, WKRect initialFrame, WKRect finalFrame)
+{
+    if (m_dumpFullScreenCallbacks) {
+        protectedCurrentInvocation()->outputText(makeString(
+            "beganEnterFullScreen() - initialRect.size: {"_s,
+            initialFrame.size.width,
+            ", "_s,
+            initialFrame.size.height,
+            "}, finalRect.size: {"_s,
+            finalFrame.size.width,
+            ", "_s,
+            finalFrame.size.height,
+            "}\n"_s
+        ));
+    }
+}
+
+void TestController::exitFullScreen(WKPageRef page, const void* clientInfo)
+{
+    static_cast<TestController*>(const_cast<void*>(clientInfo))->exitFullScreen(page);
+}
+
+void TestController::exitFullScreen(WKPageRef page)
+{
+    if (m_dumpFullScreenCallbacks)
+        protectedCurrentInvocation()->outputText("exitFullScreenForElement()\n"_s);
+}
+
+void TestController::beganExitFullScreen(WKPageRef page, WKRect initialFrame, WKRect finalFrame, WKCompletionListenerRef listener, const void* clientInfo)
+{
+    return static_cast<TestController*>(const_cast<void*>(clientInfo))->beganExitFullScreen(page, initialFrame, finalFrame, listener);
+}
+
+void TestController::beganExitFullScreen(WKPageRef, WKRect initialFrame, WKRect finalFrame, WKCompletionListenerRef listener)
+{
+    if (m_dumpFullScreenCallbacks) {
+        protectedCurrentInvocation()->outputText(makeString(
+        "beganExitFullScreen() - initialRect.size: {"_s,
+        initialFrame.size.width,
+        ", "_s,
+        initialFrame.size.height,
+        "}, finalRect.size: {"_s,
+        finalFrame.size.width,
+        ", "_s,
+        finalFrame.size.height,
+        "}\n"_s
+        ));
+    }
+
+    m_finishExitFullscreenHandler = [listener = WKRetainPtr { listener }] {
+        WKCompletionListenerComplete(listener.get());
+    };
+    if (!m_waitBeforeFinishingFullscreenExit)
+        finishFullscreenExit();
+}
+
+void TestController::finishFullscreenExit()
+{
+    m_finishExitFullscreenHandler();
+}
+
+void TestController::requestExitFullscreenFromUIProcess(WKPageRef page)
+{
+    WKPageRequestExitFullScreen(page);
 }
 
 PlatformWebView* TestController::createOtherPlatformWebView(PlatformWebView* parentView, WKPageConfigurationRef configuration, WKNavigationActionRef, WKWindowFeaturesRef)
@@ -463,8 +638,8 @@ PlatformWebView* TestController::createOtherPlatformWebView(PlatformWebView* par
 
     view->resizeTo(800, 600);
 
-    WKPageUIClientV8 otherPageUIClient = {
-        { 8, view.ptr() },
+    WKPageUIClientV19 otherPageUIClient = {
+        { 19, view.ptr() },
         nullptr, // createNewPage_deprecatedForUseWithV0
         nullptr, // showPage
         closeOtherPage,
@@ -518,22 +693,44 @@ PlatformWebView* TestController::createOtherPlatformWebView(PlatformWebView* par
         nullptr, // isPlayingAudioDidChange
         decidePolicyForUserMediaPermissionRequest,
         nullptr, // didClickAutofillButton
-        nullptr, // runJavaScriptAlert
-        nullptr, // runJavaScriptConfirm
-        nullptr, // runJavaScriptPrompt
+        nullptr, // runJavaScriptAlert_deprecatedForUseWithV5
+        nullptr, // runJavaScriptConfirm_deprecatedForUseWithV5
+        nullptr, // runJavaScriptPrompt_deprecatedForUseWithV5
         nullptr, // unused5
         createOtherPage,
         runJavaScriptAlert,
-        nullptr, // runJavaScriptConfirm
-        nullptr, // runJavaScriptPrompt
-        checkUserMediaPermissionForOrigin,
+        runJavaScriptConfirm,
+        runJavaScriptPrompt,
+        nullptr, // checkUserMediaPermissionForOrigin,
         nullptr, // runBeforeUnloadConfirmPanel
         nullptr, // fullscreenMayReturnToInline
         requestPointerLock,
         nullptr, // didLosePointerLock
+        nullptr, // handleAutoplayEvent
+        nullptr, // hasVideoInPictureInPictureDidChange
+        nullptr, // didExceedBackgroundResourceLimitWhileInForeground
+        nullptr, // didResignInputElementStrongPasswordAppearance
+        nullptr, // requestStorageAccessConfirm
+        nullptr, // shouldAllowDeviceOrientationAndMotionAccess
+        nullptr, // runWebAuthenticationPanel
+        nullptr, // decidePolicyForSpeechRecognitionPermissionRequest
+        nullptr, // decidePolicyForMediaKeySystemPermissionRequest
+        nullptr, // queryPermission
+        nullptr, // lockScreenOrientationCallback,
+        nullptr, // unlockScreenOrientationCallback,
+        addMessageToConsole
     };
     WKPageSetPageUIClient(newPage, &otherPageUIClient.base);
-    
+
+    WKPageFullScreenClientV0 fullscreenClient = {
+        { 0, this },
+        willEnterFullScreen,
+        beganEnterFullScreen,
+        exitFullScreen,
+        beganExitFullScreen
+    };
+    WKPageSetFullScreenClientForTesting(newPage, &fullscreenClient.base);
+
     WKPageNavigationClientV3 pageNavigationClient = {
         { 3, &TestController::singleton() },
         decidePolicyForNavigationAction,
@@ -630,8 +827,8 @@ void TestController::initialize(int argc, const char* argv[])
     m_allowAnyHTTPSCertificateForAllowedHosts = options.allowAnyHTTPSCertificateForAllowedHosts;
     m_enableAllExperimentalFeatures = options.enableAllExperimentalFeatures;
     m_globalFeatures = std::move(options.features);
-#if PLATFORM(WPE)
-    m_useWPEPlatformAPI = options.useWPEPlatformAPI;
+#if ENABLE(WPE_PLATFORM)
+    m_useWPELegacyAPI = options.useWPELegacyAPI;
 #endif
 
     /* localhost is implicitly allowed and so should aliases to it. */
@@ -694,6 +891,7 @@ void TestController::configureWebsiteDataStoreTemporaryDirectories(WKWebsiteData
         WKWebsiteDataStoreConfigurationSetResourceLoadStatisticsDirectory(configuration, toWK(makeString(temporaryFolder, pathSeparator, "ResourceLoadStatistics"_s, pathSeparator, randomNumber)).get());
         WKWebsiteDataStoreConfigurationSetServiceWorkerRegistrationDirectory(configuration, toWK(makeString(temporaryFolder, pathSeparator, "ServiceWorkers"_s, pathSeparator, randomNumber)).get());
         WKWebsiteDataStoreConfigurationSetGeneralStorageDirectory(configuration, toWK(makeString(temporaryFolder, pathSeparator, "Default"_s, pathSeparator, randomNumber)).get());
+        WKWebsiteDataStoreConfigurationSetResourceMonitorThrottlerDirectory(configuration, toWK(makeString(temporaryFolder, pathSeparator, "ResourceMonitorThrottler"_s, pathSeparator, randomNumber)).get());
 #if PLATFORM(WIN)
         WKWebsiteDataStoreConfigurationSetCookieStorageFile(configuration, toWK(makeString(temporaryFolder, pathSeparator, "cookies"_s, pathSeparator, randomNumber, pathSeparator, "cookiejar.db"_s)).get());
 #endif
@@ -804,6 +1002,7 @@ WKRetainPtr<WKPageConfigurationRef> TestController::generatePageConfiguration(co
 
     if (options.allowTestOnlyIPC())
         WKPageConfigurationSetAllowTestOnlyIPC(pageConfiguration.get(), true);
+    WKPageConfigurationSetShouldSendConsoleLogsToUIProcessForTesting(pageConfiguration.get(), true);
 
     m_userContentController = adoptWK(WKUserContentControllerCreate());
     WKPageConfigurationSetUserContentController(pageConfiguration.get(), userContentController());
@@ -865,6 +1064,11 @@ bool TestController::denyNotificationPermissionOnPrompt(WKStringRef originString
 }
 
 #if !PLATFORM(COCOA)
+void TestController::updatePresentation(CompletionHandler<void(WKTypeRef)>&& completionHandler)
+{
+    completionHandler(nullptr);
+}
+
 WKRetainPtr<WKStringRef> TestController::getBackgroundFetchIdentifier()
 {
     return { };
@@ -911,91 +1115,101 @@ void TestController::createWebViewWithOptions(const TestOptions& options)
     platformCreateWebView(configuration.get(), options);
     WKPageUIClientV19 pageUIClient = {
         { 19, m_mainWebView.get() },
-        0, // createNewPage_deprecatedForUseWithV0
-        0, // showPage
-        0, // close
-        0, // takeFocus
+        nullptr, // createNewPage_deprecatedForUseWithV0
+        nullptr, // showPage
+        nullptr, // close
+        nullptr, // takeFocus
         focus,
         unfocus,
-        0, // runJavaScriptAlert_deprecatedForUseWithV0
-        0, // runJavaScriptAlert_deprecatedForUseWithV0
-        0, // runJavaScriptAlert_deprecatedForUseWithV0
-        0, // setStatusText
-        0, // mouseDidMoveOverElement_deprecatedForUseWithV0
-        0, // missingPluginButtonClicked
-        0, // didNotHandleKeyEvent
-        0, // didNotHandleWheelEvent
-        0, // toolbarsAreVisible
-        0, // setToolbarsAreVisible
-        0, // menuBarIsVisible
-        0, // setMenuBarIsVisible
-        0, // statusBarIsVisible
-        0, // setStatusBarIsVisible
-        0, // isResizable
-        0, // setIsResizable
+        nullptr, // runJavaScriptAlert_deprecatedForUseWithV0
+        nullptr, // runJavaScriptAlert_deprecatedForUseWithV0
+        nullptr, // runJavaScriptAlert_deprecatedForUseWithV0
+        nullptr, // setStatusText
+        nullptr, // mouseDidMoveOverElement_deprecatedForUseWithV0
+        nullptr, // missingPluginButtonClicked
+        nullptr, // didNotHandleKeyEvent
+        nullptr, // didNotHandleWheelEvent
+        nullptr, // toolbarsAreVisible
+        nullptr, // setToolbarsAreVisible
+        nullptr, // menuBarIsVisible
+        nullptr, // setMenuBarIsVisible
+        nullptr, // statusBarIsVisible
+        nullptr, // setStatusBarIsVisible
+        nullptr, // isResizable
+        nullptr, // setIsResizable
         getWindowFrame,
         setWindowFrame,
         runBeforeUnloadConfirmPanel,
-        0, // didDraw
-        0, // pageDidScroll
-        0, // exceededDatabaseQuota,
-        options.shouldHandleRunOpenPanel() ? runOpenPanel : 0,
+        nullptr, // didDraw
+        nullptr, // pageDidScroll
+        nullptr, // exceededDatabaseQuota,
+        options.shouldHandleRunOpenPanel() ? runOpenPanel : nullptr,
         decidePolicyForGeolocationPermissionRequest,
-        0, // headerHeight
-        0, // footerHeight
-        0, // drawHeader
-        0, // drawFooter
+        nullptr, // headerHeight
+        nullptr, // footerHeight
+        nullptr, // drawHeader
+        nullptr, // drawFooter
         printFrame,
         runModal,
-        0, // didCompleteRubberBandForMainFrame
-        0, // saveDataToFileInDownloadsFolder
-        0, // shouldInterruptJavaScript
-        0, // createNewPage_deprecatedForUseWithV1
-        0, // mouseDidMoveOverElement
+        nullptr, // didCompleteRubberBandForMainFrame
+        nullptr, // saveDataToFileInDownloadsFolder
+        nullptr, // shouldInterruptJavaScript
+        nullptr, // createNewPage_deprecatedForUseWithV1
+        nullptr, // mouseDidMoveOverElement
         decidePolicyForNotificationPermissionRequest, // decidePolicyForNotificationPermissionRequest
-        0, // unavailablePluginButtonClicked_deprecatedForUseWithV1
-        0, // showColorPicker
-        0, // hideColorPicker
+        nullptr, // unavailablePluginButtonClicked_deprecatedForUseWithV1
+        nullptr, // showColorPicker
+        nullptr, // hideColorPicker
         unavailablePluginButtonClicked,
-        0, // pinnedStateDidChange
-        0, // didBeginTrackingPotentialLongMousePress
-        0, // didRecognizeLongMousePress
-        0, // didCancelTrackingPotentialLongMousePress
-        0, // isPlayingAudioDidChange
+        nullptr, // pinnedStateDidChange
+        nullptr, // didBeginTrackingPotentialLongMousePress
+        nullptr, // didRecognizeLongMousePress
+        nullptr, // didCancelTrackingPotentialLongMousePress
+        nullptr, // isPlayingAudioDidChange
         decidePolicyForUserMediaPermissionRequest,
-        0, // didClickAutofillButton
-        0, // runJavaScriptAlert
-        0, // runJavaScriptConfirm
-        0, // runJavaScriptPrompt
-        0, // unused5
+        nullptr, // didClickAutofillButton
+        nullptr, // runJavaScriptAlert_deprecatedForUseWithV5
+        nullptr, // runJavaScriptConfirm_deprecatedForUseWithV5
+        nullptr, // runJavaScriptPrompt_deprecatedForUseWithV5
+        nullptr, // unused5
         createOtherPage,
         runJavaScriptAlert,
-        0, // runJavaScriptConfirm
-        0, // runJavaScriptPrompt
-        checkUserMediaPermissionForOrigin,
-        0, // runBeforeUnloadConfirmPanel
-        0, // fullscreenMayReturnToInline
+        runJavaScriptConfirm,
+        runJavaScriptPrompt,
+        nullptr, // checkUserMediaPermissionForOrigin,
+        nullptr, // runBeforeUnloadConfirmPanel
+        nullptr, // fullscreenMayReturnToInline
         requestPointerLock,
-        0, // didLosePointerLock
-        0, // handleAutoplayEvent
-        0, // hasVideoInPictureInPictureDidChange
-        0, // didExceedBackgroundResourceLimitWhileInForeground
-        0, // didResignInputElementStrongPasswordAppearance
-        0, // requestStorageAccessConfirm
+        nullptr, // didLosePointerLock
+        nullptr, // handleAutoplayEvent
+        nullptr, // hasVideoInPictureInPictureDidChange
+        nullptr, // didExceedBackgroundResourceLimitWhileInForeground
+        nullptr, // didResignInputElementStrongPasswordAppearance
+        nullptr, // requestStorageAccessConfirm
         shouldAllowDeviceOrientationAndMotionAccess,
         runWebAuthenticationPanel,
-        0,
+        nullptr, // decidePolicyForSpeechRecognitionPermissionRequest
         decidePolicyForMediaKeySystemPermissionRequest,
         queryPermission,
 #if PLATFORM(IOS) || PLATFORM(VISION)
         lockScreenOrientationCallback,
-        unlockScreenOrientationCallback
+        unlockScreenOrientationCallback,
 #else
-        0, // lockScreenOrientation
-        0 // unlockScreenOrientation
+        nullptr, // lockScreenOrientation
+        nullptr, // unlockScreenOrientation
 #endif
+        addMessageToConsole
     };
     WKPageSetPageUIClient(m_mainWebView->page(), &pageUIClient.base);
+
+    WKPageFullScreenClientV0 fullscreenClient = {
+        { 0, this },
+        willEnterFullScreen,
+        beganEnterFullScreen,
+        exitFullScreen,
+        beganExitFullScreen
+    };
+    WKPageSetFullScreenClientForTesting(m_mainWebView->page(), &fullscreenClient.base);
 
     WKPageNavigationClientV3 pageNavigationClient = {
         { 3, this },
@@ -1065,6 +1279,7 @@ void TestController::ensureViewSupportsOptionsForTest(const TestInvocation& test
         willDestroyWebView();
 
         WKPageSetPageUIClient(m_mainWebView->page(), nullptr);
+        WKPageSetFullScreenClientForTesting(m_mainWebView->page(), nullptr);
         WKPageSetPageNavigationClient(m_mainWebView->page(), nullptr);
         WKPageClose(m_mainWebView->page());
 
@@ -1094,6 +1309,7 @@ void TestController::resetPreferencesToConsistentValues(const TestOptions& optio
         if (enableAllExperimentalFeatures) {
             WKPreferencesEnableAllExperimentalFeatures(preferences);
             WKPreferencesSetExperimentalFeatureForKey(preferences, false, toWK("SiteIsolationEnabled").get());
+            WKPreferencesSetExperimentalFeatureForKey(preferences, false, toWK("VerifyWindowOpenUserGestureFromUIProcess").get());
             WKPreferencesSetExperimentalFeatureForKey(preferences, true, toWK("WebGPUEnabled").get());
             WKPreferencesSetExperimentalFeatureForKey(preferences, false, toWK("HTTPSByDefaultEnabled").get());
             WKPreferencesSetExperimentalFeatureForKey(preferences, false, toWK("WebRTCL4SEnabled").get()); // FIXME: Remove this once L4S SDP negotation is supported.
@@ -1171,6 +1387,8 @@ bool TestController::resetStateToConsistentValues(const TestOptions& options, Re
     resetMockMediaDevices();
     WKPageSetMediaCaptureReportingDelayForTesting(m_mainWebView->page(), 0);
 
+    WKWebsiteDataStoreResetResourceMonitorThrottler(websiteDataStore(), nullptr, nullptr);
+
     // FIXME: This function should also ensure that there is only one page open.
 
     // Reset the EventSender for each test.
@@ -1217,9 +1435,7 @@ bool TestController::resetStateToConsistentValues(const TestOptions& options, Re
 
     // Reset UserMedia permissions.
     m_userMediaPermissionRequests.clear();
-    m_cachedUserMediaPermissions.clear();
-    setCameraPermission(true);
-    setMicrophonePermission(true);
+    resetUserMediaPermission();
 
     // Reset Custom Policy Delegate.
     setCustomPolicyDelegate(false, false);
@@ -1278,8 +1494,6 @@ bool TestController::resetStateToConsistentValues(const TestOptions& options, Re
 
     WKPageDispatchActivityStateUpdateForTesting(m_mainWebView->page());
 
-    WKPageResetStateBetweenTests(m_mainWebView->page());
-
     m_didReceiveServerRedirectForProvisionalNavigation = false;
     m_serverTrustEvaluationCallbackCallsCount = 0;
     m_shouldDismissJavaScriptAlertsAsynchronously = false;
@@ -1303,6 +1517,8 @@ bool TestController::resetStateToConsistentValues(const TestOptions& options, Re
         }
     }
 
+    WKPageResetStateBetweenTests(m_mainWebView->page());
+
     WKPageClearBackForwardListForTesting(TestController::singleton().mainWebView()->page(), nullptr, [](void*) { });
 
     if (resetStage == ResetStage::AfterTest) {
@@ -1318,6 +1534,11 @@ bool TestController::resetStateToConsistentValues(const TestOptions& options, Re
     m_downloadIndex = 0;
     m_shouldDownloadContentDispositionAttachments = true;
     m_dumpPolicyDelegateCallbacks = false;
+    m_dumpFullScreenCallbacks = false;
+    m_waitBeforeFinishingFullscreenExit = false;
+    m_scrollDuringEnterFullscreen = false;
+    if (m_finishExitFullscreenHandler)
+        m_finishExitFullscreenHandler();
 
     return m_doneResetting;
 }
@@ -1499,56 +1720,33 @@ WKRetainPtr<WKStringRef> TestController::backgroundFetchState(WKStringRef)
 }
 #endif
 
-WKURLRef TestController::createTestURL(const char* pathOrURL)
+WKURLRef TestController::createTestURL(std::span<const char> pathOrURL)
 {
-    if (strstr(pathOrURL, "http://") || strstr(pathOrURL, "https://"))
-        return WKURLCreateWithUTF8CString(pathOrURL);
+    if (pathOrURL.empty())
+        return nullptr;
 
-    size_t length = strlen(pathOrURL);
-    if (!length)
-        return 0;
+    if (spanHasPrefix(pathOrURL, "http://"_span) || spanHasPrefix(pathOrURL, "https://"_span))
+        return WKURLCreateWithUTF8String(pathOrURL.data(), pathOrURL.size());
 
-    if (length >= 7 && strstr(pathOrURL, "file://")) {
-        auto url = adoptWK(WKURLCreateWithUTF8CString(pathOrURL));
+    if (spanHasPrefix(pathOrURL, "file://"_span)) {
+        auto url = adoptWK(WKURLCreateWithUTF8String(pathOrURL.data(), pathOrURL.size()));
         auto path = testPath(url.get());
-        if (!m_usingServerMode && !WTF::FileSystemImpl::fileExists(String(std::span { path }))) {
-            printf("Failed: File for URL ‘%s’ was not found or is inaccessible\n", pathOrURL);
-            return 0;
+        auto pathString = String::fromUTF8(std::span { path });
+        if (!m_usingServerMode && !WTF::FileSystemImpl::fileExists(pathString)) {
+            printf("Failed: File for URL ‘%s’ was not found or is inaccessible\n", pathString.utf8().data());
+            return nullptr;
         }
         return url.leakRef();
     }
 
     // Creating from filesytem path.
-
-#if PLATFORM(WIN)
-    bool isAbsolutePath = !PathIsRelativeA(pathOrURL);
-#else
-    bool isAbsolutePath = pathOrURL[0] == pathSeparator;
-#endif
-    const char* filePrefix = "file://";
-    static const size_t prefixLength = strlen(filePrefix);
-
-    UniqueArray<char> buffer;
-    if (isAbsolutePath) {
-        buffer = makeUniqueArray<char>(prefixLength + length + 1);
-        strcpy(buffer.get(), filePrefix);
-        strcpy(buffer.get() + prefixLength, pathOrURL);
-    } else {
-        buffer = makeUniqueArray<char>(prefixLength + PATH_MAX + length + 2); // 1 for the pathSeparator
-        strcpy(buffer.get(), filePrefix);
-        if (!getcwd(buffer.get() + prefixLength, PATH_MAX))
-            return 0;
-        size_t numCharacters = strlen(buffer.get());
-        buffer[numCharacters] = pathSeparator;
-        strcpy(buffer.get() + numCharacters + 1, pathOrURL);
-    }
-
-    auto cPath = buffer.get();
-    auto url = adoptWK(WKURLCreateWithUTF8CString(cPath));
+    auto urlString = makeString("file://"_s, FileSystem::realPath(String::fromUTF8(pathOrURL))).utf8();
+    auto url = adoptWK(WKURLCreateWithUTF8String(urlString.data(), urlString.length()));
     auto path = testPath(url.get());
-    if (!m_usingServerMode && !WTF::FileSystemImpl::fileExists(String(std::span { path }))) {
-        printf("Failed: File ‘%s’ was not found or is inaccessible\n", pathOrURL);
-        return 0;
+    auto pathString = String::fromUTF8(std::span { path });
+    if (!m_usingServerMode && !FileSystem::fileExists(pathString)) {
+        printf("Failed: File ‘%s’ was not found or is inaccessible\n", pathString.utf8().data());
+        return nullptr;
     }
     return url.leakRef();
 }
@@ -1702,7 +1900,7 @@ bool TestController::runTest(const char* inputLine)
     
     TestOptions options = testOptionsForTest(command);
 
-    m_mainResourceURL = adoptWK(createTestURL(command.pathOrURL.c_str()));
+    m_mainResourceURL = adoptWK(createTestURL(command.pathOrURL));
     if (!m_mainResourceURL)
         return false;
 
@@ -1737,9 +1935,9 @@ bool TestController::waitForCompletion(const WTF::Function<void ()>& function, W
     return !m_doneResetting;
 }
 
-bool TestController::handleControlCommand(const char* command)
+bool TestController::handleControlCommand(std::span<const char> command)
 {
-    if (!strncmp("#CHECK FOR WORLD LEAKS", command, 22)) {
+    if (spanHasPrefix(command, "#CHECK FOR WORLD LEAKS"_span)) {
         if (m_checkForWorldLeaks)
             findAndDumpWorldLeaks();
         else
@@ -1747,7 +1945,7 @@ bool TestController::handleControlCommand(const char* command)
         return true;
     }
 
-    if (!strncmp("#LIST CHILD PROCESSES", command, 21)) {
+    if (spanHasPrefix(command, "#LIST CHILD PROCESSES"_span)) {
         findAndDumpWebKitProcessIdentifiers();
         return true;
     }
@@ -1757,19 +1955,18 @@ bool TestController::handleControlCommand(const char* command)
 
 void TestController::runTestingServerLoop()
 {
-    char filenameBuffer[2048];
-    while (fgets(filenameBuffer, sizeof(filenameBuffer), stdin)) {
-        char* newLineCharacter = strchr(filenameBuffer, '\n');
-        if (newLineCharacter)
-            *newLineCharacter = '\0';
+    std::array<char, 2048> filenameBuffer;
+    while (fgets(filenameBuffer.data(), filenameBuffer.size(), stdin)) {
+        if (size_t newLineCharacterIndex = find(std::span<const char> { filenameBuffer }, '\n'); newLineCharacterIndex != notFound)
+            filenameBuffer[newLineCharacterIndex] = '\0';
 
-        if (strlen(filenameBuffer) == 0)
+        if (!strlen(filenameBuffer.data()))
             continue;
 
         if (handleControlCommand(filenameBuffer))
             continue;
 
-        if (!runTest(filenameBuffer))
+        if (!runTest(filenameBuffer.data()))
             break;
     }
 }
@@ -2004,6 +2201,9 @@ void TestController::didReceiveAsyncMessageFromInjectedBundle(WKStringRef messag
     if (WKStringIsEqualToUTF8CString(messageName, "FlushConsoleLogs"))
         return completionHandler(nullptr);
 
+    if (WKStringIsEqualToUTF8CString(messageName, "UpdatePresentation"))
+        return updatePresentation(WTFMove(completionHandler));
+
     if (WKStringIsEqualToUTF8CString(messageName, "SetPageScaleFactor")) {
         auto messageBodyDictionary = dictionaryValue(messageBody);
         auto scaleFactor = doubleValue(messageBodyDictionary, "scaleFactor");
@@ -2028,10 +2228,13 @@ void TestController::didReceiveAsyncMessageFromInjectedBundle(WKStringRef messag
         return setStatisticsDebugMode(booleanValue(messageBody), WTFMove(completionHandler));
 
     if (WKStringIsEqualToUTF8CString(messageName, "SetStatisticsShouldBlockThirdPartyCookiesOnSitesWithoutUserInteraction"))
-        return setStatisticsShouldBlockThirdPartyCookies(booleanValue(messageBody), true, WTFMove(completionHandler));
+        return setStatisticsShouldBlockThirdPartyCookies(booleanValue(messageBody), ThirdPartyCookieBlockingPolicy::AllOnlyOnSitesWithoutUserInteraction, WTFMove(completionHandler));
+
+    if (WKStringIsEqualToUTF8CString(messageName, "SetStatisticsShouldBlockThirdPartyCookiesExceptPartitioned"))
+        return setStatisticsShouldBlockThirdPartyCookies(booleanValue(messageBody), ThirdPartyCookieBlockingPolicy::AllExceptPartitioned, WTFMove(completionHandler));
 
     if (WKStringIsEqualToUTF8CString(messageName, "SetStatisticsShouldBlockThirdPartyCookies"))
-        return setStatisticsShouldBlockThirdPartyCookies(booleanValue(messageBody), false, WTFMove(completionHandler));
+        return setStatisticsShouldBlockThirdPartyCookies(booleanValue(messageBody), ThirdPartyCookieBlockingPolicy::All, WTFMove(completionHandler));
 
     if (WKStringIsEqualToUTF8CString(messageName, "SetStatisticsPrevalentResourceForDebugMode")) {
         WKStringRef hostName = stringValue(messageBody);
@@ -2198,14 +2401,33 @@ void TestController::didReceiveAsyncMessageFromInjectedBundle(WKStringRef messag
     if (WKStringIsEqualToUTF8CString(messageName, "RemoveAllSessionCredentials"))
         return TestController::singleton().removeAllSessionCredentials(WTFMove(completionHandler));
 
-    if (WKStringIsEqualToUTF8CString(messageName, "SetTopContentInset"))
-        return WKPageSetTopContentInsetForTesting(TestController::singleton().mainWebView()->page(), static_cast<float>(doubleValue(messageBody)), completionHandler.leak(), adoptAndCallCompletionHandler);
+    if (WKStringIsEqualToUTF8CString(messageName, "SetObscuredContentInsets")) {
+        auto insetValues = arrayValue(messageBody);
+        auto top = static_cast<float>(doubleValue(WKArrayGetItemAtIndex(insetValues, 0)));
+        auto right = static_cast<float>(doubleValue(WKArrayGetItemAtIndex(insetValues, 1)));
+        auto bottom = static_cast<float>(doubleValue(WKArrayGetItemAtIndex(insetValues, 2)));
+        auto left = static_cast<float>(doubleValue(WKArrayGetItemAtIndex(insetValues, 3)));
+        return WKPageSetObscuredContentInsetsForTesting(TestController::singleton().mainWebView()->page(), top, right, bottom, left, completionHandler.leak(), adoptAndCallCompletionHandler);
+    }
 
     if (WKStringIsEqualToUTF8CString(messageName, "ClearBackForwardList"))
         return WKPageClearBackForwardListForTesting(TestController::singleton().mainWebView()->page(), completionHandler.leak(), adoptAndCallCompletionHandler);
 
     if (WKStringIsEqualToUTF8CString(messageName, "DisplayAndTrackRepaints"))
         return WKPageDisplayAndTrackRepaintsForTesting(TestController::singleton().mainWebView()->page(), completionHandler.leak(), adoptAndCallCompletionHandler);
+
+    if (WKStringIsEqualToUTF8CString(messageName, "SetResourceMonitorList"))
+        return setResourceMonitorList(stringValue(messageBody), WTFMove(completionHandler));
+
+    if (WKStringIsEqualToUTF8CString(messageName, "FindString")) {
+        auto messageBodyDictionary = dictionaryValue(messageBody);
+        auto string = stringValue(messageBodyDictionary, "String");
+        auto findOptions = static_cast<WKFindOptions>(uint64Value(messageBodyDictionary, "FindOptions"));
+        return WKPageFindStringForTesting(TestController::singleton().mainWebView()->page(), completionHandler.leak(), string, findOptions, 0, [](bool found, void* context) {
+            auto completionHandler = WTF::adopt(static_cast<CompletionHandler<void(WKTypeRef)>::Impl*>(context));
+            completionHandler(WKBooleanCreate(found));
+        });
+    }
 
     ASSERT_NOT_REACHED();
 }
@@ -2390,14 +2612,14 @@ void TestController::didReceiveSynchronousMessageFromInjectedBundle(WKStringRef 
         if (WKStringIsEqualToUTF8CString(subMessageName, "SetPageZoom")) {
             auto* page = mainWebView()->page();
             WKPageSetTextZoomFactor(page, 1);
-            WKPageSetPageZoomFactor(page, doubleValue(dictionary, "ZoomFactor"));
+            WKPageSetPageZoomFactor(page, WKPageGetPageZoomFactor(page) * (booleanValue(dictionary, "ZoomIn") ? ZoomMultiplierRatio : (1.0 / ZoomMultiplierRatio)));
             return completionHandler(nullptr);
         }
 
         if (WKStringIsEqualToUTF8CString(subMessageName, "SetTextZoom")) {
             auto* page = mainWebView()->page();
             WKPageSetPageZoomFactor(page, 1);
-            WKPageSetTextZoomFactor(page, doubleValue(dictionary, "ZoomFactor"));
+            WKPageSetTextZoomFactor(page, WKPageGetTextZoomFactor(page) * (booleanValue(dictionary, "ZoomIn") ? ZoomMultiplierRatio : (1.0 / ZoomMultiplierRatio)));
             return completionHandler(nullptr);
         }
 
@@ -2940,46 +3162,26 @@ bool TestController::isGeolocationProviderActive() const
     return m_geolocationProvider->isActive();
 }
 
-static String userMediaOriginHash(WKSecurityOriginRef userMediaDocumentOrigin, WKSecurityOriginRef topLevelDocumentOrigin)
-{
-    String userMediaDocumentOriginString = originUserVisibleName(userMediaDocumentOrigin);
-    String topLevelDocumentOriginString = originUserVisibleName(topLevelDocumentOrigin);
-
-    if (topLevelDocumentOriginString.isEmpty())
-        return userMediaDocumentOriginString;
-
-    return makeString(userMediaDocumentOriginString, '-', topLevelDocumentOriginString);
-}
-
-static String userMediaOriginHash(WKStringRef userMediaDocumentOriginString, WKStringRef topLevelDocumentOriginString)
-{
-    auto userMediaDocumentOrigin = adoptWK(WKSecurityOriginCreateFromString(userMediaDocumentOriginString));
-    if (!WKStringGetLength(topLevelDocumentOriginString))
-        return userMediaOriginHash(userMediaDocumentOrigin.get(), nullptr);
-
-    auto topLevelDocumentOrigin = adoptWK(WKSecurityOriginCreateFromString(topLevelDocumentOriginString));
-    return userMediaOriginHash(userMediaDocumentOrigin.get(), topLevelDocumentOrigin.get());
-}
-
 void TestController::setCameraPermission(bool enabled)
 {
-    m_isUserMediaPermissionSet = true;
+    m_canDecideUserMediaRequest = true;
     m_isCameraPermissionAllowed = enabled;
     decidePolicyForUserMediaPermissionRequestIfPossible();
 }
 
 void TestController::setMicrophonePermission(bool enabled)
 {
-    m_isUserMediaPermissionSet = true;
+    m_canDecideUserMediaRequest = true;
     m_isMicrophonePermissionAllowed = enabled;
     decidePolicyForUserMediaPermissionRequestIfPossible();
 }
 
 void TestController::resetUserMediaPermission()
 {
-    m_isUserMediaPermissionSet = false;
-    m_isCameraPermissionAllowed = true;
-    m_isMicrophonePermissionAllowed = true;
+    m_requestCount = 0;
+    m_canDecideUserMediaRequest = true;
+    m_isCameraPermissionAllowed = { };
+    m_isMicrophonePermissionAllowed = { };
 }
 
 void TestController::setShouldDismissJavaScriptAlertsAsynchronously(bool value)
@@ -2987,8 +3189,10 @@ void TestController::setShouldDismissJavaScriptAlertsAsynchronously(bool value)
     m_shouldDismissJavaScriptAlertsAsynchronously = value;
 }
 
-void TestController::handleJavaScriptAlert(WKPageRunJavaScriptAlertResultListenerRef listener)
+void TestController::handleJavaScriptAlert(WKStringRef alertText, WKPageRunJavaScriptAlertResultListenerRef listener)
 {
+    protectedCurrentInvocation()->outputText(makeString("ALERT:"_s, addLeadingSpaceStripTrailingSpacesAddNewline(toWTFString(alertText))));
+
     if (!m_shouldDismissJavaScriptAlertsAsynchronously) {
         WKPageRunJavaScriptAlertResultListenerCall(listener);
         return;
@@ -3001,71 +3205,18 @@ void TestController::handleJavaScriptAlert(WKPageRunJavaScriptAlertResultListene
     });
 }
 
-class OriginSettings : public RefCounted<OriginSettings> {
-public:
-    explicit OriginSettings()
-    {
-    }
-
-    bool persistentPermission() const { return m_persistentPermission; }
-    void setPersistentPermission(bool permission) { m_persistentPermission = permission; }
-
-    String persistentSalt() const { return m_persistentSalt; }
-    void setPersistentSalt(const String& salt) { m_persistentSalt = salt; }
-
-    HashMap<uint64_t, String>& ephemeralSalts() { return m_ephemeralSalts; }
-
-    void incrementRequestCount() { ++m_requestCount; }
-    void resetRequestCount() { m_requestCount = 0; }
-    unsigned requestCount() const { return m_requestCount; }
-
-private:
-    HashMap<uint64_t, String> m_ephemeralSalts;
-    String m_persistentSalt;
-    unsigned m_requestCount { 0 };
-    bool m_persistentPermission { false };
-};
-
-String TestController::saltForOrigin(WKFrameRef frame, String originHash)
+void TestController::handleJavaScriptPrompt(WKStringRef message, WKStringRef defaultValue, WKPageRunJavaScriptPromptResultListenerRef listener)
 {
-    auto& settings = settingsForOrigin(originHash);
-    auto& ephemeralSalts = settings.ephemeralSalts();
-    auto frameHandle = adoptWK(WKFrameCreateFrameHandle(frame));
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    uint64_t frameIdentifier = WKFrameHandleGetFrameID(frameHandle.get());
-ALLOW_DEPRECATED_DECLARATIONS_END
-    String frameSalt = ephemeralSalts.get(frameIdentifier);
+    protectedCurrentInvocation()->outputText(makeString("PROMPT: "_s, toWTFString(message), ", default text:"_s, addLeadingSpaceStripTrailingSpacesAddNewline(toWTFString(defaultValue))));
 
-    if (settings.persistentPermission()) {
-        if (frameSalt.length())
-            return frameSalt;
-
-        if (!settings.persistentSalt().length())
-            settings.setPersistentSalt(createVersion4UUIDString());
-
-        return settings.persistentSalt();
-    }
-
-    if (!frameSalt.length()) {
-        frameSalt = createVersion4UUIDString();
-        ephemeralSalts.add(frameIdentifier, frameSalt);
-    }
-
-    return frameSalt;
+    WKPageRunJavaScriptPromptResultListenerCall(listener, defaultValue);
 }
 
-void TestController::setUserMediaPersistentPermissionForOrigin(bool permission, WKStringRef userMediaDocumentOriginString, WKStringRef topLevelDocumentOriginString)
+void TestController::handleJavaScriptConfirm(WKStringRef message, WKPageRunJavaScriptConfirmResultListenerRef listener)
 {
-    auto originHash = userMediaOriginHash(userMediaDocumentOriginString, topLevelDocumentOriginString);
-    auto& settings = settingsForOrigin(originHash);
-    settings.setPersistentPermission(permission);
-}
+    protectedCurrentInvocation()->outputText(makeString("CONFIRM:"_s, addLeadingSpaceStripTrailingSpacesAddNewline(toWTFString(message))));
 
-void TestController::handleCheckOfUserMediaPermissionForOrigin(WKFrameRef frame, WKSecurityOriginRef userMediaDocumentOrigin, WKSecurityOriginRef topLevelDocumentOrigin, const WKUserMediaPermissionCheckRef& checkRequest)
-{
-    auto originHash = userMediaOriginHash(userMediaDocumentOrigin, topLevelDocumentOrigin);
-    auto salt = saltForOrigin(frame, originHash);
-    WKUserMediaPermissionCheckSetUserMediaAccessInfo(checkRequest, toWK(salt).get(), settingsForOrigin(originHash).persistentPermission());
+    WKPageRunJavaScriptConfirmResultListenerCall(listener, true);
 }
 
 bool TestController::handleDeviceOrientationAndMotionAccessRequest(WKSecurityOriginRef origin, WKFrameInfoRef frame)
@@ -3077,61 +3228,47 @@ bool TestController::handleDeviceOrientationAndMotionAccessRequest(WKSecurityOri
 
 void TestController::handleUserMediaPermissionRequest(WKFrameRef frame, WKSecurityOriginRef userMediaDocumentOrigin, WKSecurityOriginRef topLevelDocumentOrigin, WKUserMediaPermissionRequestRef request)
 {
-    auto originHash = userMediaOriginHash(userMediaDocumentOrigin, topLevelDocumentOrigin);
-    m_userMediaPermissionRequests.append(std::make_pair(originHash, request));
+    m_requestCount++;
+    m_userMediaPermissionRequests.append(request);
     decidePolicyForUserMediaPermissionRequestIfPossible();
 }
 
-OriginSettings& TestController::settingsForOrigin(const String& originHash)
+void TestController::delayUserMediaRequestDecision()
 {
-    RefPtr<OriginSettings> settings = m_cachedUserMediaPermissions.get(originHash);
-    if (!settings) {
-        settings = adoptRef(*new OriginSettings());
-        m_cachedUserMediaPermissions.add(originHash, settings);
-    }
-
-    return *settings;
+    m_canDecideUserMediaRequest = false;
 }
 
-unsigned TestController::userMediaPermissionRequestCountForOrigin(WKStringRef userMediaDocumentOriginString, WKStringRef topLevelDocumentOriginString)
+unsigned TestController::userMediaPermissionRequestCount()
 {
-    auto originHash = userMediaOriginHash(userMediaDocumentOriginString, topLevelDocumentOriginString);
-    return settingsForOrigin(originHash).requestCount();
+    return m_requestCount;
 }
 
-void TestController::resetUserMediaPermissionRequestCountForOrigin(WKStringRef userMediaDocumentOriginString, WKStringRef topLevelDocumentOriginString)
+void TestController::resetUserMediaPermissionRequestCount()
 {
-    auto originHash = userMediaOriginHash(userMediaDocumentOriginString, topLevelDocumentOriginString);
-    settingsForOrigin(originHash).resetRequestCount();
+    m_requestCount = 0;
 }
 
 void TestController::decidePolicyForUserMediaPermissionRequestIfPossible()
 {
-    if (!m_isUserMediaPermissionSet)
+    if (!m_canDecideUserMediaRequest)
         return;
 
-    for (auto& pair : m_userMediaPermissionRequests) {
-        auto originHash = pair.first;
-        auto request = pair.second.get();
-
-        auto& settings = settingsForOrigin(originHash);
-        settings.incrementRequestCount();
-
-        if (m_isUserMediaPermissionSet && WKUserMediaPermissionRequestRequiresCameraCapture(request) && !m_isCameraPermissionAllowed) {
-            WKUserMediaPermissionRequestDeny(request, kWKPermissionDenied);
+    for (WKRetainPtr request : m_userMediaPermissionRequests) {
+        if (m_isCameraPermissionAllowed && WKUserMediaPermissionRequestRequiresCameraCapture(request.get()) && !*m_isCameraPermissionAllowed) {
+            WKUserMediaPermissionRequestDeny(request.get(), kWKPermissionDenied);
             continue;
         }
 
-        if (m_isUserMediaPermissionSet && WKUserMediaPermissionRequestRequiresMicrophoneCapture(request) && !m_isMicrophonePermissionAllowed) {
-            WKUserMediaPermissionRequestDeny(request, kWKPermissionDenied);
+        if (m_isMicrophonePermissionAllowed && WKUserMediaPermissionRequestRequiresMicrophoneCapture(request.get()) && !*m_isMicrophonePermissionAllowed) {
+            WKUserMediaPermissionRequestDeny(request.get(), kWKPermissionDenied);
             continue;
         }
 
-        auto audioDeviceUIDs = adoptWK(WKUserMediaPermissionRequestAudioDeviceUIDs(request));
-        auto videoDeviceUIDs = adoptWK(WKUserMediaPermissionRequestVideoDeviceUIDs(request));
+        auto audioDeviceUIDs = adoptWK(WKUserMediaPermissionRequestAudioDeviceUIDs(request.get()));
+        auto videoDeviceUIDs = adoptWK(WKUserMediaPermissionRequestVideoDeviceUIDs(request.get()));
 
-        if (!WKUserMediaPermissionRequestRequiresDisplayCapture(request) && !WKArrayGetSize(videoDeviceUIDs.get()) && !WKArrayGetSize(audioDeviceUIDs.get())) {
-            WKUserMediaPermissionRequestDeny(request, kWKNoConstraints);
+        if (!WKUserMediaPermissionRequestRequiresDisplayCapture(request.get()) && !WKArrayGetSize(videoDeviceUIDs.get()) && !WKArrayGetSize(audioDeviceUIDs.get())) {
+            WKUserMediaPermissionRequestDeny(request.get(), kWKNoConstraints);
             continue;
         }
 
@@ -3147,7 +3284,7 @@ void TestController::decidePolicyForUserMediaPermissionRequestIfPossible()
         else
             audioDeviceUID = toWK("");
 
-        WKUserMediaPermissionRequestAllow(request, audioDeviceUID.get(), videoDeviceUID.get());
+        WKUserMediaPermissionRequestAllow(request.get(), audioDeviceUID.get(), videoDeviceUID.get());
     }
     m_userMediaPermissionRequests.clear();
 }
@@ -3317,7 +3454,7 @@ void TestController::decidePolicyForNavigationAction(WKPageRef page, WKNavigatio
     }
 
     if (m_shouldDecideNavigationPolicyAfterDelay)
-        RunLoop::main().dispatch(WTFMove(decisionFunction));
+        RunLoop::protectedMain()->dispatch(WTFMove(decisionFunction));
     else
         decisionFunction();
 }
@@ -3360,7 +3497,7 @@ void TestController::decidePolicyForNavigationResponse(WKNavigationResponseRef n
     }
 
     if (m_shouldDecideResponsePolicyAfterDelay)
-        RunLoop::main().dispatch(WTFMove(decisionFunction));
+        RunLoop::protectedMain()->dispatch(WTFMove(decisionFunction));
     else
         decisionFunction();
 }
@@ -4101,9 +4238,25 @@ void TestController::setStatisticsShouldDowngradeReferrer(bool value, Completion
     WKWebsiteDataStoreSetResourceLoadStatisticsShouldDowngradeReferrerForTesting(websiteDataStore(), value, completionHandler.leak(), adoptAndCallCompletionHandler);
 }
 
-void TestController::setStatisticsShouldBlockThirdPartyCookies(bool value, bool onlyOnSitesWithoutUserInteraction, CompletionHandler<void(WKTypeRef)>&& completionHandler)
+void TestController::setStatisticsShouldBlockThirdPartyCookies(bool value, ThirdPartyCookieBlockingPolicy thirdPartyCookieBlockingPolicy, CompletionHandler<void(WKTypeRef)>&& completionHandler)
 {
-    WKWebsiteDataStoreSetResourceLoadStatisticsShouldBlockThirdPartyCookiesForTesting(websiteDataStore(), value, onlyOnSitesWithoutUserInteraction, completionHandler.leak(), adoptAndCallCompletionHandler);
+    WKThirdPartyCookieBlockingPolicy blockingPolicy;
+    switch (thirdPartyCookieBlockingPolicy) {
+    case ThirdPartyCookieBlockingPolicy::AllOnlyOnSitesWithoutUserInteraction:
+        blockingPolicy = kWKThirdPartyCookieBlockingPolicyAllOnlyOnSitesWithoutUserInteraction;
+        break;
+    case ThirdPartyCookieBlockingPolicy::AllExceptPartitioned:
+        blockingPolicy = kWKThirdPartyCookieBlockingPolicyAllExceptPartitioned;
+        break;
+    case ThirdPartyCookieBlockingPolicy::All:
+        blockingPolicy = kWKThirdPartyCookieBlockingPolicyAll;
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+        blockingPolicy = kWKThirdPartyCookieBlockingPolicyAll;
+        break;
+    };
+    WKWebsiteDataStoreSetResourceLoadStatisticsShouldBlockThirdPartyCookiesForTesting(websiteDataStore(), value, blockingPolicy, completionHandler.leak(), adoptAndCallCompletionHandler);
 }
 
 void TestController::setStatisticsFirstPartyWebsiteDataRemovalMode(bool value, CompletionHandler<void(WKTypeRef)>&& completionHandler)
@@ -4150,7 +4303,8 @@ void TestController::removeAllCookies(CompletionHandler<void(WKTypeRef)>&& compl
 
 void TestController::addMockMediaDevice(WKStringRef persistentID, WKStringRef label, WKStringRef type, WKDictionaryRef properties)
 {
-    WKAddMockMediaDevice(platformContext(), persistentID, label, type, properties);
+    bool isDefault = false;
+    WKAddMockMediaDevice(platformContext(), persistentID, label, type, properties, isDefault);
 }
 
 void TestController::clearMockMediaDevices()
@@ -4188,9 +4342,9 @@ void TestController::setMockCaptureDevicesInterrupted(bool isCameraInterrupted, 
     WKPageSetMockCaptureDevicesInterrupted(m_mainWebView->page(), isCameraInterrupted, isMicrophoneInterrupted);
 }
 
-void TestController::triggerMockCaptureConfigurationChange(bool forMicrophone, bool forDisplay)
+void TestController::triggerMockCaptureConfigurationChange(bool forCamera, bool forMicrophone, bool forDisplay)
 {
-    WKPageTriggerMockCaptureConfigurationChange(m_mainWebView->page(), forMicrophone, forDisplay);
+    WKPageTriggerMockCaptureConfigurationChange(m_mainWebView->page(), forCamera, forMicrophone, forDisplay);
 }
 
 void TestController::setCaptureState(bool cameraState, bool microphoneState, bool displayState)
@@ -4460,6 +4614,11 @@ void TestController::setRequestStorageAccessThrowsExceptionUntilReload(bool enab
     auto configuration = adoptWK(WKPageCopyPageConfiguration(m_mainWebView->page()));
     auto preferences = WKPageConfigurationGetPreferences(configuration.get());
     WKPreferencesSetBoolValueForKeyForTesting(preferences, enabled, toWK("RequestStorageAccessThrowsExceptionUntilReload").get());
+}
+
+void TestController::setResourceMonitorList(WKStringRef rulesText, CompletionHandler<void(WKTypeRef)>&& completionHandler)
+{
+    WKContextSetResourceMonitorURLsForTesting(m_context.get(), rulesText, completionHandler.leak(), adoptAndCallCompletionHandler);
 }
 
 } // namespace WTR

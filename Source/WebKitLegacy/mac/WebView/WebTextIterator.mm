@@ -115,7 +115,7 @@
         _private->_upconvertedText.appendRange(characters.begin(), characters.end());
     }
     ASSERT(_private->_upconvertedText.size() == text.length());
-    return _private->_upconvertedText.data();
+    return _private->_upconvertedText.span().data();
 }
 
 - (NSUInteger)currentTextLength

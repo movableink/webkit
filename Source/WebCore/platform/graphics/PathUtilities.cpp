@@ -34,6 +34,8 @@
 #include "FloatRoundedRect.h"
 #include "GeometryUtilities.h"
 #include <math.h>
+#include <numbers>
+#include <ranges>
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -136,7 +138,7 @@ static bool addIntersectionPoints(Vector<FloatPointGraph::Polygon>& polys, Float
             intersectionPoints.append(graph.findOrCreateNode(intersectionPoint));
         }
 
-        std::sort(intersectionPoints.begin(), intersectionPoints.end(), [edgeA](auto* a, auto* b) {
+        std::ranges::sort(intersectionPoints, [edgeA](auto* a, auto* b) {
             return FloatPoint(*edgeA.first - *b).lengthSquared() > FloatPoint(*edgeA.first - *a).lengthSquared();
         });
 
@@ -185,7 +187,7 @@ static FloatPointGraph::Polygon walkGraphAndExtractPolygon(FloatPointGraph::Node
             float crossZ = nextVec.x() * currentVec.y() - nextVec.y() * currentVec.x();
 
             if (crossZ < 0)
-                angle = (2 * piFloat) - angle;
+                angle = (2 * std::numbers::pi_v<float>) - angle;
 
             if (!nextNode || angle > nextNodeAngle) {
                 nextNode = potentialNextNode;
@@ -263,12 +265,8 @@ static Vector<FloatPointGraph::Polygon> polygonsForRect(const Vector<FloatRect>&
 {
     Vector<FloatRect> sortedRects = rects;
     // FIXME: Replace it with 2 dimensional sort.
-    std::sort(sortedRects.begin(), sortedRects.end(), [](FloatRect a, FloatRect b) {
-        return a.x() < b.x();
-    });
-    std::sort(sortedRects.begin(), sortedRects.end(), [](FloatRect a, FloatRect b) {
-        return a.y() < b.y();
-    });
+    std::ranges::sort(sortedRects, { }, &FloatRect::x);
+    std::ranges::sort(sortedRects, { }, &FloatRect::y);
 
     Vector<FloatPointGraph::Polygon> rectPolygons;
     rectPolygons.reserveInitialCapacity(sortedRects.size());

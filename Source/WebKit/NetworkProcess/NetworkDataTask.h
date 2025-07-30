@@ -36,6 +36,7 @@
 #include <WebCore/StoredCredentialsPolicy.h>
 #include <pal/SessionID.h>
 #include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/text/WTFString.h>
@@ -50,12 +51,14 @@ class SharedBuffer;
 
 namespace WebKit {
 
-class NetworkLoadParameters;
 class NetworkSession;
 class PendingDownload;
+
 enum class AuthenticationChallengeDisposition : uint8_t;
 enum class NegotiatedLegacyTLS : bool;
 enum class PrivateRelayed : bool;
+
+struct NetworkLoadParameters;
 
 using RedirectCompletionHandler = CompletionHandler<void(WebCore::ResourceRequest&&)>;
 using ChallengeCompletionHandler = CompletionHandler<void(AuthenticationChallengeDisposition, const WebCore::Credential&)>;
@@ -111,6 +114,7 @@ public:
     virtual State state() const = 0;
 
     NetworkDataTaskClient* client() const { return m_client.get(); }
+    RefPtr<NetworkDataTaskClient> protectedClient() const { return client(); }
     void clearClient() { m_client = nullptr; }
 
     std::optional<DownloadID> pendingDownloadID() const { return m_pendingDownloadID.asOptional(); }
@@ -147,8 +151,11 @@ public:
 
     const NetworkSession* networkSession() const;
     NetworkSession* networkSession();
+    CheckedPtr<NetworkSession> checkedNetworkSession();
 
     virtual void setTimingAllowFailedFlag() { }
+
+    size_t bytesTransferredOverNetwork() const { return m_bytesTransferredOverNetwork; }
 
 protected:
     NetworkDataTask(NetworkSession&, NetworkDataTaskClient&, const WebCore::ResourceRequest&, WebCore::StoredCredentialsPolicy, bool shouldClearReferrerOnHTTPSToHTTPRedirect, bool dataTaskIsForMainFrameNavigation);
@@ -162,6 +169,7 @@ protected:
     void scheduleFailure(FailureType);
 
     void restrictRequestReferrerToOriginIfNeeded(WebCore::ResourceRequest&);
+    void setBytesTransferredOverNetwork(size_t bytes) { m_bytesTransferredOverNetwork = bytes; }
 
     WeakPtr<NetworkSession> m_session;
     WeakPtr<NetworkDataTaskClient> m_client;
@@ -176,8 +184,9 @@ protected:
     String m_pendingDownloadLocation;
     WebCore::ResourceRequest m_firstRequest;
     WebCore::ResourceRequest m_previousRequest;
-    bool m_shouldClearReferrerOnHTTPSToHTTPRedirect { true };
     String m_suggestedFilename;
+    size_t m_bytesTransferredOverNetwork { 0 };
+    bool m_shouldClearReferrerOnHTTPSToHTTPRedirect { true };
     bool m_dataTaskIsForMainFrameNavigation { false };
     bool m_failureScheduled { false };
 };

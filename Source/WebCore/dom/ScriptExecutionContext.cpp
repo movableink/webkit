@@ -31,6 +31,8 @@
 #include "CSSValuePool.h"
 #include "CachedScript.h"
 #include "CommonVM.h"
+#include "ContentSecurityPolicy.h"
+#include "CrossOriginMode.h"
 #include "CrossOriginOpenerPolicy.h"
 #include "DOMTimer.h"
 #include "DatabaseContext.h"
@@ -58,6 +60,7 @@
 #include "SWContextManager.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
+#include "ScriptExecutionContextInlines.h"
 #include "ScriptTelemetryCategory.h"
 #include "ServiceWorker.h"
 #include "ServiceWorkerGlobalScope.h"
@@ -121,11 +124,12 @@ public:
     RefPtr<ScriptCallStack> m_callStack;
 };
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(ScriptExecutionContext, PendingException);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(ScriptExecutionContext, Task);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScriptExecutionContext::PendingException);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScriptExecutionContext::Task);
 
 ScriptExecutionContext::ScriptExecutionContext(Type type, std::optional<ScriptExecutionContextIdentifier> contextIdentifier)
     : m_identifier(contextIdentifier ? *contextIdentifier : ScriptExecutionContextIdentifier::generate())
+    , m_storageBlockingPolicy { StorageBlockingPolicy::AllowAll }
     , m_type(type)
 {
 }
@@ -285,7 +289,7 @@ std::unique_ptr<FontLoadRequest> ScriptExecutionContext::fontLoadRequest(const S
     return nullptr;
 }
 
-void ScriptExecutionContext::forEachActiveDOMObject(const Function<ShouldContinue(ActiveDOMObject&)>& apply) const
+void ScriptExecutionContext::forEachActiveDOMObject(NOESCAPE const Function<ShouldContinue(ActiveDOMObject&)>& apply) const
 {
     // It is not allowed to run arbitrary script or construct new ActiveDOMObjects while we are iterating over ActiveDOMObjects.
     // An ASSERT_WITH_SECURITY_IMPLICATION or RELEASE_ASSERT will fire if this happens, but it's important to code
@@ -318,7 +322,7 @@ JSC::ScriptExecutionStatus ScriptExecutionContext::jscScriptExecutionStatus() co
     return JSC::ScriptExecutionStatus::Running;
 }
 
-URL ScriptExecutionContext::currentSourceURL() const
+URL ScriptExecutionContext::currentSourceURL(CallStackPosition position) const
 {
     auto* globalObject = this->globalObject();
     if (!globalObject)
@@ -330,7 +334,7 @@ URL ScriptExecutionContext::currentSourceURL() const
         return { };
 
     URL sourceURL;
-    JSC::StackVisitor::visit(topCallFrame, vm, [&sourceURL](auto& visitor) {
+    JSC::StackVisitor::visit(topCallFrame, vm, [&sourceURL, position](auto& visitor) {
         if (visitor->isNativeFrame())
             return IterationStatus::Continue;
 
@@ -338,11 +342,12 @@ URL ScriptExecutionContext::currentSourceURL() const
         if (urlString.isEmpty())
             return IterationStatus::Continue;
 
-        sourceURL = URL { WTFMove(urlString) };
-        if (sourceURL.isValid())
+        auto newSourceURL = URL { WTFMove(urlString) };
+        if (!newSourceURL.isValid())
             return IterationStatus::Continue;
 
-        return IterationStatus::Done;
+        sourceURL = WTFMove(newSourceURL);
+        return position == CallStackPosition::BottomMost ? IterationStatus::Continue : IterationStatus::Done;
     });
     return sourceURL;
 }
@@ -442,6 +447,11 @@ void ScriptExecutionContext::didCreateDestructionObserver(ContextDestructionObse
 void ScriptExecutionContext::willDestroyDestructionObserver(ContextDestructionObserver& observer)
 {
     m_destructionObservers.remove(&observer);
+}
+
+std::optional<PAL::SessionID> ScriptExecutionContext::sessionID() const
+{
+    return std::nullopt;
 }
 
 RefPtr<RTCDataChannelRemoteHandlerConnection> ScriptExecutionContext::createRTCDataChannelRemoteHandlerConnection()
@@ -572,6 +582,11 @@ PublicURLManager& ScriptExecutionContext::publicURLManager()
     return *m_publicURLManager;
 }
 
+Ref<PublicURLManager> ScriptExecutionContext::protectedPublicURLManager()
+{
+    return publicURLManager();
+}
+
 void ScriptExecutionContext::adjustMinimumDOMTimerInterval(Seconds oldMinimumTimerInterval)
 {
     if (minimumDOMTimerInterval() != oldMinimumTimerInterval) {
@@ -644,7 +659,7 @@ JSC::JSGlobalObject* ScriptExecutionContext::globalObject() const
 {
     if (auto* document = dynamicDowncast<Document>(*this)) {
         auto frame = document->frame();
-        return frame ? frame->script().globalObject(mainThreadNormalWorld()) : nullptr;
+        return frame ? frame->script().globalObject(mainThreadNormalWorldSingleton()) : nullptr;
     }
 
     if (auto* globalScope = dynamicDowncast<WorkerOrWorkletGlobalScope>(*this)) {
@@ -783,6 +798,27 @@ bool ScriptExecutionContext::ensureOnContextThread(ScriptExecutionContextIdentif
     return true;
 }
 
+bool ScriptExecutionContext::ensureOnContextThreadForCrossThreadTask(ScriptExecutionContextIdentifier identifier, CrossThreadTask&& crossThreadTask)
+{
+    {
+        Locker locker { allScriptExecutionContextsMapLock };
+        auto context = allScriptExecutionContextsMap().get(identifier);
+
+        if (!context)
+            return false;
+
+        if (!context->isContextThread()) {
+            context->postTask([crossThreadTask = WTFMove(crossThreadTask)](ScriptExecutionContext&) mutable {
+                crossThreadTask.performTask();
+            });
+            return true;
+        }
+    }
+
+    crossThreadTask.performTask();
+    return true;
+}
+
 void ScriptExecutionContext::postTaskToResponsibleDocument(Function<void(Document&)>&& callback)
 {
     if (auto* document = dynamicDowncast<Document>(*this)) {
@@ -831,7 +867,7 @@ ScriptExecutionContext::HasResourceAccess ScriptExecutionContext::canAccessResou
     case ResourceType::StorageManager:
         if (isOriginEquivalentToLocal(*origin))
             return HasResourceAccess::No;
-        FALLTHROUGH;
+        [[fallthrough]];
     case ResourceType::SessionStorage:
         if (m_storageBlockingPolicy == StorageBlockingPolicy::BlockAll)
             return HasResourceAccess::No;
@@ -852,11 +888,6 @@ ScriptExecutionContext::NotificationCallbackIdentifier ScriptExecutionContext::a
 CompletionHandler<void()> ScriptExecutionContext::takeNotificationCallback(NotificationCallbackIdentifier identifier)
 {
     return m_notificationCallbacks.take(identifier);
-}
-
-CheckedRef<EventLoopTaskGroup> ScriptExecutionContext::checkedEventLoop()
-{
-    return eventLoop();
 }
 
 void ScriptExecutionContext::ref()
@@ -900,7 +931,7 @@ public:
 private:
     explicit ScriptExecutionContextDispatcher(ScriptExecutionContext& context)
         : m_identifier(context.identifier())
-        , m_threadId(context.isWorkerGlobalScope() ? Thread::current().uid() : 1)
+        , m_threadId(context.isWorkerGlobalScope() ? Thread::currentSingleton().uid() : 1)
     {
     }
 
@@ -913,7 +944,7 @@ private:
         }
         ScriptExecutionContext::postTaskTo(m_identifier, WTFMove(callback));
     }
-    bool isCurrent() const final { return m_threadId == Thread::current().uid(); }
+    bool isCurrent() const final { return m_threadId == Thread::currentSingleton().uid(); }
 
     ScriptExecutionContextIdentifier m_identifier;
     const uint32_t m_threadId { 1 };
@@ -933,6 +964,9 @@ bool ScriptExecutionContext::requiresScriptExecutionTelemetry(ScriptTelemetryCat
         return false;
 
     if (!vm->topCallFrame)
+        return false;
+
+    if (!shouldEnableScriptTelemetry(category, advancedPrivacyProtections()))
         return false;
 
     auto [taintedness, taintedURL] = JSC::sourceTaintedOriginFromStack(*vm, vm->topCallFrame);

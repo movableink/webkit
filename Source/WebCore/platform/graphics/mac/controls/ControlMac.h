@@ -29,6 +29,7 @@
 
 #import "LengthBox.h"
 #import "PlatformControl.h"
+#import <wtf/CheckedRef.h>
 #import <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -42,6 +43,7 @@ class ControlMac : public PlatformControl {
     WTF_MAKE_TZONE_ALLOCATED(ControlMac);
 public:
     ControlMac(ControlPart&, ControlFactoryMac&);
+    ~ControlMac();
 
 protected:
     static bool userPrefersContrast();
@@ -68,9 +70,7 @@ protected:
 
     void drawCell(GraphicsContext&, const FloatRect&, float deviceScaleFactor, const ControlStyle&, NSCell *, bool drawCell = true);
 
-#if ENABLE(DATALIST_ELEMENT)
     void drawListButton(GraphicsContext&, const FloatRect&, float deviceScaleFactor, const ControlStyle&);
-#endif
 
 private:
     void drawCellInternal(GraphicsContext&, const FloatRect&, float deviceScaleFactor, const ControlStyle&, NSCell *);
@@ -79,7 +79,7 @@ private:
     void drawCellFocusRing(GraphicsContext&, const FloatRect&, float deviceScaleFactor, const ControlStyle&, NSCell *);
     void drawCellOrFocusRing(GraphicsContext&, const FloatRect&, float deviceScaleFactor, const ControlStyle&, NSCell *, bool drawCell = true);
 
-    ControlFactoryMac& m_controlFactory;
+    const CheckedRef<ControlFactoryMac> m_controlFactory;
 };
 
 } // namespace WebCore

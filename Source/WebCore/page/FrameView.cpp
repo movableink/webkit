@@ -35,6 +35,7 @@
 #include "RenderElement.h"
 #include "RenderLayer.h"
 #include "RenderLayerScrollableArea.h"
+#include "RenderObjectInlines.h"
 #include "RenderWidget.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -60,17 +61,19 @@ int FrameView::footerHeight() const
     return page ? page->footerHeight() : 0;
 }
 
-float FrameView::topContentInset(TopContentInsetType contentInsetTypeToReturn) const
+FloatBoxExtent FrameView::obscuredContentInsets(InsetType type) const
 {
-    if (platformWidget() && contentInsetTypeToReturn == TopContentInsetType::WebCoreOrPlatformContentInset)
-        return platformTopContentInset();
+    if (platformWidget() && type == InsetType::WebCoreOrPlatformInset)
+        return platformContentInsets();
 
     Ref frame = this->frame();
     if (!frame->isMainFrame())
-        return 0;
+        return { };
 
-    Page* page = frame->page();
-    return page ? page->topContentInset() : 0;
+    if (RefPtr page = frame->page())
+        return page->obscuredContentInsets();
+
+    return { };
 }
 
 float FrameView::visibleContentScaleFactor() const
@@ -177,6 +180,16 @@ bool FrameView::scrollAnimatorEnabled() const
 
     return false;
 }
+
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+bool FrameView::vectorBasedControlsEnabled() const
+{
+    if (RefPtr page = frame().page())
+        return page->settings().vectorBasedControlsOnMacEnabled();
+
+    return false;
+}
+#endif
 
 IntRect FrameView::convertFromRendererToContainingView(const RenderElement* renderer, const IntRect& rendererRect) const
 {

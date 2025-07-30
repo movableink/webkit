@@ -27,7 +27,7 @@
 #include "config.h"
 #include "CSSFontSelector.h"
 
-#include "CachedFont.h"
+#include "CSSCounterStyleRegistry.h"
 #include "CSSFontFace.h"
 #include "CSSFontFaceSource.h"
 #include "CSSFontFeatureValuesRule.h"
@@ -36,6 +36,7 @@
 #include "CSSSegmentedFontFace.h"
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
+#include "CachedFont.h"
 #include "CachedResourceLoader.h"
 #include "Document.h"
 #include "DocumentInlines.h"
@@ -88,7 +89,7 @@ CSSFontSelector::CSSFontSelector(ScriptExecutionContext& context)
         });
     }
 
-    FontCache::forCurrentThread().addClient(*this);
+    FontCache::forCurrentThread()->addClient(*this);
     m_cssFontFaceSet->addFontModifiedObserver(m_fontModifiedObserver);
     LOG(Fonts, "CSSFontSelector %p ctor", this);
 }
@@ -176,21 +177,18 @@ void CSSFontSelector::addFontFaceRule(StyleRuleFontFace& fontFaceRule, bool isIn
         return;
     }
 
-    const StyleProperties& style = fontFaceRule.properties();
-    RefPtr familyList = dynamicDowncast<CSSValueList>(style.getPropertyCSSValue(CSSPropertyFontFamily));
+    auto& style = fontFaceRule.properties();
+    RefPtr fontFamily = style.getPropertyCSSValue(CSSPropertyFontFamily);
     RefPtr fontStyle = style.getPropertyCSSValue(CSSPropertyFontStyle);
     RefPtr fontWeight = style.getPropertyCSSValue(CSSPropertyFontWeight);
-    RefPtr fontStretch = style.getPropertyCSSValue(CSSPropertyFontStretch);
+    RefPtr fontWidth = style.getPropertyCSSValue(CSSPropertyFontWidth);
     RefPtr srcList = dynamicDowncast<CSSValueList>(style.getPropertyCSSValue(CSSPropertySrc));
     RefPtr unicodeRange = style.getPropertyCSSValue(CSSPropertyUnicodeRange);
-    CSSValueList* rangeList = downcast<CSSValueList>(unicodeRange.get());
+    RefPtr rangeList = downcast<CSSValueList>(unicodeRange.get());
     RefPtr featureSettings = style.getPropertyCSSValue(CSSPropertyFontFeatureSettings);
     RefPtr display = style.getPropertyCSSValue(CSSPropertyFontDisplay);
     RefPtr sizeAdjust = style.getPropertyCSSValue(CSSPropertySizeAdjust);
-    if (!familyList || !srcList || (unicodeRange && !rangeList))
-        return;
-
-    if (!familyList->length())
+    if (!fontFamily || !srcList || (unicodeRange && !rangeList))
         return;
 
     if (!srcList->length())
@@ -199,13 +197,13 @@ void CSSFontSelector::addFontFaceRule(StyleRuleFontFace& fontFaceRule, bool isIn
     SetForScope creatingFont(m_creatingFont, true);
     auto fontFace = CSSFontFace::create(*this, &fontFaceRule);
 
-    fontFace->setFamilies(*familyList);
+    fontFace->setFamily(*fontFamily);
     if (fontStyle)
         fontFace->setStyle(*fontStyle);
     if (fontWeight)
         fontFace->setWeight(*fontWeight);
-    if (fontStretch)
-        fontFace->setStretch(*fontStretch);
+    if (fontWidth)
+        fontFace->setWidth(*fontWidth);
     if (rangeList)
         fontFace->setUnicodeRange(*rangeList);
     if (featureSettings)
@@ -407,7 +405,7 @@ FontRanges CSSFontSelector::fontRangesForFamily(const FontDescription& fontDescr
     if (!resolveGenericFamilyFirst)
         resolveAndAssignGenericFamily();
 
-    auto font = FontCache::forCurrentThread().fontForFamily(*fontDescriptionForLookup, familyForLookup, { { }, { }, fontPaletteValues, fontFeatureValues, 1.0 });
+    auto font = FontCache::forCurrentThread()->fontForFamily(*fontDescriptionForLookup, familyForLookup, { { }, { }, fontPaletteValues, fontFeatureValues, 1.0 });
     if (document && document->settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logFontLoad(*document, familyForLookup.string(), !!font);
     return { FontRanges { WTFMove(font) }, isGenericFontFamily };
@@ -438,11 +436,26 @@ RefPtr<Font> CSSFontSelector::fallbackFontAt(const FontDescription& fontDescript
     if (!m_context->settingsValues().fontFallbackPrefersPictographs)
         return nullptr;
     auto& pictographFontFamily = m_context->settingsValues().fontGenericFamilies.pictographFontFamily();
-    auto font = FontCache::forCurrentThread().fontForFamily(fontDescription, pictographFontFamily);
+    auto font = FontCache::forCurrentThread()->fontForFamily(fontDescription, pictographFontFamily);
     if (auto* document = dynamicDowncast<Document>(m_context.get()); document && document->settingsValues().webAPIStatisticsEnabled)
         ResourceLoadObserver::shared().logFontLoad(*document, pictographFontFamily, !!font);
 
     return font;
+}
+
+bool CSSFontSelector::isSimpleFontSelectorForDescription() const
+{
+    // font face rules still pending
+    if (m_stagingArea.size())
+        return false;
+
+    // FIXME: remove this when we fix counter style rules mutation.
+    if (auto* document = dynamicDowncast<Document>(m_context.get())) {
+        if (document->counterStyleRegistry().hasAuthorCounterStyles())
+            return false;
+    }
+
+    return !m_cssFontFaceSet->faceCount() && m_featureValues.isEmpty() && m_paletteMap.isEmpty();
 }
 
 }

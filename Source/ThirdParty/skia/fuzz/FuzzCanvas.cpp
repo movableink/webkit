@@ -7,7 +7,6 @@
 
 #include "fuzz/Fuzz.h"
 #include "fuzz/FuzzCommon.h"
-#include "include/codec/SkPngDecoder.h"
 #include "include/core/SkBitmap.h"
 #include "include/core/SkBlurTypes.h"
 #include "include/core/SkCanvas.h"
@@ -25,6 +24,7 @@
 #include "include/core/SkTypeface.h"
 #include "include/core/SkVertices.h"
 #include "include/docs/SkPDFDocument.h"
+#include "include/docs/SkPDFJpegHelpers.h"
 #include "include/effects/Sk1DPathEffect.h"
 #include "include/effects/Sk2DPathEffect.h"
 #include "include/effects/SkCornerPathEffect.h"
@@ -35,7 +35,6 @@
 #include "include/effects/SkImageFilters.h"
 #include "include/effects/SkLumaColorFilter.h"
 #include "include/effects/SkPerlinNoiseShader.h"
-#include "include/encode/SkPngEncoder.h"
 #include "include/gpu/ganesh/SkSurfaceGanesh.h"
 #include "include/private/base/SkTo.h"
 #include "include/svg/SkSVGCanvas.h"
@@ -1519,6 +1518,10 @@ DEF_FUZZ(RasterN32Canvas, fuzz) {
     fuzz_canvas(fuzz, surface->getCanvas());
 }
 
+#if defined(SK_CODEC_DECODES_PNG_WITH_LIBPNG) && defined(SK_CODEC_ENCODES_PNG_WITH_LIBPNG)
+#include "include/codec/SkPngDecoder.h"
+#include "include/encode/SkPngEncoder.h"
+
 DEF_FUZZ(RasterN32CanvasViaSerialization, fuzz) {
     SkPictureRecorder recorder;
     fuzz_canvas(fuzz, recorder.beginRecording(SkIntToScalar(kCanvasSize.width()),
@@ -1540,6 +1543,8 @@ DEF_FUZZ(RasterN32CanvasViaSerialization, fuzz) {
     SkASSERT(surface && surface->getCanvas());
     surface->getCanvas()->drawPicture(deserialized);
 }
+
+#endif
 
 DEF_FUZZ(ImageFilter, fuzz) {
     SkBitmap bitmap;
@@ -1669,7 +1674,7 @@ DEF_FUZZ(NativeGLCanvas, fuzz) {
 
 DEF_FUZZ(PDFCanvas, fuzz) {
     SkNullWStream stream;
-    auto doc = SkPDF::MakeDocument(&stream);
+    auto doc = SkPDF::MakeDocument(&stream, SkPDF::JPEG::MetadataWithCallbacks());
     fuzz_canvas(fuzz, doc->beginPage(SkIntToScalar(kCanvasSize.width()),
                                      SkIntToScalar(kCanvasSize.height())));
 }

@@ -23,12 +23,12 @@
 import json
 import os
 import re
-
-from datetime import datetime
+from datetime import datetime, timezone
+from unittest.mock import patch
 
 from webkitcorepy import mocks
-from webkitscmpy import local
-from webkitscmpy import Commit, Contributor
+
+from webkitscmpy import Commit, Contributor, local
 
 
 class Svn(mocks.Subprocess):
@@ -41,7 +41,7 @@ class Svn(mocks.Subprocess):
         return 'r{revision} | {email} | {date}'.format(
             revision=commit.revision,
             email=email,
-            date=datetime.utcfromtimestamp(commit.timestamp).strftime('%Y-%m-%d %H:%M:%S {} (%a, %d %b %Y)'.format(self.utc_offset)),
+            date=datetime.fromtimestamp(commit.timestamp, timezone.utc).strftime('%Y-%m-%d %H:%M:%S {} (%a, %d %b %Y)'.format(self.utc_offset)),
         )
 
     def __init__(self, path='/.invalid-svn', datafile=None, remote=None, utc_offset=None):
@@ -169,11 +169,14 @@ class Svn(mocks.Subprocess):
         )
 
     def __enter__(self):
-        from mock import patch
-        from shutil import which
-
-        self.patches.append(patch('shutil.which', lambda cmd: dict(svn=self.executable).get(cmd, which(cmd))))
+        local.Svn.executable.clear()  # Clear the memoized cache prior to patching
+        p = patch('shutil.which', lambda cmd: self.executable if cmd == 'svn' else p.temp_original(cmd))
+        self.patches.append(p)
         return super(Svn, self).__enter__()
+
+    def __exit__(self, typ, exc, tb):
+        super().__exit__(typ, exc, tb)
+        local.Svn.executable.clear()  # Clear the memoized cache after patching
 
     @property
     def branch(self):
@@ -208,7 +211,7 @@ class Svn(mocks.Subprocess):
                 branch=self.branch,
                 revision=commit.revision,
                 author=commit.author.email,
-                date=datetime.utcfromtimestamp(commit.timestamp).strftime('%Y-%m-%d %H:%M:%S {} (%a, %d %b %Y)'.format(self.utc_offset)),
+                date=datetime.fromtimestamp(commit.timestamp, timezone.utc).strftime('%Y-%m-%d %H:%M:%S {} (%a, %d %b %Y)'.format(self.utc_offset)),
             ),
         )
 

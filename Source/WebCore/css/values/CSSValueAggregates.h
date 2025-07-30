@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,52 +24,106 @@
 
 #pragma once
 
+#include "CSSValueConcepts.h"
 #include "CSSValueKeywords.h"
 #include "RectEdges.h"
 #include <optional>
 #include <tuple>
 #include <utility>
-#include <variant>
 #include <wtf/Markable.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomString.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-// Types can specialize this and set the value to true to be treated as "empty-like"
-// for CSS value type algorithms.
-// Requirements: None.
-template<typename> inline constexpr auto TreatAsEmptyLike = false;
-
-// Types can specialize this and set the value to true to be treated as "optional-like"
-// for CSS value type algorithms.
-// Requirements: Types be comparable to bool and have a operator* function.
-template<typename> inline constexpr auto TreatAsOptionalLike = false;
-
-// Types can specialize this and set the value to true to be treated as "tuple-like"
-// for CSS value type algorithms.
-// NOTE: This gets automatically specialized when using the CSS_TUPLE_LIKE_CONFORMANCE macro.
-// Requirements: Types must have conform the to the standard tuple-like pseudo-protocol.
-template<typename> inline constexpr auto TreatAsTupleLike = false;
-
-// Types can specialize this and set the value to true to be treated as "range-like"
-// for CSS value type algorithms.
-// Requirements: Types must have valid begin()/end() functions.
-template<typename> inline constexpr auto TreatAsRangeLike = false;
-
-// Types can specialize this and set the value to true to be treated as "variant-like"
-// for CSS value type algorithms.
-// Requirements: Types must be able to be passed to WTF::switchOn().
-template<typename> inline constexpr auto TreatAsVariantLike = false;
+enum class SerializationSeparatorType : uint8_t { None, Space, Comma, Slash };
 
 // Types that specialize TreatAsTupleLike or TreatAsRangeLike can specialize this to
 // indicate how to serialize the gaps between elements.
-template<typename> inline constexpr ASCIILiteral SerializationSeparator = ""_s;
+template<typename> inline constexpr SerializationSeparatorType SerializationSeparator = SerializationSeparatorType::None;
+
+template<SerializationSeparatorType> inline constexpr ASCIILiteral SerializationSeparatorStringForType = ""_s;
+template<> inline constexpr ASCIILiteral SerializationSeparatorStringForType<SerializationSeparatorType::Space> = " "_s;
+template<> inline constexpr ASCIILiteral SerializationSeparatorStringForType<SerializationSeparatorType::Comma> = ", "_s;
+template<> inline constexpr ASCIILiteral SerializationSeparatorStringForType<SerializationSeparatorType::Slash> = " / "_s;
+
+template<typename T> inline constexpr ASCIILiteral SerializationSeparatorString = SerializationSeparatorStringForType<SerializationSeparator<T>>;
 
 // Helper to define a simple `get()` implementation for a single value `name`.
-#define DEFINE_TYPE_WRAPPER(t, name) \
+#define DEFINE_TYPE_WRAPPER_GET(t, name) \
     template<size_t> const auto& get(const t& value) { return value.name; }
+
+// Helper to define a type by extending another type via inheritance.
+#define DEFINE_TYPE_EXTENDER(wrapper, wrapped)                                \
+    struct wrapper : wrapped {                                                \
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;                                       \
+        using Wrapped = wrapped;                                              \
+        using Wrapped::Wrapped;                                               \
+        template<size_t I> friend const auto& get(const wrapper& self)        \
+        {                                                                     \
+            return get<I>(static_cast<const wrapped&>(self));                 \
+        }                                                                     \
+        bool operator==(const wrapper&) const = default;                      \
+    };
+
+// Helper to define a type via direct wrapping of another type.
+#define DEFINE_TYPE_WRAPPER(wrapper, wrapped)                                 \
+    struct wrapper {                                                          \
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;                                       \
+        using Wrapped = wrapped;                                              \
+        wrapped value;                                                        \
+        template<typename... Args>                                            \
+        wrapper(Args&&... args) requires (requires { { wrapped(args...) }; }) \
+            : value(std::forward<Args>(args)...)                              \
+        {                                                                     \
+        }                                                                     \
+        const Wrapped& operator*() const { return value; }                    \
+        Wrapped& operator*() { return value; }                                \
+        const Wrapped* operator->() const { return &value; }                  \
+        Wrapped* operator->() { return &value; }                              \
+        template<size_t> friend const auto& get(const wrapper& self)          \
+        {                                                                     \
+            return self.value;                                                \
+        }                                                                     \
+        bool operator==(const wrapper&) const = default;                      \
+    };
+
+// Helper to define a tuple-like conformance for a type with `numberOfArguments` arguments.
+#define DEFINE_TUPLE_LIKE_CONFORMANCE(t, numberOfArguments) \
+    namespace std { \
+        template<> class tuple_size<t> : public std::integral_constant<size_t, numberOfArguments> { }; \
+        template<size_t I> class tuple_element<I, t> { \
+        public: \
+            using type = decltype(get<I>(std::declval<t>())); \
+        }; \
+    } \
+    template<> inline constexpr bool WebCore::TreatAsTupleLike<t> = true;
+
+// Helper to define a tuple-like conformance and that the type should be serialized as space separated.
+#define DEFINE_SPACE_SEPARATED_TUPLE_LIKE_CONFORMANCE(t, numberOfArguments) \
+    DEFINE_TUPLE_LIKE_CONFORMANCE(t, numberOfArguments) \
+    template<> inline constexpr WebCore::SerializationSeparatorType WebCore::SerializationSeparator<t> = WebCore::SerializationSeparatorType::Space;
+
+// Helper to define a tuple-like conformance and that the type should be serialized as comma separated.
+#define DEFINE_COMMA_SEPARATED_TUPLE_LIKE_CONFORMANCE(t, numberOfArguments) \
+    DEFINE_TUPLE_LIKE_CONFORMANCE(t, numberOfArguments) \
+    template<> inline constexpr WebCore::SerializationSeparatorType WebCore::SerializationSeparator<t> = WebCore::SerializationSeparatorType::Comma;
+
+// Helper to define a tuple-like conformance and that the type should be serialized as slash separated.
+#define DEFINE_SLASH_SEPARATED_TUPLE_LIKE_CONFORMANCE(t, numberOfArguments) \
+    DEFINE_TUPLE_LIKE_CONFORMANCE(t, numberOfArguments) \
+    template<> inline constexpr WebCore::SerializationSeparatorType WebCore::SerializationSeparator<t> = WebCore::SerializationSeparatorType::Slash;
+
+// Helper to define a tuple-like conformance based on the type being extended.
+#define DEFINE_TUPLE_LIKE_CONFORMANCE_FOR_TYPE_EXTENDER(t) \
+    DEFINE_TUPLE_LIKE_CONFORMANCE(t, std::tuple_size_v<t::Wrapped>) \
+    template<> inline constexpr WebCore::SerializationSeparatorType WebCore::SerializationSeparator<t> = WebCore::SerializationSeparator<t::Wrapped>;
+
+// Helper to define a tuple-like conformance for a wrapper type.
+#define DEFINE_TUPLE_LIKE_CONFORMANCE_FOR_TYPE_WRAPPER(t) \
+    DEFINE_TUPLE_LIKE_CONFORMANCE(t, 1)
 
 // MARK: - Conforming Existing Types
 
@@ -81,15 +135,7 @@ template<typename T> inline constexpr auto TreatAsOptionalLike<WTF::Markable<T>>
 template<typename... Ts> inline constexpr auto TreatAsTupleLike<std::tuple<Ts...>> = true;
 
 // - Variant-like
-template<typename... Ts> inline constexpr auto TreatAsVariantLike<std::variant<Ts...>> = true;
-
-
-// MARK: Utility Concepts
-
-template<typename T> concept HasIsZero = requires(T t) {
-    { t.isZero() } -> std::convertible_to<bool>;
-};
-
+template<typename... Ts> inline constexpr auto TreatAsVariantLike<Variant<Ts...>> = true;
 
 // MARK: - Standard Leaf Types
 
@@ -100,12 +146,19 @@ struct CustomIdentifier {
     bool operator==(const CustomIdentifier&) const = default;
     bool operator==(const AtomString& other) const { return value == other; }
 };
-WTF::TextStream& operator<<(WTF::TextStream&, const CustomIdentifier&);
+TextStream& operator<<(TextStream&, const CustomIdentifier&);
+
+template<CSSValueID C> TextStream& operator<<(TextStream& ts, const Constant<C>&)
+{
+    return ts << nameLiteral(C);
+}
 
 // MARK: - Standard Aggregates
 
 // Helper type used to represent a CSS function.
 template<CSSValueID C, typename T> struct FunctionNotation {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
     static constexpr auto name = C;
     T parameters;
 
@@ -120,9 +173,19 @@ template<CSSValueID C, typename T> struct FunctionNotation {
     bool operator==(const FunctionNotation<C, T>&) const = default;
 };
 
+template<CSSValueID C, typename T> bool operator==(const UniqueRef<FunctionNotation<C, T>>& a, const UniqueRef<FunctionNotation<C, T>>& b)
+{
+    return a.get() == b.get();
+}
+
 template<size_t, CSSValueID C, typename T> const auto& get(const FunctionNotation<C, T>& function)
 {
     return function.parameters;
+}
+
+template<CSSValueID C, typename T> TextStream& operator<<(TextStream& ts, const FunctionNotation<C, T>& function)
+{
+    return ts << nameLiteral(function.name) << '(' << function.parameters << ')';
 }
 
 template<CSSValueID C, typename T> inline constexpr auto TreatAsTupleLike<FunctionNotation<C, T>> = true;
@@ -163,7 +226,7 @@ template<typename T, size_t inlineCapacity = 0> struct SpaceSeparatedVector {
 };
 
 template<typename T, size_t N> inline constexpr auto TreatAsRangeLike<SpaceSeparatedVector<T, N>> = true;
-template<typename T, size_t N> inline constexpr auto SerializationSeparator<SpaceSeparatedVector<T, N>> = " "_s;
+template<typename T, size_t N> inline constexpr auto SerializationSeparator<SpaceSeparatedVector<T, N>> = SerializationSeparatorType::Space;
 
 // Wraps a variable number of elements of a single type, semantically marking them as serializing as "comma separated".
 template<typename T, size_t inlineCapacity = 0> struct CommaSeparatedVector {
@@ -201,7 +264,7 @@ template<typename T, size_t inlineCapacity = 0> struct CommaSeparatedVector {
 };
 
 template<typename T, size_t N> inline constexpr auto TreatAsRangeLike<CommaSeparatedVector<T, N>> = true;
-template<typename T, size_t N> inline constexpr auto SerializationSeparator<CommaSeparatedVector<T, N>> = ", "_s;
+template<typename T, size_t N> inline constexpr auto SerializationSeparator<CommaSeparatedVector<T, N>> = SerializationSeparatorType::Comma;
 
 // Wraps a list and enforces the invariant that it is either created with a non-empty value or `CSS::Keyword::None`.
 template<typename T> struct ListOrNone {
@@ -272,7 +335,7 @@ template<size_t I, typename T, size_t N> decltype(auto) get(const SpaceSeparated
 }
 
 template<typename T, size_t N> inline constexpr auto TreatAsTupleLike<SpaceSeparatedArray<T, N>> = true;
-template<typename T, size_t N> inline constexpr auto SerializationSeparator<SpaceSeparatedArray<T, N>> = " "_s;
+template<typename T, size_t N> inline constexpr auto SerializationSeparator<SpaceSeparatedArray<T, N>> = SerializationSeparatorType::Space;
 
 // Convenience for representing a two element array.
 template<typename T> using SpaceSeparatedPair = SpaceSeparatedArray<T, 2>;
@@ -310,7 +373,7 @@ template<size_t I, typename T, size_t N> decltype(auto) get(const CommaSeparated
 }
 
 template<typename T, size_t N> inline constexpr auto TreatAsTupleLike<CommaSeparatedArray<T, N>> = true;
-template<typename T, size_t N> inline constexpr auto SerializationSeparator<CommaSeparatedArray<T, N>> = ", "_s;
+template<typename T, size_t N> inline constexpr auto SerializationSeparator<CommaSeparatedArray<T, N>> = SerializationSeparatorType::Comma;
 
 // Convenience for representing a two element array.
 template<typename T> using CommaSeparatedPair = CommaSeparatedArray<T, 2>;
@@ -345,7 +408,7 @@ template<size_t I, typename... Ts> decltype(auto) get(const SpaceSeparatedTuple<
 }
 
 template<typename... Ts> inline constexpr auto TreatAsTupleLike<SpaceSeparatedTuple<Ts...>> = true;
-template<typename... Ts> inline constexpr auto SerializationSeparator<SpaceSeparatedTuple<Ts...>> = " "_s;
+template<typename... Ts> inline constexpr auto SerializationSeparator<SpaceSeparatedTuple<Ts...>> = SerializationSeparatorType::Space;
 
 // Wraps a variadic list of types, semantically marking them as serializing as "comma separated".
 template<typename... Ts> struct CommaSeparatedTuple {
@@ -377,7 +440,7 @@ template<size_t I, typename... Ts> decltype(auto) get(const CommaSeparatedTuple<
 }
 
 template<typename... Ts> inline constexpr auto TreatAsTupleLike<CommaSeparatedTuple<Ts...>> = true;
-template<typename... Ts> inline constexpr auto SerializationSeparator<CommaSeparatedTuple<Ts...>> = ", "_s;
+template<typename... Ts> inline constexpr auto SerializationSeparator<CommaSeparatedTuple<Ts...>> = SerializationSeparatorType::Comma;
 
 // Wraps a pair of elements of a single type representing a point, semantically marking them as serializing as "space separated".
 template<typename T> struct SpaceSeparatedPoint {
@@ -399,12 +462,6 @@ template<typename T> struct SpaceSeparatedPoint {
     const T& x() const { return get<0>(value); }
     const T& y() const { return get<1>(value); }
 
-    bool isZero() const
-        requires HasIsZero<T>
-    {
-        return x().isZero() && y().isZero();
-    }
-
     SpaceSeparatedPair<T> value;
 };
 
@@ -414,7 +471,7 @@ template<size_t I, typename T> decltype(auto) get(const SpaceSeparatedPoint<T>& 
 }
 
 template<typename T> inline constexpr auto TreatAsTupleLike<SpaceSeparatedPoint<T>> = true;
-template<typename T> inline constexpr auto SerializationSeparator<SpaceSeparatedPoint<T>> = " "_s;
+template<typename T> inline constexpr auto SerializationSeparator<SpaceSeparatedPoint<T>> = SerializationSeparatorType::Space;
 
 // Wraps a pair of elements of a single type representing a size, semantically marking them as serializing as "space separated".
 template<typename T> struct SpaceSeparatedSize {
@@ -436,18 +493,6 @@ template<typename T> struct SpaceSeparatedSize {
     const T& width() const { return get<0>(value); }
     const T& height() const { return get<1>(value); }
 
-    bool isZero() const
-        requires HasIsZero<T>
-    {
-        return width().isZero() && height().isZero();
-    }
-
-    bool isEmpty() const
-        requires HasIsZero<T>
-    {
-        return width().isZero() || height().isZero();
-    }
-
     SpaceSeparatedPair<T> value;
 };
 
@@ -457,30 +502,59 @@ template<size_t I, typename T> decltype(auto) get(const SpaceSeparatedSize<T>& s
 }
 
 template<typename T> inline constexpr auto TreatAsTupleLike<SpaceSeparatedSize<T>> = true;
-template<typename T> inline constexpr auto SerializationSeparator<SpaceSeparatedSize<T>> = " "_s;
+template<typename T> inline constexpr auto SerializationSeparator<SpaceSeparatedSize<T>> = SerializationSeparatorType::Space;
 
-// Wraps a quad of elements of a single type representing the edges of a rect, semantically marking them as serializing as "space separated".
-template<typename T> struct SpaceSeparatedRectEdges {
+// Wraps a pair of elements of a single type representing a size, semantically marking them as serializing as "space separated" and "minimally serializing".
+template<typename T> struct MinimallySerializingSpaceSeparatedSize {
+    using Array = SpaceSeparatedPair<T>;
     using value_type = T;
 
+    constexpr MinimallySerializingSpaceSeparatedSize(T p1, T p2)
+        : value { WTFMove(p1), WTFMove(p2) }
+    {
+    }
+
+    constexpr MinimallySerializingSpaceSeparatedSize(SpaceSeparatedPair<T>&& array)
+        : value { WTFMove(array) }
+    {
+    }
+
+    constexpr bool operator==(const MinimallySerializingSpaceSeparatedSize<T>&) const = default;
+
+    const T& width() const { return get<0>(value); }
+    const T& height() const { return get<1>(value); }
+
+    SpaceSeparatedPair<T> value;
+};
+
+template<size_t I, typename T> decltype(auto) get(const MinimallySerializingSpaceSeparatedSize<T>& size)
+{
+    return get<I>(size.value);
+}
+
+template<typename T> inline constexpr auto TreatAsTupleLike<MinimallySerializingSpaceSeparatedSize<T>> = true;
+template<typename T> inline constexpr auto SerializationSeparator<MinimallySerializingSpaceSeparatedSize<T>> = SerializationSeparatorType::Space;
+
+// Wraps a quad of elements of a single type representing the edges of a rect, semantically marking them as serializing as "space separated".
+template<typename T> struct SpaceSeparatedRectEdges : RectEdges<T> {
+    using value_type = T;
+
+    constexpr SpaceSeparatedRectEdges(T repeat)
+        : RectEdges<T> { repeat, repeat, repeat, repeat }
+    {
+    }
+
     constexpr SpaceSeparatedRectEdges(T top, T right, T bottom, T left)
-        : value { WTFMove(top), WTFMove(right), WTFMove(bottom), WTFMove(left) }
+        : RectEdges<T> { WTFMove(top), WTFMove(right), WTFMove(bottom), WTFMove(left) }
     {
     }
 
     constexpr SpaceSeparatedRectEdges(RectEdges<T>&& rectEdges)
-        : value { WTFMove(rectEdges) }
+        : RectEdges<T> { WTFMove(rectEdges) }
     {
     }
 
     constexpr bool operator==(const SpaceSeparatedRectEdges<T>&) const = default;
-
-    const T& top() const { return value.top(); }
-    const T& right() const { return value.right(); }
-    const T& bottom() const { return value.bottom(); }
-    const T& left() const { return value.left(); }
-
-    RectEdges<T> value;
 };
 
 template<size_t I, typename T> const auto& get(const SpaceSeparatedRectEdges<T>& rectEdges)
@@ -496,7 +570,8 @@ template<size_t I, typename T> const auto& get(const SpaceSeparatedRectEdges<T>&
 }
 
 template<typename T> inline constexpr auto TreatAsTupleLike<SpaceSeparatedRectEdges<T>> = true;
-template<typename T> inline constexpr auto SerializationSeparator<SpaceSeparatedRectEdges<T>> = " "_s;
+template<typename T> inline constexpr auto SerializationSeparator<SpaceSeparatedRectEdges<T>> = SerializationSeparatorType::Space;
+
 
 // A set of 4 values parsed and interpreted in the same manner as defined for the margin shorthand.
 //
@@ -509,27 +584,25 @@ template<typename T> inline constexpr auto SerializationSeparator<SpaceSeparated
 // As the name implies, the benefit of using this over `SpaceSeparatedRectEdges` directly
 // is that this will serialize in its minimal form, checking for element equality and only
 // serializing what is necessary.
-template<typename T> struct MinimallySerializingSpaceSeparatedRectEdges {
+template<typename T> struct MinimallySerializingSpaceSeparatedRectEdges : RectEdges<T> {
     using value_type = T;
 
+    constexpr MinimallySerializingSpaceSeparatedRectEdges(T value)
+        : RectEdges<T> { value, value, value, value }
+    {
+    }
+
     constexpr MinimallySerializingSpaceSeparatedRectEdges(T top, T right, T bottom, T left)
-        : value { WTFMove(top), WTFMove(right), WTFMove(bottom), WTFMove(left) }
+        : RectEdges<T> { WTFMove(top), WTFMove(right), WTFMove(bottom), WTFMove(left) }
     {
     }
 
     constexpr MinimallySerializingSpaceSeparatedRectEdges(RectEdges<T>&& rectEdges)
-        : value { WTFMove(rectEdges) }
+        : RectEdges<T> { WTFMove(rectEdges) }
     {
     }
 
-    const T& top() const    { return value.top(); }
-    const T& right() const  { return value.right(); }
-    const T& bottom() const { return value.bottom(); }
-    const T& left() const   { return value.left(); }
-
     constexpr bool operator==(const MinimallySerializingSpaceSeparatedRectEdges<T>&) const = default;
-
-    RectEdges<T> value;
 };
 
 template<size_t I, typename T> decltype(auto) get(const MinimallySerializingSpaceSeparatedRectEdges<T>& value)
@@ -545,7 +618,7 @@ template<size_t I, typename T> decltype(auto) get(const MinimallySerializingSpac
 }
 
 template<typename T> inline constexpr auto TreatAsTupleLike<MinimallySerializingSpaceSeparatedRectEdges<T>> = true;
-template<typename T> inline constexpr auto SerializationSeparator<MinimallySerializingSpaceSeparatedRectEdges<T>> = " "_s;
+template<typename T> inline constexpr auto SerializationSeparator<MinimallySerializingSpaceSeparatedRectEdges<T>> = SerializationSeparatorType::Space;
 
 } // namespace WebCore
 
@@ -589,6 +662,12 @@ public:
 
 template<typename T> class tuple_size<WebCore::SpaceSeparatedSize<T>> : public std::integral_constant<size_t, 2> { };
 template<size_t I, typename T> class tuple_element<I, WebCore::SpaceSeparatedSize<T>> {
+public:
+    using type = T;
+};
+
+template<typename T> class tuple_size<WebCore::MinimallySerializingSpaceSeparatedSize<T>> : public std::integral_constant<size_t, 2> { };
+template<size_t I, typename T> class tuple_element<I, WebCore::MinimallySerializingSpaceSeparatedSize<T>> {
 public:
     using type = T;
 };

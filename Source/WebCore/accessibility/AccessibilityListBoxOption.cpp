@@ -31,6 +31,7 @@
 
 #include "AXObjectCache.h"
 #include "AccessibilityListBox.h"
+#include "ContainerNodeInlines.h"
 #include "ElementInlines.h"
 #include "HTMLNames.h"
 #include "HTMLOptGroupElement.h"
@@ -38,6 +39,7 @@
 #include "HTMLSelectElement.h"
 #include "IntRect.h"
 #include "RenderListBox.h"
+#include "RenderObjectInlines.h"
 
 namespace WebCore {
 

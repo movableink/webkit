@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2008, 2009 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005 Rob Buis <buis@kde.org>
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -28,6 +28,10 @@
 
 namespace WebCore {
 
+namespace Style {
+struct URL;
+}
+
 class SVGElement;
 
 class SVGURIReference {
@@ -39,12 +43,14 @@ public:
     void parseAttribute(const QualifiedName&, const AtomString&);
 
     static AtomString fragmentIdentifierFromIRIString(const String&, const Document&);
+    static AtomString fragmentIdentifierFromIRIString(const Style::URL&, const Document&);
 
     struct TargetElementResult {
         RefPtr<Element> element;
         AtomString identifier;
     };
     static TargetElementResult targetElementFromIRIString(const String&, const TreeScope&, RefPtr<Document> externalDocument = nullptr);
+    static TargetElementResult targetElementFromIRIString(const Style::URL&, const TreeScope&, RefPtr<Document> externalDocument = nullptr);
 
     static bool isExternalURIReference(const String& uri, const Document& document)
     {
@@ -58,11 +64,7 @@ public:
         return !equalIgnoringFragmentIdentifier(url, document.url());
     }
 
-#if 0
-    typedef SVGPropertyOwnerRegistry<SVGURIReference> PropertyRegistry;
-#else
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGURIReference>;
-#endif
 
     String href() const { return m_href->currentValue(); }
     SVGAnimatedString& hrefAnimated() { return m_href; }

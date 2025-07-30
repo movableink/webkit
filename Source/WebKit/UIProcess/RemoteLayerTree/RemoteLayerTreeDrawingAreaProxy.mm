@@ -37,6 +37,7 @@
 #import "RemotePageProxy.h"
 #import "RemoteScrollingCoordinatorProxy.h"
 #import "RemoteScrollingCoordinatorTransaction.h"
+#import "RemoteScrollingTreeCocoa.h"
 #import "WebPageMessages.h"
 #import "WebPageProxy.h"
 #import "WebProcessProxy.h"
@@ -62,6 +63,10 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteLayerTreeDrawingAreaProxy);
 RemoteLayerTreeDrawingAreaProxy::RemoteLayerTreeDrawingAreaProxy(WebPageProxy& pageProxy, WebProcessProxy& webProcessProxy)
     : DrawingAreaProxy(DrawingAreaType::RemoteLayerTree, pageProxy, webProcessProxy)
     , m_remoteLayerTreeHost(makeUnique<RemoteLayerTreeHost>(*this))
+#if ASSERT_ENABLED
+    , m_lastVisibleTransactionID(TransactionIdentifier(), webProcessProxy.coreProcessIdentifier())
+#endif
+    , m_transactionIDForPendingCACommit(TransactionIdentifier(), webProcessProxy.coreProcessIdentifier())
 {
     // We don't want to pool surfaces in the UI process.
     // FIXME: We should do this somewhere else.
@@ -171,7 +176,7 @@ void RemoteLayerTreeDrawingAreaProxy::sendUpdateGeometry()
     m_lastSentSizeToContentAutoSizeMaximumSize = webPageProxy->sizeToContentAutoSizeMaximumSize();
     m_lastSentSize = m_size;
 
-    dispatchSetTopContentInset();
+    dispatchSetObscuredContentInsets();
 
     m_isWaitingForDidUpdateGeometry = true;
     sendWithAsyncReply(Messages::DrawingArea::UpdateGeometry(m_size, false /* flushSynchronously */, MachSendRight()), [weakThis = WeakPtr { this }] {
@@ -193,7 +198,7 @@ RemoteLayerTreeDrawingAreaProxy::ProcessState& RemoteLayerTreeDrawingAreaProxy::
     return m_webPageProxyProcessState;
 }
 
-void RemoteLayerTreeDrawingAreaProxy::forEachProcessState(Function<void(ProcessState&, WebProcessProxy&)>&& callback)
+void RemoteLayerTreeDrawingAreaProxy::forEachProcessState(NOESCAPE Function<void(ProcessState&, WebProcessProxy&)>&& callback)
 {
     callback(m_webPageProxyProcessState, m_webProcessProxy);
     for (auto& [key, value] : m_remotePageProcessState) {
@@ -224,7 +229,7 @@ IPC::Connection* RemoteLayerTreeDrawingAreaProxy::connectionForIdentifier(WebCor
 void RemoteLayerTreeDrawingAreaProxy::commitLayerTreeNotTriggered(IPC::Connection& connection, TransactionID nextCommitTransactionID)
 {
     ProcessState& state = processStateForConnection(connection);
-    if (nextCommitTransactionID <= state.lastLayerTreeTransactionID) {
+    if (state.lastLayerTreeTransactionID && nextCommitTransactionID.lessThanOrEqualSameProcess(*state.lastLayerTreeTransactionID)) {
         LOG_WITH_STREAM(RemoteLayerTree, stream << "RemoteLayerTreeDrawingAreaProxy::commitLayerTreeNotTriggered nextCommitTransactionID=" << nextCommitTransactionID << ") already obsoleted by m_lastLayerTreeTransactionID=" << state.lastLayerTreeTransactionID);
         return;
     }
@@ -242,7 +247,7 @@ void RemoteLayerTreeDrawingAreaProxy::commitLayerTreeNotTriggered(IPC::Connectio
 void RemoteLayerTreeDrawingAreaProxy::willCommitLayerTree(IPC::Connection& connection, TransactionID transactionID)
 {
     ProcessState& state = processStateForConnection(connection);
-    if (transactionID <= state.lastLayerTreeTransactionID)
+    if (state.lastLayerTreeTransactionID && transactionID.lessThanOrEqualSameProcess(*state.lastLayerTreeTransactionID))
         return;
 
     state.pendingLayerTreeTransactionID = transactionID;
@@ -250,7 +255,9 @@ void RemoteLayerTreeDrawingAreaProxy::willCommitLayerTree(IPC::Connection& conne
 
 void RemoteLayerTreeDrawingAreaProxy::commitLayerTree(IPC::Connection& connection, const Vector<std::pair<RemoteLayerTreeTransaction, RemoteScrollingCoordinatorTransaction>>& transactions, HashMap<RemoteImageBufferSetIdentifier, std::unique_ptr<BufferSetBackendHandle>>&& handlesMap)
 {
-    Vector<MachSendRight> sendRights;
+    // The `sendRights` vector must have __block scope to be captured by
+    // the commit handler block below without the need to copy it.
+    __block Vector<MachSendRight, 16> sendRights;
     for (auto& transaction : transactions) {
         // commitLayerTreeTransaction consumes the incoming buffers, so we need to grab them first.
         for (auto& [layerID, properties] : transaction.first.changedLayerProperties()) {
@@ -280,7 +287,7 @@ void RemoteLayerTreeDrawingAreaProxy::commitLayerTree(IPC::Connection& connectio
     // Keep IOSurface send rights alive until the transaction is commited, otherwise we will
     // prematurely drop the only reference to them, and `inUse` will be wrong for a brief window.
     if (!sendRights.isEmpty())
-        [CATransaction addCommitHandler:[sendRights = WTFMove(sendRights)]() { } forPhase:kCATransactionPhasePostCommit];
+        [CATransaction addCommitHandler:^{ sendRights.clear(); } forPhase:kCATransactionPhasePostCommit];
 
     ProcessState& state = processStateForConnection(connection);
     if (std::exchange(state.commitLayerTreeMessageState, NeedsDisplayDidRefresh) == MissedCommit)
@@ -288,6 +295,16 @@ void RemoteLayerTreeDrawingAreaProxy::commitLayerTree(IPC::Connection& connectio
 
     scheduleDisplayRefreshCallbacks();
 }
+
+#if ENABLE(TOUCH_EVENT_REGIONS)
+WebCore::TrackingType RemoteLayerTreeDrawingAreaProxy::eventTrackingTypeForPoint(WebCore::EventTrackingRegions::EventType eventType, IntPoint location)
+{
+    FloatPoint localLocation = location;
+    if (auto* eventRegion = eventRegionForPoint(remoteLayerTreeHost().rootLayer(), localLocation))
+        return eventRegion->eventTrackingTypeForPoint(eventType, roundedIntPoint(localLocation));
+    return WebCore::TrackingType::NotTracking;
+}
+#endif
 
 void RemoteLayerTreeDrawingAreaProxy::commitLayerTreeTransaction(IPC::Connection& connection, const RemoteLayerTreeTransaction& layerTreeTransaction, const RemoteScrollingCoordinatorTransaction& scrollingTreeTransaction)
 {
@@ -302,7 +319,7 @@ void RemoteLayerTreeDrawingAreaProxy::commitLayerTreeTransaction(IPC::Connection
         return;
 
     state.lastLayerTreeTransactionID = layerTreeTransaction.transactionID();
-    if (state.pendingLayerTreeTransactionID < state.lastLayerTreeTransactionID)
+    if (!state.pendingLayerTreeTransactionID || state.pendingLayerTreeTransactionID->lessThanSameProcess(layerTreeTransaction.transactionID()))
         state.pendingLayerTreeTransactionID = state.lastLayerTreeTransactionID;
 
     bool didUpdateEditorState { false };
@@ -342,13 +359,7 @@ void RemoteLayerTreeDrawingAreaProxy::commitLayerTreeTransaction(IPC::Connection
         }
 
 #if ENABLE(ASYNC_SCROLLING)
-#if PLATFORM(IOS_FAMILY)
-        if (!layerTreeTransaction.isMainFrameProcessTransaction()) {
-            // TODO: rdar://123104203 Making scrolling trees work with site isolation on iOS.
-            return;
-        }
-#endif
-        requestedScroll = webPageProxy->scrollingCoordinatorProxy()->commitScrollingTreeState(connection, scrollingTreeTransaction, layerTreeTransaction.remoteContextHostedIdentifier());
+    requestedScroll = webPageProxy->scrollingCoordinatorProxy()->commitScrollingTreeState(connection, scrollingTreeTransaction, layerTreeTransaction.remoteContextHostedIdentifier());
 #endif
     };
 
@@ -409,7 +420,7 @@ void RemoteLayerTreeDrawingAreaProxy::commitLayerTreeTransaction(IPC::Connection
 
     for (auto& callbackID : layerTreeTransaction.callbackIDs()) {
         if (auto callback = connection.takeAsyncReplyHandler(callbackID))
-            callback(nullptr);
+            callback(nullptr, nullptr);
     }
 }
 
@@ -491,7 +502,7 @@ void RemoteLayerTreeDrawingAreaProxy::updateDebugIndicator()
 void RemoteLayerTreeDrawingAreaProxy::updateDebugIndicator(IntSize contentsSize, bool rootLayerChanged, float scale, const IntPoint& scrollPosition)
 {
     // Make sure we're the last sublayer.
-    CALayer *rootLayer = m_remoteLayerTreeHost->rootLayer();
+    RetainPtr rootLayer = m_remoteLayerTreeHost->rootLayer();
     [m_tileMapHostLayer removeFromSuperlayer];
     [rootLayer addSublayer:m_tileMapHostLayer.get()];
 
@@ -540,14 +551,14 @@ void RemoteLayerTreeDrawingAreaProxy::initializeDebugIndicator()
     [m_tileMapHostLayer setMasksToBounds:YES];
     [m_tileMapHostLayer setBorderWidth:2];
 
-    CGColorSpaceRef colorSpace = sRGBColorSpaceRef();
+    RetainPtr colorSpace = sRGBColorSpaceSingleton();
     {
         const CGFloat components[] = { 1, 1, 1, 0.6 };
-        RetainPtr<CGColorRef> color = adoptCF(CGColorCreate(colorSpace, components));
+        RetainPtr<CGColorRef> color = adoptCF(CGColorCreate(colorSpace.get(), components));
         [m_tileMapHostLayer setBackgroundColor:color.get()];
 
         const CGFloat borderComponents[] = { 0, 0, 0, 1 };
-        RetainPtr<CGColorRef> borderColor = adoptCF(CGColorCreate(colorSpace, borderComponents));
+        RetainPtr<CGColorRef> borderColor = adoptCF(CGColorCreate(colorSpace.get(), borderComponents));
         [m_tileMapHostLayer setBorderColor:borderColor.get()];
     }
     
@@ -557,7 +568,7 @@ void RemoteLayerTreeDrawingAreaProxy::initializeDebugIndicator()
 
     {
         const CGFloat components[] = { 0, 1, 0, 1 };
-        RetainPtr<CGColorRef> color = adoptCF(CGColorCreate(colorSpace, components));
+        RetainPtr<CGColorRef> color = adoptCF(CGColorCreate(colorSpace.get(), components));
         [m_exposedRectIndicatorLayer setBorderColor:color.get()];
     }
 }
@@ -643,7 +654,7 @@ void RemoteLayerTreeDrawingAreaProxy::waitForDidUpdateActivityState(ActivityStat
         didRefreshDisplay(connection.ptr());
 
     static Seconds activityStateUpdateTimeout = [] {
-        if (id value = [[NSUserDefaults standardUserDefaults] objectForKey:@"WebKitOverrideActivityStateUpdateTimeout"])
+        if (RetainPtr<id> value = [[NSUserDefaults standardUserDefaults] objectForKey:@"WebKitOverrideActivityStateUpdateTimeout"])
             return Seconds([value doubleValue]);
         return Seconds::fromMilliseconds(250);
     }();

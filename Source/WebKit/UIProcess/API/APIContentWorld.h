@@ -41,8 +41,8 @@ class ContentWorld final : public API::ObjectImpl<API::Object::Type::ContentWorl
 public:
     static ContentWorld* worldForIdentifier(WebKit::ContentWorldIdentifier);
     static Ref<ContentWorld> sharedWorldWithName(const WTF::String&, OptionSet<WebKit::ContentWorldOption> options = { });
-    static ContentWorld& pageContentWorld();
-    static ContentWorld& defaultClientWorld();
+    static ContentWorld& pageContentWorldSingleton();
+    static ContentWorld& defaultClientWorldSingleton();
 
     virtual ~ContentWorld();
 
@@ -76,3 +76,5 @@ private:
 };
 
 } // namespace API
+
+SPECIALIZE_TYPE_TRAITS_API_OBJECT(ContentWorld);

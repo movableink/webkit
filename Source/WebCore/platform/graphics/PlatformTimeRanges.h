@@ -31,6 +31,8 @@
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
+OBJC_CLASS NSArray;
+
 namespace WTF {
 class PrintStream;
 }
@@ -140,14 +142,19 @@ private:
     Vector<Range> m_ranges;
 };
 
+#if PLATFORM(COCOA)
+RetainPtr<NSArray> makeNSArray(const PlatformTimeRanges&);
+#endif
+
+inline String toString(const PlatformTimeRanges& platformTimeRanges) { return platformTimeRanges.toString(); }
+
 } // namespace WebCore
 
 namespace WTF {
-
 template<typename> struct LogArgument;
 
 template<> struct LogArgument<WebCore::PlatformTimeRanges> {
-    WEBCORE_EXPORT static String toString(const WebCore::PlatformTimeRanges&);
+    static String toString(const WebCore::PlatformTimeRanges& platformTimeRanges) { return platformTimeRanges.toString(); }
 };
 
 } // namespace WTF

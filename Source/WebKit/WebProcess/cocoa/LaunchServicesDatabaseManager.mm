@@ -31,7 +31,7 @@
 #import "XPCEndpoint.h"
 #import <pal/spi/cocoa/LaunchServicesSPI.h>
 #import <wtf/cocoa/Entitlements.h>
-#import <wtf/spi/darwin/XPCSPI.h>
+#import <wtf/darwin/XPCExtras.h>
 #import <wtf/text/WTFString.h>
 
 namespace WebKit {
@@ -48,15 +48,15 @@ LaunchServicesDatabaseManager& LaunchServicesDatabaseManager::singleton()
 
 void LaunchServicesDatabaseManager::handleEvent(xpc_object_t message)
 {
-    auto* messageName = xpc_dictionary_get_string(message, XPCEndpoint::xpcMessageNameKey);
-    if (LaunchServicesDatabaseXPCConstants::xpcUpdateLaunchServicesDatabaseMessageName == messageName) {
+    String messageName = xpcDictionaryGetString(message, XPCEndpoint::xpcMessageNameKey);
+    if (messageName == LaunchServicesDatabaseXPCConstants::xpcUpdateLaunchServicesDatabaseMessageName) {
 #if HAVE(LSDATABASECONTEXT)
-        auto database = xpc_dictionary_get_value(message, LaunchServicesDatabaseXPCConstants::xpcLaunchServicesDatabaseKey);
+        RetainPtr database = xpc_dictionary_get_value(message, LaunchServicesDatabaseXPCConstants::xpcLaunchServicesDatabaseKey);
 
-        RELEASE_LOG(Loading, "Received Launch Services database");
+        RELEASE_LOG_FORWARDABLE(Loading, RECEIVED_LAUNCH_SERVICES_DATABASE);
 
         if (database)
-            [LSDatabaseContext.sharedDatabaseContext observeDatabaseChange4WebKit:database];
+            [LSDatabaseContext.sharedDatabaseContext observeDatabaseChange4WebKit:database.get()];
 #endif
         m_semaphore.signal();
         m_hasReceivedLaunchServicesDatabase = true;
@@ -93,9 +93,10 @@ void LaunchServicesDatabaseManager::waitForDatabaseUpdate()
     bool databaseUpdated = waitForDatabaseUpdate(waitTime);
     auto elapsedTime = MonotonicTime::now() - startTime;
     if (elapsedTime > 0.5_s)
-        RELEASE_LOG_ERROR(Loading, "Waiting for Launch Services database update took %f seconds", elapsedTime.value());
+        RELEASE_LOG_ERROR_FORWARDABLE(Loading, WAITING_FOR_LAUNCH_SERVICES_DATABASE_UPDATE_TOOK_F_SECONDS, elapsedTime.value());
+
     if (!databaseUpdated)
-        RELEASE_LOG_FAULT(Loading, "Timed out waiting for Launch Services database update.");
+        RELEASE_LOG_FAULT_FORWARDABLE(Loading, TIMED_OUT_WAITING_FOR_LAUNCH_SERVICES_DATABASE_UPDATE);
 }
 
 }

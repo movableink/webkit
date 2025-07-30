@@ -21,12 +21,14 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
+import shutil
 import time
+from datetime import datetime, timezone
+from unittest.mock import patch
 
-from datetime import datetime
-from webkitcorepy import run, testing, LoggerCapture, OutputCapture
+from webkitcorepy import LoggerCapture, OutputCapture, run, testing
 from webkitcorepy.mocks import Time as MockTime
-from webkitscmpy import Commit, local, mocks, remote
+from webkitscmpy import Commit, Contributor, local, mocks, remote
 
 
 class TestGit(testing.PathTestCase):
@@ -515,7 +517,7 @@ CommitDate: {time_c}
                 [
                     'From bae5d1e90999d4f916a8a15810ccfa43f37a2fd6',
                     'From: Jonathan Bedard <jbedard@apple.com>',
-                    'Date: {} +0000'.format(datetime.utcfromtimestamp(1601668000 + time.timezone).strftime('%a %b %d %H:%M:%S %Y')),
+                    'Date: {} +0000'.format(datetime.fromtimestamp(1601668000 + time.timezone, timezone.utc).strftime('%a %b %d %H:%M:%S %Y')),
                     'Subject: [PATCH] 8th commit',
                     '---',
                     'diff --git a/ChangeLog b/ChangeLog',
@@ -588,6 +590,24 @@ CommitDate: {time_c}
                 ['Source/main.cpp', 'Source/main.h'],
             )
 
+    def test_last_commits_on(self):
+        with mocks.local.Git(self.path):
+            git = local.Git(self.path)
+            commits = git.last_commits_on('README.md', count=5)
+
+            # Mock environment only produces 3 commits when README.md is requested
+            # because the mock filters to commits with odd-numbered identifiers.
+            self.assertEqual(len(commits), 3)
+            self.assertTrue(all(len(c.hash) == 40 for c in commits))
+            self.assertEqual(
+                [f'{c.identifier}@{c.branch}' for c in commits],
+                [
+                    '1@main',
+                    '3@main',
+                    '5@main',
+                ]
+            )
+
     def test_merge_base(self):
         with mocks.local.Git(self.path), OutputCapture():
             self.assertEqual(
@@ -598,6 +618,45 @@ CommitDate: {time_c}
                 str(local.Git(self.path).merge_base('branch-a', 'branch-b')),
                 '2@main',
             )
+
+    def test_is_suitable_branch_for_pull_request(self):
+        with mocks.local.Git(self.path, remotes={
+            'origin': 'git@github.example.com:WebKit/WebKit.git'
+        }):
+            repo = local.Git(self.path)
+            source_remote = repo.source_remotes()[0]
+            self.assertEqual(repo.is_suitable_branch_for_pull_request('eng/12345', source_remote=source_remote), True)
+            self.assertEqual(repo.is_suitable_branch_for_pull_request('eng/squash-branch', source_remote=source_remote), True)
+            self.assertEqual(repo.is_suitable_branch_for_pull_request('integration/branch', source_remote=source_remote), True)
+            self.assertEqual(repo.is_suitable_branch_for_pull_request('not-default-branch', source_remote=source_remote), True)
+            self.assertEqual(repo.is_suitable_branch_for_pull_request('main', source_remote=source_remote), False)
+            self.assertEqual(repo.is_suitable_branch_for_pull_request('safari-610-branch', source_remote=source_remote), False)
+            self.assertEqual(repo.is_suitable_branch_for_pull_request('branch-a', source_remote=source_remote), False)
+            self.assertEqual(repo.is_suitable_branch_for_pull_request(None, source_remote=source_remote), False)
+
+
+class TestMockGit(testing.PathTestCase):
+    basepath = 'mock/repository'
+
+    def setUp(self):
+        super().setUp()
+        os.mkdir(os.path.join(self.path, '.git'))
+
+    def test_executable(self):
+        with mocks.local.Git(self.path) as mock_git:
+            self.assertEqual(mock_git.executable, local.Git.executable())
+
+    def test_executable_stack(self):
+        with patch('shutil.which', lambda _: 'everything-command'):
+            with mocks.local.Git(self.path) as mock_git:
+                self.assertEqual(mock_git.executable, local.Git.executable())
+                self.assertEqual('everything-command', shutil.which('echo'))
+
+    def test_executable_stack_2(self):
+        with mocks.local.Git(self.path) as mock_git:
+            with patch('shutil.which', lambda _: 'everything-command'):
+                self.assertEqual(os.path.realpath('everything-command'), local.Git.executable())
+                self.assertEqual('everything-command', shutil.which('echo'))
 
 
 class TestGitHub(testing.TestCase):

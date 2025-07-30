@@ -66,7 +66,7 @@ public:
     static std::optional<CaptureDevice> screenCaptureDeviceWithPersistentID(const String&);
     static std::optional<CaptureDevice> windowCaptureDeviceWithPersistentID(const String&);
 
-    using Content = std::variant<RetainPtr<SCWindow>, RetainPtr<SCDisplay>>;
+    using Content = Variant<RetainPtr<SCWindow>, RetainPtr<SCDisplay>>;
     void streamDidOutputVideoSampleBuffer(RetainPtr<CMSampleBufferRef>);
     void sessionFailedWithError(RetainPtr<NSError>&&, const String&);
     void outputVideoEffectDidStartForStream() { m_isVideoEffectEnabled = true; }
@@ -75,7 +75,7 @@ public:
 private:
     // DisplayCaptureSourceCocoa::Capturer
     bool start() final;
-    void stop() final { stopInternal([] { }); }
+    void stop() final;
     void end() final;
     DisplayCaptureSourceCocoa::DisplayFrameType generateFrame() final;
     CaptureDevice::DeviceType deviceType() const final;
@@ -91,7 +91,8 @@ private:
     void sessionFilterDidChange(SCContentFilter*) final;
     void sessionStreamDidEnd(SCStream*) final;
 
-    void stopInternal(CompletionHandler<void()>&&);
+    enum class IsPrewarming : bool { No, Yes };
+    void startInternal(IsPrewarming = IsPrewarming::No);
     void startContentStream();
     void findShareableContent();
     RetainPtr<SCStreamConfiguration> streamConfiguration();
@@ -124,6 +125,7 @@ private:
     bool m_isRunning { false };
     bool m_isVideoEffectEnabled { false };
     bool m_didReceiveVideoFrame { false };
+    bool m_isPrewarming { false };
     CompletionHandler<void(CaptureSourceError&&)> m_whenReadyCallback;
 };
 

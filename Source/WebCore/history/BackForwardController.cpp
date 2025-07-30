@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -64,11 +64,6 @@ Ref<Page> BackForwardController::protectedPage() const
     return m_page.get();
 }
 
-Ref<BackForwardClient> BackForwardController::protectedClient() const
-{
-    return m_client;
-}
-
 bool BackForwardController::canGoBackOrForward(int distance) const
 {
     if (!distance)
@@ -100,7 +95,7 @@ void BackForwardController::goBackOrForward(int distance)
         return;
 
     Ref page { protectedPage() };
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return;
 
@@ -114,7 +109,7 @@ bool BackForwardController::goBack()
         return false;
 
     Ref page { protectedPage() };
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return false;
 
@@ -129,7 +124,7 @@ bool BackForwardController::goForward()
         return false;
 
     Ref page { protectedPage() };
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return false;
 
@@ -137,34 +132,24 @@ bool BackForwardController::goForward()
     return true;
 }
 
-void BackForwardController::addItem(FrameIdentifier targetFrameID, Ref<HistoryItem>&& item)
+void BackForwardController::addItem(Ref<HistoryItem>&& item)
 {
-    protectedClient()->addItem(targetFrameID, WTFMove(item));
+    m_client->addItem(WTFMove(item));
 }
 
-void BackForwardController::setChildItem(BackForwardItemIdentifier identifier, Ref<HistoryItem>&& item)
+void BackForwardController::setChildItem(BackForwardFrameItemIdentifier frameItemID, Ref<HistoryItem>&& item)
 {
-    protectedClient()->setChildItem(identifier, WTFMove(item));
+    m_client->setChildItem(frameItemID, WTFMove(item));
 }
 
 void BackForwardController::setCurrentItem(HistoryItem& item)
 {
-    protectedClient()->goToItem(item);
-}
-
-void BackForwardController::setProvisionalItem(const HistoryItem& item)
-{
-    protectedClient()->goToProvisionalItem(item);
-}
-
-void BackForwardController::clearProvisionalItem(const HistoryItem& item)
-{
-    protectedClient()->clearProvisionalItem(item);
+    m_client->goToItem(item);
 }
 
 bool BackForwardController::containsItem(const HistoryItem& item) const
 {
-    return protectedClient()->containsItem(item);
+    return m_client->containsItem(item);
 }
 
 unsigned BackForwardController::count() const
@@ -175,17 +160,17 @@ unsigned BackForwardController::count() const
 
 unsigned BackForwardController::backCount() const
 {
-    return protectedClient()->backListCount();
+    return m_client->backListCount();
 }
 
 unsigned BackForwardController::forwardCount() const
 {
-    return protectedClient()->forwardListCount();
+    return m_client->forwardListCount();
 }
 
 RefPtr<HistoryItem> BackForwardController::itemAtIndex(int i, std::optional<FrameIdentifier> frameID)
 {
-    return protectedClient()->itemAtIndex(i, frameID.value_or(m_page->mainFrame().frameID()));
+    return m_client->itemAtIndex(i, frameID.value_or(m_page->mainFrame().frameID()));
 }
 
 Vector<Ref<HistoryItem>> BackForwardController::allItems()
@@ -201,7 +186,7 @@ Vector<Ref<HistoryItem>> BackForwardController::allItems()
 
 void BackForwardController::close()
 {
-    protectedClient()->close();
+    m_client->close();
 }
 
 } // namespace WebCore

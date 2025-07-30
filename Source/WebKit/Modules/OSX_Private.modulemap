@@ -294,11 +294,6 @@ framework module WebKit_Private [system] {
     export *
   }
 
-  explicit module WKBundlePageFullScreenClient {
-    header "WKBundlePageFullScreenClient.h"
-    export *
-  }
-
   explicit module WKBundlePageLoaderClient {
     header "WKBundlePageLoaderClient.h"
     export *
@@ -829,6 +824,11 @@ framework module WebKit_Private [system] {
     export *
   }
 
+  explicit module WKPageFullScreenClient {
+    header "WKPageFullScreenClient.h"
+    export *
+  }
+
   explicit module WKPageGroup {
     header "WKPageGroup.h"
     export *
@@ -911,16 +911,6 @@ framework module WebKit_Private [system] {
 
   explicit module WKPreferencesRefPrivate {
     header "WKPreferencesRefPrivate.h"
-    export *
-  }
-
-  explicit module WKProcessGroup {
-    header "WKProcessGroup.h"
-    export *
-  }
-
-  explicit module WKProcessGroupPrivate {
-    header "WKProcessGroupPrivate.h"
     export *
   }
 

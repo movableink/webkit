@@ -14,5 +14,9 @@ Property values requiring vendor prefixes:
 None
 ------------------------------------------------------------------------
 List of files:
+/LayoutTests/imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/update-the-image-data/current-request-microtask-002.html
 /LayoutTests/imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/update-the-image-data/current-request-microtask.html
 /LayoutTests/imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/update-the-image-data/fail-to-resolve.html
+/LayoutTests/imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/update-the-image-data/lazy-out-of-band-load.html
+/LayoutTests/imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/update-the-image-data/not-broken-while-load-task-scheduled.html
+/LayoutTests/imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/update-the-image-data/src-then-lazy-load.html

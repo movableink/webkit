@@ -66,10 +66,10 @@ bool ScriptTelemetryFilter::matches(const URL& url, const WebCore::SecurityOrigi
             return true;
     }
 
-    if (UNLIKELY(m_firstPartyHosts.contains(hostName)))
+    if (m_firstPartyHosts.contains(hostName)) [[unlikely]]
         return true;
 
-    if (UNLIKELY(m_firstPartyTopDomains.contains(scriptTopDomainName)))
+    if (m_firstPartyTopDomains.contains(scriptTopDomainName)) [[unlikely]]
         return true;
 
     return false;

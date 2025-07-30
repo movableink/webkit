@@ -32,9 +32,9 @@
 #include "ChromeClient.h"
 #include "DOMTimer.h"
 #include "Document.h"
+#include "DocumentFullscreen.h"
 #include "DocumentInlines.h"
 #include "EventNames.h"
-#include "FullscreenManager.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLImageElement.h"
 #include "Logging.h"
@@ -42,6 +42,7 @@
 #include "Page.h"
 #include "RenderDescendantIterator.h"
 #include "RenderStyleInlines.h"
+#include "Quirks.h"
 #include "Settings.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -57,18 +58,24 @@ static bool isHiddenBehindFullscreenElement(const Node& descendantCandidate)
 {
     // Fullscreen status is propagated on the ancestor document chain all the way to the top document.
     auto& document = descendantCandidate.document();
-    CheckedPtr fullscreenManager = document.topDocument().fullscreenManagerIfExists();
-    if (!fullscreenManager)
+    RefPtr mainFrameDocument = document.mainFrameDocument();
+    if (!mainFrameDocument) {
+        LOG_ONCE(SiteIsolation, "Unable to properly calculate isHiddenBehindFullscreenElement() without access to the main frame document ");
         return false;
-    auto* topMostFullScreenElement = fullscreenManager->fullscreenElement();
+    }
+
+    RefPtr documentFullscreen = mainFrameDocument->fullscreenIfExists();
+    if (!documentFullscreen)
+        return false;
+    RefPtr topMostFullScreenElement = documentFullscreen->fullscreenElement();
     if (!topMostFullScreenElement)
         return false;
 
     // If the document where the node lives does not have an active fullscreen element, it is a sibling/nephew document -> not a descendant.
-    fullscreenManager = document.fullscreenManagerIfExists();
-    if (!fullscreenManager)
+    documentFullscreen = document.fullscreenIfExists();
+    if (!documentFullscreen)
         return false;
-    RefPtr fullscreenElement = fullscreenManager->fullscreenElement();
+    RefPtr fullscreenElement = documentFullscreen->fullscreenElement();
     if (!fullscreenElement)
         return true;
     return !descendantCandidate.isDescendantOf(*fullscreenElement);
@@ -103,13 +110,13 @@ bool ContentChangeObserver::isVisuallyHidden(const Node& node)
     auto top = style.logicalTop();
     auto left = style.logicalLeft();
     // FIXME: This is trying to check if the element is outside of the viewport. This is incorrect for many reasons.
-    if (left.isFixed() && width.isFixed() && -left.value() >= width.value())
+    if (auto fixedLeft = left.tryFixed(); fixedLeft && width.isFixed() && -fixedLeft->value >= width.value())
         return true;
-    if (top.isFixed() && height.isFixed() && -top.value() >= height.value())
+    if (auto fixedTop = top.tryFixed(); fixedTop && height.isFixed() && -fixedTop->value >= height.value())
         return true;
 
     // It's a common technique used to position content offscreen.
-    if (style.hasOutOfFlowPosition() && left.isFixed() && left.value() <= -999)
+    if (auto fixedLeft = left.tryFixed(); style.hasOutOfFlowPosition() && fixedLeft && fixedLeft->value <= -999)
         return true;
 
     // FIXME: Check for other cases like zero height with overflow hidden.
@@ -471,6 +478,9 @@ void ContentChangeObserver::rendererWillBeDestroyed(const Element& element)
 void ContentChangeObserver::didAddMouseMoveRelatedEventListener(const AtomString& eventType, const Node& node)
 {
     if (!isObservingContentChanges())
+        return;
+
+    if (!node.protectedDocument()->quirks().shouldTreatAddingMouseOutEventListenerAsContentChange())
         return;
 
     if (eventType != eventNames().mouseoutEvent)

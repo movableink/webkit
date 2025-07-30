@@ -30,6 +30,8 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WTF {
 
 PrintStream::PrintStream() = default;
@@ -75,7 +77,7 @@ void printInternal(PrintStream& out, const char* string)
 
 static void printExpectedCStringHelper(PrintStream& out, const char* type, Expected<CString, UTF8ConversionError> expectedCString)
 {
-    if (UNLIKELY(!expectedCString)) {
+    if (!expectedCString) [[unlikely]] {
         if (expectedCString.error() == UTF8ConversionError::OutOfMemory) {
             printInternal(out, "(Out of memory while converting ");
             printInternal(out, type);
@@ -231,3 +233,4 @@ void dumpCharacter(PrintStream& out, char value)
 
 } // namespace WTF
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

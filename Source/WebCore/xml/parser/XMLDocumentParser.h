@@ -81,7 +81,7 @@ public:
     ~XMLDocumentParser();
 
     // Exposed for callbacks:
-    void handleError(XMLErrors::ErrorType, const char* message, TextPosition);
+    void handleError(XMLErrors::Type, const char* message, TextPosition);
 
     void setIsXHTMLDocument(bool isXHTML) { m_isXHTMLDocument = isXHTML; }
     bool isXHTMLDocument() const { return m_isXHTMLDocument; }
@@ -125,14 +125,14 @@ public:
     // Callbacks from parser SAX, and other functions needed inside
     // the parser implementation, but outside this class.
 
-    void error(XMLErrors::ErrorType, const char* message, va_list args) WTF_ATTRIBUTE_PRINTF(3, 0);
+    void error(XMLErrors::Type, const char* message, va_list args) WTF_ATTRIBUTE_PRINTF(3, 0);
     void startElementNs(const xmlChar* xmlLocalName, const xmlChar* xmlPrefix, const xmlChar* xmlURI,
         int numNamespaces, const xmlChar** namespaces,
         int numAttributes, int numDefaulted, const xmlChar** libxmlAttributes);
     void endElementNs();
     void characters(std::span<const xmlChar>);
     void processingInstruction(const xmlChar* target, const xmlChar* data);
-    void cdataBlock(const xmlChar*, int length);
+    void cdataBlock(std::span<const xmlChar>);
     void comment(const xmlChar*);
     void startDocument(const xmlChar* version, const xmlChar* encoding, int standalone);
     void internalSubset(const xmlChar* name, const xmlChar* externalID, const xmlChar* systemID);

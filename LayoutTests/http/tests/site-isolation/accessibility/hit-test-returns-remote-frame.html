@@ -23,9 +23,9 @@ function runTest() {
         output += `iframe rect: ${iframeRect.x}, ${iframeRect.y}\n`;
 
         setTimeout(async function() {
-            var headingHitTest = accessibilityController.rootElement.elementAtPointWithRemoteElementForTesting(headingRect.x + 10, headingRect.y + 10);
+            var headingHitTest = accessibilityController.rootElement.elementAtPointWithRemoteElement(headingRect.x + 10, headingRect.y + 10);
             output += `Hit test at "heading" returns a remote element? ${headingHitTest.isRemoteFrame ? "YES" : "NO"}\n`;
-            var iframeHitTest = accessibilityController.rootElement.elementAtPointWithRemoteElementForTesting(iframeRect.x + 50, iframeRect.y + 50);
+            var iframeHitTest = accessibilityController.rootElement.elementAtPointWithRemoteElement(iframeRect.x + 50, iframeRect.y + 50);
             output += `Hit test at "iframe" returns a remote element? ${iframeHitTest.isRemoteFrame ? "YES" : "NO"}\n`;
 
             debug(output);

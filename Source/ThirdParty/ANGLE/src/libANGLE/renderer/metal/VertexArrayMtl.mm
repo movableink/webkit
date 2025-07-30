@@ -11,6 +11,7 @@
 
 #include <TargetConditionals.h>
 
+#include "libANGLE/ErrorStrings.h"
 #include "libANGLE/renderer/metal/BufferMtl.h"
 #include "libANGLE/renderer/metal/ContextMtl.h"
 #include "libANGLE/renderer/metal/DisplayMtl.h"
@@ -36,7 +37,7 @@ angle::Result StreamVertexData(ContextMtl *contextMtl,
                                SimpleWeakBufferHolderMtl *bufferHolder,
                                size_t *bufferOffsetOut)
 {
-    ANGLE_CHECK(contextMtl, vertexLoadFunction, "Unsupported format conversion", GL_INVALID_ENUM);
+    ANGLE_CHECK(contextMtl, vertexLoadFunction, gl::err::kInternalError, GL_INVALID_OPERATION);
     uint8_t *dst = nullptr;
     mtl::BufferRef newBuffer;
     ANGLE_TRY(dynamicBuffer->allocate(contextMtl, bytesToAllocate, &dst, &newBuffer,
@@ -646,6 +647,7 @@ angle::Result VertexArrayMtl::syncDirtyAttrib(const gl::Context *glContext,
 {
     ContextMtl *contextMtl = mtl::GetImpl(glContext);
     ASSERT(mtl::kMaxVertexAttribs > attribIndex);
+    mContentsObserverBindingsMask.reset(attrib.bindingIndex);
 
     if (attrib.enabled)
     {
@@ -658,7 +660,7 @@ angle::Result VertexArrayMtl::syncDirtyAttrib(const gl::Context *glContext,
             // https://bugs.webkit.org/show_bug.cgi?id=236733
             // even non-converted buffers need to be observed for potential
             // data rebinds.
-            mContentsObservers->enableForBuffer(bufferGL, static_cast<uint32_t>(attribIndex));
+            mContentsObserverBindingsMask.set(attrib.bindingIndex);
             bool needConversion =
                 format.actualFormatId != format.intendedFormatId ||
                 (binding.getOffset() % mtl::kVertexAttribBufferStrideAlignment) != 0 ||
@@ -1087,8 +1089,10 @@ angle::Result VertexArrayMtl::convertVertexBufferGPU(const gl::Context *glContex
     GLintptr bindingOffset = binding.getOffset();
 
     if constexpr (sizeof(bindingOffset) > sizeof(uint32_t))
+    {
         ANGLE_CHECK_GL_MATH(contextMtl, static_cast<std::make_unsigned_t<decltype(bindingOffset)>>(
                                             bindingOffset) <= std::numeric_limits<uint32_t>::max());
+    }
     ANGLE_CHECK_GL_MATH(contextMtl, newBufferOffset <= std::numeric_limits<uint32_t>::max());
     ANGLE_CHECK_GL_MATH(contextMtl, numVertices <= std::numeric_limits<uint32_t>::max());
 
@@ -1096,8 +1100,10 @@ angle::Result VertexArrayMtl::convertVertexBufferGPU(const gl::Context *glContex
     VertexConversionBufferMtl *vertexConversion =
         static_cast<VertexConversionBufferMtl *>(conversion);
     if constexpr (sizeof(vertexConversion->offset) > sizeof(uint32_t))
+    {
         ANGLE_CHECK_GL_MATH(contextMtl,
                             vertexConversion->offset <= std::numeric_limits<uint32_t>::max());
+    }
     params.srcBuffer            = srcBuffer->getCurrentBuffer();
     params.srcBufferStartOffset = std::min(static_cast<uint32_t>(vertexConversion->offset),
                                            static_cast<uint32_t>(bindingOffset));

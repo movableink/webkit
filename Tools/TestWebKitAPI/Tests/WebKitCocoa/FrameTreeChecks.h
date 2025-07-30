@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include <variant>
+#include <wtf/Variant.h>
 #include <wtf/Vector.h>
 
 namespace TestWebKitAPI {
@@ -33,7 +33,7 @@ namespace TestWebKitAPI {
 enum RemoteFrameTag { RemoteFrame };
 
 struct ExpectedFrameTree {
-    std::variant<RemoteFrameTag, String> remoteOrOrigin;
+    Variant<RemoteFrameTag, String> remoteOrOrigin;
     Vector<ExpectedFrameTree> children { };
 };
 

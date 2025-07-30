@@ -22,6 +22,7 @@
 
 #include "LegacyRenderSVGRoot.h"
 #include "RenderLayer.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGGraphicsElement.h"
@@ -78,13 +79,25 @@ void LegacyRenderSVGResourceContainer::styleDidChange(StyleDifference diff, cons
 void LegacyRenderSVGResourceContainer::idChanged()
 {
     // Invalidate all our current clients.
-    removeAllClientsFromCache();
+    removeAllClientsFromCacheAndMarkForInvalidation();
 
     // Remove old id, that is guaranteed to be present in cache.
     treeScopeForSVGReferences().removeSVGResource(m_id);
     m_id = element().getIdAttribute();
 
     registerResource();
+}
+
+void LegacyRenderSVGResourceContainer::removeClientFromCacheAndMarkForInvalidation(RenderElement& client, bool markForInvalidation)
+{
+    removeClientFromCache(client);
+    markClientForInvalidation(client, markForInvalidation ? BoundariesInvalidation : ParentOnlyInvalidation);
+}
+
+void LegacyRenderSVGResourceContainer::removeAllClientsFromCacheAndMarkForInvalidationIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers)
+{
+    removeAllClientsFromCache();
+    markAllClientsForInvalidationIfNeeded(markForInvalidation ? LayoutAndBoundariesInvalidation : ParentOnlyInvalidation, visitedRenderers);
 }
 
 void LegacyRenderSVGResourceContainer::markAllClientsForRepaint()
@@ -117,7 +130,7 @@ void LegacyRenderSVGResourceContainer::markAllClientsForInvalidationIfNeeded(Inv
             continue;
 
         if (CheckedPtr container = dynamicDowncast<LegacyRenderSVGResourceContainer>(client)) {
-            container->removeAllClientsFromCacheIfNeeded(markForInvalidation, visitedRenderers);
+            container->removeAllClientsFromCacheAndMarkForInvalidationIfNeeded(markForInvalidation, visitedRenderers);
             continue;
         }
 
@@ -155,7 +168,7 @@ void LegacyRenderSVGResourceContainer::markAllClientLayersForInvalidation()
 
 void LegacyRenderSVGResourceContainer::markClientForInvalidation(RenderObject& client, InvalidationMode mode)
 {
-    ASSERT(!m_clients.isEmptyIgnoringNullReferences());
+    ASSERT(!m_clients.isEmptyIgnoringNullReferences() || client.style().clipPath());
 
     switch (mode) {
     case LayoutAndBoundariesInvalidation:
@@ -178,7 +191,7 @@ void LegacyRenderSVGResourceContainer::addClient(RenderElement& client)
 
 void LegacyRenderSVGResourceContainer::removeClient(RenderElement& client)
 {
-    removeClientFromCache(client, false);
+    removeClientFromCacheAndMarkForInvalidation(client, false);
     m_clients.remove(client);
 }
 

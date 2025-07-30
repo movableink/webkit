@@ -76,25 +76,7 @@ class ProtectionSystemEvents {
 public:
     using EventVector = Vector<GRefPtr<GstEvent>>;
 
-    explicit ProtectionSystemEvents(GstMessage* message)
-    {
-        const GstStructure* structure = gst_message_get_structure(message);
-
-        const GValue* streamEncryptionEventsList = gst_structure_get_value(structure, "stream-encryption-events");
-        ASSERT(streamEncryptionEventsList && GST_VALUE_HOLDS_LIST(streamEncryptionEventsList));
-        unsigned numEvents = gst_value_list_get_size(streamEncryptionEventsList);
-        m_events.reserveInitialCapacity(numEvents);
-        for (unsigned i = 0; i < numEvents; ++i)
-            m_events.append(GRefPtr<GstEvent>(static_cast<GstEvent*>(g_value_get_boxed(gst_value_list_get_value(streamEncryptionEventsList, i)))));
-        const GValue* streamEncryptionAllowedSystemsValue = gst_structure_get_value(structure, "available-stream-encryption-systems");
-        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
-        const char** streamEncryptionAllowedSystems = reinterpret_cast<const char**>(g_value_get_boxed(streamEncryptionAllowedSystemsValue));
-        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-        if (streamEncryptionAllowedSystems) {
-            for (unsigned i = 0; streamEncryptionAllowedSystems[i]; ++i)
-                m_availableSystems.append(String::fromLatin1(streamEncryptionAllowedSystems[i]));
-        }
-    }
+    explicit ProtectionSystemEvents(GstMessage*);
     const EventVector& events() const { return m_events; }
     const Vector<String>& availableSystems() const { return m_availableSystems; }
 
@@ -115,6 +97,10 @@ public:
     static constexpr std::array<ASCIILiteral, 2> s_PlayReadyKeySystems = { "com.microsoft.playready"_s,  "com.youtube.playready"_s };
     static constexpr auto s_unspecifiedUUID = GST_PROTECTION_UNSPECIFIED_SYSTEM_ID ""_s;
     static constexpr auto s_unspecifiedKeySystem = GST_PROTECTION_UNSPECIFIED_SYSTEM_ID ""_s;
+
+    static constexpr std::array<ASCIILiteral, 11> s_cencEncryptionMediaTypes = { "video/mp4"_s, "audio/mp4"_s, "video/x-h264"_s, "video/x-h265"_s, "audio/mpeg"_s,
+        "audio/x-eac3"_s, "audio/x-ac3"_s, "audio/x-flac"_s, "audio/x-opus"_s, "video/x-vp9"_s, "video/x-av1"_s };
+    static constexpr std::array<ASCIILiteral, 7> s_webmEncryptionMediaTypes = { "video/webm"_s, "audio/webm"_s, "video/x-vp9"_s, "video/x-av1"_s, "audio/x-opus"_s, "audio/x-vorbis"_s, "video/x-vp8"_s };
 
     static bool isClearKeyKeySystem(const String& keySystem)
     {
@@ -193,6 +179,6 @@ public:
     }
 };
 
-}
+} // namespace WebCore
 
 #endif // ENABLE(ENCRYPTED_MEDIA) && USE(GSTREAMER)

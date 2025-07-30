@@ -90,6 +90,7 @@ function runTest()
     test("document.createEvent('KeyboardEvent')", "KeyboardEvent");
     test("document.createEvent('MouseEvent')", "MouseEvent");
     test("document.createEvent('MutationEvent')", "MutationEvent");
+    test("document.createEvent('OverflowEvent')", "OverflowEvent");
     test("document.createEvent('TextEvent')", "TextEvent");
     test("document.createEvent('UIEvent')", "UIEvent");
     test("document.createEvent('WheelEvent')", "WheelEvent");
@@ -102,7 +103,7 @@ function runTest()
     test("stylesheet", "CSSStyleSheet");
     test("stylesheet.cssRules", "CSSRuleList");
     test("stylesheet.cssRules.item(0)", "CSSStyleRule");
-    test("stylesheet.cssRules.item(0).style", "CSSStyleDeclaration");
+    test("stylesheet.cssRules.item(0).style", "CSSStyleProperties");
     test("stylesheet.media", "MediaList");
 
     debug('');

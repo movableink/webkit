@@ -24,6 +24,7 @@
 
 #pragma once
 
+#include "CSSParserContext.h"
 #include "CSSPrimitiveNumericTypes+Canonicalization.h"
 #include "CSSPropertyParserConsumer+MetaConsumerDefinitions.h"
 
@@ -31,33 +32,37 @@ namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
 struct AngleValidator {
-    static constexpr bool isValid(CSSUnitType unitType, CSSPropertyParserOptions)
+    static constexpr std::optional<CSS::AngleUnit> validate(CSSUnitType unitType, CSS::PropertyParserState&, CSSPropertyParserOptions)
     {
-        switch (unitType) {
-        case CSSUnitType::CSS_DEG:
-        case CSSUnitType::CSS_RAD:
-        case CSSUnitType::CSS_GRAD:
-        case CSSUnitType::CSS_TURN:
-            return true;
-
-        default:
-            return false;
-        }
+        return CSS::UnitTraits<CSS::AngleUnit>::validate(unitType);
     }
 
-    template<auto R> static bool isValid(CSS::AngleRaw<R> raw, CSSPropertyParserOptions)
+    template<auto R, typename V> static bool isValid(CSS::AngleRaw<R, V> raw, CSSPropertyParserOptions)
     {
         return isValidDimensionValue(raw, [&] {
             auto canonicalValue = CSS::canonicalize(raw);
             return canonicalValue >= raw.range.min && canonicalValue <= raw.range.max;
         });
     }
+
+    static bool shouldAcceptUnitlessValue(double value, CSS::PropertyParserState& state, CSSPropertyParserOptions options)
+    {
+        if (!value && options.unitlessZeroAngle == UnitlessZeroQuirk::Allow)
+            return true;
+
+        auto mode = options.overrideParserMode.value_or(state.context.mode);
+
+        if (isUnitlessValueParsingForcedForMode(mode))
+            return true;
+
+        return mode == HTMLQuirksMode && CSSProperty::acceptsQuirkyAngle(state.currentProperty);
+    }
 };
 
-template<auto R> struct ConsumerDefinition<CSS::Angle<R>> {
-    using FunctionToken = FunctionConsumerForCalcValues<CSS::Angle<R>>;
-    using DimensionToken = DimensionConsumer<CSS::Angle<R>, AngleValidator>;
-    using NumberToken = NumberConsumerForUnitlessValues<CSS::Angle<R>, AngleValidator, CSSUnitType::CSS_DEG>;
+template<auto R, typename V> struct ConsumerDefinition<CSS::Angle<R, V>> {
+    using FunctionToken = FunctionConsumerForCalcValues<CSS::Angle<R, V>>;
+    using DimensionToken = DimensionConsumer<CSS::Angle<R, V>, AngleValidator>;
+    using NumberToken = NumberConsumerForUnitlessValues<CSS::Angle<R, V>, AngleValidator, CSS::AngleUnit::Deg>;
 };
 
 } // namespace CSSPropertyParserHelpers

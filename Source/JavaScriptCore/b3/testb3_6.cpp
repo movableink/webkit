@@ -26,6 +26,8 @@
 #include "config.h"
 #include "testb3.h"
 
+#include <numbers>
+
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 #if ENABLE(B3_JIT)
@@ -281,7 +283,7 @@ void testSelectDoubleCompareFloat(float a, float b)
             arguments[2],
             arguments[3]));
 
-    CHECK(isIdentical(compileAndRun<double>(proc, std::bit_cast<int32_t>(a), std::bit_cast<int32_t>(b), 42.1, -M_PI), a < b ? 42.1 : -M_PI));
+    CHECK(isIdentical(compileAndRun<double>(proc, std::bit_cast<int32_t>(a), std::bit_cast<int32_t>(b), 42.1, -std::numbers::pi), a < b ? 42.1 : -std::numbers::pi));
 }
 
 void testSelectFloatCompareFloat(float a, float b)
@@ -1526,7 +1528,7 @@ void testLateRegister()
         lateUseArgs.append(value);
     }
     Value* regularUse = root->appendNew<Const64Value>(proc, Origin(), 1);
-    PatchpointValue* firstPatchpoint = root->appendNew<PatchpointValue>(proc, Int64, Origin());
+    PatchpointValue* firstPatchpoint = root->appendNew<PatchpointValue>(proc, pointerType(), Origin());
     {
         unsigned i = 0;
         for (GPRReg reg = CCallHelpers::firstRegister(); reg <= CCallHelpers::lastRegister(); reg = CCallHelpers::nextRegister(reg)) {
@@ -1556,7 +1558,7 @@ void testLateRegister()
             CHECK(!!skipped);
         });
 
-    PatchpointValue* secondPatchpoint = root->appendNew<PatchpointValue>(proc, Int64, Origin());
+    PatchpointValue* secondPatchpoint = root->appendNew<PatchpointValue>(proc, pointerType(), Origin());
     secondPatchpoint->append(firstPatchpoint, ValueRep::reg(GPRInfo::regT1));
     secondPatchpoint->setGenerator(
         [&] (CCallHelpers& jit, const StackmapGenerationParams& params) {
@@ -1571,7 +1573,7 @@ void testLateRegister()
     root->appendNewControlValue(proc, Return, Origin(), secondPatchpoint);
 
     auto code = compileProc(proc);
-    CHECK_EQ(invoke<uint64_t>(*code), result);
+    CHECK_EQ(invoke<uintptr_t>(*code), result);
 }
 
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(interpreterPrint, void, (Vector<intptr_t>* stream, intptr_t value));
@@ -1797,7 +1799,7 @@ void testInterpreter()
     if (shouldBeVerbose(proc))
         dataLog("code = ", listDump(code), "\n");
 
-    CHECK(!invoke<intptr_t>(*interpreter, data.data(), code.data(), &stream));
+    CHECK(!invoke<intptr_t>(*interpreter, data.span().data(), code.span().data(), &stream));
 
     CHECK_EQ(stream.size(), 100u);
     for (unsigned i = 0; i < 100; ++i)

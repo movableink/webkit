@@ -442,7 +442,7 @@ bool SQLiteIDBCursor::fetch()
     while (fetchNextRecord(m_fetchedRecords.last())) {
         m_fetchedRecordsSize += m_fetchedRecords.last().record.size();
 
-        if (m_currentKeyForUniqueness.compare(m_fetchedRecords.last().record.key))
+        if (m_currentKeyForUniqueness != m_fetchedRecords.last().record.key)
             return true;
 
         if (m_fetchedRecords.last().completed)
@@ -598,24 +598,24 @@ bool SQLiteIDBCursor::iterate(const IDBKeyData& targetKey, const IDBKeyData& tar
 
         // Search for the next key >= the target if the cursor is a Next cursor, or the next key <= if the cursor is a Previous cursor.
         if (m_cursorDirection == IndexedDB::CursorDirection::Next || m_cursorDirection == IndexedDB::CursorDirection::Nextunique) {
-            if (m_fetchedRecords.first().record.key.compare(targetKey) >= 0)
+            if (m_fetchedRecords.first().record.key >= targetKey)
                 break;
-        } else if (m_fetchedRecords.first().record.key.compare(targetKey) <= 0)
+        } else if (m_fetchedRecords.first().record.key <= targetKey)
             break;
 
         result = advance(1);
     }
 
     if (targetPrimaryKey.isValid()) {
-        while (!m_fetchedRecords.first().isTerminalRecord() && !m_fetchedRecords.first().record.key.compare(targetKey)) {
+        while (!m_fetchedRecords.first().isTerminalRecord() && m_fetchedRecords.first().record.key == targetKey) {
             if (!result)
                 return false;
 
             // Search for the next primary key >= the primary target if the cursor is a Next cursor, or the next key <= if the cursor is a Previous cursor.
             if (m_cursorDirection == IndexedDB::CursorDirection::Next || m_cursorDirection == IndexedDB::CursorDirection::Nextunique) {
-                if (m_fetchedRecords.first().record.primaryKey.compare(targetPrimaryKey) >= 0)
+                if (m_fetchedRecords.first().record.primaryKey >= targetPrimaryKey)
                     break;
-            } else if (m_fetchedRecords.first().record.primaryKey.compare(targetPrimaryKey) <= 0)
+            } else if (m_fetchedRecords.first().record.primaryKey <= targetPrimaryKey)
                 break;
 
             result = advance(1);

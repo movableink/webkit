@@ -33,6 +33,7 @@
 #include "config.h"
 #include "SubframeLoader.h"
 
+#include "ContainerNodeInlines.h"
 #include "ContentSecurityPolicy.h"
 #include "DNS.h"
 #include "DiagnosticLoggingClient.h"
@@ -91,9 +92,23 @@ void FrameLoader::SubframeLoader::clear()
     m_containsPlugins = false;
 }
 
+bool FrameLoader::SubframeLoader::canCreateSubFrame() const
+{
+    Ref frame = m_frame.get();
+    if (!frame->page() || frame->protectedPage()->subframeCount() >= Page::maxNumberOfFrames)
+        return false;
+
+    if (frame->tree().depth() >= Page::maxFrameDepth)
+        return false;
+
+    return true;
+}
+
 void FrameLoader::SubframeLoader::createFrameIfNecessary(HTMLFrameOwnerElement& ownerElement, const AtomString& frameName)
 {
     if (ownerElement.contentFrame())
+        return;
+    if (!canCreateSubFrame())
         return;
     protectedFrame()->protectedLoader()->client().createFrame(frameName, ownerElement);
     if (!ownerElement.contentFrame())
@@ -128,10 +143,11 @@ bool FrameLoader::SubframeLoader::resourceWillUsePlugin(const String& url, const
     return shouldUsePlugin(completedURL, mimeType, false, useFallback);
 }
 
-bool FrameLoader::SubframeLoader::pluginIsLoadable(const URL& url)
+bool FrameLoader::SubframeLoader::pluginIsLoadable(const URL& url, const HTMLPlugInImageElement& ownerElement, const String& mimeType) const
 {
     if (RefPtr document = m_frame->document()) {
-        if (document->isSandboxed(SandboxFlag::Plugins))
+        bool isFullMainFramePlugin = m_frame->isMainFrame() && is<PluginDocument>(m_frame->document());
+        if (document->isSandboxed(SandboxFlag::Plugins) && !(isFullMainFramePlugin && ownerElement.shouldBypassCSPForPDFPlugin(mimeType)))
             return false;
 
         Ref securityOrigin = document->securityOrigin();
@@ -161,7 +177,7 @@ static String findPluginMIMETypeFromURL(Page& page, const URL& url)
 
     auto extensionFromURL = lastPathComponent.substring(dotIndex + 1);
 
-    for (auto& type : page.pluginData().webVisibleMimeTypes()) {
+    for (auto& type : page.protectedPluginData()->webVisibleMimeTypes()) {
         for (auto& extension : type.extensions) {
             if (equalIgnoringASCIICase(extensionFromURL, extension))
                 return type.type;
@@ -185,7 +201,7 @@ bool FrameLoader::SubframeLoader::requestPlugin(HTMLPlugInImageElement& ownerEle
     if (!(m_frame->settings().legacyPluginQuirkForMailSignaturesEnabled() || MIMETypeRegistry::isApplicationPluginMIMEType(mimeType)))
         return false;
 
-    if (!pluginIsLoadable(url))
+    if (!pluginIsLoadable(url, ownerElement, mimeType))
         return false;
 
     ASSERT(ownerElement.hasTagName(objectTag) || ownerElement.hasTagName(embedTag));
@@ -205,7 +221,7 @@ static void logPluginRequest(Page* page, const String& mimeType, const URL& url)
             return;
     }
 
-    String pluginFile = page->pluginData().pluginFileForWebVisibleMimeType(newMIMEType);
+    String pluginFile = page->protectedPluginData()->pluginFileForWebVisibleMimeType(newMIMEType);
     String description = !pluginFile ? newMIMEType : pluginFile;
     page->sawPlugin(description);
 }
@@ -284,7 +300,7 @@ RefPtr<LocalFrame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerEleme
     Ref frame = m_frame.get();
     Ref document = ownerElement.document();
 
-    if (!document->securityOrigin().canDisplay(url, OriginAccessPatternsForWebProcess::singleton())) {
+    if (!document->protectedSecurityOrigin()->canDisplay(url, OriginAccessPatternsForWebProcess::singleton())) {
         FrameLoader::reportLocalLoadFailed(frame.ptr(), url.string());
         return nullptr;
     }
@@ -297,10 +313,12 @@ RefPtr<LocalFrame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerEleme
     if (!SubframeLoadingDisabler::canLoadFrame(ownerElement))
         return nullptr;
 
-    if (!frame->page() || frame->page()->subframeCount() >= Page::maxNumberOfFrames)
+    if (!frame->page() || frame->protectedPage()->subframeCount() >= Page::maxNumberOfFrames)
         return nullptr;
 
     if (frame->tree().depth() >= Page::maxFrameDepth)
+
+    if (!canCreateSubFrame())
         return nullptr;
 
     // Prevent initial empty document load from triggering load events.
@@ -327,14 +345,14 @@ RefPtr<LocalFrame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerEleme
     // which case, Referrer Policy is applied).
     auto referrerToUse = url.isAboutBlank() ? referrer.string() : SecurityPolicy::generateReferrerHeader(policy, url, referrer, OriginAccessPatternsForWebProcess::singleton());
 
-    frame->protectedLoader()->loadURLIntoChildFrame(url, referrerToUse, subFrame.get());
+    frame->protectedLoader()->loadURLIntoChildFrame(url, referrerToUse, *subFrame);
 
 #if ENABLE(CONTENT_EXTENSIONS)
     RefPtr subFramePage = subFrame->page();
     if ((url.isAboutBlank() || url.isAboutSrcDoc()) && subFramePage) {
         subFramePage->protectedUserContentProvider()->userContentExtensionBackend().forEach([&] (const String& identifier, ContentExtensions::ContentExtension& extension) {
             if (RefPtr styleSheetContents = extension.globalDisplayNoneStyleSheet())
-                subFrame->document()->extensionStyleSheets().maybeAddContentExtensionSheet(identifier, *styleSheetContents);
+                subFrame->protectedDocument()->extensionStyleSheets().maybeAddContentExtensionSheet(identifier, *styleSheetContents);
         });
     }
 #endif

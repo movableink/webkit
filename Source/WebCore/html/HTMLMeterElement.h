@@ -62,6 +62,8 @@ public:
 
     bool canContainRangeEndPoint() const final { return false; }
 
+    bool isDevolvableWidget() const override { return true; }
+
 private:
     HTMLMeterElement(const QualifiedName&, Document&);
     virtual ~HTMLMeterElement();
@@ -77,7 +79,7 @@ private:
     void didElementStateChange();
     void didAddUserAgentShadowRoot(ShadowRoot&) final;
 
-    RefPtr<HTMLElement> m_value;
+    RefPtr<HTMLElement> m_valueElement;
 };
 
 } // namespace WebCore

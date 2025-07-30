@@ -28,8 +28,8 @@
 
 #include "ContentSecurityPolicy.h"
 #include "ContentSecurityPolicyDirectiveList.h"
-#include "ParsingUtilities.h"
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringCommon.h>
 #include <wtf/text/WTFString.h>
 
@@ -79,8 +79,6 @@ bool ContentSecurityPolicyTrustedTypesDirective::allows(const String& value, boo
         details = AllowTrustedTypePolicy::DisallowedName;
     else if (!(m_allowAny || m_list.contains(value)))
         details = AllowTrustedTypePolicy::DisallowedName;
-    else
-        details = AllowTrustedTypePolicy::Allowed;
 
     return details == AllowTrustedTypePolicy::Allowed;
 }

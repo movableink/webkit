@@ -33,6 +33,7 @@
 #include "LocalFrame.h"
 #include "MediaQueryParser.h"
 #include "MediaQueryParserContext.h"
+#include "NodeInlines.h"
 #include "StyleScope.h"
 #include "StyleSheetContents.h"
 #include "XMLDocumentParser.h"
@@ -72,11 +73,11 @@ String ProcessingInstruction::nodeName() const
     return m_target;
 }
 
-Ref<Node> ProcessingInstruction::cloneNodeInternal(Document& targetDocument, CloningOperation)
+Ref<Node> ProcessingInstruction::cloneNodeInternal(Document& document, CloningOperation, CustomElementRegistry*)
 {
     // FIXME: Is it a problem that this does not copy m_localHref?
     // What about other data members?
-    return create(targetDocument, String { m_target }, String { data() });
+    return create(document, String { m_target }, String { data() });
 }
 
 void ProcessingInstruction::checkStyleSheet()
@@ -189,14 +190,16 @@ void ProcessingInstruction::setCSSStyleSheet(const String& href, const URL& base
         return;
     }
 
+    ASSERT(sheet);
+
     Ref document = this->document();
     ASSERT(m_isCSS);
     CSSParserContext parserContext(document, baseURL, charset);
 
-    Ref cssSheet = CSSStyleSheet::create(StyleSheetContents::create(href, parserContext), *this);
+    Ref cssSheet = CSSStyleSheet::create(StyleSheetContents::create(href, parserContext), *this, sheet->isCORSSameOrigin());
     cssSheet->setDisabled(m_alternate);
     cssSheet->setTitle(m_title);
-    cssSheet->setMediaQueries(MQ::MediaQueryParser::parse(m_media, MediaQueryParserContext(document)));
+    cssSheet->setMediaQueries(MQ::MediaQueryParser::parse(m_media, document->cssParserContext()));
 
     m_sheet = WTFMove(cssSheet);
 

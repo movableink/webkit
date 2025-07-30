@@ -3,8 +3,6 @@ This test provides a base snapshot of the root web area's attributes.
 On success, you will see a series of "PASS" messages, followed by "TEST COMPLETE".
 
 
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXWebArea
 AXRoleDescription: HTML content
 AXChildren: <array of size 2>
@@ -30,6 +28,7 @@ AXLanguage:
 AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXVisibleCharacterRange: NSRange: {9223372036854775807, 0}
+AXElementBusy: 0
 AXLinkUIElements: <array of size 0>
 AXLoaded: 1
 AXLayoutCount: 2
@@ -37,7 +36,6 @@ AXLoadingProgress: 1
 AXURL: LayoutTests/accessibility/mac/document-attributes.html
 AXCaretBrowsingEnabled: 0
 AXPreventKeyboardDOMEventDispatch: 0
-AXElementBusy: 0
 
 PASS successfullyParsed is true
 

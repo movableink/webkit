@@ -58,7 +58,7 @@ public:
 
     void startProducingData();
     void stopProducingData();
-    void reconfigure();
+    WEBCORE_EXPORT void reconfigure();
     virtual bool isProducingData() const = 0;
 
     virtual void delaySamples(Seconds) { }
@@ -84,7 +84,7 @@ public:
     void clearClients();
 
     virtual bool hasAudioUnit() const = 0;
-    void setCaptureDevice(String&&, uint32_t);
+    void setCaptureDevice(String&&, uint32_t, bool isDefault);
 
     virtual LongCapabilityRange sampleRateCapacities() const = 0;
     virtual int actualSampleRate() const { return sampleRate(); }
@@ -98,12 +98,15 @@ public:
 
     uint32_t captureDeviceID() const { return m_capturingDevice ? m_capturingDevice->second : 0; }
 
+#if ASSERT_ENABLED
+    void allowStarting() { m_isAllowedToStart = true; }
+#endif
+
 protected:
     BaseAudioSharedUnit();
 
-    void forEachClient(const Function<void(CoreAudioCaptureSource&)>&) const;
+    void forEachClient(NOESCAPE const Function<void(CoreAudioCaptureSource&)>&) const;
     void captureFailed();
-    void continueStartProducingData();
 
     virtual void cleanupAudioUnit() = 0;
     virtual OSStatus startInternal() = 0;
@@ -120,7 +123,6 @@ protected:
 
     void setIsRenderingAudio(bool);
 
-protected:
     void setIsProducingMicrophoneSamples(bool);
     bool isProducingMicrophoneSamples() const { return m_isProducingMicrophoneSamples; }
     void setOutputDeviceID(uint32_t deviceID) { m_outputDeviceID = deviceID; }
@@ -133,8 +135,10 @@ protected:
     bool hasVoiceActivityListenerCallback() const { return !!m_voiceActivityCallback; }
     void voiceActivityDetected();
 
-    void disableVoiceActivityThrottleTimerForTesting() { m_voiceActivityThrottleTimer.stop(); }
+    void disableVoiceActivityThrottleTimerForTesting();
     void stopRunning();
+
+    bool isCapturingWithDefaultMicrophone() const { return m_isCapturingWithDefaultMicrophone; }
 
 private:
     OSStatus startUnit();
@@ -145,6 +149,9 @@ private:
     // RealtimeMediaSourceCenterObserver
     void devicesChanged() final;
     void deviceWillBeRemoved(const String&) final { }
+
+    void continueStartProducingData();
+    void continueStopProducingData();
 
     bool m_enableEchoCancellation { true };
     double m_volume { 1 };
@@ -165,7 +172,10 @@ private:
     bool m_isCapturingWithDefaultMicrophone { false };
     bool m_isProducingMicrophoneSamples { true };
     Function<void()> m_voiceActivityCallback;
-    Timer m_voiceActivityThrottleTimer;
+    std::unique_ptr<Timer> m_voiceActivityThrottleTimer;
+#if ASSERT_ENABLED
+    bool m_isAllowedToStart { false };
+#endif
 };
 
 } // namespace WebCore

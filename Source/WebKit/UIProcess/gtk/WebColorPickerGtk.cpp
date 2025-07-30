@@ -26,8 +26,6 @@
 #include "config.h"
 #include "WebColorPickerGtk.h"
 
-#if ENABLE(INPUT_TYPE_COLOR)
-
 #include "WebPageProxy.h"
 #include <WebCore/Color.h>
 #include <WebCore/GtkUtilities.h>
@@ -62,11 +60,9 @@ void WebColorPickerGtk::cancel()
 
 void WebColorPickerGtk::endPicker()
 {
-    if (!m_colorChooser)
-        return;
+    g_clear_pointer(&m_colorChooser, gtk_widget_destroy);
 
-    gtk_widget_destroy(m_colorChooser);
-    m_colorChooser = nullptr;
+    WebColorPicker::endPicker();
 }
 
 void WebColorPickerGtk::didChooseColor(const Color& color)
@@ -109,5 +105,3 @@ void WebColorPickerGtk::showColorPicker(const Color& color)
 }
 
 } // namespace WebKit
-
-#endif // ENABLE(INPUT_TYPE_COLOR)

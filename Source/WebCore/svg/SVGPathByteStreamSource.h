@@ -23,6 +23,7 @@
 #include "SVGPathByteStream.h"
 #include "SVGPathSource.h"
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
@@ -46,16 +47,12 @@ private:
     std::optional<CurveToQuadraticSmoothSegment> parseCurveToQuadraticSmoothSegment(FloatPoint) final;
     std::optional<ArcToSegment> parseArcToSegment(FloatPoint) final;
 
-#if COMPILER(MSVC)
-#pragma warning(disable: 4701)
-#endif
     template<typename DataType>
     DataType readType()
     {
         DataType data;
         size_t dataSize = sizeof(DataType);
-        memcpySpan(asMutableByteSpan(data), m_streamCurrent.first(dataSize));
-        m_streamCurrent = m_streamCurrent.subspan(dataSize);
+        memcpySpan(asMutableByteSpan(data), consumeSpan(m_streamCurrent, dataSize));
         return data;
     }
 

@@ -34,6 +34,8 @@ if (WIN32)
 else ()
     list(APPEND WTF_SOURCES
         posix/FileSystemPOSIX.cpp
+        posix/FileHandlePOSIX.cpp
+        posix/MappedFileDataPOSIX.cpp
         posix/OSAllocatorPOSIX.cpp
         posix/ThreadingPOSIX.cpp
         posix/CPUTimePOSIX.cpp
@@ -49,7 +51,7 @@ if (USE_MACH_PORTS)
     list(APPEND WTF_PUBLIC_HEADERS
         spi/cocoa/MachVMSPI.h
         spi/darwin/XPCSPI.h
-        spi/darwin/AbortWithReasonSPI.h
+        spi/darwin/ReasonSPI.h
         darwin/OSLogPrintStream.h
     )
 endif()

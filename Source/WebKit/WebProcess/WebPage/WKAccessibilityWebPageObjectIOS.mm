@@ -74,9 +74,24 @@
 {
     if (!m_page)
         return nil;
-    
+
+    RefPtr focusedLocalFrame = [self focusedLocalFrame];
+
+#if ENABLE(PDF_PLUGIN)
+    if (m_hasMainFramePlugin)
+        return [[self accessibilityRootObjectWrapper:focusedLocalFrame.get()] accessibilityHitTest:WebCore::IntPoint(point)];
+#endif // ENABLE(PDF_PLUGIN)
+
     WebCore::IntPoint convertedPoint = m_page->accessibilityScreenToRootView(WebCore::IntPoint(point));
-    return [[self accessibilityRootObjectWrapper] accessibilityHitTest:convertedPoint];
+
+    // If we are hit-testing a remote element (not the main frame), offset the hit test by the scroll of the web page.
+    // We can't use focusedLocalFrame for this check, because that will always return a local frame (that isn't necessarily the main frame).
+    if (!is<WebCore::LocalFrame>(m_page->mainFrame())) {
+        if (CheckedPtr frameView = focusedLocalFrame ? focusedLocalFrame->view() : nullptr)
+            convertedPoint.moveBy(frameView->scrollPosition());
+    }
+
+    return [[self accessibilityRootObjectWrapper:focusedLocalFrame.get()] accessibilityHitTest:convertedPoint];
 }
 
 @end

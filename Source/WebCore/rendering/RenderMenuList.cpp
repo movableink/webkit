@@ -46,6 +46,7 @@
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderChildIterator.h"
 #include "RenderElementInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderScrollbar.h"
 #include "RenderStyleSetters.h"
 #include "RenderText.h"
@@ -127,15 +128,15 @@ void RenderMenuList::adjustInnerStyle()
     // when the content overflows, treat it the same as align-items: flex-start.
     // But we only do that for the cases where html.css would otherwise use center.
     if (style().alignItems().position() == ItemPosition::Center) {
-        innerStyle.setMarginBefore(Length());
-        innerStyle.setMarginAfter(Length());
+        innerStyle.setMarginBefore(CSS::Keyword::Auto { });
+        innerStyle.setMarginAfter(CSS::Keyword::Auto { });
 
         innerStyle.setAlignSelfPosition(ItemPosition::FlexStart);
     }
 
     auto paddingBox = theme().popupInternalPaddingBox(style());
     if (!writingMode().isHorizontal())
-        paddingBox = LengthBox(paddingBox.left().value(), paddingBox.top().value(), paddingBox.right().value(), paddingBox.bottom().value());
+        paddingBox = { paddingBox.left(), paddingBox.top(), paddingBox.right(), paddingBox.bottom() };
 
     innerStyle.setPaddingBox(WTFMove(paddingBox));
 
@@ -194,7 +195,7 @@ HTMLSelectElement& RenderMenuList::selectElement() const
 void RenderMenuList::didAttachChild(RenderObject& child, RenderObject*)
 {
     if (CheckedPtr cache = document().existingAXObjectCache())
-        cache->childrenChanged(this, &child);
+        cache->childrenChanged(*this, &child);
 }
 
 void RenderMenuList::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
@@ -204,7 +205,7 @@ void RenderMenuList::styleDidChange(StyleDifference diff, const RenderStyle* old
     if (m_innerBlock) // RenderBlock handled updating the anonymous block's style.
         adjustInnerStyle();
 
-    bool fontChanged = !oldStyle || oldStyle->fontCascade() != style().fontCascade();
+    bool fontChanged = !oldStyle || !oldStyle->fontCascadeEqual(style());
     if (fontChanged) {
         updateOptionsWidth();
         m_needsOptionsWidthUpdate = false;
@@ -297,10 +298,9 @@ void RenderMenuList::setText(const String& s)
 {
     String textToUse = s.isEmpty() ? "\n"_str : s;
 
-    if (m_buttonText) {
+    if (m_buttonText)
         m_buttonText->setText(textToUse.impl(), true);
-        m_buttonText->dirtyLegacyLineBoxes(false);
-    } else {
+    else {
         auto newButtonText = createRenderer<RenderText>(Type::Text, document(), textToUse);
         m_buttonText = *newButtonText;
         // FIXME: This mutation should go through the normal RenderTreeBuilder path.
@@ -324,14 +324,14 @@ LayoutRect RenderMenuList::controlClipRect(const LayoutPoint& additionalOffset) 
     // This will leave room for the arrows which sit in the inner box padding,
     // and if the inner box ever spills out of the outer box, that will get clipped too.
     LayoutRect outerBox(additionalOffset.x() + borderLeft() + paddingLeft(), 
-                   additionalOffset.y() + borderTop() + paddingTop(),
-                   contentWidth(), 
-                   contentHeight());
+        additionalOffset.y() + borderTop() + paddingTop(),
+        contentBoxWidth(),
+        contentBoxHeight());
     
     LayoutRect innerBox(additionalOffset.x() + m_innerBlock->x() + m_innerBlock->paddingLeft(), 
-                   additionalOffset.y() + m_innerBlock->y() + m_innerBlock->paddingTop(),
-                   m_innerBlock->contentWidth(), 
-                   m_innerBlock->contentHeight());
+        additionalOffset.y() + m_innerBlock->y() + m_innerBlock->paddingTop(),
+        m_innerBlock->contentBoxWidth(),
+        m_innerBlock->contentBoxHeight());
 
     return intersection(outerBox, innerBox);
 }
@@ -373,7 +373,7 @@ void RenderMenuList::computePreferredLogicalWidths()
 
     RenderBox::computePreferredLogicalWidths(style().logicalMinWidth(), style().logicalMaxWidth(), writingMode().isHorizontal() ? horizontalBorderAndPaddingExtent() : verticalBorderAndPaddingExtent());
 
-    setPreferredLogicalWidthsDirty(false);
+    clearNeedsPreferredWidthsUpdate();
 }
 
 #if PLATFORM(IOS_FAMILY)

@@ -932,6 +932,8 @@ void testRotateFringeClobber()
             || reg == GPRInfo::regT7
             || reg == GPRInfo::regCS0)
             continue;
+        if (RegisterSetBuilder::specialRegisters().contains(reg, IgnoreVectors))
+            continue;
         code.pinRegister(reg);
     }
 
@@ -1949,7 +1951,7 @@ void testInvalidateCachedTempRegisters()
     root->append(Move, nullptr, Arg::bigImm(std::bit_cast<intptr_t>(&things)), base);
 
     B3::BasicBlock* patchPoint1Root = proc.addBlock();
-    B3::Air::Special* patchpointSpecial = code.addSpecial(makeUnique<B3::PatchpointSpecial>());
+    B3::Air::Special* patchpointSpecial = code.addSpecial(makeUniqueWithoutFastMallocCheck<B3::PatchpointSpecial>());
 
     // In Patchpoint, Load things[0] -> tmp. This will materialize the address in x17 (dataMemoryRegister).
     B3::PatchpointValue* patchpoint1 = patchPoint1Root->appendNew<B3::PatchpointValue>(proc, B3::Void, B3::Origin());
@@ -2024,7 +2026,7 @@ void testArgumentRegPinned()
     GPRReg pinned = GPRInfo::argumentGPR0;
     proc.pinRegister(pinned);
 
-    B3::Air::Special* patchpointSpecial = code.addSpecial(makeUnique<B3::PatchpointSpecial>());
+    B3::Air::Special* patchpointSpecial = code.addSpecial(makeUniqueWithoutFastMallocCheck<B3::PatchpointSpecial>());
 
     B3::BasicBlock* b3Root = proc.addBlock();
     B3::PatchpointValue* patchpoint = b3Root->appendNew<B3::PatchpointValue>(proc, B3::Void, B3::Origin());
@@ -2056,7 +2058,7 @@ void testArgumentRegPinned2()
     GPRReg pinned = GPRInfo::argumentGPR0;
     proc.pinRegister(pinned);
 
-    B3::Air::Special* patchpointSpecial = code.addSpecial(makeUnique<B3::PatchpointSpecial>());
+    B3::Air::Special* patchpointSpecial = code.addSpecial(makeUniqueWithoutFastMallocCheck<B3::PatchpointSpecial>());
 
     B3::BasicBlock* b3Root = proc.addBlock();
     B3::PatchpointValue* patchpoint = b3Root->appendNew<B3::PatchpointValue>(proc, B3::Void, B3::Origin());
@@ -2094,7 +2096,7 @@ void testArgumentRegPinned3()
     GPRReg pinned = GPRInfo::argumentGPR0;
     proc.pinRegister(pinned);
 
-    B3::Air::Special* patchpointSpecial = code.addSpecial(makeUnique<B3::PatchpointSpecial>());
+    B3::Air::Special* patchpointSpecial = code.addSpecial(makeUniqueWithoutFastMallocCheck<B3::PatchpointSpecial>());
 
     B3::BasicBlock* b3Root = proc.addBlock();
     B3::PatchpointValue* patchpoint = b3Root->appendNew<B3::PatchpointValue>(proc, B3::Void, B3::Origin());
@@ -2250,7 +2252,7 @@ void testElideHandlesEarlyClobber()
         });
     });
 
-    Inst inst(Patch, patch, Arg::special(code.addSpecial(WTF::makeUnique<JSC::B3::PatchpointSpecial>())));
+    Inst inst(Patch, patch, Arg::special(code.addSpecial(makeUniqueWithoutFastMallocCheck<JSC::B3::PatchpointSpecial>())));
     inst.args.append(Tmp(firstCalleeSave));
     root->appendInst(WTFMove(inst));
 
@@ -2344,7 +2346,7 @@ void testLinearScanSpillRangesLateUse()
 
     BasicBlock* root = code.addBlock();
 
-    B3::Air::Special* patchpointSpecial = code.addSpecial(makeUnique<B3::PatchpointSpecial>());
+    B3::Air::Special* patchpointSpecial = code.addSpecial(makeUniqueWithoutFastMallocCheck<B3::PatchpointSpecial>());
 
     Vector<Tmp> tmps;
     for (unsigned i = 0; i < 100; ++i) {
@@ -2397,7 +2399,7 @@ void testLinearScanSpillRangesEarlyDef()
 
     BasicBlock* root = code.addBlock();
 
-    B3::Air::Special* patchpointSpecial = code.addSpecial(makeUnique<B3::PatchpointSpecial>());
+    B3::Air::Special* patchpointSpecial = code.addSpecial(makeUniqueWithoutFastMallocCheck<B3::PatchpointSpecial>());
 
     Vector<Tmp> tmps;
     for (unsigned i = 0; i < 100; ++i) {
@@ -2508,7 +2510,7 @@ void testEarlyAndLateUseOfSameTmp()
         B3::Procedure proc;
         Code& code = proc.code();
 
-        B3::Air::Special* patchpointSpecial = code.addSpecial(makeUnique<B3::PatchpointSpecial>());
+        B3::Air::Special* patchpointSpecial = code.addSpecial(makeUniqueWithoutFastMallocCheck<B3::PatchpointSpecial>());
 
         BasicBlock* root = code.addBlock();
         Vector<Tmp> tmps;
@@ -2570,7 +2572,7 @@ void testEarlyClobberInterference()
         B3::Procedure proc;
         Code& code = proc.code();
 
-        B3::Air::Special* patchpointSpecial = code.addSpecial(makeUnique<B3::PatchpointSpecial>());
+        B3::Air::Special* patchpointSpecial = code.addSpecial(makeUniqueWithoutFastMallocCheck<B3::PatchpointSpecial>());
 
         BasicBlock* root = code.addBlock();
         Vector<Tmp> tmps;

@@ -29,7 +29,11 @@
 #if PLATFORM(IOS_FAMILY)
 
 #import "UIKitSPI.h"
+#import <WebCore/BoxSides.h>
 #import <WebCore/FloatPoint.h>
+#import <WebCore/FloatQuad.h>
+#import <wtf/BlockPtr.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 #if HAVE(UI_SCROLL_VIEW_TRANSFERS_SCROLLING_TO_PARENT)
 
@@ -71,6 +75,11 @@
 {
     auto inset = self.adjustedContentInset;
     return self.contentSize.height + inset.top + inset.bottom;
+}
+
+- (BOOL)_wk_isScrolledBeyondTopExtent
+{
+    return self.contentOffset.y < -self.adjustedContentInset.top;
 }
 
 - (BOOL)_wk_isScrolledBeyondExtents
@@ -237,6 +246,15 @@ static UIAxis axesForDelta(WebCore::FloatSize delta)
     return NO;
 }
 
+- (void)_wk_collectDescendantsIncludingSelf:(Vector<RetainPtr<UIView>>&)descendants matching:(NS_NOESCAPE BOOL(^)(UIView *))block
+{
+    if (block(self))
+        descendants.append(self);
+
+    for (UIView *subview in self.subviews)
+        [subview _wk_collectDescendantsIncludingSelf:descendants matching:block];
+}
+
 - (UIViewController *)_wk_viewControllerForFullScreenPresentation
 {
     auto controller = self.window.rootViewController;
@@ -244,6 +262,31 @@ static UIAxis axesForDelta(WebCore::FloatSize delta)
     while ((nextPresentedController = controller.presentedViewController))
         controller = nextPresentedController;
     return controller.viewIfLoaded.window == self.window ? controller : nil;
+}
+
+- (WebCore::FloatQuad)_wk_convertQuad:(const WebCore::FloatQuad&)quad toCoordinateSpace:(id<UICoordinateSpace>)destination
+{
+    return {
+        [self convertPoint:quad.p1() toCoordinateSpace:destination],
+        [self convertPoint:quad.p2() toCoordinateSpace:destination],
+        [self convertPoint:quad.p3() toCoordinateSpace:destination],
+        [self convertPoint:quad.p4() toCoordinateSpace:destination],
+    };
+}
+
+- (UIView *)_wk_previousSibling
+{
+    RetainPtr superview = [self superview];
+    if (!superview)
+        return nil;
+
+    UIView *previousSibling = nil;
+    for (UIView *currentSibling in [superview subviews]) {
+        if (currentSibling == self)
+            break;
+        previousSibling = currentSibling;
+    }
+    return previousSibling;
 }
 
 @end
@@ -287,6 +330,24 @@ static UIAxis axesForDelta(WebCore::FloatSize delta)
 
 @end
 
+#if USE(UICONTEXTMENU)
+
+@implementation UIContextMenuInteraction (WebKitInternal)
+
+- (BOOL)_wk_isMenuVisible
+{
+    bool contextMenuIsVisible = false;
+    [self updateVisibleMenuWithBlock:makeBlockPtr([&contextMenuIsVisible](UIMenu *menu) {
+        contextMenuIsVisible = true;
+        return menu;
+    }).get()];
+    return contextMenuIsVisible;
+}
+
+@end
+
+#endif // USE(UICONTEXTMENU)
+
 namespace WebKit {
 
 RetainPtr<UIAlertController> createUIAlertController(NSString *title, NSString *message)
@@ -310,6 +371,22 @@ UIScrollView *scrollViewForTouches(NSSet<UITouch *> *touches)
             return scrollView;
     }
     return nil;
+}
+
+UIRectEdge uiRectEdgeForSide(WebCore::BoxSide side)
+{
+    switch (side) {
+    case WebCore::BoxSide::Top:
+        return UIRectEdgeTop;
+    case WebCore::BoxSide::Right:
+        return UIRectEdgeRight;
+    case WebCore::BoxSide::Bottom:
+        return UIRectEdgeBottom;
+    case WebCore::BoxSide::Left:
+        return UIRectEdgeLeft;
+    }
+    ASSERT_NOT_REACHED();
+    return UIRectEdgeNone;
 }
 
 } // namespace WebKit

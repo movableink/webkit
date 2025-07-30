@@ -27,6 +27,7 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "Exception.h"
 #include "Page.h"
 #include "UserMediaClient.h"
 #include <wtf/CompletionHandler.h>
@@ -35,7 +36,6 @@
 
 namespace WebCore {
 
-class Exception;
 class UserMediaRequest;
 
 class UserMediaController : public Supplement<Page> {

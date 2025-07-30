@@ -41,8 +41,12 @@
 
 /Tools/CISupport @aj062 @JonWBedard @ryanhaddad @briannafan
 
-/Tools/Scripts/libraries @JonWBedard @briannafan
-/Tools/Scripts/libraries/webkitscmpy @facetothefate @JonWBedard @briannafan
+/Tools/lldb/ @JonWBedard @gsnedders
+
+/Tools/Scripts/ @JonWBedard @gsnedders
+
+/Tools/Scripts/libraries @JonWBedard @briannafan @gsnedders
+/Tools/Scripts/libraries/webkitscmpy @facetothefate @JonWBedard @briannafan @gsnedders
 
 /Tools/TestWebKitAPI
 /Tools/TestWebKitAPI/Tests/WebKitGLib/ @WebKit/glib-reviewers
@@ -60,8 +64,8 @@
 # ================================================================================
 # bmalloc
 
-/Source/bmalloc @Constellation
-/Tools/TestWebKitAPI/Tests/WTF/bmalloc @Constellation
+/Source/bmalloc @WebKit/jsc-reviewers
+/Tools/TestWebKitAPI/Tests/WTF/bmalloc @WebKit/jsc-reviewers
 
 # ================================================================================
 # JavaScriptCore
@@ -99,7 +103,7 @@
 /Source/WebCore/Modules/contact-picker @marcoscaceres
 /Source/WebCore/Modules/entriesapi @cdumez
 /Source/WebCore/Modules/geolocation @cdumez @marcoscaceres
-/Source/WebCore/Modules/model-element @graouts @marcoscaceres
+/Source/WebCore/Modules/model-element @marcoscaceres
 /Source/WebCore/Modules/notifications @cdumez
 /Source/WebCore/Modules/paymentrequest @aprotyas @marcoscaceres
 /Source/WebCore/Modules/permissions @marcoscaceres
@@ -120,16 +124,15 @@
 
 /Source/WebCore/animation @graouts
 
-
-/Source/WebCore/crypto/ @zdobersek
-
 /LayoutTests/http/tests/paymentrequest @aprotyas @marcoscaceres
 /LayoutTests/http/tests/ssl/applepay @aprotyas
 /LayoutTests/http/tests/ssl/applepay-ams-ui @aprotyas
 /LayoutTests/imported/w3c/web-platform-tests/geolocation @marcoscaceres
 /LayoutTests/imported/w3c/web-platform-tests/payment-request @aprotyas @marcoscaceres
 /LayoutTests/imported/w3c/web-platform-tests/permissions @marcoscaceres
+/LayoutTests/imported/w3c/web-platform-tests/resources @gsnedders
 /LayoutTests/imported/w3c/web-platform-tests/screen-orientation @marcoscaceres
+/LayoutTests/imported/w3c/web-platform-tests/tools @gsnedders
 /LayoutTests/imported/w3c/web-platform-tests/web-share @marcoscaceres
 
 # ================================================================================
@@ -138,6 +141,7 @@
 *ContentExtension* @b-weinstein @xeenon
 *InspectorExtension* @b-weinstein @xeenon
 *WebExtension* @b-weinstein @xeenon
+/Source/WebKit/_WebKit_SwiftUI @rr-codes
 /Source/WebKit/GPUProcess/mac/com.apple.WebKit.GPUProcess.sb.in @brentfulgham @pvollan
 /Source/WebKit/NetworkProcess @cdumez
 /Source/WebKit/NetworkProcess/mac/com.apple.WebKit.NetworkProcess.sb.in @brentfulgham @pvollan
@@ -149,6 +153,7 @@
 /Source/WebKit/UIProcess @cdumez
 /Source/WebKit/UIProcess/Extensions @b-weinstein @xeenon
 /Source/WebKit/UIProcess/Inspector @dcrousso @patrickangle
+/Source/WebKit/WebKitSwift @rr-codes
 /Source/WebKit/WebProcess @cdumez
 /Source/WebKit/WebProcess/ApplePay @aprotyas
 /Source/WebKit/WebProcess/Extensions @b-weinstein @xeenon
@@ -172,12 +177,16 @@
 *.xcconfig @emw-apple
 
 # ================================================================================
+# Swift
+
+*.swift @rr-codes
+
+# ================================================================================
 # Linux graphics
 
-CoordinatedGraphics/ @magomez @zdobersek
-cairo/ @magomez @zdobersek
-coordinated/ @magomez @zdobersek
-nicosia/ @magomez @zdobersek
+CoordinatedGraphics/ @magomez
+cairo/ @magomez
+coordinated/ @magomez
 skia/ @alexgcastro @carlosgcampos @nikolaszimmermann
 
 # ================================================================================
@@ -203,12 +212,12 @@ glib/ @WebKit/glib-reviewers
 gtk4/ @WebKit/glib-reviewers
 gtk/ @WebKit/glib-reviewers
 harfbuzz/ @WebKit/glib-reviewers
-libwpe/ @WebKit/glib-reviewers @donny-dont @zdobersek
+libwpe/ @WebKit/glib-reviewers @donny-dont
 linux/ @WebKit/glib-reviewers
 soup/ @WebKit/glib-reviewers
 unix/ @WebKit/glib-reviewers
 xdg/ @WebKit/glib-reviewers
-wpe/ @WebKit/glib-reviewers @zdobersek
+wpe/ @WebKit/glib-reviewers
 **/wpe/qt/ @philn
 
 # Don't want to own these

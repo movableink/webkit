@@ -70,14 +70,21 @@ class HookProcessor(object):
 
         branch = data.get('ref')
         remote = ''
-        name = data.get('repository', {}).get('url', '').split('://')[-1]
+        name = data.get('repository', {}).get('clone_url', '').split('://')[-1]
+        if not name:
+            name = data.get('repository', {}).get('url', '').split('://')[-1]
+        if name and not name.endswith('.git'):
+            name = '{}.git'.format(name)
         if name and self.checkout.repository:
             for config_arg, url in self.checkout.repository.config().items():
                 match = self.REMOTES_RE.match(config_arg)
-                if not match or '{}.git'.format(name) not in [url.split('@')[-1], url.split('://')[-1]]:
+                if not match or name not in [url.split('@')[-1], url.split('://')[-1]]:
                     continue
                 remote = match.group('remote')
                 break
+
+        if not remote:
+            sys.stderr.write(f"Failed to map '{name or '?'}' to a remote name\n")
 
         if type == 'push' and branch:
             try:

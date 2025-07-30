@@ -36,7 +36,6 @@ class Document;
 
 struct CSSSelectorParserContext {
     CSSParserMode mode { CSSParserMode::HTMLStandardMode };
-    bool cssNestingEnabled : 1 { false };
 #if ENABLE(SERVICE_CONTROLS)
     bool imageControlsEnabled : 1 { false };
 #endif
@@ -46,6 +45,7 @@ struct CSSSelectorParserContext {
     bool viewTransitionsEnabled : 1 { false };
     bool viewTransitionClassesEnabled : 1 { false };
     bool viewTransitionTypesEnabled : 1 { false };
+    bool webkitMediaTextTrackDisplayQuirkEnabled : 1 { false };
 
     bool isHashTableDeletedValue : 1 { false };
 

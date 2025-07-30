@@ -29,8 +29,7 @@
 #if PLATFORM(MAC)
 
 #include <algorithm>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+#include <wtf/StdLibExtras.h>
 
 enum {
     kAudioHardwarePropertyProcessIsRunning = 'prun'
@@ -126,7 +125,7 @@ AudioHardwareListenerMac::AudioHardwareListenerMac(Client& client)
     WeakPtr weakThis { *this };
     m_block = Block_copy(^(UInt32 count, const AudioObjectPropertyAddress properties[]) {
         if (weakThis)
-            weakThis->propertyChanged(count, properties);
+            weakThis->propertyChanged(unsafeMakeSpan(properties, count));
     });
 
     AudioObjectAddPropertyListenerBlock(kAudioObjectSystemObject, &processIsRunningPropertyDescriptor(), dispatch_get_main_queue(), m_block);
@@ -140,17 +139,16 @@ AudioHardwareListenerMac::~AudioHardwareListenerMac()
     Block_release(m_block);
 }
 
-void AudioHardwareListenerMac::propertyChanged(UInt32 propertyCount, const AudioObjectPropertyAddress properties[])
+void AudioHardwareListenerMac::propertyChanged(std::span<const AudioObjectPropertyAddress> properties)
 {
-    const AudioObjectPropertyAddress& deviceRunning = processIsRunningPropertyDescriptor();
-    const AudioObjectPropertyAddress& outputDevice = outputDevicePropertyDescriptor();
+    auto deviceRunning = asByteSpan(processIsRunningPropertyDescriptor());
+    auto outputDevice = asByteSpan(outputDevicePropertyDescriptor());
 
-    for (UInt32 i = 0; i < propertyCount; ++i) {
-        const AudioObjectPropertyAddress& property = properties[i];
-
-        if (!memcmp(&property, &deviceRunning, sizeof(AudioObjectPropertyAddress)))
+    for (auto& property : properties) {
+        auto propertyBytes = asByteSpan(property);
+        if (equalSpans(propertyBytes, deviceRunning))
             processIsRunningChanged();
-        else if (!memcmp(&property, &outputDevice, sizeof(AudioObjectPropertyAddress)))
+        else if (equalSpans(propertyBytes, outputDevice))
             outputDeviceChanged();
     }
 }
@@ -175,7 +173,5 @@ void AudioHardwareListenerMac::outputDeviceChanged()
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif

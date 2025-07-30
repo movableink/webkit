@@ -175,7 +175,7 @@ RetainPtr<ViewClass> setUpWebViewForPreferredContentModeTestingWithoutNavigation
     if (defaultContentMode)
         [configuration setDefaultWebpagePreferences:[WKWebpagePreferences preferencesWithContentMode:defaultContentMode.value()]];
     if (applicationNameForUserAgent)
-        [configuration setApplicationNameForUserAgent:applicationNameForUserAgent->isNull() ? nil : (NSString *)applicationNameForUserAgent.value()];
+        [configuration setApplicationNameForUserAgent:applicationNameForUserAgent->isNull() ? nil : applicationNameForUserAgent.value().createNSString().get()];
     auto webView = adoptNS([[ViewClass alloc] initWithFrame:CGRectMake(0, 0, size.width, size.height) configuration:configuration.get()]);
     EXPECT_TRUE([webView isKindOfClass:WKWebView.class]);
     return webView;

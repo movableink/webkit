@@ -152,7 +152,13 @@ class TestRadar(unittest.TestCase):
         with wkmocks.Environment(RADAR_USERNAME='wwatcher'), mocks.Radar(issues=mocks.ISSUES) as mock:
             tracker = radar.Tracker()
             tracker.issue(1).add_comment('Is this related to <rdar://2> ?')
-            self.assertEqual(tracker.issue(1).references, [tracker.issue(2)])
+            self.assertEqual(tracker.issue(1).references, [])
+
+    def test_reference_multiline(self):
+        with wkmocks.Environment(RADAR_USERNAME='wwatcher'), mocks.Radar(issues=mocks.ISSUES) as mock:
+            tracker = radar.Tracker()
+            tracker.issue(1).add_comment('<rdar://2>\nrdar://3')
+            self.assertEqual(tracker.issue(1).references, [tracker.issue(2), tracker.issue(3)])
 
     def test_me(self):
         with wkmocks.Environment(RADAR_USERNAME='tcontributor'), mocks.Radar(issues=mocks.ISSUES):
@@ -213,15 +219,25 @@ class TestRadar(unittest.TestCase):
         with wkmocks.Environment(RADAR_USERNAME='tcontributor'), mocks.Radar(issues=mocks.ISSUES):
             issue = radar.Tracker().issue(1)
             self.assertTrue(issue.opened)
+            self.assertEqual(issue.state, 'Analyze')
             self.assertFalse(issue.open())
             self.assertTrue(issue.close())
             self.assertFalse(issue.opened)
+            self.assertEqual(issue.state, 'Verify')
 
             issue = radar.Tracker().issue(1)
             self.assertFalse(issue.opened)
             self.assertFalse(issue.close())
             self.assertTrue(issue.open())
             self.assertTrue(issue.opened)
+
+    def test_substate(self):
+        with wkmocks.Environment(RADAR_USERNAME='tcontributor'), mocks.Radar(issues=mocks.ISSUES):
+            issue = radar.Tracker().issue(1)
+            self.assertEqual(issue.state, 'Analyze')
+            self.assertTrue(issue.set_state(state='Analyze', substate='Fix'))
+            self.assertEqual(issue.state, 'Analyze')
+            self.assertEqual(issue.substate, 'Fix')
 
     def test_state_why(self):
         with wkmocks.Environment(RADAR_USERNAME='tcontributor'), mocks.Radar(issues=mocks.ISSUES):
@@ -230,12 +246,16 @@ class TestRadar(unittest.TestCase):
             self.assertTrue(issue.close(why='Fixed in 1234@main'))
             self.assertFalse(issue.opened)
             self.assertEqual(issue.comments[-1].content, 'Fixed in 1234@main')
+            self.assertEqual(issue.state, 'Verify')
 
             issue = radar.Tracker().issue(1)
             self.assertFalse(issue.opened)
             self.assertTrue(issue.open(why='Need to revert, fix broke the build'))
             self.assertTrue(issue.opened)
             self.assertEqual(issue.comments[-1].content, 'Need to revert, fix broke the build')
+            self.assertEqual(issue.state, 'Analyze')
+            issue.set_state(state='Verify')
+            self.assertEqual(issue.state, 'Verify')
 
     def test_duplicate(self):
         with wkmocks.Environment(RADAR_USERNAME='tcontributor'), mocks.Radar(issues=mocks.ISSUES):
@@ -559,3 +579,14 @@ What version of 'WebKit Text' should the bug be associated with?:
                     'Repo1, merged, a4daad5b9fbd26d557088037f54dc0935a437182',
                     'Repo2, merged, 604395a516c13cff80d4b0400e43a4c322dbb32f',
                 ])
+
+    def test_related_links(self):
+        with OutputCapture() as captured, mocks.Radar(issues=mocks.ISSUES):
+            tracker = radar.Tracker()
+            self.assertEqual(tracker.issue(1).references, [])
+            self.assertIsNone(tracker.issue(1).add_related_links(['12345']))
+
+        self.assertEqual(
+            captured.stderr.getvalue(),
+            'Radar does not support the see_also field at this time\n',
+        )

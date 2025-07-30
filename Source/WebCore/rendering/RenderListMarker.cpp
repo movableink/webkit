@@ -30,11 +30,13 @@
 #include "FontCascade.h"
 #include "GraphicsContext.h"
 #include "ListStyleType.h"
+#include "RenderBlockInlines.h"
 #include "RenderBoxInlines.h"
 #include "RenderLayer.h"
 #include "RenderListItem.h"
 #include "RenderMultiColumnFlow.h"
 #include "RenderMultiColumnSpannerPlaceholder.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "StyleScope.h"
 #include <wtf/StackStats.h>
@@ -51,7 +53,7 @@ RenderListMarker::RenderListMarker(RenderListItem& listItem, RenderStyle&& style
     , m_listItem(listItem)
 {
     setInline(true);
-    setReplacedOrInlineBlock(true); // pretend to be replaced
+    setReplacedOrAtomicInline(true); // pretend to be replaced
     ASSERT(isRenderListMarker());
 }
 
@@ -234,7 +236,7 @@ RenderBox* RenderListMarker::parentBox(RenderBox& box)
     CheckedPtr multiColumnFlow = dynamicDowncast<RenderMultiColumnFlow>(m_listItem->enclosingFragmentedFlow());
     if (!multiColumnFlow)
         return box.parentBox();
-    auto* placeholder = multiColumnFlow->findColumnSpannerPlaceholder(&box);
+    auto* placeholder = multiColumnFlow->findColumnSpannerPlaceholder(box);
     return placeholder ? placeholder->parentBox() : box.parentBox();
 };
 
@@ -247,8 +249,8 @@ void RenderListMarker::layout()
     for (auto* ancestor = parentBox(*this); ancestor && ancestor != m_listItem.get(); ancestor = parentBox(*ancestor))
         blockOffset += ancestor->logicalTop();
 
-    m_lineLogicalOffsetForListItem = m_listItem->logicalLeftOffsetForLine(blockOffset, 0_lu);
-    m_lineOffsetForListItem = writingMode().isLogicalLeftInlineStart() ? m_lineLogicalOffsetForListItem : m_listItem->logicalRightOffsetForLine(blockOffset, 0_lu);
+    m_lineLogicalOffsetForListItem = m_listItem->logicalLeftOffsetForLine(blockOffset);
+    m_lineOffsetForListItem = writingMode().isLogicalLeftInlineStart() ? m_lineLogicalOffsetForListItem : m_listItem->logicalRightOffsetForLine(blockOffset);
 
     if (isImage()) {
         updateInlineMarginsAndContent();
@@ -262,12 +264,10 @@ void RenderListMarker::layout()
     setMarginStart(0);
     setMarginEnd(0);
 
-    Length startMargin = style().marginStart();
-    Length endMargin = style().marginEnd();
-    if (startMargin.isFixed())
-        setMarginStart(LayoutUnit(startMargin.value()));
-    if (endMargin.isFixed())
-        setMarginEnd(LayoutUnit(endMargin.value()));
+    if (auto fixedStartMargin = style().marginStart().tryFixed())
+        setMarginStart(LayoutUnit(fixedStartMargin->value));
+    if (auto fixedEndMargin = style().marginEnd().tryFixed())
+        setMarginEnd(LayoutUnit(fixedEndMargin->value));
 
     clearNeedsLayout();
 }
@@ -288,7 +288,7 @@ void RenderListMarker::imageChanged(WrappedImagePtr o, const IntRect* rect)
 void RenderListMarker::updateInlineMarginsAndContent()
 {
     // FIXME: It's messy to use the preferredLogicalWidths dirty bit for this optimization, also unclear if this is premature optimization.
-    if (preferredLogicalWidthsDirty())
+    if (needsPreferredLogicalWidthsUpdate())
         updateContent();
     updateInlineMargins();
 }
@@ -355,13 +355,13 @@ void RenderListMarker::updateContent()
 
 void RenderListMarker::computePreferredLogicalWidths()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
     updateContent();
 
     if (isImage()) {
         LayoutSize imageSize = LayoutSize(m_image->imageSize(this, style().usedZoom()));
         m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = writingMode().isHorizontal() ? imageSize.width() : imageSize.height();
-        setPreferredLogicalWidthsDirty(false);
+        clearNeedsPreferredWidthsUpdate();
         updateInlineMargins();
         return;
     }
@@ -377,7 +377,7 @@ void RenderListMarker::computePreferredLogicalWidths()
     m_minPreferredLogicalWidth = logicalWidth;
     m_maxPreferredLogicalWidth = logicalWidth;
 
-    setPreferredLogicalWidthsDirty(false);
+    clearNeedsPreferredWidthsUpdate();
 
     updateInlineMargins();
 }
@@ -415,8 +415,8 @@ void RenderListMarker::updateInlineMargins()
     };
 
     auto [marginStart, marginEnd] = isInside() ? marginsForInsideMarker() : marginsForOutsideMarker();
-    mutableStyle().setMarginStart(Length(marginStart, LengthType::Fixed));
-    mutableStyle().setMarginEnd(Length(marginEnd, LengthType::Fixed));
+    mutableStyle().setMarginStart(Style::Length<> { marginStart });
+    mutableStyle().setMarginEnd(Style::Length<> { marginEnd });
 }
 
 LayoutUnit RenderListMarker::lineHeight(bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const

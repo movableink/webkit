@@ -1,0 +1,8 @@
+
+PASS getPropertyValue('all') returns empty string
+PASS getPropertyValue('all') returns css-wide keyword if possible
+PASS getPropertyValue('all') returns empty string when single property overriden
+PASS setProperty('all') sets all property values
+PASS removeProperty('all') removes all declarations affected by 'all'
+PASS removeProperty('all') removes an 'all' declaration
+

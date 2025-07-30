@@ -27,6 +27,8 @@ class AffineTransform;
 class RenderObject;
 class SVGMarkerElement;
 
+enum class SVGMarkerUnitsType : uint8_t;
+
 class LegacyRenderSVGResourceMarker final : public LegacyRenderSVGResourceContainer {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGResourceMarker);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGResourceMarker);
@@ -36,8 +38,8 @@ public:
 
     inline SVGMarkerElement& markerElement() const;
 
-    void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers) override;
-    void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
+    void removeAllClientsFromCache() override { }
+    void removeClientFromCache(RenderElement&) override { }
 
     void draw(PaintInfo&, const AffineTransform&);
 

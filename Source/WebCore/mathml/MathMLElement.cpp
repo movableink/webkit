@@ -31,6 +31,7 @@
 
 #if ENABLE(MATHML)
 
+#include "ContainerNodeInlines.h"
 #include "ElementInlines.h"
 #include "EventHandler.h"
 #include "FrameLoader.h"
@@ -268,8 +269,10 @@ bool MathMLElement::isKeyboardFocusable(KeyboardEvent* event) const
     if (isFocusable() && StyledElement::supportsFocus())
         return StyledElement::isKeyboardFocusable(event);
 
-    if (isLink())
-        return document().frame()->eventHandler().tabsToLinks(event);
+    if (isLink()) {
+        RefPtr frame = document().frame();
+        return frame && frame->eventHandler().tabsToLinks(event);
+    }
 
     return StyledElement::isKeyboardFocusable(event);
 }

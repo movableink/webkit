@@ -22,11 +22,10 @@
 #pragma once
 
 #include "FilterEffectApplier.h"
+#include "SourceGraphic.h"
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
-
-class SourceGraphic;
 
 class SourceGraphicSoftwareApplier final : public FilterEffectConcreteApplier<SourceGraphic> {
     WTF_MAKE_TZONE_ALLOCATED(SourceGraphicSoftwareApplier);
@@ -36,7 +35,7 @@ public:
     using Base::Base;
 
 private:
-    bool apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const final;
+    bool apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const final;
 };
 
 } // namespace WebCore

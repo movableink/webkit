@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Simon Hausmann <hausmann@kde.org>
- * Copyright (C) 2003-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Google Inc. All rights reserved.
  *           (C) 2006 Graham Dennis (graham.dennis@gmail.com)
  *
@@ -45,7 +45,6 @@
 #include "MouseEvent.h"
 #include "OriginAccessPatterns.h"
 #include "PingLoader.h"
-#include "PlatformMouseEvent.h"
 #include "PlatformStrategies.h"
 #include "PrivateClickMeasurement.h"
 #include "RegistrableDomain.h"
@@ -56,6 +55,7 @@
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include "Settings.h"
+#include "SystemPreviewInfo.h"
 #include "URLKeepingBlobAlive.h"
 #include "UserGestureIndicator.h"
 #include <wtf/RuntimeApplicationChecks.h>
@@ -216,16 +216,9 @@ void HTMLAnchorElement::attributeChanged(const QualifiedName& name, const AtomSt
 {
     HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 
-    if (name == hrefAttr) {
+    if (name == hrefAttr)
         setIsLink(!newValue.isNull() && !shouldProhibitLinks(this));
-        if (isLink()) {
-            auto parsedURL = newValue.string().trim(isASCIIWhitespace);
-            if (document().isDNSPrefetchEnabled() && document().frame()) {
-                if (protocolIsInHTTPFamily(parsedURL) || parsedURL.startsWith("//"_s))
-                    document().frame()->loader().client().prefetchDNS(document().completeURL(parsedURL).host().toString());
-            }
-        }
-    } else if (name == relAttr) {
+    else if (name == relAttr) {
         // Update HTMLAnchorElement::relList() if more rel attributes values are supported.
         static MainThreadNeverDestroyed<const AtomString> noReferrer("noreferrer"_s);
         static MainThreadNeverDestroyed<const AtomString> noOpener("noopener"_s);
@@ -240,7 +233,7 @@ void HTMLAnchorElement::attributeChanged(const QualifiedName& name, const AtomSt
         if (m_relList)
             m_relList->associatedAttributeValueChanged();
     } else if (name == nameAttr)
-        document().processInternalResourceLinks(this);
+        protectedDocument()->processInternalResourceLinks(this);
 }
 
 bool HTMLAnchorElement::isURLAttribute(const Attribute& attribute) const
@@ -267,7 +260,7 @@ bool HTMLAnchorElement::draggable() const
 
 URL HTMLAnchorElement::href() const
 {
-    return document().completeURL(attributeWithoutSynchronization(hrefAttr));
+    return protectedDocument()->completeURL(attributeWithoutSynchronization(hrefAttr));
 }
 
 void HTMLAnchorElement::setHref(const AtomString& value)
@@ -283,7 +276,7 @@ bool HTMLAnchorElement::hasRel(Relation relation) const
 DOMTokenList& HTMLAnchorElement::relList()
 {
     if (!m_relList) {
-        m_relList = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::relAttr, [](Document& document, StringView token) {
+        lazyInitialize(m_relList, makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::relAttr, [](Document& document, StringView token) {
 #if USE(SYSTEM_PREVIEW)
             if (equalLettersIgnoringASCIICase(token, "ar"_s))
                 return document.settings().systemPreviewEnabled();
@@ -291,7 +284,7 @@ DOMTokenList& HTMLAnchorElement::relList()
             UNUSED_PARAM(document);
 #endif
             return equalLettersIgnoringASCIICase(token, "noreferrer"_s) || equalLettersIgnoringASCIICase(token, "noopener"_s) || equalLettersIgnoringASCIICase(token, "opener"_s);
-        });
+        }));
     }
     return *m_relList;
 }
@@ -346,9 +339,6 @@ void HTMLAnchorElement::sendPings(const URL& destinationURL)
     if (!document().frame())
         return;
 
-    if (!document().settings().hyperlinkAuditingEnabled())
-        return;
-
     const auto& pingValue = attributeWithoutSynchronization(pingAttr);
     if (pingValue.isNull())
         return;
@@ -393,12 +383,13 @@ std::optional<URL> HTMLAnchorElement::attributionDestinationURLForPCM() const
 
 std::optional<RegistrableDomain> HTMLAnchorElement::mainDocumentRegistrableDomainForPCM() const
 {
-    if (auto* page = document().page()) {
+    Ref document = this->document();
+    if (RefPtr page = document->page()) {
         if (auto mainFrameURL = page->mainFrameURL(); !mainFrameURL.isEmpty())
             return RegistrableDomain(mainFrameURL);
     }
 
-    protectedDocument()->addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "Could not find a main document to use as source site for Private Click Measurement."_s);
+    document->addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "Could not find a main document to use as source site for Private Click Measurement."_s);
     return std::nullopt;
 }
 
@@ -467,9 +458,8 @@ std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasu
     using SourceSite = PCM::SourceSite;
     using AttributionDestinationSite = PCM::AttributionDestinationSite;
 
-    RefPtr frame { document().frame() };
-    auto* page = document().page();
-    if (!frame || !page || !document().settings().privateClickMeasurementEnabled() || !UserGestureIndicator::processingUserGesture())
+    RefPtr page = document().page();
+    if (!page || !document().settings().privateClickMeasurementEnabled() || !UserGestureIndicator::processingUserGesture())
         return std::nullopt;
 
     if (auto pcm = parsePrivateClickMeasurementForSKAdNetwork(hrefURL))
@@ -505,18 +495,13 @@ std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasu
         return std::nullopt;
     }
 
-    RegistrableDomain mainDocumentRegistrableDomain;
-    auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
-    if (!localFrame)
-        return std::nullopt;
-
-    if (auto mainDocument = localFrame->document())
-        mainDocumentRegistrableDomain = RegistrableDomain { mainDocument->url() };
-    else {
+    auto& mainURL = page->mainFrameURL();
+    if (mainURL.isEmpty()) {
         protectedDocument()->addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "Could not find a main document to use as source site for Private Click Measurement."_s);
         return std::nullopt;
     }
 
+    RegistrableDomain mainDocumentRegistrableDomain = RegistrableDomain { mainURL };
     if (mainDocumentRegistrableDomain.matches(destinationURL)) {
         protectedDocument()->addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "attributiondestination can not be the same site as the current website."_s);
         return std::nullopt;
@@ -615,7 +600,7 @@ void HTMLAnchorElement::handleClick(Event& event)
     // Preconnect to the link's target for improved page load time.
     if (completedURL.protocolIsInHTTPFamily() && document->settings().linkPreconnectEnabled() && ((frame->isMainFrame() && isSelfTargetFrameName(effectiveTarget)) || isBlankTargetFrameName(effectiveTarget))) {
         auto storageCredentialsPolicy = frame->page() && frame->page()->canUseCredentialStorage() ? StoredCredentialsPolicy::Use : StoredCredentialsPolicy::DoNotUse;
-        platformStrategies()->loaderStrategy()->preconnectTo(frame->loader(), completedURL, storageCredentialsPolicy, LoaderStrategy::ShouldPreconnectAsFirstParty::Yes, nullptr);
+        platformStrategies()->loaderStrategy()->preconnectTo(frame->loader(), ResourceRequest { WTFMove(completedURL) }, storageCredentialsPolicy, LoaderStrategy::ShouldPreconnectAsFirstParty::Yes, [] (ResourceError) { });
     }
 }
 

@@ -23,6 +23,10 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
+DECLARE_SYSTEM_HEADER
+
 #import <UIKit/UIKit.h>
 
 #if USE(APPLE_INTERNAL_SDK)
@@ -591,6 +595,7 @@ extern NSString * const UIPresentationControllerDismissalTransitionDidEndNotific
 extern NSString * const UIPresentationControllerDismissalTransitionDidEndCompletedKey;
 
 @interface _UIViewControllerTransitionContext : NSObject <UIViewControllerContextTransitioning>
+- (id <UIViewControllerTransitionCoordinator>)_transitionCoordinator;
 @end
 
 // FIXME: Separate the parts we are simply re-declaring from the ones we are overriding.
@@ -730,6 +735,7 @@ typedef NS_ENUM(NSInteger, UIWKGestureType) {
 - (void)showTextServiceFor:(NSString *)selectedTerm fromRect:(CGRect)presentationRect;
 - (void)scheduleReplacementsForText:(NSString *)text;
 - (void)scheduleChineseTransliterationForText:(NSString *)text;
+- (void)translate:(NSString *)text fromRect:(CGRect)presentationRect;
 @end
 
 @class UIWKDocumentRequest;
@@ -1108,10 +1114,6 @@ typedef NS_ENUM(NSUInteger, _UIScrollDeviceCategory) {
 @property (nonatomic, readonly) NSInteger _gsModifierFlags;
 @end
 
-@interface UIWKTextInteractionAssistant (Staging_74209560)
-- (void)translate:(NSString *)text fromRect:(CGRect)presentationRect;
-@end
-
 @interface UIColor (IPI)
 + (UIColor *)insertionPointColor;
 @end
@@ -1207,10 +1209,6 @@ typedef NS_ENUM(NSUInteger, _UIScrollDeviceCategory) {
 @property (nonatomic, readonly) CGRect _selectionClipRect;
 @end
 
-@interface UIDragItem (Staging_117702233)
-- (void)_setNeedsDropPreviewUpdate;
-@end
-
 @interface UIDevice ()
 @property (nonatomic, setter=_setBacklightLevel:) float _backlightLevel;
 @end
@@ -1264,6 +1262,10 @@ typedef NS_ENUM(NSUInteger, _UIScrollDeviceCategory) {
 
 @interface UIApplication (InternalBSAction)
 - (void)_registerInternalBSActionHandler:(id<_UIApplicationBSActionHandler>)handler;
+@end
+
+@interface UIWindowSceneGeometry (Staging_143004359)
+@property (nonatomic, readonly, getter=isInteractivelyResizing) BOOL interactivelyResizing;
 @end
 
 WTF_EXTERN_C_BEGIN

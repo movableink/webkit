@@ -70,6 +70,8 @@ public:
     ~LibWebRTCProvider();
 
 private:
+    bool isLibWebRTCProvider() const final { return true; }
+
     std::unique_ptr<SuspendableSocketFactory> createSocketFactory(String&& /* userAgent */, WebCore::ScriptExecutionContextIdentifier, bool /* isFirstParty */, WebCore::RegistrableDomain&&) final;
 
     rtc::scoped_refptr<webrtc::PeerConnectionInterface> createPeerConnection(WebCore::ScriptExecutionContextIdentifier, webrtc::PeerConnectionObserver&, rtc::PacketSocketFactory*, webrtc::PeerConnectionInterface::RTCConfiguration&&) final;
@@ -111,3 +113,7 @@ inline UniqueRef<LibWebRTCProvider> createLibWebRTCProvider(WebPage&)
 #endif // USE(LIBWEBRTC)
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::LibWebRTCProvider) \
+static bool isType(const WebCore::WebRTCProvider& provider) { return provider.isLibWebRTCProvider(); } \
+SPECIALIZE_TYPE_TRAITS_END()

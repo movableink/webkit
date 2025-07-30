@@ -26,6 +26,8 @@
 #import "AXTextMarker.h"
 
 #import <Foundation/NSRange.h>
+#import <wtf/StdLibExtras.h>
+
 #if PLATFORM(MAC)
 #import "AXIsolatedObject.h"
 #import "WebAccessibilityObjectWrapperMac.h"
@@ -35,6 +37,8 @@
 #endif
 
 namespace WebCore {
+
+using namespace Accessibility;
 
 AXTextMarker::AXTextMarker(PlatformTextMarkerData platformData)
 {
@@ -52,7 +56,7 @@ AXTextMarker::AXTextMarker(PlatformTextMarkerData platformData)
         return;
     }
 
-    memcpy(&m_data, AXTextMarkerGetBytePtr(platformData), sizeof(m_data));
+    memcpySpan(asMutableByteSpan(m_data), AXTextMarkerGetByteSpan(platformData));
 #else // PLATFORM(IOS_FAMILY)
     [platformData getBytes:&m_data length:sizeof(m_data)];
 #endif
@@ -68,7 +72,8 @@ RetainPtr<PlatformTextMarkerData> AXTextMarker::platformData() const
 }
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
-RetainPtr<NSAttributedString> AXTextMarkerRange::toAttributedString() const
+// FIXME: There's a lot of duplicated code between this function and AXTextMarkerRange::toString().
+RetainPtr<NSAttributedString> AXTextMarkerRange::toAttributedString(AXCoreObject::SpellCheck spellCheck) const
 {
     RELEASE_ASSERT(!isMainThread());
 
@@ -79,16 +84,53 @@ RetainPtr<NSAttributedString> AXTextMarkerRange::toAttributedString() const
     if (!end.isValid())
         return nil;
 
+    String listMarkerText = listMarkerTextOnSameLine(start);
+
     if (start.isolatedObject() == end.isolatedObject()) {
         size_t minOffset = std::min(start.offset(), end.offset());
         size_t maxOffset = std::max(start.offset(), end.offset());
         // FIXME: createAttributedString takes a StringView, but we create a full-fledged String. Could we create a
         // new substringView method that returns a StringView?
-        // FIXME: Should we be passing SpellCheck::Yes? Maybe we need to take `SpellCheck` as a function parameter?
-        return start.isolatedObject()->createAttributedString(start.runs()->substring(minOffset, maxOffset - minOffset), AXCoreObject::SpellCheck::No).autorelease();
+        return start.isolatedObject()->createAttributedString(makeString(listMarkerText, start.runs()->substring(minOffset, maxOffset - minOffset)), spellCheck).autorelease();
     }
-    // FIXME: Handle ranges that span multiple objects.
-    return nil;
+
+    RetainPtr<NSMutableAttributedString> result = start.isolatedObject()->createAttributedString(makeString(listMarkerText, start.runs()->substring(start.offset())), spellCheck);
+    auto appendToResult = [&result] (RetainPtr<NSMutableAttributedString>&& string) {
+        if (!string)
+            return;
+
+        if (result)
+            [result appendAttributedString:string.autorelease()];
+        else
+            result = WTFMove(string);
+    };
+
+    auto emitNewlineOnExit = [&] (AXIsolatedObject& object) {
+        // FIXME: This function should not just be emitting newlines, but instead handling every character type in TextEmissionBehavior.
+        auto behavior = object.textEmissionBehavior();
+        if (behavior != TextEmissionBehavior::Newline && behavior != TextEmissionBehavior::DoubleNewline)
+            return;
+
+        auto length = [result length];
+        // Like TextIterator, don't emit a newline if the most recently emitted character was already a newline.
+        if (length && [[result string] characterAtIndex:length - 1] != '\n') {
+            // FIXME: This is super inefficient. We are creating a whole new dictionary and attributed string just to append newline(s).
+            NSString *newlineString = behavior == TextEmissionBehavior::Newline ? @"\n" : @"\n\n";
+            NSDictionary *attributes = [result attributesAtIndex:length - 1 effectiveRange:nil];
+            appendToResult(adoptNS([[NSMutableAttributedString alloc] initWithString:newlineString attributes:attributes]));
+        }
+    };
+
+    // FIXME: If we've been given reversed markers, i.e. the end marker actually comes before the start marker,
+    // we may want to detect this and try searching AXDirection::Previous?
+    RefPtr current = findObjectWithRuns(*start.isolatedObject(), AXDirection::Next, std::nullopt, emitNewlineOnExit);
+    while (current && current->objectID() != end.objectID()) {
+        appendToResult(current->createAttributedString(current->textRuns()->toString(), spellCheck));
+        current = findObjectWithRuns(*current, AXDirection::Next, std::nullopt, emitNewlineOnExit);
+    }
+    appendToResult(end.isolatedObject()->createAttributedString(end.runs()->substring(0, end.offset()), spellCheck));
+
+    return result;
 }
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
 
@@ -101,14 +143,11 @@ AXTextMarkerRange::AXTextMarkerRange(AXTextMarkerRangeRef textMarkerRangeRef)
         return;
     }
 
-    auto start = AXTextMarkerRangeCopyStartMarker(textMarkerRangeRef);
-    auto end = AXTextMarkerRangeCopyEndMarker(textMarkerRangeRef);
+    RetainPtr start = adoptCF(AXTextMarkerRangeCopyStartMarker(textMarkerRangeRef));
+    RetainPtr end = adoptCF(AXTextMarkerRangeCopyEndMarker(textMarkerRangeRef));
 
-    m_start = start;
-    m_end = end;
-
-    CFRelease(start);
-    CFRelease(end);
+    m_start = start.get();
+    m_end = end.get();
 }
 
 RetainPtr<AXTextMarkerRangeRef> AXTextMarkerRange::platformData() const

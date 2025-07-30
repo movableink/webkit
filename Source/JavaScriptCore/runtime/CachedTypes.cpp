@@ -42,6 +42,7 @@
 #include "UnlinkedMetadataTableInlines.h"
 #include "UnlinkedModuleProgramCodeBlock.h"
 #include "UnlinkedProgramCodeBlock.h"
+#include <wtf/FileHandle.h>
 #include <wtf/MallocPtr.h>
 #include <wtf/MallocSpan.h>
 #include <wtf/Packed.h>
@@ -49,6 +50,7 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/UUID.h>
 #include <wtf/text/AtomStringImpl.h>
+#include <wtf/text/ParsingUtilities.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -95,9 +97,9 @@ public:
         ptrdiff_t m_offset;
     };
 
-    Encoder(VM& vm, FileSystem::PlatformFileHandle fd = FileSystem::invalidPlatformFileHandle)
+    Encoder(VM& vm, FileSystem::FileHandle& fileHandle)
         : m_vm(vm)
-        , m_fd(fd)
+        , m_fileHandle(fileHandle)
         , m_baseOffset(0)
         , m_currentPage(nullptr)
     {
@@ -159,19 +161,16 @@ public:
             return nullptr;
         m_currentPage->alignEnd();
 
-        if (FileSystem::isHandleValid(m_fd)) {
+        if (m_fileHandle) {
             return releaseMapped(error);
         }
 
         size_t size = m_baseOffset + m_currentPage->size();
         auto buffer = MallocSpan<uint8_t, VMMalloc>::malloc(size);
         auto bufferSpan = buffer.mutableSpan();
-        unsigned offset = 0;
-        for (const auto& page : m_pages) {
-            memcpySpan(bufferSpan.subspan(offset), page.span());
-            offset += page.size();
-        }
-        RELEASE_ASSERT(offset == size);
+        for (const auto& page : m_pages)
+            memcpySpan(consumeSpan(bufferSpan, page.size()), page.span());
+        RELEASE_ASSERT(bufferSpan.empty());
         return CachedBytecode::create(WTFMove(buffer), WTFMove(m_leafExecutables));
     }
 
@@ -179,32 +178,31 @@ private:
     RefPtr<CachedBytecode> releaseMapped(BytecodeCacheError& error)
     {
         size_t size = m_baseOffset + m_currentPage->size();
-        if (!FileSystem::truncateFile(m_fd, size)) {
+        if (!m_fileHandle.truncate(size)) {
             error = BytecodeCacheError::StandardError(errno);
             return nullptr;
         }
 
         for (const auto& page : m_pages) {
-            int bytesWritten = FileSystem::writeToFile(m_fd, page.span());
-            if (bytesWritten == -1) {
+            auto bytesWritten = m_fileHandle.write(page.span());
+            if (!bytesWritten) {
                 error = BytecodeCacheError::StandardError(errno);
                 return nullptr;
             }
 
-            if (static_cast<size_t>(bytesWritten) != page.size()) {
-                error = BytecodeCacheError::WriteError(bytesWritten, page.size());
+            if (*bytesWritten != page.size()) {
+                error = BytecodeCacheError::WriteError(*bytesWritten, page.size());
                 return nullptr;
             }
         }
 
-        bool success;
-        FileSystem::MappedFileData mappedFileData(m_fd, FileSystem::MappedFileMode::Private, success);
-        if (!success) {
+        auto mappedFileData = m_fileHandle.map(FileSystem::MappedFileMode::Private);
+        if (!mappedFileData) {
             error = BytecodeCacheError::StandardError(errno);
             return nullptr;
         }
 
-        return CachedBytecode::create(WTFMove(mappedFileData), WTFMove(m_leafExecutables));
+        return CachedBytecode::create(WTFMove(*mappedFileData), WTFMove(m_leafExecutables));
     }
 
     class Page {
@@ -216,7 +214,7 @@ private:
 
         bool malloc(size_t size, ptrdiff_t& result)
         {
-            size_t alignment = std::min(alignof(std::max_align_t), static_cast<size_t>(WTF::roundUpToPowerOfTwo(size)));
+            size_t alignment = std::min(alignof(std::max_align_t), static_cast<size_t>(roundUpToPowerOfTwo(size)));
             ptrdiff_t offset = roundUpToMultipleOf(alignment, m_offset);
             size = roundUpToMultipleOf(alignment, size);
             if (static_cast<size_t>(offset + size) > capacity())
@@ -232,8 +230,8 @@ private:
         uint8_t* buffer() { return m_buffer.mutableSpan().data(); }
         size_t size() const { return static_cast<size_t>(m_offset); }
 
-        std::span<uint8_t> mutableSpan() { return m_buffer.mutableSpan().first(size()); }
-        std::span<const uint8_t> span() const { return m_buffer.span().first(size()); }
+        std::span<uint8_t> mutableSpan() LIFETIME_BOUND { return m_buffer.mutableSpan().first(size()); }
+        std::span<const uint8_t> span() const LIFETIME_BOUND { return m_buffer.span().first(size()); }
 
         bool getOffset(const void* address, ptrdiff_t& result) const
         {
@@ -278,7 +276,7 @@ private:
     }
 
     VM& m_vm;
-    FileSystem::PlatformFileHandle m_fd;
+    FileSystem::FileHandle& m_fileHandle;
     ptrdiff_t m_baseOffset;
     Page* m_currentPage;
     Vector<Page> m_pages;
@@ -672,12 +670,13 @@ private:
 };
 
 template<typename Key, typename Value, typename HashArg = DefaultHash<SourceType<Key>>, typename KeyTraitsArg = HashTraits<SourceType<Key>>, typename MappedTraitsArg = HashTraits<SourceType<Value>>, typename TableTraits = WTF::HashTableTraits>
-class CachedHashMap : public VariableLengthObject<UncheckedKeyHashMap<SourceType<Key>, SourceType<Value>, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraits>> {
-    template<typename K, typename V>
-    using Map = UncheckedKeyHashMap<K, V, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraits>;
+class CachedHashMap : public VariableLengthObject<HashMap<SourceType<Key>, SourceType<Value>, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraits>> {
+    template<typename K, typename V, WTF::ShouldValidateKey shouldValidateKey>
+    using Map = HashMap<K, V, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraits, shouldValidateKey>;
 
 public:
-    void encode(Encoder& encoder, const Map<SourceType<Key>, SourceType<Value>>& map)
+    template<WTF::ShouldValidateKey shouldValidateKey>
+    void encode(Encoder& encoder, const Map<SourceType<Key>, SourceType<Value>, shouldValidateKey>& map)
     {
         SourceType<decltype(m_entries)> entriesVector(map.size());
         unsigned i = 0;
@@ -686,7 +685,8 @@ public:
         m_entries.encode(encoder, entriesVector);
     }
 
-    void decode(Decoder& decoder, Map<SourceType<Key>, SourceType<Value>>& map) const
+    template<WTF::ShouldValidateKey shouldValidateKey>
+    void decode(Decoder& decoder, Map<SourceType<Key>, SourceType<Value>, shouldValidateKey>& map) const
     {
         SourceType<decltype(m_entries)> decodedEntries;
         m_entries.decode(decoder, decodedEntries);
@@ -957,9 +957,9 @@ private:
 };
 
 template<typename T, typename HashArg = DefaultHash<T>>
-class CachedHashSet : public CachedObject<HashSet<SourceType<T>, HashArg>> {
+class CachedHashSet : public CachedObject<UncheckedKeyHashSet<SourceType<T>, HashArg>> {
 public:
-    void encode(Encoder& encoder, const HashSet<SourceType<T>, HashArg>& set)
+    void encode(Encoder& encoder, const UncheckedKeyHashSet<SourceType<T>, HashArg>& set)
     {
         SourceType<decltype(m_entries)> entriesVector(set.size());
         unsigned i = 0;
@@ -968,7 +968,7 @@ public:
         m_entries.encode(encoder, entriesVector);
     }
 
-    void decode(Decoder& decoder, HashSet<SourceType<T>, HashArg>& set) const
+    void decode(Decoder& decoder, UncheckedKeyHashSet<SourceType<T>, HashArg>& set) const
     {
         SourceType<decltype(m_entries)> entriesVector;
         m_entries.decode(decoder, entriesVector);
@@ -1032,7 +1032,7 @@ public:
         m_storage.encode(encoder, info.payload(), info.payloadSize());
     }
 
-    MallocPtr<ExpressionInfo> decode(Decoder& decoder) const
+    std::unique_ptr<ExpressionInfo> decode(Decoder& decoder) const
     {
         auto info = ExpressionInfo::createUninitialized(m_numberOfChapters, m_numberOfEncodedInfo, m_numberOfEncodedInfoExtensions);
         m_storage.decode(decoder, info->payload(), info->payloadSize());
@@ -2596,11 +2596,11 @@ void encodeCodeBlock(Encoder& encoder, const SourceCodeKey& key, const UnlinkedC
     entry->encode(encoder, { key, jsCast<const UnlinkedCodeBlockType*>(codeBlock) });
 }
 
-RefPtr<CachedBytecode> encodeCodeBlock(VM& vm, const SourceCodeKey& key, const UnlinkedCodeBlock* codeBlock, FileSystem::PlatformFileHandle fd, BytecodeCacheError& error)
+RefPtr<CachedBytecode> encodeCodeBlock(VM& vm, const SourceCodeKey& key, const UnlinkedCodeBlock* codeBlock, FileSystem::FileHandle& fileHandle, BytecodeCacheError& error)
 {
     const ClassInfo* classInfo = codeBlock->classInfo();
 
-    Encoder encoder(vm, fd);
+    Encoder encoder(vm, fileHandle);
     if (classInfo == UnlinkedProgramCodeBlock::info())
         encodeCodeBlock<UnlinkedProgramCodeBlock>(encoder, key, codeBlock);
     else if (classInfo == UnlinkedModuleProgramCodeBlock::info())
@@ -2614,12 +2614,14 @@ RefPtr<CachedBytecode> encodeCodeBlock(VM& vm, const SourceCodeKey& key, const U
 RefPtr<CachedBytecode> encodeCodeBlock(VM& vm, const SourceCodeKey& key, const UnlinkedCodeBlock* codeBlock)
 {
     BytecodeCacheError error;
-    return encodeCodeBlock(vm, key, codeBlock, FileSystem::invalidPlatformFileHandle, error);
+    FileSystem::FileHandle invalidFileHandle;
+    return encodeCodeBlock(vm, key, codeBlock, invalidFileHandle, error);
 }
 
 RefPtr<CachedBytecode> encodeFunctionCodeBlock(VM& vm, const UnlinkedFunctionCodeBlock* codeBlock, BytecodeCacheError& error)
 {
-    Encoder encoder(vm);
+    FileSystem::FileHandle invalidFileHandle;
+    Encoder encoder(vm, invalidFileHandle);
     encoder.malloc<CachedFunctionCodeBlock>()->encode(encoder, *codeBlock);
     return encoder.release(error);
 }

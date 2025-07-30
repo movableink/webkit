@@ -37,6 +37,9 @@ list(APPEND TestWebCore_SOURCES
     ${test_main_SOURCES}
 
     Tests/WebCore/UserAgentQuirks.cpp
+
+    Tests/WebCore/glib/Damage.cpp
+
     Tests/WebCore/gstreamer/GStreamerTest.cpp
     Tests/WebCore/gstreamer/GstElementHarness.cpp
     Tests/WebCore/gstreamer/GstMappedBuffer.cpp
@@ -58,11 +61,12 @@ list(APPEND TestWebCore_LIBRARIES
 
 # TestWebKit
 list(APPEND TestWebKit_SOURCES
-    ${test_main_SOURCES}
-
     wpe/PlatformUtilitiesWPE.cpp
     wpe/PlatformWebViewWPE.cpp
+    wpe/WebKitTestMain.cpp
 )
+
+add_subdirectory(wpe/mock-platform)
 
 list(APPEND TestWebKit_PRIVATE_INCLUDE_DIRECTORIES
     ${CMAKE_SOURCE_DIR}/Source
@@ -77,6 +81,16 @@ list(APPEND TestWebKit_SYSTEM_INCLUDE_DIRECTORIES
 list(APPEND TestWebKit_PRIVATE_LIBRARIES
     WebKit::WPEToolingBackends
 )
+
+if (ENABLE_WPE_PLATFORM)
+    list(APPEND TestWebKit_PRIVATE_INCLUDE_DIRECTORIES
+        ${WPEPlatform_DERIVED_SOURCES_DIR}
+        ${WEBKIT_DIR}/WPEPlatform
+    )
+    list(APPEND TestWebKit_PRIVATE_LIBRARIES
+        WPEPlatform-${WPE_API_VERSION}
+    )
+endif ()
 
 # TestWebKitAPIBase
 target_include_directories(TestWebKitAPIBase PRIVATE

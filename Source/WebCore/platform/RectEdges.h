@@ -40,12 +40,17 @@ public:
     {
     }
 
+    RectEdges(const T& value)
+        : m_sides { value, value, value, value }
+    {
+    }
+
     RectEdges(const RectEdges&) = default;
     RectEdges& operator=(const RectEdges&) = default;
 
     template<typename U>
     RectEdges(U&& top, U&& right, U&& bottom, U&& left)
-        : m_sides({ { std::forward<T>(top), std::forward<T>(right), std::forward<T>(bottom), std::forward<T>(left) } })
+        : m_sides({ { std::forward<U>(top), std::forward<U>(right), std::forward<U>(bottom), std::forward<U>(left) } })
     {
     }
 
@@ -124,9 +129,25 @@ public:
         return yFlippedCopy();
     }
 
-    bool isZero() const
+    template<typename F> bool anyOf(F&& functor) const
     {
-        return !top() && !right() && !bottom() && !left();
+        return std::ranges::any_of(m_sides, std::forward<F>(functor));
+    }
+
+    template<typename F> bool allOf(F&& functor) const
+    {
+        return std::ranges::all_of(m_sides, std::forward<F>(functor));
+    }
+
+    template<typename F> bool noneOf(F&& functor) const
+    {
+        return std::ranges::none_of(m_sides, std::forward<F>(functor));
+    }
+
+    bool isZero() const
+        requires (requires { { !std::declval<T>() } -> std::same_as<bool>; })
+    {
+        return allOf([](auto& edge) { return !edge; });
     }
 
     bool operator==(const RectEdges<T>&) const = default;
@@ -153,10 +174,27 @@ inline RectEdges<T>& operator+=(RectEdges<T>& a, const RectEdges<T>& b)
     return a;
 }
 
+template<typename T, typename F>
+inline RectEdges<T> blend(const RectEdges<T>& a, const RectEdges<T>& b, F&& functor)
+{
+    return {
+        functor(a.top(), b.top(), BoxSide::Top),
+        functor(a.right(), b.right(), BoxSide::Right),
+        functor(a.bottom(), b.bottom(), BoxSide::Bottom),
+        functor(a.left(), b.left(), BoxSide::Left)
+    };
+}
+
+template<typename T>
+inline RectEdges<T> max(const RectEdges<T>& a, const RectEdges<T>& b)
+{
+    return blend(a, b, [](const T& a, const T& b, BoxSide) { return std::max(a, b); });
+}
+
 template<typename T>
 TextStream& operator<<(TextStream& ts, const RectEdges<T>& edges)
 {
-    ts << "[top " << edges.top() << " right " << edges.right() << " bottom " << edges.bottom() << " left " << edges.left() << "]";
+    ts << "[top "_s << edges.top() << " right "_s << edges.right() << " bottom "_s << edges.bottom() << " left "_s << edges.left() << ']';
     return ts;
 }
 

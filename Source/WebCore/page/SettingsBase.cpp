@@ -43,6 +43,7 @@
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "Page.h"
+#include "RenderObjectInlines.h"
 #include "RenderWidget.h"
 #include "Settings.h"
 #include "StorageMap.h"
@@ -195,7 +196,7 @@ void SettingsBase::setMinimumDOMTimerInterval(Seconds interval)
     if (!m_page)
         return;
 
-    for (RefPtr frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
         if (!localFrame)
             continue;
@@ -338,7 +339,7 @@ void SettingsBase::mediaTypeOverrideChanged()
     if (!page)
         return;
 
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return;
 
@@ -365,7 +366,7 @@ void SettingsBase::imageLoadingSettingsTimerFired()
     if (!m_page)
         return;
 
-    for (RefPtr frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
         if (!localFrame)
             continue;
@@ -430,7 +431,7 @@ void SettingsBase::layerBasedSVGEngineEnabledChanged()
     if (!m_page)
         return;
 
-    for (RefPtr frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
         if (!localFrame)
             continue;
@@ -462,12 +463,6 @@ void SettingsBase::usesBackForwardCacheChanged()
         BackForwardCache::singleton().pruneToSizeNow(0, PruningReason::None);
 }
 
-void SettingsBase::dnsPrefetchingEnabledChanged()
-{
-    if (m_page)
-        m_page->dnsPrefetchingStateChanged();
-}
-
 void SettingsBase::storageBlockingPolicyChanged()
 {
     if (m_page)
@@ -476,16 +471,30 @@ void SettingsBase::storageBlockingPolicyChanged()
 
 void SettingsBase::backgroundShouldExtendBeyondPageChanged()
 {
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
-    if (m_page && localMainFrame)
-        localMainFrame->view()->updateExtendBackgroundIfNecessary();
+    RefPtr page = m_page.get();
+    if (!page)
+        return;
+
+    RefPtr localMainFrame = page->localMainFrame();
+    if (!localMainFrame)
+        return;
+
+    if (RefPtr view = localMainFrame->view())
+        view->updateExtendBackgroundIfNecessary();
 }
 
 void SettingsBase::scrollingPerformanceTestingEnabledChanged()
 {
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
-    if (m_page && localMainFrame && localMainFrame->view())
-        localMainFrame->view()->setScrollingPerformanceTestingEnabled(m_page->settings().scrollingPerformanceTestingEnabled());
+    RefPtr page = m_page.get();
+    if (!page)
+        return;
+
+    RefPtr localMainFrame = page->localMainFrame();
+    if (!localMainFrame)
+        return;
+
+    if (RefPtr view = localMainFrame->view())
+        view->setScrollingPerformanceTestingEnabled(page->settings().scrollingPerformanceTestingEnabled());
 }
 
 void SettingsBase::hiddenPageDOMTimerThrottlingStateChanged()
@@ -515,5 +524,21 @@ void SettingsBase::shouldUseModernAVContentKeySessionChanged()
         MediaSessionManagerCocoa::setShouldUseModernAVContentKeySession(m_page->settings().shouldUseModernAVContentKeySession());
 }
 #endif
+
+void SettingsBase::useSystemAppearanceChanged()
+{
+    if (m_page)
+        m_page->useSystemAppearanceChanged();
+}
+
+RefPtr<Page> SettingsBase::protectedPage() const
+{
+    return m_page.get();
+}
+
+void SettingsBase::fontFallbackPrefersPictographsChanged()
+{
+    invalidateAfterGenericFamilyChange(protectedPage().get());
+}
 
 } // namespace WebCore

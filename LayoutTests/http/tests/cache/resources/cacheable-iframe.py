@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 max_age = 12 * 31 * 24 * 60 * 60
-expires = '{} +0000'.format((datetime.utcnow() + timedelta(seconds=max_age)).strftime('%a, %d %b %Y %H:%M:%S'))
+expires = '{} +0000'.format((datetime.now(timezone.utc) + timedelta(seconds=max_age)).strftime('%a, %d %b %Y %H:%M:%S'))
 
 sys.stdout.write(
     f'Cache-Control: public, max-age={max_age}\r\n'

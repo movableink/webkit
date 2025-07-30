@@ -35,7 +35,7 @@ namespace WebCore {
 
 void AXObjectCache::attachWrapper(AccessibilityObject& axObject)
 {
-    auto wrapper = AccessibilityObjectAtspi::create(&axObject, document().page()->accessibilityRootObject());
+    auto wrapper = AccessibilityObjectAtspi::create(&axObject, document()->page()->accessibilityRootObject());
     axObject.setWrapper(wrapper.ptr());
 
     m_deferredParentChangedList.add(&axObject);
@@ -44,14 +44,14 @@ void AXObjectCache::attachWrapper(AccessibilityObject& axObject)
 
 void AXObjectCache::platformPerformDeferredCacheUpdate()
 {
-    auto handleParentChanged = [&](const AXCoreObject& axObject) {
+    auto handleParentChanged = [&](const AccessibilityObject& axObject) {
         auto* wrapper = axObject.wrapper();
         if (!wrapper)
             return;
 
         auto* axParent = axObject.parentObjectUnignored();
         if (!axParent) {
-            if (axObject.isScrollView() && axObject.scrollView() == document().view())
+            if (axObject.isScrollView() && document() && axObject.scrollView() == document()->view())
                 wrapper->setParent(nullptr); // nullptr means root.
             return;
         }
@@ -146,7 +146,7 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject& coreObject, AX
     }
 }
 
-void AXObjectCache::postTextStateChangePlatformNotification(AccessibilityObject* coreObject, const AXTextStateChangeIntent&, const VisibleSelection& selection)
+void AXObjectCache::postTextSelectionChangePlatformNotification(AccessibilityObject* coreObject, const AXTextStateChangeIntent&, const VisibleSelection& selection)
 {
     if (!coreObject)
         coreObject = rootWebArea();
@@ -183,6 +183,10 @@ void AXObjectCache::postTextStateChangePlatformNotification(AccessibilityObject*
         break;
     case AXTextEditTypeAttributesChange:
         wrapper->textAttributesChanged();
+        break;
+    case AXTextEditTypeReplace:
+        // Should call postTextReplacementPlatformNotification instead.
+        ASSERT_NOT_REACHED();
         break;
     case AXTextEditTypeUnknown:
         break;
@@ -236,7 +240,7 @@ void AXObjectCache::frameLoadingEventPlatformNotification(AccessibilityObject* c
     if (!coreObject)
         return;
 
-    if (coreObject->roleValue() != AccessibilityRole::WebArea)
+    if (coreObject->role() != AccessibilityRole::WebArea)
         return;
 
     auto* wrapper = coreObject->wrapper();

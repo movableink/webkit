@@ -27,15 +27,13 @@
 #include "CDMProxyThunder.h"
 #include "GStreamerCommon.h"
 #include "GStreamerEMEUtilities.h"
-#include <gcrypt.h>
-#include <gst/base/gstbytereader.h>
-#include <wtf/RunLoop.h>
 #include <wtf/glib/WTFGType.h>
 
 using namespace WebCore;
 
 struct WebKitMediaThunderDecryptPrivate {
     RefPtr<CDMProxyThunder> cdmProxy;
+    GRefPtr<GstCaps> inputCaps;
 };
 
 static const char* protectionSystemId(WebKitMediaCommonEncryptionDecrypt*);
@@ -46,13 +44,7 @@ static bool decrypt(WebKitMediaCommonEncryptionDecrypt*, GstBuffer* iv, GstBuffe
 GST_DEBUG_CATEGORY(webkitMediaThunderDecryptDebugCategory);
 #define GST_CAT_DEFAULT webkitMediaThunderDecryptDebugCategory
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
-static const char* cencEncryptionMediaTypes[] = { "video/mp4", "audio/mp4", "video/x-h264", "video/x-h265", "audio/mpeg",
-    "audio/x-eac3", "audio/x-ac3", "audio/x-flac", "audio/x-opus", "video/x-vp9", "video/x-av1", nullptr };
-static const char* webmEncryptionMediaTypes[] = { "video/webm", "audio/webm", "video/x-vp9", "video/x-av1", "audio/x-opus", "audio/x-vorbis", "video/x-vp8", nullptr };
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-
-static GstStaticPadTemplate srcTemplate = GST_STATIC_PAD_TEMPLATE("src",
+static GstStaticPadTemplate thunderSrcTemplate = GST_STATIC_PAD_TEMPLATE("src",
     GST_PAD_SRC,
     GST_PAD_ALWAYS,
     GST_STATIC_CAPS(
@@ -70,7 +62,6 @@ static GstStaticPadTemplate srcTemplate = GST_STATIC_PAD_TEMPLATE("src",
         "video/x-av1; "
         "audio/x-opus; audio/x-vorbis"));
 
-#define webkit_media_thunder_decrypt_parent_class parent_class
 WEBKIT_DEFINE_TYPE(WebKitMediaThunderDecrypt, webkit_media_thunder_decrypt, WEBKIT_TYPE_MEDIA_CENC_DECRYPT)
 
 static GRefPtr<GstCaps> createSinkPadTemplateCaps()
@@ -80,25 +71,25 @@ static GRefPtr<GstCaps> createSinkPadTemplateCaps()
     auto& supportedKeySystems = CDMFactoryThunder::singleton().supportedKeySystems();
 
     if (supportedKeySystems.isEmpty()) {
-        GST_WARNING("no supported key systems in Thunder, we won't be able to decrypt anything with the its decryptor");
+        GST_WARNING("no supported key systems in Thunder, we won't be able to decrypt anything with the decryptor");
         return caps;
     }
 
-    for (int i = 0; cencEncryptionMediaTypes[i]; ++i) {
+    for (const auto& mediaType : GStreamerEMEUtilities::s_cencEncryptionMediaTypes) {
         gst_caps_append_structure(caps.get(), gst_structure_new("application/x-cenc", "original-media-type", G_TYPE_STRING,
-            cencEncryptionMediaTypes[i], nullptr));
+            mediaType.characters(), nullptr));
     }
     for (const auto& keySystem : supportedKeySystems) {
-        for (int i = 0; cencEncryptionMediaTypes[i]; ++i) {
+        for (const auto& mediaType : GStreamerEMEUtilities::s_cencEncryptionMediaTypes) {
             gst_caps_append_structure(caps.get(), gst_structure_new("application/x-cenc", "original-media-type", G_TYPE_STRING,
-                cencEncryptionMediaTypes[i], "protection-system", G_TYPE_STRING, GStreamerEMEUtilities::keySystemToUuid(keySystem), nullptr));
+                mediaType.characters(), "protection-system", G_TYPE_STRING, GStreamerEMEUtilities::keySystemToUuid(keySystem), nullptr));
         }
     }
 
     if (supportedKeySystems.contains(GStreamerEMEUtilities::s_WidevineKeySystem) || supportedKeySystems.contains(GStreamerEMEUtilities::s_ClearKeyKeySystem)) {
-        for (int i = 0; webmEncryptionMediaTypes[i]; ++i) {
+        for (const auto& mediaType : GStreamerEMEUtilities::s_webmEncryptionMediaTypes) {
             gst_caps_append_structure(caps.get(), gst_structure_new("application/x-webm-enc", "original-media-type", G_TYPE_STRING,
-                webmEncryptionMediaTypes[i], nullptr));
+                mediaType.characters(), nullptr));
         }
     }
 
@@ -107,14 +98,30 @@ static GRefPtr<GstCaps> createSinkPadTemplateCaps()
     return caps;
 }
 
+static void webkitMediaThunderDecryptorConstructed(GObject* object)
+{
+    G_OBJECT_CLASS(webkit_media_thunder_decrypt_parent_class)->constructed(object);
+
+    auto self = WEBKIT_MEDIA_THUNDER_DECRYPT(object);
+    auto baseTransform = GST_BASE_TRANSFORM_CAST(self);
+    self->priv->inputCaps = adoptGRef(gst_pad_get_current_caps(GST_BASE_TRANSFORM_SINK_PAD(baseTransform)));
+
+    g_signal_connect_swapped(GST_BASE_TRANSFORM_SINK_PAD(baseTransform), "notify::caps", G_CALLBACK(+[](WebKitMediaThunderDecrypt* self) {
+        self->priv->inputCaps = adoptGRef(gst_pad_get_current_caps(GST_BASE_TRANSFORM_SINK_PAD(GST_BASE_TRANSFORM_CAST(self))));
+    }), self);
+}
+
 static void webkit_media_thunder_decrypt_class_init(WebKitMediaThunderDecryptClass* klass)
 {
     GST_DEBUG_CATEGORY_INIT(webkitMediaThunderDecryptDebugCategory, "webkitthunderdecrypt", 0, "Thunder decrypt");
 
+    auto objectClass = G_OBJECT_CLASS(klass);
+    objectClass->constructed = webkitMediaThunderDecryptorConstructed;
+
     GstElementClass* elementClass = GST_ELEMENT_CLASS(klass);
     GRefPtr<GstCaps> gstSinkPadTemplateCaps = createSinkPadTemplateCaps();
     gst_element_class_add_pad_template(elementClass, gst_pad_template_new("sink", GST_PAD_SINK, GST_PAD_ALWAYS, gstSinkPadTemplateCaps.get()));
-    gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&srcTemplate));
+    gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&thunderSrcTemplate));
 
     gst_element_class_set_static_metadata(elementClass, "Decrypt encrypted content using Thunder", GST_ELEMENT_FACTORY_KLASS_DECRYPTOR,
         "Decrypts encrypted media using Thunder.", "Xabier Rodríguez Calvar <calvaris@igalia.com>");
@@ -164,7 +171,7 @@ static bool decrypt(WebKitMediaCommonEncryptionDecrypt* decryptor, GstBuffer* iv
     context.numSubsamples = subsampleCount;
     context.subsamplesBuffer = subsampleCount ? subsamplesBuffer : nullptr;
     context.cdmProxyDecryptionClient = webKitMediaCommonEncryptionDecryptGetCDMProxyDecryptionClient(decryptor);
-    bool result = priv->cdmProxy->decrypt(context);
+    bool result = priv->cdmProxy->decrypt(context, priv->inputCaps);
 
     return result;
 }

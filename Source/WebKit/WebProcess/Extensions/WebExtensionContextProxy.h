@@ -45,6 +45,7 @@ namespace WebKit {
 
 class WebExtensionAPINamespace;
 class WebExtensionAPIStorage;
+class WebExtensionAPIWebPageNamespace;
 class WebExtensionControllerProxy;
 class WebExtensionMatchPattern;
 class WebFrame;
@@ -72,7 +73,10 @@ public:
     using WeakPageTabWindowMap = WeakHashMap<WebPage, TabWindowIdentifierPair>;
     using PermissionsMap = WebExtensionContext::PermissionsMap;
 
-    WebExtensionContextIdentifier identifier() const { return m_identifier; }
+    WebExtensionContextIdentifier identifier() const { return m_privilegedIdentifier ? *m_privilegedIdentifier : m_unprivilegedIdentifier; }
+    WebExtensionContextIdentifier unprivilegedIdentifier() const { return m_unprivilegedIdentifier; }
+    Markable<WebExtensionContextIdentifier> privilegedIdentifier() const { return m_privilegedIdentifier; }
+
     WebExtensionControllerProxy* extensionControllerProxy() const;
 
     bool operator==(const WebExtensionContextProxy& other) const { return (this == &other); }
@@ -93,9 +97,9 @@ public:
     bool inTestingMode() const;
 
     bool hasDOMWrapperWorld(WebExtensionContentWorldType contentWorldType) const { return contentWorldType != WebExtensionContentWorldType::ContentScript || hasContentScriptWorld(); }
-    WebCore::DOMWrapperWorld& toDOMWrapperWorld(WebExtensionContentWorldType) const;
+    Ref<WebCore::DOMWrapperWorld> toDOMWrapperWorld(WebExtensionContentWorldType) const;
 
-    static WebCore::DOMWrapperWorld& mainWorldSingleton() { return WebCore::mainThreadNormalWorld(); }
+    static WebCore::DOMWrapperWorld& mainWorldSingleton() { return WebCore::mainThreadNormalWorldSingleton(); }
 
     bool hasContentScriptWorld() const { return !!m_contentScriptWorld; }
     WebCore::DOMWrapperWorld& contentScriptWorld() const { RELEASE_ASSERT(hasContentScriptWorld()); return *m_contentScriptWorld; }
@@ -128,9 +132,10 @@ public:
     Vector<Ref<WebPage>> tabPages(std::optional<WebExtensionTabIdentifier> = std::nullopt, std::optional<WebExtensionWindowIdentifier> = std::nullopt) const;
     void addTabPage(WebPage&, std::optional<WebExtensionTabIdentifier>, std::optional<WebExtensionWindowIdentifier>);
 
-    void enumerateFramesAndNamespaceObjects(const Function<void(WebFrame&, WebExtensionAPINamespace&)>&, WebCore::DOMWrapperWorld& = mainWorldSingleton());
+    void enumerateFramesAndNamespaceObjects(NOESCAPE const Function<void(WebFrame&, WebExtensionAPINamespace&)>&, Ref<WebCore::DOMWrapperWorld>&& = mainWorldSingleton());
+    void enumerateFramesAndWebPageNamespaceObjects(NOESCAPE const Function<void(WebFrame&, WebExtensionAPIWebPageNamespace&)>&);
 
-    void enumerateNamespaceObjects(const Function<void(WebExtensionAPINamespace&)>& function)
+    void enumerateNamespaceObjects(NOESCAPE const Function<void(WebExtensionAPINamespace&)>& function)
     {
         enumerateFramesAndNamespaceObjects([&](auto&, auto& namespaceObject) {
             function(namespaceObject);
@@ -204,11 +209,14 @@ private:
     void dispatchTabsHighlightedEvent(const Vector<WebExtensionTabIdentifier>&, WebExtensionWindowIdentifier);
     void dispatchTabsRemovedEvent(WebExtensionTabIdentifier, WebExtensionWindowIdentifier, WebExtensionContext::WindowIsClosing);
 
+    // Test
+    void dispatchTestMessageEvent(const String& message, const String& argumentJSON, WebExtensionContentWorldType);
+
     // Web Navigation
     void dispatchWebNavigationEvent(WebExtensionEventListenerType, WebExtensionTabIdentifier, const WebExtensionFrameParameters&, WallTime);
 
     // Web Request
-    void resourceLoadDidSendRequest(WebExtensionTabIdentifier, WebExtensionWindowIdentifier, const WebCore::ResourceRequest&, const ResourceLoadInfo&);
+    void resourceLoadDidSendRequest(WebExtensionTabIdentifier, WebExtensionWindowIdentifier, const WebCore::ResourceRequest&, const ResourceLoadInfo&, const std::optional<IPC::FormDataReference>&);
     void resourceLoadDidPerformHTTPRedirection(WebExtensionTabIdentifier, WebExtensionWindowIdentifier, const WebCore::ResourceResponse&, const ResourceLoadInfo&, const WebCore::ResourceRequest& newRequest);
     void resourceLoadDidReceiveChallenge(WebExtensionTabIdentifier, WebExtensionWindowIdentifier, const WebCore::AuthenticationChallenge&, const ResourceLoadInfo&);
     void resourceLoadDidReceiveResponse(WebExtensionTabIdentifier, WebExtensionWindowIdentifier, const WebCore::ResourceResponse&, const ResourceLoadInfo&);
@@ -220,7 +228,8 @@ private:
     // IPC::MessageReceiver
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
 
-    WebExtensionContextIdentifier m_identifier;
+    WebExtensionContextIdentifier m_unprivilegedIdentifier;
+    Markable<WebExtensionContextIdentifier> m_privilegedIdentifier;
     WeakPtr<WebExtensionControllerProxy> m_extensionControllerProxy;
     URL m_baseURL;
     String m_uniqueIdentifier;

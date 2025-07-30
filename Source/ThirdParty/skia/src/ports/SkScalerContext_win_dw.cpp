@@ -265,10 +265,10 @@ static bool is_axis_aligned(const SkScalerContextRec& rec) {
 
 }  //namespace
 
-SkScalerContext_DW::SkScalerContext_DW(sk_sp<DWriteFontTypeface> typefaceRef,
+SkScalerContext_DW::SkScalerContext_DW(DWriteFontTypeface& typefaceRef,
                                        const SkScalerContextEffects& effects,
                                        const SkDescriptor* desc)
-        : SkScalerContext(std::move(typefaceRef), effects, desc)
+        : SkScalerContext(typefaceRef, effects, desc)
 {
     DWriteFontTypeface* typeface = this->getDWriteTypeface();
     fGlyphCount = typeface->fDWriteFontFace->GetGlyphCount();
@@ -1476,7 +1476,7 @@ bool SkScalerContext_DW::drawColorV1Image(const SkGlyph&, SkCanvas&) { return fa
 
 bool SkScalerContext_DW::setAdvance(const SkGlyph& glyph, SkVector* advance) {
     *advance = {0, 0};
-    uint16_t glyphId = glyph.getGlyphID();
+    UINT16 glyphId = glyph.getGlyphID();
     DWriteFontTypeface* typeface = this->getDWriteTypeface();
 
     // DirectWrite treats all out of bounds glyph ids as having the same data as glyph 0.
@@ -1907,7 +1907,7 @@ void SkScalerContext_DW::generateFontMetrics(SkFontMetrics* metrics) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#include "include/private/SkColorData.h"
+#include "src/core/SkColorData.h"
 
 void SkScalerContext_DW::BilevelToBW(const uint8_t* SK_RESTRICT src,
                                      const SkGlyph& glyph, void* imageBuffer) {
@@ -2394,16 +2394,7 @@ void SkScalerContext_DW::generateImage(const SkGlyph& glyph, void* imageBuffer) 
     } else if (format == ScalerContextBits::PNG) {
         this->generatePngImage(glyph, imageBuffer);
     } else if (format == ScalerContextBits::PATH) {
-        const SkPath* devPath = glyph.path();
-        SkASSERT_RELEASE(devPath);
-        SkMaskBuilder mask(static_cast<uint8_t*>(imageBuffer),
-                           glyph.iRect(), glyph.rowBytes(), glyph.maskFormat());
-        SkASSERT(SkMask::kARGB32_Format != mask.fFormat);
-        const bool doBGR = SkToBool(fRec.fFlags & SkScalerContext::kLCD_BGROrder_Flag);
-        const bool doVert = SkToBool(fRec.fFlags & SkScalerContext::kLCD_Vertical_Flag);
-        const bool a8LCD = SkToBool(fRec.fFlags & SkScalerContext::kGenA8FromLCD_Flag);
-        const bool hairline = glyph.pathIsHairline();
-        GenerateImageFromPath(mask, *devPath, fPreBlend, doBGR, doVert, a8LCD, hairline);
+        this->generateImageFromPath(glyph, imageBuffer);
     } else {
         SK_ABORT("Bad format");
     }

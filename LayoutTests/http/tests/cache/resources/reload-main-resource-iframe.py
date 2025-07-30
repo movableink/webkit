@@ -3,7 +3,7 @@
 import os
 import sys
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 file = __file__.split(':/cygwin')[-1]
 http_root = os.path.dirname(os.path.dirname(os.path.abspath(os.path.dirname(file))))
@@ -26,8 +26,8 @@ file = open(tmpFile, 'w+')
 file.close()
 
 max_age = 12 * 31 * 24 * 60 * 60
-last_modified = '{} +0000'.format((datetime.utcnow() + timedelta(seconds=max_age)).strftime('%a, %d %b %Y %H:%M:%S'))
-expires = '{} +0000'.format((datetime.utcnow() + timedelta(seconds=max_age)).strftime('%a, %d %b %Y %H:%M:%S'))
+last_modified = '{} +0000'.format((datetime.now(timezone.utc) + timedelta(seconds=max_age)).strftime('%a, %d %b %Y %H:%M:%S'))
+expires = '{} +0000'.format((datetime.now(timezone.utc) + timedelta(seconds=max_age)).strftime('%a, %d %b %Y %H:%M:%S'))
 
 sys.stdout.write(
     f'Cache-Control: public, max-age={max_age}\r\n'

@@ -3,16 +3,7 @@
 import pytest
 
 from tests.support.asserts import assert_error, assert_dialog_handled, assert_success
-
-
-def is_element_enabled(session, element_id):
-    return session.transport.send(
-        "GET",
-        "session/{session_id}/element/{element_id}/enabled".format(
-            session_id=session.session_id,
-            element_id=element_id
-        )
-    )
+from . import is_element_enabled
 
 
 @pytest.fixture
@@ -21,7 +12,7 @@ def check_user_prompt_closed_without_exception(session, create_dialog, inline):
         session.url = inline("<input id=foo disabled>")
         element = session.find.css("#foo", all=False)
 
-        create_dialog(dialog_type, text=dialog_type)
+        create_dialog(dialog_type, text="cheese")
 
         response = is_element_enabled(session, element.id)
         assert_success(response, False)
@@ -37,10 +28,11 @@ def check_user_prompt_closed_with_exception(session, create_dialog, inline):
         session.url = inline("<input id=foo disabled>")
         element = session.find.css("#foo", all=False)
 
-        create_dialog(dialog_type, text=dialog_type)
+        create_dialog(dialog_type, text="cheese")
 
         response = is_element_enabled(session, element.id)
-        assert_error(response, "unexpected alert open")
+        assert_error(response, "unexpected alert open",
+                     data={"text": "cheese"})
 
         assert_dialog_handled(session, expected_text=dialog_type, expected_retval=retval)
 
@@ -53,12 +45,13 @@ def check_user_prompt_not_closed_but_exception(session, create_dialog, inline):
         session.url = inline("<input id=foo disabled>")
         element = session.find.css("#foo", all=False)
 
-        create_dialog(dialog_type, text=dialog_type)
+        create_dialog(dialog_type, text="cheese")
 
         response = is_element_enabled(session, element.id)
-        assert_error(response, "unexpected alert open")
+        assert_error(response, "unexpected alert open",
+                     data={"text": "cheese"})
 
-        assert session.alert.text == dialog_type
+        assert session.alert.text == "cheese"
         session.alert.dismiss()
 
     return check_user_prompt_not_closed_but_exception

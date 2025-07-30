@@ -1,7 +1,7 @@
 
 PASS img (no src), onload, narrow
 PASS img (no src), resize to wide
-FAIL img (empty src), onload, narrow assert_equals: expected "" but got "http://localhost:8800/html/semantics/embedded-content/the-img-element/environment-changes/iframed.sub.html?id=47d45610-241a-4239-9603-adc718096300"
+FAIL img (empty src), onload, narrow assert_equals: expected "" but got "http://localhost:8800/html/semantics/embedded-content/the-img-element/environment-changes/iframed.sub.html?id=a7ed0945-cbf4-4916-a4b1-edd6d1c0c3b1"
 PASS img (empty src), resize to wide
 PASS img (src only) broken image, onload, narrow
 PASS img (src only) broken image, resize to wide
@@ -20,10 +20,10 @@ FAIL picture: source (max-width:500px) valid image, img broken image, resize to 
 PASS picture: source (max-width:500px) valid image, img valid image, onload, narrow
 PASS picture: source (max-width:500px) valid image, img valid image, resize to wide
 PASS picture: same URL in source (max-width:500px) and img, onload, narrow
-FAIL picture: same URL in source (max-width:500px) and img, resize to wide assert_unreached: Got unexpected load event Reached unreachable code
+PASS picture: same URL in source (max-width:500px) and img, resize to wide
 PASS img (no src), onload, wide
 PASS img (no src), resize to narrow
-FAIL img (empty src), onload, wide assert_equals: expected "" but got "http://localhost:8800/html/semantics/embedded-content/the-img-element/environment-changes/iframed.sub.html?id=d36c341d-cb56-4f35-b714-d1960359bb6c"
+FAIL img (empty src), onload, wide assert_equals: expected "" but got "http://localhost:8800/html/semantics/embedded-content/the-img-element/environment-changes/iframed.sub.html?id=3c874e49-a578-4024-91cf-0e1ddb0b0396"
 PASS img (empty src), resize to narrow
 PASS img (src only) broken image, onload, wide
 PASS img (src only) broken image, resize to narrow
@@ -42,5 +42,5 @@ PASS picture: source (max-width:500px) valid image, img broken image, resize to 
 PASS picture: source (max-width:500px) valid image, img valid image, onload, wide
 PASS picture: source (max-width:500px) valid image, img valid image, resize to narrow
 PASS picture: same URL in source (max-width:500px) and img, onload, wide
-FAIL picture: same URL in source (max-width:500px) and img, resize to narrow assert_unreached: Got unexpected load event Reached unreachable code
+PASS picture: same URL in source (max-width:500px) and img, resize to narrow
 

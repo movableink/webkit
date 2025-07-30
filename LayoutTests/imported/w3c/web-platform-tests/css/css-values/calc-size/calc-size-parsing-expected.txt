@@ -31,6 +31,7 @@ FAIL e.style['width'] = "calc-size(fit-content, 50% + size / 2)" should set the 
 FAIL e.style['width'] = "calc-size(any, 25em)" should set the property value assert_not_equals: property should be set got disallowed value ""
 FAIL e.style['width'] = "calc-size(any, 40%)" should set the property value assert_not_equals: property should be set got disallowed value ""
 FAIL e.style['width'] = "calc-size(any, 50px + 30%)" should set the property value assert_not_equals: property should be set got disallowed value ""
+FAIL e.style['width'] = "calc-size(calc-size(any, 30px), size)" should set the property value assert_not_equals: property should be set got disallowed value ""
 PASS e.style['width'] = "calc-size(any, size)" should not set the property value
 PASS e.style['width'] = "calc-size(any, fit-content)" should not set the property value
 PASS e.style['width'] = "calc-size(any, max-content)" should not set the property value
@@ -88,4 +89,8 @@ PASS e.style['max-width'] = "calc-size(content, size)" should not set the proper
 PASS e.style['max-height'] = "calc-size(content, size)" should not set the property value
 PASS e.style['min-width'] = "calc-size(content, size)" should not set the property value
 PASS e.style['min-height'] = "calc-size(content, size)" should not set the property value
+FAIL e.style['width'] = "calc-size(0px, 0px)" should set the property value assert_not_equals: property should be set got disallowed value ""
+PASS e.style['width'] = "calc-size(0, 0px)" should not set the property value
+PASS e.style['width'] = "calc-size(0px, 0)" should not set the property value
+PASS e.style['width'] = "calc-size(0, 0)" should not set the property value
 

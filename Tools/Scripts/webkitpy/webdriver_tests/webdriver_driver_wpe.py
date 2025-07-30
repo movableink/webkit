@@ -47,13 +47,12 @@ class WebDriverWPE(WebDriver):
             else:
                 args.append("--platform=gtk4")
         elif self.browser_name() == "minibrowser":
-            args.append('--use-wpe-platform-api')
             if self._port._display_server == 'headless':
                 args.append('--headless')
         return args
 
     def browser_env(self):
-        return self._port.setup_environ_for_minibrowser()
+        return self._port.setup_environ_for_webdriver()
 
     def capabilities(self):
         return {'wpe:browserOptions': {

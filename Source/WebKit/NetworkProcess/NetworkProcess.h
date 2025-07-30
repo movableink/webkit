@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -137,7 +137,7 @@ class Cache;
 enum class CacheOption : uint8_t;
 }
 
-class NetworkProcess final : public AuxiliaryProcess, private DownloadManager::Client, public ThreadSafeRefCounted<NetworkProcess>, public CanMakeCheckedPtr<NetworkProcess>
+class NetworkProcess final : public AuxiliaryProcess, private DownloadManager::Client, public ThreadSafeRefCounted<NetworkProcess>
 {
     WTF_MAKE_NONCOPYABLE(NetworkProcess);
     WTF_MAKE_TZONE_ALLOCATED(NetworkProcess);
@@ -159,28 +159,38 @@ public:
     ~NetworkProcess();
     static constexpr WTF::AuxiliaryProcessType processType = WTF::AuxiliaryProcessType::Network;
 
-    // CheckedPtr interface
-    uint32_t checkedPtrCount() const final { return CanMakeCheckedPtr::checkedPtrCount(); }
-    uint32_t checkedPtrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::checkedPtrCountWithoutThreadCheck(); }
-    void incrementCheckedPtrCount() const final { CanMakeCheckedPtr::incrementCheckedPtrCount(); }
-    void decrementCheckedPtrCount() const final { CanMakeCheckedPtr::decrementCheckedPtrCount(); }
+    // CanMakeThreadSafeCheckedPtr interface
+    uint32_t checkedPtrCount() const final { return AuxiliaryProcess::checkedPtrCount(); }
+    uint32_t checkedPtrCountWithoutThreadCheck() const final { return AuxiliaryProcess::checkedPtrCountWithoutThreadCheck(); }
+    void incrementCheckedPtrCount() const final { AuxiliaryProcess::incrementCheckedPtrCount(); }
+    void decrementCheckedPtrCount() const final { AuxiliaryProcess::decrementCheckedPtrCount(); }
 
-    template <typename T>
+    template<typename T>
     T* supplement()
     {
         return static_cast<T*>(m_supplements.get(T::supplementName()));
     }
 
-    template <typename T>
+    template<typename T>
+    RefPtr<T> protectedSupplement()
+    {
+        return supplement<T>();
+    }
+
+    template<typename T>
     void addSupplement()
     {
         m_supplements.add(T::supplementName(), makeUnique<T>(*this));
     }
 
-    template <typename T>
+    template<typename T>
     void addSupplementWithoutRefCountedCheck()
     {
-        m_supplements.add(T::supplementName(), makeUniqueWithoutRefCountedCheck<T>(*this));
+        // NetworkProcessSupplement objects forward their ref-counting to the NetworkProcess. The NetworkProcess
+        // stores this in a HashMap. It is currently safe because we only ever add to the HashMap, never remove.
+        // However, the current design is fragile and the need to const_cast here is annoying so it would be good
+        // to find a better pattern.
+        m_supplements.add(T::supplementName(), const_cast<std::unique_ptr<NetworkProcessSupplement>&&>(makeUniqueWithoutRefCountedCheck<T, NetworkProcessSupplement>(*this)));
     }
 
     void removeNetworkConnectionToWebProcess(NetworkConnectionToWebProcess&);
@@ -188,14 +198,16 @@ public:
     AuthenticationManager& authenticationManager();
     Ref<AuthenticationManager> protectedAuthenticationManager();
     DownloadManager& downloadManager();
+    CheckedRef<DownloadManager> checkedDownloadManager();
 
     void setSession(PAL::SessionID, std::unique_ptr<NetworkSession>&&);
     NetworkSession* networkSession(PAL::SessionID) const final;
     void destroySession(PAL::SessionID, CompletionHandler<void()>&& = [] { });
+    void ensureSessionWithDataStoreIdentifierRemoved(WTF::UUID, CompletionHandler<void()>&&);
 
-    void forEachNetworkSession(const Function<void(NetworkSession&)>&);
+    void forEachNetworkSession(NOESCAPE const Function<void(NetworkSession&)>&);
 
-    void forEachNetworkStorageSession(const Function<void(WebCore::NetworkStorageSession&)>&);
+    void forEachNetworkStorageSession(NOESCAPE const Function<void(WebCore::NetworkStorageSession&)>&);
     WebCore::NetworkStorageSession* storageSession(PAL::SessionID) const;
     std::unique_ptr<WebCore::NetworkStorageSession> newTestingSession(PAL::SessionID);
     void addStorageSession(PAL::SessionID, const WebsiteDataStoreParameters&);
@@ -233,7 +245,7 @@ public:
 
     void addWebsiteDataStore(WebsiteDataStoreParameters&&);
 
-    void registrableDomainsWithLastAccessedTime(PAL::SessionID, CompletionHandler<void(std::optional<HashMap<RegistrableDomain, WallTime>>)>&&);
+    void registrableDomainsWithLastAccessedTime(PAL::SessionID, CompletionHandler<void(std::optional<HashMap<RegistrableDomain, WallTime>>&&)>&&);
     void registrableDomainsExemptFromWebsiteDataDeletion(PAL::SessionID, CompletionHandler<void(HashSet<RegistrableDomain>)>&&);
     void clearPrevalentResource(PAL::SessionID, RegistrableDomain&&, CompletionHandler<void()>&&);
     void clearUserInteraction(PAL::SessionID, RegistrableDomain&&, CompletionHandler<void()>&&);
@@ -315,11 +327,12 @@ public:
     bool privateClickMeasurementEnabled() const;
     void setPrivateClickMeasurementDebugMode(PAL::SessionID, bool);
 
-    void setBlobRegistryTopOriginPartitioningEnabled(PAL::SessionID, bool) const;
     void setShouldSendPrivateTokenIPCForTesting(PAL::SessionID, bool) const;
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
     void setOptInCookiePartitioningEnabled(PAL::SessionID, bool) const;
+#endif
 
-    void preconnectTo(PAL::SessionID, WebPageProxyIdentifier, WebCore::PageIdentifier, WebCore::ResourceRequest&&, WebCore::StoredCredentialsPolicy, std::optional<NavigatingToAppBoundDomain>);
+    void preconnectTo(PAL::SessionID, WebPageProxyIdentifier, WebCore::PageIdentifier, WebCore::ResourceRequest&&, WebCore::StoredCredentialsPolicy, std::optional<NavigatingToAppBoundDomain>, uint64_t requiredCookiesVersion);
 
     void setSessionIsControlledByAutomation(PAL::SessionID, bool);
     bool sessionIsControlledByAutomation(PAL::SessionID) const;
@@ -328,6 +341,7 @@ public:
 
 #if ENABLE(CONTENT_EXTENSIONS)
     NetworkContentRuleListManager& networkContentRuleListManager() { return m_networkContentRuleListManager; }
+    Ref<NetworkContentRuleListManager> protectedNetworkContentRuleListManager() { return m_networkContentRuleListManager; }
 #endif
 
     void syncLocalStorage(CompletionHandler<void()>&&);
@@ -379,7 +393,8 @@ public:
     const OptionSet<NetworkCache::CacheOption>& cacheOptions() const { return m_cacheOptions; }
 
     NetworkConnectionToWebProcess* webProcessConnection(WebCore::ProcessIdentifier) const;
-    std::optional<WebCore::ProcessIdentifier> webProcessIdentifierForConnection(IPC::Connection&) const;
+    RefPtr<NetworkConnectionToWebProcess> protectedWebProcessConnection(WebCore::ProcessIdentifier) const;
+    NetworkConnectionToWebProcess* webProcessConnection(const IPC::Connection&) const;
     WebCore::MessagePortChannelRegistry& messagePortChannelRegistry() { return m_messagePortChannelRegistry; }
 
     void setServiceWorkerFetchTimeoutForTesting(Seconds, CompletionHandler<void()>&&);
@@ -416,11 +431,10 @@ public:
 #endif
 
     bool ftpEnabled() const { return m_ftpEnabled; }
-    bool builtInNotificationsEnabled() const { return m_builtInNotificationsEnabled; }
 
     void getPendingPushMessage(PAL::SessionID, CompletionHandler<void(const std::optional<WebPushMessage>&)>&&);
     void getPendingPushMessages(PAL::SessionID, CompletionHandler<void(const Vector<WebPushMessage>&)>&&);
-    void processPushMessage(PAL::SessionID, WebPushMessage&&, WebCore::PushPermissionState, CompletionHandler<void(bool, std::optional<WebCore::NotificationPayload>&&)>&&);
+    void processPushMessage(PAL::SessionID, WebPushMessage&&, WebCore::PushPermissionState, bool builtInNotificationsEnabled, CompletionHandler<void(bool, std::optional<WebCore::NotificationPayload>&&)>&&);
     void processNotificationEvent(WebCore::NotificationData&&, WebCore::NotificationEventType, CompletionHandler<void(bool)>&&);
 
     void getAllBackgroundFetchIdentifiers(PAL::SessionID, CompletionHandler<void(Vector<String>&&)>&&);
@@ -441,10 +455,10 @@ public:
     void deleteWebsiteDataForOrigin(PAL::SessionID, OptionSet<WebsiteDataType>, const WebCore::ClientOrigin&, CompletionHandler<void()>&&);
     void deleteWebsiteDataForOrigins(PAL::SessionID, OptionSet<WebsiteDataType>, const Vector<WebCore::SecurityOriginData>& origins, const Vector<String>& cookieHostNames, const Vector<String>& HSTSCacheHostnames, const Vector<RegistrableDomain>&, CompletionHandler<void()>&&);
 
-    bool allowsFirstPartyForCookies(WebCore::ProcessIdentifier, const URL&);
-    bool allowsFirstPartyForCookies(WebCore::ProcessIdentifier, const RegistrableDomain&);
+    enum class AllowCookieAccess : uint8_t { Disallow, Allow, Terminate };
+    AllowCookieAccess allowsFirstPartyForCookies(WebCore::ProcessIdentifier, const URL&);
+    AllowCookieAccess allowsFirstPartyForCookies(WebCore::ProcessIdentifier, const RegistrableDomain&);
     void addAllowedFirstPartyForCookies(WebCore::ProcessIdentifier, WebCore::RegistrableDomain&&, LoadedWebArchive, CompletionHandler<void()>&&);
-    void webProcessWillLoadWebArchive(WebCore::ProcessIdentifier);
 
     void requestBackgroundFetchPermission(PAL::SessionID, const WebCore::ClientOrigin&, CompletionHandler<void(bool)>&&);
     void setInspectionForServiceWorkersAllowed(PAL::SessionID, bool);
@@ -458,7 +472,13 @@ public:
 
     bool enableModernDownloadProgress() const { return m_enableModernDownloadProgress; }
 
-    void fetchLocalStorage(PAL::SessionID, CompletionHandler<void(HashMap<WebCore::ClientOrigin, HashMap<String, String>>&&)>&&);
+    void fetchLocalStorage(PAL::SessionID, CompletionHandler<void(std::optional<HashMap<WebCore::ClientOrigin, HashMap<String, String>>>&&)>&&);
+    void restoreLocalStorage(PAL::SessionID, HashMap<WebCore::ClientOrigin, HashMap<String, String>>&&, CompletionHandler<void(bool)>&&);
+
+    void fetchSessionStorage(PAL::SessionID, WebPageProxyIdentifier, CompletionHandler<void(std::optional<HashMap<WebCore::ClientOrigin, HashMap<String, String>>>&&)>&&);
+    void restoreSessionStorage(PAL::SessionID, WebPageProxyIdentifier, HashMap<WebCore::ClientOrigin, HashMap<String, String>>&&, CompletionHandler<void(bool)>&&);
+
+    WebCore::ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlockingForPage(std::optional<WebPageProxyIdentifier>) const;
 
 private:
     void platformInitializeNetworkProcess(const NetworkProcessCreationParameters&);
@@ -497,7 +517,7 @@ private:
     void sharedPreferencesForWebProcessDidChange(WebCore::ProcessIdentifier, SharedPreferencesForWebProcess&&, CompletionHandler<void()>&&);
 
     void fetchWebsiteData(PAL::SessionID, OptionSet<WebsiteDataType>, OptionSet<WebsiteDataFetchOption>, CompletionHandler<void(WebsiteData&&)>&&);
-    void deleteWebsiteData(PAL::SessionID, OptionSet<WebsiteDataType>, WallTime modifiedSince, CompletionHandler<void()>&&);
+    void deleteWebsiteData(PAL::SessionID, OptionSet<WebsiteDataType>, WallTime modifiedSince, const HashSet<WebCore::ProcessIdentifier>& activeWebProcesses, CompletionHandler<void()>&&);
 
     // FIXME: This should take a session ID so we can identify which disk cache to delete.
     void clearDiskCache(WallTime modifiedSince, CompletionHandler<void()>&&);
@@ -534,7 +554,7 @@ private:
 
 #if HAVE(NW_PROXY_CONFIG)
     void clearProxyConfigData(PAL::SessionID);
-    void setProxyConfigData(PAL::SessionID, Vector<std::pair<Vector<uint8_t>, WTF::UUID>>&& proxyConfigurations);
+    void setProxyConfigData(PAL::SessionID, Vector<std::pair<Vector<uint8_t>, std::optional<WTF::UUID>>>&& proxyConfigurations);
 #endif
     
 #if USE(SOUP)
@@ -567,8 +587,21 @@ private:
 #endif
     void stopRunLoopIfNecessary();
 
+    void setShouldRelaxThirdPartyCookieBlockingForPage(WebPageProxyIdentifier);
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    void resetResourceMonitorThrottlerForTesting(PAL::SessionID, CompletionHandler<void()>&&);
+#endif
+
+    struct TaskIdentifierType;
+    using TaskIdentifier = ObjectIdentifier<TaskIdentifierType>;
+    enum class TaskTrigger : bool { Timer, Connection };
+    void performDeleteWebsiteDataTask(TaskIdentifier, TaskTrigger = TaskTrigger::Connection);
+    void deleteWebsiteDataImpl(PAL::SessionID, OptionSet<WebsiteDataType>, WallTime, CompletionHandler<void()>&&);
+
     // Connections to WebProcesses.
     HashMap<WebCore::ProcessIdentifier, Ref<NetworkConnectionToWebProcess>> m_webProcessConnections;
+    HashMap<WebCore::ProcessIdentifier, Vector<CompletionHandler<void()>>> m_webProcessConnectionCloseHandlers;
 
     bool m_hasSetCacheModel { false };
     CacheModel m_cacheModel { CacheModel::DocumentViewer };
@@ -618,12 +651,12 @@ private:
     Seconds m_serviceWorkerFetchTimeout { defaultServiceWorkerFetchTimeout };
 
     HashMap<WebCore::PageIdentifier, Vector<WebCore::UserContentURLPattern>> m_extensionCORSDisablingPatterns;
-    HashSet<RefPtr<NetworkStorageManager>> m_closingStorageManagers;
+    HashSet<Ref<NetworkStorageManager>> m_closingStorageManagers;
     HashSet<String> m_localhostAliasesForTesting;
+    HashSet<WebPageProxyIdentifier> m_pagesWithRelaxedThirdPartyCookieBlocking;
 
     bool m_privateClickMeasurementEnabled { true };
     bool m_ftpEnabled { false };
-    bool m_builtInNotificationsEnabled { false };
     bool m_isSuspended { false };
     bool m_didSyncCookiesForClose { false };
 #if PLATFORM(COCOA)
@@ -631,6 +664,14 @@ private:
     bool m_isParentProcessFullWebBrowserOrRunningTest { false };
 #endif
     bool m_enableModernDownloadProgress { false };
+
+    struct DeleteWebsiteDataTask {
+        std::optional<PAL::SessionID> sessionID;
+        OptionSet<WebsiteDataType> websiteDataTypes;
+        WallTime modifiedSince;
+        CompletionHandler<void()> completionHandler;
+    };
+    HashMap<TaskIdentifier, DeleteWebsiteDataTask> m_deleteWebsiteDataTasks;
 };
 
 #if !PLATFORM(COCOA)

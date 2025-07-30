@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -65,7 +65,7 @@ public:
 private:
     InspectorEnvironment& m_environment;
     std::unique_ptr<InspectorFrontendDispatcher> m_frontendDispatcher;
-    Ref<InspectorBackendDispatcher> m_backendDispatcher;
+    const Ref<InspectorBackendDispatcher> m_backendDispatcher;
 
     Vector<String> m_pendingEvaluateTestCommands;
     std::pair<RefPtr<Protocol::Runtime::RemoteObject>, RefPtr<JSON::Object>> m_pendingInspectData;

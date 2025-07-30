@@ -33,6 +33,7 @@
 #include "PermissionsPolicy.h"
 #include "RealtimeMediaSourceCenter.h"
 #include "UserMediaRequest.h"
+#include <algorithm>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -99,7 +100,7 @@ void UserMediaController::checkDocumentForVoiceActivity(const Document* document
             return;
     }
 
-    bool shouldListenToVoiceActivity = anyOf(m_voiceActivityDocuments, [] (auto& document) {
+    bool shouldListenToVoiceActivity = std::ranges::any_of(m_voiceActivityDocuments, [](auto& document) {
         return document.mediaState().containsAny(MediaProducer::IsCapturingAudioMask);
     });
     if (m_shouldListenToVoiceActivity == shouldListenToVoiceActivity)
@@ -111,8 +112,10 @@ void UserMediaController::checkDocumentForVoiceActivity(const Document* document
 
 void UserMediaController::voiceActivityDetected()
 {
+#if ENABLE(MEDIA_SESSION)
     for (auto& document : m_voiceActivityDocuments)
         Ref(document)->voiceActivityDetected();
+#endif
 }
 
 } // namespace WebCore

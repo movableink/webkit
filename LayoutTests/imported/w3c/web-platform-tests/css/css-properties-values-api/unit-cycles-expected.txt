@@ -1,4 +1,7 @@
 
+PASS Font-dependent unregistered variables can be used in font-size
+PASS Registered universal variables referencing font-dependent units can be used in font-size
+PASS Font-dependent unregistered variables referencing env() can be used in font-size
 PASS Non-font-dependent variables can be used in font-size
 PASS Lengths with em units may not be referenced from font-size
 PASS Lengths with ex units may not be referenced from font-size

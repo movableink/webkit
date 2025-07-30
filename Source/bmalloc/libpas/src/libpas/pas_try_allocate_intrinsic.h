@@ -62,15 +62,23 @@ PAS_BEGIN_EXTERN_C;
 
 #define PAS_INTRINSIC_HEAP_INITIALIZER(heap_ptr, primitive_type, intrinsic_support, passed_config, runtime_config) { \
         PAS_INTRINSIC_HEAP_SEGREGATED_HEAP_FIELDS(heap_ptr, intrinsic_support, runtime_config) \
+        .megapage_large_heap = { \
+            .free_heap = PAS_FAST_LARGE_FREE_HEAP_INITIALIZER, \
+            .index = 0, \
+            .table_state = pas_heap_table_state_uninitialized, \
+            .is_megapage_heap = true, \
+        }, \
         .large_heap = { \
             .free_heap = PAS_FAST_LARGE_FREE_HEAP_INITIALIZER, \
             .index = 0, \
             .table_state = pas_heap_table_state_uninitialized, \
+            .is_megapage_heap = false, \
         }, \
         .type = (const pas_heap_type*)(primitive_type), \
         .heap_ref = NULL, \
         .next_heap = PAS_COMPACT_PTR_INITIALIZER, \
         .config_kind = (passed_config).kind, \
+        .is_non_compact_heap = true, \
     }
 
 static PAS_ALWAYS_INLINE pas_allocation_result

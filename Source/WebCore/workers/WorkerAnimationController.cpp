@@ -30,6 +30,7 @@
 
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
 
+#include "InspectorInstrumentation.h"
 #include "Performance.h"
 #include "RequestAnimationFrameCallback.h"
 #include "WorkerGlobalScope.h"
@@ -89,6 +90,8 @@ WorkerAnimationController::CallbackId WorkerAnimationController::requestAnimatio
     callback->m_id = callbackId;
     m_animationCallbacks.append(WTFMove(callback));
 
+    InspectorInstrumentation::didRequestAnimationFrame(m_workerGlobalScope, callbackId);
+
     scheduleAnimation();
 
     return callbackId;
@@ -100,7 +103,8 @@ void WorkerAnimationController::cancelAnimationFrame(CallbackId callbackId)
         auto& callback = m_animationCallbacks[i];
         if (callback->m_id == callbackId) {
             callback->m_firedOrCancelled = true;
-            m_animationCallbacks.remove(i);
+            m_animationCallbacks.removeAt(i);
+            InspectorInstrumentation::didCancelAnimationFrame(m_workerGlobalScope, callbackId);
             return;
         }
     }
@@ -136,7 +140,9 @@ void WorkerAnimationController::serviceRequestAnimationFrameCallbacks(DOMHighRes
         if (callback->m_firedOrCancelled)
             continue;
         callback->m_firedOrCancelled = true;
-        callback->handleEvent(timestamp);
+        InspectorInstrumentation::willFireAnimationFrame(m_workerGlobalScope, callback->m_id);
+        callback->invoke(timestamp);
+        InspectorInstrumentation::didFireAnimationFrame(m_workerGlobalScope, callback->m_id);
     }
 
     // Remove any callbacks we fired from the list of pending callbacks.

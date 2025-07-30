@@ -34,8 +34,6 @@
 #import "LocalDefaultSystemAppearance.h"
 #import <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ButtonMac);
@@ -52,11 +50,11 @@ ButtonMac::ButtonMac(ButtonPart& owningPart, ControlFactoryMac& controlFactory, 
 IntSize ButtonMac::cellSize(NSControlSize controlSize, const ControlStyle&) const
 {
     // Buttons really only constrain height. They respect width.
-    static const IntSize cellSizes[] = {
-        { 0, 20 },
-        { 0, 16 },
-        { 0, 13 },
-        { 0, 28 }
+    static constexpr std::array cellSizes {
+        IntSize { 0, 20 },
+        IntSize { 0, 16 },
+        IntSize { 0, 13 },
+        IntSize { 0, 28 }
     };
     return cellSizes[controlSize];
 }
@@ -65,12 +63,12 @@ IntOutsets ButtonMac::cellOutsets(NSControlSize controlSize, const ControlStyle&
 {
     // FIXME: Determine these values programmatically.
     // https://bugs.webkit.org/show_bug.cgi?id=251066
-    static const IntOutsets cellOutsets[] = {
+    static const std::array cellOutsets {
         // top right bottom left
-        { 5, 7, 7, 7 },
-        { 4, 6, 7, 6 },
-        { 1, 2, 2, 2 },
-        { 6, 6, 6, 6 },
+        IntOutsets { 5, 7, 7, 7 },
+        IntOutsets { 4, 6, 7, 6 },
+        IntOutsets { 1, 2, 2, 2 },
+        IntOutsets { 6, 6, 6, 6 },
     };
     return cellOutsets[controlSize];
 }
@@ -133,7 +131,5 @@ void ButtonMac::draw(GraphicsContext& context, const FloatRoundedRect& borderRec
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // PLATFORM(MAC)

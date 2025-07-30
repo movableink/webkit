@@ -28,6 +28,7 @@
 
 #include "DOMStringList.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "IDBConnectionProxy.h"
 #include "IDBConnectionToServer.h"
 #include "IDBIndex.h"
@@ -40,6 +41,7 @@
 #include "Node.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/HeapInlines.h>
+#include <ranges>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -48,7 +50,7 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(IDBDatabase);
 
 static Vector<String> sortAndRemoveDuplicates(Vector<String>&& vector)
 {
-    std::sort(vector.begin(), vector.end(), WTF::codePointCompareLessThan);
+    std::ranges::sort(vector, WTF::codePointCompareLessThan);
     removeRepeatedElements(vector);
     return WTFMove(vector);
 }
@@ -68,7 +70,7 @@ IDBDatabase::IDBDatabase(ScriptExecutionContext& context, IDBClient::IDBConnecti
     , m_eventNames(eventNames())
 {
     LOG(IndexedDB, "IDBDatabase::IDBDatabase - Creating database %s with version %" PRIu64 " connection %" PRIu64 " (%p)", m_info.name().utf8().data(), m_info.version(), m_databaseConnectionIdentifier.toUInt64(), this);
-    m_connectionProxy->registerDatabaseConnection(*this);
+    m_connectionProxy->registerDatabaseConnection(*this, context.identifier());
 }
 
 IDBDatabase::~IDBDatabase()
@@ -486,6 +488,14 @@ void IDBDatabase::didDeleteIndexInfo(const IDBIndexInfo& info)
     auto* objectStore = m_info.infoForExistingObjectStore(info.objectStoreIdentifier());
     ASSERT(objectStore);
     objectStore->deleteIndex(info.name());
+}
+
+std::optional<ScriptExecutionContextIdentifier> IDBDatabase::scriptExecutionContextIdentifier() const
+{
+    if (RefPtr context = scriptExecutionContext())
+        return context->identifier();
+
+    return std::nullopt;
 }
 
 } // namespace WebCore

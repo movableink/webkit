@@ -36,6 +36,7 @@
 #import <WebCore/CrossOriginPreflightResultCache.h>
 #import <WebCore/Document.h>
 #import <WebCore/MemoryCache.h>
+#import <WebCore/NativeImage.h>
 #import <WebCore/NetworkStorageSession.h>
 #import <WebCore/StorageSessionProvider.h>
 #import <WebCore/WebCoreJITOperations.h>

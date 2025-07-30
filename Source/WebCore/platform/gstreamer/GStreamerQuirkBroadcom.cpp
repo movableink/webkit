@@ -37,22 +37,27 @@ GStreamerQuirkBroadcom::GStreamerQuirkBroadcom()
     m_disallowedWebAudioDecoders = { "brcmaudfilter"_s };
 }
 
+bool GStreamerQuirkBroadcom::isPlatformSupported() const
+{
+    auto broadcomFactory = adoptGRef(gst_element_factory_find("brcmaudiosink"));
+    return broadcomFactory;
+}
+
 void GStreamerQuirkBroadcom::configureElement(GstElement* element, const OptionSet<ElementRuntimeCharacteristics>& characteristics)
 {
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
+    auto view = StringView::fromLatin1(GST_ELEMENT_NAME(element));
     if (!g_strcmp0(G_OBJECT_TYPE_NAME(element), "Gstbrcmaudiosink"))
         g_object_set(G_OBJECT(element), "async", TRUE, nullptr);
-    else if (g_str_has_prefix(GST_ELEMENT_NAME(element), "brcmaudiodecoder")) {
+    else if (view.startsWith("brcmaudiodecoder"_s)) {
         // Limit BCM audio decoder buffering to 1sec so live progressive playback can start faster.
         if (characteristics.contains(ElementRuntimeCharacteristics::IsLiveStream))
             g_object_set(G_OBJECT(element), "limit_buffering_ms", 1000, nullptr);
     }
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     if (!characteristics.contains(ElementRuntimeCharacteristics::IsMediaStream))
         return;
 
-    if (!g_strcmp0(G_OBJECT_TYPE_NAME(G_OBJECT(element)), "GstBrcmPCMSink") && gstObjectHasProperty(element, "low_latency")) {
+    if (!g_strcmp0(G_OBJECT_TYPE_NAME(G_OBJECT(element)), "GstBrcmPCMSink") && gstObjectHasProperty(element, "low_latency"_s)) {
         GST_DEBUG("Set 'low_latency' in brcmpcmsink");
         g_object_set(element, "low_latency", TRUE, "low_latency_max_queued_ms", 60, nullptr);
     }
@@ -60,10 +65,9 @@ void GStreamerQuirkBroadcom::configureElement(GstElement* element, const OptionS
 
 std::optional<bool> GStreamerQuirkBroadcom::isHardwareAccelerated(GstElementFactory* factory)
 {
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
-    if (g_str_has_prefix(GST_OBJECT_NAME(factory), "brcm"))
+    auto view = StringView::fromLatin1(GST_OBJECT_NAME(factory));
+    if (view.startsWith("brcm"_s))
         return true;
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     return std::nullopt;
 }

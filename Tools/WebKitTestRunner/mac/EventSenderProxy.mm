@@ -35,7 +35,7 @@
 #import "TestRunnerWKWebView.h"
 #import "WebKitTestRunnerWindow.h"
 #import <Carbon/Carbon.h>
-#import <WebCore/PlatformMouseEvent.h>
+#import <WebCore/MouseEventTypes.h>
 #import <WebKit/WKString.h>
 #import <WebKit/WKPagePrivate.h>
 #import <WebKit/WKWebView.h>
@@ -652,7 +652,7 @@ void EventSenderProxy::leapForward(int milliseconds)
 
 void EventSenderProxy::keyDown(WKStringRef key, WKEventModifiers modifiers, unsigned keyLocation)
 {
-    RetainPtr<ModifierKeys> modifierKeys = [ModifierKeys modifierKeysWithKey:toWTFString(key) modifiers:buildModifierFlags(modifiers) keyLocation:keyLocation];
+    RetainPtr<ModifierKeys> modifierKeys = [ModifierKeys modifierKeysWithKey:toWTFString(key).createNSString().get() modifiers:buildModifierFlags(modifiers) keyLocation:keyLocation];
 
     NSEvent *event = [NSEvent keyEventWithType:NSEventTypeKeyDown
         location:NSMakePoint(5, 5)
@@ -687,7 +687,7 @@ void EventSenderProxy::keyDown(WKStringRef key, WKEventModifiers modifiers, unsi
 
 void EventSenderProxy::rawKeyDown(WKStringRef key, WKEventModifiers modifiers, unsigned keyLocation)
 {
-    RetainPtr<ModifierKeys> modifierKeys = [ModifierKeys modifierKeysWithKey:toWTFString(key) modifiers:buildModifierFlags(modifiers) keyLocation:keyLocation];
+    RetainPtr<ModifierKeys> modifierKeys = [ModifierKeys modifierKeysWithKey:toWTFString(key).createNSString().get() modifiers:buildModifierFlags(modifiers) keyLocation:keyLocation];
 
     NSEvent *event = [NSEvent keyEventWithType:NSEventTypeKeyDown
         location:NSMakePoint(5, 5)
@@ -707,7 +707,7 @@ void EventSenderProxy::rawKeyDown(WKStringRef key, WKEventModifiers modifiers, u
 
 void EventSenderProxy::rawKeyUp(WKStringRef key, WKEventModifiers modifiers, unsigned keyLocation)
 {
-    RetainPtr<ModifierKeys> modifierKeys = [ModifierKeys modifierKeysWithKey:toWTFString(key) modifiers:buildModifierFlags(modifiers) keyLocation:keyLocation];
+    RetainPtr<ModifierKeys> modifierKeys = [ModifierKeys modifierKeysWithKey:toWTFString(key).createNSString().get() modifiers:buildModifierFlags(modifiers) keyLocation:keyLocation];
 
     NSEvent *event = [NSEvent keyEventWithType:NSEventTypeKeyUp
         location:NSMakePoint(5, 5)

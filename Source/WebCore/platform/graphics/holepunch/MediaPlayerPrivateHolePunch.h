@@ -22,6 +22,7 @@
 
 #if USE(EXTERNAL_HOLEPUNCH)
 
+#include "DestinationColorSpace.h"
 #include "MediaPlayerPrivate.h"
 #include "PlatformLayer.h"
 #include <wtf/RefCounted.h>
@@ -31,7 +32,7 @@
 
 namespace WebCore {
 
-class TextureMapperPlatformLayerProxy;
+class CoordinatedPlatformLayerBufferProxy;
 
 class MediaPlayerPrivateHolePunch
     : public MediaPlayerPrivateInterface
@@ -52,7 +53,7 @@ public:
 
     void load(const String&) final;
 #if ENABLE(MEDIA_SOURCE)
-    void load(const URL&, const ContentType&, MediaSourcePrivateClient&) final { };
+    void load(const URL&, const LoadOptions&, MediaSourcePrivateClient&) final { };
 #endif
 #if ENABLE(MEDIA_STREAM)
     void load(MediaStreamPrivate&) final { };
@@ -62,7 +63,9 @@ public:
     void play() final { };
     void pause() final { };
 
+#if USE(COORDINATED_GRAPHICS)
     PlatformLayer* platformLayer() const final;
+#endif
 
     FloatSize naturalSize() const final;
 
@@ -108,8 +111,8 @@ private:
     IntSize m_size;
     RunLoop::Timer m_readyTimer;
     MediaPlayer::NetworkState m_networkState;
-#if USE(TEXTURE_MAPPER)
-    RefPtr<TextureMapperPlatformLayerProxy> m_platformLayer;
+#if USE(COORDINATED_GRAPHICS)
+    RefPtr<CoordinatedPlatformLayerBufferProxy> m_contentsBufferProxy;
 #endif
 
 };

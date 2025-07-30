@@ -31,7 +31,6 @@
 #include "CaptureDeviceManager.h"
 #include "Logging.h"
 #include <AudioUnit/AudioUnit.h>
-#include <CoreMedia/CMSync.h>
 
 #import <pal/cf/CoreMediaSoftLink.h>
 
@@ -150,27 +149,10 @@ Vector<AudioDeviceID> CoreAudioCaptureDevice::relatedAudioDeviceIDs(AudioDeviceI
         return { };
 
     Vector<AudioDeviceID> devices(size / sizeof(AudioDeviceID));
-    error = AudioObjectGetPropertyData(deviceID, &property, 0, nullptr, &size, devices.data());
+    error = AudioObjectGetPropertyData(deviceID, &property, 0, nullptr, &size, devices.mutableSpan().data());
     if (error)
         return { };
     return devices;
-}
-
-RetainPtr<CMClockRef> CoreAudioCaptureDevice::deviceClock()
-{
-    if (m_deviceClock)
-        return m_deviceClock;
-
-    CMClockRef clock;
-    auto err = PAL::CMAudioDeviceClockCreate(kCFAllocatorDefault, persistentId().createCFString().get(), &clock);
-    if (err) {
-        RELEASE_LOG_ERROR(WebRTC, "CoreAudioCaptureDevice::CMAudioDeviceClockCreate(%p) CMAudioDeviceClockCreate failed with error %d (%.4s)", this, (int)err, (char*)&err);
-        return nullptr;
-    }
-
-    m_deviceClock = adoptCF(clock);
-
-    return m_deviceClock;
 }
 
 } // namespace WebCore

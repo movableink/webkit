@@ -44,6 +44,7 @@
 #import <UIKit/UIKeyboardPreferencesController.h>
 #import <UIKit/UIKeyboard_Private.h>
 #import <UIKit/UIPress_Private.h>
+#import <UIKit/UIRemoteView.h>
 #import <UIKit/UIResponder_Private.h>
 #import <UIKit/UIScreen_Private.h>
 #import <UIKit/UIScrollEvent_Private.h>
@@ -255,6 +256,7 @@ typedef NS_ENUM(NSInteger, UIWKGestureType) {
 @end
 
 @interface UIScreen ()
+- (BOOL)_isEmbeddedScreen;
 @property (nonatomic, readonly) CGRect _referenceBounds;
 @end
 
@@ -279,6 +281,7 @@ typedef NS_ENUM(NSInteger, _UIDataOwner) {
 - (BOOL)isAutoShifted;
 - (void)dismissKeyboard;
 - (void)setCorrectionLearningAllowed:(BOOL)allowed;
+- (void)updateForChangedSelection;
 @end
 
 @interface UIScreen ()
@@ -286,7 +289,7 @@ typedef NS_ENUM(NSInteger, _UIDataOwner) {
 @end
 
 @protocol UITextInputSuggestionDelegate <UITextInputDelegate>
-- (void)setSuggestions:(NSArray <UITextSuggestion*> *)suggestions;
+- (void)setSuggestions:(NSArray<UITextSuggestion *> *)suggestions;
 @end
 
 @interface UIScrollView (SPI)

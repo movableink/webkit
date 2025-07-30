@@ -25,8 +25,7 @@
 #pragma once
 
 #include "EventTarget.h"
-#include "ExceptionOr.h"
-#include "PlatformMouseEvent.h"
+#include "MouseEventTypes.h"
 #include "PointerID.h"
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
@@ -42,6 +41,7 @@ class Page;
 class PlatformTouchEvent;
 class PointerEvent;
 class WindowProxy;
+template<typename> class ExceptionOr;
 
 class PointerCaptureController {
     WTF_MAKE_NONCOPYABLE(PointerCaptureController);

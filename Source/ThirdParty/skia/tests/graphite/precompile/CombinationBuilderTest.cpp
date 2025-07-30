@@ -42,10 +42,10 @@ static constexpr int kExpectedTableCFCombos = 1;
 
 // shaders
 static constexpr int kExpectedGradientCombos = 3;
-static constexpr int kExpectedImageCombos = 6;
+static constexpr int kExpectedImageCombos = 24;
 static constexpr int kExpectedPerlinNoiseCombos = 1;
-static constexpr int kExpectedPictureCombos = 12;
-static constexpr int kExpectedRawImageCombos = 3;
+static constexpr int kExpectedPictureCombos = 48;
+static constexpr int kExpectedRawImageCombos = 10;
 static constexpr int kExpectedSolidColorCombos = 1;
 
 
@@ -112,17 +112,17 @@ void big_test(const KeyContext& keyContext,
               const RenderPassDesc& renderPassDesc,
               skiatest::Reporter* reporter) {
 
-    static constexpr int kNumExpected = 444;
-    // paintOptions (444 = 4*111)
-    //  |- (111 = 3+108) sweepGrad_0 (3) |
-    //  |                blendShader_0 (108 = 1*4*27)
+    static constexpr int kNumExpected = 1596;
+    // paintOptions (1596 = 4*399)
+    //  |- (399 = 3+396) sweepGrad_0 (3) |
+    //  |                blendShader_0 (396 = 1*4*99)
     //  |                 |- 0: (1)       kSrc (1)
     //  |                 |- 1: (4=3+1)   (dsts) linearGrad_0 (3) | solid_0 (1)
-    //  |                 |- 2: (27=3+24) (srcs) linearGrad_1 (3) |
-    //  |                                        blendShader_1 (24=1*4*6)
+    //  |                 |- 2: (99=3+96) (srcs) linearGrad_1 (3) |
+    //  |                                        blendShader_1 (96=1*4*24)
     //  |                                         |- 0: (1) kDst (1)
     //  |                                         |- 1: (4=3+1) (dsts) radGrad_0 (3) | solid_1 (1)
-    //  |                                         |- 2: (6) (srcs) imageShader_0 (6)
+    //  |                                         |- 2: (24) (srcs) imageShader_0 (24)
     //  |
     //  |- (4) 4-built-in-blend-modes
 
@@ -168,7 +168,9 @@ void big_test(const KeyContext& keyContext,
     paintOptions.setBlendModes(kEvenMoreBlendModes);                             // c array
 
     REPORTER_ASSERT(reporter, paintOptions.priv().numCombinations() == kNumExpected,
-                    "Actual # of combinations %d", paintOptions.priv().numCombinations());
+                    "Actual # of combinations %d, expected %d",
+                    paintOptions.priv().numCombinations(),
+                    kNumExpected);
 
     std::vector<UniquePaintParamsID> precompileIDs;
     paintOptions.priv().buildCombinations(keyContext,
@@ -439,7 +441,8 @@ void shader_subtest(const KeyContext& keyContext,
                                            kExpectedPerlinNoiseCombos);
     }
 
-    // The ImageShaders have 6 combinations (3 sampling/tiling x 2 alpha/non-alpha)
+    // The ImageShaders have 24 combinations
+    // (6 sampling/tiling x 4 color space xform)
     // The CoordClamp shader doesn't add any additional combinations to its wrapped shader.
     {
         PaintOptions paintOptions;
@@ -449,7 +452,8 @@ void shader_subtest(const KeyContext& keyContext,
                  /* expectedNumOptions= */ kExpectedImageCombos);
     }
 
-    // RawImageShaders only have 3 combinations (since they never incorporate alpha)
+    // RawImageShaders only have 10 combinations since they never do cubic filtering and only have
+    // two possible color space xform variants.
     {
         PaintOptions paintOptions;
         paintOptions.setShaders({ PrecompileShaders::RawImage() });
@@ -481,8 +485,8 @@ void shader_subtest(const KeyContext& keyContext,
                                            kExpectedGradientCombos + kExpectedGradientCombos);
     }
 
-    // Each picture shader generates 12 combinations:
-    //    2 (pictureShader LM) x 6 (imageShader variations)
+    // Each picture shader generates 48 combinations:
+    //    2 (pictureShader LM) x 24 (imageShader variations)
     {
         PaintOptions paintOptions;
         paintOptions.setShaders({ PrecompileShaders::Picture() });
@@ -597,7 +601,7 @@ void colorfilter_subtest(const KeyContext& keyContext,
 } // anonymous namespace
 
 DEF_GRAPHITE_TEST_FOR_ALL_CONTEXTS(CombinationBuilderTest, reporter, context,
-                                   CtsEnforcement::kNextRelease) {
+                                   CtsEnforcement::kNever) {
     ShaderCodeDictionary* dict = context->priv().shaderCodeDictionary();
 
     auto rtEffectDict = std::make_unique<RuntimeEffectDictionary>();

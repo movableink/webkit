@@ -16,14 +16,15 @@
 #include "include/core/SkString.h"
 #include "include/core/SkStrokeRec.h"
 #include "include/gpu/ganesh/GrRecordingContext.h"
-#include "include/private/SkColorData.h"
 #include "include/private/base/SkAlignedStorage.h"
 #include "include/private/base/SkDebug.h"
 #include "include/private/base/SkFloatingPoint.h"
 #include "include/private/base/SkOnce.h"
 #include "include/private/base/SkTArray.h"
+#include "include/private/base/SkTo.h"
 #include "include/private/gpu/ganesh/GrTypesPriv.h"
 #include "src/base/SkArenaAlloc.h"
+#include "src/core/SkColorData.h"
 #include "src/core/SkMatrixPriv.h"
 #include "src/core/SkRRectPriv.h"
 #include "src/core/SkSLTypeShared.h"
@@ -61,6 +62,7 @@
 
 #include <algorithm>
 #include <array>
+#include <climits>
 #include <cstdint>
 #include <memory>
 #include <utility>
@@ -161,7 +163,6 @@ private:
             fInUnionPlane = {"inUnionPlane", kFloat3_GrVertexAttribType, SkSLType::kHalf3};
         }
         if (roundCaps) {
-            SkASSERT(stroke);
             SkASSERT(clipPlane);
             fInRoundCapCenters =
                     {"inRoundCapCenters", kFloat4_GrVertexAttribType, SkSLType::kFloat4};
@@ -1154,7 +1155,7 @@ public:
                 std::swap(startPoint, stopPoint);
             }
 
-            fRoundCaps = stroked &&
+            fRoundCaps = hasStroke &&
                          style.strokeRec().getWidth() > 0 &&
                          style.strokeRec().getCap() == SkPaint::kRound_Cap;
             SkPoint roundCaps[2];
@@ -2831,8 +2832,11 @@ private:
     CombineResult onCombineIfPossible(GrOp* t, SkArenaAlloc*, const GrCaps& caps) override {
         CircularRRectOp* that = t->cast<CircularRRectOp>();
 
-        // can only represent 65535 unique vertices with 16-bit indices
-        if (fVertCount + that->fVertCount > 65536) {
+        // Cannot combine if the net number of indices would overflow int32, or if the net number
+        // of vertices would overflow uint16 (since the index values are 16-bit that point into
+        // the vertex buffer).
+        if ((fIndexCount > INT32_MAX - that->fIndexCount) ||
+            (fVertCount > SkToInt(UINT16_MAX) - that->fVertCount)) {
             return CombineResult::kCannotCombine;
         }
 

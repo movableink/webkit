@@ -37,8 +37,8 @@ class ContextDestructionObserver {
 public:
     WEBCORE_EXPORT virtual void contextDestroyed();
 
-    ScriptExecutionContext* scriptExecutionContext() const; // Defined in ContextDestructionObserverInlines.h.
-    RefPtr<ScriptExecutionContext> protectedScriptExecutionContext() const;
+    inline ScriptExecutionContext* scriptExecutionContext() const; // Defined in ContextDestructionObserverInlines.h.
+    inline RefPtr<ScriptExecutionContext> protectedScriptExecutionContext() const; // Defined in ContextDestructionObserverInlines.h.
 
 protected:
     WEBCORE_EXPORT explicit ContextDestructionObserver(ScriptExecutionContext*);

@@ -101,7 +101,7 @@ ExceptionOr<void> PaymentRequestValidator::validateTotal(const ApplePayLineItem&
     if (!total.amount)
         return Exception { ExceptionCode::TypeError, "Missing total amount."_s };
 
-    double amount = [NSDecimalNumber decimalNumberWithString:total.amount locale:@{ NSLocaleDecimalSeparator : @"." }].doubleValue;
+    double amount = [NSDecimalNumber decimalNumberWithString:total.amount.createNSString().get() locale:@{ NSLocaleDecimalSeparator : @"." }].doubleValue;
 
     if (amount < 0)
         return Exception { ExceptionCode::TypeError, "Total amount must not be negative."_s };
@@ -113,20 +113,20 @@ ExceptionOr<void> PaymentRequestValidator::validateTotal(const ApplePayLineItem&
     return { };
 }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 static ExceptionOr<void> validateCountryCode(const String& countryCode)
 {
     if (!countryCode)
         return Exception { ExceptionCode::TypeError, "Missing country code."_s };
 
-    for (auto *countryCodePtr = uloc_getISOCountries(); *countryCodePtr; ++countryCodePtr) {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    for (auto* countryCodePtr = uloc_getISOCountries(); *countryCodePtr; ++countryCodePtr) {
         if (countryCode == StringView::fromLatin1(*countryCodePtr))
             return { };
     }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     return Exception { ExceptionCode::TypeError, makeString("\""_s, countryCode, "\" is not a valid country code."_s) };
 }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 static ExceptionOr<void> validateCurrencyCode(const String& currencyCode)
 {
@@ -163,8 +163,8 @@ static ExceptionOr<void> validateSupportedNetworks(const Vector<String>& support
 
 static ExceptionOr<void> validateShippingMethod(const ApplePayShippingMethod& shippingMethod)
 {
-    NSDecimalNumber *amount = [NSDecimalNumber decimalNumberWithString:shippingMethod.amount locale:@{ NSLocaleDecimalSeparator : @"." }];
-    if (amount.integerValue < 0)
+    RetainPtr amount = [NSDecimalNumber decimalNumberWithString:shippingMethod.amount.createNSString().get() locale:@{ NSLocaleDecimalSeparator : @"." }];
+    if (amount.get().integerValue < 0)
         return Exception { ExceptionCode::TypeError, "Shipping method amount must be greater than or equal to zero."_s };
 
     return { };

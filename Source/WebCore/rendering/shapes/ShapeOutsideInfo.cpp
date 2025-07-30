@@ -39,6 +39,7 @@
 #include "RenderFragmentContainer.h"
 #include "RenderImage.h"
 #include "RenderView.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
@@ -136,7 +137,7 @@ Ref<const LayoutShape> makeShapeForShapeOutside(const RenderBox& renderer)
     auto boxSize = computeLogicalBoxSize(renderer, isHorizontalWritingMode);
 
     auto margin = [&] {
-        auto shapeMargin = floatValueForLength(style.shapeMargin(), containingBlock.contentWidth());
+        auto shapeMargin = floatValueForLength(style.shapeMargin(), containingBlock.contentBoxWidth());
         return isnan(shapeMargin) ? 0.0f : shapeMargin;
     }();
 

@@ -200,6 +200,11 @@ public:
 #endif
 #endif
 
+#if HAVE(CORE_MATERIAL)
+    AppleVisualEffectData appleVisualEffectData() const override;
+    void setAppleVisualEffectData(AppleVisualEffectData) override;
+#endif
+
     TiledBacking* tiledBacking() override;
 
     Ref<PlatformCALayer> clone(PlatformCALayerClient* owner) const override;

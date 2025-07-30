@@ -108,7 +108,7 @@ WebKitPlatformMouseEvent::WebKitPlatformMouseEvent(QInputEvent* event, int click
 
         m_type = type;
         m_position = IntPoint(mouseEvent->pos());
-        m_globalPosition = IntPoint(mouseEvent->globalPos());
+        m_globalPosition = IntPoint(mouseEvent->globalPosition().toPoint());
     }
 
     m_clickCount = clickCount;

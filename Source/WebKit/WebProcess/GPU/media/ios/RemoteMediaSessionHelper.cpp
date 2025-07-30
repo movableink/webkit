@@ -44,9 +44,9 @@ RemoteMediaSessionHelper::RemoteMediaSessionHelper() = default;
 
 IPC::Connection& RemoteMediaSessionHelper::ensureConnection()
 {
-    auto gpuProcessConnection = m_gpuProcessConnection.get();
+    RefPtr gpuProcessConnection = m_gpuProcessConnection.get();
     if (!gpuProcessConnection) {
-        gpuProcessConnection = &WebProcess::singleton().ensureGPUProcessConnection();
+        gpuProcessConnection = WebProcess::singleton().ensureGPUProcessConnection();
         m_gpuProcessConnection = gpuProcessConnection;
         gpuProcessConnection->addClient(*this);
         gpuProcessConnection->messageReceiverMap().addMessageReceiver(Messages::RemoteMediaSessionHelper::messageReceiverName(), *this);
@@ -73,8 +73,7 @@ void RemoteMediaSessionHelper::stopMonitoringWirelessRoutesInternal()
 
 void RemoteMediaSessionHelper::providePresentingApplicationPID(int pid, ShouldOverride shouldOverride)
 {
-    ASSERT_UNUSED(shouldOverride, shouldOverride == ShouldOverride::No);
-    ensureConnection().send(Messages::RemoteMediaSessionHelperProxy::ProvidePresentingApplicationPID(pid), { });
+    ensureConnection().send(Messages::RemoteMediaSessionHelperProxy::ProvidePresentingApplicationPID(pid, shouldOverride), { });
 }
 
 void RemoteMediaSessionHelper::activeVideoRouteDidChange(SupportsAirPlayVideo supportsAirPlayVideo, MediaPlaybackTargetContextSerialized&& targetContext)

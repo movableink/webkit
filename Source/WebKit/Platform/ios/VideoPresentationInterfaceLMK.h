@@ -65,6 +65,10 @@ private:
     void setupPlayerViewController() final;
     void invalidatePlayerViewController() final;
     UIViewController *playerViewController() const final;
+    void enterExternalPlayback(CompletionHandler<void(bool, UIViewController *)> &&, CompletionHandler<void(bool)>&&) final;
+    void exitExternalPlayback() final;
+    bool cleanupExternalPlayback() final;
+    void didSetVideoReceiverEndpoint() final;
     void tryToStartPictureInPicture() final { }
     void stopPictureInPicture() final { }
     void presentFullscreen(bool animated, Function<void(BOOL, NSError *)>&&) final;
@@ -79,6 +83,7 @@ private:
     void setupCaptionsLayer(CALayer *parent, const WebCore::FloatSize&) final;
     LMPlayableViewController *playableViewController() final;
     void setSpatialImmersive(bool) final;
+    void swapFullscreenModesWith(VideoPresentationInterfaceIOS&) final;
 
     WKSLinearMediaPlayer *linearMediaPlayer() const;
     void ensurePlayableViewController();
@@ -89,6 +94,8 @@ private:
     String m_spatialTrackingLabel;
     RetainPtr<CALayer> m_spatialTrackingLayer;
 #endif
+
+    CompletionHandler<void(bool)> m_exitExternalPlaybackHandler;
 };
 
 } // namespace WebKit

@@ -32,8 +32,10 @@
 #include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInterfaces.h"
+#include "FrameInlines.h"
 #include "LocalDOMWindow.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameView.h"
 #include "Page.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -174,7 +176,7 @@ void VisualViewport::update()
         m_offsetLeft = offsetLeft;
         m_offsetTop = offsetTop;
     }
-    if (m_width != width || m_height != height || m_scale != scale) {
+    if (m_width != width || m_height != height) {
         if (document)
             document->setNeedsVisualViewportResize();
         m_width = width;

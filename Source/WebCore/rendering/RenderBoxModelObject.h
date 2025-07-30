@@ -54,6 +54,8 @@ enum class ContentChangeType : uint8_t {
 
 class BorderEdge;
 class BorderShape;
+class GraphicsContext;
+class Image;
 class ImageBuffer;
 class RenderTextFragment;
 class StickyPositionViewportConstraints;
@@ -64,6 +66,9 @@ class InlineBoxIterator;
 };
 
 enum class BoxSideFlag : uint8_t;
+enum class DecodingMode : uint8_t;
+enum class InterpolationQuality : uint8_t;
+
 using BoxSideSet = OptionSet<BoxSideFlag>;
 using BorderEdges = RectEdges<BorderEdge>;
 
@@ -181,7 +186,7 @@ public:
     LayoutUnit marginLogicalHeight() const { return marginBefore() + marginAfter(); }
     LayoutUnit marginLogicalWidth() const { return marginStart() + marginEnd(); }
 
-    BorderShape borderShapeForContentClipping(const LayoutRect& borderBoxRect, bool includeLeftEdge = true, bool includeRightEdge = true) const;
+    BorderShape borderShapeForContentClipping(const LayoutRect& borderBoxRect, RectEdges<bool> closedEdges = { true }) const;
 
     inline bool hasInlineDirectionBordersPaddingOrMargin() const;
     inline bool hasInlineDirectionBordersOrPadding() const;
@@ -196,7 +201,7 @@ public:
 
     void setSelectionState(HighlightState) override;
 
-    bool canHaveBoxInfoInFragment() const { return !isFloating() && !isReplacedOrInlineBlock() && !isInline() && !isRenderTableCell() && isRenderBlock() && !isRenderSVGBlock(); }
+    bool canHaveBoxInfoInFragment() const { return !isFloating() && !isReplacedOrAtomicInline() && !isInline() && !isRenderTableCell() && isRenderBlock() && !isRenderSVGBlock(); }
 
     void contentChanged(ContentChangeType);
     bool hasAcceleratedCompositing() const;
@@ -213,8 +218,6 @@ public:
 
     void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption>) const override;
 
-    enum class UpdatePercentageHeightDescendants : bool { No, Yes };
-
 protected:
     RenderBoxModelObject(Type, Element&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);
     RenderBoxModelObject(Type, Document&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);
@@ -228,8 +231,6 @@ protected:
     bool hasVisibleBoxDecorationStyle() const;
     bool borderObscuresBackgroundEdge(const FloatSize& contextScale) const;
     bool borderObscuresBackground() const;
-
-    bool hasAutoHeightOrContainingBlockWithAutoHeight(UpdatePercentageHeightDescendants = UpdatePercentageHeightDescendants::Yes) const;
 
 public:
     bool fixedBackgroundPaintsInLocalCoordinates() const;
@@ -248,6 +249,8 @@ public:
 
     RenderBlock* containingBlockForAutoHeightDetection(Length logicalHeight) const;
 
+    void removeOutOfFlowBoxesIfNeededOnStyleChange(RenderBlock& delegateBlock, const RenderStyle& oldStyle, const RenderStyle& newStyle);
+
     struct ContinuationChainNode {
         WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
@@ -264,7 +267,8 @@ public:
     ContinuationChainNode* continuationChainNode() const;
 
 protected:
-    LayoutUnit resolveLengthPercentageUsingContainerLogicalWidth(const Length&) const;
+    LayoutUnit resolveLengthPercentageUsingContainerLogicalWidth(const auto&) const;
+
     virtual void absoluteQuadsIgnoringContinuation(const FloatRect&, Vector<FloatQuad>&, bool* /*wasFixed*/) const { ASSERT_NOT_REACHED(); }
     void collectAbsoluteQuadsForContinuation(Vector<FloatQuad>& quads, bool* wasFixed) const;
 

@@ -29,11 +29,13 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "InPlaceInterpreter.h"
+#include "JSCJSValueInlines.h"
 #include "JSToWasm.h"
 #include "LLIntData.h"
 #include "LLIntExceptions.h"
 #include "LLIntThunks.h"
 #include "NativeCalleeRegistry.h"
+#include "PCToCodeOriginMap.h"
 #include "VMInspector.h"
 #include "WasmCallingConvention.h"
 #include "WasmModuleInformation.h"
@@ -205,6 +207,14 @@ void JSToWasmICCallee::setEntrypoint(MacroAssemblerCodeRef<JSEntryPtrTag>&& entr
 
 WasmToJSCallee::WasmToJSCallee()
     : Callee(Wasm::CompilationMode::WasmToJSMode)
+    , m_boxedThis(CalleeBits::encodeNativeCallee(this))
+{
+    NativeCalleeRegistry::singleton().registerCallee(this);
+}
+
+WasmToJSCallee::WasmToJSCallee(FunctionSpaceIndex index, std::pair<const Name*, RefPtr<NameSection>>&& name)
+    : Callee(Wasm::CompilationMode::WasmToJSMode, index, WTFMove(name))
+    , m_boxedThis(CalleeBits::encodeNativeCallee(this))
 {
     NativeCalleeRegistry::singleton().registerCallee(this);
 }
@@ -226,11 +236,11 @@ IPIntCallee::IPIntCallee(FunctionIPIntMetadataGenerator& generator, FunctionSpac
     , m_bytecode(generator.m_bytecode.data() + generator.m_bytecodeOffset)
     , m_bytecodeEnd(m_bytecode + (generator.m_bytecode.size() - generator.m_bytecodeOffset - 1))
     , m_metadataVector(WTFMove(generator.m_metadata))
-    , m_metadata(m_metadataVector.data())
+    , m_metadata(m_metadataVector.span().data())
     , m_argumINTBytecode(WTFMove(generator.m_argumINTBytecode))
-    , m_argumINTBytecodePointer(m_argumINTBytecode.data())
+    , m_argumINTBytecodePointer(m_argumINTBytecode.span().data())
     , m_uINTBytecode(WTFMove(generator.m_uINTBytecode))
-    , m_uINTBytecodePointer(m_uINTBytecode.data())
+    , m_uINTBytecodePointer(m_uINTBytecode.span().data())
     , m_highestReturnStackOffset(generator.m_highestReturnStackOffset)
     , m_localSizeToAlloc(roundUpToMultipleOf<2>(generator.m_numLocals))
     , m_numRethrowSlotsToAlloc(generator.m_numAlignedRethrowSlots)
@@ -244,7 +254,28 @@ IPIntCallee::IPIntCallee(FunctionIPIntMetadataGenerator& generator, FunctionSpac
         for (size_t i = 0; i < count; i++) {
             const UnlinkedHandlerInfo& unlinkedHandler = generator.m_exceptionHandlers[i];
             HandlerInfo& handler = m_exceptionHandlers[i];
-            void* ptr = reinterpret_cast<void*>(unlinkedHandler.m_type == HandlerType::Catch ? ipint_catch_entry : ipint_catch_all_entry);
+            void* ptr = nullptr;
+            switch (unlinkedHandler.m_type) {
+            case HandlerType::Catch:
+                ptr = reinterpret_cast<void*>(ipint_catch_entry);
+                break;
+            case HandlerType::CatchAll:
+            case HandlerType::Delegate:
+                ptr = reinterpret_cast<void*>(ipint_catch_all_entry);
+                break;
+            case HandlerType::TryTableCatch:
+                ptr = reinterpret_cast<void*>(ipint_table_catch_entry);
+                break;
+            case HandlerType::TryTableCatchRef:
+                ptr = reinterpret_cast<void*>(ipint_table_catch_ref_entry);
+                break;
+            case HandlerType::TryTableCatchAll:
+                ptr = reinterpret_cast<void*>(ipint_table_catch_all_entry);
+                break;
+            case HandlerType::TryTableCatchAllRef:
+                ptr = reinterpret_cast<void*>(ipint_table_catch_allref_entry);
+                break;
+            }
             void* untagged = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).untaggedPtr();
             void* retagged = nullptr;
 #if ENABLE(JIT_CAGE)
@@ -425,6 +456,19 @@ IndexOrName OptimizingJITCallee::getOrigin(unsigned csi, unsigned depth, bool& i
     return indexOrName();
 }
 
+std::optional<CallSiteIndex> OptimizingJITCallee::tryGetCallSiteIndex(const void* pc) const
+{
+    constexpr bool verbose = false;
+    if (m_callSiteIndexMap) {
+        dataLogLnIf(verbose, "Querying ", RawPointer(pc));
+        if (std::optional<CodeOrigin> codeOrigin = m_callSiteIndexMap->findPC(removeCodePtrTag<void*>(pc))) {
+            dataLogLnIf(verbose, "Found ", *codeOrigin);
+            return CallSiteIndex { codeOrigin->bytecodeIndex().offset() };
+        }
+    }
+    return std::nullopt;
+}
+
 const StackMap& OptimizingJITCallee::stackmap(CallSiteIndex callSiteIndex) const
 {
     auto iter = m_stackmaps.find(callSiteIndex);
@@ -439,9 +483,41 @@ const StackMap& OptimizingJITCallee::stackmap(CallSiteIndex callSiteIndex) const
     RELEASE_ASSERT(iter != m_stackmaps.end());
     return iter->value;
 }
+
+Box<PCToCodeOriginMap> OptimizingJITCallee::materializePCToOriginMap(B3::PCToOriginMap&& originMap, LinkBuffer& linkBuffer)
+{
+    constexpr bool shouldBuildMapping = true;
+    PCToCodeOriginMapBuilder builder(shouldBuildMapping);
+    for (const B3::PCToOriginMap::OriginRange& originRange : originMap.ranges()) {
+        B3::Origin b3Origin = originRange.origin;
+        if (auto* origin = b3Origin.maybeOMGOrigin()) {
+            // We stash the location into a BytecodeIndex.
+            builder.appendItem(originRange.label, CodeOrigin(BytecodeIndex(origin->m_callSiteIndex.bits())));
+        } else
+            builder.appendItem(originRange.label, PCToCodeOriginMapBuilder::defaultCodeOrigin());
+    }
+    auto map = Box<PCToCodeOriginMap>::create(WTFMove(builder), linkBuffer);
+    WTF::storeStoreFence();
+    m_callSiteIndexMap = WTFMove(map);
+
+    if (Options::useSamplingProfiler()) {
+        PCToCodeOriginMapBuilder samplingProfilerBuilder(shouldBuildMapping);
+        for (const B3::PCToOriginMap::OriginRange& originRange : originMap.ranges()) {
+            B3::Origin b3Origin = originRange.origin;
+            if (auto* origin = b3Origin.maybeOMGOrigin()) {
+                // We stash the location into a BytecodeIndex.
+                samplingProfilerBuilder.appendItem(originRange.label, CodeOrigin(BytecodeIndex(origin->m_opcodeOrigin.location())));
+            } else
+                samplingProfilerBuilder.appendItem(originRange.label, PCToCodeOriginMapBuilder::defaultCodeOrigin());
+        }
+        return Box<PCToCodeOriginMap>::create(WTFMove(samplingProfilerBuilder), linkBuffer);
+    }
+    return nullptr;
+}
+
 #endif
 
-JSEntrypointCallee::JSEntrypointCallee(TypeIndex typeIndex, bool usesSIMD)
+JSEntrypointCallee::JSEntrypointCallee(TypeIndex typeIndex, bool)
     : Callee(Wasm::CompilationMode::JSToWasmEntrypointMode)
     , m_typeIndex(typeIndex)
 {
@@ -454,30 +530,6 @@ JSEntrypointCallee::JSEntrypointCallee(TypeIndex typeIndex, bool usesSIMD)
     totalFrameSize += JSEntrypointCallee::RegisterStackSpaceAligned;
     totalFrameSize = WTF::roundUpToMultipleOf<stackAlignmentBytes()>(totalFrameSize);
     m_frameSize = totalFrameSize;
-
-#if ENABLE(JIT)
-    if (Options::useWasmJIT()) {
-#else
-    if (false) {
-#endif
-        if (Options::useWasmIPInt())
-            m_wasmFunctionPrologue = LLInt::inPlaceInterpreterEntryThunk().code().retagged<WasmEntryPtrTag>();
-        else {
-            if (usesSIMD)
-                m_wasmFunctionPrologue = LLInt::wasmFunctionEntryThunkSIMD().code().retagged<WasmEntryPtrTag>();
-            else
-                m_wasmFunctionPrologue = LLInt::wasmFunctionEntryThunk().code().retagged<WasmEntryPtrTag>();
-        }
-    } else {
-        if (Options::useWasmIPInt())
-            m_wasmFunctionPrologue = CodePtr<CFunctionPtrTag>(LLInt::getCodeFunctionPtr<CFunctionPtrTag>(ipint_trampoline)).retagged<WasmEntryPtrTag>();
-        else {
-            if (usesSIMD)
-                m_wasmFunctionPrologue = CodePtr<CFunctionPtrTag>(LLInt::getCodeFunctionPtr<CFunctionPtrTag>(wasm_function_prologue_simd_trampoline)).retagged<WasmEntryPtrTag>();
-            else
-                m_wasmFunctionPrologue = CodePtr<CFunctionPtrTag>(LLInt::getCodeFunctionPtr<CFunctionPtrTag>(wasm_function_prologue_trampoline)).retagged<WasmEntryPtrTag>();
-        }
-    }
 }
 
 CodePtr<WasmEntryPtrTag> JSEntrypointCallee::entrypointImpl() const

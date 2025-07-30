@@ -23,6 +23,7 @@
 #if ENABLE(GPU_PROCESS)
 
 [
+    ExceptionForEnabledBy,
     DispatchedFrom=WebContent,
     DispatchedTo=GPU
 ]
@@ -38,7 +39,7 @@ messages -> GPUConnectionToWebProcess WantsDispatchMessage {
     void ClearNowPlayingInfo()
     void SetNowPlayingInfo(struct WebCore::NowPlayingInfo nowPlayingInfo)
 #if USE(AUDIO_SESSION)
-    [EnabledBy=MediaPlaybackEnabled] EnsureAudioSession() -> (struct WebKit::RemoteAudioSessionConfiguration configuration) Synchronous
+    [EnabledBy=UseGPUProcessForMediaEnabled && MediaPlaybackEnabled] EnsureAudioSession() -> (struct WebKit::RemoteAudioSessionConfiguration configuration) Synchronous
 #endif
 #if PLATFORM(IOS_FAMILY)
     EnsureMediaSessionHelper()

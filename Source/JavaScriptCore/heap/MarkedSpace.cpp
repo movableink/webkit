@@ -41,7 +41,7 @@ static Vector<size_t> sizeClasses()
 {
     Vector<size_t> result;
 
-    if (UNLIKELY(Options::dumpSizeClasses())) {
+    if (Options::dumpSizeClasses()) [[unlikely]] {
         dataLog("Block size: ", MarkedBlock::blockSize, "\n");
         dataLog("Header size: ", sizeof(MarkedBlock::Header), "\n");
     }
@@ -227,6 +227,24 @@ void MarkedSpace::sweepBlocks()
         });
 }
 
+void MarkedSpace::registerPreciseAllocation(PreciseAllocation* allocation, bool isNewAllocation)
+{
+    // FIXME: This is a bit of a mess we should really consolidate setting all the bits to here.
+    allocation->setIndexInSpace(m_preciseAllocations.size());
+    allocation->m_hasValidCell = true;
+    ASSERT(allocation->isNewlyAllocated());
+    ASSERT(!allocation->isMarked());
+    m_preciseAllocations.append(allocation);
+    if (auto* set = preciseAllocationSet())
+        set->add(allocation->cell());
+    if (isNewAllocation) {
+        // Existing code's ordering is calling `didAllocate` and increasing capacity.
+        size_t size = allocation->cellSize();
+        heap().didAllocate(size);
+        m_capacity += size;
+    }
+}
+
 void MarkedSpace::sweepPreciseAllocations()
 {
     RELEASE_ASSERT(m_preciseAllocationsNurseryOffset == m_preciseAllocations.size());
@@ -270,7 +288,7 @@ void MarkedSpace::prepareForAllocation()
 
 void MarkedSpace::enablePreciseAllocationTracking()
 {
-    m_preciseAllocationSet = makeUnique<HashSet<HeapCell*>>();
+    m_preciseAllocationSet = makeUnique<UncheckedKeyHashSet<HeapCell*>>();
     for (auto* allocation : m_preciseAllocations)
         m_preciseAllocationSet->add(allocation->cell());
 }
@@ -415,7 +433,7 @@ void MarkedSpace::beginMarking()
                 return IterationStatus::Continue;
             });
 
-        if (UNLIKELY(nextVersion(m_markingVersion) == initialVersion)) {
+        if (nextVersion(m_markingVersion) == initialVersion) [[unlikely]] {
             forEachBlock(
                 [&] (MarkedBlock::Handle* handle) {
                     handle->block().resetMarks();
@@ -445,7 +463,7 @@ void MarkedSpace::beginMarking()
 
 void MarkedSpace::endMarking()
 {
-    if (UNLIKELY(nextVersion(m_newlyAllocatedVersion) == initialVersion)) {
+    if (nextVersion(m_newlyAllocatedVersion) == initialVersion) [[unlikely]] {
         forEachBlock(
             [&] (MarkedBlock::Handle* handle) {
                 handle->block().resetAllocated();

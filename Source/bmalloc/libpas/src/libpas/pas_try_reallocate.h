@@ -98,10 +98,10 @@ pas_try_allocate_for_reallocate_and_copy(
     if (result.begin) {
         if (verbose)
             pas_log("result.begin = %p\n", (void*)result.begin);
-        PAS_PROFILE(TRY_REALLOCATE_AND_COPY, result.begin);
         size_t copy_size = PAS_MIN(new_size, old_size);
         if (verbose)
             pas_log("copying size %zu from %p to %p\n", copy_size, old_ptr, (void*)result.begin);
+        PAS_PROFILE(TRY_REALLOCATE_AND_COPY, result.begin, old_ptr, copy_size);
         memcpy((void*)result.begin, old_ptr, copy_size);
         if (verbose)
             pas_log("\t...done copying size %zu from %p to %p\n", copy_size, old_ptr, (void*)result.begin);
@@ -258,7 +258,7 @@ pas_try_reallocate(void* old_ptr,
                 page_and_kind.page_base, begin, heap, new_size, allocation_mode, config.small_bitfit_config,
                 teleport_rule, free_mode, allocate_callback, allocate_callback_arg);
         default:
-            PAS_ASSERT(!"Should not be reached");
+            PAS_ASSERT_NOT_REACHED();
             return pas_allocation_result_create_failure();
         }
     }
@@ -327,7 +327,9 @@ pas_try_reallocate(void* old_ptr,
             
             PAS_ASSERT(free_mode == pas_reallocate_free_if_successful);
 
-            raw_result = pas_debug_heap_realloc(old_ptr, new_size);
+            raw_result = allocation_mode == pas_non_compact_allocation_mode
+                ? pas_debug_heap_realloc(old_ptr, new_size)
+                : pas_debug_heap_realloc_compact(old_ptr, new_size);
 
             result = pas_allocation_result_create_failure();
 
@@ -342,9 +344,9 @@ pas_try_reallocate(void* old_ptr,
         pas_heap_lock_lock();
 
         // Check for PGM case for slow path if object is using PGM large heap
-        if (config.pgm_enabled && pas_probabilistic_guard_malloc_check_exists(begin)) {
+        if (config.pgm_enabled && pas_probabilistic_guard_malloc_check_exists(begin))
             entry = pas_probabilistic_guard_malloc_return_as_large_map_entry(begin);
-        } else {
+        else {
             entry = pas_large_map_find(begin);
             if (pas_large_map_entry_is_empty(entry))
                 pas_reallocation_did_fail("Source object not allocated", NULL, heap, old_ptr, 0, new_size);

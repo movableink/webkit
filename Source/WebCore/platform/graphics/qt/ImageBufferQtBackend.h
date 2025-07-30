@@ -28,6 +28,7 @@
 #include "GraphicsContextQt.h"
 #include "ImageBufferBackend.h"
 #include "PlatformImage.h"
+#include "NativeImage.h"
 #include "PixelBuffer.h"
 #include <wtf/IsoMalloc.h>
 #include <QPainter>
@@ -59,7 +60,7 @@ public:
     bool canMapBackingStore() const final { return true; }
 
     void getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination) override;
-    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
+    void putPixelBuffer(const PixelBufferSourceView&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
 
 protected:
     using ImageBufferBackend::ImageBufferBackend;

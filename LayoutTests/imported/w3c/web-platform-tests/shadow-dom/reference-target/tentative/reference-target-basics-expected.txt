@@ -1,0 +1,6 @@
+
+PASS ShadowRoot.referenceTarget defaults to empty string when shadow is created declaratively
+PASS <template> shadowrootreferencetarget sets referenceTarget on shadow root
+PASS ShadowRoot.referenceTarget defaults to empty string when shadow is created imperatively
+PASS ShadowRootInitDict can be used to set referenceTarget on shadow root
+

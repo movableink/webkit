@@ -1,3 +1,5 @@
+<!-- webkit-test-runner [ enableMetalDebugDevice=true ] -->
+<script src="../../../resources/js-test-pre.js"></script>
 <script>
 async function run() {
     let adapter = await navigator.gpu.requestAdapter();
@@ -41,7 +43,13 @@ async function run() {
     renderBundleEncoder.drawIndexed(1);
     renderBundleEncoder.setIndexBuffer(buffer, 'uint32', 3_668);
     renderBundleEncoder.setPipeline(renderPipeline2);
+    await device.queue.onSubmittedWorkDone();
+    debug('Pass')
+    globalThis.testRunner?.notifyDone();
 }
+globalThis.testRunner?.dumpAsText();
 globalThis.testRunner?.waitUntilDone();
-run().then(() => globalThis.testRunner?.notifyDone());
+
+run();
 </script>
+

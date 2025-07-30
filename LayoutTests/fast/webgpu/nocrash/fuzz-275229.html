@@ -1,3 +1,5 @@
+<!-- webkit-test-runner [ enableMetalDebugDevice=true ] -->
+<script src="../../../resources/js-test-pre.js"></script>
 <script>
 async function run() {
     let adapter = await navigator.gpu.requestAdapter();
@@ -6,7 +8,13 @@ async function run() {
     let textureView = texture.createView();
     texture.destroy();
     device.createCommandEncoder().beginRenderPass({ colorAttachments: [], depthStencilAttachment: { view: textureView } });
+    await device.queue.onSubmittedWorkDone();
+    debug('Pass')
+    globalThis.testRunner?.notifyDone();
 }
+globalThis.testRunner?.dumpAsText();
 globalThis.testRunner?.waitUntilDone();
-run().finally(() => globalThis.testRunner?.notifyDone());
+
+run();
 </script>
+

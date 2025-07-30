@@ -49,16 +49,10 @@ static void testNetworkSessionEphemeral(Test* test, gconstpointer)
     g_assert_true(WEBKIT_IS_WEBSITE_DATA_MANAGER(manager));
     g_assert_false(webkit_website_data_manager_is_ephemeral(manager));
 
-    auto webView = Test::adoptView(Test::createWebView());
+    auto webView = test->createWebView("network-session", nullptr, nullptr);
     g_assert_true(webkit_web_view_get_network_session(webView.get()) == webkit_network_session_get_default());
 
-    webView = Test::adoptView(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-#if PLATFORM(WPE)
-        "backend", Test::createWebViewBackend(),
-#endif
-        "web-context", test->m_webContext.get(),
-        "network-session", test->m_networkSession.get(),
-        nullptr));
+    webView = test->createWebView();
     g_assert_true(webkit_web_view_get_network_session(webView.get()) == test->m_networkSession.get());
 
     GRefPtr<WebKitNetworkSession> session = adoptGRef(webkit_network_session_new_ephemeral());
@@ -68,13 +62,7 @@ static void testNetworkSessionEphemeral(Test* test, gconstpointer)
     g_assert_true(webkit_website_data_manager_is_ephemeral(manager));
     g_assert_true(webkit_web_view_get_network_session(webView.get()) != session.get());
 
-    webView = Test::adoptView(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-#if PLATFORM(WPE)
-        "backend", Test::createWebViewBackend(),
-#endif
-        "web-context", test->m_webContext.get(),
-        "network-session", session.get(),
-        nullptr));
+    webView = test->createWebView("network-session", session.get(), nullptr);
     g_assert_true(webkit_web_view_get_network_session(webView.get()) == session.get());
 }
 
@@ -200,13 +188,7 @@ static void testNetworkSessionProxySettings(ProxyTest* test, gconstpointer)
     GRefPtr<WebKitNetworkSession> ephemeralSession = adoptGRef(webkit_network_session_new_ephemeral());
     webkit_network_session_set_proxy_settings(ephemeralSession.get(), WEBKIT_NETWORK_PROXY_MODE_CUSTOM, settings);
     webkit_network_proxy_settings_free(settings);
-    auto webView = Test::adoptView(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-#if PLATFORM(WPE)
-        "backend", Test::createWebViewBackend(),
-#endif
-        "web-context", test->m_webContext.get(),
-        "network-session", ephemeralSession.get(),
-        nullptr));
+    auto webView = test->createWebView("network-session", ephemeralSession.get(), nullptr);
     g_assert_true(webkit_web_view_get_network_session(webView.get()) == ephemeralSession.get());
 
     g_signal_connect(webView.get(), "load-changed", G_CALLBACK(ephemeralViewloadChanged), test);

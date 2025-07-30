@@ -42,7 +42,9 @@ public:
     static Ref<PathQt> create(const PathQt&);
     static Ref<PathQt> create(const PathSegment&);
     static Ref<PathQt> create(const PathStream&);
+    static Ref<PathQt> create(std::span<const PathSegment>);
     static Ref<PathQt> create(QPainterPath);
+    static PlatformPathPtr emptyPlatformPath();
 
     PathQt();
     PathQt(QPainterPath&&);
@@ -52,7 +54,7 @@ public:
     PathQt& operator=(const PathQt&);
     PathQt& operator=(PathQt&& other);
 
-    QPainterPath platformPath() const;
+    const QPainterPath& platformPath() const;
 
     void addPath(const PathQt&, const AffineTransform&);
 
@@ -84,12 +86,11 @@ private:
     void add(PathEllipseInRect) final;
     void add(PathRect) final;
     void add(PathRoundedRect) final;
+    void add(PathContinuousRoundedRect) final;
 
     void add(PathCloseSubpath) final;
 
     void applySegments(const PathSegmentApplier&) const final;
-
-    bool isEmpty() const final;
 
     FloatPoint currentPoint() const final;
 

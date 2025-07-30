@@ -71,8 +71,7 @@ public:
 
     RenderLineBoxList& legacyLineBoxes() { return m_legacyLineBoxes; }
     const RenderLineBoxList& legacyLineBoxes() const { return m_legacyLineBoxes; }
-    void dirtyLegacyLineBoxes(bool fullLayout);
-    void deleteLegacyLines();
+    void deleteLegacyLineBoxes();
     LegacyInlineFlowBox* firstLegacyInlineBox() const { return m_legacyLineBoxes.firstLegacyLineBox(); }
     LegacyInlineFlowBox* lastLegacyInlineBox() const { return m_legacyLineBoxes.lastLegacyLineBox(); }
 
@@ -129,7 +128,7 @@ protected:
     RepaintRects computeVisibleRectsUsingPaintOffset(const RepaintRects&) const;
 
     void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const override;
-    const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
+    const RenderElement* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
 
 private:
     VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) final;

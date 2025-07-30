@@ -56,7 +56,7 @@ private:
     float valueForRange() const final;
     float maxValueForRange() const final;
     float minValueForRange() const final;
-    AccessibilityOrientation orientation() const final;
+    std::optional<AccessibilityOrientation> explicitOrientation() const final;
 };
 
 class AccessibilitySliderThumb final : public AccessibilityMockObject {

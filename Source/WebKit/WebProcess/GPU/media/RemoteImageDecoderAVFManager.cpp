@@ -44,6 +44,9 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteImageDecoderAVFManager);
 
 RefPtr<RemoteImageDecoderAVF> RemoteImageDecoderAVFManager::createImageDecoder(FragmentedSharedBuffer& data, const String& mimeType, AlphaOption alphaOption, GammaAndColorProfileOption gammaAndColorProfileOption)
 {
+    if (!WebProcess::singleton().mediaPlaybackEnabled())
+        return nullptr;
+
     auto sendResult = ensureGPUProcessConnection().connection().sendSync(Messages::RemoteImageDecoderAVFProxy::CreateDecoder(IPC::SharedBufferReference(data), mimeType), 0);
     auto [imageDecoderIdentifier] = sendResult.takeReplyOr(std::nullopt);
     if (!imageDecoderIdentifier)
@@ -86,9 +89,9 @@ void RemoteImageDecoderAVFManager::gpuProcessConnectionDidClose(GPUProcessConnec
 
 GPUProcessConnection& RemoteImageDecoderAVFManager::ensureGPUProcessConnection()
 {
-    auto gpuProcessConnection = m_gpuProcessConnection.get();
+    RefPtr gpuProcessConnection = m_gpuProcessConnection.get();
     if (!gpuProcessConnection) {
-        gpuProcessConnection = &WebProcess::singleton().ensureGPUProcessConnection();
+        gpuProcessConnection = WebProcess::singleton().ensureGPUProcessConnection();
         m_gpuProcessConnection = gpuProcessConnection;
         gpuProcessConnection->addClient(*this);
         gpuProcessConnection->messageReceiverMap().addMessageReceiver(Messages::RemoteImageDecoderAVFManager::messageReceiverName(), *this);
@@ -107,8 +110,9 @@ void RemoteImageDecoderAVFManager::setUseGPUProcess(bool useGPUProcess)
     ImageDecoder::installFactory({
         RemoteImageDecoderAVF::supportsMediaType,
         RemoteImageDecoderAVF::canDecodeType,
-        [this](FragmentedSharedBuffer& data, const String& mimeType, AlphaOption alphaOption, GammaAndColorProfileOption gammaAndColorProfileOption) {
-            return createImageDecoder(data, mimeType, alphaOption, gammaAndColorProfileOption);
+        [weakThis = ThreadSafeWeakPtr { *this }](FragmentedSharedBuffer& data, const String& mimeType, AlphaOption alphaOption, GammaAndColorProfileOption gammaAndColorProfileOption) {
+            RefPtr protectedThis = weakThis.get();
+            return protectedThis ? protectedThis->createImageDecoder(data, mimeType, alphaOption, gammaAndColorProfileOption) : nullptr;
         }
     });
 }

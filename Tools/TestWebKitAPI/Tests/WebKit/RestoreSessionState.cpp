@@ -48,7 +48,7 @@ static void didFinishNavigation(WKPageRef, WKNavigationRef, WKTypeRef, const voi
 static void decidePolicyForNavigationAction(WKPageRef page, WKFrameRef frame, WKFrameNavigationType navigationType, WKEventModifiers modifiers, WKEventMouseButton mouseButton, WKFrameRef originatingFrame, WKURLRequestRef request, WKFramePolicyListenerRef listener, WKTypeRef userData, const void* clientInfo)
 {
     WKRetainPtr<WKFramePolicyListenerRef> retainedListener(listener);
-    RunLoop::main().dispatch([retainedListener = WTFMove(retainedListener)] {
+    RunLoop::protectedMain()->dispatch([retainedListener = WTFMove(retainedListener)] {
         WKFramePolicyListenerUse(retainedListener.get());
     });
 }
@@ -56,7 +56,7 @@ static void decidePolicyForNavigationAction(WKPageRef page, WKFrameRef frame, WK
 static void decidePolicyForNavigationActionIgnore(WKPageRef page, WKFrameRef frame, WKFrameNavigationType navigationType, WKEventModifiers modifiers, WKEventMouseButton mouseButton, WKFrameRef originatingFrame, WKURLRequestRef request, WKFramePolicyListenerRef listener, WKTypeRef userData, const void* clientInfo)
 {
     WKRetainPtr<WKFramePolicyListenerRef> retainedListener(listener);
-    RunLoop::main().dispatch([retainedListener = WTFMove(retainedListener), page = WTFMove(page)] {
+    RunLoop::protectedMain()->dispatch([retainedListener = WTFMove(retainedListener), page = WTFMove(page)] {
         EXPECT_NOT_NULL(adoptWK(WKPageCopyPendingAPIRequestURL(page)));
         WKFramePolicyListenerIgnore(retainedListener.get());
         didDecideNavigationPolicy = true;
@@ -66,7 +66,7 @@ static void decidePolicyForNavigationActionIgnore(WKPageRef page, WKFrameRef fra
 static void decidePolicyForResponse(WKPageRef page, WKFrameRef frame, WKURLResponseRef response, WKURLRequestRef request, bool canShowMIMEType, WKFramePolicyListenerRef listener, WKTypeRef userData, const void* clientInfo)
 {
     WKRetainPtr<WKFramePolicyListenerRef> retainedListener(listener);
-    RunLoop::main().dispatch([retainedListener = WTFMove(retainedListener)] {
+    RunLoop::protectedMain()->dispatch([retainedListener = WTFMove(retainedListener)] {
         WKFramePolicyListenerUse(retainedListener.get());
     });
 }
@@ -74,7 +74,7 @@ static void decidePolicyForResponse(WKPageRef page, WKFrameRef frame, WKURLRespo
 static void setPageLoaderClient(WKPageRef page)
 {
     WKPageNavigationClientV0 loaderClient;
-    memset(&loaderClient, 0, sizeof(loaderClient));
+    zeroBytes(loaderClient);
 
     loaderClient.base.version = 0;
     loaderClient.didFinishNavigation = didFinishNavigation;
@@ -121,7 +121,7 @@ TEST(WebKit, RestoreSessionStateContainingScrollRestorationDefaultWithAsyncPolic
     setPageLoaderClient(webView.page());
 
     WKPagePolicyClientV1 policyClient;
-    memset(&policyClient, 0, sizeof(policyClient));
+    zeroBytes(policyClient);
     policyClient.base.version = 1;
     policyClient.decidePolicyForNavigationAction = decidePolicyForNavigationAction;
     policyClient.decidePolicyForResponse = decidePolicyForResponse;
@@ -175,7 +175,7 @@ TEST(WebKit, ClearedPendingURLAfterCancelingRestoreSessionState)
     setPageLoaderClient(webView.page());
 
     WKPagePolicyClientV1 policyClient;
-    memset(&policyClient, 0, sizeof(policyClient));
+    zeroBytes(policyClient);
     policyClient.base.version = 1;
     policyClient.decidePolicyForNavigationAction = decidePolicyForNavigationActionIgnore;
     WKPageSetPagePolicyClient(webView.page(), &policyClient.base);

@@ -26,7 +26,6 @@
 #pragma once
 
 #include "ApplicationCacheResourceLoader.h"
-#include "DOMApplicationCache.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -114,8 +113,8 @@ private:
     void didFinishLoadingManifest();
     void didFailLoadingManifest(ApplicationCacheResourceLoader::Error);
 
-    void didFailLoadingEntry(ApplicationCacheResourceLoader::Error, const URL&, unsigned type);
-    void didFinishLoadingEntry(const URL&);
+    void didFailLoadingEntry(ApplicationCacheResourceLoader::Error, URL&&, unsigned type);
+    void didFinishLoadingEntry(URL&&);
 
     void didReachMaxAppCacheSize();
     void didReachOriginQuota(int64_t totalSpaceNeeded);

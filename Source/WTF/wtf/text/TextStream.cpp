@@ -108,18 +108,24 @@ TextStream& TextStream::operator<<(double d)
 
 TextStream& TextStream::operator<<(const char* string)
 {
-    m_text.append(span(string));
+    m_text.append(unsafeSpan(string));
     return *this;
 }
 
 TextStream& TextStream::operator<<(const void* p)
 {
     char buffer[printBufferSize];
-    snprintf(buffer, sizeof(buffer) - 1, "%p", p);
+    SAFE_SPRINTF(std::span { buffer }, "%p", p);
     return *this << buffer;
 }
 
 TextStream& TextStream::operator<<(const AtomString& string)
+{
+    m_text.append(string);
+    return *this;
+}
+
+TextStream& TextStream::operator<<(const CString& string)
 {
     m_text.append(string);
     return *this;
@@ -178,18 +184,18 @@ void TextStream::startGroup()
     TextStream& ts = *this;
 
     if (m_multiLineMode) {
-        ts << "\n";
+        ts << '\n';
         ts.writeIndent();
-        ts << "(";
+        ts << '(';
         ts.increaseIndent();
     } else
-        ts << " (";
+        ts << " ("_s;
 }
 
 void TextStream::endGroup()
 {
     TextStream& ts = *this;
-    ts << ")";
+    ts << ')';
     if (m_multiLineMode)
         ts.decreaseIndent();
 }
@@ -198,10 +204,10 @@ void TextStream::nextLine()
 {
     TextStream& ts = *this;
     if (m_multiLineMode) {
-        ts << "\n";
+        ts << '\n';
         ts.writeIndent();
     } else
-        ts << " ";
+        ts << ' ';
 }
 
 void TextStream::writeIndent()
@@ -213,7 +219,7 @@ void TextStream::writeIndent()
 void writeIndent(TextStream& ts, int indent)
 {
     for (int i = 0; i < indent; ++i)
-        ts << "  ";
+        ts << "  "_s;
 }
 
 } // namespace WTF

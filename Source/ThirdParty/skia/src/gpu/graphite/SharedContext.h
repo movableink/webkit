@@ -52,8 +52,7 @@ public:
 
     virtual std::unique_ptr<ResourceProvider> makeResourceProvider(SingleOwner*,
                                                                    uint32_t recorderID,
-                                                                   size_t resourceBudget,
-                                                                   bool avoidBufferAlloc) = 0;
+                                                                   size_t resourceBudget) = 0;
 
     // Called by Context::isContextLost(). Returns true if the backend-specific SharedContext has
     // gotten into an unrecoverable, lost state.
@@ -62,7 +61,9 @@ public:
     virtual void deviceTick(Context*) {}
 
 protected:
-    SharedContext(std::unique_ptr<const Caps>, BackendApi);
+    SharedContext(std::unique_ptr<const Caps>,
+                  BackendApi,
+                  SkSpan<sk_sp<SkRuntimeEffect>> userDefinedKnownRuntimeEffects);
 
 private:
     friend class Context; // for setRendererProvider()

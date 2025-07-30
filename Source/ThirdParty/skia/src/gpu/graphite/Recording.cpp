@@ -4,23 +4,34 @@
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  */
-
 #include "include/gpu/graphite/Recording.h"
 
+#include "include/core/SkRect.h"
+#include "include/core/SkSize.h"
+#include "include/gpu/GpuTypes.h"
+#include "include/gpu/graphite/GraphiteTypes.h"
+#include "include/gpu/graphite/TextureInfo.h"
+#include "include/private/base/SkAssert.h"
+#include "include/private/base/SkPoint_impl.h"
+#include "include/private/base/SkTo.h"
 #include "src/core/SkChecksum.h"
 #include "src/gpu/RefCntedCallback.h"
 #include "src/gpu/graphite/CommandBuffer.h"
-#include "src/gpu/graphite/ContextPriv.h"
 #include "src/gpu/graphite/Log.h"
 #include "src/gpu/graphite/RecordingPriv.h"
 #include "src/gpu/graphite/Resource.h"
-#include "src/gpu/graphite/ResourceProvider.h"
 #include "src/gpu/graphite/Surface_Graphite.h"
 #include "src/gpu/graphite/Texture.h"
 #include "src/gpu/graphite/TextureProxy.h"
+#include "src/gpu/graphite/task/Task.h"
 #include "src/gpu/graphite/task/TaskList.h"
 
+#include <functional>
+#include <unordered_map>
 #include <unordered_set>
+#include <utility>
+
+namespace skgpu::graphite { class Context; }
 
 using namespace skia_private;
 
@@ -49,13 +60,31 @@ std::size_t Recording::ProxyHash::operator()(const sk_sp<TextureProxy> &proxy) c
     return SkGoodHash()(proxy.get());
 }
 
-Recording::LazyProxyData::LazyProxyData(const TextureInfo& textureInfo) {
-    fTargetProxy = TextureProxy::MakeFullyLazy(
-            textureInfo, skgpu::Budgeted::kNo, Volatile::kYes, [this](ResourceProvider*) {
-                SkASSERT(SkToBool(fTarget));
-                return std::move(fTarget);
-            });
+Recording::LazyProxyData::LazyProxyData(const Caps* caps,
+                                        SkISize dimensions,
+                                        const TextureInfo& textureInfo) {
+    auto onInstantiate = [this](ResourceProvider*) {
+        SkASSERT(SkToBool(fTarget));
+        return std::move(fTarget);
+    };
+
+    // If the texture info specifies that mipmapping is required, that implies that the final
+    // surface used to instantiate this proxy will be mipmapped, and that the dimensions of that
+    // surface are known already.
+    fTargetProxy = textureInfo.mipmapped() == Mipmapped::kYes
+                           ? TextureProxy::MakeLazy(caps,
+                                                    dimensions,
+                                                    textureInfo,
+                                                    skgpu::Budgeted::kNo,
+                                                    Volatile::kYes,
+                                                    std::move(onInstantiate))
+                           : TextureProxy::MakeFullyLazy(textureInfo,
+                                                         skgpu::Budgeted::kNo,
+                                                         Volatile::kYes,
+                                                         std::move(onInstantiate));
 }
+
+Recording::LazyProxyData::~LazyProxyData() = default;
 
 TextureProxy* Recording::LazyProxyData::lazyProxy() { return fTargetProxy.get(); }
 
@@ -121,35 +150,63 @@ void RecordingPriv::setFailureResultForFinishedProcs() {
     fRecording->fFinishedProcs.clear();
 }
 
-bool RecordingPriv::addCommands(Context* context,
-                                CommandBuffer* commandBuffer,
-                                Surface* targetSurface,
-                                SkIVector targetTranslation,
-                                SkIRect targetClip) {
-    AutoDeinstantiateTextureProxy autoDeinstantiateTargetProxy(
-            fRecording->fTargetProxyData ? fRecording->fTargetProxyData->lazyProxy() : nullptr);
+TextureProxy* RecordingPriv::deferredTargetProxy() {
+    return fRecording->fTargetProxyData ? fRecording->fTargetProxyData->lazyProxy() : nullptr;
+}
 
-    const Texture* replayTarget = nullptr;
-    ResourceProvider* resourceProvider = context->priv().resourceProvider();
-    SkASSERT(!SkToBool(fRecording->fTargetProxyData) || SkToBool(targetSurface));
-    if (fRecording->fTargetProxyData) {
-        if (!targetSurface) {
-            SKGPU_LOG_E("No surface provided to instantiate target texture proxy.");
-            return false;
-        }
-        TextureProxy* surfaceTexture = targetSurface->backingTextureProxy();
-        if (!surfaceTexture->instantiate(resourceProvider)) {
-            SKGPU_LOG_E("Could not instantiate target texture proxy.");
-            return false;
-        }
-        if (!fRecording->fTargetProxyData->lazyInstantiate(resourceProvider,
-                                                           surfaceTexture->refTexture())) {
-            SKGPU_LOG_E("Could not instantiate deferred texture proxy.");
-            return false;
-        }
-        replayTarget = surfaceTexture->texture();
+const Texture* RecordingPriv::setupDeferredTarget(ResourceProvider* resourceProvider,
+                                                  Surface* targetSurface,
+                                                  SkIVector targetTranslation,
+                                                  SkIRect targetClip) {
+    SkASSERT(targetSurface && fRecording->fTargetProxyData);
+
+    TextureProxy* surfaceTexture = targetSurface->backingTextureProxy();
+    SkASSERT(surfaceTexture->isInstantiated());
+
+    const TextureProxy* targetProxy = fRecording->fTargetProxyData->lazyProxy();
+    if (surfaceTexture->mipmapped() != targetProxy->mipmapped()) {
+        SKGPU_LOG_E("Deferred canvas mipmap settings don't match instantiating target's.");
+        return nullptr;
     }
 
+    // If the deferred canvas's texture proxy is not fully lazy, that means we used it for draws
+    // that require specific dimensions and no translation. The only time this happens is when a
+    // client requests a mipmapped deferred canvas and we automatically insert commands to
+    // regenerate mipmaps.
+    if (!targetProxy->isFullyLazy()) {
+        SkASSERT(targetProxy->mipmapped() == skgpu::Mipmapped::kYes);
+        if (targetProxy->dimensions() != surfaceTexture->dimensions()) {
+            SKGPU_LOG_E(
+                    "Deferred canvas dimensions don't match instantiating target's dimensions.");
+            return nullptr;
+        }
+        if (!targetTranslation.isZero()) {
+            SKGPU_LOG_E(
+                    "Replay translation is not allowed when replaying draws to a mipmapped "
+                    "deferred canvas.");
+            return nullptr;
+        }
+        if (!targetClip.isEmpty()) {
+            SKGPU_LOG_E(
+                    "Replay clip is not allowed when replaying draws to a mipmapped deferred "
+                    "canvas.");
+            return nullptr;
+        }
+    }
+
+    if (!fRecording->fTargetProxyData->lazyInstantiate(resourceProvider,
+                                                       surfaceTexture->refTexture())) {
+        SKGPU_LOG_E("Could not instantiate deferred texture proxy.");
+        return nullptr;
+    }
+    return surfaceTexture->texture();
+}
+
+bool RecordingPriv::addCommands(Context* context,
+                                CommandBuffer* commandBuffer,
+                                const Texture* replayTarget,
+                                SkIVector targetTranslation,
+                                SkIRect targetClip) {
     for (size_t i = 0; i < fRecording->fExtraResourceRefs.size(); ++i) {
         commandBuffer->trackResource(fRecording->fExtraResourceRefs[i]);
     }

@@ -56,7 +56,7 @@ class HTMLTreeBuilder {
     WTF_MAKE_TZONE_ALLOCATED(HTMLTreeBuilder);
 public:
     HTMLTreeBuilder(HTMLDocumentParser&, HTMLDocument&, OptionSet<ParserContentPolicy>, const HTMLParserOptions&);
-    HTMLTreeBuilder(HTMLDocumentParser&, DocumentFragment&, Element& contextElement, OptionSet<ParserContentPolicy>, const HTMLParserOptions&);
+    HTMLTreeBuilder(HTMLDocumentParser&, DocumentFragment&, Element& contextElement, OptionSet<ParserContentPolicy>, const HTMLParserOptions&, CustomElementRegistry*);
     void setShouldSkipLeadingNewline(bool);
 
     ~HTMLTreeBuilder();
@@ -71,12 +71,15 @@ public:
     // Must be called to take the parser-blocking script before calling the parser again.
     RefPtr<ScriptElement> takeScriptToProcess(TextPosition& scriptStartPosition);
     const ScriptElement* scriptToProcess() const { return m_scriptToProcess.get(); }
+    RefPtr<const ScriptElement> protectedScriptToProcess() const;
 
     std::unique_ptr<CustomElementConstructionData> takeCustomElementConstructionData() { return WTFMove(m_customElementToConstruct); }
     void didCreateCustomOrFallbackElement(Ref<Element>&&, CustomElementConstructionData&);
 
     // Done, close any open tags, etc.
     void finished();
+
+    bool isOnStackOfOpenElements(Element&) const;
 
 private:
     class ExternalCharacterTokenBuffer;

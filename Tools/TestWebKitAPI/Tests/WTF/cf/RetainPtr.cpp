@@ -181,4 +181,11 @@ TEST(RetainPtr, RetainPtrCF)
     EXPECT_EQ(1, CFGetRetainCount(object2.get()));
 }
 
+TEST(RETAIN_PTR_TEST_NAME, RetainPtrType)
+{
+    static_assert(std::is_same_v<RetainPtr<CFTypeRef>, RetainPtr<WTF::RetainPtrType<CFTypeRef>>>);
+    static_assert(std::is_same_v<RetainPtr<CFStringRef>, RetainPtr<WTF::RetainPtrType<CFStringRef>>>);
+    static_assert(std::is_same_v<RetainPtr<CFMutableStringRef>, RetainPtr<WTF::RetainPtrType<CFMutableStringRef>>>);
+}
+
 } // namespace TestWebKitAPI

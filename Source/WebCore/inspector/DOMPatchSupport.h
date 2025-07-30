@@ -30,7 +30,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include <wtf/HashMap.h>
 #include <wtf/Vector.h>
 
@@ -40,6 +39,8 @@ class ContainerNode;
 class DOMEditor;
 class Document;
 class Node;
+class WeakPtrImplWithEventTargetData;
+template<typename> class ExceptionOr;
 
 class DOMPatchSupport final {
 public:
@@ -67,7 +68,7 @@ private:
 #endif
 
     DOMEditor& m_domEditor;
-    Document& m_document;
+    WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
 
     UnusedNodesMap m_unusedNodesMap;
 };

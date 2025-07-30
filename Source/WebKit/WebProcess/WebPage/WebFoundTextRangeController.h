@@ -73,6 +73,8 @@ public:
 
     void redraw();
 
+    void clearCachedRanges();
+
 private:
     // PageOverlayClient.
     void willMoveToPage(WebCore::PageOverlay&, WebCore::Page*) override;
@@ -94,12 +96,15 @@ private:
     WebCore::Document* documentForFoundTextRange(const WebFoundTextRange&) const;
     std::optional<WebCore::SimpleRange> simpleRangeFromFoundTextRange(WebFoundTextRange);
 
+    RefPtr<WebPage> protectedWebPage() const { return m_webPage.get(); }
+    RefPtr<WebCore::PageOverlay> protectedFindPageOverlay() const { return m_findPageOverlay; }
+
     WeakPtr<WebPage> m_webPage;
     RefPtr<WebCore::PageOverlay> m_findPageOverlay;
 
     WebFoundTextRange m_highlightedRange;
 
-    HashMap<WebFoundTextRange, std::optional<WebCore::SimpleRange>> m_cachedFoundRanges;
+    HashMap<WebFoundTextRange, std::optional<WebCore::WeakSimpleRange>> m_cachedFoundRanges;
     HashMap<WebFoundTextRange, FindDecorationStyle> m_decoratedRanges;
 
     RefPtr<WebCore::TextIndicator> m_textIndicator;

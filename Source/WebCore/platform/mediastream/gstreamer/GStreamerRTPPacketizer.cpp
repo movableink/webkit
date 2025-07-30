@@ -23,6 +23,7 @@
 #if USE(GSTREAMER_WEBRTC)
 
 #include "GStreamerCommon.h"
+#include "GStreamerWebRTCCommon.h"
 #include <gst/rtp/rtp.h>
 #include <wtf/PrintStream.h>
 #include <wtf/glib/WTFGType.h>
@@ -34,10 +35,11 @@ namespace WebCore {
 GST_DEBUG_CATEGORY(webkit_webrtc_rtp_packetizer_debug);
 #define GST_CAT_DEFAULT webkit_webrtc_rtp_packetizer_debug
 
-GStreamerRTPPacketizer::GStreamerRTPPacketizer(GRefPtr<GstElement>&& encoder, GRefPtr<GstElement>&& payloader, GUniquePtr<GstStructure>&& encodingParameters)
+GStreamerRTPPacketizer::GStreamerRTPPacketizer(GRefPtr<GstElement>&& encoder, GRefPtr<GstElement>&& payloader, GUniquePtr<GstStructure>&& encodingParameters, std::optional<int>&& payloadType)
     : m_encoder(WTFMove(encoder))
     , m_payloader(WTFMove(payloader))
     , m_encodingParameters(WTFMove(encodingParameters))
+    , m_payloadType(WTFMove(payloadType))
 {
     static std::once_flag debugRegisteredFlag;
     std::call_once(debugRegisteredFlag, [] {
@@ -60,6 +62,9 @@ GStreamerRTPPacketizer::GStreamerRTPPacketizer(GRefPtr<GstElement>&& encoder, GR
 
     m_stats.reset(gst_structure_new_empty("stats"));
 
+    if (m_payloadType)
+        gstPayloaderSetPayloadType(m_payloader, *m_payloadType);
+
     if (m_encodingParameters)
         applyEncodingParameters(m_encodingParameters.get());
 }
@@ -68,10 +73,16 @@ GStreamerRTPPacketizer::~GStreamerRTPPacketizer() = default;
 
 void GStreamerRTPPacketizer::configureExtensions()
 {
+    if (!webkitGstCheckVersion(1, 24, 0)) {
+        GST_WARNING_OBJECT(m_bin.get(), "GStreamer 1.24 is required for configuring extensions on the RTP payloaders. Simulcast will not work.");
+        return;
+    }
+
     m_lastExtensionId = 0;
 
     GValue extensions = G_VALUE_INIT;
     g_object_get_property(G_OBJECT(m_payloader.get()), "extensions", &extensions);
+    RELEASE_ASSERT(GST_VALUE_HOLDS_ARRAY(&extensions));
     m_lastExtensionId = gst_value_array_get_size(&extensions) + 1;
     g_value_unset(&extensions);
 
@@ -83,7 +94,11 @@ void GStreamerRTPPacketizer::configureExtensions()
         g_signal_emit_by_name(m_payloader.get(), "add-extension", m_midExtension.get());
     }
 
+    // Invalidate rid and re-cache it from encoding parameters.
+    m_rid = emptyString();
     auto rid = rtpStreamId();
+    m_rid = rid;
+
     if (!m_ridExtension) {
         m_ridExtension = adoptGRef(gst_rtp_header_extension_create_from_uri(GST_RTP_HDREXT_BASE "sdes:rtp-stream-id"));
         gst_rtp_header_extension_set_id(m_ridExtension.get(), m_lastExtensionId);
@@ -103,6 +118,12 @@ void GStreamerRTPPacketizer::configureExtensions()
 
 void GStreamerRTPPacketizer::ensureMidExtension(const String& mid)
 {
+    if (!webkitGstCheckVersion(1, 24, 0)) {
+        GST_WARNING_OBJECT(m_bin.get(), "GStreamer 1.24 is required for ensuring mid extension on the RTP payloaders.");
+        return;
+    }
+
+    m_mid = mid;
     if (m_midExtension) {
         g_object_set(m_midExtension.get(), "mid", mid.utf8().data(), nullptr);
         GST_DEBUG_OBJECT(m_bin.get(), "Existing mid extension %" GST_PTR_FORMAT " updated with mid %s", m_midExtension.get(), mid.utf8().data());
@@ -111,6 +132,7 @@ void GStreamerRTPPacketizer::ensureMidExtension(const String& mid)
 
     GValue extensions = G_VALUE_INIT;
     g_object_get_property(G_OBJECT(m_payloader.get()), "extensions", &extensions);
+    RELEASE_ASSERT(GST_VALUE_HOLDS_ARRAY(&extensions));
     auto totalExtensions = gst_value_array_get_size(&extensions);
     auto midURI = StringView::fromLatin1(GST_RTP_HDREXT_BASE "sdes:mid");
     for (unsigned i = 0; i < totalExtensions; i++) {
@@ -148,6 +170,9 @@ GUniquePtr<GstStructure> GStreamerRTPPacketizer::rtpParameters() const
 
 String GStreamerRTPPacketizer::rtpStreamId() const
 {
+    if (!m_rid.isEmpty())
+        return m_rid;
+
     if (!m_encodingParameters)
         return emptyString();
 
@@ -157,11 +182,26 @@ String GStreamerRTPPacketizer::rtpStreamId() const
     return emptyString();
 }
 
-int GStreamerRTPPacketizer::payloadType() const
+std::optional<int> GStreamerRTPPacketizer::payloadType() const
 {
-    int payloadType;
-    g_object_get(m_payloader.get(), "pt", &payloadType, nullptr);
-    return payloadType;
+    if (m_payloadType) [[likely]]
+        return m_payloadType;
+
+    GValue value = G_VALUE_INIT;
+    g_object_get_property(G_OBJECT(m_payloader.get()), "pt", &value);
+
+    if (G_VALUE_TYPE(&value) != G_TYPE_INT && G_VALUE_TYPE(&value) != G_TYPE_UINT) {
+        GST_ERROR_OBJECT(m_payloader.get(), "pt property is not integer or unsigned");
+        return std::nullopt;
+    }
+
+    if (G_VALUE_TYPE(&value) == G_TYPE_INT)
+        return g_value_get_int(&value);
+
+    if (G_VALUE_TYPE(&value) == G_TYPE_UINT)
+        return g_value_get_uint(&value);
+
+    return std::nullopt;
 }
 
 unsigned GStreamerRTPPacketizer::currentSequenceNumberOffset() const
@@ -191,7 +231,7 @@ int GStreamerRTPPacketizer::findLastExtensionId(const GstCaps* caps)
             return true;
 
         auto identifier = WTF::parseInteger<int>(name.substring(7));
-        if (UNLIKELY(!identifier))
+        if (!identifier) [[unlikely]]
             return true;
 
         holder->extensionId = std::max(holder->extensionId, *identifier);
@@ -238,18 +278,15 @@ void GStreamerRTPPacketizer::startUpdatingStats()
 
 void GStreamerRTPPacketizer::updateStatsFromRTPExtensions()
 {
-    if (m_midExtension) {
-        GUniqueOutPtr<char> mid;
-        g_object_get(m_midExtension.get(), "mid", &mid.outPtr(), nullptr);
-        gst_structure_set(m_stats.get(), "mid", G_TYPE_STRING, mid.get(), nullptr);
-    } else if (gst_structure_has_field(m_stats.get(), "mid"))
+
+    if (!m_mid.isEmpty())
+        gst_structure_set(m_stats.get(), "mid", G_TYPE_STRING, m_mid.ascii().data(), nullptr);
+    else if (gst_structure_has_field(m_stats.get(), "mid"))
         gst_structure_remove_field(m_stats.get(), "mid");
 
-    if (m_ridExtension) {
-        GUniqueOutPtr<char> rid;
-        g_object_get(m_ridExtension.get(), "rid", &rid.outPtr(), nullptr);
-        gst_structure_set(m_stats.get(), "rid", G_TYPE_STRING, rid.get(), nullptr);
-    } else if (gst_structure_has_field(m_stats.get(), "rid"))
+    if (!m_rid.isEmpty())
+        gst_structure_set(m_stats.get(), "rid", G_TYPE_STRING, m_rid.ascii().data(), nullptr);
+    else if (gst_structure_has_field(m_stats.get(), "rid"))
         gst_structure_remove_field(m_stats.get(), "rid");
 }
 
@@ -281,6 +318,9 @@ void GStreamerRTPPacketizer::applyEncodingParameters(const GstStructure* encodin
         return;
 
     auto peer = adoptGRef(gst_pad_get_peer(srcPad.get()));
+    if (!peer)
+        return;
+
     gst_pad_send_event(peer.get(), gst_event_new_flush_start());
     gst_pad_send_event(peer.get(), gst_event_new_flush_stop(FALSE));
 }

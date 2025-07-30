@@ -122,8 +122,8 @@ footer
 
 form
       AXRole: AXGroup
-      AXSubrole:
-      AXRoleDescription: group
+      AXSubrole: AXLandmarkForm
+      AXRoleDescription: form
 
 header
       AXRole: AXGroup
@@ -213,7 +213,7 @@ input[type='checkbox']
 input[type='date']
       AXRole: AXTextField
       AXSubrole:
-      AXRoleDescription: date field
+      AXRoleDescription: text field
 
 input[type='datetime']
       AXRole: AXTextField
@@ -223,7 +223,7 @@ input[type='datetime']
 input[type='datetime-local']
       AXRole: AXTextField
       AXSubrole:
-      AXRoleDescription: date and time field
+      AXRoleDescription: text field
 
 input[type='email']
       AXRole: AXTextField
@@ -246,7 +246,7 @@ input[type='image']
 input[type='month']
       AXRole: AXTextField
       AXSubrole:
-      AXRoleDescription: month and year field
+      AXRoleDescription: text field
 
 input[type='number']
       AXRole: AXTextField
@@ -296,7 +296,7 @@ input[type='text']
 input[type='time']
       AXRole: AXTextField
       AXSubrole:
-      AXRoleDescription: time field
+      AXRoleDescription: text field
 
 input[type='url']
       AXRole: AXTextField
@@ -306,7 +306,7 @@ input[type='url']
 input[type='week']
       AXRole: AXTextField
       AXSubrole:
-      AXRoleDescription: week and year field
+      AXRoleDescription: text field
 
 ins:not([datetime])
       AXRole: AXGroup

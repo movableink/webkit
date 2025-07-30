@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@ class VM;
 
 namespace Wasm {
 
-class LLIntPlan;
+class EntryPlan;
 class StreamingPlan;
 
 class StreamingCompiler final : public StreamingParserClient, public ThreadSafeRefCounted<StreamingCompiler> {
@@ -74,9 +74,9 @@ private:
     Lock m_lock;
     unsigned m_remainingCompilationRequests { 0 };
     DeferredWorkTimer::Ticket m_ticket;
-    Ref<Wasm::ModuleInformation> m_info;
+    const Ref<Wasm::ModuleInformation> m_info;
     StreamingParser m_parser;
-    RefPtr<LLIntPlan> m_plan;
+    RefPtr<EntryPlan> m_plan;
 };
 
 

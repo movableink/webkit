@@ -54,7 +54,7 @@ public:
 
     void makeWindowObject(JSContextRef);
     virtual JSClassRef wrapperClass();
-    
+
     // Enhanced accessibility.
     void enableEnhancedAccessibility(bool);
     bool enhancedAccessibilityEnabled();
@@ -87,6 +87,11 @@ public:
     void logValueChangeEvents() { }
     void logScrollingStartEvents() { }
     void logAccessibilityEvents() { };
+#if PLATFORM(MAC)
+    void printTrees(JSContextRef);
+#else
+    void printTrees(JSContextRef) { }
+#endif
 
     void resetToConsistentState();
 

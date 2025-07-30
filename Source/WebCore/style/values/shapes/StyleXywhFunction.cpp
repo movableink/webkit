@@ -31,10 +31,10 @@
 namespace WebCore {
 namespace Style {
 
-auto ToStyle<CSS::Xywh>::operator()(const CSS::Xywh& value, const BuilderState& state, const CSSCalcSymbolTable& symbolTable) -> Inset
+auto ToStyle<CSS::Xywh>::operator()(const CSS::Xywh& value, const BuilderState& state) -> Inset
 {
-    auto location = toStyle(value.location, state, symbolTable);
-    auto size = toStyle(value.size, state, symbolTable);
+    auto location = toStyle(value.location, state);
+    auto size = toStyle(value.size, state);
 
     return {
         .insets = {
@@ -43,13 +43,13 @@ auto ToStyle<CSS::Xywh>::operator()(const CSS::Xywh& value, const BuilderState& 
             reflectSum(location.y(), size.height()),
             location.x(),
         },
-        .radii = toStyle(value.radii, state, symbolTable)
+        .radii = toStyle(value.radii, state)
     };
 }
 
-auto ToStyle<CSS::XywhFunction>::operator()(const CSS::XywhFunction& value, const BuilderState& state, const CSSCalcSymbolTable& symbolTable) -> InsetFunction
+auto ToStyle<CSS::XywhFunction>::operator()(const CSS::XywhFunction& value, const BuilderState& state) -> InsetFunction
 {
-    return { toStyle(value.parameters, state, symbolTable) };
+    return { toStyle(value.parameters, state) };
 }
 
 } // namespace Style

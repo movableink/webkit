@@ -50,7 +50,7 @@ void UIScriptControllerIOS::doAsyncTask(JSValueRef callback)
 {
     unsigned callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
 
-    WorkQueue::main().dispatch([this, protectedThis = Ref { *this }, callbackID] {
+    WorkQueue::protectedMain()->dispatch([this, protectedThis = Ref { *this }, callbackID] {
         if (!m_context)
             return;
         m_context->asyncTaskComplete(callbackID);
@@ -61,7 +61,7 @@ void UIScriptControllerIOS::zoomToScale(double scale, JSValueRef callback)
 {
     unsigned callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
 
-    WorkQueue::main().dispatch([this, protectedThis = Ref { *this }, scale, callbackID] {
+    WorkQueue::protectedMain()->dispatch([this, protectedThis = Ref { *this }, scale, callbackID] {
         [gWebScrollView zoomToScale:scale animated:YES completionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, callbackID] {
             if (!m_context)
                 return;
@@ -142,7 +142,7 @@ JSObjectRef UIScriptControllerIOS::contentVisibleRect() const
 
 void UIScriptControllerIOS::copyText(JSStringRef text)
 {
-    UIPasteboard.generalPasteboard.string = text->string();
+    UIPasteboard.generalPasteboard.string = text->string().createNSString().get();
 }
 
 int64_t UIScriptControllerIOS::pasteboardChangeCount() const

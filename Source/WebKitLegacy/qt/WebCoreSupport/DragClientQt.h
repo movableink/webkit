@@ -27,6 +27,7 @@
 #define DragClientQt_h
 
 #include <WebCore/DragClient.h>
+#include <WebCore/ElementIdentifier.h>
 
 namespace WebCore {
 
@@ -38,7 +39,7 @@ public:
     void willPerformDragDestinationAction(DragDestinationAction, const DragData&) override;
     OptionSet<DragSourceAction> dragSourceActionMaskForPoint(const IntPoint&) override;
     void willPerformDragSourceAction(DragSourceAction, const IntPoint&, DataTransfer&) override;
-    void startDrag(DragItem, DataTransfer&, Frame&) override;
+    void startDrag(DragItem, DataTransfer&, Frame&, const std::optional<ElementIdentifier>&) override;
 private:
     ChromeClient* m_chromeClient;
 };

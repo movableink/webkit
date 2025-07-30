@@ -171,6 +171,8 @@ private:
     void compositionSessionDidFinishReplacement();
     void compositionSessionDidFinishReplacement(const WTF::UUID& sourceAnimationUUID, const WTF::UUID& destinationAnimationUUID, const CharacterRange&, const String&);
 
+    void smartReplySessionDidReceiveTextWithReplacementRange(const WritingTools::Session&, const AttributedString&, const CharacterRange&, const WritingTools::Context&, bool finished);
+
     void compositionSessionDidReceiveTextWithReplacementRangeAsync(const WTF::UUID&, const WTF::UUID&, const AttributedString&, const CharacterRange&, const WritingTools::Context&, bool finished, TextAnimationRunMode);
 
     void showOriginalCompositionForSession();
@@ -195,7 +197,7 @@ private:
 
     WeakPtr<Page> m_page;
 
-    std::variant<std::monostate, ProofreadingState, CompositionState> m_state;
+    Variant<std::monostate, ProofreadingState, CompositionState> m_state;
 };
 
 } // namespace WebKit

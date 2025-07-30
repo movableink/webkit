@@ -197,6 +197,7 @@ list(APPEND WebCore_SOURCES
     platform/audio/AudioSession.cpp
 
     platform/audio/cocoa/AudioDecoderCocoa.cpp
+    platform/audio/cocoa/AudioEncoderCocoa.cpp
     platform/audio/cocoa/WebAudioBufferList.cpp
 
     platform/audio/mac/AudioBusMac.mm
@@ -281,6 +282,7 @@ list(APPEND WebCore_SOURCES
     platform/graphics/ca/cocoa/PlatformCAAnimationCocoa.mm
     platform/graphics/ca/cocoa/PlatformCAFiltersCocoa.mm
     platform/graphics/ca/cocoa/PlatformCALayerCocoa.mm
+    platform/graphics/ca/cocoa/PlatformDynamicRangeLimitCocoa.mm
     platform/graphics/ca/cocoa/WebSystemBackdropLayer.mm
     platform/graphics/ca/cocoa/WebTiledBackingLayer.mm
 
@@ -324,6 +326,7 @@ list(APPEND WebCore_SOURCES
     platform/graphics/cocoa/GraphicsContextGLCocoa.mm
     platform/graphics/cocoa/IntRectCocoa.mm
     platform/graphics/cocoa/IOSurface.mm
+    platform/graphics/cocoa/IOSurfaceDrawingBuffer.cpp
     platform/graphics/cocoa/IOSurfacePoolCocoa.mm
     platform/graphics/cocoa/UnrealizedCoreTextFont.cpp
     platform/graphics/cocoa/WebActionDisablingCALayerDelegate.mm
@@ -495,6 +498,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/mediasession/MediaSessionReadyState.h
     Modules/mediasession/NavigatorMediaSession.h
 
+    accessibility/mac/CocoaAccessibilityConstants.h
     accessibility/mac/WebAccessibilityObjectWrapperBase.h
     accessibility/mac/WebAccessibilityObjectWrapperMac.h
 
@@ -583,6 +587,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     platform/audio/cocoa/AudioDecoderCocoa.h
     platform/audio/cocoa/AudioDestinationCocoa.h
+    platform/audio/cocoa/AudioEncoderCocoa.h
     platform/audio/cocoa/AudioOutputUnitAdaptor.h
     platform/audio/cocoa/AudioSampleBufferList.h
     platform/audio/cocoa/AudioSampleDataConverter.h
@@ -596,7 +601,6 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     platform/cf/MediaAccessibilitySoftLink.h
 
-    platform/cocoa/AGXCompilerService.h
     platform/cocoa/CoreVideoSoftLink.h
     platform/cocoa/LocalCurrentGraphicsContext.h
     platform/cocoa/NetworkExtensionContentFilter.h
@@ -834,7 +838,7 @@ set(ADDITIONAL_BINDINGS_DEPENDENCIES
     ${WORKERGLOBALSCOPE_CONSTRUCTORS_FILE}
     ${DEDICATEDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE}
 )
-set(CSS_VALUE_PLATFORM_DEFINES "WTF_PLATFORM_MAC=1 HAVE_OS_DARK_MODE_SUPPORT=1 WTF_PLATFORM_COCOA=1 ENABLE_APPLE_PAY_NEW_BUTTON_TYPES=1")
+set(CSS_VALUE_PLATFORM_DEFINES "WTF_PLATFORM_MAC=1 WTF_PLATFORM_COCOA=1 ENABLE_APPLE_PAY_NEW_BUTTON_TYPES=1")
 
 set(WebCore_USER_AGENT_SCRIPTS ${WebCore_DERIVED_SOURCES_DIR}/ModernMediaControls.js)
 

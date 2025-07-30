@@ -56,12 +56,27 @@ WebExtensionContext::WebExtensionContext()
     webExtensionContexts().add(identifier(), *this);
 }
 
-WebExtensionContextParameters WebExtensionContext::parameters() const
+WebExtensionContextIdentifier WebExtensionContext::privilegedIdentifier() const
+{
+    if (!m_privilegedIdentifier)
+        m_privilegedIdentifier = WebExtensionContextIdentifier::generate();
+    return *m_privilegedIdentifier;
+}
+
+bool WebExtensionContext::isPrivilegedMessage(IPC::Decoder& message) const
+{
+    if (!m_privilegedIdentifier)
+        return false;
+    return m_privilegedIdentifier.value().toRawValue() == message.destinationID();
+}
+
+WebExtensionContextParameters WebExtensionContext::parameters(IncludePrivilegedIdentifier includePrivilegedIdentifier) const
 {
     RefPtr extension = m_extension;
 
     return {
         identifier(),
+        includePrivilegedIdentifier == IncludePrivilegedIdentifier::Yes ? std::optional(privilegedIdentifier()) : std::nullopt,
         baseURL(),
         uniqueIdentifier(),
         unsupportedAPIs(),
@@ -94,7 +109,7 @@ const WebExtensionContext::UserContentControllerProxySet& WebExtensionContext::u
     return extensionController()->allNonPrivateUserContentControllers();
 }
 
-WebExtensionContext::WebProcessProxySet WebExtensionContext::processes(EventListenerTypeSet&& typeSet, ContentWorldTypeSet&& contentWorldTypeSet, Function<bool(WebPageProxy&, WebFrameProxy&)>&& predicate) const
+WebExtensionContext::WebProcessProxySet WebExtensionContext::processes(EventListenerTypeSet&& typeSet, ContentWorldTypeSet&& contentWorldTypeSet, Function<bool(WebProcessProxy&, WebPageProxy&, WebFrameProxy&)>&& predicate) const
 {
     if (!isLoaded())
         return { };
@@ -124,10 +139,10 @@ WebExtensionContext::WebProcessProxySet WebExtensionContext::processes(EventList
                 if (!hasAccessToPrivateData() && page->sessionID().isEphemeral())
                     continue;
 
-                if (predicate && !predicate(*page, frame))
+                Ref webProcess = frame->process();
+                if (predicate && !predicate(webProcess, *page, frame))
                     continue;
 
-                Ref webProcess = frame->process();
                 if (webProcess->canSendMessage())
                     result.add(webProcess);
             }

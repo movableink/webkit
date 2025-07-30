@@ -15,6 +15,7 @@
 #include "libANGLE/Context.h"
 #include "libANGLE/Context.inl.h"
 #include "libANGLE/capture/capture_gles_1_0_autogen.h"
+#include "libANGLE/context_private_call.inl.h"
 #include "libANGLE/context_private_call_autogen.h"
 #include "libANGLE/entry_points_utils.h"
 #include "libANGLE/validationES1.h"
@@ -25,18 +26,29 @@ using namespace gl;
 extern "C" {
 void GL_APIENTRY GL_AlphaFunc(GLenum func, GLfloat ref)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLAlphaFunc, "context = %d, func = %s, ref = %f", CID(context),
           GLenumToString(GLESEnum::AlphaFunction, func), ref);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         AlphaTestFunc funcPacked = PackParam<AlphaTestFunc>(func);
-        bool isCallValid         = (context->skipValidation() ||
-                            ValidateAlphaFunc(context->getPrivateState(),
-                                                      context->getMutableErrorSetForValidation(),
-                                                      angle::EntryPoint::GLAlphaFunc, funcPacked, ref));
-        if (isCallValid)
+        bool isCallValid         = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateAlphaFunc(context->getPrivateState(),
+                                                context->getMutableErrorSetForValidation(),
+                                                angle::EntryPoint::GLAlphaFunc, funcPacked, ref);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLAlphaFunc);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateAlphaFunc(context->getMutablePrivateState(),
                                     context->getMutablePrivateStateCache(), funcPacked, ref);
@@ -45,25 +57,36 @@ void GL_APIENTRY GL_AlphaFunc(GLenum func, GLfloat ref)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLAlphaFunc);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_AlphaFuncx(GLenum func, GLfixed ref)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLAlphaFuncx, "context = %d, func = %s, ref = 0x%X", CID(context),
           GLenumToString(GLESEnum::AlphaFunction, func), ref);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         AlphaTestFunc funcPacked = PackParam<AlphaTestFunc>(func);
-        bool isCallValid         = (context->skipValidation() ||
-                            ValidateAlphaFuncx(context->getPrivateState(),
-                                                       context->getMutableErrorSetForValidation(),
-                                                       angle::EntryPoint::GLAlphaFuncx, funcPacked, ref));
-        if (isCallValid)
+        bool isCallValid         = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateAlphaFuncx(context->getPrivateState(),
+                                                 context->getMutableErrorSetForValidation(),
+                                                 angle::EntryPoint::GLAlphaFuncx, funcPacked, ref);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLAlphaFuncx);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateAlphaFuncx(context->getMutablePrivateState(),
                                      context->getMutablePrivateStateCache(), funcPacked, ref);
@@ -72,26 +95,36 @@ void GL_APIENTRY GL_AlphaFuncx(GLenum func, GLfixed ref)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLAlphaFuncx);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_ClearColorx(GLfixed red, GLfixed green, GLfixed blue, GLfixed alpha)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLClearColorx,
           "context = %d, red = 0x%X, green = 0x%X, blue = 0x%X, alpha = 0x%X", CID(context), red,
           green, blue, alpha);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateClearColorx(context->getPrivateState(),
-                                 context->getMutableErrorSetForValidation(),
-                                 angle::EntryPoint::GLClearColorx, red, green, blue, alpha));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateClearColorx(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLClearColorx, red, green, blue, alpha);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLClearColorx);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateClearColorx(context->getMutablePrivateState(),
                                       context->getMutablePrivateStateCache(), red, green, blue,
@@ -101,23 +134,34 @@ void GL_APIENTRY GL_ClearColorx(GLfixed red, GLfixed green, GLfixed blue, GLfixe
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLClearColorx);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_ClearDepthx(GLfixed depth)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLClearDepthx, "context = %d, depth = 0x%X", CID(context), depth);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateClearDepthx(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLClearDepthx, depth));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateClearDepthx(context->getPrivateState(),
+                                                  context->getMutableErrorSetForValidation(),
+                                                  angle::EntryPoint::GLClearDepthx, depth);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLClearDepthx);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateClearDepthx(context->getMutablePrivateState(),
                                       context->getMutablePrivateStateCache(), depth);
@@ -126,24 +170,41 @@ void GL_APIENTRY GL_ClearDepthx(GLfixed depth)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLClearDepthx);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_ClientActiveTexture(GLenum texture)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLClientActiveTexture, "context = %d, texture = %s", CID(context),
           GLenumToString(GLESEnum::TextureUnit, texture));
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateClientActiveTexture(
-                                context, angle::EntryPoint::GLClientActiveTexture, texture));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+#if defined(ANGLE_ENABLE_ASSERTS)
+                const uint32_t errorCount = context->getPushedErrorCount();
+#endif
+                isCallValid = ValidateClientActiveTexture(
+                    context, angle::EntryPoint::GLClientActiveTexture, texture);
+#if defined(ANGLE_ENABLE_ASSERTS)
+                ASSERT(context->getPushedErrorCount() - errorCount == (isCallValid ? 0 : 1));
+#endif
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLClientActiveTexture);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->clientActiveTexture(texture);
         }
@@ -151,24 +212,35 @@ void GL_APIENTRY GL_ClientActiveTexture(GLenum texture)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLClientActiveTexture);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_ClipPlanef(GLenum p, const GLfloat *eqn)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLClipPlanef, "context = %d, p = %s, eqn = 0x%016" PRIxPTR "", CID(context),
           GLenumToString(GLESEnum::ClipPlaneName, p), (uintptr_t)eqn);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateClipPlanef(context->getPrivateState(),
-                                               context->getMutableErrorSetForValidation(),
-                                               angle::EntryPoint::GLClipPlanef, p, eqn));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateClipPlanef(context->getPrivateState(),
+                                                 context->getMutableErrorSetForValidation(),
+                                                 angle::EntryPoint::GLClipPlanef, p, eqn);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLClipPlanef);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateClipPlanef(context->getMutablePrivateState(),
                                      context->getMutablePrivateStateCache(), p, eqn);
@@ -177,24 +249,35 @@ void GL_APIENTRY GL_ClipPlanef(GLenum p, const GLfloat *eqn)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLClipPlanef);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_ClipPlanex(GLenum plane, const GLfixed *equation)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLClipPlanex, "context = %d, plane = %s, equation = 0x%016" PRIxPTR "",
           CID(context), GLenumToString(GLESEnum::ClipPlaneName, plane), (uintptr_t)equation);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateClipPlanex(context->getPrivateState(),
-                                               context->getMutableErrorSetForValidation(),
-                                               angle::EntryPoint::GLClipPlanex, plane, equation));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateClipPlanex(context->getPrivateState(),
+                                                 context->getMutableErrorSetForValidation(),
+                                                 angle::EntryPoint::GLClipPlanex, plane, equation);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLClipPlanex);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateClipPlanex(context->getMutablePrivateState(),
                                      context->getMutablePrivateStateCache(), plane, equation);
@@ -203,24 +286,35 @@ void GL_APIENTRY GL_ClipPlanex(GLenum plane, const GLfixed *equation)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLClipPlanex);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Color4f(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLColor4f, "context = %d, red = %f, green = %f, blue = %f, alpha = %f",
           CID(context), red, green, blue, alpha);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateColor4f(context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                             angle::EntryPoint::GLColor4f, red, green, blue, alpha));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateColor4f(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLColor4f, red, green, blue, alpha);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLColor4f);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateColor4f(context->getMutablePrivateState(),
                                   context->getMutablePrivateStateCache(), red, green, blue, alpha);
@@ -229,25 +323,35 @@ void GL_APIENTRY GL_Color4f(GLfloat red, GLfloat green, GLfloat blue, GLfloat al
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLColor4f);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Color4ub(GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLColor4ub, "context = %d, red = %d, green = %d, blue = %d, alpha = %d",
           CID(context), red, green, blue, alpha);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateColor4ub(context->getPrivateState(),
-                              context->getMutableErrorSetForValidation(),
-                              angle::EntryPoint::GLColor4ub, red, green, blue, alpha));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateColor4ub(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLColor4ub, red, green, blue, alpha);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLColor4ub);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateColor4ub(context->getMutablePrivateState(),
                                    context->getMutablePrivateStateCache(), red, green, blue, alpha);
@@ -256,24 +360,35 @@ void GL_APIENTRY GL_Color4ub(GLubyte red, GLubyte green, GLubyte blue, GLubyte a
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLColor4ub);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Color4x(GLfixed red, GLfixed green, GLfixed blue, GLfixed alpha)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLColor4x, "context = %d, red = 0x%X, green = 0x%X, blue = 0x%X, alpha = 0x%X",
           CID(context), red, green, blue, alpha);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateColor4x(context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                             angle::EntryPoint::GLColor4x, red, green, blue, alpha));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateColor4x(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLColor4x, red, green, blue, alpha);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLColor4x);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateColor4x(context->getMutablePrivateState(),
                                   context->getMutablePrivateStateCache(), red, green, blue, alpha);
@@ -282,27 +397,44 @@ void GL_APIENTRY GL_Color4x(GLfixed red, GLfixed green, GLfixed blue, GLfixed al
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLColor4x);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_ColorPointer(GLint size, GLenum type, GLsizei stride, const void *pointer)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLColorPointer,
           "context = %d, size = %d, type = %s, stride = %d, pointer = 0x%016" PRIxPTR "",
           CID(context), size, GLenumToString(GLESEnum::ColorPointerType, type), stride,
           (uintptr_t)pointer);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         VertexAttribType typePacked = PackParam<VertexAttribType>(type);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateColorPointer(context, angle::EntryPoint::GLColorPointer, size,
-                                                 typePacked, stride, pointer));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+#if defined(ANGLE_ENABLE_ASSERTS)
+                const uint32_t errorCount = context->getPushedErrorCount();
+#endif
+                isCallValid = ValidateColorPointer(context, angle::EntryPoint::GLColorPointer, size,
+                                                   typePacked, stride, pointer);
+#if defined(ANGLE_ENABLE_ASSERTS)
+                ASSERT(context->getPushedErrorCount() - errorCount == (isCallValid ? 0 : 1));
+#endif
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLColorPointer);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->colorPointer(size, typePacked, stride, pointer);
         }
@@ -310,23 +442,34 @@ void GL_APIENTRY GL_ColorPointer(GLint size, GLenum type, GLsizei stride, const 
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLColorPointer);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_DepthRangex(GLfixed n, GLfixed f)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLDepthRangex, "context = %d, n = 0x%X, f = 0x%X", CID(context), n, f);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateDepthRangex(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLDepthRangex, n, f));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateDepthRangex(context->getPrivateState(),
+                                                  context->getMutableErrorSetForValidation(),
+                                                  angle::EntryPoint::GLDepthRangex, n, f);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLDepthRangex);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateDepthRangex(context->getMutablePrivateState(),
                                       context->getMutablePrivateStateCache(), n, f);
@@ -335,25 +478,42 @@ void GL_APIENTRY GL_DepthRangex(GLfixed n, GLfixed f)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLDepthRangex);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_DisableClientState(GLenum array)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLDisableClientState, "context = %d, array = %s", CID(context),
           GLenumToString(GLESEnum::EnableCap, array));
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         ClientVertexArrayType arrayPacked = PackParam<ClientVertexArrayType>(array);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateDisableClientState(
-                                context, angle::EntryPoint::GLDisableClientState, arrayPacked));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+#if defined(ANGLE_ENABLE_ASSERTS)
+                const uint32_t errorCount = context->getPushedErrorCount();
+#endif
+                isCallValid = ValidateDisableClientState(
+                    context, angle::EntryPoint::GLDisableClientState, arrayPacked);
+#if defined(ANGLE_ENABLE_ASSERTS)
+                ASSERT(context->getPushedErrorCount() - errorCount == (isCallValid ? 0 : 1));
+#endif
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLDisableClientState);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->disableClientState(arrayPacked);
         }
@@ -361,25 +521,42 @@ void GL_APIENTRY GL_DisableClientState(GLenum array)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLDisableClientState);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_EnableClientState(GLenum array)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLEnableClientState, "context = %d, array = %s", CID(context),
           GLenumToString(GLESEnum::EnableCap, array));
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         ClientVertexArrayType arrayPacked = PackParam<ClientVertexArrayType>(array);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateEnableClientState(
-                                context, angle::EntryPoint::GLEnableClientState, arrayPacked));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+#if defined(ANGLE_ENABLE_ASSERTS)
+                const uint32_t errorCount = context->getPushedErrorCount();
+#endif
+                isCallValid = ValidateEnableClientState(
+                    context, angle::EntryPoint::GLEnableClientState, arrayPacked);
+#if defined(ANGLE_ENABLE_ASSERTS)
+                ASSERT(context->getPushedErrorCount() - errorCount == (isCallValid ? 0 : 1));
+#endif
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLEnableClientState);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->enableClientState(arrayPacked);
         }
@@ -387,24 +564,35 @@ void GL_APIENTRY GL_EnableClientState(GLenum array)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLEnableClientState);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Fogf(GLenum pname, GLfloat param)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLFogf, "context = %d, pname = %s, param = %f", CID(context),
           GLenumToString(GLESEnum::FogParameter, pname), param);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateFogf(context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                          angle::EntryPoint::GLFogf, pname, param));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateFogf(context->getPrivateState(),
+                                           context->getMutableErrorSetForValidation(),
+                                           angle::EntryPoint::GLFogf, pname, param);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLFogf);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateFogf(context->getMutablePrivateState(),
                                context->getMutablePrivateStateCache(), pname, param);
@@ -413,24 +601,35 @@ void GL_APIENTRY GL_Fogf(GLenum pname, GLfloat param)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLFogf);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Fogfv(GLenum pname, const GLfloat *params)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLFogfv, "context = %d, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
           GLenumToString(GLESEnum::FogParameter, pname), (uintptr_t)params);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateFogfv(context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                           angle::EntryPoint::GLFogfv, pname, params));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateFogfv(context->getPrivateState(),
+                                            context->getMutableErrorSetForValidation(),
+                                            angle::EntryPoint::GLFogfv, pname, params);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLFogfv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateFogfv(context->getMutablePrivateState(),
                                 context->getMutablePrivateStateCache(), pname, params);
@@ -439,24 +638,35 @@ void GL_APIENTRY GL_Fogfv(GLenum pname, const GLfloat *params)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLFogfv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Fogx(GLenum pname, GLfixed param)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLFogx, "context = %d, pname = %s, param = 0x%X", CID(context),
           GLenumToString(GLESEnum::FogPName, pname), param);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateFogx(context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                          angle::EntryPoint::GLFogx, pname, param));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateFogx(context->getPrivateState(),
+                                           context->getMutableErrorSetForValidation(),
+                                           angle::EntryPoint::GLFogx, pname, param);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLFogx);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateFogx(context->getMutablePrivateState(),
                                context->getMutablePrivateStateCache(), pname, param);
@@ -465,24 +675,35 @@ void GL_APIENTRY GL_Fogx(GLenum pname, GLfixed param)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLFogx);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Fogxv(GLenum pname, const GLfixed *param)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLFogxv, "context = %d, pname = %s, param = 0x%016" PRIxPTR "", CID(context),
           GLenumToString(GLESEnum::FogPName, pname), (uintptr_t)param);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateFogxv(context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                           angle::EntryPoint::GLFogxv, pname, param));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateFogxv(context->getPrivateState(),
+                                            context->getMutableErrorSetForValidation(),
+                                            angle::EntryPoint::GLFogxv, pname, param);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLFogxv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateFogxv(context->getMutablePrivateState(),
                                 context->getMutablePrivateStateCache(), pname, param);
@@ -491,24 +712,35 @@ void GL_APIENTRY GL_Fogxv(GLenum pname, const GLfixed *param)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLFogxv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Frustumf(GLfloat l, GLfloat r, GLfloat b, GLfloat t, GLfloat n, GLfloat f)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLFrustumf, "context = %d, l = %f, r = %f, b = %f, t = %f, n = %f, f = %f",
           CID(context), l, r, b, t, n, f);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateFrustumf(context->getPrivateState(),
-                                             context->getMutableErrorSetForValidation(),
-                                             angle::EntryPoint::GLFrustumf, l, r, b, t, n, f));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateFrustumf(context->getPrivateState(),
+                                               context->getMutableErrorSetForValidation(),
+                                               angle::EntryPoint::GLFrustumf, l, r, b, t, n, f);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLFrustumf);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateFrustumf(context->getMutablePrivateState(),
                                    context->getMutablePrivateStateCache(), l, r, b, t, n, f);
@@ -517,25 +749,36 @@ void GL_APIENTRY GL_Frustumf(GLfloat l, GLfloat r, GLfloat b, GLfloat t, GLfloat
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLFrustumf);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Frustumx(GLfixed l, GLfixed r, GLfixed b, GLfixed t, GLfixed n, GLfixed f)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLFrustumx,
           "context = %d, l = 0x%X, r = 0x%X, b = 0x%X, t = 0x%X, n = 0x%X, f = 0x%X", CID(context),
           l, r, b, t, n, f);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateFrustumx(context->getPrivateState(),
-                                             context->getMutableErrorSetForValidation(),
-                                             angle::EntryPoint::GLFrustumx, l, r, b, t, n, f));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateFrustumx(context->getPrivateState(),
+                                               context->getMutableErrorSetForValidation(),
+                                               angle::EntryPoint::GLFrustumx, l, r, b, t, n, f);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLFrustumx);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateFrustumx(context->getMutablePrivateState(),
                                    context->getMutablePrivateStateCache(), l, r, b, t, n, f);
@@ -544,25 +787,35 @@ void GL_APIENTRY GL_Frustumx(GLfixed l, GLfixed r, GLfixed b, GLfixed t, GLfixed
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLFrustumx);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_GetClipPlanef(GLenum plane, GLfloat *equation)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetClipPlanef, "context = %d, plane = %s, equation = 0x%016" PRIxPTR "",
           CID(context), GLenumToString(GLESEnum::ClipPlaneName, plane), (uintptr_t)equation);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateGetClipPlanef(context->getPrivateState(),
-                                   context->getMutableErrorSetForValidation(),
-                                   angle::EntryPoint::GLGetClipPlanef, plane, equation));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateGetClipPlanef(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLGetClipPlanef, plane, equation);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLGetClipPlanef);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateGetClipPlanef(context->getMutablePrivateState(),
                                         context->getMutablePrivateStateCache(), plane, equation);
@@ -571,25 +824,35 @@ void GL_APIENTRY GL_GetClipPlanef(GLenum plane, GLfloat *equation)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLGetClipPlanef);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_GetClipPlanex(GLenum plane, GLfixed *equation)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetClipPlanex, "context = %d, plane = %s, equation = 0x%016" PRIxPTR "",
           CID(context), GLenumToString(GLESEnum::ClipPlaneName, plane), (uintptr_t)equation);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateGetClipPlanex(context->getPrivateState(),
-                                   context->getMutableErrorSetForValidation(),
-                                   angle::EntryPoint::GLGetClipPlanex, plane, equation));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateGetClipPlanex(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLGetClipPlanex, plane, equation);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLGetClipPlanex);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateGetClipPlanex(context->getMutablePrivateState(),
                                         context->getMutablePrivateStateCache(), plane, equation);
@@ -598,24 +861,41 @@ void GL_APIENTRY GL_GetClipPlanex(GLenum plane, GLfixed *equation)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLGetClipPlanex);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_GetFixedv(GLenum pname, GLfixed *params)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetFixedv, "context = %d, pname = %s, params = 0x%016" PRIxPTR "",
           CID(context), GLenumToString(GLESEnum::GetPName, pname), (uintptr_t)params);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateGetFixedv(context, angle::EntryPoint::GLGetFixedv, pname, params));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+#if defined(ANGLE_ENABLE_ASSERTS)
+                const uint32_t errorCount = context->getPushedErrorCount();
+#endif
+                isCallValid =
+                    ValidateGetFixedv(context, angle::EntryPoint::GLGetFixedv, pname, params);
+#if defined(ANGLE_ENABLE_ASSERTS)
+                ASSERT(context->getPushedErrorCount() - errorCount == (isCallValid ? 0 : 1));
+#endif
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLGetFixedv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getFixedv(pname, params);
         }
@@ -623,27 +903,37 @@ void GL_APIENTRY GL_GetFixedv(GLenum pname, GLfixed *params)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLGetFixedv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_GetLightfv(GLenum light, GLenum pname, GLfloat *params)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetLightfv, "context = %d, light = %s, pname = %s, params = 0x%016" PRIxPTR "",
           CID(context), GLenumToString(GLESEnum::LightName, light),
           GLenumToString(GLESEnum::LightParameter, pname), (uintptr_t)params);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         LightParameter pnamePacked = PackParam<LightParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateGetLightfv(context->getPrivateState(),
-                                context->getMutableErrorSetForValidation(),
-                                angle::EntryPoint::GLGetLightfv, light, pnamePacked, params));
-        if (isCallValid)
+        bool isCallValid           = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateGetLightfv(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLGetLightfv, light, pnamePacked, params);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLGetLightfv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateGetLightfv(context->getMutablePrivateState(),
                                      context->getMutablePrivateStateCache(), light, pnamePacked,
@@ -653,27 +943,37 @@ void GL_APIENTRY GL_GetLightfv(GLenum light, GLenum pname, GLfloat *params)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLGetLightfv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_GetLightxv(GLenum light, GLenum pname, GLfixed *params)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetLightxv, "context = %d, light = %s, pname = %s, params = 0x%016" PRIxPTR "",
           CID(context), GLenumToString(GLESEnum::LightName, light),
           GLenumToString(GLESEnum::LightParameter, pname), (uintptr_t)params);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         LightParameter pnamePacked = PackParam<LightParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateGetLightxv(context->getPrivateState(),
-                                context->getMutableErrorSetForValidation(),
-                                angle::EntryPoint::GLGetLightxv, light, pnamePacked, params));
-        if (isCallValid)
+        bool isCallValid           = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateGetLightxv(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLGetLightxv, light, pnamePacked, params);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLGetLightxv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateGetLightxv(context->getMutablePrivateState(),
                                      context->getMutablePrivateStateCache(), light, pnamePacked,
@@ -683,28 +983,38 @@ void GL_APIENTRY GL_GetLightxv(GLenum light, GLenum pname, GLfixed *params)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLGetLightxv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_GetMaterialfv(GLenum face, GLenum pname, GLfloat *params)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetMaterialfv,
           "context = %d, face = %s, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
           GLenumToString(GLESEnum::TriangleFace, face),
           GLenumToString(GLESEnum::MaterialParameter, pname), (uintptr_t)params);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         MaterialParameter pnamePacked = PackParam<MaterialParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateGetMaterialfv(context->getPrivateState(),
-                                   context->getMutableErrorSetForValidation(),
-                                   angle::EntryPoint::GLGetMaterialfv, face, pnamePacked, params));
-        if (isCallValid)
+        bool isCallValid              = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateGetMaterialfv(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLGetMaterialfv, face, pnamePacked, params);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLGetMaterialfv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateGetMaterialfv(context->getMutablePrivateState(),
                                         context->getMutablePrivateStateCache(), face, pnamePacked,
@@ -714,28 +1024,38 @@ void GL_APIENTRY GL_GetMaterialfv(GLenum face, GLenum pname, GLfloat *params)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLGetMaterialfv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_GetMaterialxv(GLenum face, GLenum pname, GLfixed *params)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetMaterialxv,
           "context = %d, face = %s, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
           GLenumToString(GLESEnum::TriangleFace, face),
           GLenumToString(GLESEnum::MaterialParameter, pname), (uintptr_t)params);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         MaterialParameter pnamePacked = PackParam<MaterialParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateGetMaterialxv(context->getPrivateState(),
-                                   context->getMutableErrorSetForValidation(),
-                                   angle::EntryPoint::GLGetMaterialxv, face, pnamePacked, params));
-        if (isCallValid)
+        bool isCallValid              = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateGetMaterialxv(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLGetMaterialxv, face, pnamePacked, params);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLGetMaterialxv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateGetMaterialxv(context->getMutablePrivateState(),
                                         context->getMutablePrivateStateCache(), face, pnamePacked,
@@ -745,29 +1065,39 @@ void GL_APIENTRY GL_GetMaterialxv(GLenum face, GLenum pname, GLfixed *params)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLGetMaterialxv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_GetTexEnvfv(GLenum target, GLenum pname, GLfloat *params)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetTexEnvfv,
           "context = %d, target = %s, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
           GLenumToString(GLESEnum::TextureEnvTarget, target),
           GLenumToString(GLESEnum::TextureEnvParameter, pname), (uintptr_t)params);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         TextureEnvTarget targetPacked   = PackParam<TextureEnvTarget>(target);
         TextureEnvParameter pnamePacked = PackParam<TextureEnvParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateGetTexEnvfv(
-                 context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                 angle::EntryPoint::GLGetTexEnvfv, targetPacked, pnamePacked, params));
-        if (isCallValid)
+        bool isCallValid                = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateGetTexEnvfv(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLGetTexEnvfv, targetPacked, pnamePacked, params);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLGetTexEnvfv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateGetTexEnvfv(context->getMutablePrivateState(),
                                       context->getMutablePrivateStateCache(), targetPacked,
@@ -777,29 +1107,39 @@ void GL_APIENTRY GL_GetTexEnvfv(GLenum target, GLenum pname, GLfloat *params)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLGetTexEnvfv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_GetTexEnviv(GLenum target, GLenum pname, GLint *params)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetTexEnviv,
           "context = %d, target = %s, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
           GLenumToString(GLESEnum::TextureEnvTarget, target),
           GLenumToString(GLESEnum::TextureEnvParameter, pname), (uintptr_t)params);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         TextureEnvTarget targetPacked   = PackParam<TextureEnvTarget>(target);
         TextureEnvParameter pnamePacked = PackParam<TextureEnvParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateGetTexEnviv(
-                 context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                 angle::EntryPoint::GLGetTexEnviv, targetPacked, pnamePacked, params));
-        if (isCallValid)
+        bool isCallValid                = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateGetTexEnviv(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLGetTexEnviv, targetPacked, pnamePacked, params);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLGetTexEnviv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateGetTexEnviv(context->getMutablePrivateState(),
                                       context->getMutablePrivateStateCache(), targetPacked,
@@ -809,29 +1149,39 @@ void GL_APIENTRY GL_GetTexEnviv(GLenum target, GLenum pname, GLint *params)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLGetTexEnviv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_GetTexEnvxv(GLenum target, GLenum pname, GLfixed *params)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetTexEnvxv,
           "context = %d, target = %s, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
           GLenumToString(GLESEnum::TextureEnvTarget, target),
           GLenumToString(GLESEnum::TextureEnvParameter, pname), (uintptr_t)params);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         TextureEnvTarget targetPacked   = PackParam<TextureEnvTarget>(target);
         TextureEnvParameter pnamePacked = PackParam<TextureEnvParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateGetTexEnvxv(
-                 context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                 angle::EntryPoint::GLGetTexEnvxv, targetPacked, pnamePacked, params));
-        if (isCallValid)
+        bool isCallValid                = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateGetTexEnvxv(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLGetTexEnvxv, targetPacked, pnamePacked, params);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLGetTexEnvxv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateGetTexEnvxv(context->getMutablePrivateState(),
                                       context->getMutablePrivateStateCache(), targetPacked,
@@ -841,28 +1191,44 @@ void GL_APIENTRY GL_GetTexEnvxv(GLenum target, GLenum pname, GLfixed *params)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLGetTexEnvxv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_GetTexParameterxv(GLenum target, GLenum pname, GLfixed *params)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetTexParameterxv,
           "context = %d, target = %s, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
           GLenumToString(GLESEnum::TextureTarget, target),
           GLenumToString(GLESEnum::GetTextureParameter, pname), (uintptr_t)params);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         TextureType targetPacked = PackParam<TextureType>(target);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateGetTexParameterxv(context, angle::EntryPoint::GLGetTexParameterxv,
-                                       targetPacked, pname, params));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+#if defined(ANGLE_ENABLE_ASSERTS)
+                const uint32_t errorCount = context->getPushedErrorCount();
+#endif
+                isCallValid = ValidateGetTexParameterxv(
+                    context, angle::EntryPoint::GLGetTexParameterxv, targetPacked, pname, params);
+#if defined(ANGLE_ENABLE_ASSERTS)
+                ASSERT(context->getPushedErrorCount() - errorCount == (isCallValid ? 0 : 1));
+#endif
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLGetTexParameterxv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->getTexParameterxv(targetPacked, pname, params);
         }
@@ -870,24 +1236,35 @@ void GL_APIENTRY GL_GetTexParameterxv(GLenum target, GLenum pname, GLfixed *para
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLGetTexParameterxv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_LightModelf(GLenum pname, GLfloat param)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLightModelf, "context = %d, pname = %s, param = %f", CID(context),
           GLenumToString(GLESEnum::LightModelParameter, pname), param);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateLightModelf(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLLightModelf, pname, param));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateLightModelf(context->getPrivateState(),
+                                                  context->getMutableErrorSetForValidation(),
+                                                  angle::EntryPoint::GLLightModelf, pname, param);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLLightModelf);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateLightModelf(context->getMutablePrivateState(),
                                       context->getMutablePrivateStateCache(), pname, param);
@@ -896,24 +1273,35 @@ void GL_APIENTRY GL_LightModelf(GLenum pname, GLfloat param)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLLightModelf);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_LightModelfv(GLenum pname, const GLfloat *params)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLightModelfv, "context = %d, pname = %s, params = 0x%016" PRIxPTR "",
           CID(context), GLenumToString(GLESEnum::LightModelParameter, pname), (uintptr_t)params);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateLightModelfv(context->getPrivateState(),
-                                                 context->getMutableErrorSetForValidation(),
-                                                 angle::EntryPoint::GLLightModelfv, pname, params));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateLightModelfv(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLLightModelfv, pname, params);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLLightModelfv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateLightModelfv(context->getMutablePrivateState(),
                                        context->getMutablePrivateStateCache(), pname, params);
@@ -922,24 +1310,35 @@ void GL_APIENTRY GL_LightModelfv(GLenum pname, const GLfloat *params)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLLightModelfv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_LightModelx(GLenum pname, GLfixed param)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLightModelx, "context = %d, pname = %s, param = 0x%X", CID(context),
           GLenumToString(GLESEnum::LightModelParameter, pname), param);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateLightModelx(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLLightModelx, pname, param));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateLightModelx(context->getPrivateState(),
+                                                  context->getMutableErrorSetForValidation(),
+                                                  angle::EntryPoint::GLLightModelx, pname, param);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLLightModelx);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateLightModelx(context->getMutablePrivateState(),
                                       context->getMutablePrivateStateCache(), pname, param);
@@ -948,24 +1347,35 @@ void GL_APIENTRY GL_LightModelx(GLenum pname, GLfixed param)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLLightModelx);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_LightModelxv(GLenum pname, const GLfixed *param)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLightModelxv, "context = %d, pname = %s, param = 0x%016" PRIxPTR "",
           CID(context), GLenumToString(GLESEnum::LightModelParameter, pname), (uintptr_t)param);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateLightModelxv(context->getPrivateState(),
-                                                 context->getMutableErrorSetForValidation(),
-                                                 angle::EntryPoint::GLLightModelxv, pname, param));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateLightModelxv(context->getPrivateState(),
+                                                   context->getMutableErrorSetForValidation(),
+                                                   angle::EntryPoint::GLLightModelxv, pname, param);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLLightModelxv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateLightModelxv(context->getMutablePrivateState(),
                                        context->getMutablePrivateStateCache(), pname, param);
@@ -974,26 +1384,37 @@ void GL_APIENTRY GL_LightModelxv(GLenum pname, const GLfixed *param)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLLightModelxv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Lightf(GLenum light, GLenum pname, GLfloat param)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLightf, "context = %d, light = %s, pname = %s, param = %f", CID(context),
           GLenumToString(GLESEnum::LightName, light),
           GLenumToString(GLESEnum::LightParameter, pname), param);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         LightParameter pnamePacked = PackParam<LightParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateLightf(context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                            angle::EntryPoint::GLLightf, light, pnamePacked, param));
-        if (isCallValid)
+        bool isCallValid           = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateLightf(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLLightf, light, pnamePacked, param);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLLightf);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateLightf(context->getMutablePrivateState(),
                                  context->getMutablePrivateStateCache(), light, pnamePacked, param);
@@ -1002,26 +1423,37 @@ void GL_APIENTRY GL_Lightf(GLenum light, GLenum pname, GLfloat param)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLLightf);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Lightfv(GLenum light, GLenum pname, const GLfloat *params)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLightfv, "context = %d, light = %s, pname = %s, params = 0x%016" PRIxPTR "",
           CID(context), GLenumToString(GLESEnum::LightName, light),
           GLenumToString(GLESEnum::LightParameter, pname), (uintptr_t)params);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         LightParameter pnamePacked = PackParam<LightParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateLightfv(context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                             angle::EntryPoint::GLLightfv, light, pnamePacked, params));
-        if (isCallValid)
+        bool isCallValid           = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateLightfv(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLLightfv, light, pnamePacked, params);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLLightfv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateLightfv(context->getMutablePrivateState(),
                                   context->getMutablePrivateStateCache(), light, pnamePacked,
@@ -1031,26 +1463,37 @@ void GL_APIENTRY GL_Lightfv(GLenum light, GLenum pname, const GLfloat *params)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLLightfv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Lightx(GLenum light, GLenum pname, GLfixed param)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLightx, "context = %d, light = %s, pname = %s, param = 0x%X", CID(context),
           GLenumToString(GLESEnum::LightName, light),
           GLenumToString(GLESEnum::LightParameter, pname), param);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         LightParameter pnamePacked = PackParam<LightParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateLightx(context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                            angle::EntryPoint::GLLightx, light, pnamePacked, param));
-        if (isCallValid)
+        bool isCallValid           = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateLightx(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLLightx, light, pnamePacked, param);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLLightx);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateLightx(context->getMutablePrivateState(),
                                  context->getMutablePrivateStateCache(), light, pnamePacked, param);
@@ -1059,26 +1502,37 @@ void GL_APIENTRY GL_Lightx(GLenum light, GLenum pname, GLfixed param)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLLightx);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Lightxv(GLenum light, GLenum pname, const GLfixed *params)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLightxv, "context = %d, light = %s, pname = %s, params = 0x%016" PRIxPTR "",
           CID(context), GLenumToString(GLESEnum::LightName, light),
           GLenumToString(GLESEnum::LightParameter, pname), (uintptr_t)params);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         LightParameter pnamePacked = PackParam<LightParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateLightxv(context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                             angle::EntryPoint::GLLightxv, light, pnamePacked, params));
-        if (isCallValid)
+        bool isCallValid           = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateLightxv(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLLightxv, light, pnamePacked, params);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLLightxv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateLightxv(context->getMutablePrivateState(),
                                   context->getMutablePrivateStateCache(), light, pnamePacked,
@@ -1088,23 +1542,34 @@ void GL_APIENTRY GL_Lightxv(GLenum light, GLenum pname, const GLfixed *params)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLLightxv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_LineWidthx(GLfixed width)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLineWidthx, "context = %d, width = 0x%X", CID(context), width);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateLineWidthx(context->getPrivateState(),
-                                               context->getMutableErrorSetForValidation(),
-                                               angle::EntryPoint::GLLineWidthx, width));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateLineWidthx(context->getPrivateState(),
+                                                 context->getMutableErrorSetForValidation(),
+                                                 angle::EntryPoint::GLLineWidthx, width);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLLineWidthx);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateLineWidthx(context->getMutablePrivateState(),
                                      context->getMutablePrivateStateCache(), width);
@@ -1113,23 +1578,34 @@ void GL_APIENTRY GL_LineWidthx(GLfixed width)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLLineWidthx);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_LoadIdentity()
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLoadIdentity, "context = %d", CID(context));
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateLoadIdentity(context->getPrivateState(),
-                                                 context->getMutableErrorSetForValidation(),
-                                                 angle::EntryPoint::GLLoadIdentity));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateLoadIdentity(context->getPrivateState(),
+                                                   context->getMutableErrorSetForValidation(),
+                                                   angle::EntryPoint::GLLoadIdentity);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLLoadIdentity);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateLoadIdentity(context->getMutablePrivateState(),
                                        context->getMutablePrivateStateCache());
@@ -1138,24 +1614,35 @@ void GL_APIENTRY GL_LoadIdentity()
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLLoadIdentity);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_LoadMatrixf(const GLfloat *m)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLoadMatrixf, "context = %d, m = 0x%016" PRIxPTR "", CID(context),
           (uintptr_t)m);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateLoadMatrixf(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLLoadMatrixf, m));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateLoadMatrixf(context->getPrivateState(),
+                                                  context->getMutableErrorSetForValidation(),
+                                                  angle::EntryPoint::GLLoadMatrixf, m);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLLoadMatrixf);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateLoadMatrixf(context->getMutablePrivateState(),
                                       context->getMutablePrivateStateCache(), m);
@@ -1164,24 +1651,35 @@ void GL_APIENTRY GL_LoadMatrixf(const GLfloat *m)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLLoadMatrixf);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_LoadMatrixx(const GLfixed *m)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLoadMatrixx, "context = %d, m = 0x%016" PRIxPTR "", CID(context),
           (uintptr_t)m);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateLoadMatrixx(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLLoadMatrixx, m));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateLoadMatrixx(context->getPrivateState(),
+                                                  context->getMutableErrorSetForValidation(),
+                                                  angle::EntryPoint::GLLoadMatrixx, m);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLLoadMatrixx);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateLoadMatrixx(context->getMutablePrivateState(),
                                       context->getMutablePrivateStateCache(), m);
@@ -1190,25 +1688,36 @@ void GL_APIENTRY GL_LoadMatrixx(const GLfixed *m)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLLoadMatrixx);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_LogicOp(GLenum opcode)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLogicOp, "context = %d, opcode = %s", CID(context),
           GLenumToString(GLESEnum::LogicOp, opcode));
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         LogicalOperation opcodePacked = PackParam<LogicalOperation>(opcode);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateLogicOp(context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                             angle::EntryPoint::GLLogicOp, opcodePacked));
-        if (isCallValid)
+        bool isCallValid              = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateLogicOp(context->getPrivateState(),
+                                              context->getMutableErrorSetForValidation(),
+                                              angle::EntryPoint::GLLogicOp, opcodePacked);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLLogicOp);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateLogicOp(context->getMutablePrivateState(),
                                   context->getMutablePrivateStateCache(), opcodePacked);
@@ -1217,27 +1726,37 @@ void GL_APIENTRY GL_LogicOp(GLenum opcode)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLLogicOp);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Materialf(GLenum face, GLenum pname, GLfloat param)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLMaterialf, "context = %d, face = %s, pname = %s, param = %f", CID(context),
           GLenumToString(GLESEnum::TriangleFace, face),
           GLenumToString(GLESEnum::MaterialParameter, pname), param);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         MaterialParameter pnamePacked = PackParam<MaterialParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateMaterialf(context->getPrivateState(),
-                               context->getMutableErrorSetForValidation(),
-                               angle::EntryPoint::GLMaterialf, face, pnamePacked, param));
-        if (isCallValid)
+        bool isCallValid              = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateMaterialf(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLMaterialf, face, pnamePacked, param);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLMaterialf);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateMaterialf(context->getMutablePrivateState(),
                                     context->getMutablePrivateStateCache(), face, pnamePacked,
@@ -1247,27 +1766,37 @@ void GL_APIENTRY GL_Materialf(GLenum face, GLenum pname, GLfloat param)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLMaterialf);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Materialfv(GLenum face, GLenum pname, const GLfloat *params)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLMaterialfv, "context = %d, face = %s, pname = %s, params = 0x%016" PRIxPTR "",
           CID(context), GLenumToString(GLESEnum::TriangleFace, face),
           GLenumToString(GLESEnum::MaterialParameter, pname), (uintptr_t)params);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         MaterialParameter pnamePacked = PackParam<MaterialParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateMaterialfv(context->getPrivateState(),
-                                context->getMutableErrorSetForValidation(),
-                                angle::EntryPoint::GLMaterialfv, face, pnamePacked, params));
-        if (isCallValid)
+        bool isCallValid              = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateMaterialfv(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLMaterialfv, face, pnamePacked, params);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLMaterialfv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateMaterialfv(context->getMutablePrivateState(),
                                      context->getMutablePrivateStateCache(), face, pnamePacked,
@@ -1277,27 +1806,37 @@ void GL_APIENTRY GL_Materialfv(GLenum face, GLenum pname, const GLfloat *params)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLMaterialfv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Materialx(GLenum face, GLenum pname, GLfixed param)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLMaterialx, "context = %d, face = %s, pname = %s, param = 0x%X", CID(context),
           GLenumToString(GLESEnum::TriangleFace, face),
           GLenumToString(GLESEnum::MaterialParameter, pname), param);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         MaterialParameter pnamePacked = PackParam<MaterialParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateMaterialx(context->getPrivateState(),
-                               context->getMutableErrorSetForValidation(),
-                               angle::EntryPoint::GLMaterialx, face, pnamePacked, param));
-        if (isCallValid)
+        bool isCallValid              = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateMaterialx(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLMaterialx, face, pnamePacked, param);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLMaterialx);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateMaterialx(context->getMutablePrivateState(),
                                     context->getMutablePrivateStateCache(), face, pnamePacked,
@@ -1307,27 +1846,37 @@ void GL_APIENTRY GL_Materialx(GLenum face, GLenum pname, GLfixed param)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLMaterialx);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Materialxv(GLenum face, GLenum pname, const GLfixed *param)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLMaterialxv, "context = %d, face = %s, pname = %s, param = 0x%016" PRIxPTR "",
           CID(context), GLenumToString(GLESEnum::TriangleFace, face),
           GLenumToString(GLESEnum::MaterialParameter, pname), (uintptr_t)param);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         MaterialParameter pnamePacked = PackParam<MaterialParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateMaterialxv(context->getPrivateState(),
-                                context->getMutableErrorSetForValidation(),
-                                angle::EntryPoint::GLMaterialxv, face, pnamePacked, param));
-        if (isCallValid)
+        bool isCallValid              = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateMaterialxv(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLMaterialxv, face, pnamePacked, param);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLMaterialxv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateMaterialxv(context->getMutablePrivateState(),
                                      context->getMutablePrivateStateCache(), face, pnamePacked,
@@ -1337,25 +1886,36 @@ void GL_APIENTRY GL_Materialxv(GLenum face, GLenum pname, const GLfixed *param)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLMaterialxv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_MatrixMode(GLenum mode)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLMatrixMode, "context = %d, mode = %s", CID(context),
           GLenumToString(GLESEnum::MatrixMode, mode));
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         MatrixType modePacked = PackParam<MatrixType>(mode);
-        bool isCallValid      = (context->skipValidation() ||
-                            ValidateMatrixMode(context->getPrivateState(),
-                                                    context->getMutableErrorSetForValidation(),
-                                                    angle::EntryPoint::GLMatrixMode, modePacked));
-        if (isCallValid)
+        bool isCallValid      = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateMatrixMode(context->getPrivateState(),
+                                                 context->getMutableErrorSetForValidation(),
+                                                 angle::EntryPoint::GLMatrixMode, modePacked);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLMatrixMode);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateMatrixMode(context->getMutablePrivateState(),
                                      context->getMutablePrivateStateCache(), modePacked);
@@ -1364,24 +1924,35 @@ void GL_APIENTRY GL_MatrixMode(GLenum mode)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLMatrixMode);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_MultMatrixf(const GLfloat *m)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLMultMatrixf, "context = %d, m = 0x%016" PRIxPTR "", CID(context),
           (uintptr_t)m);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateMultMatrixf(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLMultMatrixf, m));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateMultMatrixf(context->getPrivateState(),
+                                                  context->getMutableErrorSetForValidation(),
+                                                  angle::EntryPoint::GLMultMatrixf, m);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLMultMatrixf);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateMultMatrixf(context->getMutablePrivateState(),
                                       context->getMutablePrivateStateCache(), m);
@@ -1390,24 +1961,35 @@ void GL_APIENTRY GL_MultMatrixf(const GLfloat *m)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLMultMatrixf);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_MultMatrixx(const GLfixed *m)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLMultMatrixx, "context = %d, m = 0x%016" PRIxPTR "", CID(context),
           (uintptr_t)m);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateMultMatrixx(context->getPrivateState(),
-                                                context->getMutableErrorSetForValidation(),
-                                                angle::EntryPoint::GLMultMatrixx, m));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateMultMatrixx(context->getPrivateState(),
+                                                  context->getMutableErrorSetForValidation(),
+                                                  angle::EntryPoint::GLMultMatrixx, m);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLMultMatrixx);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateMultMatrixx(context->getMutablePrivateState(),
                                       context->getMutablePrivateStateCache(), m);
@@ -1416,25 +1998,35 @@ void GL_APIENTRY GL_MultMatrixx(const GLfixed *m)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLMultMatrixx);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_MultiTexCoord4f(GLenum target, GLfloat s, GLfloat t, GLfloat r, GLfloat q)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLMultiTexCoord4f, "context = %d, target = %s, s = %f, t = %f, r = %f, q = %f",
           CID(context), GLenumToString(GLESEnum::TextureUnit, target), s, t, r, q);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateMultiTexCoord4f(context->getPrivateState(),
-                                     context->getMutableErrorSetForValidation(),
-                                     angle::EntryPoint::GLMultiTexCoord4f, target, s, t, r, q));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateMultiTexCoord4f(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLMultiTexCoord4f, target, s, t, r, q);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLMultiTexCoord4f);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateMultiTexCoord4f(context->getMutablePrivateState(),
                                           context->getMutablePrivateStateCache(), target, s, t, r,
@@ -1444,26 +2036,36 @@ void GL_APIENTRY GL_MultiTexCoord4f(GLenum target, GLfloat s, GLfloat t, GLfloat
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLMultiTexCoord4f);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_MultiTexCoord4x(GLenum texture, GLfixed s, GLfixed t, GLfixed r, GLfixed q)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLMultiTexCoord4x,
           "context = %d, texture = %s, s = 0x%X, t = 0x%X, r = 0x%X, q = 0x%X", CID(context),
           GLenumToString(GLESEnum::TextureUnit, texture), s, t, r, q);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateMultiTexCoord4x(context->getPrivateState(),
-                                     context->getMutableErrorSetForValidation(),
-                                     angle::EntryPoint::GLMultiTexCoord4x, texture, s, t, r, q));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateMultiTexCoord4x(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLMultiTexCoord4x, texture, s, t, r, q);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLMultiTexCoord4x);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateMultiTexCoord4x(context->getMutablePrivateState(),
                                           context->getMutablePrivateStateCache(), texture, s, t, r,
@@ -1473,23 +2075,34 @@ void GL_APIENTRY GL_MultiTexCoord4x(GLenum texture, GLfixed s, GLfixed t, GLfixe
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLMultiTexCoord4x);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Normal3f(GLfloat nx, GLfloat ny, GLfloat nz)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLNormal3f, "context = %d, nx = %f, ny = %f, nz = %f", CID(context), nx, ny, nz);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateNormal3f(context->getPrivateState(),
-                                             context->getMutableErrorSetForValidation(),
-                                             angle::EntryPoint::GLNormal3f, nx, ny, nz));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateNormal3f(context->getPrivateState(),
+                                               context->getMutableErrorSetForValidation(),
+                                               angle::EntryPoint::GLNormal3f, nx, ny, nz);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLNormal3f);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateNormal3f(context->getMutablePrivateState(),
                                    context->getMutablePrivateStateCache(), nx, ny, nz);
@@ -1498,24 +2111,35 @@ void GL_APIENTRY GL_Normal3f(GLfloat nx, GLfloat ny, GLfloat nz)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLNormal3f);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Normal3x(GLfixed nx, GLfixed ny, GLfixed nz)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLNormal3x, "context = %d, nx = 0x%X, ny = 0x%X, nz = 0x%X", CID(context), nx,
           ny, nz);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateNormal3x(context->getPrivateState(),
-                                             context->getMutableErrorSetForValidation(),
-                                             angle::EntryPoint::GLNormal3x, nx, ny, nz));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateNormal3x(context->getPrivateState(),
+                                               context->getMutableErrorSetForValidation(),
+                                               angle::EntryPoint::GLNormal3x, nx, ny, nz);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLNormal3x);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateNormal3x(context->getMutablePrivateState(),
                                    context->getMutablePrivateStateCache(), nx, ny, nz);
@@ -1524,26 +2148,43 @@ void GL_APIENTRY GL_Normal3x(GLfixed nx, GLfixed ny, GLfixed nz)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLNormal3x);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_NormalPointer(GLenum type, GLsizei stride, const void *pointer)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLNormalPointer,
           "context = %d, type = %s, stride = %d, pointer = 0x%016" PRIxPTR "", CID(context),
           GLenumToString(GLESEnum::NormalPointerType, type), stride, (uintptr_t)pointer);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         VertexAttribType typePacked = PackParam<VertexAttribType>(type);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateNormalPointer(context, angle::EntryPoint::GLNormalPointer,
-                                                  typePacked, stride, pointer));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+#if defined(ANGLE_ENABLE_ASSERTS)
+                const uint32_t errorCount = context->getPushedErrorCount();
+#endif
+                isCallValid = ValidateNormalPointer(context, angle::EntryPoint::GLNormalPointer,
+                                                    typePacked, stride, pointer);
+#if defined(ANGLE_ENABLE_ASSERTS)
+                ASSERT(context->getPushedErrorCount() - errorCount == (isCallValid ? 0 : 1));
+#endif
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLNormalPointer);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->normalPointer(typePacked, stride, pointer);
         }
@@ -1551,24 +2192,35 @@ void GL_APIENTRY GL_NormalPointer(GLenum type, GLsizei stride, const void *point
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLNormalPointer);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Orthof(GLfloat l, GLfloat r, GLfloat b, GLfloat t, GLfloat n, GLfloat f)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLOrthof, "context = %d, l = %f, r = %f, b = %f, t = %f, n = %f, f = %f",
           CID(context), l, r, b, t, n, f);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateOrthof(context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                            angle::EntryPoint::GLOrthof, l, r, b, t, n, f));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateOrthof(context->getPrivateState(),
+                                             context->getMutableErrorSetForValidation(),
+                                             angle::EntryPoint::GLOrthof, l, r, b, t, n, f);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLOrthof);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateOrthof(context->getMutablePrivateState(),
                                  context->getMutablePrivateStateCache(), l, r, b, t, n, f);
@@ -1577,25 +2229,36 @@ void GL_APIENTRY GL_Orthof(GLfloat l, GLfloat r, GLfloat b, GLfloat t, GLfloat n
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLOrthof);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Orthox(GLfixed l, GLfixed r, GLfixed b, GLfixed t, GLfixed n, GLfixed f)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLOrthox,
           "context = %d, l = 0x%X, r = 0x%X, b = 0x%X, t = 0x%X, n = 0x%X, f = 0x%X", CID(context),
           l, r, b, t, n, f);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateOrthox(context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                            angle::EntryPoint::GLOrthox, l, r, b, t, n, f));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateOrthox(context->getPrivateState(),
+                                             context->getMutableErrorSetForValidation(),
+                                             angle::EntryPoint::GLOrthox, l, r, b, t, n, f);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLOrthox);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateOrthox(context->getMutablePrivateState(),
                                  context->getMutablePrivateStateCache(), l, r, b, t, n, f);
@@ -1604,26 +2267,36 @@ void GL_APIENTRY GL_Orthox(GLfixed l, GLfixed r, GLfixed b, GLfixed t, GLfixed n
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLOrthox);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_PointParameterf(GLenum pname, GLfloat param)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLPointParameterf, "context = %d, pname = %s, param = %f", CID(context),
           GLenumToString(GLESEnum::AllEnums, pname), param);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         PointParameter pnamePacked = PackParam<PointParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidatePointParameterf(context->getPrivateState(),
-                                     context->getMutableErrorSetForValidation(),
-                                     angle::EntryPoint::GLPointParameterf, pnamePacked, param));
-        if (isCallValid)
+        bool isCallValid           = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidatePointParameterf(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLPointParameterf, pnamePacked, param);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLPointParameterf);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivatePointParameterf(context->getMutablePrivateState(),
                                           context->getMutablePrivateStateCache(), pnamePacked,
@@ -1633,26 +2306,36 @@ void GL_APIENTRY GL_PointParameterf(GLenum pname, GLfloat param)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLPointParameterf);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_PointParameterfv(GLenum pname, const GLfloat *params)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLPointParameterfv, "context = %d, pname = %s, params = 0x%016" PRIxPTR "",
           CID(context), GLenumToString(GLESEnum::AllEnums, pname), (uintptr_t)params);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         PointParameter pnamePacked = PackParam<PointParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidatePointParameterfv(context->getPrivateState(),
-                                      context->getMutableErrorSetForValidation(),
-                                      angle::EntryPoint::GLPointParameterfv, pnamePacked, params));
-        if (isCallValid)
+        bool isCallValid           = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidatePointParameterfv(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLPointParameterfv, pnamePacked, params);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLPointParameterfv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivatePointParameterfv(context->getMutablePrivateState(),
                                            context->getMutablePrivateStateCache(), pnamePacked,
@@ -1662,26 +2345,36 @@ void GL_APIENTRY GL_PointParameterfv(GLenum pname, const GLfloat *params)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLPointParameterfv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_PointParameterx(GLenum pname, GLfixed param)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLPointParameterx, "context = %d, pname = %s, param = 0x%X", CID(context),
           GLenumToString(GLESEnum::AllEnums, pname), param);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         PointParameter pnamePacked = PackParam<PointParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidatePointParameterx(context->getPrivateState(),
-                                     context->getMutableErrorSetForValidation(),
-                                     angle::EntryPoint::GLPointParameterx, pnamePacked, param));
-        if (isCallValid)
+        bool isCallValid           = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidatePointParameterx(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLPointParameterx, pnamePacked, param);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLPointParameterx);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivatePointParameterx(context->getMutablePrivateState(),
                                           context->getMutablePrivateStateCache(), pnamePacked,
@@ -1691,26 +2384,36 @@ void GL_APIENTRY GL_PointParameterx(GLenum pname, GLfixed param)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLPointParameterx);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_PointParameterxv(GLenum pname, const GLfixed *params)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLPointParameterxv, "context = %d, pname = %s, params = 0x%016" PRIxPTR "",
           CID(context), GLenumToString(GLESEnum::AllEnums, pname), (uintptr_t)params);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         PointParameter pnamePacked = PackParam<PointParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidatePointParameterxv(context->getPrivateState(),
-                                      context->getMutableErrorSetForValidation(),
-                                      angle::EntryPoint::GLPointParameterxv, pnamePacked, params));
-        if (isCallValid)
+        bool isCallValid           = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidatePointParameterxv(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLPointParameterxv, pnamePacked, params);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLPointParameterxv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivatePointParameterxv(context->getMutablePrivateState(),
                                            context->getMutablePrivateStateCache(), pnamePacked,
@@ -1720,23 +2423,34 @@ void GL_APIENTRY GL_PointParameterxv(GLenum pname, const GLfixed *params)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLPointParameterxv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_PointSize(GLfloat size)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLPointSize, "context = %d, size = %f", CID(context), size);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidatePointSize(context->getPrivateState(),
-                                              context->getMutableErrorSetForValidation(),
-                                              angle::EntryPoint::GLPointSize, size));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidatePointSize(context->getPrivateState(),
+                                                context->getMutableErrorSetForValidation(),
+                                                angle::EntryPoint::GLPointSize, size);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLPointSize);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivatePointSize(context->getMutablePrivateState(),
                                     context->getMutablePrivateStateCache(), size);
@@ -1745,23 +2459,34 @@ void GL_APIENTRY GL_PointSize(GLfloat size)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLPointSize);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_PointSizex(GLfixed size)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLPointSizex, "context = %d, size = 0x%X", CID(context), size);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidatePointSizex(context->getPrivateState(),
-                                               context->getMutableErrorSetForValidation(),
-                                               angle::EntryPoint::GLPointSizex, size));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidatePointSizex(context->getPrivateState(),
+                                                 context->getMutableErrorSetForValidation(),
+                                                 angle::EntryPoint::GLPointSizex, size);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLPointSizex);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivatePointSizex(context->getMutablePrivateState(),
                                      context->getMutablePrivateStateCache(), size);
@@ -1770,25 +2495,35 @@ void GL_APIENTRY GL_PointSizex(GLfixed size)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLPointSizex);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_PolygonOffsetx(GLfixed factor, GLfixed units)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLPolygonOffsetx, "context = %d, factor = 0x%X, units = 0x%X", CID(context),
           factor, units);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidatePolygonOffsetx(context->getPrivateState(),
-                                    context->getMutableErrorSetForValidation(),
-                                    angle::EntryPoint::GLPolygonOffsetx, factor, units));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidatePolygonOffsetx(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLPolygonOffsetx, factor, units);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLPolygonOffsetx);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivatePolygonOffsetx(context->getMutablePrivateState(),
                                          context->getMutablePrivateStateCache(), factor, units);
@@ -1797,23 +2532,34 @@ void GL_APIENTRY GL_PolygonOffsetx(GLfixed factor, GLfixed units)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLPolygonOffsetx);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_PopMatrix()
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLPopMatrix, "context = %d", CID(context));
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidatePopMatrix(context->getPrivateState(),
-                                              context->getMutableErrorSetForValidation(),
-                                              angle::EntryPoint::GLPopMatrix));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidatePopMatrix(context->getPrivateState(),
+                                                context->getMutableErrorSetForValidation(),
+                                                angle::EntryPoint::GLPopMatrix);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLPopMatrix);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivatePopMatrix(context->getMutablePrivateState(),
                                     context->getMutablePrivateStateCache());
@@ -1822,23 +2568,34 @@ void GL_APIENTRY GL_PopMatrix()
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLPopMatrix);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_PushMatrix()
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLPushMatrix, "context = %d", CID(context));
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidatePushMatrix(context->getPrivateState(),
-                                               context->getMutableErrorSetForValidation(),
-                                               angle::EntryPoint::GLPushMatrix));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidatePushMatrix(context->getPrivateState(),
+                                                 context->getMutableErrorSetForValidation(),
+                                                 angle::EntryPoint::GLPushMatrix);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLPushMatrix);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivatePushMatrix(context->getMutablePrivateState(),
                                      context->getMutablePrivateStateCache());
@@ -1847,24 +2604,35 @@ void GL_APIENTRY GL_PushMatrix()
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLPushMatrix);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Rotatef(GLfloat angle, GLfloat x, GLfloat y, GLfloat z)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLRotatef, "context = %d, angle = %f, x = %f, y = %f, z = %f", CID(context),
           angle, x, y, z);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateRotatef(context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                             angle::EntryPoint::GLRotatef, angle, x, y, z));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateRotatef(context->getPrivateState(),
+                                              context->getMutableErrorSetForValidation(),
+                                              angle::EntryPoint::GLRotatef, angle, x, y, z);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLRotatef);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateRotatef(context->getMutablePrivateState(),
                                   context->getMutablePrivateStateCache(), angle, x, y, z);
@@ -1873,24 +2641,35 @@ void GL_APIENTRY GL_Rotatef(GLfloat angle, GLfloat x, GLfloat y, GLfloat z)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLRotatef);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Rotatex(GLfixed angle, GLfixed x, GLfixed y, GLfixed z)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLRotatex, "context = %d, angle = 0x%X, x = 0x%X, y = 0x%X, z = 0x%X",
           CID(context), angle, x, y, z);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateRotatex(context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                             angle::EntryPoint::GLRotatex, angle, x, y, z));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateRotatex(context->getPrivateState(),
+                                              context->getMutableErrorSetForValidation(),
+                                              angle::EntryPoint::GLRotatex, angle, x, y, z);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLRotatex);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateRotatex(context->getMutablePrivateState(),
                                   context->getMutablePrivateStateCache(), angle, x, y, z);
@@ -1899,25 +2678,35 @@ void GL_APIENTRY GL_Rotatex(GLfixed angle, GLfixed x, GLfixed y, GLfixed z)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLRotatex);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_SampleCoveragex(GLclampx value, GLboolean invert)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLSampleCoveragex, "context = %d, value = 0x%X, invert = %s", CID(context),
           value, GLbooleanToString(invert));
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateSampleCoveragex(context->getPrivateState(),
-                                     context->getMutableErrorSetForValidation(),
-                                     angle::EntryPoint::GLSampleCoveragex, value, invert));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateSampleCoveragex(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLSampleCoveragex, value, invert);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLSampleCoveragex);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateSampleCoveragex(context->getMutablePrivateState(),
                                           context->getMutablePrivateStateCache(), value, invert);
@@ -1926,23 +2715,34 @@ void GL_APIENTRY GL_SampleCoveragex(GLclampx value, GLboolean invert)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLSampleCoveragex);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Scalef(GLfloat x, GLfloat y, GLfloat z)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLScalef, "context = %d, x = %f, y = %f, z = %f", CID(context), x, y, z);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateScalef(context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                            angle::EntryPoint::GLScalef, x, y, z));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateScalef(context->getPrivateState(),
+                                             context->getMutableErrorSetForValidation(),
+                                             angle::EntryPoint::GLScalef, x, y, z);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLScalef);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateScalef(context->getMutablePrivateState(),
                                  context->getMutablePrivateStateCache(), x, y, z);
@@ -1951,23 +2751,34 @@ void GL_APIENTRY GL_Scalef(GLfloat x, GLfloat y, GLfloat z)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLScalef);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Scalex(GLfixed x, GLfixed y, GLfixed z)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLScalex, "context = %d, x = 0x%X, y = 0x%X, z = 0x%X", CID(context), x, y, z);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateScalex(context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                            angle::EntryPoint::GLScalex, x, y, z));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateScalex(context->getPrivateState(),
+                                             context->getMutableErrorSetForValidation(),
+                                             angle::EntryPoint::GLScalex, x, y, z);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLScalex);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateScalex(context->getMutablePrivateState(),
                                  context->getMutablePrivateStateCache(), x, y, z);
@@ -1976,25 +2787,36 @@ void GL_APIENTRY GL_Scalex(GLfixed x, GLfixed y, GLfixed z)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLScalex);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_ShadeModel(GLenum mode)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLShadeModel, "context = %d, mode = %s", CID(context),
           GLenumToString(GLESEnum::ShadingModel, mode));
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         ShadingModel modePacked = PackParam<ShadingModel>(mode);
-        bool isCallValid        = (context->skipValidation() ||
-                            ValidateShadeModel(context->getPrivateState(),
-                                                      context->getMutableErrorSetForValidation(),
-                                                      angle::EntryPoint::GLShadeModel, modePacked));
-        if (isCallValid)
+        bool isCallValid        = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateShadeModel(context->getPrivateState(),
+                                                 context->getMutableErrorSetForValidation(),
+                                                 angle::EntryPoint::GLShadeModel, modePacked);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLShadeModel);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateShadeModel(context->getMutablePrivateState(),
                                      context->getMutablePrivateStateCache(), modePacked);
@@ -2003,27 +2825,44 @@ void GL_APIENTRY GL_ShadeModel(GLenum mode)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLShadeModel);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_TexCoordPointer(GLint size, GLenum type, GLsizei stride, const void *pointer)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTexCoordPointer,
           "context = %d, size = %d, type = %s, stride = %d, pointer = 0x%016" PRIxPTR "",
           CID(context), size, GLenumToString(GLESEnum::TexCoordPointerType, type), stride,
           (uintptr_t)pointer);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         VertexAttribType typePacked = PackParam<VertexAttribType>(type);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateTexCoordPointer(context, angle::EntryPoint::GLTexCoordPointer,
-                                                    size, typePacked, stride, pointer));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+#if defined(ANGLE_ENABLE_ASSERTS)
+                const uint32_t errorCount = context->getPushedErrorCount();
+#endif
+                isCallValid = ValidateTexCoordPointer(context, angle::EntryPoint::GLTexCoordPointer,
+                                                      size, typePacked, stride, pointer);
+#if defined(ANGLE_ENABLE_ASSERTS)
+                ASSERT(context->getPushedErrorCount() - errorCount == (isCallValid ? 0 : 1));
+#endif
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLTexCoordPointer);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texCoordPointer(size, typePacked, stride, pointer);
         }
@@ -2031,27 +2870,38 @@ void GL_APIENTRY GL_TexCoordPointer(GLint size, GLenum type, GLsizei stride, con
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLTexCoordPointer);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_TexEnvf(GLenum target, GLenum pname, GLfloat param)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTexEnvf, "context = %d, target = %s, pname = %s, param = %f", CID(context),
           GLenumToString(GLESEnum::TextureEnvTarget, target),
           GLenumToString(GLESEnum::TextureEnvParameter, pname), param);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         TextureEnvTarget targetPacked   = PackParam<TextureEnvTarget>(target);
         TextureEnvParameter pnamePacked = PackParam<TextureEnvParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateTexEnvf(context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                             angle::EntryPoint::GLTexEnvf, targetPacked, pnamePacked, param));
-        if (isCallValid)
+        bool isCallValid                = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateTexEnvf(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLTexEnvf, targetPacked, pnamePacked, param);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLTexEnvf);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateTexEnvf(context->getMutablePrivateState(),
                                   context->getMutablePrivateStateCache(), targetPacked, pnamePacked,
@@ -2061,28 +2911,38 @@ void GL_APIENTRY GL_TexEnvf(GLenum target, GLenum pname, GLfloat param)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLTexEnvf);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_TexEnvfv(GLenum target, GLenum pname, const GLfloat *params)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTexEnvfv, "context = %d, target = %s, pname = %s, params = 0x%016" PRIxPTR "",
           CID(context), GLenumToString(GLESEnum::TextureEnvTarget, target),
           GLenumToString(GLESEnum::TextureEnvParameter, pname), (uintptr_t)params);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         TextureEnvTarget targetPacked   = PackParam<TextureEnvTarget>(target);
         TextureEnvParameter pnamePacked = PackParam<TextureEnvParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateTexEnvfv(context->getPrivateState(),
-                              context->getMutableErrorSetForValidation(),
-                              angle::EntryPoint::GLTexEnvfv, targetPacked, pnamePacked, params));
-        if (isCallValid)
+        bool isCallValid                = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateTexEnvfv(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLTexEnvfv, targetPacked, pnamePacked, params);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLTexEnvfv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateTexEnvfv(context->getMutablePrivateState(),
                                    context->getMutablePrivateStateCache(), targetPacked,
@@ -2092,27 +2952,38 @@ void GL_APIENTRY GL_TexEnvfv(GLenum target, GLenum pname, const GLfloat *params)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLTexEnvfv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_TexEnvi(GLenum target, GLenum pname, GLint param)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTexEnvi, "context = %d, target = %s, pname = %s, param = %d", CID(context),
           GLenumToString(GLESEnum::TextureEnvTarget, target),
           GLenumToString(GLESEnum::TextureEnvParameter, pname), param);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         TextureEnvTarget targetPacked   = PackParam<TextureEnvTarget>(target);
         TextureEnvParameter pnamePacked = PackParam<TextureEnvParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateTexEnvi(context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                             angle::EntryPoint::GLTexEnvi, targetPacked, pnamePacked, param));
-        if (isCallValid)
+        bool isCallValid                = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateTexEnvi(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLTexEnvi, targetPacked, pnamePacked, param);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLTexEnvi);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateTexEnvi(context->getMutablePrivateState(),
                                   context->getMutablePrivateStateCache(), targetPacked, pnamePacked,
@@ -2122,28 +2993,38 @@ void GL_APIENTRY GL_TexEnvi(GLenum target, GLenum pname, GLint param)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLTexEnvi);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_TexEnviv(GLenum target, GLenum pname, const GLint *params)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTexEnviv, "context = %d, target = %s, pname = %s, params = 0x%016" PRIxPTR "",
           CID(context), GLenumToString(GLESEnum::TextureEnvTarget, target),
           GLenumToString(GLESEnum::TextureEnvParameter, pname), (uintptr_t)params);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         TextureEnvTarget targetPacked   = PackParam<TextureEnvTarget>(target);
         TextureEnvParameter pnamePacked = PackParam<TextureEnvParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateTexEnviv(context->getPrivateState(),
-                              context->getMutableErrorSetForValidation(),
-                              angle::EntryPoint::GLTexEnviv, targetPacked, pnamePacked, params));
-        if (isCallValid)
+        bool isCallValid                = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateTexEnviv(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLTexEnviv, targetPacked, pnamePacked, params);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLTexEnviv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateTexEnviv(context->getMutablePrivateState(),
                                    context->getMutablePrivateStateCache(), targetPacked,
@@ -2153,27 +3034,38 @@ void GL_APIENTRY GL_TexEnviv(GLenum target, GLenum pname, const GLint *params)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLTexEnviv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_TexEnvx(GLenum target, GLenum pname, GLfixed param)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTexEnvx, "context = %d, target = %s, pname = %s, param = 0x%X", CID(context),
           GLenumToString(GLESEnum::TextureEnvTarget, target),
           GLenumToString(GLESEnum::TextureEnvParameter, pname), param);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         TextureEnvTarget targetPacked   = PackParam<TextureEnvTarget>(target);
         TextureEnvParameter pnamePacked = PackParam<TextureEnvParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateTexEnvx(context->getPrivateState(), context->getMutableErrorSetForValidation(),
-                             angle::EntryPoint::GLTexEnvx, targetPacked, pnamePacked, param));
-        if (isCallValid)
+        bool isCallValid                = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateTexEnvx(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLTexEnvx, targetPacked, pnamePacked, param);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLTexEnvx);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateTexEnvx(context->getMutablePrivateState(),
                                   context->getMutablePrivateStateCache(), targetPacked, pnamePacked,
@@ -2183,28 +3075,38 @@ void GL_APIENTRY GL_TexEnvx(GLenum target, GLenum pname, GLfixed param)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLTexEnvx);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_TexEnvxv(GLenum target, GLenum pname, const GLfixed *params)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTexEnvxv, "context = %d, target = %s, pname = %s, params = 0x%016" PRIxPTR "",
           CID(context), GLenumToString(GLESEnum::TextureEnvTarget, target),
           GLenumToString(GLESEnum::TextureEnvParameter, pname), (uintptr_t)params);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         TextureEnvTarget targetPacked   = PackParam<TextureEnvTarget>(target);
         TextureEnvParameter pnamePacked = PackParam<TextureEnvParameter>(pname);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidateTexEnvxv(context->getPrivateState(),
-                              context->getMutableErrorSetForValidation(),
-                              angle::EntryPoint::GLTexEnvxv, targetPacked, pnamePacked, params));
-        if (isCallValid)
+        bool isCallValid                = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateTexEnvxv(
+                    context->getPrivateState(), context->getMutableErrorSetForValidation(),
+                    angle::EntryPoint::GLTexEnvxv, targetPacked, pnamePacked, params);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLTexEnvxv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateTexEnvxv(context->getMutablePrivateState(),
                                    context->getMutablePrivateStateCache(), targetPacked,
@@ -2214,26 +3116,43 @@ void GL_APIENTRY GL_TexEnvxv(GLenum target, GLenum pname, const GLfixed *params)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLTexEnvxv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_TexParameterx(GLenum target, GLenum pname, GLfixed param)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTexParameterx, "context = %d, target = %s, pname = %s, param = 0x%X",
           CID(context), GLenumToString(GLESEnum::TextureTarget, target),
           GLenumToString(GLESEnum::GetTextureParameter, pname), param);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         TextureType targetPacked = PackParam<TextureType>(target);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateTexParameterx(context, angle::EntryPoint::GLTexParameterx,
-                                                  targetPacked, pname, param));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+#if defined(ANGLE_ENABLE_ASSERTS)
+                const uint32_t errorCount = context->getPushedErrorCount();
+#endif
+                isCallValid = ValidateTexParameterx(context, angle::EntryPoint::GLTexParameterx,
+                                                    targetPacked, pname, param);
+#if defined(ANGLE_ENABLE_ASSERTS)
+                ASSERT(context->getPushedErrorCount() - errorCount == (isCallValid ? 0 : 1));
+#endif
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLTexParameterx);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texParameterx(targetPacked, pname, param);
         }
@@ -2241,27 +3160,44 @@ void GL_APIENTRY GL_TexParameterx(GLenum target, GLenum pname, GLfixed param)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLTexParameterx);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_TexParameterxv(GLenum target, GLenum pname, const GLfixed *params)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTexParameterxv,
           "context = %d, target = %s, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
           GLenumToString(GLESEnum::TextureTarget, target),
           GLenumToString(GLESEnum::GetTextureParameter, pname), (uintptr_t)params);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         TextureType targetPacked = PackParam<TextureType>(target);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateTexParameterxv(context, angle::EntryPoint::GLTexParameterxv,
-                                                   targetPacked, pname, params));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+#if defined(ANGLE_ENABLE_ASSERTS)
+                const uint32_t errorCount = context->getPushedErrorCount();
+#endif
+                isCallValid = ValidateTexParameterxv(context, angle::EntryPoint::GLTexParameterxv,
+                                                     targetPacked, pname, params);
+#if defined(ANGLE_ENABLE_ASSERTS)
+                ASSERT(context->getPushedErrorCount() - errorCount == (isCallValid ? 0 : 1));
+#endif
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLTexParameterxv);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->texParameterxv(targetPacked, pname, params);
         }
@@ -2269,23 +3205,34 @@ void GL_APIENTRY GL_TexParameterxv(GLenum target, GLenum pname, const GLfixed *p
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLTexParameterxv);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Translatef(GLfloat x, GLfloat y, GLfloat z)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTranslatef, "context = %d, x = %f, y = %f, z = %f", CID(context), x, y, z);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateTranslatef(context->getPrivateState(),
-                                               context->getMutableErrorSetForValidation(),
-                                               angle::EntryPoint::GLTranslatef, x, y, z));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateTranslatef(context->getPrivateState(),
+                                                 context->getMutableErrorSetForValidation(),
+                                                 angle::EntryPoint::GLTranslatef, x, y, z);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLTranslatef);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateTranslatef(context->getMutablePrivateState(),
                                      context->getMutablePrivateStateCache(), x, y, z);
@@ -2294,24 +3241,35 @@ void GL_APIENTRY GL_Translatef(GLfloat x, GLfloat y, GLfloat z)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLTranslatef);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_Translatex(GLfixed x, GLfixed y, GLfixed z)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTranslatex, "context = %d, x = 0x%X, y = 0x%X, z = 0x%X", CID(context), x, y,
           z);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateTranslatex(context->getPrivateState(),
-                                               context->getMutableErrorSetForValidation(),
-                                               angle::EntryPoint::GLTranslatex, x, y, z));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+                isCallValid = ValidateTranslatex(context->getPrivateState(),
+                                                 context->getMutableErrorSetForValidation(),
+                                                 angle::EntryPoint::GLTranslatex, x, y, z);
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLTranslatex);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             ContextPrivateTranslatex(context->getMutablePrivateState(),
                                      context->getMutablePrivateStateCache(), x, y, z);
@@ -2320,27 +3278,44 @@ void GL_APIENTRY GL_Translatex(GLfixed x, GLfixed y, GLfixed z)
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLTranslatex);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }
 
 void GL_APIENTRY GL_VertexPointer(GLint size, GLenum type, GLsizei stride, const void *pointer)
 {
+    ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
     Context *context = GetValidGlobalContext();
     EVENT(context, GLVertexPointer,
           "context = %d, size = %d, type = %s, stride = %d, pointer = 0x%016" PRIxPTR "",
           CID(context), size, GLenumToString(GLESEnum::VertexPointerType, type), stride,
           (uintptr_t)pointer);
 
-    if (context)
+    if (ANGLE_LIKELY(context != nullptr))
     {
         VertexAttribType typePacked = PackParam<VertexAttribType>(type);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateVertexPointer(context, angle::EntryPoint::GLVertexPointer, size,
-                                                  typePacked, stride, pointer));
-        if (isCallValid)
+        bool isCallValid = context->skipValidation();
+        if (!isCallValid)
+        {
+            if (ANGLE_LIKELY(context->getClientVersion() < ES_2_0))
+            {
+#if defined(ANGLE_ENABLE_ASSERTS)
+                const uint32_t errorCount = context->getPushedErrorCount();
+#endif
+                isCallValid = ValidateVertexPointer(context, angle::EntryPoint::GLVertexPointer,
+                                                    size, typePacked, stride, pointer);
+#if defined(ANGLE_ENABLE_ASSERTS)
+                ASSERT(context->getPushedErrorCount() - errorCount == (isCallValid ? 0 : 1));
+#endif
+            }
+            else
+            {
+                RecordVersionErrorES10(context, angle::EntryPoint::GLVertexPointer);
+            }
+        }
+        if (ANGLE_LIKELY(isCallValid))
         {
             context->vertexPointer(size, typePacked, stride, pointer);
         }
@@ -2348,7 +3323,7 @@ void GL_APIENTRY GL_VertexPointer(GLint size, GLenum type, GLsizei stride, const
     }
     else
     {
-        GenerateContextLostErrorOnCurrentGlobalContext();
+        GenerateContextLostErrorOnCurrentGlobalContext(angle::EntryPoint::GLVertexPointer);
     }
     ASSERT(!egl::Display::GetCurrentThreadUnlockedTailCall()->any());
 }

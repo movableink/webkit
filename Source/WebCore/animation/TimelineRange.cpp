@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,12 @@
 
 #include "config.h"
 #include "TimelineRange.h"
+
 #include "CSSNumericFactory.h"
 #include "CSSPropertyParserConsumer+Timeline.h"
 #include "CSSValuePair.h"
 #include "CSSValuePool.h"
+#include "ContainerNodeInlines.h"
 #include "StyleBuilderConverter.h"
 #include "StyleBuilderState.h"
 
@@ -88,7 +90,7 @@ static const std::optional<CSSToLengthConversionData> cssToLengthConversionData(
 
 Length SingleTimelineRange::lengthForCSSValue(RefPtr<const CSSPrimitiveValue> value, RefPtr<Element> element)
 {
-    if (!value || value->isCalculated() || !element)
+    if (!value || !element)
         return { };
     if (value->valueID() == CSSValueAuto)
         return { };
@@ -117,7 +119,7 @@ Length SingleTimelineRange::lengthForCSSValue(RefPtr<const CSSPrimitiveValue> va
     return { };
 }
 
-SingleTimelineRange SingleTimelineRange::range(const CSSValue& value, Type type, const Style::BuilderState* state, RefPtr<Element> element)
+SingleTimelineRange SingleTimelineRange::range(const CSSValue& value, Type type, Style::BuilderState* state, RefPtr<Element> element)
 {
     if (RefPtr primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
         // <length-percentage>
@@ -137,41 +139,31 @@ SingleTimelineRange SingleTimelineRange::range(const CSSValue& value, Type type,
     return { SingleTimelineRange::timelineName(pair->first().valueID()), state ? Style::BuilderConverter::convertLength(*state, primitiveValue) : lengthForCSSValue(RefPtr { primitiveValue.ptr() }, element) };
 }
 
-SingleTimelineRange SingleTimelineRange::parse(TimelineRangeValue&& value, RefPtr<Element> element, Type type)
+RefPtr<CSSValue> SingleTimelineRange::parse(TimelineRangeValue&& value, RefPtr<Element> element, Type type)
 {
     if (!element)
         return { };
-    RefPtr document = element->protectedDocument();
-    if (!document)
-        return { };
+    Ref document = element->document();
     const auto& parserContext = document->cssParserContext();
     return WTF::switchOn(value,
-    [&](String& rangeString) {
-        CSSTokenizer tokenizer(rangeString);
-        auto tokenRange = tokenizer.tokenRange();
-        tokenRange.consumeWhitespace();
-        if (auto consumedRange = CSSPropertyParserHelpers::consumeAnimationRange(tokenRange, parserContext, type))
-            return range(*consumedRange, type, nullptr, element);
-        return SingleTimelineRange { };
+    [&](String& rangeString) -> RefPtr<CSSValue> {
+        return CSSPropertyParserHelpers::parseSingleAnimationRange(rangeString, parserContext, type);
     },
-    [&](TimelineRangeOffset& rangeOffset) {
-        CSSTokenizer tokenizer(rangeOffset.rangeName);
-        auto tokenRange = tokenizer.tokenRange();
-        tokenRange.consumeWhitespace();
-        if (auto consumedRangeName = CSSPropertyParserHelpers::consumeAnimationRange(tokenRange, parserContext, type)) {
+    [&](TimelineRangeOffset& rangeOffset) -> RefPtr<CSSValue> {
+        if (auto consumedRangeName = CSSPropertyParserHelpers::parseSingleAnimationRange(rangeOffset.rangeName, parserContext, type)) {
             if (rangeOffset.offset)
-                return range(CSSValuePair::createNoncoalescing(*consumedRangeName, *rangeOffset.offset->toCSSValue()), type, nullptr, element);
-            return range(*consumedRangeName, type, nullptr, element);
+                return CSSValuePair::createNoncoalescing(*consumedRangeName, *rangeOffset.offset->toCSSValue());
+            return consumedRangeName;
         }
         if (RefPtr offset = rangeOffset.offset)
-            return range(*offset->toCSSValue(), type, nullptr, element);
-        return SingleTimelineRange { };
+            return offset->toCSSValue();
+        return nullptr;
     },
     [&](RefPtr<CSSKeywordValue> rangeKeyword) {
-        return range(*rangeKeyword->toCSSValue(), type, nullptr, element);
+        return rangeKeyword->toCSSValue();
     },
     [&](RefPtr<CSSNumericValue> rangeValue) {
-        return range(*rangeValue->toCSSValue(), type, nullptr, element);
+        return rangeValue->toCSSValue();
     });
 }
 
@@ -225,14 +217,14 @@ CSSValueID SingleTimelineRange::valueID(SingleTimelineRange::Name range)
 WTF::TextStream& operator<<(WTF::TextStream& ts, const SingleTimelineRange& range)
 {
     switch (range.name) {
-    case SingleTimelineRange::Name::Normal: ts << "Normal "; break;
-    case SingleTimelineRange::Name::Omitted: ts << "Omitted "; break;
-    case SingleTimelineRange::Name::Cover: ts << "Cover "; break;
-    case SingleTimelineRange::Name::Contain: ts << "Contain "; break;
-    case SingleTimelineRange::Name::Entry: ts << "Entry "; break;
-    case SingleTimelineRange::Name::Exit: ts << "Exit "; break;
-    case SingleTimelineRange::Name::EntryCrossing: ts << "EntryCrossing "; break;
-    case SingleTimelineRange::Name::ExitCrossing: ts << "ExitCrossing "; break;
+    case SingleTimelineRange::Name::Normal: ts << "Normal "_s; break;
+    case SingleTimelineRange::Name::Omitted: ts << "Omitted "_s; break;
+    case SingleTimelineRange::Name::Cover: ts << "Cover "_s; break;
+    case SingleTimelineRange::Name::Contain: ts << "Contain "_s; break;
+    case SingleTimelineRange::Name::Entry: ts << "Entry "_s; break;
+    case SingleTimelineRange::Name::Exit: ts << "Exit "_s; break;
+    case SingleTimelineRange::Name::EntryCrossing: ts << "EntryCrossing "_s; break;
+    case SingleTimelineRange::Name::ExitCrossing: ts << "ExitCrossing "_s; break;
     }
     ts << range.offset;
     return ts;

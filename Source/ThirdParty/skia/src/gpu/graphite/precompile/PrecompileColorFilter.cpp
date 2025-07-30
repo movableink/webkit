@@ -9,10 +9,12 @@
 
 #include "include/effects/SkRuntimeEffect.h"
 #include "include/gpu/graphite/precompile/PrecompileRuntimeEffect.h"
-#include "include/private/SkColorData.h"
+#include "src/core/SkColorData.h"
 #include "src/core/SkColorSpacePriv.h"
 #include "src/core/SkKnownRuntimeEffects.h"
+#include "src/effects/colorfilters/SkWorkingFormatColorFilter.h"
 #include "src/gpu/graphite/BuiltInCodeSnippetID.h"
+#include "src/gpu/graphite/KeyContext.h"
 #include "src/gpu/graphite/KeyHelpers.h"
 #include "src/gpu/graphite/PaintParams.h"
 #include "src/gpu/graphite/PaintParamsKey.h"
@@ -194,6 +196,10 @@ sk_sp<PrecompileColorFilter> PrecompileColorFilters::Blend(SkSpan<const SkBlendM
 
 //--------------------------------------------------------------------------------------------------
 class PrecompileMatrixColorFilter : public PrecompileColorFilter {
+public:
+    PrecompileMatrixColorFilter(bool inHSLA) : fInHSLA(inHSLA) {}
+
+private:
     void addToKey(const KeyContext& keyContext,
                   PaintParamsKeyBuilder* builder,
                   PipelineDataGatherer* gatherer,
@@ -206,46 +212,72 @@ class PrecompileMatrixColorFilter : public PrecompileColorFilter {
                                                  0, 0, 0, 1, 0 };
 
         MatrixColorFilterBlock::MatrixColorFilterData matrixCFData(
-                kIdentity, /* inHSLA= */ false, /* clamp= */ true);
+                kIdentity, fInHSLA, /* clamp= */ true);
 
         MatrixColorFilterBlock::AddBlock(keyContext, builder, gatherer, matrixCFData);
     }
+
+    bool fInHSLA;
 };
 
 sk_sp<PrecompileColorFilter> PrecompileColorFilters::Matrix() {
-    return sk_make_sp<PrecompileMatrixColorFilter>();
+    return sk_make_sp<PrecompileMatrixColorFilter>(/*inHSLA=*/false);
 }
 
 sk_sp<PrecompileColorFilter> PrecompileColorFilters::HSLAMatrix() {
-    return sk_make_sp<PrecompileMatrixColorFilter>();
+    return sk_make_sp<PrecompileMatrixColorFilter>(/*inHSLA=*/true);
 }
 
 //--------------------------------------------------------------------------------------------------
 class PrecompileColorSpaceXformColorFilter : public PrecompileColorFilter {
+public:
+    PrecompileColorSpaceXformColorFilter(SkSpan<const sk_sp<SkColorSpace>> src,
+                                         SkSpan<const sk_sp<SkColorSpace>> dst)
+            : fSrc(src.begin(), src.end())
+            , fDst(dst.begin(), dst.end())
+            , fNumCombinations(src.size() * dst.size()) {}
+
+private:
+    int numIntrinsicCombinations() const override { return fNumCombinations; }
+
     void addToKey(const KeyContext& keyContext,
                   PaintParamsKeyBuilder* builder,
                   PipelineDataGatherer* gatherer,
                   int desiredCombination) const override {
-        SkASSERT(desiredCombination == 0);
+        const int srcCombination = desiredCombination % fSrc.size();
+        const int dstCombination = desiredCombination / fSrc.size();
+        SkASSERT(dstCombination < static_cast<int>(fDst.size()));
 
+        // The alpha type is unused for determining which color space transform block to use.
         constexpr SkAlphaType kAlphaType = kPremul_SkAlphaType;
-        ColorSpaceTransformBlock::ColorSpaceTransformData csData(sk_srgb_singleton(), kAlphaType,
-                                                                 sk_srgb_singleton(), kAlphaType);
+
+        ColorSpaceTransformBlock::ColorSpaceTransformData csData =
+                ColorSpaceTransformBlock::ColorSpaceTransformData(
+                        fSrc[srcCombination].get(), kAlphaType,
+                        fDst[dstCombination].get(), kAlphaType);
 
         ColorSpaceTransformBlock::AddBlock(keyContext, builder, gatherer, csData);
     }
+
+    std::vector<sk_sp<SkColorSpace>> fSrc;
+    std::vector<sk_sp<SkColorSpace>> fDst;
+
+    const int fNumCombinations;
 };
 
 sk_sp<PrecompileColorFilter> PrecompileColorFilters::LinearToSRGBGamma() {
-    return sk_make_sp<PrecompileColorSpaceXformColorFilter>();
+    return PrecompileColorFiltersPriv::ColorSpaceXform({ SkColorSpace::MakeSRGBLinear() },
+                                                       { SkColorSpace::MakeSRGB() });
 }
 
 sk_sp<PrecompileColorFilter> PrecompileColorFilters::SRGBToLinearGamma() {
-    return sk_make_sp<PrecompileColorSpaceXformColorFilter>();
+    return PrecompileColorFiltersPriv::ColorSpaceXform({ SkColorSpace::MakeSRGB() },
+                                                       { SkColorSpace::MakeSRGBLinear() });
 }
 
-sk_sp<PrecompileColorFilter> PrecompileColorFiltersPriv::ColorSpaceXform() {
-    return sk_make_sp<PrecompileColorSpaceXformColorFilter>();
+sk_sp<PrecompileColorFilter> PrecompileColorFiltersPriv::ColorSpaceXform(
+        SkSpan<const sk_sp<SkColorSpace>> src, SkSpan<const sk_sp<SkColorSpace>> dst) {
+    return sk_make_sp<PrecompileColorSpaceXformColorFilter>(src, dst);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -308,7 +340,13 @@ sk_sp<PrecompileColorFilter> PrecompileColorFilters::HighContrast() {
     if (!cf) {
         return nullptr;
     }
-    return PrecompileColorFiltersPriv::WithWorkingFormat({ std::move(cf) });
+
+    // These color space working format arguments should match those from
+    // src/effects/SkHighContrastFilter.cpp.
+    const skcms_TransferFunction kTF = SkNamedTransferFn::kLinear;
+    const SkAlphaType kUnpremul = kUnpremul_SkAlphaType;
+    return PrecompileColorFiltersPriv::WithWorkingFormat(
+            {std::move(cf)}, &kTF, /* gamut= */ nullptr, &kUnpremul);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -346,9 +384,12 @@ sk_sp<PrecompileColorFilter> PrecompileColorFiltersPriv::Gaussian() {
 //--------------------------------------------------------------------------------------------------
 class PrecompileWithWorkingFormatColorFilter : public PrecompileColorFilter {
 public:
-    PrecompileWithWorkingFormatColorFilter(SkSpan<const sk_sp<PrecompileColorFilter>> childOptions)
-            : fChildOptions(childOptions.begin(), childOptions.end()) {
-
+    PrecompileWithWorkingFormatColorFilter(SkSpan<const sk_sp<PrecompileColorFilter>> childOptions,
+                                           const skcms_TransferFunction* tf,
+                                           const skcms_Matrix3x3* gamut,
+                                           const SkAlphaType* at)
+            : fChildOptions(childOptions.begin(), childOptions.end())
+            , fWorkingFormatCalculator(tf, gamut, at) {
         fNumChildCombos = 0;
         for (const auto& childOption : fChildOptions) {
             fNumChildCombos += childOption->priv().numCombinations();
@@ -364,9 +405,15 @@ private:
                   int desiredCombination) const override {
         SkASSERT(desiredCombination < fNumChildCombos);
 
+        SkAlphaType unusedWorkingAT;
+        const sk_sp<SkColorSpace> dstCS = keyContext.dstColorInfo().colorSpace()
+                                                  ? keyContext.dstColorInfo().refColorSpace()
+                                                  : SkColorSpace::MakeSRGB();
+        const sk_sp<SkColorSpace> workingCS =
+                fWorkingFormatCalculator.workingFormat(dstCS, &unusedWorkingAT);
+
+        // The alpha type is unused for determining which color space transform block to use.
         constexpr SkAlphaType kAlphaType = kPremul_SkAlphaType;
-        ColorSpaceTransformBlock::ColorSpaceTransformData csData(sk_srgb_singleton(), kAlphaType,
-                                                                 sk_srgb_singleton(), kAlphaType);
 
         // Use two nested compose blocks to chain (dst->working), child, and (working->dst) together
         // while appearing as one block to the parent node.
@@ -376,8 +423,10 @@ private:
                     Compose(keyContext, builder, gatherer,
                             /* addInnerToKey= */ [&]() -> void {
                                 // Innermost (inner of inner compose)
+                                ColorSpaceTransformBlock::ColorSpaceTransformData data1(
+                                        dstCS.get(), kAlphaType, workingCS.get(), kAlphaType);
                                 ColorSpaceTransformBlock::AddBlock(keyContext, builder, gatherer,
-                                                                   csData);
+                                                                   data1);
                             },
                             /* addOuterToKey= */ [&]() -> void {
                                 // Middle (outer of inner compose)
@@ -387,18 +436,25 @@ private:
                 },
                 /* addOuterToKey= */ [&]() -> void {
                     // Outermost (outer of outer compose)
-                    ColorSpaceTransformBlock::AddBlock(keyContext, builder, gatherer, csData);
+                    ColorSpaceTransformBlock::ColorSpaceTransformData data2(
+                            workingCS.get(), kAlphaType, dstCS.get(), kAlphaType);
+                    ColorSpaceTransformBlock::AddBlock(keyContext, builder, gatherer, data2);
                 });
     }
 
     std::vector<sk_sp<PrecompileColorFilter>> fChildOptions;
 
     int fNumChildCombos;
+
+    SkWorkingFormatCalculator fWorkingFormatCalculator;
 };
 
 sk_sp<PrecompileColorFilter> PrecompileColorFiltersPriv::WithWorkingFormat(
-        SkSpan<const sk_sp<PrecompileColorFilter>> childOptions) {
-    return sk_make_sp<PrecompileWithWorkingFormatColorFilter>(childOptions);
+        SkSpan<const sk_sp<PrecompileColorFilter>> childOptions,
+        const skcms_TransferFunction* tf,
+        const skcms_Matrix3x3* gamut,
+        const SkAlphaType* at) {
+    return sk_make_sp<PrecompileWithWorkingFormatColorFilter>(childOptions, tf, gamut, at);
 }
 
 } // namespace skgpu::graphite

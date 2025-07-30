@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
  * Copyright (C) 2015 Roopesh Chander (roop@roopc.net)
- * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -82,7 +82,7 @@ static bool processContentRuleListsForLoad(const LocalFrame& frame, ResourceRequ
 
 #endif
 
-void PingLoader::loadImage(LocalFrame& frame, const URL& url)
+void PingLoader::loadImage(LocalFrame& frame, URL&& url)
 {
     ASSERT(frame.document());
     Ref document = *frame.document();
@@ -97,7 +97,7 @@ void PingLoader::loadImage(LocalFrame& frame, const URL& url)
         return;
     }
 
-    ResourceRequest request(url);
+    ResourceRequest request(WTFMove(url));
 #if ENABLE(CONTENT_EXTENSIONS)
     if (processContentRuleListsForLoad(frame, request, ContentExtensions::ResourceType::Image))
         return;
@@ -118,14 +118,15 @@ void PingLoader::loadImage(LocalFrame& frame, const URL& url)
 }
 
 // http://www.whatwg.org/specs/web-apps/current-work/multipage/links.html#hyperlink-auditing
-void PingLoader::sendPing(LocalFrame& frame, const URL& pingURL, const URL& destinationURL)
+void PingLoader::sendPing(LocalFrame& frame, URL&& sendPingURL, const URL& destinationURL)
 {
     ASSERT(frame.document());
 
-    if (!pingURL.protocolIsInHTTPFamily())
+    if (!sendPingURL.protocolIsInHTTPFamily())
         return;
 
-    ResourceRequest request(pingURL);
+    ResourceRequest request(WTFMove(sendPingURL));
+    const auto& pingURL = request.url();
     request.setRequester(ResourceRequestRequester::Ping);
 
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -140,7 +141,7 @@ void PingLoader::sendPing(LocalFrame& frame, const URL& pingURL, const URL& dest
 
     request.setHTTPMethod("POST"_s);
     request.setHTTPContentType("text/ping"_s);
-    request.setHTTPBody(FormData::create("PING"));
+    request.setHTTPBody(FormData::create("PING"_s));
     request.setHTTPHeaderField(HTTPHeaderName::CacheControl, HTTPHeaderValues::maxAge0());
 
     HTTPHeaderMap originalRequestHeader = request.httpHeaderFields();
@@ -151,7 +152,7 @@ void PingLoader::sendPing(LocalFrame& frame, const URL& pingURL, const URL& dest
     frame.protectedLoader()->updateRequestAndAddExtraFields(request, IsMainResource::No);
 
     // https://html.spec.whatwg.org/multipage/links.html#hyperlink-auditing
-    if (document->securityOrigin().isSameOriginAs(SecurityOrigin::create(pingURL).get())
+    if (document->protectedSecurityOrigin()->isSameOriginAs(SecurityOrigin::create(pingURL).get())
         || !document->url().protocolIs("https"_s))
         request.setHTTPHeaderField(HTTPHeaderName::PingFrom, document->url().string());
     request.setHTTPHeaderField(HTTPHeaderName::PingTo, destinationURL.string());
@@ -159,7 +160,7 @@ void PingLoader::sendPing(LocalFrame& frame, const URL& pingURL, const URL& dest
     startPingLoad(frame, request, WTFMove(originalRequestHeader), ShouldFollowRedirects::Yes, ContentSecurityPolicyImposition::DoPolicyCheck, ReferrerPolicy::NoReferrer);
 }
 
-void PingLoader::sendViolationReport(LocalFrame& frame, const URL& reportURL, Ref<FormData>&& report, ViolationReportType reportType)
+void PingLoader::sendViolationReport(LocalFrame& frame, URL&& violationReportURL, Ref<FormData>&& report, ViolationReportType reportType)
 {
     ASSERT(frame.document());
 
@@ -168,7 +169,8 @@ void PingLoader::sendViolationReport(LocalFrame& frame, const URL& reportURL, Re
     if (reportType == ViolationReportType::CrossOriginOpenerPolicy && Page::nonUtilityPageCount() <= 1)
         return;
 
-    ResourceRequest request(reportURL);
+    ResourceRequest request(WTFMove(violationReportURL));
+    const auto& reportURL = request.url();
 #if ENABLE(CONTENT_EXTENSIONS)
     if (processContentRuleListsForLoad(frame, request, ContentExtensions::ResourceType::CSPReport))
         return;
@@ -185,10 +187,12 @@ void PingLoader::sendViolationReport(LocalFrame& frame, const URL& reportURL, Re
         break;
     case ViolationReportType::COEPInheritenceViolation:
     case ViolationReportType::CORPViolation:
+    case ViolationReportType::CSPHashReport:
     case ViolationReportType::CrossOriginOpenerPolicy:
     case ViolationReportType::Deprecation:
     case ViolationReportType::StandardReportingAPIViolation:
     case ViolationReportType::Test:
+    case ViolationReportType::IntegrityPolicy:
         request.setHTTPContentType("application/reports+json"_s);
         break;
     }

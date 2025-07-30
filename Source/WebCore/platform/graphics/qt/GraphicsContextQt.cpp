@@ -543,9 +543,9 @@ void GraphicsContextQt::drawPattern(NativeImage& nativeImage, const FloatRect &d
     setCompositeOperation(previousOperator);
 }
 
-void GraphicsContextQt::drawGlyphs(const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode fontSmoothingMode)
+void GraphicsContextQt::drawGlyphs(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& point, FontSmoothingMode fontSmoothingMode)
 {
-    FontCascade::drawGlyphs(*this, font, glyphs, advances, numGlyphs, point, fontSmoothingMode);
+    FontCascade::drawGlyphs(*this, font, glyphs, advances, point, fontSmoothingMode);
 }
 
 /*
@@ -1203,27 +1203,26 @@ void GraphicsContextQt::drawLineForText(const FloatRect& rect, bool printing, bo
 }
 
 // NOTE: this code is based on GraphicsContextCG implementation
-void GraphicsContextQt::drawLinesForText(const FloatPoint& origin, float thickness, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle strokeStyle)
+void GraphicsContextQt::drawLinesForText(const FloatPoint& origin, float thickness, std::span<const FloatSegment> lineSegments, bool isPrinting, bool doubleLines, StrokeStyle strokeStyle)
 {
-    if (widths.size() <= 0)
+    if (lineSegments.size() <= 0)
         return;
 
     Color localStrokeColor(strokeColor());
 
-    FloatRect bounds = computeLineBoundsAndAntialiasingModeForText(FloatRect(origin, FloatSize(widths.last(), thickness)), printing, localStrokeColor);
+    FloatRect bounds = computeLineBoundsAndAntialiasingModeForText(FloatRect(origin, FloatSize(lineSegments.back().end, thickness)), isPrinting, localStrokeColor);
     bool fillColorIsNotEqualToStrokeColor = fillColor() != localStrokeColor;
 
     // FIXME: drawRects() is significantly slower than drawLine() for thin lines (<= 1px)
     Vector<QRectF, 4> dashBounds;
-    ASSERT(!(widths.size() % 2));
-    dashBounds.reserveInitialCapacity(dashBounds.size() / 2);
-    for (size_t i = 0; i < widths.size(); i += 2)
-        dashBounds.append(QRectF(bounds.x() + widths[i], bounds.y(), widths[i+1] - widths[i], bounds.height()));
+    dashBounds.reserveInitialCapacity(lineSegments.size());
+    for (const auto& lineSegment : lineSegments)
+        dashBounds.append(QRectF(bounds.x() + lineSegment.begin, bounds.y(), lineSegment.length(), bounds.height()));
 
     if (doubleLines) {
         // The space between double underlines is equal to the height of the underline
-        for (size_t i = 0; i < widths.size(); i += 2)
-            dashBounds.append(QRectF(bounds.x() + widths[i], bounds.y() + 2 * bounds.height(), widths[i+1] - widths[i], bounds.height()));
+        for (const auto& lineSegment : lineSegments)
+            dashBounds.append(QRectF(bounds.x() + lineSegment.begin, bounds.y() + 2 * bounds.height(), lineSegment.length(), bounds.height()));
     }
 
     QPainter* p = m_data->p();

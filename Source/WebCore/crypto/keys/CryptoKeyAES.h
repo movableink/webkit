@@ -27,13 +27,13 @@
 
 #include "CryptoAlgorithmIdentifier.h"
 #include "CryptoKey.h"
-#include "ExceptionOr.h"
 #include <wtf/Function.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 class CryptoAlgorithmParameters;
+template<typename> class ExceptionOr;
 
 struct JsonWebKey;
 
@@ -68,6 +68,7 @@ private:
     CryptoKeyAES(CryptoAlgorithmIdentifier, Vector<uint8_t>&& key, bool extractable, CryptoKeyUsageBitmap);
 
     KeyAlgorithm algorithm() const final;
+    CryptoKey::Data data() const final;
 
     Vector<uint8_t> m_key;
 };

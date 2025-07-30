@@ -42,7 +42,9 @@
 #include "RenderListItem.h"
 #include "RenderListMarker.h"
 #include "RenderMenuList.h"
+#include "RenderSVGInline.h"
 #include "RenderSlider.h"
+#include "RenderStyleInlines.h"
 #include "RenderStyleSetters.h"
 #include "RenderTable.h"
 #include "RenderTextControl.h"
@@ -90,6 +92,13 @@ static Layout::Box::ElementAttributes elementAttributes(const RenderElement& ren
 
 BoxTreeUpdater::BoxTreeUpdater(RenderBlock& rootRenderer)
     : m_rootRenderer(rootRenderer)
+    , m_document(rootRenderer.document())
+{
+}
+
+BoxTreeUpdater::BoxTreeUpdater(RenderBlock& rootRenderer, const Document& document)
+    : m_rootRenderer(rootRenderer)
+    , m_document(document)
 {
 }
 
@@ -123,6 +132,9 @@ CheckedRef<Layout::ElementBox> BoxTreeUpdater::build()
 
 void BoxTreeUpdater::tearDown()
 {
+    if (m_document->renderTreeBeingDestroyed())
+        return rootLayoutBox().destroyChildren();
+
     Vector<CheckedRef<Layout::Box>> boxesToDetach;
     for (auto& constLayoutBox : formattingContextBoxes(rootLayoutBox())) {
         auto& layoutBox = const_cast<Layout::Box&>(constLayoutBox);
@@ -177,7 +189,16 @@ void BoxTreeUpdater::adjustStyleIfNeeded(const RenderElement& renderer, RenderSt
                 styleToAdjust.resetBorderRight();
                 styleToAdjust.setPaddingRight(RenderStyle::initialPadding());
             }
-            if ((styleToAdjust.display() == DisplayType::RubyBase || styleToAdjust.display() == DisplayType::RubyAnnotation) && renderInline->parent()->style().display() != DisplayType::Ruby)
+
+            auto isSupportedInlineDisplay = [&] {
+                auto display = styleToAdjust.display();
+                if (display == DisplayType::RubyBase || display == DisplayType::RubyAnnotation)
+                    return renderInline->parent()->style().display() == DisplayType::Ruby;
+                if (is<RenderSVGInline>(*renderInline))
+                    return display == DisplayType::Inline;
+                return styleToAdjust.isDisplayInlineType();
+            };
+            if (!isSupportedInlineDisplay())
                 styleToAdjust.setDisplay(DisplayType::Inline);
             return;
         }
@@ -235,7 +256,9 @@ UniqueRef<Layout::Box> BoxTreeUpdater::createLayoutBox(RenderObject& renderer)
 
         auto contentCharacteristic = OptionSet<Layout::InlineTextBox::ContentCharacteristic> { };
         if (canUseSimpleFontCodePath)
-            contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimpledFontCodepath);
+            contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimpleFontCodepath);
+        if (textRenderer->shouldUseSimpleGlyphOverflowCodePath())
+            contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::ShouldUseSimpleGlyphOverflowCodePath);
         if (*canUseSimplifiedTextMeasuring)
             contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimplifiedContentMeasuring);
         if (*hasPositionDependentContentWidth)
@@ -248,7 +271,7 @@ UniqueRef<Layout::Box> BoxTreeUpdater::createLayoutBox(RenderObject& renderer)
 
     auto& renderElement = downcast<RenderElement>(renderer);
 
-    auto style = RenderStyle::clone(renderer.style());
+    auto style = RenderStyle::clone(renderElement.style());
     adjustStyleIfNeeded(renderElement, style, firstLineStyle.get());
 
     if (auto* listMarkerRenderer = dynamicDowncast<RenderListMarker>(renderElement)) {
@@ -301,14 +324,16 @@ void BoxTreeUpdater::insertChild(UniqueRef<Layout::Box> childBox, RenderObject& 
 static void updateContentCharacteristic(const RenderText& rendererText, Layout::InlineTextBox& inlineTextBox)
 {
     auto& rendererStyle = rendererText.style();
-    auto shouldUpdateContentCharacteristic = rendererStyle.fontCascade() != inlineTextBox.style().fontCascade();
+    auto shouldUpdateContentCharacteristic = !rendererStyle.fontCascadeEqual(inlineTextBox.style());
     if (!shouldUpdateContentCharacteristic)
         return;
 
     auto contentCharacteristic = OptionSet<Layout::InlineTextBox::ContentCharacteristic> { };
     // These may only change when content changes.
     if (inlineTextBox.canUseSimpleFontCodePath())
-        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimpledFontCodepath);
+        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimpleFontCodepath);
+    if (inlineTextBox.shouldUseSimpleGlyphOverflowCodePath())
+        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::ShouldUseSimpleGlyphOverflowCodePath);
     if (inlineTextBox.hasPositionDependentContentWidth())
         contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::HasPositionDependentContentWidth);
     if (inlineTextBox.hasStrongDirectionalityContent())
@@ -333,7 +358,6 @@ static void updateListMarkerAttributes(const RenderListMarker& listMarkerRendere
 
 void BoxTreeUpdater::updateStyle(const RenderObject& renderer)
 {
-    auto& rendererStyle = renderer.style();
     auto* layoutBox = const_cast<Layout::Box*>(renderer.layoutBox());
     if (!layoutBox) {
         ASSERT_NOT_REACHED();
@@ -343,7 +367,7 @@ void BoxTreeUpdater::updateStyle(const RenderObject& renderer)
     if (auto* renderText = dynamicDowncast<RenderText>(renderer)) {
         if (auto* inlineTextBox = dynamicDowncast<Layout::InlineTextBox>(*layoutBox)) {
             updateContentCharacteristic(*renderText, *inlineTextBox);
-            inlineTextBox->updateStyle(RenderStyle::createAnonymousStyleWithDisplay(rendererStyle, DisplayType::Inline), firstLineStyleFor(*renderText));
+            inlineTextBox->updateStyle(RenderStyle::createAnonymousStyleWithDisplay(renderText->style(), DisplayType::Inline), firstLineStyleFor(*renderText));
             return;
         }
         ASSERT_NOT_REACHED();
@@ -351,7 +375,7 @@ void BoxTreeUpdater::updateStyle(const RenderObject& renderer)
     }
 
     auto firstLineNewStyle = firstLineStyleFor(renderer);
-    auto newStyle = RenderStyle::clone(rendererStyle);
+    auto newStyle = RenderStyle::clone(downcast<RenderElement>(renderer).style());
     adjustStyleIfNeeded(downcast<RenderElement>(renderer), newStyle, firstLineNewStyle.get());
     layoutBox->updateStyle(WTFMove(newStyle), WTFMove(firstLineNewStyle));
     if (auto* listMarkerRenderer = dynamicDowncast<RenderListMarker>(renderer); listMarkerRenderer && is<Layout::ElementBox>(*layoutBox))
@@ -369,9 +393,11 @@ void BoxTreeUpdater::updateContent(const RenderText& textRenderer)
     auto text = style.textSecurity() == TextSecurity::None ? (isCombinedText ? textRenderer.originalText() : String { textRenderer.text() }) : RenderBlock::updateSecurityDiscCharacters(style, isCombinedText ? textRenderer.originalText() : String { textRenderer.text() });
     auto contentCharacteristic = OptionSet<Layout::InlineTextBox::ContentCharacteristic> { };
     if (textRenderer.canUseSimpleFontCodePath())
-        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimpledFontCodepath);
+        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimpleFontCodepath);
     if (textRenderer.canUseSimpleFontCodePath() && Layout::TextUtil::canUseSimplifiedTextMeasuring(text, style.fontCascade(), style.collapseWhiteSpace(), &inlineTextBox.firstLineStyle()))
         contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimplifiedContentMeasuring);
+    if (textRenderer.shouldUseSimpleGlyphOverflowCodePath())
+        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::ShouldUseSimpleGlyphOverflowCodePath);
     auto hasPositionDependentContentWidth = textRenderer.hasPositionDependentContentWidth();
     if (!hasPositionDependentContentWidth) {
         hasPositionDependentContentWidth = Layout::TextUtil::hasPositionDependentContentWidth(text);
@@ -434,9 +460,9 @@ void showInlineContent(TextStream& stream, const InlineContent& inlineContent, s
         auto addSpacing = [&](auto& streamToUse) {
             size_t printedCharacters = 0;
             if (isDamaged)
-                streamToUse << "            -+";
+                streamToUse << "           -+";
             else
-                streamToUse << "            --";
+                streamToUse << "           --";
             while (++printedCharacters <= depth * 2)
                 streamToUse << " ";
 

@@ -30,6 +30,8 @@
 
 #include "WebKitWebViewBasePrivate.h"
 #include <WebCore/GtkUtilities.h>
+#include <WebCore/ImageAdapter.h>
+#include <WebCore/NativeImage.h>
 #include <WebCore/PasteboardCustomData.h>
 #include <gtk/gtk.h>
 

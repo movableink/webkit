@@ -38,35 +38,49 @@ typedef void* PlatformTextMarkerRange;
 #endif
 
 namespace WTR {
-    
+
 class AccessibilityTextMarkerRange : public JSWrappable {
 public:
     static Ref<AccessibilityTextMarkerRange> create(PlatformTextMarkerRange);
     static Ref<AccessibilityTextMarkerRange> create(const AccessibilityTextMarkerRange&);
-    
+
     ~AccessibilityTextMarkerRange();
-    
+
     PlatformTextMarkerRange platformTextMarkerRange() const;
     virtual JSClassRef wrapperClass();
-    
+
     static JSObjectRef makeJSAccessibilityTextMarkerRange(JSContextRef, const AccessibilityTextMarkerRange&);
     bool isEqual(AccessibilityTextMarkerRange*);
-    
+
 private:
     AccessibilityTextMarkerRange(PlatformTextMarkerRange);
     AccessibilityTextMarkerRange(const AccessibilityTextMarkerRange&);
-    
+
 #if PLATFORM(COCOA)
     RetainPtr<id> m_textMarkerRange;
 #else
     PlatformTextMarkerRange m_textMarkerRange;
 #endif
 };
-    
+
 #if !PLATFORM(COCOA)
 inline bool AccessibilityTextMarkerRange::isEqual(AccessibilityTextMarkerRange*) { return false; }
 #endif
-    
+
+#if PLATFORM(COCOA)
+#ifdef __OBJC__
+inline PlatformTextMarkerRange AccessibilityTextMarkerRange::platformTextMarkerRange() const
+{
+    return m_textMarkerRange.get();
+}
+#endif
+#else
+inline PlatformTextMarkerRange AccessibilityTextMarkerRange::platformTextMarkerRange() const
+{
+    return m_textMarkerRange;
+}
+#endif
+
 #ifdef __OBJC__
 inline std::optional<RefPtr<AccessibilityTextMarkerRange>> makeVectorElement(const RefPtr<AccessibilityTextMarkerRange>*, id range) { return { { AccessibilityTextMarkerRange::create(range) } }; }
 #endif

@@ -31,6 +31,7 @@ class Factory(factory.BuildFactory):
     findModifiedLayoutTests = False
     skipBuildIfNoResult = True
     branches = None
+    requiresUserValidation = False
 
     def __init__(self, platform, configuration=None, architectures=None, buildOnly=True, triggers=None, triggered_by=None, remotes=None, additionalArguments=None, checkRelevance=False, **kwargs):
         factory.BuildFactory.__init__(self)
@@ -40,6 +41,9 @@ class Factory(factory.BuildFactory):
         self.addStep(ValidateChange(branches=self.branches))
         self.addStep(PrintConfiguration())
         self.addStep(CleanGitRepo())
+        if platform.startswith('mac'):
+            self.addStep(PruneCoreSymbolicationdCacheIfTooLarge())
+        self.addStep(SetCredentialHelper())
         self.addStep(CheckOutSource())
         self.addStep(FetchBranches())
         # CheckOutSource step pulls the latest revision, since we use alwaysUseLatest=True. Without alwaysUseLatest Buildbot will
@@ -51,6 +55,8 @@ class Factory(factory.BuildFactory):
         self.addStep(ShowIdentifier())
         self.addStep(ApplyPatch())
         self.addStep(CheckOutPullRequest())
+        if self.requiresUserValidation:
+            self.addStep(ValidateUserForQueue())
         if self.findModifiedLayoutTests:
             self.addStep(GetUpdatedTestExpectations())
             self.addStep(FindModifiedLayoutTests(skipBuildIfNoResult=self.skipBuildIfNoResult))
@@ -63,6 +69,7 @@ class StyleFactory(factory.BuildFactory):
         self.addStep(ValidateChange())
         self.addStep(PrintConfiguration())
         self.addStep(CleanGitRepo())
+        self.addStep(SetCredentialHelper())
         self.addStep(CheckOutSource())
         self.addStep(FetchBranches())
         self.addStep(UpdateWorkingDirectory())
@@ -79,6 +86,7 @@ class WatchListFactory(factory.BuildFactory):
         self.addStep(ValidateChange())
         self.addStep(PrintConfiguration())
         self.addStep(CleanGitRepo())
+        self.addStep(SetCredentialHelper())
         self.addStep(CheckOutSource())
         self.addStep(FetchBranches())
         self.addStep(UpdateWorkingDirectory())
@@ -98,6 +106,7 @@ class SaferCPPStaticAnalyzerFactory(factory.BuildFactory):
         self.addStep(ValidateChange())
         self.addStep(PrintConfiguration())
         self.addStep(CleanGitRepo())
+        self.addStep(SetCredentialHelper())
         self.addStep(CheckOutSource())
         self.addStep(FetchBranches())
         self.addStep(ShowIdentifier())
@@ -109,6 +118,7 @@ class SaferCPPStaticAnalyzerFactory(factory.BuildFactory):
         self.addStep(CheckOutPullRequest())
         self.addStep(KillOldProcesses())
         self.addStep(ValidateChange(addURLs=False))
+        self.addStep(FindModifiedSaferCPPExpectations())
         self.addStep(ScanBuild())
 
 
@@ -168,10 +178,10 @@ class TestFactory(Factory):
             self.addStep(InstallWpeDependencies())
         elif platform == 'win':
             self.addStep(InstallWinDependencies())
+        self.addStep(KillOldProcesses())
         self.getProduct()
         if self.willTriggerCrashLogSubmission:
             self.addStep(WaitForCrashCollection())
-        self.addStep(KillOldProcesses())
         if self.LayoutTestClass:
             self.addStep(RunWebKitTestsInStressMode(num_iterations=10, layout_test_class=self.LayoutTestClass))
             self.addStep(self.LayoutTestClass())
@@ -188,9 +198,9 @@ class StressTestFactory(TestFactory):
 
     def __init__(self, platform, configuration=None, architectures=None, triggered_by=None, additionalArguments=None, checkRelevance=False, **kwargs):
         Factory.__init__(self, platform=platform, configuration=configuration, architectures=architectures, buildOnly=False, triggered_by=triggered_by, additionalArguments=additionalArguments, checkRelevance=checkRelevance)
+        self.addStep(KillOldProcesses())
         self.getProduct()
         self.addStep(WaitForCrashCollection())
-        self.addStep(KillOldProcesses())
         self.addStep(RunWebKitTestsInStressMode())
         self.addStep(TriggerCrashLogSubmission())
         self.addStep(SetBuildSummary())
@@ -217,9 +227,9 @@ class JSCBuildAndTestsFactory(Factory):
 class JSCTestsFactory(Factory):
     def __init__(self, platform, configuration='release', architectures=None, remotes=None, additionalArguments=None, **kwargs):
         Factory.__init__(self, platform=platform, configuration=configuration, architectures=architectures, buildOnly=False, remotes=remotes, additionalArguments=additionalArguments, checkRelevance=True)
+        self.addStep(KillOldProcesses())
         self.addStep(DownloadBuiltProduct())
         self.addStep(ExtractBuiltProduct())
-        self.addStep(KillOldProcesses())
         self.addStep(RunJavaScriptCoreTests())
 
 
@@ -289,6 +299,12 @@ class macOSWK2Factory(TestFactory):
     willTriggerCrashLogSubmission = True
 
 
+class PlayStationBuildFactory(BuildFactory):
+    branches = [r'main']
+    requiresUserValidation = True
+    skipUpload = True
+
+
 class WinBuildFactory(BuildFactory):
     branches = [r'main']
 
@@ -338,6 +354,7 @@ class CommitQueueFactory(factory.BuildFactory):
         self.addStep(ValidateCommitterAndReviewer())
         self.addStep(PrintConfiguration())
         self.addStep(CleanGitRepo())
+        self.addStep(SetCredentialHelper())
         self.addStep(CheckOutSource())
         self.addStep(FetchBranches())
         self.addStep(UpdateWorkingDirectory())
@@ -372,6 +389,7 @@ class MergeQueueFactoryBase(factory.BuildFactory):
         self.addStep(ValidateCommitterAndReviewer())
         self.addStep(PrintConfiguration())
         self.addStep(CleanGitRepo())
+        self.addStep(SetCredentialHelper())
         self.addStep(CheckOutSource())
         self.addStep(FetchBranches())
         self.addStep(MapBranchAlias())

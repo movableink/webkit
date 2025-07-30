@@ -4,7 +4,8 @@
  *           (C) 1998 Waldo Bastian (bastian@kde.org)
  *           (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003, 2004, 2005, 2006, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2016 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -142,12 +143,14 @@ public:
     // FIXME: We may want to introduce a structure holding the in-flux layout information.
     LayoutUnit distributeExtraLogicalHeightToRows(LayoutUnit extraLogicalHeight);
 
-    static RenderPtr<RenderTableSection> createAnonymousWithParentRenderer(const RenderTable&);
-    RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override;
-    
     void paint(PaintInfo&, const LayoutPoint&) override;
 
     void willInsertTableRow(RenderTableRow& child, RenderObject* beforeChild);
+
+    // Whether a row has opaque background depends on many factors, e.g. border spacing, border collapsing, missing cells, etc.
+    // For simplicity, just conservatively assume all table rows are not opaque.
+    bool foregroundIsKnownToBeOpaqueInRect(const LayoutRect&, unsigned) const override { return false; }
+    bool backgroundIsKnownToBeOpaqueInRect(const LayoutRect&) const override { return false; }
 
 private:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
@@ -159,7 +162,7 @@ private:
         DoNotIncludeAllIntersectingCells
     };
 
-    ASCIILiteral renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableSection (anonymous)"_s : "RenderTableSection"_s; }
+    ASCIILiteral renderName() const override;
 
     bool canHaveChildren() const override { return true; }
 
@@ -290,11 +293,6 @@ inline CellSpan RenderTableSection::fullTableRowSpan() const
 {
     ASSERT(!m_needsCellRecalc);
     return CellSpan(0, m_grid.size());
-}
-
-inline RenderPtr<RenderBox> RenderTableSection::createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const
-{
-    return RenderTableSection::createTableSectionWithStyle(renderer.document(), renderer.style());
 }
 
 } // namespace WebCore

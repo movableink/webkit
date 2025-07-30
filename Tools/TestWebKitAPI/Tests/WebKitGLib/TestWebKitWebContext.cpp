@@ -55,11 +55,11 @@ static void testWebContextEphemeral(Test* test, gconstpointer)
     g_assert_true(WEBKIT_IS_WEBSITE_DATA_MANAGER(manager));
     g_assert_false(webkit_website_data_manager_is_ephemeral(manager));
 
-    auto webView = Test::adoptView(Test::createWebView());
+    auto webView = test->createWebView("web-context", nullptr, nullptr);
     g_assert_false(webkit_web_view_is_ephemeral(webView.get()));
     g_assert_true(webkit_web_view_get_website_data_manager(webView.get()) == webkit_web_context_get_website_data_manager(webkit_web_context_get_default()));
 
-    webView = Test::adoptView(Test::createWebView(test->m_webContext.get()));
+    webView = test->createWebView();
     g_assert_false(webkit_web_view_is_ephemeral(webView.get()));
     g_assert_true(webkit_web_view_get_website_data_manager(webView.get()) == manager);
 
@@ -70,7 +70,7 @@ static void testWebContextEphemeral(Test* test, gconstpointer)
     g_assert_true(webkit_website_data_manager_is_ephemeral(manager));
     g_assert_true(webkit_web_view_get_website_data_manager(webView.get()) != manager);
 
-    webView = Test::adoptView(Test::createWebView(context.get()));
+    webView = test->createWebView("web-context", context.get(), nullptr);
     g_assert_true(webkit_web_view_is_ephemeral(webView.get()));
     g_assert_true(webkit_web_view_get_website_data_manager(webView.get()) == manager);
 
@@ -120,7 +120,7 @@ public:
         test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(request));
 
         if (test->m_uriSchemeRequestCallbackUsesTestWebView)
-            g_assert_true(webkit_uri_scheme_request_get_web_view(request) == test->m_webView);
+            g_assert_true(webkit_uri_scheme_request_get_web_view(request) == test->webView());
 
         const char* scheme = webkit_uri_scheme_request_get_scheme(request);
         g_assert_nonnull(scheme);
@@ -229,21 +229,6 @@ String generateHTMLContent(unsigned contentLength)
     builder.append("</body></html>"_s);
 
     return builder.toString();
-}
-
-static GRefPtr<WebKitWebView> createTestWebViewWithWebContext(WebKitWebContext* context)
-{
-    WebKitWebView* view = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-#if PLATFORM(WPE)
-        "backend", Test::createWebViewBackend(),
-#endif
-        "web-context", context,
-        nullptr));
-
-#if PLATFORM(GTK)
-    g_object_ref_sink(view);
-#endif
-    return adoptGRef(view);
 }
 
 static void testWebContextURIScheme(URISchemeTest* test, gconstpointer)
@@ -382,7 +367,7 @@ static void testWebContextURIScheme(URISchemeTest* test, gconstpointer)
     GRefPtr<WebKitWebView> views[numIterations];
     test->m_uriSchemeRequestCallbackUsesTestWebView = false;
     for (int i = 0; i < numIterations; i++) {
-        views[i] = createTestWebViewWithWebContext(test->m_webContext.get());
+        views[i] = test->createWebView();
         test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(views[i].get()));
         webkit_web_view_load_uri(views[i].get(), "foo:blank");
         g_signal_connect(views[i].get(), "load-changed", G_CALLBACK(+[] (WebKitWebView* webView, WebKitLoadEvent loadEvent, gpointer userData) {
@@ -694,7 +679,7 @@ static void testWebContextSecurityFileXHR(WebViewTest* test, gconstpointer)
     g_assert_false(waitUntilXHRDone());
 
     // Allow file access from file URLs.
-    webkit_settings_set_allow_file_access_from_file_urls(webkit_web_view_get_settings(test->m_webView), TRUE);
+    webkit_settings_set_allow_file_access_from_file_urls(webkit_web_view_get_settings(test->webView()), TRUE);
     test->loadURI(fileURL.get());
     test->waitUntilLoadFinished();
     value = test->runJavaScriptAndWaitUntilFinished(xhr.get(), &error.outPtr());
@@ -717,7 +702,7 @@ static void testWebContextSecurityFileXHR(WebViewTest* test, gconstpointer)
     webkit_user_content_manager_unregister_script_message_handler(test->m_userContentManager.get(), "xhr", nullptr);
 #endif
 
-    webkit_settings_set_allow_file_access_from_file_urls(webkit_web_view_get_settings(test->m_webView), FALSE);
+    webkit_settings_set_allow_file_access_from_file_urls(webkit_web_view_get_settings(test->webView()), FALSE);
 }
 
 class ProxyTest : public WebViewTest {
@@ -844,13 +829,7 @@ static void testWebContextProxySettings(ProxyTest* test, gconstpointer)
 #endif
 
     // Proxy settings also affect ephemeral web views.
-    auto webView = Test::adoptView(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-#if PLATFORM(WPE)
-        "backend", Test::createWebViewBackend(),
-#endif
-        "web-context", test->m_webContext.get(),
-        "is-ephemeral", TRUE,
-        nullptr));
+    auto webView = test->createWebView("is-ephemeral", TRUE, nullptr);
     g_assert_true(webkit_web_view_is_ephemeral(webView.get()));
     g_assert_false(webkit_web_context_is_ephemeral(webkit_web_view_get_context(webView.get())));
 
@@ -939,7 +918,7 @@ public:
 
     void waitUntilWebProcessTerminated()
     {
-        g_signal_connect_after(m_webView, "web-process-terminated", G_CALLBACK(MemoryPressureTest::webProcessTerminatedCallback), this);
+        g_signal_connect_after(m_webView.get(), "web-process-terminated", G_CALLBACK(MemoryPressureTest::webProcessTerminatedCallback), this);
         g_main_loop_run(m_mainLoop);
     }
 
@@ -1023,7 +1002,7 @@ static void testWebContextTimeZoneOverride(WebViewTest* test, gconstpointer)
     auto webContext = adoptGRef(WEBKIT_WEB_CONTEXT(g_object_new(WEBKIT_TYPE_WEB_CONTEXT,
         "time-zone-override", "Europe/Berlin", nullptr)));
     g_assert_cmpstr(webkit_web_context_get_time_zone_override(webContext.get()), ==, "Europe/Berlin");
-    auto webView = Test::adoptView(Test::createWebView(webContext.get()));
+    auto webView = test->createWebView("web-context", webContext.get(), nullptr);
     value = test->runJavaScriptAndWaitUntilFinished("const date = new Date(1651511226050); date.getTimezoneOffset()", &error.outPtr(), webView.get());
     g_assert_nonnull(value);
     g_assert_no_error(error.get());
@@ -1042,7 +1021,7 @@ static void testWebContextTimeZoneOverrideInWorker(WebViewTest* test, gconstpoin
     auto webContext = adoptGRef(WEBKIT_WEB_CONTEXT(g_object_new(WEBKIT_TYPE_WEB_CONTEXT,
         "time-zone-override", "Europe/Berlin", nullptr)));
     g_assert_cmpstr(webkit_web_context_get_time_zone_override(webContext.get()), ==, "Europe/Berlin");
-    auto webView = Test::adoptView(Test::createWebView(webContext.get()));
+    auto webView = test->createWebView("web-context", webContext.get(), nullptr);
 
     test->runJavaScriptAndWaitUntilFinished(
         "window.results = [Intl.DateTimeFormat().resolvedOptions().timeZone];"
@@ -1066,7 +1045,7 @@ static void testNoWebProcessLeakAfterWebKitWebContextDestroy(WebViewTest* test, 
 {
     webkitSetCachedProcessSuspensionDelayForTesting(0);
     GRefPtr<WebKitWebContext> webContext = adoptGRef(WEBKIT_WEB_CONTEXT(g_object_new(WEBKIT_TYPE_WEB_CONTEXT, nullptr)));
-    GRefPtr<WebKitWebView> webView = Test::adoptView(Test::createWebView(webContext.get()));
+    GRefPtr<WebKitWebView> webView = test->createWebView("web-context", webContext.get(), nullptr);
     webkit_web_view_load_uri(webView.get(), kServer->getURIForPath("/").data());
     test->waitUntilLoadFinished(webView.get());
     bool didRunForceRepaintCallback = false;

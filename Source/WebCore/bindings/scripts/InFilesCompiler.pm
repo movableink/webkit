@@ -224,7 +224,7 @@ sub generateInterfacesHeader()
 
     print F "namespace WebCore {\n";
     print F "\n";
-    print F "enum class ${namespace}InterfaceType {\n";
+    print F "enum class ${namespace}InterfaceType : uint8_t {\n";
 
     my $suffix = "InterfaceType";
     if ($useNamespaceAsSuffix eq "true") {

@@ -33,7 +33,7 @@
 #include "OpportunisticTaskScheduler.h"
 #include "Page.h"
 #include "ScheduledAction.h"
-#include "ScriptExecutionContext.h"
+#include "ScriptExecutionContextInlines.h"
 #include "Settings.h"
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/HashMap.h>
@@ -97,7 +97,7 @@ public:
     static DOMTimerFireState* current;
 
 private:
-    Ref<ScriptExecutionContext> m_context;
+    const Ref<ScriptExecutionContext> m_context;
     bool m_contextIsDocument;
     bool m_scriptMadeNonUserObservableChanges { false };
     bool m_scriptMadeUserObservableChanges { false };
@@ -267,7 +267,7 @@ void DOMTimer::updateThrottlingStateIfNecessary(const DOMTimerFireState& fireSta
     if (!contextDocument)
         return;
 
-    if (UNLIKELY(!isDOMTimersThrottlingEnabled(*contextDocument))) {
+    if (!isDOMTimersThrottlingEnabled(*contextDocument)) [[unlikely]] {
         if (m_throttleState == ShouldThrottle) {
             // Unthrottle the timer in case it was throttled before the setting was updated.
             LOG(DOMTimers, "%p - Unthrottling DOM timer because throttling was disabled via settings.", this);

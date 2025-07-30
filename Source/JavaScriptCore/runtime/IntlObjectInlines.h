@@ -101,11 +101,11 @@ InstanceType* unwrapForLegacyIntlConstructor(JSGlobalObject* globalObject, JSVal
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* thisObject = jsDynamicCast<JSObject*>(thisValue);
-    if (UNLIKELY(!thisObject))
+    if (!thisObject) [[unlikely]]
         return nullptr;
 
     auto* instance = jsDynamicCast<InstanceType*>(thisObject);
-    if (LIKELY(instance))
+    if (instance) [[likely]]
         return instance;
 
     ASSERT(!constructor->template inherits<JSBoundFunction>());
@@ -293,7 +293,7 @@ inline JSObject* intlGetOptionsObject(JSGlobalObject* globalObject, JSValue opti
     auto scope = DECLARE_THROW_SCOPE(vm);
     if (options.isUndefined())
         return nullptr;
-    if (LIKELY(options.isObject()))
+    if (options.isObject()) [[likely]]
         return asObject(options);
     throwTypeError(globalObject, scope, "options argument is not an object or undefined"_s);
     return nullptr;
@@ -363,8 +363,8 @@ public:
     }
 
     int32_t size() const { return m_stringPointers.size(); }
-    const UChar* const* stringPointers() const { return m_stringPointers.data(); }
-    const int32_t* stringLengths() const { return m_stringLengths.data(); }
+    const UChar* const* stringPointers() const { return m_stringPointers.span().data(); }
+    const int32_t* stringLengths() const { return m_stringLengths.span().data(); }
 
 private:
     Vector<String, 4> m_strings;

@@ -2,12 +2,6 @@ description("This tests some obvious failures that can happen while calling IDBD
 
 indexedDBTest(prepareDatabase);
 
-
-function done()
-{
-    finishJSTest();
-}
-
 var database;
 var dbname;
 function prepareDatabase(event)
@@ -21,8 +15,7 @@ function prepareDatabase(event)
     var request = objectStore.put("bar", "foo");
 
     versionTransaction.onabort = function(event) {
-        debug("Initial upgrade versionchange transaction unexpected aborted");
-        done();
+        endTestWithLog("Initial upgrade versionchange transaction unexpected aborted");
     }
 
     versionTransaction.oncomplete = function(event) {
@@ -31,8 +24,7 @@ function prepareDatabase(event)
     }
 
     versionTransaction.onerror = function(event) {
-        debug("Initial upgrade versionchange transaction unexpected error" + event);
-        done();
+        endTestWithLog("Initial upgrade versionchange transaction unexpected error" + event);
     }
 }
 
@@ -52,8 +44,7 @@ function continueTest1()
     }
     
     transaction.onabort = function(event) {
-        debug("readwrite transaction unexpected aborted");
-        done();
+        endTestWithLog("readwrite transaction unexpected aborted");
     }
 
     transaction.oncomplete = function(event) {
@@ -63,8 +54,7 @@ function continueTest1()
     }
 
     transaction.onerror = function(event) {
-        debug("readwrite transaction unexpected error" + event);
-        done();
+        endTestWithLog("readwrite transaction unexpected error" + event);
     }
 }
 
@@ -73,16 +63,13 @@ function continueTest2()
     var openRequest = window.indexedDB.open(dbname, 2);
 
     openRequest.onerror = function(event) {
-        debug("Request unexpected error - " + event);
-        done();
+        endTestWithLog("Request unexpected error - " + event);
     }
     openRequest.onblocked = function(event) {
-        debug("Request unexpected blocked - " + event);
-        done();
+        endTestWithLog("Request unexpected blocked - " + event);
     }
     openRequest.onsuccess = function(event) {
-        debug("Request unexpected success - " + event);
-        done();
+        endTestWithLog("Request unexpected success - " + event);
     }
 
     openRequest.onupgradeneeded = function(event) {
@@ -122,18 +109,15 @@ function continueTest2()
         setTimeout(tryInactiveDelete, 0);
 
         versionTransaction.onabort = function(event) {
-            debug("Second version change transaction unexpected abort");
-            done();
+            endTestWithLog("Second version change transaction unexpected abort");
         }
 
         versionTransaction.oncomplete = function(event) {
-            debug("Second version change transaction complete");
-            done();
+            endTestWithLog("Second version change transaction complete");
         }
 
         versionTransaction.onerror = function(event) {
-            debug("Second version change transaction unexpected error - " + event);
-            done();
+            endTestWithLog("Second version change transaction unexpected error - " + event);
         }
     }
 }

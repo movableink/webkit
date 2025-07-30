@@ -24,8 +24,10 @@ public:
     VkBufferUsageFlags bufferUsageFlags() const { return fBufferUsageFlags; }
 
     void setBufferAccess(VulkanCommandBuffer* buffer,
-                         VkAccessFlags dstAccessMask,
+                         VkAccessFlags dstAccess,
                          VkPipelineStageFlags dstStageMask) const;
+
+    bool bufferUsedForCpuRead() const { return fBufferUsedForCPURead; }
 
 private:
     VulkanBuffer(const VulkanSharedContext*,
@@ -49,12 +51,10 @@ private:
         return static_cast<const VulkanSharedContext*>(this->sharedContext());
     }
 
-    static VkPipelineStageFlags AccessMaskToPipelineSrcStageFlags(const VkAccessFlags accessFlags);
-
     VkBuffer fBuffer;
     skgpu::VulkanAlloc fAlloc;
     const VkBufferUsageFlags fBufferUsageFlags;
-    mutable VkAccessFlags fCurrentAccessMask = 0;
+    mutable VkAccessFlags fCurrentAccess = 0;
 
     /**
      * Buffers can either be mapped for:

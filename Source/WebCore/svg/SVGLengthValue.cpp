@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2006 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2007-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,6 +26,7 @@
 #include "SVGElement.h"
 #include "SVGLengthContext.h"
 #include "SVGParserUtilities.h"
+#include "SVGParsingError.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/FastCharacterComparison.h>
 #include <wtf/text/MakeString.h>
@@ -60,6 +61,10 @@ static inline ASCIILiteral lengthTypeToString(SVGLengthType lengthType)
         return "pt"_s;
     case SVGLengthType::Picas:
         return "pc"_s;
+    case SVGLengthType::Lh:
+        return "lh"_s;
+    case SVGLengthType::Ch:
+        return "ch"_s;
     }
 
     ASSERT_NOT_REACHED();
@@ -98,6 +103,10 @@ template<typename CharacterType> static inline SVGLengthType parseLengthType(Str
         return SVGLengthType::Points;
     if (compareCharacters(firstCharacterPosition, 'p', 'c'))
         return SVGLengthType::Picas;
+    if (compareCharacters(firstCharacterPosition, 'l', 'h'))
+        return SVGLengthType::Lh;
+    if (compareCharacters(firstCharacterPosition, 'c', 'h'))
+        return SVGLengthType::Ch;
 
     return SVGLengthType::Unknown;
 }
@@ -127,6 +136,10 @@ static inline SVGLengthType primitiveTypeToLengthType(CSSUnitType primitiveType)
         return SVGLengthType::Points;
     case CSSUnitType::CSS_PC:
         return SVGLengthType::Picas;
+    case CSSUnitType::CSS_LH:
+        return SVGLengthType::Lh;
+    case CSSUnitType::CSS_CH:
+        return SVGLengthType::Ch;
     default:
         return SVGLengthType::Unknown;
     }
@@ -159,6 +172,10 @@ static inline CSSUnitType lengthTypeToPrimitiveType(SVGLengthType lengthType)
         return CSSUnitType::CSS_PT;
     case SVGLengthType::Picas:
         return CSSUnitType::CSS_PC;
+    case SVGLengthType::Lh:
+        return CSSUnitType::CSS_LH;
+    case SVGLengthType::Ch:
+        return CSSUnitType::CSS_CH;
     }
 
     ASSERT_NOT_REACHED();
@@ -199,9 +216,9 @@ SVGLengthValue SVGLengthValue::construct(SVGLengthMode lengthMode, StringView va
     SVGLengthValue length(lengthMode);
 
     if (length.setValueAsString(valueAsString).hasException())
-        parseError = ParsingAttributeFailedError;
+        parseError = SVGParsingError::ParsingFailed;
     else if (negativeValuesMode == SVGLengthNegativeValuesMode::Forbid && length.valueInSpecifiedUnits() < 0)
-        parseError = NegativeValueForbiddenError;
+        parseError = SVGParsingError::ForbiddenNegativeValue;
 
     return length;
 }

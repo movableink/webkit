@@ -26,7 +26,6 @@
 
 #if ENABLE(MEDIA_STREAM) && ENABLE(WEB_CODECS)
 
-#include "ExceptionOr.h"
 #include "MediaStreamTrack.h"
 #include "ReadableStreamSource.h"
 #include "RealtimeMediaSource.h"
@@ -42,6 +41,7 @@ namespace WebCore {
 class ReadableStream;
 class ScriptExecutionContext;
 class WebCodecsVideoFrame;
+template<typename> class ExceptionOr;
 
 class MediaStreamTrackProcessor
     : public RefCounted<MediaStreamTrackProcessor>
@@ -75,6 +75,8 @@ public:
 
         void ref() const final { m_processor->ref(); };
         void deref() const final { m_processor->deref(); };
+
+        void setAsCancelled() { m_isCancelled = true; }
 
     private:
 
@@ -148,7 +150,7 @@ private:
     };
 
     RefPtr<ReadableStream> m_readable;
-    std::unique_ptr<Source> m_readableStreamSource;
+    const std::unique_ptr<Source> m_readableStreamSource;
     RefPtr<VideoFrameObserverWrapper> m_videoFrameObserverWrapper;
     const Ref<MediaStreamTrack> m_track;
 };

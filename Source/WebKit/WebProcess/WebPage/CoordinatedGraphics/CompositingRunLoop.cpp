@@ -57,10 +57,10 @@ CompositingRunLoop::~CompositingRunLoop()
 {
     ASSERT(RunLoop::isMain());
     // Make sure the RunLoop is stopped after the CompositingRunLoop, because m_updateTimer has a reference.
-    RunLoop::main().dispatch([runLoop = m_runLoop] {
+    RunLoop::protectedMain()->dispatch([runLoop = m_runLoop] {
         runLoop->stop();
         runLoop->dispatch([] {
-            RunLoop::current().stop();
+            RunLoop::currentSingleton().stop();
         });
     });
 }
@@ -68,6 +68,12 @@ CompositingRunLoop::~CompositingRunLoop()
 bool CompositingRunLoop::isCurrent() const
 {
     return m_runLoop->isCurrent();
+}
+
+bool CompositingRunLoop::isActive()
+{
+    Locker stateLocker { m_state.lock };
+    return m_state.update != UpdateState::Idle;
 }
 
 void CompositingRunLoop::performTask(Function<void ()>&& function)

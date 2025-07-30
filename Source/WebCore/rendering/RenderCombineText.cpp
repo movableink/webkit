@@ -22,6 +22,7 @@
 #include "RenderCombineText.h"
 
 #include "RenderBlock.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "StyleInheritedData.h"
 #include <wtf/NeverDestroyed.h>
@@ -49,7 +50,7 @@ void RenderCombineText::styleDidChange(StyleDifference diff, const RenderStyle* 
     // Only cache a new font style if our old one actually changed. We do this to avoid
     // clobbering width variants and shrink-to-fit changes, since we won't recombine when
     // the font doesn't change.
-    if (!oldStyle || oldStyle->fontCascade() != style().fontCascade())
+    if (!oldStyle || !oldStyle->fontCascadeEqual(style()))
         m_combineFontStyle = RenderStyle::clonePtr(style());
 
     RenderText::styleDidChange(diff, oldStyle);

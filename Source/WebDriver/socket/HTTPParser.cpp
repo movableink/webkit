@@ -133,7 +133,7 @@ bool HTTPParser::readLine(String& line)
     if (line.isNull())
         LOG_ERROR("Client error: invalid encoding in HTTP header.");
 
-    m_buffer.remove(0, position + 2);
+    m_buffer.removeAt(0, position + 2);
     return true;
 }
 

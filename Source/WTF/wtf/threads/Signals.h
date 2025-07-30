@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/AlignedStorage.h>
 #include <wtf/CodePtr.h>
 #include <wtf/Function.h>
 #include <wtf/Lock.h>
@@ -80,9 +81,7 @@ struct SigInfo {
 };
 
 using SignalHandler = Function<SignalAction(Signal, SigInfo&, PlatformRegisters&)>;
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-using SignalHandlerMemory = std::aligned_storage<sizeof(SignalHandler), std::alignment_of<SignalHandler>::value>::type;
-ALLOW_DEPRECATED_DECLARATIONS_END
+using SignalHandlerMemory = AlignedStorage<SignalHandler>;
 
 struct SignalHandlers {
     static void initialize();
@@ -121,8 +120,8 @@ struct SignalHandlers {
     };
     InitState initState;
 
-    uint8_t numberOfHandlers[numberOfSignals];
-    SignalHandlerMemory handlers[numberOfSignals][maxNumberOfHandlers];
+    std::array<uint8_t, numberOfSignals> numberOfHandlers;
+    std::array<std::array<SignalHandlerMemory, maxNumberOfHandlers>, numberOfSignals> handlers;
 
 #if OS(UNIX)
     struct sigaction oldActions[numberOfSignals];

@@ -30,6 +30,7 @@
 
 #include "ErrorEvent.h"
 #include "EventNames.h"
+#include "ExceptionOr.h"
 #include "JSDOMGlobalObject.h"
 #include "MessageChannel.h"
 #include "RTCRtpScriptTransformer.h"
@@ -132,8 +133,6 @@ bool RTCRtpScriptTransform::setupTransformer(Ref<RTCRtpTransformBackend>&& backe
 
 void RTCRtpScriptTransform::clear(RTCRtpScriptTransformer::ClearCallback clearCallback)
 {
-    m_isAttached = false;
-
     Locker locker { m_transformerLock };
     m_isTransformerInitialized = false;
     m_worker->postTaskToWorkerGlobalScope([transformer = WTFMove(m_transformer), clearCallback](auto&) mutable {

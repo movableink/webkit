@@ -41,5 +41,6 @@
 @property (nonatomic, readonly) CGSize _contentSize WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
 @property (nonatomic, readonly) CGSize _visibleContentSize WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
 @property (nonatomic, readonly) CGSize _visibleContentSizeExcludingScrollbars WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
+@property (nonatomic, readonly, nullable) SecTrustRef _serverTrust WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
 
 @end

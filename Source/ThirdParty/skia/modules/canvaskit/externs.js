@@ -238,6 +238,22 @@ var CanvasKit = {
     _setLineBreaksUtf16: function() {},
   },
 
+  Bidi: {
+    Make: function() {},
+    getBidiRegions: function () {},
+    reorderVisual: function () {},
+    // private API
+    _getBidiRegions: function() {},
+    _reorderVisual: function() {},
+  },
+
+  CodeUnits: {
+    Make: function() {},
+    compute: function() {},
+    // private API
+    _compute: function() {},
+  },
+
   RuntimeEffect: {
     // public API (from JS bindings)
     Make: function() {},
@@ -806,6 +822,7 @@ var CanvasKit = {
     MakeTypefaceFromData: function() {},
     prototype: {
       getGlyphIDs: function() {},
+      getFamilyName: function() {},
     },
     _MakeTypefaceFromData: function() {},
     _getGlyphIDs: function() {},
@@ -1128,6 +1145,14 @@ var CanvasKit = {
     Option: {},
     Command: {},
     FirstPass: {},
+  },
+
+  CodeUnitFlags: {
+    NoCodeUnitFlag: {},
+    Whitespace: {},
+    Space: {},
+    Control: {},
+    Ideographic: {},
   },
 
   // Things Enscriptem adds for us

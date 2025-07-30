@@ -9,7 +9,7 @@ Do NOT modify or remove this file.
 
 ------------------------------------------------------------------------
 Properties requiring vendor prefixes:
-ruby-position
+None
 Property values requiring vendor prefixes:
 None
 ------------------------------------------------------------------------
@@ -73,6 +73,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-text-decor/reference/text-decoration-thickness-percent-001-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-text-decor/reference/text-decoration-thickness-scroll-001-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-text-decor/reference/text-decoration-thickness-single-notref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-text-decor/reference/text-decoration-thickness-single2-notref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-text-decor/reference/text-decoration-thickness-vertical-green-rect-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-text-decor/reference/text-decoration-underline-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-text-decor/reference/text-decoration-wavy-covers-whole-line-length-001-notref.html

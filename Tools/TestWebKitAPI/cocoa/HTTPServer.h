@@ -30,6 +30,7 @@
 #import <wtf/Forward.h>
 #import <wtf/HashMap.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/StringHash.h>
 
 OBJC_CLASS NSURLRequest;
@@ -46,10 +47,10 @@ public:
     enum class Protocol : uint8_t { Http, Https, HttpsWithLegacyTLS, Http2, HttpsProxy, HttpsProxyWithAuthentication };
     using CertificateVerifier = Function<void(sec_protocol_metadata_t, sec_trust_t, sec_protocol_verify_complete_t)>;
 
-    HTTPServer(std::initializer_list<std::pair<String, HTTPResponse>>, Protocol = Protocol::Http, CertificateVerifier&& = nullptr, RetainPtr<SecIdentityRef>&& = nullptr, std::optional<uint16_t> port = { });
+    HTTPServer(std::initializer_list<std::pair<String, HTTPResponse>>, Protocol = Protocol::Http, CertificateVerifier&& = nullptr, SecIdentityRef = nullptr, std::optional<uint16_t> port = { });
     HTTPServer(Function<void(Connection)>&&, Protocol = Protocol::Http);
     enum class UseCoroutines : bool { Yes };
-    HTTPServer(UseCoroutines, Function<Task(Connection)>&&, Protocol = Protocol::Http);
+    HTTPServer(UseCoroutines, Function<ConnectionTask(Connection)>&&, Protocol = Protocol::Http);
     ~HTTPServer();
     uint16_t port() const;
     String origin() const;
@@ -58,6 +59,7 @@ public:
     WKWebViewConfiguration *httpsProxyConfiguration() const;
     size_t totalConnections() const;
     size_t totalRequests() const;
+    String lastRequestCookies() const;
     void cancel();
     void terminateAllConnections(CompletionHandler<void()>&&);
 
@@ -66,6 +68,7 @@ public:
 
     static void respondWithOK(Connection);
     static void respondWithChallengeThenOK(Connection);
+    static String parseCookies(const Vector<char>& request);
     static String parsePath(const Vector<char>& request);
     static String parseBody(const Vector<char>&);
     static Vector<uint8_t> testPrivateKey();
@@ -84,7 +87,7 @@ private:
 struct HTTPResponse {
     enum class Behavior : uint8_t {
         SendResponseNormally,
-        TerminateConnectionAfterReceivingResponse,
+        TerminateConnectionAfterReceivingRequest,
         NeverSendResponse
     };
 
@@ -101,12 +104,20 @@ struct HTTPResponse {
         , body(bodyFromString(body)) { }
     HTTPResponse(Behavior behavior)
         : behavior(behavior) { }
+    HTTPResponse(NSData *data)
+        : body(makeVector(data)) { }
 
     HTTPResponse(const HTTPResponse&) = default;
     HTTPResponse(HTTPResponse&&) = default;
     HTTPResponse() = default;
     HTTPResponse& operator=(const HTTPResponse&) = default;
     HTTPResponse& operator=(HTTPResponse&&) = default;
+
+    void setShouldRespondWith304ToConditionalRequests(HashMap<String, String>&& headerFields = { })
+    {
+        shouldRespondWith304ToConditionalRequests = true;
+        headerFieldsFor304 = WTFMove(headerFields);
+    }
 
     enum class IncludeContentLength : bool { No, Yes };
     Vector<uint8_t> serialize(IncludeContentLength = IncludeContentLength::Yes) const;
@@ -116,6 +127,8 @@ struct HTTPResponse {
     HashMap<String, String> headerFields;
     Vector<uint8_t> body;
     Behavior behavior { Behavior::SendResponseNormally };
+    bool shouldRespondWith304ToConditionalRequests { false };
+    HashMap<String, String> headerFieldsFor304;
 };
 
 namespace H2 {
@@ -178,3 +191,4 @@ private:
 RetainPtr<SecCertificateRef> testCertificate();
 RetainPtr<SecIdentityRef> testIdentity();
 RetainPtr<SecIdentityRef> testIdentity2();
+void verifyCertificateAndPublicKey(SecTrustRef);

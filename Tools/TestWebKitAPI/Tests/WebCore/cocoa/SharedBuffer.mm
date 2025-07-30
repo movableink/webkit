@@ -64,7 +64,7 @@ TEST_F(FragmentedSharedBufferTest, createNSDataArray)
         expectDataArraysEqual(@[ helloData ], SharedBuffer::create(helloData)->createNSDataArray().get());
         expectDataArraysEqual(@[ worldData ], SharedBuffer::create((__bridge CFDataRef)worldData)->createNSDataArray().get());
 
-        expectDataArraysEqual(@[ [NSData dataWithContentsOfFile:tempFilePath()] ], SharedBuffer::createWithContentsOfFile(tempFilePath())->createNSDataArray().get());
+        expectDataArraysEqual(@[ [NSData dataWithContentsOfFile:tempFilePath().createNSString().get()] ], SharedBuffer::createWithContentsOfFile(tempFilePath())->createNSDataArray().get());
     }
 }
 

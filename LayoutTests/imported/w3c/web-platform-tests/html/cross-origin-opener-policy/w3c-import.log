@@ -38,6 +38,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/html/cross-origin-opener-policy/coop-navigated-history-popup.https.html
 /LayoutTests/imported/w3c/web-platform-tests/html/cross-origin-opener-policy/coop-navigated-popup.https.html
 /LayoutTests/imported/w3c/web-platform-tests/html/cross-origin-opener-policy/coop-navigated-popup.https.html.headers
+/LayoutTests/imported/w3c/web-platform-tests/html/cross-origin-opener-policy/coop-noopener-allow-popups.https.html
 /LayoutTests/imported/w3c/web-platform-tests/html/cross-origin-opener-policy/coop-popup-opener-navigates.https.html
 /LayoutTests/imported/w3c/web-platform-tests/html/cross-origin-opener-policy/coop-popup-opener-navigates.https.html.headers
 /LayoutTests/imported/w3c/web-platform-tests/html/cross-origin-opener-policy/coop-same-origin-allow-popups-document-write.html

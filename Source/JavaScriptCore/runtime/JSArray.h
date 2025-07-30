@@ -25,6 +25,7 @@
 #include "Butterfly.h"
 #include "JSCell.h"
 #include "JSObject.h"
+#include "ResourceExhaustion.h"
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -122,6 +123,14 @@ public:
 
     JSArray* fastToReversed(JSGlobalObject*, uint64_t length);
 
+    JSArray* fastWith(JSGlobalObject*, uint32_t index, JSValue, uint64_t length);
+
+    std::optional<bool> fastIncludes(JSGlobalObject*, JSValue,  uint64_t fromIndex, uint64_t length);
+
+    bool fastCopyWithin(JSGlobalObject*, uint64_t from64, uint64_t to64, uint64_t count64, uint64_t length64);
+
+    JSArray* fastToSpliced(JSGlobalObject*, CallFrame*, uint64_t length, uint64_t newLength, uint64_t start, uint64_t deleteCount, uint64_t insertCount);
+
     ALWAYS_INLINE bool definitelyNegativeOneMiss() const;
 
     enum ShiftCountMode {
@@ -159,7 +168,7 @@ public:
     JS_EXPORT_PRIVATE bool isIteratorProtocolFastAndNonObservable();
 
     inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue, IndexingType);
-        
+
 protected:
 #if ASSERT_ENABLED
     void finishCreation(VM& vm)
@@ -217,14 +226,14 @@ inline JSArray* JSArray::tryCreate(VM& vm, Structure* structure, unsigned initia
 
     Butterfly* butterfly;
     IndexingType indexingType = structure->indexingType();
-    if (LIKELY(!hasAnyArrayStorage(indexingType))) {
+    if (!hasAnyArrayStorage(indexingType)) [[likely]] {
         ASSERT(
             hasUndecided(indexingType)
             || hasInt32(indexingType)
             || hasDouble(indexingType)
             || hasContiguous(indexingType));
 
-        if (UNLIKELY(vectorLengthHint > MAX_STORAGE_VECTOR_LENGTH))
+        if (vectorLengthHint > MAX_STORAGE_VECTOR_LENGTH) [[unlikely]]
             return nullptr;
 
         unsigned vectorLength = Butterfly::optimalContiguousVectorLength(structure, vectorLengthHint);
@@ -263,8 +272,7 @@ inline JSArray* JSArray::tryCreate(VM& vm, Structure* structure, unsigned initia
 inline JSArray* JSArray::create(VM& vm, Structure* structure, unsigned initialLength)
 {
     JSArray* result = JSArray::tryCreate(vm, structure, initialLength);
-    RELEASE_ASSERT(result);
-
+    RELEASE_ASSERT_RESOURCE_AVAILABLE(result, MemoryExhaustion, "Crash intentionally because memory is exhausted.");
     return result;
 }
 
@@ -282,12 +290,18 @@ enum class ArrayFillMode {
     Empty,
 };
 
+enum class NeedsGCSafeOps {
+    No,
+    Yes,
+};
+
+
 template<ArrayFillMode fillMode>
 bool moveArrayElements(JSGlobalObject* globalObject, VM& vm, JSArray* target, unsigned targetOffset, JSArray* source, unsigned sourceLength)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (LIKELY(!hasAnyArrayStorage(source->indexingType()) && !source->holesMustForwardToPrototype())) {
+    if (!hasAnyArrayStorage(source->indexingType()) && !source->holesMustForwardToPrototype()) [[likely]] {
         for (unsigned i = 0; i < sourceLength; ++i) {
             JSValue value = source->tryGetIndexQuickly(i);
             if constexpr (fillMode == ArrayFillMode::Empty) {
@@ -327,8 +341,8 @@ void clearElement(T& element)
 template<>
 void clearElement(double& element);
 
-template<ArrayFillMode fillMode, typename T, typename U>
-ALWAYS_INLINE void copyArrayElements(T* buffer, unsigned offset, U* source, unsigned sourceSize, IndexingType sourceType)
+template<ArrayFillMode fillMode, NeedsGCSafeOps needsGCSafeOps, typename T, typename U>
+ALWAYS_INLINE void copyArrayElements(T* buffer, unsigned offset, U* source, unsigned sourceOffset, unsigned sourceSize, IndexingType sourceType)
 {
     if (sourceType == ArrayWithUndecided) {
         if constexpr (fillMode == ArrayFillMode::Empty) {
@@ -343,14 +357,16 @@ ALWAYS_INLINE void copyArrayElements(T* buffer, unsigned offset, U* source, unsi
 
     if constexpr (std::is_same_v<T, U>) {
         if constexpr (fillMode == ArrayFillMode::Empty) {
-            if constexpr (std::is_same_v<T, double>)
-                memcpy(buffer + offset, source, sizeof(double) * sourceSize);
+            if constexpr (needsGCSafeOps == NeedsGCSafeOps::No && sizeof(T) == sizeof(U))
+                memcpy(buffer + offset, source + sourceOffset, sizeof(T) * sourceSize);
+            else if constexpr (std::is_same_v<T, double>)
+                memcpy(buffer + offset, source + sourceOffset, sizeof(double) * sourceSize);
             else
-                gcSafeMemcpy(buffer + offset, source, sizeof(JSValue) * sourceSize);
+                gcSafeMemcpy(buffer + offset, source + sourceOffset, sizeof(JSValue) * sourceSize);
             return;
         } else {
             for (unsigned i = 0; i < sourceSize; ++i) {
-                JSValue value = source[i].get();
+                JSValue value = source[i + sourceOffset].get();
                 if (!value)
                     value = jsUndefined();
                 buffer[i + offset].setWithoutWriteBarrier(value);
@@ -360,7 +376,7 @@ ALWAYS_INLINE void copyArrayElements(T* buffer, unsigned offset, U* source, unsi
         ASSERT(sourceType == ArrayWithInt32);
         static_assert(fillMode == ArrayFillMode::Empty);
         for (unsigned i = 0; i < sourceSize; ++i) {
-            JSValue value = source[i].get();
+            JSValue value = source[i + sourceOffset].get();
             if (value)
                 buffer[i + offset] = value.asInt32();
             else
@@ -369,7 +385,7 @@ ALWAYS_INLINE void copyArrayElements(T* buffer, unsigned offset, U* source, unsi
     } else {
         static_assert(std::is_same_v<U, double>);
         for (unsigned i = 0; i < sourceSize; ++i) {
-            double value = source[i];
+            double value = source[i + sourceOffset];
             if (value == value)
                 buffer[i + offset].setWithoutWriteBarrier(JSValue(JSValue::EncodeAsDouble, value));
             else {

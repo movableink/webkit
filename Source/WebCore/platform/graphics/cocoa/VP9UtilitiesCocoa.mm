@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -98,6 +98,16 @@ void VP9TestingOverrides::resetOverridesToDefaultValues()
         m_configurationChangedCallback(true);
 }
 
+void VP9TestingOverrides::setShouldEnableVP9Decoder(bool enabled)
+{
+    m_vp9DecoderEnabled = enabled;
+}
+
+bool VP9TestingOverrides::shouldEnableVP9Decoder() const
+{
+    return m_vp9DecoderEnabled;
+}
+
 enum class ResolutionCategory : uint8_t {
     R_480p,
     R_720p,
@@ -126,6 +136,11 @@ static ResolutionCategory resolutionCategory(const FloatSize& size)
     return ResolutionCategory::R_480p;
 }
 
+void registerWebKitVP9Decoder()
+{
+    LibWebRTCProvider::registerWebKitVP9Decoder();
+}
+
 void registerSupplementalVP9Decoder()
 {
     if (!VideoToolboxLibrary(true))
@@ -135,9 +150,19 @@ void registerSupplementalVP9Decoder()
         softLink_VideoToolbox_VTRegisterSupplementalVideoDecoderIfAvailable(kCMVideoCodecType_VP9);
 }
 
+bool shouldEnableVP9Decoder()
+{
+    return VP9TestingOverrides::singleton().shouldEnableVP9Decoder();
+}
+
 static bool isSWDecodersAlwaysEnabled()
 {
     return VP9TestingOverrides::singleton().swVPDecodersAlwaysEnabled();
+}
+
+bool shouldEnableSWVP9Decoder()
+{
+    return isSWDecodersAlwaysEnabled() || (!vp9HardwareDecoderAvailable() && !systemHasBattery());
 }
 
 bool isVP9DecoderAvailable()
@@ -147,7 +172,7 @@ bool isVP9DecoderAvailable()
 #if PLATFORM(IOS) || PLATFORM(VISION)
     return vp9HardwareDecoderAvailable();
 #else
-    return VideoDecoder::isVPXSupported() || vp9HardwareDecoderAvailable();
+    return (shouldEnableSWVP9Decoder() && VideoDecoder::isVPXSupported()) || vp9HardwareDecoderAvailable();
 #endif
 }
 
@@ -185,11 +210,8 @@ static bool isVP9CodecConfigurationRecordSupported(const VPCodecConfigurationRec
     if (codecConfiguration.level > VPConfigurationLevel::Level_6)
         return false;
 
-    if (isSWDecodersAlwaysEnabled())
-        return true;
-
     // Hardware decoders are always available.
-    if (vp9HardwareDecoderAvailable())
+    if (vp9HardwareDecoderAvailable() && !isSWDecodersAlwaysEnabled())
         return true;
 
     // For wall-powered devices, always report VP9 as supported, even if not powerEfficient.

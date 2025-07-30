@@ -34,7 +34,7 @@ PlatformImagePtr ImageBackingStore::image() const
 {
     m_pixels->ref();
     // QTFIXME: Ownership of QImage?
-    return QImage(reinterpret_cast<unsigned char*>(const_cast<uint32_t*>(m_pixelsPtr)),
+    return QImage(reinterpret_cast<unsigned char*>(const_cast<uint32_t*>(m_pixelsSpan.data())),
         size().width(), size().height(), 
         m_premultiplyAlpha ? QImage::Format_ARGB32_Premultiplied : QImage::Format_ARGB32, 
         [](void* data) { static_cast<DataSegment*>(data)->deref(); },

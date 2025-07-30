@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include <mutex>
+#include <ranges>
 #include <thread>
 #include <wtf/Condition.h>
 #include <wtf/DataLog.h>
@@ -109,7 +110,7 @@ void runTest(
                             emptyCondition,
                             [&] () {
                                 if (verbose)
-                                    dataLog(toString(Thread::current(), ": Checking consumption predicate with shouldContinue = ", shouldContinue, ", queue.size() == ", queue.size(), "\n"));
+                                    dataLog(toString(Thread::currentSingleton(), ": Checking consumption predicate with shouldContinue = ", shouldContinue, ", queue.size() == ", queue.size(), "\n"));
                                 return !shouldContinue || !queue.isEmpty();
                             },
                             timeout);
@@ -142,7 +143,7 @@ void runTest(
                             fullCondition,
                             [&] () {
                                 if (verbose)
-                                    dataLog(toString(Thread::current(), ": Checking production predicate with shouldContinue = ", shouldContinue, ", queue.size() == ", queue.size(), "\n"));
+                                    dataLog(toString(Thread::currentSingleton(), ": Checking production predicate with shouldContinue = ", shouldContinue, ", queue.size() == ", queue.size(), "\n"));
                                 return queue.size() < maxQueueSize;
                             },
                             timeout);
@@ -167,7 +168,7 @@ void runTest(
         thread->waitForCompletion();
 
     EXPECT_EQ(numProducers * numMessagesPerProducer, received.size());
-    std::sort(received.begin(), received.end());
+    std::ranges::sort(received);
     for (unsigned messageIndex = 0; messageIndex < numMessagesPerProducer; ++messageIndex) {
         for (unsigned producerIndex = 0; producerIndex < numProducers; ++producerIndex)
             EXPECT_EQ(messageIndex, received[messageIndex * numProducers + producerIndex]);

@@ -42,8 +42,7 @@ public:
 
     std::unique_ptr<ResourceProvider> makeResourceProvider(SingleOwner*,
                                                            uint32_t recorderID,
-                                                           size_t resourceBudget,
-                                                           bool avoidBufferAlloc) override;
+                                                           size_t resourceBudget) override;
 
     bool checkVkResult(VkResult result) const;
 
@@ -56,7 +55,8 @@ private:
     VulkanSharedContext(const VulkanBackendContext&,
                         sk_sp<const skgpu::VulkanInterface> interface,
                         sk_sp<skgpu::VulkanMemoryAllocator> memoryAllocator,
-                        std::unique_ptr<const VulkanCaps> caps);
+                        std::unique_ptr<const VulkanCaps> caps,
+                        SkSpan<sk_sp<SkRuntimeEffect>> userDefinedKnownRuntimeEffects);
 
     sk_sp<const skgpu::VulkanInterface> fInterface;
     sk_sp<skgpu::VulkanMemoryAllocator> fMemoryAllocator;

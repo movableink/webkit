@@ -27,22 +27,20 @@
 
 #if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
+#include "ExceptionCode.h"
+#include "ExceptionOr.h"
 #include "LibWebRTCMacros.h"
 #include "LibWebRTCProvider.h"
 #include "LibWebRTCUtils.h"
 #include "RTCCertificate.h"
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_COMMA_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 #include <webrtc/rtc_base/ref_counted_object.h>
 #include <webrtc/rtc_base/rtc_certificate_generator.h>
 #include <webrtc/rtc_base/ssl_certificate.h>
 
-ALLOW_COMMA_END
-ALLOW_UNUSED_PARAMETERS_END
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 namespace WebCore {
 
@@ -106,7 +104,7 @@ void generateCertificate(Ref<SecurityOrigin>&& origin, LibWebRTCProvider& provid
 {
     auto callbackWrapper = RTCCertificateGeneratorCallbackWrapper::create(WTFMove(origin), WTFMove(resultCallback));
 
-    absl::optional<uint64_t> expiresMs;
+    std::optional<uint64_t> expiresMs;
     if (info.expires)
         expiresMs = static_cast<uint64_t>(*info.expires);
 

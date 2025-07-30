@@ -1,5 +1,6 @@
 
 PASS getStats succeeds
+PASS All references resolve
 PASS Validating stats
 PASS codec's payloadType
 FAIL codec's codecType assert_true: Is codecType present expected true got false

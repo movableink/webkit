@@ -33,6 +33,8 @@
 #include "Event.h"
 #include "EventLoop.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
+#include "EventTargetInterfaces.h"
 #include "JSDOMPromise.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSNotification.h"
@@ -42,7 +44,6 @@
 #include "NotificationClient.h"
 #include "NotificationPermission.h"
 #include "PushEvent.h"
-#include "PushNotificationEvent.h"
 #include "ServiceWorker.h"
 #include "ServiceWorkerContainer.h"
 #include "ServiceWorkerGlobalScope.h"
@@ -311,18 +312,19 @@ void ServiceWorkerRegistration::showNotification(ScriptExecutionContext& context
 
     RefPtr serviceWorkerGlobalScope = dynamicDowncast<ServiceWorkerGlobalScope>(context);
 
-    // If we're handling a PushNotificationEvent, this Notification will override the proposed notification
+    // If we're handling a DeclarativePushEvent, this Notification will override the proposed notification
     // instead of being shown directly.
     if (serviceWorkerGlobalScope) {
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-        if (RefPtr pushNotificationEvent = serviceWorkerGlobalScope->pushNotificationEvent()) {
+        if (RefPtr declarativePushEvent = serviceWorkerGlobalScope->declarativePushEvent()) {
             auto notification = notificationResult.releaseReturnValue();
-            if (!notification->defaultAction().isValid()) {
+            if (!notification->navigate().isValid()) {
                 promise->reject(Exception { ExceptionCode::TypeError, "Call to showNotification() while handling a `pushnotification` event did not include NotificationOptions that specify a valid defaultAction url"_s });
                 return;
             }
 
-            pushNotificationEvent->setUpdatedNotificationData(notification->data());
+            declarativePushEvent->setUpdatedNotification(notification.ptr());
+            promise->resolve();
             return;
         }
 #endif

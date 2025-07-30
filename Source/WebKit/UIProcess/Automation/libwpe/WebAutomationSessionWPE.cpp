@@ -46,7 +46,7 @@
 
 namespace WebKit {
 
-#if ENABLE(WEBDRIVER)
+#if ENABLE(WEBDRIVER) && (ENABLE(WEBDRIVER_MOUSE_INTERACTIONS) || ENABLE(WEBDRIVER_TOUCH_INTERACTIONS) || ENABLE(WEBDRIVER_WHEEL_INTERACTIONS))
 static WebCore::IntPoint deviceScaleLocationInView(WebPageProxy& page, const WebCore::IntPoint& locationInView)
 {
     WebCore::IntPoint deviceScaleLocationInView(locationInView);
@@ -222,11 +222,7 @@ static void doKeyStrokeEvent(WebPageProxy &page, bool pressed, uint32_t keyVal, 
     auto* view = page.wpeView();
     auto* display = wpe_view_get_display(view);
     GUniqueOutPtr<GError> error;
-    auto* keymap = WPE_KEYMAP(wpe_display_get_keymap(display, &error.outPtr()));
-    if (error) {
-        LOG(Automation, "WebAutomationSession::doKeyStrokeEvent: Failed to get keymap: %s. Ignoring event.", error->message);
-        return;
-    }
+    auto* keymap = WPE_KEYMAP(wpe_display_get_keymap(display));
 
     GUniqueOutPtr<WPEKeymapEntry> entries;
     guint entriesCount;

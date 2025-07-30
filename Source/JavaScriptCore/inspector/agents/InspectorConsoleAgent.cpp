@@ -264,7 +264,7 @@ void InspectorConsoleAgent::addConsoleMessage(std::unique_ptr<ConsoleMessage> co
         m_consoleMessages.append(WTFMove(consoleMessage));
         if (m_consoleMessages.size() >= maximumConsoleMessages) {
             m_expiredConsoleMessageCount += expireConsoleMessagesStep;
-            m_consoleMessages.remove(0, expireConsoleMessagesStep);
+            m_consoleMessages.removeAt(0, expireConsoleMessagesStep);
         }
     }
 }

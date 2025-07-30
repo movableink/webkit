@@ -1,0 +1,9 @@
+Input 1
+Input 1 via Options
+Input 2 Input 2 via Options
+
+PASS Label applies to descendant custom element that uses shadowrootreferencetarget (Input 1)
+PASS Label applies to descendant custom element that uses shadowrootreferencetarget (Input 1 via Options)
+PASS Label applies to multiple layers of descendant custom elements that use shadowrootreferencetarget (Input 2)
+PASS Label applies to multiple layers of descendant custom elements that use shadowrootreferencetarget (Input 2 via Options)
+

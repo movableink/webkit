@@ -34,6 +34,7 @@
 #include <wtf/glib/GUniquePtr.h>
 #include <wtf/glib/RunLoopSourcePriority.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
@@ -58,6 +59,14 @@ static unsigned long maximumNumberOfOutputChannels()
     static int count = 0;
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
+        auto maxFromEnvironment = StringView::fromLatin1(g_getenv("WEBKIT_GST_MAX_NUMBER_OF_AUDIO_OUTPUT_CHANNELS"));
+        if (!maxFromEnvironment.isEmpty()) {
+            if (auto value = WTF::parseInteger<int>(maxFromEnvironment)) {
+                count = *value;
+                return;
+            }
+        }
+
         auto monitor = adoptGRef(gst_device_monitor_new());
         auto caps = adoptGRef(gst_caps_new_empty_simple("audio/x-raw"));
         gst_device_monitor_add_filter(monitor.get(), "Audio/Sink", caps.get());
@@ -84,16 +93,16 @@ static unsigned long maximumNumberOfOutputChannels()
     return count;
 }
 
-Ref<AudioDestination> AudioDestination::create(AudioIOCallback& callback, const String&, unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate)
+Ref<AudioDestination> AudioDestination::create(const CreationOptions& options)
 {
     initializeAudioDestinationDebugCategory();
     // FIXME: make use of inputDeviceId as appropriate.
 
     // FIXME: Add support for local/live audio input.
-    if (numberOfInputChannels)
-        WTFLogAlways("AudioDestination::create(%u, %u, %f) - unhandled input channels", numberOfInputChannels, numberOfOutputChannels, sampleRate);
+    if (options.numberOfInputChannels)
+        WTFLogAlways("AudioDestination::create(%u, %u, %f) - unhandled input channels", options.numberOfInputChannels, options.numberOfOutputChannels, options.sampleRate);
 
-    return adoptRef(*new AudioDestinationGStreamer(callback, numberOfOutputChannels, sampleRate));
+    return adoptRef(*new AudioDestinationGStreamer(options));
 }
 
 float AudioDestination::hardwareSampleRate()
@@ -106,9 +115,9 @@ unsigned long AudioDestination::maxChannelCount()
     return maximumNumberOfOutputChannels();
 }
 
-AudioDestinationGStreamer::AudioDestinationGStreamer(AudioIOCallback& callback, unsigned long numberOfOutputChannels, float sampleRate)
-    : AudioDestination(callback, sampleRate)
-    , m_renderBus(AudioBus::create(numberOfOutputChannels, AudioUtilities::renderQuantumSize, false))
+AudioDestinationGStreamer::AudioDestinationGStreamer(const CreationOptions& options)
+    : AudioDestination(options)
+    , m_renderBus(AudioBus::create(options.numberOfOutputChannels, AudioUtilities::renderQuantumSize, false))
 {
     static Atomic<uint32_t> pipelineId;
     m_pipeline = gst_pipeline_new(makeString("audio-destination-"_s, pipelineId.exchangeAdd(1)).ascii().data());
@@ -117,7 +126,7 @@ AudioDestinationGStreamer::AudioDestinationGStreamer(AudioIOCallback& callback, 
         this->handleMessage(message);
     });
 
-    m_src = GST_ELEMENT_CAST(g_object_new(WEBKIT_TYPE_WEB_AUDIO_SRC, "rate", sampleRate,
+    m_src = GST_ELEMENT_CAST(g_object_new(WEBKIT_TYPE_WEB_AUDIO_SRC, "rate", options.sampleRate,
         "destination", this, "frames", AudioUtilities::renderQuantumSize, nullptr));
 
     webkitWebAudioSourceSetBus(WEBKIT_WEB_AUDIO_SRC(m_src.get()), m_renderBus);
@@ -131,8 +140,8 @@ AudioDestinationGStreamer::AudioDestinationGStreamer(AudioIOCallback& callback, 
     }
 
     // Probe platform early on for a working audio output device in autoaudiosink.
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
-    if (g_str_has_prefix(GST_OBJECT_NAME(audioSink.get()), "autoaudiosink")) {
+    auto nameView = StringView::fromLatin1(GST_OBJECT_NAME(audioSink.get()));
+    if (nameView.startsWith("autoaudiosink"_s)) {
         g_signal_connect(audioSink.get(), "child-added", G_CALLBACK(+[](GstChildProxy*, GObject* object, gchar*, gpointer) {
             if (GST_IS_AUDIO_BASE_SINK(object))
                 g_object_set(GST_AUDIO_BASE_SINK(object), "buffer-time", static_cast<gint64>(100000), nullptr);
@@ -149,10 +158,9 @@ AudioDestinationGStreamer::AudioDestinationGStreamer(AudioIOCallback& callback, 
             return;
         }
     }
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
-    GstElement* audioConvert = makeGStreamerElement("audioconvert", nullptr);
-    GstElement* audioResample = makeGStreamerElement("audioresample", nullptr);
+    GstElement* audioConvert = makeGStreamerElement("audioconvert"_s);
+    GstElement* audioResample = makeGStreamerElement("audioresample"_s);
 
     auto queue = gst_element_factory_make("queue", nullptr);
     g_object_set(queue, "max-size-buffers", 2, "max-size-bytes", 0, "max-size-time", 0, nullptr);
@@ -168,7 +176,7 @@ AudioDestinationGStreamer::AudioDestinationGStreamer(AudioIOCallback& callback, 
         // 1) Some platform sinks don't support non-interleaved audio without special caps (rialtowebaudiosink).
         // 2) Interaudio sink/src doesn't fully support non-interleaved audio (webkit audio sink)
         // 3) audiomixer doesn't support non-interleaved audio in output pipeline (webkit audio sink)
-        GstElement* capsFilter = makeGStreamerElement("capsfilter", nullptr);
+        GstElement* capsFilter = makeGStreamerElement("capsfilter"_s);
         GRefPtr<GstCaps> caps = adoptGRef(gst_caps_new_simple("audio/x-raw", "layout", G_TYPE_STRING, "interleaved", nullptr));
         g_object_set(capsFilter, "caps", caps.get(), nullptr);
         gst_bin_add(GST_BIN_CAST(m_pipeline.get()), capsFilter);
@@ -183,7 +191,7 @@ AudioDestinationGStreamer::AudioDestinationGStreamer(AudioIOCallback& callback, 
 AudioDestinationGStreamer::~AudioDestinationGStreamer()
 {
     GST_DEBUG_OBJECT(m_pipeline.get(), "Disposing");
-    if (LIKELY(m_src))
+    if (m_src) [[likely]]
         g_object_set(m_src.get(), "destination", nullptr, nullptr);
     unregisterPipeline(m_pipeline);
     disconnectSimpleBusMessageCallback(m_pipeline.get());

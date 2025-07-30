@@ -28,6 +28,8 @@
 #if ENABLE(WK_WEB_EXTENSIONS)
 
 #include "APIData.h"
+#include "WebExtensionTabIdentifier.h"
+#include <WebCore/PageIdentifier.h>
 #include <WebCore/UserStyleSheetTypes.h>
 #include <wtf/Forward.h>
 
@@ -38,7 +40,8 @@ struct WebExtensionScriptInjectionParameters {
 
     std::optional<Ref<API::Data>> arguments;
     std::optional<Vector<String>> files;
-    std::optional<Vector<WebExtensionFrameIdentifier>> frameIDs;
+    std::optional<Vector<WebExtensionFrameIdentifier>> frameIdentifiers;
+    std::optional<Vector<WTF::UUID>> documentIdentifiers;
 
     std::optional<String> code;
     std::optional<String> css;

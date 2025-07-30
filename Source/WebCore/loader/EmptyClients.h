@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Eric Seidel (eric@webkit.org)
- * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies).
  * Copyright (C) 2012 Samsung Electronics. All rights reserved.
  *
@@ -30,6 +30,8 @@
 
 #include "ChromeClient.h"
 #include "CryptoClient.h"
+#include "ExceptionOr.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
@@ -88,7 +90,7 @@ class EmptyChromeClient : public ChromeClient {
     void addMessageWithArgumentsToConsole(MessageSource, MessageLevel, const String&, std::span<const String>, unsigned, unsigned, const String&) final { }
 
     bool canRunBeforeUnloadConfirmPanel() final { return false; }
-    bool runBeforeUnloadConfirmPanel(const String&, LocalFrame&) final { return true; }
+    bool runBeforeUnloadConfirmPanel(String&&, LocalFrame&) final { return true; }
 
     void closeWindow() final { }
 
@@ -117,11 +119,12 @@ class EmptyChromeClient : public ChromeClient {
     void scroll(const IntSize&, const IntRect&, const IntRect&) final { }
 
     IntPoint screenToRootView(const IntPoint& p) const final { return p; }
+    IntPoint rootViewToScreen(const IntPoint& p) const final { return p; }
     IntRect rootViewToScreen(const IntRect& r) const final { return r; }
     IntPoint accessibilityScreenToRootView(const IntPoint& p) const final { return p; };
     IntRect rootViewToAccessibilityScreen(const IntRect& r) const final { return r; };
 #if PLATFORM(IOS_FAMILY)
-    void relayAccessibilityNotification(const String&, const RetainPtr<NSData>&) const final { };
+    void relayAccessibilityNotification(String&&, RetainPtr<NSData>&&) const final { };
 #endif
 
     void didFinishLoadingImageForElement(HTMLImageElement&) final { }
@@ -139,25 +142,20 @@ class EmptyChromeClient : public ChromeClient {
     void reachedMaxAppCacheSize(int64_t) final { }
     void reachedApplicationCacheOriginQuota(SecurityOrigin&, int64_t) final { }
 
-#if ENABLE(INPUT_TYPE_COLOR)
     RefPtr<ColorChooser> createColorChooser(ColorChooserClient&, const Color&) final;
-#endif
 
-#if ENABLE(DATALIST_ELEMENT)
     RefPtr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&) final;
     bool canShowDataListSuggestionLabels() const final { return false; }
-#endif
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     RefPtr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&) final;
-#endif
 
     void setTextIndicator(const TextIndicatorData&) const final;
+    void updateTextIndicator(const TextIndicatorData&) const final;
 
     DisplayRefreshMonitorFactory* displayRefreshMonitorFactory() const final;
 
     void runOpenPanel(LocalFrame&, FileChooser&) final;
-    void showShareSheet(ShareDataWithParsedURL&, CompletionHandler<void(bool)>&&) final;
+    void showShareSheet(ShareDataWithParsedURL&&, CompletionHandler<void(bool)>&&) final;
     void loadIconForFiles(const Vector<String>&, FileIconLoader&) final { }
 
     void elementDidFocus(Element&, const FocusOptions&) final { }

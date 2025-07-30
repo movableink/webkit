@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -56,44 +56,40 @@ void InsertIntoTextNodeCommand::doApply()
     bool passwordEchoEnabled = document().settings().passwordEchoEnabled() && !document().editor().client()->shouldSuppressPasswordEcho();
 
     if (passwordEchoEnabled)
-        protectedDocument()->updateLayoutIgnorePendingStylesheets();
+        document().updateLayoutIgnorePendingStylesheets();
 
-    auto node = protectedNode();
-    if (!node->hasEditableStyle())
+    if (!m_node->hasEditableStyle())
         return;
 
     if (passwordEchoEnabled) {
-        if (CheckedPtr renderText = node->renderer())
+        if (CheckedPtr renderText = m_node->renderer())
             renderText->momentarilyRevealLastTypedCharacter(m_offset + m_text.length());
     }
     
-    node->insertData(m_offset, m_text);
+    m_node->insertData(m_offset, m_text);
 }
 
 void InsertIntoTextNodeCommand::doReapply()
 {
-    auto node = protectedNode();
-    if (!node->hasEditableStyle())
+    if (!m_node->hasEditableStyle())
         return;
 
-    node->insertData(m_offset, m_text);
+    m_node->insertData(m_offset, m_text);
 }
 
 void InsertIntoTextNodeCommand::doUnapply()
 {
-    auto node = protectedNode();
-    if (!node->hasEditableStyle())
+    if (!m_node->hasEditableStyle())
         return;
 
-    node->deleteData(m_offset, m_text.length());
+    m_node->deleteData(m_offset, m_text.length());
 }
 
 #ifndef NDEBUG
 
-void InsertIntoTextNodeCommand::getNodesInCommand(HashSet<Ref<Node>>& nodes)
+void InsertIntoTextNodeCommand::getNodesInCommand(NodeSet& nodes)
 {
-    auto node = protectedNode();
-    addNodeAndDescendants(node.ptr(), nodes);
+    addNodeAndDescendants(m_node.ptr(), nodes);
 }
 
 #endif

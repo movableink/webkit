@@ -39,8 +39,6 @@ public:
     AtomString(std::span<const LChar>);
     AtomString(std::span<const UChar>);
 
-    ALWAYS_INLINE static AtomString fromLatin1(const char* characters) { return AtomString(characters); }
-
     AtomString(AtomStringImpl*);
     AtomString(RefPtr<AtomStringImpl>&&);
     AtomString(Ref<AtomStringImpl>&&);
@@ -68,12 +66,12 @@ public:
     String releaseString() { return WTFMove(m_string); }
 
     // FIXME: What guarantees this isn't a SymbolImpl rather than an AtomStringImpl?
-    AtomStringImpl* impl() const { return static_cast<AtomStringImpl*>(m_string.impl()); }
+    AtomStringImpl* impl() const LIFETIME_BOUND { SUPPRESS_MEMORY_UNSAFE_CAST return static_cast<AtomStringImpl*>(m_string.impl()); }
     RefPtr<AtomStringImpl> releaseImpl() { return static_pointer_cast<AtomStringImpl>(m_string.releaseImpl()); }
 
     bool is8Bit() const { return m_string.is8Bit(); }
-    std::span<const LChar> span8() const { return m_string.span8(); }
-    std::span<const UChar> span16() const { return m_string.span16(); }
+    std::span<const LChar> span8() const LIFETIME_BOUND { return m_string.span8(); }
+    std::span<const UChar> span16() const LIFETIME_BOUND { return m_string.span16(); }
     unsigned length() const { return m_string.length(); }
 
     UChar operator[](unsigned int i) const { return m_string[i]; }
@@ -121,7 +119,7 @@ public:
 
 #if USE(FOUNDATION) && defined(__OBJC__)
     AtomString(NSString *);
-    operator NSString *() const { return m_string; }
+    RetainPtr<NSString> createNSString() const { return m_string.createNSString(); }
 #endif
 
 #if PLATFORM(QT)
@@ -161,8 +159,6 @@ inline bool operator==(const AtomString& a, const AtomString& b) { return a.impl
 inline bool operator==(const AtomString& a, ASCIILiteral b) { return WTF::equal(a.impl(), b); }
 inline bool operator==(const AtomString& a, const Vector<UChar>& b) { return a.impl() && equal(a.impl(), b.span()); }
 inline bool operator==(const AtomString& a, const String& b) { return equal(a.impl(), b.impl()); }
-inline bool operator==(const String& a, const AtomString& b) { return equal(a.impl(), b.impl()); }
-inline bool operator==(const Vector<UChar>& a, const AtomString& b) { return b == a; }
 
 bool equalIgnoringASCIICase(const AtomString&, const AtomString&);
 bool equalIgnoringASCIICase(const AtomString&, const String&);
@@ -176,11 +172,6 @@ WTF_EXPORT_PRIVATE AtomString replaceUnpairedSurrogatesWithReplacementCharacter(
 WTF_EXPORT_PRIVATE String replaceUnpairedSurrogatesWithReplacementCharacter(String&&);
 
 inline AtomString::AtomString()
-{
-}
-
-inline AtomString::AtomString(const char* string)
-    : m_string(AtomStringImpl::addCString(string))
 {
 }
 
@@ -269,8 +260,8 @@ static_assert(sizeof(AtomString) == sizeof(StaticAtomString), "AtomString and St
 extern WTF_EXPORT_PRIVATE const StaticAtomString nullAtomData;
 extern WTF_EXPORT_PRIVATE const StaticAtomString emptyAtomData;
 
-inline const AtomString& nullAtom() { return *reinterpret_cast<const AtomString*>(&nullAtomData); }
-inline const AtomString& emptyAtom() { return *reinterpret_cast<const AtomString*>(&emptyAtomData); }
+inline const AtomString& nullAtom() { SUPPRESS_MEMORY_UNSAFE_CAST return *reinterpret_cast<const AtomString*>(&nullAtomData); }
+inline const AtomString& emptyAtom() { SUPPRESS_MEMORY_UNSAFE_CAST return *reinterpret_cast<const AtomString*>(&emptyAtomData); }
 
 inline AtomString::AtomString(ASCIILiteral literal)
     : m_string(literal.length() ? AtomStringImpl::add(literal.span8()) : Ref { *emptyAtom().impl() })
@@ -292,7 +283,7 @@ inline AtomString AtomString::fromUTF8(const char* characters)
         return nullAtom();
     if (!*characters)
         return emptyAtom();
-    return fromUTF8Internal(span(characters));
+    return fromUTF8Internal(unsafeSpan(characters));
 }
 
 inline AtomString String::toExistingAtomString() const
@@ -338,7 +329,7 @@ inline bool equalIgnoringASCIICase(const AtomString& a, ASCIILiteral b)
     return equalIgnoringASCIICase(a.string(), b);
 }
 
-inline int codePointCompare(const AtomString& a, const AtomString& b)
+inline std::strong_ordering codePointCompare(const AtomString& a, const AtomString& b)
 {
     return codePointCompare(a.string(), b.string());
 }

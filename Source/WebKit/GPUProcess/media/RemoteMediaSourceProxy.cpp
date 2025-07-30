@@ -46,10 +46,9 @@ using namespace WebCore;
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteMediaSourceProxy);
 
-RemoteMediaSourceProxy::RemoteMediaSourceProxy(RemoteMediaPlayerManagerProxy& manager, RemoteMediaSourceIdentifier identifier, bool webMParserEnabled, RemoteMediaPlayerProxy& remoteMediaPlayerProxy)
+RemoteMediaSourceProxy::RemoteMediaSourceProxy(RemoteMediaPlayerManagerProxy& manager, RemoteMediaSourceIdentifier identifier, RemoteMediaPlayerProxy& remoteMediaPlayerProxy)
     : m_manager(manager)
     , m_identifier(identifier)
-    , m_webMParserEnabled(webMParserEnabled)
     , m_remoteMediaPlayerProxy(remoteMediaPlayerProxy)
 {
     ASSERT(RunLoop::isMain());
@@ -121,14 +120,17 @@ void RemoteMediaSourceProxy::failedToCreateRenderer(RendererType)
     notImplemented();
 }
 
-void RemoteMediaSourceProxy::addSourceBuffer(const WebCore::ContentType& contentType, AddSourceBufferCallback&& callback)
+void RemoteMediaSourceProxy::addSourceBuffer(const WebCore::ContentType& contentType, const WebCore::MediaSourceConfiguration& configuration, AddSourceBufferCallback&& callback)
 {
     RefPtr connection = connectionToWebProcess();
-    if (!m_remoteMediaPlayerProxy || !connection)
+    RefPtr mediaSourcePrivate = this->mediaSourcePrivate();
+    if (!m_remoteMediaPlayerProxy || !connection || !mediaSourcePrivate) {
+        callback(MediaSourcePrivate::AddStatus::NotSupported, { });
         return;
+    }
 
     RefPtr<SourceBufferPrivate> sourceBufferPrivate;
-    MediaSourcePrivate::AddStatus status = mediaSourcePrivate()->addSourceBuffer(contentType, m_webMParserEnabled, sourceBufferPrivate);
+    MediaSourcePrivate::AddStatus status = mediaSourcePrivate->addSourceBuffer(contentType, configuration, sourceBufferPrivate);
 
     std::optional<RemoteSourceBufferIdentifier> remoteSourceIdentifier;
     if (status == MediaSourcePrivate::AddStatus::Ok) {

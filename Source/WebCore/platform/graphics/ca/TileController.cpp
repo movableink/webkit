@@ -51,8 +51,6 @@
 #include "TileControllerMemoryHandlerIOS.h"
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(TileController);
@@ -316,10 +314,10 @@ void TileController::setScrollability(OptionSet<Scrollability> scrollability)
     notePendingTileSizeChange();
 }
 
-void TileController::setTopContentInset(float topContentInset)
+void TileController::setObscuredContentInsets(const FloatBoxExtent& obscuredContentInsets)
 {
-    m_topContentInset = topContentInset;
-    setTiledScrollingIndicatorPosition(FloatPoint(0, m_topContentInset));
+    m_obscuredContentInsets = obscuredContentInsets;
+    setTiledScrollingIndicatorPosition({ obscuredContentInsets.left(), obscuredContentInsets.top() });
 }
 
 void TileController::setTiledScrollingIndicatorPosition(const FloatPoint& position)
@@ -479,7 +477,7 @@ FloatRect TileController::adjustTileCoverageForDesktopPageScrolling(const FloatR
 }
 #endif
 
-FloatRect TileController::adjustTileCoverageWithScrollingVelocity(const FloatRect& coverageRect, const FloatSize& newSize, const FloatRect& visibleRect, float contentsScale) const
+FloatRect TileController::adjustTileCoverageWithScrollingVelocity(const FloatRect& coverageRect, const FloatSize& newSize, const FloatRect& visibleRect, float contentsScale, MonotonicTime timestamp) const
 {
     if (m_tileCoverage == CoverageForVisibleArea || MemoryPressureHandler::singleton().isUnderMemoryPressure())
         return visibleRect;
@@ -487,8 +485,7 @@ FloatRect TileController::adjustTileCoverageWithScrollingVelocity(const FloatRec
     double horizontalMargin = kDefaultTileSize / contentsScale;
     double verticalMargin = kDefaultTileSize / contentsScale;
 
-    MonotonicTime currentTime = MonotonicTime::now();
-    Seconds timeDelta = currentTime - m_velocity.lastUpdateTime;
+    Seconds timeDelta = timestamp - m_velocity.lastUpdateTime;
 
     FloatRect futureRect = visibleRect;
     futureRect.setLocation(FloatPoint(
@@ -548,6 +545,8 @@ FloatRect TileController::adjustTileCoverageRectForScrolling(const FloatRect& co
     UNUSED_PARAM(previousVisibleRect);
 #endif
 
+    MonotonicTime currentTime = MonotonicTime::now();
+
     auto computeVelocityIfNecessary = [&](FloatPoint scrollOffset) {
         if (m_haveExternalVelocityData)
             return;
@@ -555,12 +554,12 @@ FloatRect TileController::adjustTileCoverageRectForScrolling(const FloatRect& co
         if (!m_historicalVelocityData)
             m_historicalVelocityData = makeUnique<HistoricalVelocityData>();
 
-        m_velocity = m_historicalVelocityData->velocityForNewData(scrollOffset, contentsScale, MonotonicTime::now());
+        m_velocity = m_historicalVelocityData->velocityForNewData(scrollOffset, contentsScale, currentTime);
     };
     
     computeVelocityIfNecessary(visibleRect.location());
 
-    return adjustTileCoverageWithScrollingVelocity(coverageRect, newSize, visibleRect, contentsScale);
+    return adjustTileCoverageWithScrollingVelocity(coverageRect, newSize, visibleRect, contentsScale, currentTime);
 }
 
 void TileController::scheduleTileRevalidation(Seconds interval)
@@ -668,7 +667,7 @@ IntSize TileController::computeTileSize()
     } else if (m_scrollability == Scrollability::VerticallyScrollable)
         tileSize.setWidth(std::min(std::max<int>(ceilf(boundsWithoutMargin().width() * tileGrid().scale()), kDefaultTileSize), maxTileSize.width()));
 
-    LOG_WITH_STREAM(Scrolling, stream << "TileController::tileSize newSize=" << tileSize);
+    LOG_WITH_STREAM(Tiling, stream << "TileController::tileSize newSize=" << tileSize);
 
     m_tileSizeLocked = true;
     return tileSize;
@@ -729,10 +728,8 @@ unsigned TileController::blankPixelCountForTiles(const PlatformLayerList& tiles,
 {
     Region paintedVisibleTiles;
 
-    for (PlatformLayerList::const_iterator it = tiles.begin(), end = tiles.end(); it != end; ++it) {
-        const PlatformLayer* tileLayer = it->get();
-
-        FloatRect visiblePart(CGRectOffset(PlatformCALayer::frameForLayer(tileLayer), tileTranslation.x(), tileTranslation.y()));
+    for (auto& tileLayer : tiles) {
+        FloatRect visiblePart(CGRectOffset(PlatformCALayer::frameForLayer(tileLayer.get()), tileTranslation.x(), tileTranslation.y()));
         visiblePart.intersect(visibleRect);
 
         if (!visiblePart.isEmpty())
@@ -901,8 +898,16 @@ void TileController::logFilledVisibleFreshTile(unsigned blankPixelCount)
         owningGraphicsLayer()->platformCALayerLogFilledVisibleFreshTile(blankPixelCount);
 }
 
-} // namespace WebCore
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+std::optional<DynamicContentScalingDisplayList> TileController::dynamicContentScalingDisplayListForTile(const TileGrid& tileGrid, TileIndex index)
+{
+    if (!m_client)
+        return std::nullopt;
+    return m_client->dynamicContentScalingDisplayListForTile(*this, tileGrid.identifier(), index);
+}
+#endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+} // namespace WebCore
 
 #endif // USE(CG)

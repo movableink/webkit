@@ -113,17 +113,17 @@ LoadTrackingTest::LoadTrackingTest()
     : m_runLoadUntilCompletion(false)
     , m_loadFailed(false)
 {
-    g_signal_connect(m_webView, "load-changed", G_CALLBACK(loadChangedCallback), this);
-    g_signal_connect(m_webView, "load-failed", G_CALLBACK(loadFailedCallback), this);
-    g_signal_connect(m_webView, "load-failed-with-tls-errors", G_CALLBACK(loadFailedWithTLSErrorsCallback), this);
-    g_signal_connect(m_webView, "notify::estimated-load-progress", G_CALLBACK(estimatedProgressChangedCallback), this);
+    g_signal_connect(m_webView.get(), "load-changed", G_CALLBACK(loadChangedCallback), this);
+    g_signal_connect(m_webView.get(), "load-failed", G_CALLBACK(loadFailedCallback), this);
+    g_signal_connect(m_webView.get(), "load-failed-with-tls-errors", G_CALLBACK(loadFailedWithTLSErrorsCallback), this);
+    g_signal_connect(m_webView.get(), "notify::estimated-load-progress", G_CALLBACK(estimatedProgressChangedCallback), this);
 
-    g_assert_null(webkit_web_view_get_uri(m_webView));
+    g_assert_null(webkit_web_view_get_uri(m_webView.get()));
 }
 
 LoadTrackingTest::~LoadTrackingTest()
 {
-    g_signal_handlers_disconnect_matched(m_webView, G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
+    g_signal_handlers_disconnect_matched(m_webView.get(), G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
 }
 
 void LoadTrackingTest::waitUntilLoadFinished()
@@ -173,7 +173,7 @@ bool LoadTrackingTest::loadFailedWithTLSErrors(const gchar* /*failingURI*/, GTls
 
 void LoadTrackingTest::estimatedProgressChanged()
 {
-    double progress = webkit_web_view_get_estimated_load_progress(m_webView);
+    double progress = webkit_web_view_get_estimated_load_progress(m_webView.get());
     g_assert_cmpfloat(m_estimatedProgress, <, progress);
     m_estimatedProgress = progress;
 }
@@ -211,7 +211,7 @@ void LoadTrackingTest::loadRequest(WebKitURIRequest* request)
 void LoadTrackingTest::reload()
 {
     reset();
-    webkit_web_view_reload(m_webView);
+    webkit_web_view_reload(m_webView.get());
 }
 
 void LoadTrackingTest::goBack()

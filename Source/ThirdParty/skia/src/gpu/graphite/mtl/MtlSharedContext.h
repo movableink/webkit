@@ -37,14 +37,14 @@ public:
 
     std::unique_ptr<ResourceProvider> makeResourceProvider(SingleOwner*,
                                                            uint32_t recorderID,
-                                                           size_t resourceBudget,
-                                                           bool avoidBufferAlloc) override;
+                                                           size_t resourceBudget) override;
 
 private:
 
     MtlSharedContext(sk_cfp<id<MTLDevice>>,
                      sk_sp<skgpu::MtlMemoryAllocator> memoryAllocator,
-                     std::unique_ptr<const MtlCaps>);
+                     std::unique_ptr<const MtlCaps>,
+                     SkSpan<sk_sp<SkRuntimeEffect>> userDefinedKnownRuntimeEffects);
 
     sk_sp<skgpu::MtlMemoryAllocator> fMemoryAllocator;
 

@@ -60,11 +60,16 @@ template<size_t I> const auto& get(const ColorScheme& colorScheme)
 
 DEFINE_TYPE_MAPPING(CSS::ColorScheme, ColorScheme)
 
+// `ColorScheme` is special-cased to return a `CSSColorSchemeValue`.
+template<> struct CSSValueCreation<ColorScheme> { Ref<CSSValue> operator()(CSSValuePool&, const RenderStyle&, const ColorScheme&); };
+
+template<> struct Serialize<ColorScheme> { void operator()(StringBuilder&, const CSS::SerializationContext&, const RenderStyle&, const ColorScheme&); };
+
 TextStream& operator<<(TextStream&, const ColorScheme&);
 
 } // namespace Style
 } // namespace WebCore
 
-STYLE_TUPLE_LIKE_CONFORMANCE(ColorScheme, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::ColorScheme, 2)
 
 #endif

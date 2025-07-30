@@ -58,7 +58,7 @@ public:
     }
     
 private:
-    NO_RETURN void run()
+    [[noreturn]] void run()
     {
         for (;;) {
             sleep(1_s);

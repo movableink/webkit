@@ -53,6 +53,19 @@
 SOFT_LINK_PRIVATE_FRAMEWORK(TextInput)
 SOFT_LINK_CLASS(TextInput, TIPreferencesController);
 
+static unsigned globalKeyboardUpdateForChangedSelectionCount = 0;
+
+@implementation NSObject (UIKeyboardStateManager_TestRunner)
+
+- (void)swizzled_updateForChangedSelection
+{
+    ++globalKeyboardUpdateForChangedSelectionCount;
+
+    [self swizzled_updateForChangedSelection];
+}
+
+@end
+
 #if HAVE(UI_WINDOW_SCENE_GEOMETRY_PREFERENCES)
 
 @interface WindowDidRotateObserver : NSObject
@@ -168,6 +181,16 @@ void TestController::platformInitialize(const Options& options)
     ALLOW_DEPRECATED_DECLARATIONS_END
 
     m_hardwareKeyboardModeSwizzler = WTF::makeUnique<ClassMethodSwizzler>(UIKeyboard.class, @selector(isInHardwareKeyboardMode), reinterpret_cast<IMP>(overrideIsInHardwareKeyboardMode));
+
+    if (auto stateManagerClass = NSClassFromString(@"_UIKeyboardStateManager")) {
+        auto originalMethod = class_getInstanceMethod(stateManagerClass, @selector(updateForChangedSelection));
+        auto swizzledMethod = class_getInstanceMethod(stateManagerClass, @selector(swizzled_updateForChangedSelection));
+        auto originalImplementation = method_getImplementation(originalMethod);
+        auto swizzledImplementation = method_getImplementation(swizzledMethod);
+        class_replaceMethod(stateManagerClass, @selector(swizzled_updateForChangedSelection), originalImplementation, method_getTypeEncoding(originalMethod));
+        class_replaceMethod(stateManagerClass, @selector(updateForChangedSelection), swizzledImplementation, method_getTypeEncoding(swizzledMethod));
+    } else
+        NSLog(@"Failed to look up class: _UIKeyboardStateManager");
 }
 
 void TestController::platformDestroy()
@@ -368,10 +391,9 @@ bool TestController::platformResetStateToConsistentValues(const TestOptions& opt
         [scrollView setZoomScale:1 animated:NO];
         scrollView.firstResponderKeyboardAvoidanceEnabled = YES;
 
-        auto contentInsetTop = options.contentInsetTop();
-        if (auto contentInset = scrollView.contentInset; contentInset.top != contentInsetTop) {
-            contentInset.top = contentInsetTop;
-            scrollView.contentInset = contentInset;
+        auto insetsToRestore = UIEdgeInsetsMake(options.contentInsetTop(), 0, 0, 0);
+        if (auto contentInset = scrollView.contentInset; !UIEdgeInsetsEqualToEdgeInsets(contentInset, insetsToRestore)) {
+            scrollView.contentInset = insetsToRestore;
             scrollView.contentOffset = CGPointMake(-contentInset.left, -contentInset.top);
         }
 
@@ -506,9 +528,12 @@ const char* TestController::platformLibraryPathForTesting()
     return [platformLibraryPath.get() UTF8String];
 }
 
-void TestController::setHidden(bool)
+void TestController::setHidden(bool hidden)
 {
-    // FIXME: implement for iOS
+    if (hidden)
+        mainWebView()->removeFromWindow();
+    else
+        mainWebView()->addToWindow();
 }
 
 static UIKeyboardInputMode *swizzleCurrentInputMode()
@@ -521,10 +546,15 @@ static NSArray<UIKeyboardInputMode *> *swizzleActiveInputModes()
     return @[ TestController::singleton().overriddenKeyboardInputMode() ];
 }
 
+unsigned TestController::keyboardUpdateForChangedSelectionCount() const
+{
+    return globalKeyboardUpdateForChangedSelectionCount;
+}
+
 void TestController::setKeyboardInputModeIdentifier(const String& identifier)
 {
     m_inputModeSwizzlers.clear();
-    m_overriddenKeyboardInputMode = [UIKeyboardInputMode keyboardInputModeWithIdentifier:identifier];
+    m_overriddenKeyboardInputMode = [UIKeyboardInputMode keyboardInputModeWithIdentifier:identifier.createNSString().get()];
     if (!m_overriddenKeyboardInputMode) {
         ASSERT_NOT_REACHED();
         return;

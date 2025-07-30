@@ -1,5 +1,3 @@
-//@ requireOptions("--useIteratorHelpers=1")
-
 function assert(a, text) {
     if (!a)
         throw new Error(`Failed assertion: ${text}`);

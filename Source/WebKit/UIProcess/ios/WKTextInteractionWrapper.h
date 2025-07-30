@@ -56,6 +56,7 @@
 - (void)selectAll:(id)sender;
 - (void)translate:(NSString *)text fromRect:(CGRect)presentationRect;
 - (void)prepareToMoveSelectionContainer:(UIView *)newContainer;
+- (void)setNeedsSelectionUpdate;
 
 - (void)willBeginDragLift;
 - (void)didConcludeDrop;
@@ -69,6 +70,7 @@
 
 @property (nonatomic, readonly) NSArray<UIView *> *managedTextSelectionViews;
 @property (nonatomic, readonly) UIWKTextInteractionAssistant *textInteractionAssistant;
+@property (nonatomic, readonly) UIView *selectionHighlightView;
 
 @end
 

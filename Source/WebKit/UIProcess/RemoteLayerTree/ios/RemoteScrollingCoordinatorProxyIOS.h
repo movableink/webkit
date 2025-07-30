@@ -64,10 +64,7 @@ public:
 
 #if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
     void removeDestroyedLayerIDs(const Vector<WebCore::PlatformLayerIdentifier>&);
-    void updateOverlayRegionLayerIDs(const HashSet<WebCore::PlatformLayerIdentifier>& overlayRegionLayerIDs) { m_overlayRegionLayerIDs = overlayRegionLayerIDs; }
-
-    const HashSet<WebCore::PlatformLayerIdentifier>& fixedScrollingNodeLayerIDs() const { return m_fixedScrollingNodeLayerIDs; }
-    const HashSet<WebCore::PlatformLayerIdentifier>& overlayRegionLayerIDs() const { return m_overlayRegionLayerIDs; }
+    HashSet<WebCore::PlatformLayerIdentifier> fixedScrollingNodeLayerIDs() const;
     Vector<WKBaseScrollView*> overlayRegionScrollViewCandidates() const;
 #endif
 
@@ -97,8 +94,7 @@ private:
     HashMap<unsigned, OptionSet<WebCore::TouchAction>> m_touchActionsByTouchIdentifier;
 
 #if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
-    HashSet<WebCore::PlatformLayerIdentifier> m_fixedScrollingNodeLayerIDs;
-    HashSet<WebCore::PlatformLayerIdentifier> m_overlayRegionLayerIDs;
+    HashMap<WebCore::PlatformLayerIdentifier, WebCore::ScrollingNodeID> m_fixedScrollingNodesByLayerID;
     HashMap<WebCore::PlatformLayerIdentifier, WebCore::ScrollingNodeID> m_scrollingNodesByLayerID;
 #endif
 

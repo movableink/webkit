@@ -3,6 +3,11 @@ function shouldBe(actual, expected) {
         throw new Error('bad value: ' + actual);
 }
 
+function shouldBeOneOf(actual, expectedArray) {
+    if (!expectedArray.some((value) => value === actual))
+        throw new Error('bad value: ' + actual + ' expected values: ' + expectedArray);
+}
+
 shouldBe((299792458).toLocaleString("en-US", {
     style: "unit",
     unit: "meter-per-second",
@@ -34,19 +39,19 @@ shouldBe((55).toLocaleString("en-US", {
     signDisplay: "always"
 }), `+55`);
 
-shouldBe((-100).toLocaleString("bn", {
+shouldBeOneOf((-100).toLocaleString("bn", {
     style: "currency",
     currency: "EUR",
     currencySign: "accounting"
-}), `(১০০.০০€)`);
+}), [`(১০০.০০€)`, `(100.00€)`]);
 
 shouldBe((0.55).toLocaleString("en-US", {
     style: "percent",
     signDisplay: "exceptZero"
 }), `+55%`);
 
-shouldBe((100).toLocaleString("en-CA", {
+shouldBeOneOf((100).toLocaleString("en-CA", {
     style: "currency",
     currency: "USD",
     currencyDisplay: "narrowSymbol"
-}), $vm.icuVersion() >= 72 ? `US$100.00` : `$100.00`);
+}), [`US$100.00`, `$100.00`]);

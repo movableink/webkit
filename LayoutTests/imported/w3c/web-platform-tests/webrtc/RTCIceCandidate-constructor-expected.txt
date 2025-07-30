@@ -10,7 +10,7 @@ PASS new RTCIceCandidate({ sdpMid: 'audio' })
 PASS new RTCIceCandidate({ sdpMLineIndex: 0 })
 PASS new RTCIceCandidate({ sdpMid: 'audio', sdpMLineIndex: 0 })
 PASS new RTCIceCandidate({ candidate: '', sdpMid: 'audio' }
-PASS new RTCIceCandidate({ candidate: '', sdpMLineIndex: 0 }
+PASS new RTCIceCandidate({ candidate: null, sdpMLineIndex: 0 }
 PASS new RTCIceCandidate({ ... }) with valid candidate string and sdpMid
 PASS new RTCIceCandidate({ ... }) with invalid candidate string and sdpMid
 PASS new RTCIceCandidate({ ... }) with nondefault values for all fields

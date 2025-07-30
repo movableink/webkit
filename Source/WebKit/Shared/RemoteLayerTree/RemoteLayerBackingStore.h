@@ -41,6 +41,7 @@
 #include <wtf/WeakRef.h>
 
 OBJC_CLASS CALayer;
+OBJC_CLASS UIView;
 
 // FIXME: Make PlatformCALayerRemote.cpp Objective-C so we can include WebLayer.h here and share the typedef.
 namespace WebCore {
@@ -89,10 +90,6 @@ public:
         Bitmap
     };
 
-#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
-    enum class IncludeDisplayList : bool { No, Yes };
-#endif
-
     virtual bool isRemoteLayerWithRemoteRenderingBackingStore() const { return false; }
     virtual bool isRemoteLayerWithInProcessRenderingBackingStore() const { return false; }
 
@@ -109,7 +106,7 @@ public:
         bool isOpaque { false };
 
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
-        IncludeDisplayList includeDisplayList { IncludeDisplayList::No };
+        WebCore::IncludeDynamicContentScalingDisplayList includeDisplayList { WebCore::IncludeDynamicContentScalingDisplayList::No };
 #endif
 
         friend bool operator==(const Parameters&, const Parameters&) = default;
@@ -174,7 +171,7 @@ public:
 
     virtual std::optional<ImageBufferBackendHandle> frontBufferHandle() const = 0;
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
-    virtual std::optional<ImageBufferBackendHandle> displayListHandle() const  { return std::nullopt; }
+    virtual std::optional<WebCore::DynamicContentScalingDisplayList> displayListHandle() const  { return std::nullopt; }
 #endif
     virtual std::optional<RemoteImageBufferSetIdentifier> bufferSetIdentifier() const { return std::nullopt; }
 
@@ -222,7 +219,7 @@ public:
     RemoteLayerBackingStoreProperties() = default;
     RemoteLayerBackingStoreProperties(RemoteLayerBackingStoreProperties&&) = default;
 
-    void applyBackingStoreToLayer(CALayer *, LayerContentsType, std::optional<WebCore::RenderingResourceIdentifier>, bool replayDynamicContentScalingDisplayListsIntoBackingStore);
+    void applyBackingStoreToLayer(CALayer *, LayerContentsType, std::optional<WebCore::RenderingResourceIdentifier>, bool replayDynamicContentScalingDisplayListsIntoBackingStore, UIView * hostingView);
 
     void updateCachedBuffers(RemoteLayerTreeNode&, LayerContentsType);
 
@@ -252,7 +249,7 @@ private:
     std::optional<WebCore::IntRect> m_paintedRect;
 
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
-    std::optional<ImageBufferBackendHandle> m_displayListBufferHandle;
+    std::optional<WebCore::DynamicContentScalingDisplayList> m_displayListBufferHandle;
 #endif
 
     bool m_isOpaque;

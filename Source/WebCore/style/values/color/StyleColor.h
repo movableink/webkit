@@ -64,8 +64,8 @@ struct Color {
 private:
     struct EmptyToken { constexpr bool operator==(const EmptyToken&) const = default; };
 
-    // FIXME: Replace std::variant with a generic CompactPointerVariant type.
-    using ColorKind = std::variant<
+    // FIXME: Replace Variant with a generic CompactPointerVariant type.
+    using ColorKind = Variant<
         EmptyToken,
         ResolvedColor,
         CurrentColor,
@@ -101,8 +101,8 @@ public:
     Color(WebCore::Color);
     Color(SRGBA<uint8_t>);
 
-    Color(ResolvedColor&&);
-    Color(CurrentColor&&);
+    WEBCORE_EXPORT Color(ResolvedColor&&);
+    WEBCORE_EXPORT Color(CurrentColor&&);
     Color(ColorLayers&&);
     Color(ColorMix&&);
     Color(ContrastColor&&);
@@ -125,7 +125,7 @@ public:
     WEBCORE_EXPORT Color(const Color&);
     Color& operator=(const Color&);
 
-    Color(Color&&);
+    WEBCORE_EXPORT Color(Color&&);
     Color& operator=(Color&&);
 
     WEBCORE_EXPORT ~Color();
@@ -167,8 +167,12 @@ private:
 WebCore::Color resolveColor(const Color&, const WebCore::Color& currentColor);
 bool containsCurrentColor(const Color&);
 
-void serializationForCSS(StringBuilder&, const Color&);
-WEBCORE_EXPORT String serializationForCSS(const Color&);
+void serializationForCSS(StringBuilder&, const CSS::SerializationContext&, const Color&);
+WEBCORE_EXPORT String serializationForCSS(const CSS::SerializationContext&, const Color&);
+
+template<> struct Serialize<Color> {
+    void operator()(StringBuilder&, const CSS::SerializationContext&, const RenderStyle&, const Color&);
+};
 
 WTF::TextStream& operator<<(WTF::TextStream&, const Color&);
 
@@ -176,14 +180,17 @@ WTF::TextStream& operator<<(WTF::TextStream&, const Color&);
 
 Color toStyleColor(const CSS::Color&, ColorResolutionState&);
 Color toStyleColor(const CSS::Color&, Ref<const Document>, const RenderStyle&, const CSSToLengthConversionData&, ForVisitedLink);
-Color toStyleColorWithResolvedCurrentColor(const CSS::Color&, Ref<const Document>, RenderStyle&, const CSSToLengthConversionData&, ForVisitedLink);
 
 template<> struct ToCSS<Color> {
     auto operator()(const Color&, const RenderStyle&) -> CSS::Color;
 };
 template<> struct ToStyle<CSS::Color> {
-    auto operator()(const CSS::Color&, const BuilderState&, const CSSCalcSymbolTable&, ForVisitedLink) -> Color;
-    auto operator()(const CSS::Color&, const BuilderState&, const CSSCalcSymbolTable&) -> Color;
+    auto operator()(const CSS::Color&, const BuilderState&, ForVisitedLink) -> Color;
+    auto operator()(const CSS::Color&, const BuilderState&) -> Color;
+};
+
+template<> struct CSSValueCreation<Color> {
+    Ref<CSSValue> operator()(CSSValuePool&, const RenderStyle&, const Color&);
 };
 
 template<typename... F> decltype(auto) Color::switchOn(F&&... f) const

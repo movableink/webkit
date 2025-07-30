@@ -49,7 +49,7 @@ void AnimationEffectTiming::updateComputedProperties(std::optional<WebAnimationT
             if (std::isinf(iterations))
                 intrinsicIterationDuration = WebAnimationTime::fromPercentage(0);
             else
-                intrinsicIterationDuration = (WebAnimationTime::fromPercentage(100) - startDelay - endDelay) / iterations;
+                intrinsicIterationDuration = (*timelineDuration - startDelay - endDelay) / iterations;
         }
     };
 
@@ -62,11 +62,11 @@ void AnimationEffectTiming::updateComputedProperties(std::optional<WebAnimationT
             // Set start delay and end delay to 0, as it is not possible to mix time and proportions.
             startDelay = WebAnimationTime::fromPercentage(0);
             endDelay = WebAnimationTime::fromPercentage(0);
-            iterationDuration = std::isinf(iterations) ? WebAnimationTime::fromPercentage(0) : *timelineDuration;
+            iterationDuration = std::isinf(iterations) ? WebAnimationTime::fromPercentage(0) : *timelineDuration / iterations;
         } else if (auto totalTime = specifiedEndTime()) {
-            auto sanitize = [](const WebAnimationTime& time) {
+            auto sanitize = [&](const WebAnimationTime& time) {
                 if (time.isInfinity() || time.isNaN())
-                    return WebAnimationTime::fromPercentage(100);
+                    return *timelineDuration;
                 return time;
             };
             // Otherwise:
@@ -167,8 +167,7 @@ BasicEffectTiming AnimationEffectTiming::getBasicTiming(const ResolutionData& da
             // Set unlimited current time based on the first matching condition:
             // - start time is resolved: (timeline time - start time) × playback rate
             // - Otherwise: animation's current time
-            ASSERT_IMPLIES(data.startTime, data.timelineTime);
-            auto unlimitedCurrentTime = data.startTime ? (*data.timelineTime - *data.startTime) * data.playbackRate : *data.localTime;
+            auto unlimitedCurrentTime = (data.startTime && data.timelineTime) ? (*data.timelineTime - *data.startTime) * data.playbackRate : *data.localTime;
             // Let effective timeline time be unlimited current time / animation’s playback rate + effective start time
             auto effectiveTimelineTime = unlimitedCurrentTime / data.playbackRate + effectiveStartTime;
             // Let effective timeline progress be effective timeline time / timeline duration

@@ -48,6 +48,7 @@
 
 OBJC_CLASS AVPlayerViewController;
 OBJC_CLASS LMPlayableViewController;
+OBJC_CLASS UIImage;
 OBJC_CLASS UIViewController;
 OBJC_CLASS UIWindow;
 OBJC_CLASS UIView;
@@ -70,6 +71,8 @@ class VideoPresentationInterfaceIOS
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(VideoPresentationInterfaceIOS, WEBCORE_EXPORT);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(VideoPresentationInterfaceIOS);
 public:
+    USING_CAN_MAKE_WEAKPTR(VideoPresentationModelClient);
+
     WEBCORE_EXPORT ~VideoPresentationInterfaceIOS();
 
     // CheckedPtr interface
@@ -78,15 +81,20 @@ public:
     void incrementCheckedPtrCount() const final { CanMakeCheckedPtr::incrementCheckedPtrCount(); }
     void decrementCheckedPtrCount() const final { CanMakeCheckedPtr::decrementCheckedPtrCount(); }
 
+    // VideoPresentationModelClient
+    void hasVideoChanged(bool) override { }
+    WEBCORE_EXPORT void videoDimensionsChanged(const FloatSize&) override;
+    WEBCORE_EXPORT void setPlayerIdentifier(std::optional<MediaPlayerIdentifier>) override;
+    WEBCORE_EXPORT void audioSessionCategoryChanged(WebCore::AudioSessionCategory, WebCore::AudioSessionMode, WebCore::RouteSharingPolicy) override;
+
+    // PlaybackSessionModelClient
+    WEBCORE_EXPORT void externalPlaybackChanged(bool enabled, PlaybackSessionModel::ExternalPlaybackTargetType, const String& localizedDeviceName) override;
+
     WEBCORE_EXPORT void setVideoPresentationModel(VideoPresentationModel*);
     PlaybackSessionInterfaceIOS& playbackSessionInterface() const { return m_playbackSessionInterface.get(); }
     PlaybackSessionModel* playbackSessionModel() const { return m_playbackSessionInterface->playbackSessionModel(); }
-    WEBCORE_EXPORT virtual void hasVideoChanged(bool) = 0;
-    WEBCORE_EXPORT void videoDimensionsChanged(const FloatSize&);
     virtual void setSpatialImmersive(bool) { }
-    WEBCORE_EXPORT virtual void setPlayerIdentifier(std::optional<MediaPlayerIdentifier>);
     WEBCORE_EXPORT virtual void setupFullscreen(const FloatRect& initialRect, const FloatSize& videoDimensions, UIView* parentView, HTMLMediaElementEnums::VideoFullscreenMode, bool allowsPictureInPicturePlayback, bool standby, bool blocksReturnToFullscreenFromPictureInPicture);
-    WEBCORE_EXPORT virtual void externalPlaybackChanged(bool enabled, PlaybackSessionModel::ExternalPlaybackTargetType, const String& localizedDeviceName);
     WEBCORE_EXPORT virtual AVPlayerViewController *avPlayerViewController() const = 0;
     WebAVPlayerController *playerController() const;
     WEBCORE_EXPORT void enterFullscreen();
@@ -102,6 +110,10 @@ public:
     WEBCORE_EXPORT void preparedToReturnToStandby();
     bool changingStandbyOnly() { return m_changingStandbyOnly; }
     WEBCORE_EXPORT void failedToRestoreFullscreen();
+    WEBCORE_EXPORT virtual void enterExternalPlayback(CompletionHandler<void(bool, UIViewController *)>&&, CompletionHandler<void(bool)>&&);
+    WEBCORE_EXPORT virtual void exitExternalPlayback();
+    virtual bool cleanupExternalPlayback() { return false; }
+
 
     enum class ExitFullScreenReason {
         DoneButtonTapped,
@@ -166,6 +178,13 @@ public:
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     virtual LMPlayableViewController *playableViewController() { return nil; }
+#endif
+
+    virtual void swapFullscreenModesWith(VideoPresentationInterfaceIOS&) { }
+
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    void setPrefersSpatialAudioExperience(bool value) { m_prefersSpatialAudioExperience = value; }
+    bool prefersSpatialAudioExperience() const { return m_prefersSpatialAudioExperience; }
 #endif
 
 #if !RELEASE_LOG_DISABLED
@@ -237,6 +256,7 @@ protected:
     virtual void setAllowsPictureInPicturePlayback(bool) = 0;
     virtual bool isExternalPlaybackActive() const = 0;
     virtual bool willRenderToLayer() const = 0;
+    virtual void transferVideoViewToFullscreen() { }
     WEBCORE_EXPORT virtual void returnVideoView();
 
 #if PLATFORM(WATCHOS)
@@ -245,10 +265,16 @@ protected:
 private:
     void returnToStandby();
     void watchdogTimerFired();
+    void ensurePipPlacardIsShowing();
 
     bool m_finalizeSetupNeedsVideoContentLayer { false };
     bool m_finalizeSetupNeedsReturnVideoContentLayer { false };
     Ref<PlaybackSessionInterfaceIOS> m_playbackSessionInterface;
+    RetainPtr<UIView> m_pipPlacard;
+
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    bool m_prefersSpatialAudioExperience { false };
+#endif
 };
 
 } // namespace WebCore

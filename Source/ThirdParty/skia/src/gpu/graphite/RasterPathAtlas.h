@@ -28,10 +28,16 @@ public:
     ~RasterPathAtlas() override {}
     void recordUploads(DrawContext*);
 
-    void compact(bool forceCompact) {
-        fCachedAtlasMgr.compact(fRecorder, forceCompact);
-        fSmallPathAtlasMgr.compact(fRecorder, forceCompact);
-        fUncachedAtlasMgr.compact(fRecorder, forceCompact);
+    void compact() {
+        fCachedAtlasMgr.compact(fRecorder);
+        fSmallPathAtlasMgr.compact(fRecorder);
+        fUncachedAtlasMgr.compact(fRecorder);
+    }
+
+    void freeGpuResources() {
+        fCachedAtlasMgr.freeGpuResources(fRecorder);
+        fSmallPathAtlasMgr.freeGpuResources(fRecorder);
+        fUncachedAtlasMgr.freeGpuResources(fRecorder);
     }
 
     void evictAtlases() {
@@ -41,10 +47,12 @@ public:
     }
 
 protected:
-    const TextureProxy* onAddShape(const Shape&,
-                                   const Transform& transform,
+    sk_sp<TextureProxy> onAddShape(const Shape&,
+                                   const Transform& localToDevice,
                                    const SkStrokeRec&,
+                                   skvx::half2 maskOrigin,
                                    skvx::half2 maskSize,
+                                   SkIVector transformedMaskOffset,
                                    skvx::half2* outPos) override;
 private:
     class RasterAtlasMgr : public PathAtlas::DrawAtlasMgr {
@@ -58,9 +66,10 @@ private:
 
     protected:
         bool onAddToAtlas(const Shape&,
-                          const Transform& transform,
+                          const Transform& localToDevice,
                           const SkStrokeRec&,
                           SkIRect shapeBounds,
+                          SkIVector transformedMaskOffset,
                           const AtlasLocator&) override;
     };
 

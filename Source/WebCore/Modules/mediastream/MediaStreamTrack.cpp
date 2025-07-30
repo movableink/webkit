@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2011, 2015 Ericsson AB. All rights reserved.
- * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,9 +31,11 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "CommonAtomStrings.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "ExceptionCode.h"
 #include "FrameLoader.h"
 #include "JSDOMPromiseDeferred.h"
@@ -58,6 +60,7 @@
 #include "ScriptExecutionContext.h"
 #include "Settings.h"
 #include "WebAudioSourceProvider.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/NativePromise.h>
 #include <wtf/NeverDestroyed.h>
@@ -94,13 +97,6 @@ MediaStreamTrack::MediaStreamTrack(ScriptExecutionContext& context, Ref<MediaStr
     ASSERT(isMainThread());
     ASSERT(is<Document>(context));
 
-    auto& settings = m_private->settings();
-    if (settings.supportsGroupId()) {
-        RefPtr window = downcast<Document>(context).domWindow();
-        if (RefPtr mediaDevices = window ? NavigatorMediaDevices::mediaDevices(window->navigator()) : nullptr)
-            m_groupId = mediaDevices->hashedGroupId(settings.groupId());
-    }
-
     m_isInterrupted = m_private->interrupted();
 
     if (m_private->isAudio())
@@ -110,6 +106,7 @@ MediaStreamTrack::MediaStreamTrack(ScriptExecutionContext& context, Ref<MediaStr
 MediaStreamTrack::~MediaStreamTrack()
 {
     m_private->removeObserver(*this);
+    stopTrack();
 
     if (!isCaptureTrack())
         return;
@@ -223,7 +220,7 @@ RefPtr<MediaStreamTrack> MediaStreamTrack::clone()
 
     ALWAYS_LOG(LOGIDENTIFIER);
 
-    auto clone = MediaStreamTrack::create(*scriptExecutionContext(), m_private->clone(), RegisterCaptureTrackToOwner::No);
+    auto clone = MediaStreamTrack::create(*protectedScriptExecutionContext(), m_private->clone(), RegisterCaptureTrackToOwner::No);
 
     clone->m_readyState = m_readyState;
     if (clone->ended() && clone->m_readyState == State::Live)
@@ -283,7 +280,7 @@ MediaStreamTrack::TrackSettings MediaStreamTrack::getSettings() const
     if (settings.supportsDeviceId())
         result.deviceId = settings.deviceId();
     if (settings.supportsGroupId())
-        result.groupId = m_groupId;
+        result.groupId = settings.groupId();
     if (settings.supportsDisplaySurface() && settings.displaySurface() != DisplaySurfaceType::Invalid)
         result.displaySurface = RealtimeMediaSourceSettings::displaySurface(settings.displaySurface());
 
@@ -305,7 +302,7 @@ MediaStreamTrack::TrackSettings MediaStreamTrack::getSettings() const
 
 MediaStreamTrack::TrackCapabilities MediaStreamTrack::getCapabilities() const
 {
-    auto result = toMediaTrackCapabilities(m_private->capabilities(), m_groupId);
+    auto result = toMediaTrackCapabilities(m_private->capabilities());
 
     auto settings = m_private->settings();
     if (settings.supportsDisplaySurface() && settings.displaySurface() != DisplaySurfaceType::Invalid)
@@ -318,7 +315,7 @@ auto MediaStreamTrack::takePhoto(PhotoSettings&& settings) -> Ref<TakePhotoPromi
 {
     ASSERT(!m_ended);
 
-    return m_private->takePhoto(WTFMove(settings))->whenSettled(RunLoop::main(), [protectedThis = Ref { *this }] (auto&& result) mutable {
+    return m_private->takePhoto(WTFMove(settings))->whenSettled(RunLoop::protectedMain(), [protectedThis = Ref { *this }] (auto&& result) mutable {
 
         // https://w3c.github.io/mediacapture-image/#dom-imagecapture-takephoto
         // If the operation cannot be completed for any reason (for example, upon
@@ -340,7 +337,7 @@ auto MediaStreamTrack::getPhotoCapabilities() -> Ref<PhotoCapabilitiesPromise>
 {
     ASSERT(!m_ended);
 
-    return m_private->getPhotoCapabilities()->whenSettled(RunLoop::main(), [protectedThis = Ref { *this }] (auto&& result) mutable {
+    return m_private->getPhotoCapabilities()->whenSettled(RunLoop::protectedMain(), [protectedThis = Ref { *this }] (auto&& result) mutable {
 
         // https://w3c.github.io/mediacapture-image/#ref-for-dom-imagecapture-getphotocapabilities②
         // If the data cannot be gathered for any reason (for example, the MediaStreamTrack being ended
@@ -361,7 +358,7 @@ auto MediaStreamTrack::getPhotoSettings() -> Ref<PhotoSettingsPromise>
 {
     ASSERT(!m_ended);
 
-    return m_private->getPhotoSettings()->whenSettled(RunLoop::main(), [protectedThis = Ref { *this }] (auto&& result) mutable {
+    return m_private->getPhotoSettings()->whenSettled(RunLoop::protectedMain(), [protectedThis = Ref { *this }] (auto&& result) mutable {
 
         // https://w3c.github.io/mediacapture-image/#ref-for-dom-imagecapture-getphotosettings②
         // If the data cannot be gathered for any reason (for example, the MediaStreamTrack being ended
@@ -396,13 +393,13 @@ void MediaStreamTrack::applyConstraints(const std::optional<MediaTrackConstraint
     }
 
     m_private->applyConstraints(createMediaConstraints(constraints), [this, protectedThis = Ref { *this }, constraints, promise = WTFMove(promise)](auto&& error) mutable {
-        queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [protectedThis = WTFMove(protectedThis), error = WTFMove(error), constraints, promise = WTFMove(promise)]() mutable {
+        queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [error = WTFMove(error), constraints, promise = WTFMove(promise)](auto& track) mutable {
             if (error) {
                 promise.rejectType<IDLInterface<OverconstrainedError>>(OverconstrainedError::create(error->invalidConstraint, WTFMove(error->message)));
                 return;
             }
 
-            protectedThis->m_constraints = valueOrDefault(constraints);
+            track.m_constraints = valueOrDefault(constraints);
             promise.resolve();
         });
     });
@@ -488,24 +485,24 @@ void MediaStreamTrack::trackEnded(MediaStreamTrackPrivate&)
     ALWAYS_LOG(LOGIDENTIFIER);
 
     if (m_isCaptureTrack && m_private->captureDidFail() && m_readyState != State::Ended)
-        scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, "A MediaStreamTrack ended due to a capture failure"_s);
+        protectedScriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, "A MediaStreamTrack ended due to a capture failure"_s);
 
     // http://w3c.github.io/mediacapture-main/#life-cycle
     // When a MediaStreamTrack track ends for any reason other than the stop() method being invoked, the User Agent must
     // queue a task that runs the following steps:
-    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, muted = m_private->muted()] {
+    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [muted = m_private->muted()](auto& track) {
         // 1. If the track's readyState attribute has the value ended already, then abort these steps.
-        if (!isAllowedToRunScript() || m_readyState == State::Ended)
+        if (!track.isAllowedToRunScript() || track.m_readyState == State::Ended)
             return;
 
         // 2. Set track's readyState attribute to ended.
-        m_readyState = State::Ended;
+        track.m_readyState = State::Ended;
 
-        ALWAYS_LOG(LOGIDENTIFIER, "firing 'ended' event");
+        ALWAYS_LOG_WITH_THIS(&track, LOGIDENTIFIER_WITH_THIS(&track), "firing 'ended' event");
 
         // 3. Notify track's source that track is ended so that the source may be stopped, unless other MediaStreamTrack objects depend on it.
         // 4. Fire a simple event named ended at the object.
-        dispatchEvent(Event::create(eventNames().endedEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        track.dispatchEvent(Event::create(eventNames().endedEvent, Event::CanBubble::No, Event::IsCancelable::No));
     });
 
     if (m_ended)
@@ -523,7 +520,7 @@ void MediaStreamTrack::trackMutedChanged(MediaStreamTrackPrivate&)
     if (scriptExecutionContext()->activeDOMObjectsAreStopped() || m_ended)
         return;
 
-    Function<void()> updateMuted = [this, muted = m_private->muted()] {
+    Function<void()> updateMuted = [this, protectedThis = Ref { *this }, muted = m_private->muted()] {
         RefPtr context = scriptExecutionContext();
         if (!context || context->activeDOMObjectsAreStopped())
             return;
@@ -538,10 +535,14 @@ void MediaStreamTrack::trackMutedChanged(MediaStreamTrackPrivate&)
 
         dispatchEvent(Event::create(muted ? eventNames().muteEvent : eventNames().unmuteEvent, Event::CanBubble::No, Event::IsCancelable::No));
     };
+
     if (m_shouldFireMuteEventImmediately)
         updateMuted();
-    else
-        queueTaskKeepingObjectAlive(*this, TaskSource::Networking, WTFMove(updateMuted));
+    else {
+        queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [updateMuted = WTFMove(updateMuted)](auto&) {
+            updateMuted();
+        });
+    }
 
     configureTrackRendering();
 
@@ -558,11 +559,11 @@ void MediaStreamTrack::trackSettingsChanged(MediaStreamTrackPrivate&)
 
 void MediaStreamTrack::trackConfigurationChanged(MediaStreamTrackPrivate&)
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this] {
-        if (!scriptExecutionContext() || scriptExecutionContext()->activeDOMObjectsAreStopped() || m_private->muted() || ended())
+    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [](auto& track) {
+        if (!track.scriptExecutionContext() || track.scriptExecutionContext()->activeDOMObjectsAreStopped() || track.m_private->muted() || track.ended())
             return;
 
-        dispatchEvent(Event::create(eventNames().configurationchangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        track.dispatchEvent(Event::create(eventNames().configurationchangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
     });
 }
 
@@ -599,7 +600,7 @@ void MediaStreamTrack::suspend(ReasonForSuspension reason)
 
 bool MediaStreamTrack::virtualHasPendingActivity() const
 {
-    return !m_ended;
+    return !m_ended && hasEventListeners();
 }
 
 #if ENABLE(WEB_AUDIO)
@@ -643,6 +644,11 @@ Ref<MediaStreamTrack> MediaStreamTrack::create(ScriptExecutionContext& context, 
     }
 
     return track;
+}
+
+ScriptExecutionContext* MediaStreamTrack::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
 }
 
 #if !RELEASE_LOG_DISABLED

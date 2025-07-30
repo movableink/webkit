@@ -42,6 +42,11 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(Texture);
 
 bool Texture::isCompressedFormat(WGPUTextureFormat format)
 {
+    return Texture::compressedFormatType(format).has_value();
+}
+
+std::optional<Texture::CompressFormat> Texture::compressedFormatType(WGPUTextureFormat format)
+{
     // https://gpuweb.github.io/gpuweb/#packed-formats
     switch (format) {
     case WGPUTextureFormat_BC1RGBAUnorm:
@@ -58,6 +63,7 @@ bool Texture::isCompressedFormat(WGPUTextureFormat format)
     case WGPUTextureFormat_BC6HRGBFloat:
     case WGPUTextureFormat_BC7RGBAUnorm:
     case WGPUTextureFormat_BC7RGBAUnormSrgb:
+        return Texture::CompressFormat::BC;
     case WGPUTextureFormat_ETC2RGB8Unorm:
     case WGPUTextureFormat_ETC2RGB8UnormSrgb:
     case WGPUTextureFormat_ETC2RGB8A1Unorm:
@@ -68,6 +74,7 @@ bool Texture::isCompressedFormat(WGPUTextureFormat format)
     case WGPUTextureFormat_EACR11Snorm:
     case WGPUTextureFormat_EACRG11Unorm:
     case WGPUTextureFormat_EACRG11Snorm:
+        return Texture::CompressFormat::ETC;
     case WGPUTextureFormat_ASTC4x4Unorm:
     case WGPUTextureFormat_ASTC4x4UnormSrgb:
     case WGPUTextureFormat_ASTC5x4Unorm:
@@ -96,7 +103,7 @@ bool Texture::isCompressedFormat(WGPUTextureFormat format)
     case WGPUTextureFormat_ASTC12x10UnormSrgb:
     case WGPUTextureFormat_ASTC12x12Unorm:
     case WGPUTextureFormat_ASTC12x12UnormSrgb:
-        return true;
+        return Texture::CompressFormat::ASTC;
     case WGPUTextureFormat_R8Unorm:
     case WGPUTextureFormat_R8Snorm:
     case WGPUTextureFormat_R8Uint:
@@ -140,12 +147,12 @@ bool Texture::isCompressedFormat(WGPUTextureFormat format)
     case WGPUTextureFormat_Depth24PlusStencil8:
     case WGPUTextureFormat_Depth32Float:
     case WGPUTextureFormat_Depth32FloatStencil8:
-        return false;
+        return std::nullopt;
     case WGPUTextureFormat_Undefined:
-        return false;
+        return std::nullopt;
     case WGPUTextureFormat_Force32:
         ASSERT_NOT_REACHED();
-        return false;
+        return std::nullopt;
     }
 }
 
@@ -1426,6 +1433,10 @@ bool Texture::supportsBlending(WGPUTextureFormat format, const Device& device)
         return true;
     case WGPUTextureFormat_RG11B10Ufloat:
         return device.hasFeature(WGPUFeatureName_RG11B10UfloatRenderable);
+    case WGPUTextureFormat_R32Float:
+    case WGPUTextureFormat_RG32Float:
+    case WGPUTextureFormat_RGBA32Float:
+        return device.hasFeature(WGPUFeatureName_Float32Blendable);
     case WGPUTextureFormat_R8Snorm:
     case WGPUTextureFormat_R8Uint:
     case WGPUTextureFormat_R8Sint:
@@ -1434,7 +1445,6 @@ bool Texture::supportsBlending(WGPUTextureFormat format, const Device& device)
     case WGPUTextureFormat_RG8Snorm:
     case WGPUTextureFormat_RG8Uint:
     case WGPUTextureFormat_RG8Sint:
-    case WGPUTextureFormat_R32Float:
     case WGPUTextureFormat_RG16Uint:
     case WGPUTextureFormat_RG16Sint:
     case WGPUTextureFormat_RGBA8Snorm:
@@ -1451,10 +1461,8 @@ bool Texture::supportsBlending(WGPUTextureFormat format, const Device& device)
     case WGPUTextureFormat_Depth32FloatStencil8:
     case WGPUTextureFormat_R32Uint:
     case WGPUTextureFormat_R32Sint:
-    case WGPUTextureFormat_RG32Float:
     case WGPUTextureFormat_RG32Uint:
     case WGPUTextureFormat_RG32Sint:
-    case WGPUTextureFormat_RGBA32Float:
     case WGPUTextureFormat_RGBA32Uint:
     case WGPUTextureFormat_RGBA32Sint:
     case WGPUTextureFormat_RGB9E5Ufloat:
@@ -1539,8 +1547,7 @@ static uint32_t maximumMiplevelCount(WGPUTextureDimension dimension, WGPUExtent3
         return 0;
     }
 
-    auto isPowerOf2 = !(m & (m - 1));
-    if (isPowerOf2)
+    if (isPowerOfTwo(m))
         return WTF::fastLog2(m) + 1;
     return WTF::fastLog2(m);
 }
@@ -1857,8 +1864,22 @@ NSString *Device::errorValidatingTextureCreation(const WGPUTextureDescriptor& de
         if (descriptor.sampleCount != 1)
             return @"createTexture: descriptor.sampleCount != 1";
 
-        if (Texture::isCompressedFormat(descriptor.format) || Texture::isDepthOrStencilFormat(descriptor.format))
-            return @"createTexture: descriptor.format is compressed or a depth stencil format";
+        if (auto compressedFormatType = Texture::compressedFormatType(descriptor.format)) {
+            switch (*compressedFormatType) {
+            case Texture::CompressFormat::BC:
+                if (!hasFeature(WGPUFeatureName_TextureCompressionBCSliced3D))
+                    return @"createTexture: descriptor.format is a compressed format but BC sliced 3D extension is not enabled";
+                break;
+            case Texture::CompressFormat::ASTC:
+                if (!hasFeature(WGPUFeatureName_TextureCompressionASTCSliced3D))
+                    return @"createTexture: descriptor.format is a compressed format but ASTC sliced 3D extension is not enabled";
+                break;
+            case Texture::CompressFormat::ETC:
+                return @"createTexture: descriptor.format is a ETC compressed format which is not supported for 3D textures";
+            }
+        }
+        if (Texture::isDepthOrStencilFormat(descriptor.format))
+            return @"createTexture: descriptor.format is a depth stencil format, this is not allowed for 3D textures";
         break;
     case WGPUTextureDimension_Force32:
         ASSERT_NOT_REACHED();
@@ -2641,7 +2662,7 @@ Ref<Texture> Device::createTexture(const WGPUTextureDescriptor& descriptor)
     }
 
     setOwnerWithIdentity(texture);
-    texture.label = fromAPI(descriptor.label);
+    texture.label = fromAPI(descriptor.label).createNSString().get();
 
     return Texture::create(texture, descriptor, WTFMove(viewFormats), *this);
 }
@@ -2714,6 +2735,7 @@ std::optional<WGPUTextureViewDescriptor> Texture::resolveTextureViewDescriptorDe
             resolved.dimension = WGPUTextureViewDimension_3D;
             break;
         case MTLTextureTypeTextureBuffer:
+        default:
             ASSERT_NOT_REACHED();
             break;
         }
@@ -2971,7 +2993,7 @@ Ref<TextureView> Texture::createView(const WGPUTextureViewDescriptor& inputDescr
     if (!texture)
         return TextureView::createInvalid(*this, device.get());
 
-    texture.label = fromAPI(descriptor->label);
+    texture.label = fromAPI(descriptor->label).createNSString().get();
     if (!texture.label.length)
         texture.label = m_texture.label;
 
@@ -2998,8 +3020,10 @@ void Texture::makeCanvasBacking()
 bool Texture::waitForCommandBufferCompletion()
 {
     bool result = true;
-    for (Ref commandEncoder : m_commandEncoders)
-        result = commandEncoder->waitForCommandBufferCompletion() && result;
+    for (auto commandEncoder : m_commandEncoders) {
+        if (RefPtr ptr = m_device->commandEncoderFromIdentifier(commandEncoder))
+            result = ptr->waitForCommandBufferCompletion() && result;
+    }
 
     return result;
 }
@@ -3226,8 +3250,10 @@ void Texture::destroy()
         }
     }
     if (!m_canvasBacking) {
-        for (Ref commandEncoder : m_commandEncoders)
-            commandEncoder->makeSubmitInvalid();
+        for (auto commandEncoder : m_commandEncoders) {
+            if (RefPtr ptr = m_device->commandEncoderFromIdentifier(commandEncoder))
+                ptr->makeSubmitInvalid();
+        }
     }
     m_commandEncoders.clear();
 
@@ -3236,7 +3262,7 @@ void Texture::destroy()
 
 void Texture::setLabel(String&& label)
 {
-    m_texture.label = label;
+    m_texture.label = label.createNSString().get();
 }
 
 WGPUExtent3D Texture::logicalMiplevelSpecificTextureExtent(uint32_t mipLevel)
@@ -3626,8 +3652,9 @@ NSString* Texture::errorValidatingTextureCopyRange(const WGPUImageCopyTexture& i
     return nil;
 }
 
-bool Texture::validateLinearTextureData(const WGPUTextureDataLayout& layout, uint64_t byteSize, WGPUTextureFormat format, WGPUExtent3D copyExtent)
+NSString* Texture::errorValidatingLinearTextureData(const WGPUTextureDataLayout& layout, uint64_t byteSize, WGPUTextureFormat format, WGPUExtent3D copyExtent)
 {
+#define ERROR_STRING(...) ([NSString stringWithFormat:@"GPUTexture.validateLinearTextureData: %@", __VA_ARGS__])
     // https://gpuweb.github.io/gpuweb/#abstract-opdef-validating-linear-texture-data
     uint32_t blockWidth = Texture::texelBlockWidth(format);
     uint32_t blockHeight = Texture::texelBlockHeight(format);
@@ -3635,41 +3662,40 @@ bool Texture::validateLinearTextureData(const WGPUTextureDataLayout& layout, uin
 
     auto widthInBlocks = copyExtent.width / blockWidth;
     if (copyExtent.width % blockWidth)
-        return false;
+        return ERROR_STRING([NSString stringWithFormat:@"copyExtent.width(%u) is not divisible by blockWidth(%u)", copyExtent.width, blockWidth]);
 
     auto heightInBlocks = copyExtent.height / blockHeight;
     if (copyExtent.height % blockHeight)
-        return false;
+        return ERROR_STRING([NSString stringWithFormat:@"copyExtent.height(%u) is not divisible by blockHeight(%u)", copyExtent.height, blockHeight]);
 
     auto bytesInLastRow = checkedProduct<uint64_t>(blockSize, widthInBlocks);
     if (bytesInLastRow.hasOverflowed())
-        return false;
+        return ERROR_STRING([NSString stringWithFormat:@"bytesInLastRow = blockSize(%u + widthInBlocks(%u) overflowed", blockSize, widthInBlocks]);
 
     if (heightInBlocks > 1) {
         if (layout.bytesPerRow == WGPU_COPY_STRIDE_UNDEFINED)
-            return false;
+            return ERROR_STRING([NSString stringWithFormat:@"bytesPerRow is undefined, but heightInBlocks(%u) > 1, this is not allowed", heightInBlocks]);
     }
 
     if (copyExtent.depthOrArrayLayers > 1) {
         if (layout.bytesPerRow == WGPU_COPY_STRIDE_UNDEFINED || layout.rowsPerImage == WGPU_COPY_STRIDE_UNDEFINED)
-            return false;
+            return ERROR_STRING([NSString stringWithFormat:@"depthOrArrayLayers(%u) > 1 but bytesPerRow(%u) or rowsPerImage(%u) is undefined, this is not allowed", copyExtent.depthOrArrayLayers, layout.bytesPerRow, layout.rowsPerImage]);
     }
 
     if (layout.bytesPerRow != WGPU_COPY_STRIDE_UNDEFINED) {
         if (layout.bytesPerRow < bytesInLastRow.value())
-            return false;
+            return ERROR_STRING([NSString stringWithFormat:@"bytesPerRow(%u) is less than bytesInLastRow(%llu)", layout.bytesPerRow, bytesInLastRow.value()]);
     }
 
     if (layout.rowsPerImage != WGPU_COPY_STRIDE_UNDEFINED) {
         if (layout.rowsPerImage < heightInBlocks)
-            return false;
+            return ERROR_STRING([NSString stringWithFormat:@"layout.rowsPerImage(%u) is less than heightInBlocks(%u)", layout.rowsPerImage, heightInBlocks]);
     }
 
     auto requiredBytesInCopy = CheckedUint64(0);
 
     if (copyExtent.depthOrArrayLayers > 1) {
         auto bytesPerImage = checkedProduct<uint64_t>(layout.bytesPerRow, layout.rowsPerImage);
-
         auto bytesBeforeLastImage = checkedProduct<uint64_t>(bytesPerImage, checkedDifference<uint64_t>(copyExtent.depthOrArrayLayers, 1));
 
         requiredBytesInCopy += bytesBeforeLastImage;
@@ -3684,10 +3710,14 @@ bool Texture::validateLinearTextureData(const WGPUTextureDataLayout& layout, uin
     }
 
     auto end = checkedSum<uint64_t>(layout.offset, requiredBytesInCopy);
-    if (end.hasOverflowed() || end.value() > byteSize)
-        return false;
+    if (end.hasOverflowed())
+        return ERROR_STRING([NSString stringWithFormat:@"layout.offset(%llu) + requiredBytesInCopy(%llu) overflows", layout.offset, requiredBytesInCopy.hasOverflowed() ? ULLONG_MAX : requiredBytesInCopy.value()]);
 
-    return true;
+    if (end.value() > byteSize)
+        return ERROR_STRING([NSString stringWithFormat:@"(layout.offset + requiredBytesInCopy)(%llu) is less than byteSize(%llu)", end.value(), byteSize]);
+
+#undef ERROR_STRING
+    return nil;
 }
 
 bool Texture::previouslyCleared(uint32_t mipLevel, uint32_t slice) const

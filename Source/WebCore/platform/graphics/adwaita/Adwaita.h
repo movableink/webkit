@@ -29,7 +29,7 @@
 #if USE(THEME_ADWAITA)
 
 #include "Color.h"
-#include <wtf/Seconds.h>
+#include <wtf/Forward.h>
 
 namespace WebCore {
 class GraphicsContext;
@@ -59,7 +59,7 @@ constexpr unsigned menuListButtonPadding = 5;
 constexpr int menuListButtonBorderSize = 1;
 constexpr unsigned progressActivityBlocks = 5;
 constexpr Seconds progressAnimationDuration = 2475_ms;
-constexpr unsigned progressBarSize = 6;
+constexpr int progressBarSize = 6;
 constexpr auto progressBarBackgroundColorLight = SRGBA<uint8_t> { 0, 0, 0, 40 };
 constexpr auto progressBarBackgroundColorDark = SRGBA<uint8_t> { 255, 255, 255, 30 };
 constexpr unsigned sliderTrackSize = 6;

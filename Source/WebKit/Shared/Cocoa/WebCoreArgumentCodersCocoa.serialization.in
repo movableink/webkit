@@ -35,7 +35,7 @@ header: <WebCore/FontPlatformData.h>
 };
 
 [CustomHeader] struct WebCore::FontPlatformOpticalSize {
-    std::variant<RetainPtr<CFNumberRef>, String> opticalSize;
+    Variant<RetainPtr<CFNumberRef>, String> opticalSize;
 };
 
 [CustomHeader] struct WebCore::FontPlatformSerializedAttributes {
@@ -88,6 +88,9 @@ header: <WebCore/FontPlatformData.h>
 class WebCore::ContentFilterUnblockHandler {
     String unblockURLHost()
     URL unreachableURL()
+#if HAVE(WEBCONTENTRESTRICTIONS)
+    std::optional<URL> evaluatedURL();
+#endif
 #if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
     Vector<uint8_t> webFilterEvaluatorData()
 #endif
@@ -95,10 +98,12 @@ class WebCore::ContentFilterUnblockHandler {
 }
 #endif
 
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
 header: <WebCore/DictionaryPopupInfo.h>
 [CustomHeader] struct WebCore::DictionaryPopupInfoCocoa {
     WebCore::AttributedString attributedString;
 };
+#endif
 
 header: <WebCore/ResourceRequest.h>
 [CustomHeader] struct WebCore::ResourceRequestPlatformData {
@@ -228,10 +233,10 @@ header: <WebCore/AttributedString.h>
 
 [Nested] struct WebCore::AttributedString::AttributeValue {
 #if ENABLE(MULTI_REPRESENTATION_HEIC)
-    std::variant<double, String, URL, Ref<WebCore::Font>, Vector<String>, Vector<double>, WebCore::ParagraphStyle, RetainPtr<NSPresentationIntent>, RetainPtr<NSShadow>, RetainPtr<NSDate>, WebCore::AttributedString::ColorFromCGColor, WebCore::AttributedString::ColorFromPlatformColor, WebCore::MultiRepresentationHEICAttachmentData, WebCore::TextAttachmentFileWrapper, WebCore::TextAttachmentMissingImage> value;
+    Variant<double, String, URL, Ref<WebCore::Font>, Vector<String>, Vector<double>, WebCore::ParagraphStyle, RetainPtr<NSPresentationIntent>, RetainPtr<NSShadow>, RetainPtr<NSDate>, WebCore::AttributedString::ColorFromCGColor, WebCore::AttributedString::ColorFromPlatformColor, WebCore::MultiRepresentationHEICAttachmentData, WebCore::TextAttachmentFileWrapper, WebCore::TextAttachmentMissingImage> value;
 #endif
 #if !ENABLE(MULTI_REPRESENTATION_HEIC)
-    std::variant<double, String, URL, Ref<WebCore::Font>, Vector<String>, Vector<double>, WebCore::ParagraphStyle, RetainPtr<NSPresentationIntent>, RetainPtr<NSShadow>, RetainPtr<NSDate>, WebCore::AttributedString::ColorFromCGColor, WebCore::AttributedString::ColorFromPlatformColor, WebCore::TextAttachmentFileWrapper, WebCore::TextAttachmentMissingImage> value;
+    Variant<double, String, URL, Ref<WebCore::Font>, Vector<String>, Vector<double>, WebCore::ParagraphStyle, RetainPtr<NSPresentationIntent>, RetainPtr<NSShadow>, RetainPtr<NSDate>, WebCore::AttributedString::ColorFromCGColor, WebCore::AttributedString::ColorFromPlatformColor, WebCore::TextAttachmentFileWrapper, WebCore::TextAttachmentMissingImage> value;
 #endif
 }
 
@@ -437,10 +442,19 @@ enum class WebCore::PlatformCALayerLayerType : uint8_t {
     LayerTypeAVPlayerLayer,
     LayerTypeContentsProvidedLayer,
     LayerTypeBackdropLayer,
+#if HAVE(CORE_MATERIAL)
+    LayerTypeMaterialLayer,
+#endif
+#if HAVE(MATERIAL_HOSTING)
+    LayerTypeMaterialHostingLayer,
+#endif
     LayerTypeShapeLayer,
     LayerTypeScrollContainerLayer,
 #if ENABLE(MODEL_ELEMENT)
     LayerTypeModelLayer,
+#endif
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+    LayerTypeSeparatedImageLayer,
 #endif
     LayerTypeCustom,
     LayerTypeHost,
@@ -463,7 +477,9 @@ AVOutputContext wrapped by CoreIPCAVOutputContext
 #if USE(PASSKIT)
 PKPaymentMethod wrapped by CoreIPCPKPaymentMethod
 PKPaymentMerchantSession wrapped by CoreIPCPKPaymentMerchantSession
+PKPaymentSetupFeature wrapped by CoreIPCPKPaymentSetupFeature
 PKContact wrapped by CoreIPCPKContact
+PKSecureElementPass wrapped by CoreIPCPKSecureElementPass
 PKPayment wrapped by CoreIPCPKPayment
 PKPaymentToken wrapped by CoreIPCPKPaymentToken
 PKShippingMethod wrapped by CoreIPCPKShippingMethod
@@ -511,4 +527,8 @@ using WebCore::WritingTools::Session::ID = WTF::UUID
 
 #if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS) && USE(UICONTEXTMENU)
 using WebCore::MediaControlsContextMenuItem::ID = uint64_t;
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+[Nested] enum class WebCore::MediaSessionHelper::ShouldOverride : bool
 #endif

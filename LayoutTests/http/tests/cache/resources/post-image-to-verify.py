@@ -3,7 +3,7 @@
 import os
 import sys
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs
 
 file = __file__.split(':/cygwin')[-1]
@@ -29,9 +29,9 @@ filemtime = stat.st_mtime
 filesize = stat.st_size
 
 etag = '"{}-{}"'.format(filesize, filemtime)
-last_modified = '{} +0000'.format(datetime.utcfromtimestamp(filemtime).strftime('%a, %d %b %Y %H:%M:%S'))
+last_modified = '{} +0000'.format(datetime.fromtimestamp(filemtime, timezone.utc).strftime('%a, %d %b %Y %H:%M:%S'))
 max_age = 12 * 31 * 24 * 60 * 60
-expires = '{} +0000'.format((datetime.utcnow() + timedelta(seconds=max_age)).strftime('%a, %d %b %Y %H:%M:%S'))
+expires = '{} +0000'.format((datetime.now(timezone.utc) + timedelta(seconds=max_age)).strftime('%a, %d %b %Y %H:%M:%S'))
 
 sys.stdout.write(
     'Cache-Control: public, max-age={}\r\n'

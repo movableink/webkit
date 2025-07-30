@@ -10,16 +10,14 @@ function numberToString(thisValue) {
 }
 
 (function() {
-    const runs = 1e6;
-
-    for (let i = 0; i < runs; i++) {
+    for (let i = 0; i < testLoopCount; i++) {
         numberToString({});
         numberToString(i);
     }
 
-    if (successCount !== runs)
+    if (successCount !== testLoopCount)
         throw new Error(`Bad value: ${successCount}!`);
 
-    if (errorCount !== runs)
+    if (errorCount !== testLoopCount)
         throw new Error(`Bad value: ${errorCount}!`);
 })();

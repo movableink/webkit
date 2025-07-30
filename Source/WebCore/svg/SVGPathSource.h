@@ -1,5 +1,6 @@
 /*
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,7 +22,6 @@
 
 #include "FloatPoint.h"
 #include "SVGPathSeg.h"
-#include <wtf/TZoneMallocInlines.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -36,7 +36,7 @@ template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::SVGPathSourc
 namespace WebCore {
 
 class SVGPathSource : public CanMakeSingleThreadWeakPtr<SVGPathSource> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SVGPathSource);
+    WTF_MAKE_TZONE_ALLOCATED(SVGPathSource);
     WTF_MAKE_NONCOPYABLE(SVGPathSource);
 public:
     SVGPathSource() = default;

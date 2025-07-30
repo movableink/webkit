@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "BackForwardItemIdentifier.h"
+#include "BackForwardFrameItemIdentifier.h"
 #include "FrameIdentifier.h"
 #include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
@@ -57,11 +57,9 @@ public:
     WEBCORE_EXPORT bool goBack();
     WEBCORE_EXPORT bool goForward();
 
-    void addItem(FrameIdentifier, Ref<HistoryItem>&&);
-    void setChildItem(BackForwardItemIdentifier, Ref<HistoryItem>&&);
+    void addItem(Ref<HistoryItem>&&);
+    void setChildItem(BackForwardFrameItemIdentifier, Ref<HistoryItem>&&);
     void setCurrentItem(HistoryItem&);
-    void setProvisionalItem(const HistoryItem&);
-    void clearProvisionalItem(const HistoryItem&);
 
     unsigned count() const;
     WEBCORE_EXPORT unsigned backCount() const;
@@ -80,10 +78,9 @@ public:
 
 private:
     Ref<Page> protectedPage() const;
-    Ref<BackForwardClient> protectedClient() const;
 
     WeakRef<Page> m_page;
-    Ref<BackForwardClient> m_client;
+    const Ref<BackForwardClient> m_client;
 };
 
 } // namespace WebCore

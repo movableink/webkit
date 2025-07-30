@@ -32,11 +32,11 @@
 #if USE(CAIRO)
 #include "CairoUniquePtr.h"
 #elif USE(SKIA)
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/core/SkFont.h>
 #include <skia/core/SkFontTypes.h>
 #include <skia/core/SkSurfaceProps.h>
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #endif
 
 #if PLATFORM(GTK) && !USE(GTK4)

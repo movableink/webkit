@@ -76,35 +76,45 @@ using CPSNaturalLoops = NaturalLoops<CPSCFG>;
 using SSANaturalLoops = NaturalLoops<SSACFG>;
 
 #define APPLY_THING_TO_DO(node, edge, thingToDo) thingToDo(node, edge);
-#define APPLY_THING_TO_DO_WITH_CHECK(node, edge, thingToDo) \
+#define APPLY_THING_TO_DO_BREAK_ON_DONE(node, edge, thingToDo) \
     if (thingToDo(node, edge) == IterationStatus::Done)     \
         return;
 
-#define DFG_NODE_DO_TO_CHILDREN_COMMON(graph, node, thingToDo, THING_TO_DO)                 \
-    do {                                                                                    \
-        Node* _node = (node);                                                               \
-        if (_node->flags() & NodeHasVarArgs) {                                              \
-            for (unsigned _childIdx = _node->firstChild();                                  \
-                 _childIdx < _node->firstChild() + _node->numChildren();                    \
-                 _childIdx++) {                                                             \
-                if (!!(graph).m_varArgChildren[_childIdx])                                  \
-                    THING_TO_DO(_node, (graph).m_varArgChildren[_childIdx], thingToDo)      \
-            }                                                                               \
-        } else {                                                                            \
-            for (unsigned _edgeIndex = 0; _edgeIndex < AdjacencyList::Size; _edgeIndex++) { \
-                Edge& _edge = _node->children.child(_edgeIndex);                            \
-                if (!_edge)                                                                 \
-                    break;                                                                  \
-                THING_TO_DO(_node, _edge, thingToDo)                                        \
-            }                                                                               \
-        }                                                                                   \
+#define ALWAYS_TRUE(edge) true
+#define NON_NULL_EDGE(edge) (!!(edge))
+
+#define DFG_NODE_DO_TO_CHILDREN_GENERIC(graph, node, thingToDo, THING_TO_DO, CHILD_CHECK)    \
+    do {                                                                                     \
+        Node* _node = (node);                                                                \
+        if (_node->flags() & NodeHasVarArgs) {                                               \
+            for (unsigned _childIdx = _node->firstChild();                                   \
+                _childIdx < _node->firstChild() + _node->numChildren();                      \
+                _childIdx++) {                                                               \
+                Edge& _edge = (graph).m_varArgChildren[_childIdx];                           \
+                if (CHILD_CHECK(_edge))                                                      \
+                    THING_TO_DO(_node, _edge, thingToDo);                                    \
+            }                                                                                \
+        } else {                                                                             \
+            for (unsigned _edgeIndex = 0; _edgeIndex < AdjacencyList::Size; _edgeIndex++) {  \
+                Edge& _edge = _node->children.child(_edgeIndex);                             \
+                if (!CHILD_CHECK(_edge))                                                     \
+                    break;                                                                   \
+                THING_TO_DO(_node, _edge, thingToDo);                                        \
+            }                                                                                \
+        }                                                                                    \
     } while (false)
+
+#define DFG_NODE_DO_TO_ALL_CHILDREN_COMMON(graph, node, thingToDo, THING_TO_DO) \
+    DFG_NODE_DO_TO_CHILDREN_GENERIC(graph, node, thingToDo, THING_TO_DO, ALWAYS_TRUE)
+
+#define DFG_NODE_DO_TO_CHILDREN_COMMON(graph, node, thingToDo, THING_TO_DO) \
+    DFG_NODE_DO_TO_CHILDREN_GENERIC(graph, node, thingToDo, THING_TO_DO, NON_NULL_EDGE)
 
 #define DFG_NODE_DO_TO_CHILDREN(graph, node, thingToDo) \
     DFG_NODE_DO_TO_CHILDREN_COMMON(graph, node, thingToDo, APPLY_THING_TO_DO)
 
-#define DFG_NODE_DO_TO_CHILDREN_WITH_CHECK(graph, node, thingToDo) \
-    DFG_NODE_DO_TO_CHILDREN_COMMON(graph, node, thingToDo, APPLY_THING_TO_DO_WITH_CHECK)
+#define DFG_NODE_DO_TO_CHILDREN_BREAK_ON_DONE(graph, node, thingToDo) \
+    DFG_NODE_DO_TO_CHILDREN_COMMON(graph, node, thingToDo, APPLY_THING_TO_DO_BREAK_ON_DONE)
 
 #define DFG_ASSERT(graph, node, assertion, ...) do {                    \
         if (!!(assertion))                                              \
@@ -286,7 +296,17 @@ public:
     void assertIsRegistered(Structure* structure);
     
     // CodeBlock is optional, but may allow additional information to be dumped (e.g. Identifier names).
-    void dump(PrintStream& = WTF::dataFile(), DumpContext* = nullptr);
+    void dump() const
+    {
+        const_cast<Graph&>(*this).dump(WTF::dataFile(), nullptr);
+    }
+
+    void dump(PrintStream& out) const
+    {
+        const_cast<Graph&>(*this).dump(out, nullptr);
+    }
+
+    void dump(PrintStream&, DumpContext*);
 
     bool terminalsAreValid();
     
@@ -543,7 +563,7 @@ public:
     BasicBlock* block(BlockIndex blockIndex) const { return m_blocks[blockIndex].get(); }
     BasicBlock* lastBlock() const { return block(numBlocks() - 1); }
 
-    void appendBlock(Ref<BasicBlock>&& basicBlock)
+    void appendBlock(std::unique_ptr<BasicBlock>&& basicBlock)
     {
         basicBlock->index = m_blocks.size();
         m_blocks.append(WTFMove(basicBlock));
@@ -768,59 +788,43 @@ public:
     {
         return NaturalBlockIterable(*this);
     }
-    
-    template<typename ChildFunctor>
-    ALWAYS_INLINE void doToChildrenWithNode(Node* node, const ChildFunctor& functor)
-    {
-        DFG_NODE_DO_TO_CHILDREN(*this, node, functor);
-    }
-    
+
+    template<typename Functor>
+    class ForwardingFunc {
+    public:
+        explicit ForwardingFunc(const Functor& functor)
+            : m_functor(functor)
+        {
+        }
+
+        template<typename NodeType>
+        ALWAYS_INLINE auto operator()(NodeType*, Edge& edge) const -> decltype(std::declval<Functor>()(edge))
+        {
+            return m_functor(edge);
+        }
+
+    private:
+        const Functor& m_functor;
+    };
+
     template<typename ChildFunctor>
     ALWAYS_INLINE void doToChildren(Node* node, const ChildFunctor& functor)
     {
-        class ForwardingFunc {
-        public:
-            ForwardingFunc(const ChildFunctor& functor)
-                : m_functor(functor)
-            {
-            }
-            
-            // This is a manually written func because we want ALWAYS_INLINE.
-            ALWAYS_INLINE void operator()(Node*, Edge& edge) const
-            {
-                m_functor(edge);
-            }
-        
-        private:
-            const ChildFunctor& m_functor;
-        };
+        DFG_NODE_DO_TO_CHILDREN(*this, node, (ForwardingFunc<ChildFunctor>(functor)));
+    }
     
-        doToChildrenWithNode(node, ForwardingFunc(functor));
+    template<typename ChildFunctor>
+    ALWAYS_INLINE void doToAllChildren(Node* node, const ChildFunctor& functor)
+    {
+        DFG_NODE_DO_TO_ALL_CHILDREN_COMMON(*this, node, (ForwardingFunc<ChildFunctor>(functor)), APPLY_THING_TO_DO);
     }
 
     template<typename ChildFunctor>
-    ALWAYS_INLINE void doToChildrenWithCheck(Node* node, const ChildFunctor& functor)
+    ALWAYS_INLINE void doToChildrenBreakOnDone(Node* node, const ChildFunctor& functor)
     {
-        class ForwardingFunc {
-        public:
-            ForwardingFunc(const ChildFunctor& functor)
-                : m_functor(functor)
-            {
-            }
-
-            // This is a manually written func because we want ALWAYS_INLINE.
-            ALWAYS_INLINE IterationStatus operator()(Node*, Edge& edge) const
-            {
-                return m_functor(edge);
-            }
-
-        private:
-            const ChildFunctor& m_functor;
-        };
-
-        DFG_NODE_DO_TO_CHILDREN_WITH_CHECK(*this, node, ForwardingFunc(functor));
+        DFG_NODE_DO_TO_CHILDREN_BREAK_ON_DONE(*this, node, (ForwardingFunc<ChildFunctor>(functor)));
     }
-    
+
     bool uses(Node* node, Node* child)
     {
         bool result = false;
@@ -907,11 +911,32 @@ public:
         return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::StructureCacheClearedWatchpointSet);
     }
 
-    bool isWatchingStringSymbolReplaceWatchpoint(Node* node)
+    bool isWatchingStringToStringWatchpoint(const CodeOrigin& semanticOrigin)
     {
-        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        JSGlobalObject* globalObject = globalObjectFor(semanticOrigin);
+        InlineWatchpointSet& set = globalObject->stringToStringWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::StringToStringWatchpointSet);
+    }
+
+    bool isWatchingStringValueOfWatchpoint(const CodeOrigin& semanticOrigin)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(semanticOrigin);
+        InlineWatchpointSet& set = globalObject->stringValueOfWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::StringValueOfWatchpointSet);
+    }
+
+    bool isWatchingStringSymbolReplaceWatchpoint(const CodeOrigin& semanticOrigin)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(semanticOrigin);
         InlineWatchpointSet& set = globalObject->stringSymbolReplaceWatchpointSet();
         return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::StringSymbolReplaceWatchpointSet);
+    }
+
+    bool isWatchingStringSymbolToPrimitiveWatchpoint(const CodeOrigin& semanticOrigin)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(semanticOrigin);
+        InlineWatchpointSet& set = globalObject->stringSymbolToPrimitiveWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::StringSymbolToPrimitiveWatchpointSet);
     }
 
     bool isWatchingRegExpPrimordialPropertiesWatchpoint(Node* node)
@@ -1209,7 +1234,7 @@ public:
     CodeBlock* const m_codeBlock;
     CodeBlock* const m_profiledBlock;
 
-    Vector<RefPtr<BasicBlock>, 8> m_blocks;
+    Vector<std::unique_ptr<BasicBlock>, 8> m_blocks;
     Vector<BasicBlock*, 1> m_roots;
     Vector<Edge, 16> m_varArgChildren;
 
@@ -1274,6 +1299,8 @@ public:
     Bag<MultiGetByOffsetData> m_multiGetByOffsetData;
     Bag<MultiPutByOffsetData> m_multiPutByOffsetData;
     Bag<MultiDeleteByOffsetData> m_multiDeleteByOffsetData;
+    Bag<MultiGetByValData> m_multiGetByValData;
+    Bag<MultiPutByValData> m_multiPutByValData;
     Bag<MatchStructureData> m_matchStructureData;
     Bag<ObjectMaterializationData> m_objectMaterializationData;
     Bag<CallVarargsData> m_callVarargsData;
@@ -1286,7 +1313,7 @@ public:
     Bag<BitVector> m_bitVectors;
     Vector<InlineVariableData, 4> m_inlineVariableData;
     UncheckedKeyHashMap<CodeBlock*, std::unique_ptr<FullBytecodeLiveness>> m_bytecodeLiveness;
-    HashSet<std::pair<JSObject*, PropertyOffset>> m_safeToLoad;
+    UncheckedKeyHashSet<std::pair<JSObject*, PropertyOffset>> m_safeToLoad;
     Vector<Ref<Snippet>> m_domJITSnippets;
     std::unique_ptr<CPSDominators> m_cpsDominators;
     std::unique_ptr<SSADominators> m_ssaDominators;
@@ -1313,8 +1340,8 @@ public:
     UncheckedKeyHashMap<unsigned, BytecodeIndex> m_entrypointIndexToCatchBytecodeIndex;
     Vector<CatchEntrypointData> m_catchEntrypoints;
 
-    HashSet<String> m_localStrings;
-    HashSet<String> m_copiedStrings;
+    UncheckedKeyHashSet<String> m_localStrings;
+    UncheckedKeyHashSet<String> m_copiedStrings;
 
 #if USE(JSVALUE32_64)
     UncheckedKeyHashMap<GenericHashKey<int64_t>, double*> m_doubleConstantsMap;
@@ -1334,6 +1361,7 @@ public:
     bool m_hasExceptionHandlers { false };
     bool m_isInSSAConversion { false };
     bool m_isValidating { false };
+    bool m_shouldFixAvailability { false };
     std::optional<uint32_t> m_maxLocalsForCatchOSREntry;
     std::unique_ptr<FlowIndexing> m_indexingCache;
     std::unique_ptr<FlowMap<AbstractValue>> m_abstractValuesCache;
@@ -1342,13 +1370,11 @@ public:
     RegisteredStructure stringStructure;
     RegisteredStructure symbolStructure;
 
-    HashSet<Node*> m_slowGetByVal;
-    HashSet<Node*> m_slowPutByVal;
+    UncheckedKeyHashSet<Node*> m_slowGetByVal;
+    UncheckedKeyHashSet<Node*> m_slowPutByVal;
 
 private:
     template<typename Visitor> void visitChildrenImpl(Visitor&);
-
-    bool isStringPrototypeMethodSane(JSGlobalObject*, UniquedStringImpl*);
 
     void handleSuccessor(Vector<BasicBlock*, 16>& worklist, BasicBlock*, BasicBlock* successor);
     

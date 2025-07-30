@@ -37,7 +37,7 @@ class CommitClassifier(object):
             try:
                 from rapidfuzz import fuzz
             except ModuleNotFoundError:
-                return re.compile(string)
+                return lambda x: re.compile(string).match(x)
 
             ratio = cls.DEFAULT_FUZZ_RATIO if not ratio else ratio
             return lambda x: fuzz.partial_ratio(string, x) >= ratio
@@ -65,10 +65,11 @@ class CommitClassifier(object):
                 return re.compile(header)
             return None
 
-        def __init__(self, name, pickable=True, headers=None, trailers=None, paths=None, **kwargs):
+        def __init__(self, name, pickable=True, headers=None, contents=None, trailers=None, paths=None, **kwargs):
             self.name = name
             self.pickable = pickable
             self.headers = [CommitClassifier.LineFilter(header) for header in headers or []]
+            self.contents = [CommitClassifier.LineFilter(content) for content in contents or []]
             self.trailers = [CommitClassifier.LineFilter(trailer) for trailer in trailers or []]
             self.paths = [re.compile(r'^{}'.format(path)) for path in (paths or [])]
 
@@ -108,21 +109,24 @@ class CommitClassifier(object):
     def classify(self, commit, repository=None):
         header = commit.message.splitlines()[0]
         trailers = commit.trailers
+        contents = commit.message
         paths_for = CallByNeed(
-            callback=lambda: repository.files_changed(commit.hash or str(commit)),
+            callback=lambda: repository.files_changed(commit.hash or str(commit)) if repository else [],
             type=list,
         )
 
         for klass in self.classes:
             matching_header = bool(klass.headers and header)
             matching_trailer = bool(klass.trailers and trailers)
-            can_exclude = matching_header or matching_trailer or bool(klass.paths and paths_for.value)
+            matching_content = bool(klass.contents and contents)
+            can_exclude = matching_header or matching_trailer or bool(klass.paths and paths_for.value) or matching_content
             if not can_exclude:
                 continue
 
             matches_header = klass.headers and header and any([f(header) for f in klass.headers])
             matches_trailers = klass.trailers and trailers and any([any([f(trailer) for f in klass.trailers]) for trailer in trailers])
-            if (matching_header or matching_trailer) and not matches_header and not matches_trailers:
+            matches_content = klass.contents and contents and any([f(contents) for f in klass.contents])
+            if (matching_header or matching_trailer or matching_content) and not matches_header and not matches_trailers and not matches_content:
                 continue
 
             if klass.paths and paths_for.value and not all([

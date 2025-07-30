@@ -32,6 +32,7 @@
 #include <WebCore/MemoryIDBBackingStore.h>
 #include <WebCore/SQLiteFileSystem.h>
 #include <WebCore/SQLiteIDBBackingStore.h>
+#include <algorithm>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebKit {
@@ -124,8 +125,14 @@ String IDBStorageManager::idbStorageOriginDirectory(const String& rootDirectory,
     if (rootDirectory.isEmpty())
         return emptyString();
 
-    auto originDirectory = WebCore::IDBDatabaseIdentifier::databaseDirectoryRelativeToRoot(origin, rootDirectory, "v1"_s);
-    auto oldOriginDirectory = WebCore::IDBDatabaseIdentifier::databaseDirectoryRelativeToRoot(origin, rootDirectory, "v0"_s);
+    auto originDirectory = WebCore::IDBDatabaseIdentifier::optionalDatabaseDirectoryRelativeToRoot(origin, rootDirectory, "v1"_s);
+    if (originDirectory.isEmpty())
+        return emptyString();
+
+    auto oldOriginDirectory = WebCore::IDBDatabaseIdentifier::optionalDatabaseDirectoryRelativeToRoot(origin, rootDirectory, "v0"_s);
+    if (oldOriginDirectory.isEmpty())
+        return emptyString();
+
     migrateOriginDataImpl(oldOriginDirectory, originDirectory, [](const String& name) {
         return WebCore::SQLiteFileSystem::computeHashForFileName(WebCore::IDBServer::SQLiteIDBBackingStore::decodeDatabaseName(name));
     });
@@ -208,7 +215,7 @@ bool IDBStorageManager::isActive() const
 
 bool IDBStorageManager::hasDataInMemory() const
 {
-    return WTF::anyOf(m_databases.values(), [&] (auto& database) {
+    return std::ranges::any_of(m_databases.values(), [&](auto& database) {
         return database->hasDataInMemory();
     });
 }

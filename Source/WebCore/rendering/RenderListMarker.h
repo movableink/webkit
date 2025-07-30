@@ -39,12 +39,12 @@ struct ListMarkerTextContent {
         return textWithSuffix.isEmpty();
     }
 
-    StringView textWithoutSuffix() const
+    StringView textWithoutSuffix() const LIFETIME_BOUND
     {
         return StringView { textWithSuffix }.left(textWithoutSuffixLength);
     }
 
-    StringView suffix() const
+    StringView suffix() const LIFETIME_BOUND
     {
         return StringView { textWithSuffix }.substring(textWithoutSuffixLength);
     }

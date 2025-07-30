@@ -39,8 +39,6 @@
 #import <wtf/ResourceUsage.h>
 #import <wtf/spi/cocoa/MachVMSPI.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 static unsigned categoryForVMTag(unsigned tag)
@@ -79,7 +77,7 @@ struct ThreadInfo {
     String dispatchQueueName;
 };
 
-static Vector<ThreadInfo> threadInfos()
+static std::span<const thread_t> task_threads_span()
 {
     thread_array_t threadList = nullptr;
     mach_msg_type_number_t threadCount = 0;
@@ -87,16 +85,24 @@ static Vector<ThreadInfo> threadInfos()
     ASSERT(kr == KERN_SUCCESS);
     if (kr != KERN_SUCCESS)
         return { };
+    return unsafeMakeSpan(threadList, threadCount);
+}
+
+static Vector<ThreadInfo> threadInfos()
+{
+    auto threadList = task_threads_span();
+    if (threadList.empty())
+        return { };
 
     // Since we collect thread usage without suspending threads, threads retrieved by task_threads can have gone while iterating
     // them to get usage information. If a thread has gone, a system call returns non KERN_SUCCESS, and we just ignore these threads.
     Vector<ThreadInfo> infos;
-    for (mach_msg_type_number_t i = 0; i < threadCount; ++i) {
-        MachSendRight sendRight = MachSendRight::adopt(threadList[i]);
+    for (auto thread : threadList) {
+        MachSendRight sendRight = MachSendRight::adopt(thread);
 
         thread_info_data_t threadInfo;
         mach_msg_type_number_t threadInfoCount = THREAD_INFO_MAX;
-        kr = thread_info(sendRight.sendRight(), THREAD_BASIC_INFO, reinterpret_cast<thread_info_t>(&threadInfo), &threadInfoCount);
+        auto kr = thread_info(sendRight.sendRight(), THREAD_BASIC_INFO, reinterpret_cast<thread_info_t>(&threadInfo), &threadInfoCount);
         if (kr != KERN_SUCCESS)
             continue;
 
@@ -128,8 +134,8 @@ static Vector<ThreadInfo> threadInfos()
         infos.append(ThreadInfo { WTFMove(sendRight), usage, threadName, dispatchQueueName });
     }
 
-    kr = vm_deallocate(mach_task_self(), (vm_offset_t)threadList, threadCount * sizeof(thread_t));
-    ASSERT(kr == KERN_SUCCESS);
+    auto kr = vm_deallocate(mach_task_self(), (vm_offset_t)threadList.data(), threadList.size() * sizeof(thread_t));
+    ASSERT_UNUSED(kr, kr == KERN_SUCCESS);
 
     return infos;
 }
@@ -160,7 +166,7 @@ void ResourceUsageThread::platformCollectCPUData(JSC::VM*, ResourceUsageData& da
     mach_port_t resourceUsageMachThread = mach_thread_self();
     mach_port_t mainThreadMachThread = threads[0].sendRight.sendRight();
 
-    HashSet<mach_port_t> knownWebKitThreads;
+    UncheckedKeyHashSet<mach_port_t> knownWebKitThreads;
     {
         Locker locker { Thread::allThreadsLock() };
         for (auto* thread : Thread::allThreads()) {
@@ -277,7 +283,5 @@ void ResourceUsageThread::platformCollectMemoryData(JSC::VM* vm, ResourceUsageDa
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif

@@ -38,16 +38,16 @@ auto ToCSS<BasicShape>::operator()(const BasicShape& value, const RenderStyle& s
     return WTF::switchOn(value, [&](const auto& alternative) { return CSS::BasicShape { toCSS(alternative, style) }; });
 }
 
-auto ToStyle<CSS::BasicShape>::operator()(const CSS::BasicShape& value, const BuilderState& builderState, const CSSCalcSymbolTable& symbolTable) -> BasicShape
+auto ToStyle<CSS::BasicShape>::operator()(const CSS::BasicShape& value, const BuilderState& builderState) -> BasicShape
 {
-    return WTF::switchOn(value, [&](const auto& alternative) { return BasicShape { toStyle(alternative, builderState, symbolTable) }; });
+    return WTF::switchOn(value, [&](const auto& alternative) { return BasicShape { toStyle(alternative, builderState) }; });
 }
 
 // MARK: - Blending
 
 auto Blending<BasicShape>::canBlend(const BasicShape& a, const BasicShape& b) -> bool
 {
-    return std::visit(WTF::makeVisitor(
+    return WTF::visit(WTF::makeVisitor(
         []<typename T>(const T& a, const T& b) {
             return WebCore::Style::canBlend(a, b);
         },
@@ -65,7 +65,7 @@ auto Blending<BasicShape>::canBlend(const BasicShape& a, const BasicShape& b) ->
 
 auto Blending<BasicShape>::blend(const BasicShape& a, const BasicShape& b, const BlendingContext& context) -> BasicShape
 {
-    return std::visit(WTF::makeVisitor(
+    return WTF::visit(WTF::makeVisitor(
         [&]<typename T>(const T& a, const T& b) -> BasicShape {
             return { WebCore::Style::blend(a, b, context) };
         },

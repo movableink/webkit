@@ -55,6 +55,7 @@
 #import <wtf/HashMap.h>
 #import <wtf/MainThread.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/cocoa/SpanCocoa.h>
 #import <wtf/text/MakeString.h>
 #import <wtf/text/StringHash.h>
 #import <wtf/text/WTFString.h>
@@ -1101,7 +1102,7 @@ static unsigned loadCount;
 
 - (void)addMappingFromURLString:(NSString *)urlString toData:(const char*)data
 {
-    _dataMappings.set(urlString, [NSData dataWithBytesNoCopy:(void*)data length:strlen(data) freeWhenDone:NO]);
+    _dataMappings.set(urlString, toNSDataNoCopy(unsafeSpan8(data), FreeWhenDone::No));
 }
 
 - (void)setTaskHandler:(Function<void(id <WKURLSchemeTask>)>&&)handler
@@ -1748,6 +1749,7 @@ TEST(WebpagePreferences, UserExplicitlyPrefersColorSchemeLight)
     configuration.get().defaultWebpagePreferences._colorSchemePreference = _WKWebsiteColorSchemePreferenceLight;
 
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    [webView forceDarkMode];
 
     [webView loadTestPageNamed:@"color-scheme"];
     [webView waitForMessage:@"light-detected"];

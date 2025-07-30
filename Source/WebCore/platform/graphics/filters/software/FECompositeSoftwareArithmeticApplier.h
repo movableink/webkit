@@ -42,14 +42,14 @@ private:
     static uint8_t clampByte(int);
 
     template <int b1, int b4>
-    static inline void computePixels(unsigned char* source, unsigned char* destination, int pixelArrayLength, float k1, float k2, float k3, float k4);
+    static inline void computePixels(std::span<unsigned char> source, std::span<unsigned char> destination, int pixelArrayLength, float k1, float k2, float k3, float k4);
 
     template <int b1, int b4>
-    static inline void computePixelsUnclamped(unsigned char* source, unsigned char* destination, int pixelArrayLength, float k1, float k2, float k3, float k4);
+    static inline void computePixelsUnclamped(std::span<unsigned char> source, std::span<unsigned char> destination, int pixelArrayLength, float k1, float k2, float k3, float k4);
 
-    static inline void applyPlatform(unsigned char* source, unsigned char* destination, int pixelArrayLength, float k1, float k2, float k3, float k4);
+    static inline void applyPlatform(std::span<unsigned char> source, std::span<unsigned char> destination, int pixelArrayLength, float k1, float k2, float k3, float k4);
 
-    bool apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const final;
+    bool apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const final;
 };
 
 } // namespace WebCore

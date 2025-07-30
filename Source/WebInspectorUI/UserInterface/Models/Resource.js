@@ -1089,7 +1089,7 @@ WI.Resource = class Resource extends WI.SourceCode
         switch (type) {
         case WI.LocalResourceOverride.InterceptType.Request:
             resourceData.requestMethod = this.requestMethod ?? WI.HTTPUtilities.RequestMethod.GET;
-            resourceData.requestHeaders = Object.shallowCopy(this.requestHeaders);
+            resourceData.requestHeaders = {...this.requestHeaders};
             resourceData.requestData = this.requestData ?? "";
             break;
 
@@ -1116,7 +1116,7 @@ WI.Resource = class Resource extends WI.SourceCode
             }
             resourceData.responseContent = content;
             resourceData.responseBase64Encoded = base64Encoded;
-            resourceData.responseHeaders = Object.shallowCopy(this.responseHeaders);
+            resourceData.responseHeaders = {...this.responseHeaders};
             break;
         }
 
@@ -1239,7 +1239,7 @@ WI.Resource = class Resource extends WI.SourceCode
             if (this.requestDataContentType.match(/^application\/x-www-form-urlencoded\s*(;.*)?$/i))
                 command.push("--data " + escapeStringPosix(this.requestData));
             else
-                command.push("--data-binary " + escapeStringPosix(this.requestData));
+                command.push("--data-raw " + escapeStringPosix(this.requestData));
         }
 
         return command.join(" \\\n");

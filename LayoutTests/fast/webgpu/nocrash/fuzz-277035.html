@@ -1,10 +1,14 @@
 <style>
   :root { background: #102030e0; color: #99ddbbcc; font-size: 15px; }
 </style>
+<script src="../../../resources/js-test-pre.js"></script>
 <script>
+globalThis.testRunner?.dumpAsText();
 globalThis.testRunner?.waitUntilDone();
-const log = globalThis.$vm?.print ?? console.log;
 
+function log(label) {
+}
+    
 function gc() {
   if (globalThis.GCController) {
     globalThis.GCController.collect();
@@ -186,7 +190,7 @@ device0.queue.writeTexture({
 }, new DataView(new ArrayBuffer(80)), /* required buffer size: 1_036_983 */
 {offset: 973, bytesPerRow: 274, rowsPerImage: 270}, {width: 12, height: 20, depthOrArrayLayers: 15});
 } catch {}
-let offscreenCanvas0 = new OffscreenCanvas(1628778556, 2139758447);
+let offscreenCanvas0 = new OffscreenCanvas(1628, 2139);
 let video0 = await videoWithData();
 let texture1 = device0.createTexture({
   label: '\u34b1\u0152\u{1f93e}',
@@ -5621,6 +5625,8 @@ videoFrame13.close();
       
     }
   }
-  globalThis.testRunner?.notifyDone();
+  debug('Pass')
+    globalThis.testRunner?.notifyDone();
 };
 </script>
+

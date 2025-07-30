@@ -2,7 +2,7 @@
     Copyright (C) 1998 Lars Knoll (knoll@mpi-hd.mpg.de)
     Copyright (C) 2001 Dirk Mueller <mueller@kde.org>
     Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
-    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 Apple Inc. All rights reserved.
+    Copyright (C) 2004-2025 Apple Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -103,7 +103,9 @@ public:
         XSLStyleSheet,
 #endif
         LinkPrefetch,
+#if ENABLE(VIDEO)
         TextTrackResource,
+#endif
 #if ENABLE(APPLICATION_MANIFEST)
         ApplicationManifest,
 #endif
@@ -197,7 +199,7 @@ public:
     void setLoading(bool b) { m_loading = b; }
     virtual bool stillNeedsLoad() const { return false; }
 
-    SubresourceLoader* loader() { return m_loader.get(); }
+    SubresourceLoader* loader() const { return m_loader.get(); }
 
     bool isImage() const { return type() == Type::ImageResource; }
     // FIXME: CachedRawResource could be a main resource, an audio/video resource, or a raw XHR/icon resource.
@@ -234,11 +236,12 @@ public:
     void clearLoader();
 
     FragmentedSharedBuffer* resourceBuffer() const { return m_data.get(); }
+    RefPtr<FragmentedSharedBuffer> protectedResourceBuffer() const;
 
     virtual void redirectReceived(ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&);
-    virtual void responseReceived(const ResourceResponse&);
+    virtual void responseReceived(ResourceResponse&&);
     virtual bool shouldCacheResponse(const ResourceResponse&) { return true; }
-    void setResponse(const ResourceResponse&);
+    void setResponse(ResourceResponse&&);
     WEBCORE_EXPORT const ResourceResponse& response() const;
     Box<NetworkLoadMetrics> takeNetworkLoadMetrics() { return mutableResponse().takeNetworkLoadMetrics(); }
 
@@ -317,10 +320,13 @@ public:
     const std::unique_ptr<ResourceRequest>& originalRequest() const { return m_originalRequest; }
 
 #if USE(QUICK_LOOK)
-    virtual void previewResponseReceived(const ResourceResponse&);
+    virtual void previewResponseReceived(ResourceResponse&&);
 #endif
 
     ResourceCryptographicDigest cryptographicDigest(ResourceCryptographicDigest::Algorithm) const;
+
+    void setIsHashReportingNeeded() { m_isHashReportingNeeded = true; }
+    bool isHashReportingNeeded() const { return m_isHashReportingNeeded; }
 
 protected:
     // CachedResource constructor that may be used when the CachedResource can already be filled with response data.
@@ -436,6 +442,7 @@ private:
     bool m_hasUnknownEncoding : 1;
     bool m_switchingClientsToRevalidatedResource : 1 { false };
     bool m_ignoreForRequestCount : 1;
+    bool m_isHashReportingNeeded : 1 { false };
 
 #if ASSERT_ENABLED
     bool m_deleted { false };

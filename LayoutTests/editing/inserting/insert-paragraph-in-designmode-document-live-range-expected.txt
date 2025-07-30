@@ -1,6 +1,5 @@
 Verifies that after inserting a newline after a period doesn't insert an extra space in front of the newly inserted line.
 | <!DOCTYPE html>
-| <!--   webkit-test-runner [ LiveRangeSelectionEnabled=true ]   -->
 | <html>
 |   <head>
 |     "\n    "

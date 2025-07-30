@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,18 +31,26 @@
 #include "CSSCalcTree+Simplification.h"
 #include "CSSCalcTree.h"
 #include "CSSParserContext.h"
+#include "CSSParserIdioms.h"
 #include "CSSParserTokenRange.h"
+#include "CSSParserTokenRangeGuard.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+LengthPercentage.h"
+#include "CSSPropertyParserConsumer+MetaConsumer.h"
+#include "CSSPropertyParserConsumer+NumberDefinitions.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
+#include "CSSPropertyParserState.h"
 #include "CSSPropertyParsing.h"
+#include "CSSSerializationContext.h"
 #include "CSSUnits.h"
 #include "CalculationCategory.h"
 #include "CalculationOperator.h"
+#include "ContainerQueryFeatures.h"
+#include "ContainerQueryParser.h"
 #include "Logging.h"
+#include "MediaQueryFeatures.h"
+#include "MediaQueryParser.h"
+#include <numbers>
 #include <wtf/SortedArrayMap.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 namespace CSSCalc {
@@ -54,8 +62,8 @@ static constexpr int maxExpressionDepth = 100;
 static std::optional<std::pair<Number, Type>> lookupConstantNumber(CSSValueID symbol)
 {
     static constexpr std::pair<CSSValueID, double> constantMappings[] {
-        { CSSValueE,                     eDouble                                  },
-        { CSSValuePi,                    piDouble                                 },
+        { CSSValueE,                     std::numbers::e                          },
+        { CSSValuePi,                    std::numbers::pi                         },
         { CSSValueInfinity,              std::numeric_limits<double>::infinity()  },
         { CSSValueNegativeInfinity, -1 * std::numeric_limits<double>::infinity()  },
         { CSSValueNaN,                   std::numeric_limits<double>::quiet_NaN() },
@@ -68,11 +76,13 @@ static std::optional<std::pair<Number, Type>> lookupConstantNumber(CSSValueID sy
 
 // MARK: - Parser State
 
+namespace {
+
 enum class ParseStatus { Ok, TooDeep };
 
 struct ParserState {
-    // CSSParserContext used to initiate the parse.
-    const CSSParserContext& parserContext;
+    // CSS::PropertyParserState used to initiate the parse.
+    CSS::PropertyParserState& propertyParserState;
 
     // ParserOptions used to initiate the parse.
     const ParserOptions& parserOptions;
@@ -83,6 +93,8 @@ struct ParserState {
     // Tracks whether the parse tree contains any non-canonical dimension units that require conversion data (e.g. em, vh, etc.).
     bool requiresConversionData = false;
 };
+
+} // namespace (anonymous)
 
 static ParseStatus checkDepth(int depth)
 {
@@ -107,10 +119,10 @@ static std::optional<TypedChild> parseCalcNumber(const CSSParserToken&, ParserSt
 static std::optional<TypedChild> parseCalcPercentage(const CSSParserToken&, ParserState&);
 static std::optional<TypedChild> parseCalcDimension(const CSSParserToken&, ParserState&);
 
-std::optional<Tree> parseAndSimplify(CSSParserTokenRange& range, const CSSParserContext& parserContext, const ParserOptions& parserOptions, const SimplificationOptions& simplificationOptions)
+std::optional<Tree> parseAndSimplify(CSSParserTokenRange& range, CSS::PropertyParserState& propertyParserState, const ParserOptions& parserOptions, const SimplificationOptions& simplificationOptions)
 {
     auto function = range.peek().functionId();
-    if (!isCalcFunction(function, parserContext))
+    if (!isCalcFunction(function))
         return std::nullopt;
 
     auto tokens = CSSPropertyParserHelpers::consumeFunction(range);
@@ -120,7 +132,7 @@ std::optional<Tree> parseAndSimplify(CSSParserTokenRange& range, const CSSParser
     // -- Parsing --
 
     ParserState state {
-        .parserContext = parserContext,
+        .propertyParserState = propertyParserState,
         .parserOptions = parserOptions,
         .simplificationOptions = &simplificationOptions
     };
@@ -143,18 +155,16 @@ std::optional<Tree> parseAndSimplify(CSSParserTokenRange& range, const CSSParser
     auto result = Tree {
         .root = WTFMove(root->child),
         .type = root->type,
-        .category = parserOptions.category,
         .stage = CSSCalc::Stage::Specified,
-        .range = parserOptions.range,
-        .requiresConversionData = state.requiresConversionData
+        .requiresConversionData = state.requiresConversionData,
     };
 
-    LOG_WITH_STREAM(Calc, stream << "Completed top level parse/simplification for function '" << nameLiteralForSerialization(function) << "': " << serializationForCSS(result) << ", type: " << getType(result.root) << ", category=" << result.category << ", requires-conversion-data: " << result.requiresConversionData);
+    LOG_WITH_STREAM(Calc, stream << "Completed top level parse/simplification for function '" << nameLiteralForSerialization(function) << "': " << serializationForCSS(result, { parserOptions.range, CSS::defaultSerializationContext() }) << ", type: " << getType(result.root) << ", category=" << parserOptions.category << ", requires-conversion-data: " << result.requiresConversionData);
 
     return result;
 }
 
-bool isCalcFunction(CSSValueID functionId, const CSSParserContext&)
+bool isCalcFunction(CSSValueID functionId)
 {
     switch (functionId) {
     case CSSValueCalc:
@@ -180,6 +190,11 @@ bool isCalcFunction(CSSValueID functionId, const CSSParserContext&)
     case CSSValueMod:
     case CSSValueRem:
     case CSSValueProgress:
+    case CSSValueMediaProgress:
+    case CSSValueContainerProgress:
+    case CSSValueRandom:
+    case CSSValueSiblingCount:
+    case CSSValueSiblingIndex:
     case CSSValueAnchor:
     case CSSValueAnchorSize:
         return true;
@@ -189,6 +204,18 @@ bool isCalcFunction(CSSValueID functionId, const CSSParserContext&)
     return false;
 }
 
+template<typename Op> static std::optional<TypedChild> consumeZeroArguments(CSSParserTokenRange& tokens, int, ParserState&)
+{
+    if (!tokens.atEnd()) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - extraneous tokens found");
+        return std::nullopt;
+    }
+
+    auto child = Op { };
+    auto type = getType(child);
+
+    return TypedChild { makeChild(WTFMove(child)), type };
+}
 
 template<typename Op> static std::optional<TypedChild> consumeExactlyOneArgument(CSSParserTokenRange& tokens, int depth, ParserState& state)
 {
@@ -226,7 +253,7 @@ template<typename Op> static std::optional<TypedChild> consumeExactlyOneArgument
 template<typename Op> static std::optional<TypedChild> consumeOneOrMoreArguments(CSSParserTokenRange& tokens, int depth, ParserState& state)
 {
     std::optional<Type> mergedType;
-    Children children;
+    Vector<Child> children;
 
     bool requireComma = false;
     unsigned argumentCount = 0;
@@ -424,7 +451,7 @@ static std::optional<TypedChild> consumeClamp(CSSParserTokenRange& tokens, int d
     auto parseCalcSumOrNone = [](auto& tokens, auto depth, auto& state) -> std::optional<TypedChildOrNone> {
         if (tokens.peek().id() == CSSValueNone) {
             tokens.consume();
-            return TypedChildOrNone { ChildOrNone { CSS::NoneRaw { } }, Type { } };
+            return TypedChildOrNone { ChildOrNone { CSS::Keyword::None { } }, Type { } };
         }
         auto sum = parseCalcSum(tokens, depth, state);
         if (!sum)
@@ -467,8 +494,8 @@ static std::optional<TypedChild> consumeClamp(CSSParserTokenRange& tokens, int d
     }
 
     auto computeType = [&] -> std::optional<Type> {
-        bool minIsNone = std::holds_alternative<CSS::NoneRaw>(min->child);
-        bool maxIsNone = std::holds_alternative<CSS::NoneRaw>(max->child);
+        bool minIsNone = WTF::holdsAlternative<CSS::Keyword::None>(min->child);
+        bool maxIsNone = WTF::holdsAlternative<CSS::Keyword::None>(max->child);
 
         if (minIsNone && maxIsNone)
             return val->type;
@@ -615,39 +642,284 @@ static std::optional<TypedChild> consumeRound(CSSParserTokenRange& tokens, int d
     return std::nullopt;
 }
 
+static std::optional<Random::SharingFixed> consumeOptionalRandomSharingFixed(CSSParserTokenRange& tokens, ParserState& state)
+{
+    // <random-value-sharing-fixed> = fixed <number [0,1]>
+
+    ASSERT(tokens.peek().id() == CSSValueFixed);
+
+    CSSParserTokenRangeGuard guard { tokens };
+
+    tokens.consumeIncludingWhitespace();
+
+    // Use a non-property parsing state for the fixed number value to disconnect it from the current parse.
+    // FIXME: Add a mechanism to pass along the depth count when doing this so that we can limit stack usage.
+    auto numberParsingState = CSS::PropertyParserState { .context = state.propertyParserState.context, .pool = state.propertyParserState.pool };
+    auto number = CSSPropertyParserHelpers::MetaConsumer<CSS::Number<CSS::ClosedUnitRange>>::consume(tokens, numberParsingState);
+    if (!number)
+        return { };
+
+    guard.commit();
+
+    return Random::SharingFixed {
+        .value = WTFMove(*number)
+    };
+}
+
+static Random::SharingOptions::Auto makeRandomSharingAuto(ParserState& state)
+{
+    return {
+        .property = state.propertyParserState.currentProperty,
+        .index = state.propertyParserState.cssRandomFunctionCount
+    };
+}
+
+static std::optional<Random::SharingOptions> consumeOptionalRandomSharingOptions(CSSParserTokenRange& tokens, ParserState& state)
+{
+    // <random-value-sharing-options> = [ [ auto | <dashed-ident> ] || element-shared ]
+
+    std::optional<Variant<Random::SharingOptions::Auto, AtomString>> identifier;
+    std::optional<CSS::Keyword::ElementShared> elementShared;
+
+    CSSParserTokenRangeGuard guard { tokens };
+
+    auto consumeIdentifier = [&] -> bool {
+        if (identifier)
+            return false;
+        if (tokens.peek().id() == CSSValueAuto) {
+            tokens.consumeIncludingWhitespace();
+            identifier = makeRandomSharingAuto(state);
+            return true;
+        }
+        if (tokens.peek().type() == IdentToken && isValidCustomIdentifier(tokens.peek().id()) && tokens.peek().value().startsWith("--"_s)) {
+            identifier = tokens.consumeIncludingWhitespace().value().toAtomString();
+            return true;
+        }
+        return false;
+    };
+    auto consumeElementShared = [&] -> bool {
+        if (elementShared)
+            return false;
+        if (tokens.peek().id() == CSSValueElementShared) {
+            tokens.consumeIncludingWhitespace();
+            elementShared = CSS::Keyword::ElementShared { };
+            return true;
+        }
+        return false;
+    };
+
+    for (unsigned i = 0; i < 2; ++i) {
+        if (consumeIdentifier() || consumeElementShared())
+            continue;
+        break;
+    }
+
+    if (!identifier && !elementShared)
+        return { };
+
+    guard.commit();
+
+    return Random::SharingOptions {
+        .identifier = identifier.value_or(makeRandomSharingAuto(state)),
+        .elementShared = elementShared
+    };
+}
+
+static std::optional<Random::Sharing> consumeOptionalRandomSharing(CSSParserTokenRange& tokens, ParserState& state)
+{
+    // <random-value-sharing> = [ [ auto | <dashed-ident> ] || element-shared ] | fixed <number [0,1]>
+
+    if (tokens.peek().id() == CSSValueFixed) {
+        if (auto fixed = consumeOptionalRandomSharingFixed(tokens, state))
+            return Random::Sharing { WTFMove(*fixed) };
+        return { };
+    } else {
+        if (auto options = consumeOptionalRandomSharingOptions(tokens, state))
+            return Random::Sharing { WTFMove(*options) };
+        return { };
+    }
+}
+
+static std::optional<TypedChild> consumeRandom(CSSParserTokenRange& tokens, int depth, ParserState& state)
+{
+    // <random()> = random( <random-value-sharing>? , <calc-sum>, <calc-sum>, <calc-sum>? )
+
+    if (!state.propertyParserState.context.cssRandomFunctionEnabled)
+        return { };
+
+    if (state.propertyParserState.currentRule != StyleRuleType::Style)
+        return { };
+    if (state.propertyParserState.currentProperty == CSSPropertyInvalid)
+        return { };
+
+    // FIXME: Add support for custom properties by including the custom property name in CSS::PropertyParserState for registered properties.
+    if (state.propertyParserState.currentProperty == CSSPropertyCustom)
+        return { };
+
+    using Op = Random;
+
+    std::optional<Random::Sharing> sharing;
+    if (auto optionalSharing = consumeOptionalRandomSharing(tokens, state)) {
+        if (!CSSPropertyParserHelpers::consumeCommaIncludingWhitespace(tokens)) {
+            LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - missing comma after <random-value-sharing>");
+            return { };
+        }
+
+        sharing = WTFMove(optionalSharing);
+    } else {
+        sharing = Random::SharingOptions {
+            .identifier = makeRandomSharingAuto(state),
+            .elementShared = { },
+        };
+    }
+
+    // Increment the random function count early, but after processing the the sharing production to
+    // ensure that any nested random() functions in the <calc-sum> productions have an incremented value.
+    ++state.propertyParserState.cssRandomFunctionCount;
+
+    auto min = parseCalcSum(tokens, depth, state);
+    if (!min) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed parse of argument `min`");
+        return { };
+    }
+
+    if (!CSSPropertyParserHelpers::consumeCommaIncludingWhitespace(tokens)) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - missing comma after argument `min`");
+        return { };
+    }
+
+    auto max = parseCalcSum(tokens, depth, state);
+    if (!max) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed parse of argument `max`");
+        return { };
+    }
+
+    if (tokens.atEnd()) {
+        // - Validate arguments
+
+        if (!validateType<Op::input>(min->type)) {
+            LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - argument `min` has invalid type: " << min->type);
+            return { };
+        }
+
+        if (!validateType<Op::input>(max->type)) {
+            LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - argument `max` has invalid type: " << max->type);
+            return { };
+        }
+
+        // - Merge arguments
+
+        auto mergedType = mergeTypes<Op::merge>(min->type, max->type);
+        if (!mergedType) {
+            LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed to merge types");
+            return { };
+        }
+
+        auto outputType = transformType<Op::output>(*mergedType);
+        if (!outputType) {
+            LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - output transform failed for type: " << *mergedType);
+            return { };
+        }
+
+        state.requiresConversionData = true;
+
+        Op op { WTFMove(*sharing), WTFMove(min->child), WTFMove(max->child), std::nullopt };
+
+        if (auto* simplificationOptions = state.simplificationOptions) {
+            if (auto replacement = simplify(op, *simplificationOptions))
+                return TypedChild { WTFMove(*replacement), *outputType };
+        }
+
+        return TypedChild { makeChild(WTFMove(op), *outputType), *outputType };
+    }
+
+    if (!CSSPropertyParserHelpers::consumeCommaIncludingWhitespace(tokens)) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - missing comma after argument `max`");
+        return { };
+    }
+
+    auto step = parseCalcSum(tokens, depth, state);
+    if (!step) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed parse of argument `step`");
+        return { };
+    }
+
+    if (!tokens.atEnd()) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - extraneous tokens found");
+        return { };
+    }
+
+    // - Validate arguments
+
+    if (!validateType<Op::input>(step->type)) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - argument `step` has invalid type: " << step->type);
+        return { };
+    }
+
+    // - Merge arguments
+
+    auto mergedType = mergeTypes<Op::merge>(min->type, max->type);
+    if (!mergedType) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed to merge types");
+        return { };
+    }
+
+    mergedType = mergeTypes<Op::merge>(*mergedType, step->type);
+    if (!mergedType) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed to merge types");
+        return { };
+    }
+
+    auto outputType = transformType<Op::output>(*mergedType);
+    if (!outputType) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - output transform failed for type: " << *mergedType);
+        return { };
+    }
+
+    state.requiresConversionData = true;
+
+    Op op { WTFMove(*sharing), WTFMove(min->child), WTFMove(max->child), WTFMove(step->child) };
+
+    if (auto* simplificationOptions = state.simplificationOptions) {
+        if (auto replacement = simplify(op, *simplificationOptions))
+            return TypedChild { WTFMove(*replacement), *outputType };
+    }
+    return TypedChild { makeChild(WTFMove(op), *outputType), *outputType };
+}
+
 static std::optional<TypedChild> consumeProgress(CSSParserTokenRange& tokens, int depth, ParserState& state)
 {
-    // <progress()> = progress( <calc-sum> from <calc-sum> to <calc-sum> )
+    // <progress()> = progress( <calc-sum>, <calc-sum>, <calc-sum> )
 
-    if (!state.parserContext.cssProgressFunctionEnabled)
+    if (!state.propertyParserState.context.cssProgressFunctionEnabled)
         return { };
 
     using Op = Progress;
 
-    auto progression = parseCalcSum(tokens, depth, state);
-    if (!progression) {
+    auto value = parseCalcSum(tokens, depth, state);
+    if (!value) {
         LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed parse of argument #1");
         return std::nullopt;
     }
 
-    if (!CSSPropertyParserHelpers::consumeIdentRaw<CSSValueFrom>(tokens)) {
-        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - missing literal 'from'");
+    if (!CSSPropertyParserHelpers::consumeCommaIncludingWhitespace(tokens)) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - missing comma");
         return std::nullopt;
     }
 
-    auto from = parseCalcSum(tokens, depth, state);
-    if (!from) {
+    auto start = parseCalcSum(tokens, depth, state);
+    if (!start) {
         LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed parse of argument #2");
         return std::nullopt;
     }
 
-    if (!CSSPropertyParserHelpers::consumeIdentRaw<CSSValueTo>(tokens)) {
-        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - missing literal 'to'");
+    if (!CSSPropertyParserHelpers::consumeCommaIncludingWhitespace(tokens)) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - missing comma");
         return std::nullopt;
     }
 
-    auto to = parseCalcSum(tokens, depth, state);
-    if (!to) {
+    auto end = parseCalcSum(tokens, depth, state);
+    if (!end) {
         LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed parse of argument #3");
         return std::nullopt;
     }
@@ -659,32 +931,32 @@ static std::optional<TypedChild> consumeProgress(CSSParserTokenRange& tokens, in
 
     // - Validate arguments
 
-    if (!validateType<Op::input>(progression->type)) {
-        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - argument #1 has invalid type: " << progression->type);
+    if (!validateType<Op::input>(value->type)) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - argument #1 has invalid type: " << value->type);
         return std::nullopt;
     }
 
-    if (!validateType<Op::input>(from->type)) {
-        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - argument #2 has invalid type: " << progression->type);
+    if (!validateType<Op::input>(start->type)) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - argument #2 has invalid type: " << start->type);
         return std::nullopt;
     }
 
-    if (!validateType<Op::input>(to->type)) {
-        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - argument #3 has invalid type: " << progression->type);
+    if (!validateType<Op::input>(end->type)) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - argument #3 has invalid type: " << end->type);
         return std::nullopt;
     }
 
     // - Merge arguments
 
-    auto mergedType = mergeTypes<Op::merge>(progression->type, from->type);
+    auto mergedType = mergeTypes<Op::merge>(value->type, start->type);
     if (!mergedType) {
-        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed to merge types: argument #1 type " << progression->type << ", argument #2 type" << from->type << ", argument #3 type" << to->type);
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed to merge types: argument #1 type " << value->type << ", argument #2 type" << start->type << ", argument #3 type" << end->type);
         return std::nullopt;
     }
 
-    mergedType = mergeTypes<Op::merge>(*mergedType, to->type);
+    mergedType = mergeTypes<Op::merge>(*mergedType, end->type);
     if (!mergedType) {
-        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed to merge types: argument #1 type " << progression->type << ", argument #2 type" << from->type << ", argument #3 type" << to->type);
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed to merge types: argument #1 type " << value->type << ", argument #2 type" << start->type << ", argument #3 type" << end->type);
         return std::nullopt;
     }
 
@@ -694,13 +966,217 @@ static std::optional<TypedChild> consumeProgress(CSSParserTokenRange& tokens, in
         return std::nullopt;
     }
 
-    Op op { WTFMove(progression->child), WTFMove(from->child), WTFMove(to->child) };
+    Op op { WTFMove(value->child), WTFMove(start->child), WTFMove(end->child) };
 
     if (auto* simplificationOptions = state.simplificationOptions) {
         if (auto replacement = simplify(op, *simplificationOptions))
             return TypedChild { WTFMove(*replacement), *outputType };
     }
     return TypedChild { makeChild(WTFMove(op), *outputType), *outputType };
+}
+
+static std::optional<AtomString> consumeMediaFeatureName(CSSParserTokenRange& tokens)
+{
+    if (tokens.peek().type() != IdentToken)
+        return std::nullopt;
+    return AtomString { tokens.consumeIncludingWhitespace().value().convertToASCIILowercase() };
+}
+
+static std::optional<TypedChild> consumeMediaProgress(CSSParserTokenRange& tokens, int depth, ParserState& state)
+{
+    // <media-progress()> = media-progress( <mf-name>, <calc-sum>, <calc-sum> )
+
+    if (!state.propertyParserState.context.cssMediaProgressFunctionEnabled)
+        return { };
+
+    using Op = MediaProgress;
+
+    auto featureName = consumeMediaFeatureName(tokens);
+    if (!featureName) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed parse of argument #1");
+        return std::nullopt;
+    }
+
+    auto* schema = MQ::MediaQueryParser::mediaProgressProvidingSchemaForFeatureName(*featureName, state.propertyParserState.context);
+    if (!schema) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed parse of argument #1 - invalid media feature");
+        return std::nullopt;
+    }
+
+    if (!CSSPropertyParserHelpers::consumeCommaIncludingWhitespace(tokens)) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - missing comma");
+        return std::nullopt;
+    }
+
+    auto schemaCategory = schema->category();
+
+    ParserState nestedState {
+        .propertyParserState = state.propertyParserState,
+        .parserOptions = ParserOptions {
+            .category = schemaCategory,
+            .range = CSS::All,
+            .allowedSymbols = { },
+            .propertyOptions = { }
+        },
+        .simplificationOptions = nullptr
+    };
+    SimplificationOptions nestedSimplificationOptions = {
+        .category = schemaCategory,
+        .range = CSS::All,
+        .conversionData = state.simplificationOptions->conversionData,
+        .symbolTable = state.simplificationOptions->symbolTable,
+        .allowZeroValueLengthRemovalFromSum = state.simplificationOptions->allowZeroValueLengthRemovalFromSum,
+    };
+    if (state.simplificationOptions)
+        nestedState.simplificationOptions = &nestedSimplificationOptions;
+
+    auto start = parseCalcSum(tokens, depth, nestedState);
+    if (!start) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed parse of argument #2");
+        return std::nullopt;
+    }
+
+    if (!CSSPropertyParserHelpers::consumeCommaIncludingWhitespace(tokens)) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - missing comma");
+        return std::nullopt;
+    }
+
+    auto end = parseCalcSum(tokens, depth, nestedState);
+    if (!end) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed parse of argument #3");
+        return std::nullopt;
+    }
+
+    if (!tokens.atEnd()) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - extraneous tokens found");
+        return std::nullopt;
+    }
+
+    // - Validate arguments
+
+    if (!Type::consistentType(start->type, end->type)) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - inconsistent types");
+        return std::nullopt;
+    }
+
+    if (!start->type.matches(schemaCategory)) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - inconsistent types");
+        return std::nullopt;
+    }
+
+    // `media-progress() always evaluates to a <number>.
+    auto outputType = Type { };
+
+    Op op { schema, WTFMove(start->child), WTFMove(end->child) };
+
+    if (auto* simplificationOptions = nestedState.simplificationOptions) {
+        if (auto replacement = simplify(op, *simplificationOptions))
+            return TypedChild { WTFMove(*replacement), outputType };
+    }
+    return TypedChild { makeChild(WTFMove(op), outputType), outputType };
+}
+
+static std::optional<TypedChild> consumeContainerProgress(CSSParserTokenRange& tokens, int depth, ParserState& state)
+{
+    // <container-progress()> = container-progress( <mf-name> [ of <container-name> ]?, <calc-sum>, <calc-sum> )
+
+    if (!state.propertyParserState.context.cssContainerProgressFunctionEnabled)
+        return { };
+
+    using Op = ContainerProgress;
+
+    auto featureName = consumeMediaFeatureName(tokens);
+    if (!featureName) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed parse of argument #1");
+        return std::nullopt;
+    }
+
+    AtomString container;
+    if (CSSPropertyParserHelpers::consumeIdentRaw<CSSValueOf>(tokens)) {
+        if (tokens.peek().type() != IdentToken || !isValidContainerNameIdentifier(tokens.peek().id())) {
+            LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed parse of argument #1");
+            return std::nullopt;
+        }
+        container = tokens.consumeIncludingWhitespace().value().toAtomString();
+    }
+
+    auto* schema = CQ::ContainerQueryParser::containerProgressProvidingSchemaForFeatureName(*featureName, state.propertyParserState.context);
+    if (!schema) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed parse of argument #1 - invalid media feature");
+        return std::nullopt;
+    }
+
+    if (!CSSPropertyParserHelpers::consumeCommaIncludingWhitespace(tokens)) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - missing comma");
+        return std::nullopt;
+    }
+
+    auto schemaCategory = schema->category();
+
+    ParserState nestedState {
+        .propertyParserState = state.propertyParserState,
+        .parserOptions = ParserOptions {
+            .category = schemaCategory,
+            .range = CSS::All,
+            .allowedSymbols = { },
+            .propertyOptions = { }
+        },
+        .simplificationOptions = nullptr
+    };
+    SimplificationOptions nestedSimplificationOptions = {
+        .category = schemaCategory,
+        .range = CSS::All,
+        .conversionData = state.simplificationOptions->conversionData,
+        .symbolTable = state.simplificationOptions->symbolTable,
+        .allowZeroValueLengthRemovalFromSum = state.simplificationOptions->allowZeroValueLengthRemovalFromSum,
+    };
+    if (state.simplificationOptions)
+        nestedState.simplificationOptions = &nestedSimplificationOptions;
+
+    auto start = parseCalcSum(tokens, depth, nestedState);
+    if (!start) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed parse of argument #2");
+        return std::nullopt;
+    }
+
+    if (!CSSPropertyParserHelpers::consumeCommaIncludingWhitespace(tokens)) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - missing comma");
+        return std::nullopt;
+    }
+
+    auto end = parseCalcSum(tokens, depth, nestedState);
+    if (!end) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed parse of argument #3");
+        return std::nullopt;
+    }
+
+    if (!tokens.atEnd()) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - extraneous tokens found");
+        return std::nullopt;
+    }
+
+    // - Validate arguments
+
+    if (!Type::consistentType(start->type, end->type)) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - inconsistent types");
+        return std::nullopt;
+    }
+
+    if (!start->type.matches(schemaCategory)) {
+        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - inconsistent types");
+        return std::nullopt;
+    }
+
+    // `container-progress() always evaluates to a <number>.
+    auto outputType = Type { };
+
+    Op op { schema, WTFMove(container), WTFMove(start->child), WTFMove(end->child) };
+
+    if (auto* simplificationOptions = nestedState.simplificationOptions) {
+        if (auto replacement = simplify(op, *simplificationOptions))
+            return TypedChild { WTFMove(*replacement), outputType };
+    }
+    return TypedChild { makeChild(WTFMove(op), outputType), outputType };
 }
 
 static std::optional<TypedChild> consumeValueWithoutSimplifyingCalc(CSSParserTokenRange& tokens, int depth, ParserState& state)
@@ -722,7 +1198,7 @@ static std::optional<TypedChild> consumeValueWithoutSimplifyingCalc(CSSParserTok
 
     if (isFunction && isLeafValue) {
         // Wrap in Sum to keep top level calc() function in serialization.
-        Children children;
+        Vector<Child> children;
         children.append(WTFMove(typedValue->child));
 
         return TypedChild { makeChild(Sum { WTFMove(children) }, typedValue->type), typedValue->type };
@@ -738,16 +1214,16 @@ static std::optional<TypedChild> consumeAnchor(CSSParserTokenRange& tokens, int 
     if (state.parserOptions.propertyOptions.anchorPolicy != AnchorPolicy::Allow)
         return { };
 
-    if (!state.parserContext.propertySettings.cssAnchorPositioningEnabled)
+    if (!state.propertyParserState.context.propertySettings.cssAnchorPositioningEnabled)
         return { };
 
     auto anchorElement = CSSPropertyParserHelpers::consumeDashedIdentRaw(tokens);
 
     // <anchor-side> = inside | outside | top | left | right | bottom | start | end | self-start | self-end | <percentage> | center
-    auto anchorSide = [&]() -> std::optional<Anchor::Side> {
+    auto anchorSide = [&]() -> std::optional<AnchorSide> {
         auto sideIdent = CSSPropertyParserHelpers::consumeIdentRaw<CSSValueInside, CSSValueOutside, CSSValueTop, CSSValueLeft, CSSValueRight, CSSValueBottom, CSSValueStart, CSSValueEnd, CSSValueSelfStart, CSSValueSelfEnd, CSSValueCenter>(tokens);
         if (sideIdent)
-            return sideIdent;
+            return AnchorSide { *sideIdent };
 
         auto percentageOptions = ParserOptions {
             .category = Calculation::Category::Percentage,
@@ -756,7 +1232,7 @@ static std::optional<TypedChild> consumeAnchor(CSSParserTokenRange& tokens, int 
             .propertyOptions = { },
         };
         auto percentageState = ParserState {
-            .parserContext = state.parserContext,
+            .propertyParserState = state.propertyParserState,
             .parserOptions = percentageOptions,
             .simplificationOptions = { },
         };
@@ -769,7 +1245,7 @@ static std::optional<TypedChild> consumeAnchor(CSSParserTokenRange& tokens, int 
         if (!category || category != Calculation::Category::Percentage)
             return { };
 
-        return WTFMove(percentage->child);
+        return AnchorSide { WTFMove(percentage->child) };
     }();
 
     if (!anchorSide)
@@ -836,7 +1312,7 @@ static std::optional<TypedChild> consumeAnchorSize(CSSParserTokenRange& tokens, 
     if (state.parserOptions.propertyOptions.anchorSizePolicy != AnchorSizePolicy::Allow)
         return { };
 
-    if (!state.parserContext.propertySettings.cssAnchorPositioningEnabled)
+    if (!state.propertyParserState.context.propertySettings.cssAnchorPositioningEnabled)
         return { };
 
     // parse <anchor-element>
@@ -1029,11 +1505,49 @@ std::optional<TypedChild> parseCalcFunction(CSSParserTokenRange& tokens, CSSValu
         //     - OUTPUT: <number> "made consistent"
         return consumeExactlyOneArgument<Sign>(tokens, depth, state);
 
+    case CSSValueRandom:
+        // <random()> = random( <random-value-sharing>? , <calc-sum>, <calc-sum>, <calc-sum>? )
+        //     - INPUT: "same" <number>, <dimension>, or <percentage>
+        //     - OUTPUT: same type
+        return consumeRandom(tokens, depth, state);
+
     case CSSValueProgress:
-        // <progress()> = progress( <calc-sum> from <calc-sum> to <calc-sum> )
+        // <progress()> = progress( <calc-sum>, <calc-sum>, <calc-sum> )
         //     - INPUT: "consistent" <number>, <dimension>, or <percentage>
         //     - OUTPUT: <number> "made consistent"
         return consumeProgress(tokens, depth, state);
+
+    case CSSValueMediaProgress:
+        // <media-progress()> = media-progress( <mf-name>, <calc-sum>, <calc-sum> )
+        //     - INPUT: dependent on type of <mf-name> feature.
+        //     - OUTPUT: <number>
+        return consumeMediaProgress(tokens, depth, state);
+
+    case CSSValueContainerProgress:
+        // <container-progress()> = container-progress( <mf-name> [ of <container-name> ]?, <calc-sum>, <calc-sum> )
+        //     - INPUT: dependent on type of <mf-name> feature.
+        //     - OUTPUT: <number>
+        return consumeContainerProgress(tokens, depth, state);
+
+    case CSSValueSiblingCount:
+        // <sibling-count()> = sibling-count()
+        //     - INPUT: none
+        //     - OUTPUT: <integer>
+        if (!state.propertyParserState.context.cssTreeCountingFunctionsEnabled)
+            return { };
+        if (state.propertyParserState.currentRule != StyleRuleType::Style || state.propertyParserState.currentProperty == CSSPropertyInvalid)
+            return { };
+        return consumeZeroArguments<SiblingCount>(tokens, depth, state);
+
+    case CSSValueSiblingIndex:
+        // <sibling-index()> = sibling-index()
+        //     - INPUT: none
+        //     - OUTPUT: <integer>
+        if (!state.propertyParserState.context.cssTreeCountingFunctionsEnabled)
+            return { };
+        if (state.propertyParserState.currentRule != StyleRuleType::Style || state.propertyParserState.currentProperty == CSSPropertyInvalid)
+            return { };
+        return consumeZeroArguments<SiblingIndex>(tokens, depth, state);
 
     case CSSValueAnchor:
         return consumeAnchor(tokens, depth, state);
@@ -1055,12 +1569,14 @@ std::optional<TypedChild> parseCalcSum(CSSParserTokenRange& tokens, int depth, P
     if (checkDepth(depth) != ParseStatus::Ok)
         return std::nullopt;
 
+    auto originalTokens = tokens.span();
+
     auto firstValue = parseCalcProduct(tokens, depth, state);
     if (!firstValue)
         return std::nullopt;
 
     auto sumType = firstValue->type;
-    Children children;
+    Vector<Child> children;
 
     while (!tokens.atEnd()) {
         auto& token = tokens.peek();
@@ -1068,7 +1584,8 @@ std::optional<TypedChild> parseCalcSum(CSSParserTokenRange& tokens, int depth, P
         if (operatorCharacter != static_cast<char>(Calculation::Operator::Sum) && operatorCharacter != static_cast<char>(Calculation::Operator::Negate))
             break;
 
-        if (!CSSTokenizer::isWhitespace((&tokens.peek() - 1)->type()))
+        auto previousToken = originalTokens[tokens.begin() - originalTokens.data() - 1];
+        if (!CSSTokenizer::isWhitespace(previousToken.type()))
             return std::nullopt; // calc(1px+ 2px) is invalid
 
         tokens.consume();
@@ -1134,7 +1651,7 @@ std::optional<TypedChild> parseCalcProduct(CSSParserTokenRange& tokens, int dept
         return std::nullopt;
 
     auto productType = firstValue->type;
-    Children children;
+    Vector<Child> children;
 
     while (!tokens.atEnd()) {
         auto& token = tokens.peek();
@@ -1203,7 +1720,7 @@ std::optional<TypedChild> parseCalcValue(CSSParserTokenRange& tokens, int depth,
             return CSSValueCalc;
         }
 
-        if (auto functionId = tokens.peek().functionId(); isCalcFunction(functionId, state.parserContext))
+        if (auto functionId = tokens.peek().functionId(); isCalcFunction(functionId))
             return functionId;
         return std::nullopt;
     };
@@ -1302,5 +1819,3 @@ std::optional<TypedChild> parseCalcDimension(const CSSParserToken& token, Parser
 
 } // namespace CSSCalc
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

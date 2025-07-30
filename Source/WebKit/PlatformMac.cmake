@@ -65,9 +65,6 @@ list(APPEND WebKit_SOURCES
     Shared/Cocoa/XPCEndpoint.mm
     Shared/Cocoa/XPCEndpointClient.mm
 
-    UIProcess/QuickLookThumbnailLoader.mm
-    UIProcess/QuickLookThumbnailingSoftLink.mm
-
     UIProcess/API/Cocoa/WKContentWorld.mm
     UIProcess/API/Cocoa/_WKAuthenticationExtensionsClientOutputs.mm
     UIProcess/API/Cocoa/_WKAuthenticatorAssertionResponse.mm
@@ -84,6 +81,7 @@ list(APPEND WebKit_SOURCES
     UIProcess/Cocoa/XPCConnectionTerminationWatchdog.mm
 
     UIProcess/PDF/WKPDFHUDView.mm
+    UIProcess/PDF/WKPDFPageNumberIndicator.mm
 
     WebProcess/InjectedBundle/API/c/mac/WKBundlePageMac.mm
 

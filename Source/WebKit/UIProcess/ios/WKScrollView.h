@@ -26,11 +26,11 @@
 #if PLATFORM(IOS_FAMILY)
 
 #import "UIKitSPI.h"
-#import "WKVelocityTrackingScrollView.h"
+#import "WKBaseScrollView.h"
 
 @class WKWebView;
 
-@interface WKScrollView : WKVelocityTrackingScrollView
+@interface WKScrollView : WKBaseScrollView
 
 @property (nonatomic, assign) WKWebView <WKBEScrollViewDelegate> *internalDelegate;
 
@@ -42,6 +42,10 @@
 - (void)_setBouncesInternal:(BOOL)horizontal vertical:(BOOL)vertical;
 - (BOOL)_setContentScrollInsetInternal:(UIEdgeInsets)insets;
 - (void)_setDecelerationRateInternal:(UIScrollViewDecelerationRate)rate;
+
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+@property (nonatomic, setter=_setHiddenContentInsetFillEdges:) UIRectEdge _hiddenContentInsetFillEdges;
+#endif
 
 - (void)_resetContentInset;
 @property (nonatomic, readonly) BOOL _contentInsetWasExternallyOverridden;

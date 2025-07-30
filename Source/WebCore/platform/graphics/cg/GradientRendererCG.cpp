@@ -31,13 +31,19 @@
 #include "GradientColorStops.h"
 #include <pal/spi/cg/CoreGraphicsSPI.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
-GradientRendererCG::GradientRendererCG(ColorInterpolationMethod colorInterpolationMethod, const GradientColorStops& stops)
-    : m_strategy { pickStrategy(colorInterpolationMethod, stops) }
+GradientRendererCG::GradientRendererCG(ColorInterpolationMethod colorInterpolationMethod, const GradientColorStops& stops, std::optional<DestinationColorSpace> destinationColorSpace)
+    : m_strategy { pickStrategy(colorInterpolationMethod, stops, destinationColorSpace) }
 {
+}
+
+std::optional<DestinationColorSpace> GradientRendererCG::colorSpace() const
+{
+    if (auto* gradient = std::get_if<Gradient>(&m_strategy))
+        return gradient->colorSpace;
+
+    return { };
 }
 
 // MARK: - Strategy selection.
@@ -398,7 +404,7 @@ static bool anyComponentIsNone(const GradientColorStops& stops)
     return false;
 }
 
-GradientRendererCG::Strategy GradientRendererCG::pickStrategy(ColorInterpolationMethod colorInterpolationMethod, const GradientColorStops& stops) const
+GradientRendererCG::Strategy GradientRendererCG::pickStrategy(ColorInterpolationMethod colorInterpolationMethod, const GradientColorStops& stops, std::optional<DestinationColorSpace> destinationColorSpace) const
 {
     return WTF::switchOn(colorInterpolationMethod.colorSpace,
         [&] (const ColorInterpolationMethod::SRGB&) -> Strategy {
@@ -408,16 +414,16 @@ GradientRendererCG::Strategy GradientRendererCG::pickStrategy(ColorInterpolation
 
             switch (colorInterpolationMethod.alphaPremultiplication) {
             case AlphaPremultiplication::Unpremultiplied:
-                return makeGradient(colorInterpolationMethod, stops);
+                return makeGradient(colorInterpolationMethod, stops, destinationColorSpace);
             case AlphaPremultiplication::Premultiplied:
 #if HAVE(CORE_GRAPHICS_PREMULTIPLIED_INTERPOLATION_GRADIENT)
-                return makeGradient(colorInterpolationMethod, stops);
+                return makeGradient(colorInterpolationMethod, stops, destinationColorSpace);
 #else
                 switch (analyzeColorStopsForEmulatedAlphaPremultiplicationOpportunity(stops)) {
                 case EmulatedAlphaPremultiplicationAnalysisResult::UseGradientAsIs:
-                    return makeGradient({ ColorInterpolationMethod::SRGB { }, AlphaPremultiplication::Unpremultiplied }, stops);
+                    return makeGradient({ ColorInterpolationMethod::SRGB { }, AlphaPremultiplication::Unpremultiplied }, stops, destinationColorSpace);
                 case EmulatedAlphaPremultiplicationAnalysisResult::UseGradientWithAlphaTransforms:
-                    return makeGradient({ ColorInterpolationMethod::SRGB { }, AlphaPremultiplication::Unpremultiplied }, alphaTransformStopsToEmulateAlphaPremultiplication(stops));
+                    return makeGradient({ ColorInterpolationMethod::SRGB { }, AlphaPremultiplication::Unpremultiplied }, alphaTransformStopsToEmulateAlphaPremultiplication(stops), destinationColorSpace);
                 case EmulatedAlphaPremultiplicationAnalysisResult::UseShading:
                     return makeShading(colorInterpolationMethod, stops);
                 }
@@ -432,7 +438,7 @@ GradientRendererCG::Strategy GradientRendererCG::pickStrategy(ColorInterpolation
 
 // MARK: - Gradient strategy.
 
-GradientRendererCG::Strategy GradientRendererCG::makeGradient(ColorInterpolationMethod colorInterpolationMethod, const GradientColorStops& stops) const
+GradientRendererCG::Strategy GradientRendererCG::makeGradient(ColorInterpolationMethod colorInterpolationMethod, const GradientColorStops& stops, std::optional<DestinationColorSpace> destinationColorSpace) const
 {
     ASSERT_UNUSED(colorInterpolationMethod, std::holds_alternative<ColorInterpolationMethod::SRGB>(colorInterpolationMethod.colorSpace));
 #if !HAVE(CORE_GRAPHICS_PREMULTIPLIED_INTERPOLATION_GRADIENT)
@@ -487,11 +493,20 @@ GradientRendererCG::Strategy GradientRendererCG::makeGradient(ColorInterpolation
         // extended sRGB for all gradients.
         if (hasOnlyBoundedSRGBColorStops(stops)) {
             for (const auto& stop : stops) {
-                auto [r, g, b, a] = stop.color.toColorTypeLossy<SRGBA<float>>().resolved();
-                colorComponents.appendList({ r, g, b, a });
+                if (destinationColorSpace) {
+                    auto [r, g, b, a] = stop.color.toResolvedColorComponentsInColorSpace(*destinationColorSpace);
+                    colorComponents.appendList({ r, g, b, a });
+                } else {
+                    auto [r, g, b, a] = stop.color.toColorTypeLossy<SRGBA<float>>().resolved();
+                    colorComponents.appendList({ r, g, b, a });
+                }
 
                 locations.append(stop.offset);
             }
+
+            if (destinationColorSpace)
+                return destinationColorSpace->platformColorSpace();
+
             return cachedCGColorSpace<ColorSpaceFor<SRGBA<float>>>();
         }
 
@@ -529,16 +544,16 @@ GradientRendererCG::Strategy GradientRendererCG::makeGradient(ColorInterpolation
     apply139572277Workaround();
 
 #if HAVE(CORE_GRAPHICS_GRADIENT_CREATE_WITH_OPTIONS)
-    return Gradient { adoptCF(CGGradientCreateWithColorComponentsAndOptions(cgColorSpace, colorComponents.data(), locations.data(), numberOfStops, gradientOptionsDictionary(colorInterpolationMethod))) };
+    return Gradient { adoptCF(CGGradientCreateWithColorComponentsAndOptions(cgColorSpace, colorComponents.span().data(), locations.span().data(), numberOfStops, gradientOptionsDictionary(colorInterpolationMethod))), destinationColorSpace };
 #else
-    return Gradient { adoptCF(CGGradientCreateWithColorComponents(cgColorSpace, colorComponents.data(), locations.data(), numberOfStops)) };
+    return Gradient { adoptCF(CGGradientCreateWithColorComponents(cgColorSpace, colorComponents.span().data(), locations.span().data(), numberOfStops)), destinationColorSpace };
 #endif
 }
 
 // MARK: - Shading strategy.
 
 template<typename InterpolationSpace, AlphaPremultiplication alphaPremultiplication>
-void GradientRendererCG::Shading::shadingFunction(void* info, const CGFloat* in, CGFloat* out)
+void GradientRendererCG::Shading::shadingFunction(void* info, const CGFloat* rawIn, CGFloat* rawOut)
 {
     using InterpolationSpaceColorType = typename InterpolationSpace::ColorType;
     using OutputSpaceColorType = std::conditional_t<HasCGColorSpaceMapping<ColorSpace::ExtendedSRGB>, ExtendedSRGBA<float>, SRGBA<float>>;
@@ -546,6 +561,8 @@ void GradientRendererCG::Shading::shadingFunction(void* info, const CGFloat* in,
     auto* data = static_cast<GradientRendererCG::Shading::Data*>(info);
 
     // Compute color at offset 'in[0]' and assign the components to out[0 -> 3].
+    auto in = unsafeMakeSpan(rawIn, 1);
+    auto out = unsafeMakeSpan(rawOut, 4);
 
     float requestedOffset = in[0];
 
@@ -562,11 +579,21 @@ void GradientRendererCG::Shading::shadingFunction(void* info, const CGFloat* in,
     float offset = (stop1.offset == stop0.offset) ? 0.0f : (requestedOffset - stop0.offset) / (stop1.offset - stop0.offset);
 
     // 3. Interpolate the two stops' colors by the computed offset.
-    // FIXME: We don't want to due hue fixup for each call, so we should figure out how to precompute that.
-    auto interpolatedColor = interpolateColorComponents<alphaPremultiplication>(
-        std::get<InterpolationSpace>(data->colorInterpolationMethod().colorSpace),
-        makeFromComponents<InterpolationSpaceColorType>(stop0.colorComponents), 1.0f - offset,
-        makeFromComponents<InterpolationSpaceColorType>(stop1.colorComponents), offset);
+    // Synthetic color stops are added to extend the author-provided gradient out to 0 and 1
+    // with a solid color, if necessary. These need special handling because `longer hue` gradients
+    // would otherwise rotate through 360° of hue in these segments.
+    auto interpolatedColor = [&]() {
+        if (stop0.offset == 0.0f && data->firstStopIsSynthetic())
+            return makeFromComponents<InterpolationSpaceColorType>(stop0.colorComponents);
+
+        if (stop1.offset == 1.0f && data->lastStopIsSynthetic())
+            return makeFromComponents<InterpolationSpaceColorType>(stop1.colorComponents);
+
+        return interpolateColorComponents<alphaPremultiplication>(
+            std::get<InterpolationSpace>(data->colorInterpolationMethod().colorSpace),
+            makeFromComponents<InterpolationSpaceColorType>(stop0.colorComponents), 1.0f - offset,
+            makeFromComponents<InterpolationSpaceColorType>(stop1.colorComponents), offset);
+    }();
 
     // 4. Convert to the output color space.
     auto interpolatedColorConvertedToOutputSpace = asColorComponents(convertColor<OutputSpaceColorType>(interpolatedColor).resolved());
@@ -630,7 +657,7 @@ GradientRendererCG::Strategy GradientRendererCG::makeShading(ColorInterpolationM
         if (!hasZero)
             convertedStops[0].colorComponents = convertedStops[1].colorComponents;
 
-        return Shading::Data::create(colorInterpolationMethod, WTFMove(convertedStops));
+        return Shading::Data::create(colorInterpolationMethod, WTFMove(convertedStops), !hasZero, !hasOne);
     };
 
     auto makeFunction = [&] (auto colorInterpolationMethod, auto& data) {
@@ -729,5 +756,3 @@ void GradientRendererCG::drawConicGradient(CGContextRef platformContext, CGPoint
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

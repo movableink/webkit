@@ -103,7 +103,7 @@ public:
         , m_resourceDataSize(0)
         , m_subresources(0)
     {
-        g_signal_connect(m_webView, "resource-load-started", G_CALLBACK(resourceLoadStartedCallback), this);
+        g_signal_connect(m_webView.get(), "resource-load-started", G_CALLBACK(resourceLoadStartedCallback), this);
     }
 
     ~ResourcesTest()
@@ -126,7 +126,7 @@ public:
     virtual void resourceFinished(WebKitWebResource* resource)
     {
         g_signal_handlers_disconnect_matched(resource, G_SIGNAL_MATCH_DATA, 0, 0, 0, 0, this);
-        if (webkit_web_view_get_main_resource(m_webView) != resource)
+        if (webkit_web_view_get_main_resource(m_webView.get()) != resource)
             m_subresources = g_list_prepend(m_subresources, g_object_ref(resource));
         if (++m_resourcesLoaded == m_resourcesToLoad)
             g_main_loop_quit(m_mainLoop);
@@ -203,24 +203,24 @@ public:
 static void testWebViewResources(ResourcesTest* test, gconstpointer)
 {
     // Nothing loaded yet, there shoulnd't be resources.
-    g_assert_null(webkit_web_view_get_main_resource(test->m_webView));
+    g_assert_null(webkit_web_view_get_main_resource(test->webView()));
     g_assert_null(test->subresources());
 
     // Load simple page without subresources.
     test->loadHtml("<html><body>Testing WebKitGTK</body></html>", 0);
     test->waitUntilLoadFinished();
-    WebKitWebResource* resource = webkit_web_view_get_main_resource(test->m_webView);
+    WebKitWebResource* resource = webkit_web_view_get_main_resource(test->webView());
     g_assert_nonnull(resource);
-    g_assert_cmpstr(webkit_web_view_get_uri(test->m_webView), ==, webkit_web_resource_get_uri(resource));
+    g_assert_cmpstr(webkit_web_view_get_uri(test->webView()), ==, webkit_web_resource_get_uri(resource));
     g_assert_null(test->subresources());
 
     // Load simple page with subresources.
     test->loadURI(kServer->getURIForPath("/").data());
     test->waitUntilResourcesLoaded(4);
 
-    resource = webkit_web_view_get_main_resource(test->m_webView);
+    resource = webkit_web_view_get_main_resource(test->webView());
     g_assert_nonnull(resource);
-    g_assert_cmpstr(webkit_web_view_get_uri(test->m_webView), ==, webkit_web_resource_get_uri(resource));
+    g_assert_cmpstr(webkit_web_view_get_uri(test->webView()), ==, webkit_web_resource_get_uri(resource));
     GList* subresources = test->subresources();
     g_assert_nonnull(subresources);
     g_assert_cmpint(g_list_length(subresources), ==, 3);
@@ -233,7 +233,7 @@ static void testWebViewResources(ResourcesTest* test, gconstpointer)
 #endif
 
     // Reload.
-    webkit_web_view_reload_bypass_cache(test->m_webView);
+    webkit_web_view_reload_bypass_cache(test->webView());
     test->waitUntilResourcesLoaded(4);
 }
 
@@ -258,7 +258,7 @@ public:
 
     void resourceLoadStarted(WebKitWebResource* resource, WebKitURIRequest* request)
     {
-        if (resource == webkit_web_view_get_main_resource(m_webView))
+        if (resource == webkit_web_view_get_main_resource(m_webView.get()))
             return;
 
         m_resource = resource;
@@ -367,7 +367,7 @@ static void testWebResourceResponse(SingleResourceLoadTest* test, gconstpointer)
     g_assert_cmpint(webkit_uri_response_get_status_code(response), ==, SOUP_STATUS_OK);
 
     // No cached resource: Reload.
-    webkit_web_view_reload(test->m_webView);
+    webkit_web_view_reload(test->webView());
     response = test->waitUntilResourceLoadFinishedAndReturnURIResponse();
     g_assert_cmpint(webkit_uri_response_get_status_code(response), ==, SOUP_STATUS_OK);
 
@@ -382,7 +382,7 @@ static void testWebResourceResponse(SingleResourceLoadTest* test, gconstpointer)
     g_assert_cmpint(webkit_uri_response_get_status_code(response), ==, SOUP_STATUS_OK);
 
     // Cached resource: Reload.
-    webkit_web_view_reload(test->m_webView);
+    webkit_web_view_reload(test->webView());
     response = test->waitUntilResourceLoadFinishedAndReturnURIResponse();
     g_assert_cmpint(webkit_uri_response_get_status_code(response), ==, SOUP_STATUS_NOT_MODIFIED);
 }
@@ -435,7 +435,7 @@ public:
 
     void resourceLoadStarted(WebKitWebResource* resource, WebKitURIRequest* request)
     {
-        if (resource == webkit_web_view_get_main_resource(m_webView))
+        if (resource == webkit_web_view_get_main_resource(m_webView.get()))
             return;
 
         m_resource = resource;
@@ -497,7 +497,7 @@ static void testWebResourceGetData(ResourcesTest* test, gconstpointer)
     test->loadURI(kServer->getURIForPath("/").data());
     test->waitUntilResourcesLoaded(4);
 
-    WebKitWebResource* resource = webkit_web_view_get_main_resource(test->m_webView);
+    WebKitWebResource* resource = webkit_web_view_get_main_resource(test->webView());
     g_assert_nonnull(resource);
     test->checkResourceData(resource);
 
@@ -517,7 +517,7 @@ static void webViewLoadChanged(WebKitWebView* webView, WebKitLoadEvent loadEvent
 static void testWebResourceGetDataError(Test* test, gconstpointer)
 {
     GRefPtr<GMainLoop> mainLoop = adoptGRef(g_main_loop_new(nullptr, FALSE));
-    auto webView = Test::adoptView((Test::createWebView(test->m_webContext.get())));
+    auto webView = test->createWebView();
     webkit_web_view_load_html(webView.get(), "<html></html>", nullptr);
     g_signal_connect(webView.get(), "load-changed", G_CALLBACK(webViewLoadChanged), mainLoop.get());
     g_main_loop_run(mainLoop.get());
@@ -539,7 +539,7 @@ static void testWebResourceGetDataError(Test* test, gconstpointer)
 static void testWebResourceGetDataEmpty(Test* test, gconstpointer)
 {
     GRefPtr<GMainLoop> mainLoop = adoptGRef(g_main_loop_new(nullptr, FALSE));
-    auto webView = Test::adoptView(Test::createWebView(test->m_webContext.get()));
+    auto webView = test->createWebView();
     webkit_web_view_load_html(webView.get(), "", nullptr);
     g_signal_connect(webView.get(), "load-changed", G_CALLBACK(webViewLoadChanged), mainLoop.get());
     g_main_loop_run(mainLoop.get());
@@ -564,26 +564,26 @@ static void testWebViewResourcesHistoryCache(SingleResourceLoadTest* test, gcons
     CString javascriptURI = kServer->getURIForPath("/javascript.html");
     test->loadURI(javascriptURI.data());
     test->waitUntilResourceLoadFinished();
-    WebKitWebResource* resource = webkit_web_view_get_main_resource(test->m_webView);
+    WebKitWebResource* resource = webkit_web_view_get_main_resource(test->webView());
     g_assert_nonnull(resource);
     g_assert_cmpstr(webkit_web_resource_get_uri(resource), ==, javascriptURI.data());
 
     CString simpleStyleCSSURI = kServer->getURIForPath("/simple-style-css.html");
     test->loadURI(simpleStyleCSSURI.data());
     test->waitUntilResourceLoadFinished();
-    resource = webkit_web_view_get_main_resource(test->m_webView);
+    resource = webkit_web_view_get_main_resource(test->webView());
     g_assert_nonnull(resource);
     g_assert_cmpstr(webkit_web_resource_get_uri(resource), ==, simpleStyleCSSURI.data());
 
     test->goBack();
     test->waitUntilResourceLoadFinished();
-    resource = webkit_web_view_get_main_resource(test->m_webView);
+    resource = webkit_web_view_get_main_resource(test->webView());
     g_assert_nonnull(resource);
     g_assert_cmpstr(webkit_web_resource_get_uri(resource), ==, javascriptURI.data());
 
     test->goForward();
     test->waitUntilResourceLoadFinished();
-    resource = webkit_web_view_get_main_resource(test->m_webView);
+    resource = webkit_web_view_get_main_resource(test->webView());
     g_assert_nonnull(resource);
     g_assert_cmpstr(webkit_web_resource_get_uri(resource), ==, simpleStyleCSSURI.data());
 }
@@ -727,7 +727,7 @@ static void testWebViewSyncRequestOnMaxConns(SyncRequestOnMaxConnsTest* test, gc
 
     for (unsigned i = 0; i < 2; ++i) {
         GUniquePtr<char> xhr(g_strdup_printf("xhr = new XMLHttpRequest; xhr.open('GET', '/sync-request-on-max-conns-xhr%u', false); xhr.send();", i));
-        webkit_web_view_evaluate_javascript(test->m_webView, xhr.get(), -1, nullptr, nullptr, nullptr, nullptr, nullptr);
+        webkit_web_view_evaluate_javascript(test->webView(), xhr.get(), -1, nullptr, nullptr, nullptr, nullptr, nullptr);
     }
 
     // By default sync XHRs have a 10 seconds timeout, we don't want to wait all that so use our own timeout.

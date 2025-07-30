@@ -31,6 +31,7 @@
 #include "CryptoAlgorithmEcdsaParams.h"
 #include "CryptoDigestAlgorithm.h"
 #include "CryptoKeyEC.h"
+#include "ExceptionOr.h"
 #include <wtf/StdLibExtras.h>
 
 #if HAVE(SWIFT_CPP_INTEROP)
@@ -93,7 +94,7 @@ static ExceptionOr<Vector<uint8_t>> signECDSA(CryptoAlgorithmIdentifier hash, co
     size_t bytesToCopy = keyLengthInBytes;
     if (signature[offset] < keyLengthInBytes) {
         newSignature.grow(keyLengthInBytes - signature[offset]);
-        memset(newSignature.data(), InitialOctet, keyLengthInBytes - signature[offset]);
+        memsetSpan(newSignature.mutableSpan().first(keyLengthInBytes - signature[offset]), InitialOctet);
         bytesToCopy = signature[offset];
     } else if (signature[offset] > keyLengthInBytes) // Otherwise skip the leading 0s of r.
         offset += signature[offset] - keyLengthInBytes;

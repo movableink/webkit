@@ -30,7 +30,9 @@
 
 #include "Document.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "FrameDestructionObserverInlines.h"
+#include "FrameInlines.h"
 #include "LocalFrame.h"
 #include "Page.h"
 #include "PlatformSpeechSynthesisVoice.h"
@@ -178,7 +180,9 @@ void SpeechSynthesis::cancel()
     // Remove all the items from the utterance queue.
     // Hold on to the current utterance so the platform synthesizer can have a chance to clean up.
     RefPtr current = protectedCurrentSpeechUtterance();
-    m_utteranceQueue.clear();
+    // Clear m_utteranceQueue before calling cancel to avoid picking up new utterances
+    // on completion callback
+    auto utteranceQueue = WTFMove(m_utteranceQueue);
     if (RefPtr speechSynthesisClient = m_speechSynthesisClient.get()) {
         speechSynthesisClient->cancel();
         // If we wait for cancel to callback speakingErrorOccurred, then m_currentSpeechUtterance will be null
@@ -187,6 +191,14 @@ void SpeechSynthesis::cancel()
         m_currentSpeechUtterance = nullptr;
     } else if (m_platformSpeechSynthesizer)
         m_platformSpeechSynthesizer->cancel();
+
+    // Trigger canceled events for queued utterances
+    while (!utteranceQueue.isEmpty()) {
+        const auto utterance = utteranceQueue.takeFirst();
+        // Current utterance is handled in platform cancel()
+        if (current.get() != utterance.ptr())
+            utterance.get().errorEventOccurred(eventNames().errorEvent, SpeechSynthesisErrorCode::Canceled);
+    }
 
     current = nullptr;
 }

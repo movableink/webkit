@@ -173,6 +173,8 @@ WK_EXPORT bool WKPreferencesGetAudioPlaybackRequiresUserGesture(WKPreferencesRef
 WK_EXPORT void WKPreferencesSetMainContentUserGestureOverrideEnabled(WKPreferencesRef preferencesRef, bool flag);
 WK_EXPORT bool WKPreferencesGetMainContentUserGestureOverrideEnabled(WKPreferencesRef preferencesRef);
 
+WK_EXPORT bool WKPreferencesGetVerifyUserGestureInUIProcessEnabled(WKPreferencesRef preferencesRef);
+
 // Defaults to 10.0.
 WK_EXPORT void WKPreferencesSetManagedMediaSourceLowThreshold(WKPreferencesRef preferencesRef, double threshold);
 WK_EXPORT double WKPreferencesGetManagedMediaSourceLowThreshold(WKPreferencesRef preferencesRef);
@@ -442,10 +444,6 @@ WK_EXPORT bool WKPreferencesGetMediaUserGestureInheritsFromDocument(WKPreference
 // Defaults to an empty string
 WK_EXPORT void WKPreferencesSetMediaContentTypesRequiringHardwareSupport(WKPreferencesRef, WKStringRef);
 WK_EXPORT WKStringRef WKPreferencesCopyMediaContentTypesRequiringHardwareSupport(WKPreferencesRef);
-    
-// Defaults to false.
-WK_EXPORT void WKPreferencesSetCSSOMViewScrollingAPIEnabled(WKPreferencesRef, bool);
-WK_EXPORT bool WKPreferencesGetCSSOMViewScrollingAPIEnabled(WKPreferencesRef);
 
 // Defaults to true.
 WK_EXPORT void WKPreferencesSetShouldAllowUserInstalledFonts(WKPreferencesRef, bool flag);
@@ -462,6 +460,8 @@ WK_EXPORT bool WKPreferencesGetPunchOutWhiteBackgroundsInDarkMode(WKPreferencesR
 
 // The following are all deprecated and do nothing. They should be removed when possible.
 
+WK_EXPORT void WKPreferencesSetCSSOMViewScrollingAPIEnabled(WKPreferencesRef, bool) WK_C_API_DEPRECATED;
+WK_EXPORT bool WKPreferencesGetCSSOMViewScrollingAPIEnabled(WKPreferencesRef) WK_C_API_DEPRECATED;
 WK_EXPORT void WKPreferencesSetPageCacheSupportsPlugins(WKPreferencesRef, bool) WK_C_API_DEPRECATED;
 WK_EXPORT bool WKPreferencesGetPageCacheSupportsPlugins(WKPreferencesRef) WK_C_API_DEPRECATED;
 WK_EXPORT void WKPreferencesSetAsynchronousPluginInitializationEnabled(WKPreferencesRef, bool) WK_C_API_DEPRECATED;

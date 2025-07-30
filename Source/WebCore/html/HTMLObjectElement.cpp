@@ -38,6 +38,7 @@
 #include "LocalFrame.h"
 #include "MIMETypeRegistry.h"
 #include "NodeList.h"
+#include "NodeInlines.h"
 #include "NodeName.h"
 #include "Page.h"
 #include "RenderEmbeddedObject.h"
@@ -159,7 +160,7 @@ static void mapDataParamToSrc(Vector<AtomString>& paramNames, Vector<AtomString>
 void HTMLObjectElement::parametersForPlugin(Vector<AtomString>& paramNames, Vector<AtomString>& paramValues)
 {
     if (hasAttributes()) {
-        for (const Attribute& attribute : attributesIterator()) {
+        for (auto& attribute : attributes()) {
             paramNames.append(attribute.name().localName());
             paramValues.append(attribute.value());
         }

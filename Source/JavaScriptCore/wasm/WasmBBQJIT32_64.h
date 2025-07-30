@@ -357,6 +357,7 @@ void BBQJIT::emitCCall(Func function, const Vector<Value, N>& arguments, Value& 
     case TypeKind::Externref:
     case TypeKind::Eqref:
     case TypeKind::Anyref:
+    case TypeKind::Nullexn:
     case TypeKind::Nullref:
     case TypeKind::Nullfuncref:
     case TypeKind::Nullexternref:
@@ -388,11 +389,11 @@ void BBQJIT::emitCCall(Func function, const Vector<Value, N>& arguments, Value& 
 
     RegisterBinding currentBinding;
     if (resultLocation.isGPR())
-        currentBinding = m_gprBindings[resultLocation.asGPR()];
+        currentBinding = gprBindings()[resultLocation.asGPR()];
     else if (resultLocation.isFPR())
-        currentBinding = m_fprBindings[resultLocation.asFPR()];
+        currentBinding = fprBindings()[resultLocation.asFPR()];
     else if (resultLocation.isGPR2())
-        currentBinding = m_gprBindings[resultLocation.asGPRhi()];
+        currentBinding = gprBindings()[resultLocation.asGPRhi()];
     RELEASE_ASSERT(!currentBinding.isScratch());
 
     bind(result, resultLocation);

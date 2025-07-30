@@ -30,6 +30,7 @@
 #include "FrameDestructionObserverInlines.h"
 #include "DocumentFragment.h"
 #include "Pasteboard.h"
+#include "SimpleRange.h"
 
 namespace WebCore {
 

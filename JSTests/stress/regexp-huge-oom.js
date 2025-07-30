@@ -22,12 +22,13 @@ function shouldThrow(run, errorType)
     if (!hadError)
         throw new Error("Expected " + run + "() to throw " + errorType.name + ", but did not throw.");
     if (!(actual instanceof errorType))
-        throw new Error("Expeced " + run + "() to throw " + errorType.name + " , but threw '" + actual + "'");
+        throw new Error("Expected " + run + "() to throw " + errorType.name + " , but threw '" + actual + "'");
 }
 
 // This should throw during pattern compilation.
 shouldThrow(() => RegExp('a?'.repeat(2**19) + 'b').exec('x'), SyntaxError);
 
-// This test should fail execution in the JIT'ed code and then fall back to the interpreter ans succeed.
-shouldBe(RegExp('a?'.repeat(2**19)).exec('x')[0], "");
+var r1 = RegExp('a?'.repeat(2**19));
+shouldBe(JSON.stringify(r1.exec('x')), `[""]`);
+shouldBe(JSON.stringify(r1.exec('x')), `[""]`);
 

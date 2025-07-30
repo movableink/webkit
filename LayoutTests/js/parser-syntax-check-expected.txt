@@ -468,7 +468,7 @@ PASS Invalid: "for ( %a ; ; ) { }". Produced the following syntax error: "Syntax
 PASS Invalid: "function f() { for ( %a ; ; ) { } }". Produced the following syntax error: "SyntaxError: Unexpected token '%'"
 PASS Valid:   "for (a in b) break" with ReferenceError
 PASS Valid:   "function f() { for (a in b) break }"
-PASS Valid:   "for (a() in b) break" with ReferenceError
+PASS Valid:   "for (a() in b) break" with TypeError
 PASS Valid:   "function f() { for (a() in b) break }"
 PASS Valid:   "for (a().l[4] in b) break" with ReferenceError
 PASS Valid:   "function f() { for (a().l[4] in b) break }"
@@ -639,7 +639,7 @@ PASS Valid:   "try {} catch {}"
 PASS Valid:   "function f() { try {} catch {} }"
 PASS Valid:   "if (a) try {} finally {} else b;"
 PASS Valid:   "function f() { if (a) try {} finally {} else b; }"
-PASS Valid:   "if (--a()) do with(1) try {} catch(ke) { f() ; g() } while (a in b) else {}" with ReferenceError
+PASS Valid:   "if (--a()) do with(1) try {} catch(ke) { f() ; g() } while (a in b) else {}" with TypeError
 PASS Valid:   "function f() { if (--a()) do with(1) try {} catch(ke) { f() ; g() } while (a in b) else {} }"
 PASS Invalid: "if (a) try {} else b; catch (e) { }". Produced the following syntax error: "SyntaxError: Unexpected keyword 'else'. Try statements must have at least a catch or finally block."
 PASS Invalid: "function f() { if (a) try {} else b; catch (e) { } }". Produced the following syntax error: "SyntaxError: Unexpected keyword 'else'. Try statements must have at least a catch or finally block."

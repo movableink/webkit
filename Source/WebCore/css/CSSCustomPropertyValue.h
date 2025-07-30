@@ -31,9 +31,9 @@
 #include "Length.h"
 #include "StyleColor.h"
 #include "StyleImage.h"
+#include "StyleURL.h"
 #include "TransformOperation.h"
 #include <wtf/PointerComparison.h>
-#include <wtf/URL.h>
 
 namespace WebCore {
 
@@ -53,7 +53,7 @@ public:
         bool operator==(const TransformSyntaxValue& other) const { return transform.get() == other.transform.get(); }
     };
 
-    using SyntaxValue = std::variant<Length, NumericSyntaxValue, Style::Color, RefPtr<StyleImage>, URL, String, TransformSyntaxValue>;
+    using SyntaxValue = Variant<Length, NumericSyntaxValue, Style::Color, RefPtr<StyleImage>, Style::URL, String, TransformSyntaxValue>;
 
     struct SyntaxValueList {
         Vector<SyntaxValue> values;
@@ -62,20 +62,20 @@ public:
         friend bool operator==(const SyntaxValueList&, const SyntaxValueList&) = default;
     };
 
-    using VariantValue = std::variant<Ref<CSSVariableReferenceValue>, CSSValueID, Ref<CSSVariableData>, SyntaxValue, SyntaxValueList>;
+    using VariantValue = Variant<Ref<CSSVariableReferenceValue>, CSSValueID, Ref<CSSVariableData>, SyntaxValue, SyntaxValueList>;
 
     static Ref<CSSCustomPropertyValue> createEmpty(const AtomString& name);
 
     static Ref<CSSCustomPropertyValue> createUnresolved(const AtomString& name, Ref<CSSVariableReferenceValue>&& value)
     {
-        return adoptRef(*new CSSCustomPropertyValue(name, VariantValue { std::in_place_type<Ref<CSSVariableReferenceValue>>, WTFMove(value) }));
+        return adoptRef(*new CSSCustomPropertyValue(name, VariantValue { WTF::InPlaceType<Ref<CSSVariableReferenceValue>>, WTFMove(value) }));
     }
 
     static Ref<CSSCustomPropertyValue> createWithID(const AtomString& name, CSSValueID);
 
     static Ref<CSSCustomPropertyValue> createSyntaxAll(const AtomString& name, Ref<CSSVariableData>&& value)
     {
-        return adoptRef(*new CSSCustomPropertyValue(name, VariantValue { std::in_place_type<Ref<CSSVariableData>>, WTFMove(value) }));
+        return adoptRef(*new CSSCustomPropertyValue(name, VariantValue { WTF::InPlaceType<Ref<CSSVariableData>>, WTFMove(value) }));
     }
 
     static Ref<CSSCustomPropertyValue> createForSyntaxValue(const AtomString& name, SyntaxValue&& syntaxValue)
@@ -88,7 +88,7 @@ public:
         return adoptRef(*new CSSCustomPropertyValue(name, VariantValue { WTFMove(syntaxValueList) }));
     }
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
 
     const AtomString& name() const { return m_name; }
     bool isResolved() const { return !std::holds_alternative<Ref<CSSVariableReferenceValue>>(m_value); }
@@ -109,7 +109,7 @@ public:
 
     bool customMayDependOnBaseURL() const;
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
     {
         if (auto* value = std::get_if<Ref<CSSVariableReferenceValue>>(&m_value)) {
             if (func(*value) == IterationStatus::Done)

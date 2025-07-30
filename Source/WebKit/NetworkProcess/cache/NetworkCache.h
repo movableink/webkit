@@ -45,9 +45,10 @@
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+class FragmentedSharedBuffer;
 class LowPowerModeNotifier;
 class ResourceRequest;
-class FragmentedSharedBuffer;
+class ThermalMitigationNotifier;
 enum class AdvancedPrivacyProtections : uint16_t;
 }
 
@@ -148,9 +149,7 @@ enum class CacheOption : uint8_t {
     // In testing mode we try to eliminate sources of randomness. Cache does not shrink and there are no read timeouts.
     TestingMode = 1 << 0,
     RegisterNotify = 1 << 1,
-#if ENABLE(NETWORK_CACHE_SPECULATIVE_REVALIDATION)
     SpeculativeRevalidation = 1 << 2,
-#endif
 };
 
 class Cache : public RefCountedAndCanMakeWeakPtr<Cache> {
@@ -197,13 +196,9 @@ public:
 
     String recordsPathIsolatedCopy() const;
 
-#if ENABLE(NETWORK_CACHE_SPECULATIVE_REVALIDATION)
     SpeculativeLoadManager* speculativeLoadManager() { return m_speculativeLoadManager.get(); }
-#endif
 
-#if ENABLE(NETWORK_CACHE_STALE_WHILE_REVALIDATE)
     void startAsyncRevalidationIfNeeded(const WebCore::ResourceRequest&, const NetworkCache::Key&, std::unique_ptr<Entry>&&, const GlobalFrameID&, std::optional<NavigatingToAppBoundDomain>, bool allowPrivacyProxy, OptionSet<WebCore::AdvancedPrivacyProtections>);
-#endif
 
     void browsingContextRemoved(WebPageProxyIdentifier, WebCore::PageIdentifier, WebCore::FrameIdentifier);
 
@@ -229,18 +224,18 @@ private:
 
     Ref<Storage> protectedStorage() const { return m_storage; }
 
-    Ref<Storage> m_storage;
-    Ref<NetworkProcess> m_networkProcess;
+    const Ref<Storage> m_storage;
+    const Ref<NetworkProcess> m_networkProcess;
 
-#if ENABLE(NETWORK_CACHE_SPECULATIVE_REVALIDATION)
+    bool shouldUseSpeculativeLoadManager() const;
+    void updateSpeculativeLoadManagerEnabledState();
+
     std::unique_ptr<WebCore::LowPowerModeNotifier> m_lowPowerModeNotifier;
+    std::unique_ptr<WebCore::ThermalMitigationNotifier> m_thermalMitigationNotifier;
     std::unique_ptr<SpeculativeLoadManager> m_speculativeLoadManager;
-#endif
 
-#if ENABLE(NETWORK_CACHE_STALE_WHILE_REVALIDATE)
     HashMap<Key, Ref<AsyncRevalidation>> m_pendingAsyncRevalidations;
     HashMap<GlobalFrameID, WeakHashSet<AsyncRevalidation>> m_pendingAsyncRevalidationByPage;
-#endif
 
     unsigned m_traverseCount { 0 };
     PAL::SessionID m_sessionID;

@@ -11,6 +11,8 @@
 #ifndef LIBANGLE_RENDERER_VULKAN_VK_CACHE_UTILS_H_
 #define LIBANGLE_RENDERER_VULKAN_VK_CACHE_UTILS_H_
 
+#include <deque>
+
 #include "common/Color.h"
 #include "common/FixedVector.h"
 #include "common/SimpleMutex.h"
@@ -61,6 +63,7 @@ enum class DescriptorSetIndex : uint32_t
 
 namespace vk
 {
+class Context;
 class BufferHelper;
 class DynamicDescriptorPool;
 class SamplerHelper;
@@ -297,7 +300,7 @@ class alignas(4) RenderPassDesc final
     }
 
     // Start a render pass with a render pass object.
-    void beginRenderPass(Context *context,
+    void beginRenderPass(ErrorContext *context,
                          PrimaryCommandBuffer *primary,
                          const RenderPass &renderPass,
                          VkFramebuffer framebuffer,
@@ -307,7 +310,7 @@ class alignas(4) RenderPassDesc final
                          const VkRenderPassAttachmentBeginInfo *attachmentBeginInfo) const;
 
     // Start a render pass with dynamic rendering.
-    void beginRendering(Context *context,
+    void beginRendering(ErrorContext *context,
                         PrimaryCommandBuffer *primary,
                         const gl::Rectangle &renderArea,
                         VkSubpassContents subpassContents,
@@ -324,7 +327,7 @@ class alignas(4) RenderPassDesc final
     // Calculate perf counters for a dynamic rendering render pass instance.  For render pass
     // objects, the perf counters are updated when creating the render pass, where access to
     // ContextVk is available.
-    void updatePerfCounters(Context *context,
+    void updatePerfCounters(ErrorContext *context,
                             const FramebufferAttachmentsVector<VkImageView> &attachmentViews,
                             const AttachmentOpsArray &ops,
                             angle::VulkanPerfCounters *countersOut);
@@ -408,10 +411,8 @@ static_assert(kRenderPassDescSize == 16, "Size check failed");
 
 enum class GraphicsPipelineSubset
 {
-    Complete,  // Including all subsets
-    VertexInput,
-    Shaders,
-    FragmentOutput,
+    Complete,  // Include all subsets
+    Shaders,   // Include only the shader subsets, excluding vertex input and fragment output state.
 };
 
 enum class CacheLookUpFeedback
@@ -462,8 +463,11 @@ class AttachmentOpsArray final
     AttachmentOpsArray(const AttachmentOpsArray &other);
     AttachmentOpsArray &operator=(const AttachmentOpsArray &other);
 
-    const PackedAttachmentOpsDesc &operator[](PackedAttachmentIndex index) const;
-    PackedAttachmentOpsDesc &operator[](PackedAttachmentIndex index);
+    const PackedAttachmentOpsDesc &operator[](PackedAttachmentIndex index) const
+    {
+        return mOps[index.get()];
+    }
+    PackedAttachmentOpsDesc &operator[](PackedAttachmentIndex index) { return mOps[index.get()]; }
 
     // Initialize an attachment op with all load and store operations.
     void initWithLoadStore(PackedAttachmentIndex index,
@@ -594,13 +598,12 @@ struct PackedPreRasterizationAndFragmentStates final
         // Dynamic in VK_EXT_extended_dynamic_state2
         uint32_t depthCompareOp : 4;
 
-        // Affecting specialization constants
-        uint32_t surfaceRotation : 1;
-
         // Whether the pipeline is robust (shader stages copy)
         uint32_t isRobustContext : 1;
         // Whether the pipeline needs access to protected content (shader stages copy)
         uint32_t isProtectedContext : 1;
+
+        uint32_t padding : 1;
     } bits;
 
     // Affecting specialization constants
@@ -807,6 +810,91 @@ enum class PipelineProtectedAccess
     Protected,
 };
 
+// Context state that can affect a compute pipeline
+union ComputePipelineOptions final
+{
+    struct
+    {
+        // Whether VK_EXT_pipeline_robustness should be used to make the pipeline robust.  Note that
+        // programs are allowed to be shared between robust and non-robust contexts, so different
+        // pipelines can be created for the same compute program.
+        uint8_t robustness : 1;
+        // Whether VK_EXT_pipeline_protected_access should be used to make the pipeline
+        // protected-only. Similar to robustness, EGL allows protected and unprotected to be in the
+        // same share group.
+        uint8_t protectedAccess : 1;
+        uint8_t reserved : 6;  // must initialize to zero
+    };
+    uint8_t permutationIndex;
+    static constexpr uint32_t kPermutationCount = 0x1 << 2;
+};
+static_assert(sizeof(ComputePipelineOptions) == 1, "Size check failed");
+ComputePipelineOptions GetComputePipelineOptions(vk::PipelineRobustness robustness,
+                                                 vk::PipelineProtectedAccess protectedAccess);
+
+// Compute Pipeline Description
+class ComputePipelineDesc final
+{
+  public:
+    void *operator new(std::size_t size);
+    void operator delete(void *ptr);
+
+    ComputePipelineDesc();
+    ComputePipelineDesc(const ComputePipelineDesc &other);
+    ComputePipelineDesc &operator=(const ComputePipelineDesc &other);
+
+    ComputePipelineDesc(VkSpecializationInfo *specializationInfo,
+                        vk::ComputePipelineOptions pipelineOptions);
+    ~ComputePipelineDesc() = default;
+
+    size_t hash() const;
+    bool keyEqual(const ComputePipelineDesc &other) const;
+
+    template <typename T>
+    const T *getPtr() const
+    {
+        return reinterpret_cast<const T *>(this);
+    }
+
+    std::vector<uint32_t> getConstantIds() const { return mConstantIds; }
+    std::vector<uint32_t> getConstants() const { return mConstants; }
+    ComputePipelineOptions getPipelineOptions() const { return mPipelineOptions; }
+
+  private:
+    std::vector<uint32_t> mConstantIds, mConstants;
+    ComputePipelineOptions mPipelineOptions = {};
+    char mPadding[7]                        = {};
+};
+
+class PipelineHelper;
+
+// When a graphics pipeline is created, the shaders state is either directly specified (monolithic
+// pipeline) or is specified in a pipeline library.  This struct encapsulates the choices.
+struct GraphicsPipelineShadersInfo final
+{
+  public:
+    GraphicsPipelineShadersInfo(const ShaderModuleMap *shaders,
+                                const SpecializationConstants *specConsts)
+        : mShaders(shaders), mSpecConsts(specConsts)
+    {}
+    GraphicsPipelineShadersInfo(vk::PipelineHelper *pipelineLibrary)
+        : mPipelineLibrary(pipelineLibrary)
+    {}
+
+    vk::PipelineHelper *pipelineLibrary() const { return mPipelineLibrary; }
+    bool usePipelineLibrary() const { return mPipelineLibrary != nullptr; }
+
+  private:
+    // If the shaders state should be directly specified in the final pipeline.
+    const ShaderModuleMap *mShaders            = nullptr;
+    const SpecializationConstants *mSpecConsts = nullptr;
+
+    // If the shaders state is provided via a pipeline library.
+    vk::PipelineHelper *mPipelineLibrary = nullptr;
+
+    friend class GraphicsPipelineDesc;
+};
+
 // State changes are applied through the update methods. Each update method can also have a
 // sibling method that applies the update without marking a state transition. The non-transition
 // update methods are used for internal shader pipelines. Not every non-transition update method
@@ -826,7 +914,7 @@ class GraphicsPipelineDesc final
     size_t hash(GraphicsPipelineSubset subset) const;
     bool keyEqual(const GraphicsPipelineDesc &other, GraphicsPipelineSubset subset) const;
 
-    void initDefaults(const Context *context,
+    void initDefaults(const ErrorContext *context,
                       GraphicsPipelineSubset subset,
                       PipelineRobustness contextRobustness,
                       PipelineProtectedAccess contextProtectedAccess);
@@ -838,13 +926,12 @@ class GraphicsPipelineDesc final
         return reinterpret_cast<const T *>(this);
     }
 
-    VkResult initializePipeline(Context *context,
+    VkResult initializePipeline(ErrorContext *context,
                                 PipelineCacheAccess *pipelineCache,
                                 GraphicsPipelineSubset subset,
                                 const RenderPass &compatibleRenderPass,
                                 const PipelineLayout &pipelineLayout,
-                                const ShaderModuleMap &shaders,
-                                const SpecializationConstants &specConsts,
+                                const GraphicsPipelineShadersInfo &shaders,
                                 Pipeline *pipelineOut,
                                 CacheLookUpFeedback *feedbackOut) const;
 
@@ -1000,10 +1087,6 @@ class GraphicsPipelineDesc final
     void setSubpass(uint32_t subpass);
     uint32_t getSubpass() const;
 
-    void updateSurfaceRotation(GraphicsPipelineTransitionBits *transition,
-                               bool isRotatedAspectRatio);
-    bool getSurfaceRotation() const { return mShaders.shaders.bits.surfaceRotation; }
-
     void updateEmulatedDitherControl(GraphicsPipelineTransitionBits *transition, uint16_t value);
     uint32_t getEmulatedDitherControl() const { return mShaders.shaders.emulatedDitherControl; }
 
@@ -1021,7 +1104,7 @@ class GraphicsPipelineDesc final
         mShaders.shaders.bits.nonZeroStencilWriteMaskWorkaround                 = false;
     }
 
-    static VkFormat getPipelineVertexInputStateFormat(Context *context,
+    static VkFormat getPipelineVertexInputStateFormat(ErrorContext *context,
                                                       angle::FormatID formatID,
                                                       bool compressed,
                                                       const gl::ComponentType programAttribType,
@@ -1039,30 +1122,40 @@ class GraphicsPipelineDesc final
         return mFragmentOutput;
     }
 
+    bool hasPipelineProtectedAccess() const
+    {
+        ASSERT(mShaders.shaders.bits.isProtectedContext ==
+               mVertexInput.inputAssembly.bits.isProtectedContext);
+        ASSERT(mShaders.shaders.bits.isProtectedContext ==
+               mFragmentOutput.blendMaskAndLogic.bits.isProtectedContext);
+
+        return mShaders.shaders.bits.isProtectedContext;
+    }
+
   private:
     void updateSubpass(GraphicsPipelineTransitionBits *transition, uint32_t subpass);
 
     const void *getPipelineSubsetMemory(GraphicsPipelineSubset subset, size_t *sizeOut) const;
 
     void initializePipelineVertexInputState(
-        Context *context,
+        ErrorContext *context,
         GraphicsPipelineVertexInputVulkanStructs *stateOut,
         GraphicsPipelineDynamicStateList *dynamicStateListOut) const;
 
     void initializePipelineShadersState(
-        Context *context,
+        ErrorContext *context,
         const ShaderModuleMap &shaders,
         const SpecializationConstants &specConsts,
         GraphicsPipelineShadersVulkanStructs *stateOut,
         GraphicsPipelineDynamicStateList *dynamicStateListOut) const;
 
     void initializePipelineSharedNonVertexInputState(
-        Context *context,
+        ErrorContext *context,
         GraphicsPipelineSharedNonVertexInputVulkanStructs *stateOut,
         GraphicsPipelineDynamicStateList *dynamicStateListOut) const;
 
     void initializePipelineFragmentOutputState(
-        Context *context,
+        ErrorContext *context,
         GraphicsPipelineFragmentOutputVulkanStructs *stateOut,
         GraphicsPipelineDynamicStateList *dynamicStateListOut) const;
 
@@ -1234,7 +1327,7 @@ class YcbcrConversionDesc final
     void updateConversionModel(VkSamplerYcbcrModelConversion conversionModel);
     uint64_t getExternalFormat() const { return mIsExternalFormat ? mExternalOrVkFormat : 0; }
 
-    angle::Result init(Context *context, SamplerYcbcrConversion *conversionOut) const;
+    angle::Result init(ErrorContext *context, SamplerYcbcrConversion *conversionOut) const;
 
   private:
     // If the sampler needs to convert the image content (e.g. from YUV to RGB) then
@@ -1276,7 +1369,7 @@ class SamplerDesc final
 {
   public:
     SamplerDesc();
-    SamplerDesc(Context *context,
+    SamplerDesc(ErrorContext *context,
                 const gl::SamplerState &samplerState,
                 bool stencilMode,
                 const YcbcrConversionDesc *ycbcrConversionDesc,
@@ -1341,8 +1434,6 @@ static_assert(sizeof(SamplerDesc) == 56, "Unexpected SamplerDesc size");
 
 // Disable warnings about struct padding.
 ANGLE_DISABLE_STRUCT_PADDING_WARNINGS
-
-class PipelineHelper;
 
 struct GraphicsPipelineTransition
 {
@@ -1411,14 +1502,14 @@ class PipelineCacheAccess
         mMutex         = mutex;
     }
 
-    VkResult createGraphicsPipeline(vk::Context *context,
+    VkResult createGraphicsPipeline(vk::ErrorContext *context,
                                     const VkGraphicsPipelineCreateInfo &createInfo,
                                     vk::Pipeline *pipelineOut);
-    VkResult createComputePipeline(vk::Context *context,
+    VkResult createComputePipeline(vk::ErrorContext *context,
                                    const VkComputePipelineCreateInfo &createInfo,
                                    vk::Pipeline *pipelineOut);
 
-    VkResult getCacheData(vk::Context *context, size_t *cacheSize, void *cacheData);
+    VkResult getCacheData(vk::ErrorContext *context, size_t *cacheSize, void *cacheData);
 
     void merge(Renderer *renderer, const vk::PipelineCache &pipelineCache);
 
@@ -1434,7 +1525,7 @@ class PipelineCacheAccess
 // Monolithic pipeline creation tasks are created as soon as a pipeline is created out of libraries.
 // However, they are not immediately posted to the worker queue to allow pacing.  On each use of a
 // pipeline, an attempt is made to post the task.
-class CreateMonolithicPipelineTask : public Context, public angle::Closure
+class CreateMonolithicPipelineTask : public ErrorContext, public angle::Closure
 {
   public:
     CreateMonolithicPipelineTask(Renderer *renderer,
@@ -1520,7 +1611,7 @@ class PipelineHelper final : public Resource
     PipelineHelper &operator=(PipelineHelper &&other);
 
     void destroy(VkDevice device);
-    void release(Context *context);
+    void release(ErrorContext *context);
 
     bool valid() const { return mPipeline.valid(); }
     const Pipeline &getPipeline() const { return mPipeline; }
@@ -1551,7 +1642,7 @@ class PipelineHelper final : public Resource
                        const GraphicsPipelineDesc *desc,
                        PipelineHelper *pipeline);
 
-    const std::vector<GraphicsPipelineTransition> getTransitions() const { return mTransitions; }
+    const std::vector<GraphicsPipelineTransition> &getTransitions() const { return mTransitions; }
 
     void setComputePipeline(Pipeline &&pipeline, CacheLookUpFeedback feedback)
     {
@@ -1582,8 +1673,7 @@ class PipelineHelper final : public Resource
 
     // The list of pipeline helpers that were referenced when creating a linked pipeline.  These
     // pipelines must be kept alive, so their serial is updated at the same time as this object.
-    // Not necessary for vertex input and fragment output as they stay alive until context's
-    // destruction.
+    // The shaders pipeline is the only library so far.
     PipelineHelper *mLinkedShaders = nullptr;
 
     // If pipeline libraries are used and monolithic pipelines are created in parallel, this is the
@@ -1608,7 +1698,7 @@ class FramebufferHelper : public Resource
     FramebufferHelper(FramebufferHelper &&other);
     FramebufferHelper &operator=(FramebufferHelper &&other);
 
-    angle::Result init(Context *context, const VkFramebufferCreateInfo &createInfo);
+    angle::Result init(ErrorContext *context, const VkFramebufferCreateInfo &createInfo);
     void destroy(Renderer *renderer);
     void release(ContextVk *contextVk);
 
@@ -1651,7 +1741,7 @@ struct ImageSubresourceRange
     uint32_t level : 10;
     // Max 31 levels (2 ** 5 - 1). Can store levelCount-1 if we need to save another bit.
     uint32_t levelCount : 5;
-    // Implementation max is 2048 (11 bits).
+    // Implementation max is 4096 (12 bits).
     uint32_t layer : 12;
     // One of vk::LayerMode values.  If 0, it means all layers.  Otherwise it's the count of layers
     // which is usually 1, except for multiview in which case it can be up to
@@ -1711,7 +1801,7 @@ struct DescriptorInfoDesc
 {
     uint32_t samplerOrBufferSerial;
     uint32_t imageViewSerialOrOffset;
-    uint32_t imageLayoutOrRange;  // Packed VkImageLayout
+    uint32_t imageLayoutOrRange;
     uint32_t imageSubresourceRange;
 };
 
@@ -1796,10 +1886,6 @@ class WriteDescriptorDescs
                          VkDescriptorType descriptorType,
                          uint32_t descriptorCount);
 
-    void updateInputAttachment(uint32_t binding,
-                               ImageLayout layout,
-                               RenderTargetVk *renderTargetVk);
-
     // After a preliminary minimum size, use heap memory.
     angle::FastMap<WriteDescriptorDesc, kFastDescriptorSetDescLimit> mDescs;
     size_t mDynamicDescriptorSetCount = 0;
@@ -1874,7 +1960,7 @@ class DescriptorSetDescAndPool final
         other.mPool = nullptr;
     }
     ~DescriptorSetDescAndPool() { ASSERT(!valid()); }
-    void destroy() { mPool = nullptr; }
+    void destroy(VkDevice /*device*/) { mPool = nullptr; }
 
     void destroyCachedObject(Renderer *renderer);
     void releaseCachedObject(ContextVk *contextVk) { UNREACHABLE(); }
@@ -1890,6 +1976,9 @@ class DescriptorSetDescAndPool final
         return mDesc == other.mDesc && mPool == other.mPool;
     }
 
+    // Returns true if the key/value can be found in the cache.
+    bool hasValidCachedObject(ContextVk *contextVk) const;
+
   private:
     DescriptorSetDesc mDesc;
     DynamicDescriptorPool *mPool;
@@ -1898,7 +1987,7 @@ using SharedDescriptorSetCacheKey = SharedPtr<DescriptorSetDescAndPool>;
 ANGLE_INLINE const SharedDescriptorSetCacheKey
 CreateSharedDescriptorSetCacheKey(const DescriptorSetDesc &desc, DynamicDescriptorPool *pool)
 {
-    return SharedDescriptorSetCacheKey::MakeShared(desc, pool);
+    return SharedDescriptorSetCacheKey::MakeShared(VK_NULL_HANDLE, desc, pool);
 }
 
 constexpr VkDescriptorType kStorageBufferDescriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -1947,7 +2036,8 @@ class DescriptorSetDescBuilder final
 
     // Specific helpers for shader resource descriptors.
     template <typename CommandBufferT>
-    void updateOneShaderBuffer(CommandBufferT *commandBufferHelper,
+    void updateOneShaderBuffer(Context *context,
+                               CommandBufferT *commandBufferHelper,
                                const ShaderInterfaceVariableInfoMap &variableInfoMap,
                                const gl::BufferVector &buffers,
                                const gl::InterfaceBlock &block,
@@ -1958,7 +2048,8 @@ class DescriptorSetDescBuilder final
                                const WriteDescriptorDescs &writeDescriptorDescs,
                                const GLbitfield memoryBarrierBits);
     template <typename CommandBufferT>
-    void updateShaderBuffers(CommandBufferT *commandBufferHelper,
+    void updateShaderBuffers(Context *context,
+                             CommandBufferT *commandBufferHelper,
                              const gl::ProgramExecutable &executable,
                              const ShaderInterfaceVariableInfoMap &variableInfoMap,
                              const gl::BufferVector &buffers,
@@ -1969,7 +2060,8 @@ class DescriptorSetDescBuilder final
                              const WriteDescriptorDescs &writeDescriptorDescs,
                              const GLbitfield memoryBarrierBits);
     template <typename CommandBufferT>
-    void updateAtomicCounters(CommandBufferT *commandBufferHelper,
+    void updateAtomicCounters(Context *context,
+                              CommandBufferT *commandBufferHelper,
                               const gl::ProgramExecutable &executable,
                               const ShaderInterfaceVariableInfoMap &variableInfoMap,
                               const gl::BufferVector &buffers,
@@ -2006,7 +2098,7 @@ class DescriptorSetDescBuilder final
   private:
     void updateInputAttachment(Context *context,
                                uint32_t binding,
-                               ImageLayout layout,
+                               VkImageLayout layout,
                                const vk::ImageView *imageView,
                                ImageOrBufferViewSubresourceSerial serial,
                                const WriteDescriptorDescs &writeDescriptorDescs);
@@ -2091,11 +2183,12 @@ class FramebufferDesc
     bool hasFragmentShadingRateAttachment() const;
 
     // Used by SharedFramebufferCacheKey
-    void destroy() { SetBitField(mIsValid, 0); }
+    void destroy(VkDevice /*device*/) { SetBitField(mIsValid, 0); }
     void destroyCachedObject(Renderer *renderer);
     void releaseCachedObject(Renderer *renderer) { UNREACHABLE(); }
     void releaseCachedObject(ContextVk *contextVk);
     bool valid() const { return mIsValid; }
+    bool hasValidCachedObject(ContextVk *contextVk) const;
 
   private:
     void reset();
@@ -2142,7 +2235,7 @@ using SharedFramebufferCacheKey = SharedPtr<FramebufferDesc>;
 ANGLE_INLINE const SharedFramebufferCacheKey
 CreateSharedFramebufferCacheKey(const FramebufferDesc &desc)
 {
-    return SharedFramebufferCacheKey::MakeShared(desc);
+    return SharedFramebufferCacheKey::MakeShared(VK_NULL_HANDLE, desc);
 }
 
 // The SamplerHelper allows a Sampler to be coupled with a serial.
@@ -2156,7 +2249,7 @@ class SamplerHelper final : angle::NonCopyable
     explicit SamplerHelper(SamplerHelper &&samplerHelper);
     SamplerHelper &operator=(SamplerHelper &&rhs);
 
-    angle::Result init(Context *context, const VkSamplerCreateInfo &createInfo);
+    angle::Result init(ErrorContext *context, const VkSamplerCreateInfo &createInfo);
     angle::Result init(ContextVk *contextVk, const SamplerDesc &desc);
     void destroy(VkDevice device) { mSampler.destroy(device); }
     void destroy() { ASSERT(!valid()); }
@@ -2212,16 +2305,20 @@ class SharedCacheKeyManager
     void clear();
 
     // The following APIs are expected to be used for assertion only
-    bool containsKey(const SharedCacheKeyT &key) const;
     bool empty() const { return mSharedCacheKeys.empty(); }
-    void assertAllEntriesDestroyed();
+    bool allValidEntriesAreCached(ContextVk *contextVk) const;
 
   private:
     size_t updateEmptySlotBits();
+    void addKeyImpl(const SharedCacheKeyT &key);
+
+    bool containsKeyWithOwnerEqual(const SharedCacheKeyT &key) const;
+    void assertAllEntriesDestroyed() const;
 
     // Tracks an array of cache keys with refcounting. Note this owns one refcount of
     // SharedCacheKeyT object.
     std::deque<SharedCacheKeyT> mSharedCacheKeys;
+    SharedCacheKeyT mLastAddedSharedCacheKey;
 
     // To speed up searching for available slot in the mSharedCacheKeys, we use bitset to track
     // available (i.e, empty) slot
@@ -2232,7 +2329,12 @@ class SharedCacheKeyManager
 };
 
 using FramebufferCacheManager   = SharedCacheKeyManager<SharedFramebufferCacheKey>;
+template <>
+void FramebufferCacheManager::addKey(const SharedFramebufferCacheKey &key);
+
 using DescriptorSetCacheManager = SharedCacheKeyManager<SharedDescriptorSetCacheKey>;
+template <>
+void DescriptorSetCacheManager::addKey(const SharedDescriptorSetCacheKey &key);
 }  // namespace vk
 }  // namespace rx
 
@@ -2319,6 +2421,7 @@ enum class VulkanCacheType
     CompatibleRenderPass,
     RenderPassWithOps,
     GraphicsPipeline,
+    ComputePipeline,
     PipelineLayout,
     Sampler,
     SamplerYcbcrConversion,
@@ -2492,7 +2595,7 @@ class RenderPassCache final : angle::NonCopyable
 
     static void InitializeOpsForCompatibleRenderPass(const vk::RenderPassDesc &desc,
                                                      vk::AttachmentOpsArray *opsOut);
-    static angle::Result MakeRenderPass(vk::Context *context,
+    static angle::Result MakeRenderPass(vk::ErrorContext *context,
                                         const vk::RenderPassDesc &desc,
                                         const vk::AttachmentOpsArray &ops,
                                         vk::RenderPass *renderPass,
@@ -2530,20 +2633,19 @@ enum class PipelineSource
     DrawLinked,
     // Pipeline created for UtilsVk
     Utils,
+    // Pipeline created at dispatch time
+    Dispatch
 };
 
+struct ComputePipelineDescHash
+{
+    size_t operator()(const rx::vk::ComputePipelineDesc &key) const { return key.hash(); }
+};
 struct GraphicsPipelineDescCompleteHash
 {
     size_t operator()(const rx::vk::GraphicsPipelineDesc &key) const
     {
         return key.hash(vk::GraphicsPipelineSubset::Complete);
-    }
-};
-struct GraphicsPipelineDescVertexInputHash
-{
-    size_t operator()(const rx::vk::GraphicsPipelineDesc &key) const
-    {
-        return key.hash(vk::GraphicsPipelineSubset::VertexInput);
     }
 };
 struct GraphicsPipelineDescShadersHash
@@ -2553,14 +2655,15 @@ struct GraphicsPipelineDescShadersHash
         return key.hash(vk::GraphicsPipelineSubset::Shaders);
     }
 };
-struct GraphicsPipelineDescFragmentOutputHash
+
+struct ComputePipelineDescKeyEqual
 {
-    size_t operator()(const rx::vk::GraphicsPipelineDesc &key) const
+    size_t operator()(const rx::vk::ComputePipelineDesc &first,
+                      const rx::vk::ComputePipelineDesc &second) const
     {
-        return key.hash(vk::GraphicsPipelineSubset::FragmentOutput);
+        return first.keyEqual(second);
     }
 };
-
 struct GraphicsPipelineDescCompleteKeyEqual
 {
     size_t operator()(const rx::vk::GraphicsPipelineDesc &first,
@@ -2569,28 +2672,12 @@ struct GraphicsPipelineDescCompleteKeyEqual
         return first.keyEqual(second, vk::GraphicsPipelineSubset::Complete);
     }
 };
-struct GraphicsPipelineDescVertexInputKeyEqual
-{
-    size_t operator()(const rx::vk::GraphicsPipelineDesc &first,
-                      const rx::vk::GraphicsPipelineDesc &second) const
-    {
-        return first.keyEqual(second, vk::GraphicsPipelineSubset::VertexInput);
-    }
-};
 struct GraphicsPipelineDescShadersKeyEqual
 {
     size_t operator()(const rx::vk::GraphicsPipelineDesc &first,
                       const rx::vk::GraphicsPipelineDesc &second) const
     {
         return first.keyEqual(second, vk::GraphicsPipelineSubset::Shaders);
-    }
-};
-struct GraphicsPipelineDescFragmentOutputKeyEqual
-{
-    size_t operator()(const rx::vk::GraphicsPipelineDesc &first,
-                      const rx::vk::GraphicsPipelineDesc &second) const
-    {
-        return first.keyEqual(second, vk::GraphicsPipelineSubset::FragmentOutput);
     }
 };
 
@@ -2603,23 +2690,51 @@ struct GraphicsPipelineCacheTypeHelper
 };
 
 template <>
-struct GraphicsPipelineCacheTypeHelper<GraphicsPipelineDescVertexInputHash>
-{
-    using KeyEqual                                      = GraphicsPipelineDescVertexInputKeyEqual;
-    static constexpr vk::GraphicsPipelineSubset kSubset = vk::GraphicsPipelineSubset::VertexInput;
-};
-template <>
 struct GraphicsPipelineCacheTypeHelper<GraphicsPipelineDescShadersHash>
 {
     using KeyEqual                                      = GraphicsPipelineDescShadersKeyEqual;
     static constexpr vk::GraphicsPipelineSubset kSubset = vk::GraphicsPipelineSubset::Shaders;
 };
-template <>
-struct GraphicsPipelineCacheTypeHelper<GraphicsPipelineDescFragmentOutputHash>
+
+// Compute Pipeline Cache implementation
+// TODO(aannestrand): Add cache trimming/eviction.
+// http://anglebug.com/391672281
+class ComputePipelineCache final : HasCacheStats<rx::VulkanCacheType::ComputePipeline>
 {
-    using KeyEqual = GraphicsPipelineDescFragmentOutputKeyEqual;
-    static constexpr vk::GraphicsPipelineSubset kSubset =
-        vk::GraphicsPipelineSubset::FragmentOutput;
+  public:
+    ComputePipelineCache() = default;
+    ~ComputePipelineCache() override { ASSERT(mPayload.empty()); }
+
+    void destroy(vk::ErrorContext *context);
+    void release(vk::ErrorContext *context);
+
+    angle::Result getOrCreatePipeline(vk::ErrorContext *context,
+                                      vk::PipelineCacheAccess *pipelineCache,
+                                      const vk::PipelineLayout &pipelineLayout,
+                                      vk::ComputePipelineOptions &pipelineOptions,
+                                      PipelineSource source,
+                                      vk::PipelineHelper **pipelineOut,
+                                      const char *shaderName,
+                                      VkSpecializationInfo *specializationInfo,
+                                      const vk::ShaderModuleMap &shaderModuleMap);
+
+  private:
+    angle::Result createPipeline(vk::ErrorContext *context,
+                                 vk::PipelineCacheAccess *pipelineCache,
+                                 const vk::PipelineLayout &pipelineLayout,
+                                 vk::ComputePipelineOptions &pipelineOptions,
+                                 PipelineSource source,
+                                 const char *shaderName,
+                                 const vk::ShaderModule &shaderModule,
+                                 VkSpecializationInfo *specializationInfo,
+                                 const vk::ComputePipelineDesc &desc,
+                                 vk::PipelineHelper **pipelineOut);
+
+    std::unordered_map<vk::ComputePipelineDesc,
+                       vk::PipelineHelper,
+                       ComputePipelineDescHash,
+                       ComputePipelineDescKeyEqual>
+        mPayload;
 };
 
 // TODO(jmadill): Add cache trimming/eviction.
@@ -2630,8 +2745,8 @@ class GraphicsPipelineCache final : public HasCacheStats<VulkanCacheType::Graphi
     GraphicsPipelineCache() = default;
     ~GraphicsPipelineCache() override { ASSERT(mPayload.empty()); }
 
-    void destroy(vk::Context *context);
-    void release(vk::Context *context);
+    void destroy(vk::ErrorContext *context);
+    void release(vk::ErrorContext *context);
 
     void populate(const vk::GraphicsPipelineDesc &desc,
                   vk::Pipeline &&pipeline,
@@ -2656,26 +2771,15 @@ class GraphicsPipelineCache final : public HasCacheStats<VulkanCacheType::Graphi
         return true;
     }
 
-    angle::Result createPipeline(vk::Context *context,
+    angle::Result createPipeline(vk::ErrorContext *context,
                                  vk::PipelineCacheAccess *pipelineCache,
                                  const vk::RenderPass &compatibleRenderPass,
                                  const vk::PipelineLayout &pipelineLayout,
-                                 const vk::ShaderModuleMap &shaders,
-                                 const vk::SpecializationConstants &specConsts,
+                                 const vk::GraphicsPipelineShadersInfo &shaders,
                                  PipelineSource source,
                                  const vk::GraphicsPipelineDesc &desc,
                                  const vk::GraphicsPipelineDesc **descPtrOut,
                                  vk::PipelineHelper **pipelineOut);
-
-    angle::Result linkLibraries(vk::Context *context,
-                                vk::PipelineCacheAccess *pipelineCache,
-                                const vk::GraphicsPipelineDesc &desc,
-                                const vk::PipelineLayout &pipelineLayout,
-                                vk::PipelineHelper *vertexInputPipeline,
-                                vk::PipelineHelper *shadersPipeline,
-                                vk::PipelineHelper *fragmentOutputPipeline,
-                                const vk::GraphicsPipelineDesc **descPtrOut,
-                                vk::PipelineHelper **pipelineOut);
 
     // Helper for VulkanPipelineCachePerf that resets the object without destroying any object.
     void reset() { mPayload.clear(); }
@@ -2693,10 +2797,7 @@ class GraphicsPipelineCache final : public HasCacheStats<VulkanCacheType::Graphi
 };
 
 using CompleteGraphicsPipelineCache    = GraphicsPipelineCache<GraphicsPipelineDescCompleteHash>;
-using VertexInputGraphicsPipelineCache = GraphicsPipelineCache<GraphicsPipelineDescVertexInputHash>;
 using ShadersGraphicsPipelineCache     = GraphicsPipelineCache<GraphicsPipelineDescShadersHash>;
-using FragmentOutputGraphicsPipelineCache =
-    GraphicsPipelineCache<GraphicsPipelineDescFragmentOutputHash>;
 
 class DescriptorSetLayoutCache final : angle::NonCopyable
 {
@@ -2706,7 +2807,7 @@ class DescriptorSetLayoutCache final : angle::NonCopyable
 
     void destroy(vk::Renderer *renderer);
 
-    angle::Result getDescriptorSetLayout(vk::Context *context,
+    angle::Result getDescriptorSetLayout(vk::ErrorContext *context,
                                          const vk::DescriptorSetLayoutDesc &desc,
                                          vk::DescriptorSetLayoutPtr *descriptorSetLayoutOut);
 
@@ -2728,7 +2829,7 @@ class PipelineLayoutCache final : public HasCacheStats<VulkanCacheType::Pipeline
 
     void destroy(vk::Renderer *renderer);
 
-    angle::Result getPipelineLayout(vk::Context *context,
+    angle::Result getPipelineLayout(vk::ErrorContext *context,
                                     const vk::PipelineLayoutDesc &desc,
                                     const vk::DescriptorSetLayoutPointerArray &descriptorSetLayouts,
                                     vk::PipelineLayoutPtr *pipelineLayoutOut);
@@ -2764,7 +2865,7 @@ class SamplerYcbcrConversionCache final
 
     void destroy(vk::Renderer *renderer);
 
-    angle::Result getSamplerYcbcrConversion(vk::Context *context,
+    angle::Result getSamplerYcbcrConversion(vk::ErrorContext *context,
                                             const vk::YcbcrConversionDesc &ycbcrConversionDesc,
                                             VkSamplerYcbcrConversion *vkSamplerYcbcrConversionOut);
 
@@ -2796,7 +2897,7 @@ class DescriptorSetCache final : angle::NonCopyable
 
     void clear() { mPayload.clear(); }
 
-    bool getDescriptorSet(const vk::DescriptorSetDesc &desc, T *descriptorSetOut)
+    bool getDescriptorSet(const vk::DescriptorSetDesc &desc, T *descriptorSetOut) const
     {
         auto iter = mPayload.find(desc);
         if (iter != mPayload.end())
@@ -2862,10 +2963,19 @@ class UpdateDescriptorSetsBuilder final : angle::NonCopyable
     UpdateDescriptorSetsBuilder();
     ~UpdateDescriptorSetsBuilder();
 
-    VkDescriptorBufferInfo *allocDescriptorBufferInfos(size_t count);
-    VkDescriptorImageInfo *allocDescriptorImageInfos(size_t count);
-    VkWriteDescriptorSet *allocWriteDescriptorSets(size_t count);
-    VkBufferView *allocBufferViews(size_t count);
+    VkDescriptorBufferInfo *allocDescriptorBufferInfos(uint32_t count)
+    {
+        return mDescriptorBufferInfos.allocate(count);
+    }
+    VkDescriptorImageInfo *allocDescriptorImageInfos(uint32_t count)
+    {
+        return mDescriptorImageInfos.allocate(count);
+    }
+    VkWriteDescriptorSet *allocWriteDescriptorSets(uint32_t count)
+    {
+        return mWriteDescriptorSets.allocate(count);
+    }
+    VkBufferView *allocBufferViews(uint32_t count) { return mBufferViews.allocate(count); }
 
     VkDescriptorBufferInfo &allocDescriptorBufferInfo() { return *allocDescriptorBufferInfos(1); }
     VkDescriptorImageInfo &allocDescriptorImageInfo() { return *allocDescriptorImageInfos(1); }
@@ -2876,15 +2986,52 @@ class UpdateDescriptorSetsBuilder final : angle::NonCopyable
     uint32_t flushDescriptorSetUpdates(VkDevice device);
 
   private:
-    template <typename T, const T *VkWriteDescriptorSet::*pInfo>
-    T *allocDescriptorInfos(std::vector<T> *descriptorVector, size_t count);
-    template <typename T, const T *VkWriteDescriptorSet::*pInfo>
-    void growDescriptorCapacity(std::vector<T> *descriptorVector, size_t newSize);
+    // Manage the storage for VkDescriptorBufferInfo and VkDescriptorImageInfo. The storage is not
+    // required to be continuous, but the requested allocation from allocate() call must be
+    // continuous. The actual storage will grow as needed.
+    template <typename T>
+    class DescriptorInfoAllocator : angle::NonCopyable
+    {
+      public:
+        void init(uint32_t initialVectorCapacity)
+        {
+            mVectorCapacity = initialVectorCapacity;
+            mDescriptorInfos.emplace_back();
+            mDescriptorInfos.back().reserve(mVectorCapacity);
+            mCurrentVector = mDescriptorInfos.begin();
+            mTotalSize     = 0;
+        }
+        void clear()
+        {
+            mDescriptorInfos.resize(1);
+            mDescriptorInfos.front().clear();
+            // Grow the first vector's capacity big enough to hold all of them
+            mVectorCapacity = std::max(mTotalSize, mVectorCapacity);
+            mDescriptorInfos.front().reserve(mVectorCapacity);
+            mCurrentVector = mDescriptorInfos.begin();
+            mTotalSize     = 0;
+        }
+        T *allocate(uint32_t count);
 
-    std::vector<VkDescriptorBufferInfo> mDescriptorBufferInfos;
-    std::vector<VkDescriptorImageInfo> mDescriptorImageInfos;
-    std::vector<VkWriteDescriptorSet> mWriteDescriptorSets;
-    std::vector<VkBufferView> mBufferViews;
+        bool empty() const { return mTotalSize == 0; }
+
+      protected:
+        uint32_t mVectorCapacity = 16;
+        std::deque<std::vector<T>> mDescriptorInfos;
+        typename std::deque<std::vector<T>>::iterator mCurrentVector;
+        uint32_t mTotalSize;
+    };
+
+    class WriteDescriptorSetAllocator final : public DescriptorInfoAllocator<VkWriteDescriptorSet>
+    {
+      public:
+        uint32_t updateDescriptorSets(VkDevice device) const;
+    };
+
+    DescriptorInfoAllocator<VkDescriptorBufferInfo> mDescriptorBufferInfos;
+    DescriptorInfoAllocator<VkDescriptorImageInfo> mDescriptorImageInfos;
+    DescriptorInfoAllocator<VkBufferView> mBufferViews;
+    WriteDescriptorSetAllocator mWriteDescriptorSets;
 };
 
 }  // namespace rx

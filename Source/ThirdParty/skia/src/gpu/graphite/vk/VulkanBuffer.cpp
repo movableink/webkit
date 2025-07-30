@@ -9,7 +9,7 @@
 
 #include "include/gpu/vk/VulkanMemoryAllocator.h"
 #include "src/gpu/graphite/vk/VulkanCommandBuffer.h"
-#include "src/gpu/graphite/vk/VulkanGraphiteUtilsPriv.h"
+#include "src/gpu/graphite/vk/VulkanGraphiteUtils.h"
 #include "src/gpu/vk/VulkanMemory.h"
 
 namespace skgpu::graphite {
@@ -31,9 +31,15 @@ sk_sp<Buffer> VulkanBuffer::Make(const VulkanSharedContext* sharedContext,
     // factory to say what stage the buffer is for. Maybe expand AccessPattern to be
     // GpuOnly_NotVertex or some better name like that.
     bool isProtected = sharedContext->isProtected() == Protected::kYes &&
-                       accessPattern == AccessPattern::kGpuOnly &&
+                       (accessPattern == AccessPattern::kGpuOnly ||
+                        accessPattern == AccessPattern::kGpuOnlyCopySrc) &&
                        type != BufferType::kVertex &&
                        type != BufferType::kIndex;
+
+    // kGpuOnlyCopySrc is used during testing to overwrite buffer accessPatterns that would normally
+    // be AccessPattern::kGpuOnly. So make sure that buffers that *should* be protected, don't
+    // accidentally expose access here.
+    SkASSERT(!isProtected || accessPattern != AccessPattern::kGpuOnlyCopySrc);
 
     // Protected memory _never_ uses mappable buffers.
     // Otherwise, the only time we don't require mappable buffers is when we're on a device
@@ -56,8 +62,7 @@ sk_sp<Buffer> VulkanBuffer::Make(const VulkanSharedContext* sharedContext,
     }
 
     // Create the buffer object
-    VkBufferCreateInfo bufInfo;
-    memset(&bufInfo, 0, sizeof(VkBufferCreateInfo));
+    VkBufferCreateInfo bufInfo = {};
     bufInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufInfo.flags = isProtected ? VK_BUFFER_CREATE_PROTECTED_BIT : 0;
     bufInfo.size = size;
@@ -74,6 +79,9 @@ sk_sp<Buffer> VulkanBuffer::Make(const VulkanSharedContext* sharedContext,
             break;
         case BufferType::kStorage:
             bufInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+            break;
+        case BufferType::kQuery:
+            SK_ABORT("Query buffers not supported on Vulkan");
             break;
         case BufferType::kIndirect:
             bufInfo.usage =
@@ -100,8 +108,13 @@ sk_sp<Buffer> VulkanBuffer::Make(const VulkanSharedContext* sharedContext,
     // transfer dst usage bit in case we need to do a copy to write data. It doesn't really hurt
     // to set this extra usage flag, but we could narrow the scope of buffers we set it on more than
     // just not dynamic.
-    if (!requiresMappable || accessPattern == AccessPattern::kGpuOnly) {
+    if (!requiresMappable || accessPattern == AccessPattern::kGpuOnly ||
+        accessPattern == AccessPattern::kGpuOnlyCopySrc) {
         bufInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    }
+
+    if (accessPattern == AccessPattern::kGpuOnlyCopySrc) {
+        bufInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     }
 
     bufInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -195,13 +208,6 @@ void VulkanBuffer::freeGpuData() {
 void VulkanBuffer::internalMap(size_t readOffset, size_t readSize) {
     SkASSERT(!fMapPtr);
     if (this->isMappable()) {
-        // Not every buffer will use command buffer usage refs. Instead, the command buffer just
-        // holds normal refs. Systems higher up in Graphite should be making sure not to reuse a
-        // buffer that currently has a ref held by something else. However, we do need to make sure
-        // there isn't a buffer with just a command buffer usage that is trying to be mapped.
-#ifdef SK_DEBUG
-        SkASSERT(!this->debugHasCommandBufferRef());
-#endif
         SkASSERT(fAlloc.fSize > 0);
         SkASSERT(fAlloc.fSize >= readOffset + readSize);
 
@@ -269,76 +275,118 @@ void VulkanBuffer::onUnmap() {
     this->internalUnmap(0, fBufferUsedForCPURead ? 0 : this->size());
 }
 
-void VulkanBuffer::setBufferAccess(VulkanCommandBuffer* cmdBuffer,
-                                   VkAccessFlags dstAccessMask,
-                                   VkPipelineStageFlags dstStageMask) const {
-    // TODO: fill out other cases where we need a barrier
-    if (dstAccessMask == VK_ACCESS_HOST_READ_BIT      ||
-        dstAccessMask == VK_ACCESS_TRANSFER_WRITE_BIT ||
-        dstAccessMask == VK_ACCESS_UNIFORM_READ_BIT) {
-        VkPipelineStageFlags srcStageMask =
-            VulkanBuffer::AccessMaskToPipelineSrcStageFlags(fCurrentAccessMask);
+namespace {
 
+VkPipelineStageFlags access_to_pipeline_srcStageFlags(const VkAccessFlags srcAccess) {
+    // For now this function assumes the access flags equal a specific bit and don't act like true
+    // flags (i.e. set of bits). If we ever start having buffer usages that have multiple accesses
+    // in one usage we'll need to update this.
+    switch (srcAccess) {
+        case 0:
+            return VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        case (VK_ACCESS_TRANSFER_WRITE_BIT):  // fallthrough
+        case (VK_ACCESS_TRANSFER_READ_BIT):
+            return VK_PIPELINE_STAGE_TRANSFER_BIT;
+        case (VK_ACCESS_UNIFORM_READ_BIT):
+            // TODO(b/307577875): It is possible that uniforms could have simply been used in the
+            // vertex shader and not the fragment shader, so using the fragment shader pipeline
+            // stage bit indiscriminately is a bit overkill. This call should be modified to check &
+            // allow for selecting VK_PIPELINE_STAGE_VERTEX_SHADER_BIT when appropriate.
+            return (VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+        case (VK_ACCESS_SHADER_WRITE_BIT):
+            return VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        case (VK_ACCESS_INDEX_READ_BIT):  // fallthrough
+        case (VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT):
+            return VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+        case (VK_ACCESS_INDIRECT_COMMAND_READ_BIT):
+            return VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+        case (VK_ACCESS_HOST_READ_BIT):  // fallthrough
+        case (VK_ACCESS_HOST_WRITE_BIT):
+            return VK_PIPELINE_STAGE_HOST_BIT;
+        default:
+            SkUNREACHABLE;
+    }
+}
+
+bool access_is_read_only(VkAccessFlags access) {
+    switch (access) {
+        case 0: // initialization state
+        case (VK_ACCESS_TRANSFER_READ_BIT):
+        case (VK_ACCESS_UNIFORM_READ_BIT):
+        case (VK_ACCESS_INDEX_READ_BIT):
+        case (VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT):
+        case (VK_ACCESS_INDIRECT_COMMAND_READ_BIT):
+        case (VK_ACCESS_HOST_READ_BIT):
+            return true;
+        case (VK_ACCESS_TRANSFER_WRITE_BIT):
+        case (VK_ACCESS_SHADER_WRITE_BIT):
+        case (VK_ACCESS_HOST_WRITE_BIT):
+            return false;
+        default:
+            SkUNREACHABLE;
+    }
+}
+
+} // anonymous namespace
+
+void VulkanBuffer::setBufferAccess(VulkanCommandBuffer* cmdBuffer,
+                                   VkAccessFlags dstAccess,
+                                   VkPipelineStageFlags dstStageMask) const {
+    SkASSERT(dstAccess == VK_ACCESS_HOST_READ_BIT ||
+             dstAccess == VK_ACCESS_TRANSFER_WRITE_BIT ||
+             dstAccess == VK_ACCESS_TRANSFER_READ_BIT ||
+             dstAccess == VK_ACCESS_UNIFORM_READ_BIT ||
+             dstAccess == VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT ||
+             dstAccess == VK_ACCESS_INDEX_READ_BIT);
+
+    VkPipelineStageFlags srcStageMask = access_to_pipeline_srcStageFlags(fCurrentAccess);
+    SkASSERT(srcStageMask);
+
+    bool needsBarrier = true;
+
+    // When the buffer was last used on the host, we don't need to add any barrier as writes on the
+    // CPU host are implicitly synchronized what you submit new commands.
+    if (srcStageMask == VK_PIPELINE_STAGE_HOST_BIT) {
+        needsBarrier = false;
+    } else if (access_is_read_only(fCurrentAccess) && access_is_read_only(dstAccess)) {
+        // We don't need a barrier if we're going from a read access to another read access, and we
+        // have the same type of read only access.
+        if (fCurrentAccess == dstAccess) {
+            needsBarrier = false;
+        } else {
+            /*needBarrier=true*/
+            // NOTE: Currently this setup *only* correctly handles copying from a vertex
+            // kGpuOnlyCopySrc buffer to kXferGpuToCpu buffer for read backs during testing on
+            // non-protected data.
+            //
+            // In the future we'll need to update the logic in this file to store all the read
+            // accesses in a mask. Additionally we'll need to keep track of what the last write was
+            // since we will need to add a barrier for the new read access--even if we have to put
+            // in a barrier for a previous read already. For example if we have the sequence
+            // Write_1, Read_Access1, Read_Access2. We will first put a barrier going from Write_1
+            // to Read_Access1. But with the current logic when we add Read_Access2 it will think
+            // its going from a read -> read. Thus no barrier would be added. But we need do to add
+            // another barrier for Write_1 to Read_Access2 so that the changes from write become
+            // visibile.
+        }
+    }
+
+    if (needsBarrier) {
         VkBufferMemoryBarrier bufferMemoryBarrier = {
-                 VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,  // sType
-                 nullptr,                                  // pNext
-                 fCurrentAccessMask,                       // srcAccessMask
-                 dstAccessMask,                            // dstAccessMask
-                 VK_QUEUE_FAMILY_IGNORED,                  // srcQueueFamilyIndex
-                 VK_QUEUE_FAMILY_IGNORED,                  // dstQueueFamilyIndex
-                 fBuffer,                                  // buffer
-                 0,                                        // offset
-                 this->size(),                             // size
+            VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,  // sType
+            nullptr,                                  // pNext
+            fCurrentAccess,                           // srcAccessMask
+            dstAccess,                                // dstAccessMask
+            VK_QUEUE_FAMILY_IGNORED,                  // srcQueueFamilyIndex
+            VK_QUEUE_FAMILY_IGNORED,                  // dstQueueFamilyIndex
+            fBuffer,                                  // buffer
+            0,                                        // offset
+            this->size(),                             // size
         };
         cmdBuffer->addBufferMemoryBarrier(srcStageMask, dstStageMask, &bufferMemoryBarrier);
     }
 
-    fCurrentAccessMask = dstAccessMask;
-}
-
-VkPipelineStageFlags VulkanBuffer::AccessMaskToPipelineSrcStageFlags(const VkAccessFlags srcMask) {
-    if (srcMask == 0) {
-        return VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    }
-    VkPipelineStageFlags flags = 0;
-
-    if (srcMask & VK_ACCESS_TRANSFER_WRITE_BIT || srcMask & VK_ACCESS_TRANSFER_READ_BIT) {
-        flags |= VK_PIPELINE_STAGE_TRANSFER_BIT;
-    }
-    if (srcMask & VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT ||
-        srcMask & VK_ACCESS_COLOR_ATTACHMENT_READ_BIT) {
-        flags |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    }
-    if (srcMask & VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT ||
-        srcMask & VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT) {
-        flags |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-    }
-    if (srcMask & VK_ACCESS_INPUT_ATTACHMENT_READ_BIT) {
-        flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    }
-    if (srcMask & VK_ACCESS_SHADER_READ_BIT ||
-        srcMask & VK_ACCESS_UNIFORM_READ_BIT) {
-        // TODO(b/307577875): It is possible that uniforms could have simply been used in the vertex
-        // shader and not the fragment shader, so using the fragment shader pipeline stage bit
-        // indiscriminately is a bit overkill. This call should be modified to check & allow for
-        // selecting VK_PIPELINE_STAGE_VERTEX_SHADER_BIT when appropriate.
-        flags |= (VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-    }
-    if (srcMask & VK_ACCESS_SHADER_WRITE_BIT) {
-        flags |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    }
-    if (srcMask & VK_ACCESS_INDEX_READ_BIT ||
-        srcMask & VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT) {
-        flags |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-    }
-    if (srcMask & VK_ACCESS_INDIRECT_COMMAND_READ_BIT) {
-        flags |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
-    }
-    if (srcMask & VK_ACCESS_HOST_READ_BIT || srcMask & VK_ACCESS_HOST_WRITE_BIT) {
-        flags |= VK_PIPELINE_STAGE_HOST_BIT;
-    }
-
-    return flags;
+    fCurrentAccess = dstAccess;
 }
 
 } // namespace skgpu::graphite

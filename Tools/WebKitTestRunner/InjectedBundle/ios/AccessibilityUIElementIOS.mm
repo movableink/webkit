@@ -50,6 +50,7 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 - (NSString *)accessibilityBrailleRoleDescription;
 - (id)accessibilityFocusedUIElement;
 - (id)accessibilityHitTest:(CGPoint)point;
+- (NSString *)accessibilityLanguage;
 - (id)accessibilityLinkedElement;
 - (id)accessibilityTitleElement;
 - (NSRange)accessibilityColumnRange;
@@ -57,6 +58,7 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 - (id)accessibilityElementForRow:(NSInteger)row andColumn:(NSInteger)column;
 - (NSURL *)accessibilityURL;
 - (NSArray *)accessibilityHeaderElements;
+- (NSString *)accessibilityDatetimeValue;
 - (NSArray *)accessibilityDetailsElements;
 - (NSArray *)accessibilityErrorMessageElements;
 - (NSString *)accessibilityPlaceholderValue;
@@ -67,6 +69,7 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 - (NSArray *)lineRectsAndText;
 - (CGPoint)accessibilityClickPoint;
 - (void)accessibilityModifySelection:(WebCore::TextGranularity)granularity increase:(BOOL)increase;
+- (NSDictionary<NSString *, id> *)_accessibilityResolvedEditingStyles;
 - (NSRange)_accessibilitySelectedTextRange;
 - (void)_accessibilitySetSelectedTextRange:(NSRange)range;
 - (BOOL)accessibilityReplaceRange:(NSRange)range withText:(NSString *)string;
@@ -82,6 +85,7 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 - (UIAccessibilityTraits)_axSelectedTrait;
 - (UIAccessibilityTraits)_axTextAreaTrait;
 - (UIAccessibilityTraits)_axSearchFieldTrait;
+- (UIAccessibilityTraits)_axVisitedTrait;
 - (NSString *)accessibilityCurrentState;
 - (NSUInteger)accessibilityRowCount;
 - (NSUInteger)accessibilityColumnCount;
@@ -114,8 +118,6 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 - (BOOL)accessibilityHasPopup;
 - (NSString *)accessibilityPopupValue;
 - (NSString *)accessibilityColorStringValue;
-- (BOOL)accessibilityHasDocumentRoleAncestor;
-- (BOOL)accessibilityHasWebApplicationAncestor;
 - (BOOL)accessibilityIsInDescriptionListDefinition;
 - (BOOL)accessibilityIsInDescriptionListTerm;
 - (BOOL)_accessibilityIsInTableCell;
@@ -154,6 +156,7 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 @interface NSObject (WebAccessibilityObjectWrapperPrivate)
 - (NSString *)accessibilityDOMIdentifier;
 - (CGPathRef)_accessibilityPath;
+- (CGPoint)_accessibilityPageRelativeLocation;
 @end
 
 namespace WTR {
@@ -161,15 +164,15 @@ namespace WTR {
 static JSRetainPtr<JSStringRef> concatenateAttributeAndValue(NSString *attribute, NSString *value)
 {
     Vector<UniChar> buffer([attribute length]);
-    [attribute getCharacters:buffer.data()];
+    [attribute getCharacters:buffer.mutableSpan().data()];
     buffer.append(':');
     buffer.append(' ');
 
     Vector<UniChar> valueBuffer([value length]);
-    [value getCharacters:valueBuffer.data()];
+    [value getCharacters:valueBuffer.mutableSpan().data()];
     buffer.appendVector(valueBuffer);
 
-    return adopt(JSStringCreateWithCharacters(buffer.data(), buffer.size()));
+    return adopt(JSStringCreateWithCharacters(buffer.span().data(), buffer.size()));
 }
     
 AccessibilityUIElement::AccessibilityUIElement(PlatformUIElement element)
@@ -383,6 +386,9 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::stringDescriptionOfAttributeVal
     if (JSStringIsEqualToUTF8CString(attribute, "AXVisibleCharacterRange"))
         return [NSStringFromRange([m_element accessibilityVisibleCharacterRange]) createJSStringRef];
 
+    if (JSStringIsEqualToUTF8CString(attribute, "AXResolvedEditingStyles"))
+        return [[[m_element _accessibilityResolvedEditingStyles] description] createJSStringRef];
+
     return createJSString();
 }
 
@@ -481,6 +487,10 @@ bool AccessibilityUIElement::boolAttributeValue(JSStringRef attribute)
         return [m_element _accessibilityHasTouchEventListener];
     if (JSStringIsEqualToUTF8CString(attribute, "AXIsStrongPasswordField"))
         return [m_element _accessibilityIsStrongPasswordField];
+    if (JSStringIsEqualToUTF8CString(attribute, "AXVisited")) {
+        UIAccessibilityTraits traits = [m_element accessibilityTraits];
+        return (traits & [m_element _axVisitedTrait]) == [m_element _axVisitedTrait];
+    }
     return false;
 }
 
@@ -561,12 +571,24 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::stringValue()
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::language()
 {
-    return createJSString();
+    return concatenateAttributeAndValue(@"AXLanguage", [m_element accessibilityLanguage]);
 }
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::helpText() const
 {
     return concatenateAttributeAndValue(@"AXHint", [m_element accessibilityHint]);
+}
+
+double AccessibilityUIElement::pageX()
+{
+    CGPoint point = [m_element _accessibilityPageRelativeLocation];
+    return point.x;
+}
+
+double AccessibilityUIElement::pageY()
+{
+    CGPoint point = [m_element _accessibilityPageRelativeLocation];
+    return point.y;
 }
 
 double AccessibilityUIElement::x()
@@ -743,7 +765,7 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::speakAs()
     return [[[m_element accessibilitySpeechHint] componentsJoinedByString:@", "] createJSStringRef];
 }
 
-bool AccessibilityUIElement::ariaIsGrabbed() const
+bool AccessibilityUIElement::isGrabbed() const
 {
     return false;
 }
@@ -1058,6 +1080,11 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::accessibilityValue() const
     return createJSString();
 }
 
+JSRetainPtr<JSStringRef> AccessibilityUIElement::dateTimeValue() const
+{
+    return [[m_element accessibilityDatetimeValue] createJSStringRef];
+}
+
 void AccessibilityUIElement::assistiveTechnologySimulatedFocus()
 {
     [m_element accessibilityElementDidBecomeFocused];
@@ -1211,16 +1238,6 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::popupValue() const
     return [[m_element accessibilityPopupValue] createJSStringRef];
 }
 
-bool AccessibilityUIElement::hasDocumentRoleAncestor() const
-{
-    return [m_element accessibilityHasDocumentRoleAncestor];
-}
-
-bool AccessibilityUIElement::hasWebApplicationAncestor() const
-{
-    return [m_element accessibilityHasWebApplicationAncestor];
-}
-
 bool AccessibilityUIElement::isInDescriptionListDetail() const
 {
     // The names are inconsistent here (isInDescriptionListDetail vs. isInDescriptionListDefinition)
@@ -1275,6 +1292,9 @@ RefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::misspellingTextMark
 
 RefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::textMarkerRangeForElement(AccessibilityUIElement* element)
 {
+    if (!element)
+        return nullptr;
+
     id textMarkerRange = [element->platformUIElement() textMarkerRange];
     return AccessibilityTextMarkerRange::create(textMarkerRange);
 }
@@ -1367,6 +1387,11 @@ RefPtr<AccessibilityUIElement> AccessibilityUIElement::accessibilityElementForTe
 }
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::attributedStringForTextMarkerRange(AccessibilityTextMarkerRange* markerRange)
+{
+    return nullptr;
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::attributedStringForTextMarkerRangeWithDidSpellCheck(AccessibilityTextMarkerRange* markerRange)
 {
     return nullptr;
 }

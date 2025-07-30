@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderTreeBuilder, BlockFlow);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::BlockFlow);
 
 RenderTreeBuilder::BlockFlow::BlockFlow(RenderTreeBuilder& builder)
     : m_builder(builder)

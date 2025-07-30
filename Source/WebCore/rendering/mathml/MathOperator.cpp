@@ -31,6 +31,8 @@
 
 #include "RenderStyleInlines.h"
 #include "StyleInheritedData.h"
+#include <numbers>
+#include <wtf/StdLibExtras.h>
 
 static const unsigned kRadicalOperator = 0x221A;
 static const unsigned kMaximumExtensionCount = 128;
@@ -129,7 +131,7 @@ LayoutUnit MathOperator::stretchSize() const
 bool MathOperator::getGlyph(const RenderStyle& style, char32_t character, GlyphData& glyph) const
 {
     glyph = style.fontCascade().glyphDataForCharacter(character, style.writingMode().isBidiRTL());
-    return glyph.font && glyph.font == &style.fontCascade().primaryFont();
+    return glyph.font && glyph.font == style.fontCascade().primaryFont().ptr();
 }
 
 void MathOperator::setSizeVariant(const GlyphData& sizeVariant)
@@ -151,7 +153,7 @@ static GlyphData glyphDataForCodePointOrFallbackGlyph(const RenderStyle& style, 
     
     if (fallbackGlyph) {
         fallback.glyph = fallbackGlyph;
-        fallback.font = &style.fontCascade().primaryFont();
+        fallback.font = style.fontCascade().primaryFont().ptr();
     }
     
     return fallback;
@@ -241,7 +243,7 @@ void MathOperator::calculateDisplayStyleLargeOperator(const RenderStyle& style)
         return;
 
     // The value of displayOperatorMinHeight is sometimes too small, so we ensure that it is at least \sqrt{2} times the size of the base glyph.
-    float displayOperatorMinHeight = std::max(heightForGlyph(baseGlyph) * sqrtOfTwoFloat, baseGlyph.font->mathData()->getMathConstant(*baseGlyph.font, OpenTypeMathData::DisplayOperatorMinHeight));
+    float displayOperatorMinHeight = std::max(heightForGlyph(baseGlyph) * std::numbers::sqrt2_v<float>, baseGlyph.font->mathData()->getMathConstant(*baseGlyph.font, OpenTypeMathData::DisplayOperatorMinHeight));
 
     Vector<Glyph> sizeVariants;
     Vector<OpenTypeMathData::AssemblyPart> assemblyParts;
@@ -518,7 +520,7 @@ LayoutRect MathOperator::paintGlyph(const RenderStyle& style, PaintInfo& info, c
 
     // FIXME: If we're just drawing a single glyph, why do we need to compute an advance?
     auto advance = makeGlyphBufferAdvance(advanceWidthForGlyph(data));
-    info.context().drawGlyphs(*data.font, &data.glyph, &advance, 1, origin, style.fontCascade().fontDescription().usedFontSmoothing());
+    info.context().drawGlyphs(*data.font, singleElementSpan(data.glyph), singleElementSpan(advance), origin, style.fontCascade().fontDescription().usedFontSmoothing());
 
     return glyphPaintRect;
 }
@@ -725,7 +727,7 @@ void MathOperator::paint(const RenderStyle& style, PaintInfo& info, const Layout
     LayoutPoint operatorOrigin { operatorTopLeft.x(), LayoutUnit(operatorTopLeft.y() - glyphBounds.y()) };
     // FIXME: If we're just drawing a single glyph, why do we need to compute an advance?
     auto advance = makeGlyphBufferAdvance(advanceWidthForGlyph(glyphData));
-    paintInfo.context().drawGlyphs(*glyphData.font, &glyphData.glyph, &advance, 1, operatorOrigin, style.fontCascade().fontDescription().usedFontSmoothing());
+    paintInfo.context().drawGlyphs(*glyphData.font, singleElementSpan(glyphData.glyph), singleElementSpan(advance), operatorOrigin, style.fontCascade().fontDescription().usedFontSmoothing());
 }
 
 }

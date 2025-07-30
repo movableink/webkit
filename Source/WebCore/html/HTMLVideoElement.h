@@ -137,6 +137,12 @@ public:
     bool isGStreamerHolePunchingEnabled() const final { return m_enableGStreamerHolePunching; }
 #endif
 
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    WEBCORE_EXPORT void didEnterExternalPlayback();
+    WEBCORE_EXPORT void didExitExternalPlayback();
+    bool isInExternalPlayback() const { return m_isInExternalPlayback; };
+#endif
+
     // ActiveDOMObject
     void stop() final;
 
@@ -151,7 +157,7 @@ private:
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
     bool isVideo() const final { return true; }
-    bool hasVideo() const final { return player() && player()->hasVideo(); }
+    bool hasVideo() const final { return player() && protectedPlayer()->hasVideo(); }
     bool supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenMode) const final;
     bool isURLAttribute(const Attribute&) const final;
     const AtomString& imageSourceURL() const final;
@@ -172,7 +178,7 @@ private:
     bool canShowWhileLocked() const final;
 #endif
 
-    std::unique_ptr<HTMLImageLoader> m_imageLoader;
+    const std::unique_ptr<HTMLImageLoader> m_imageLoader;
 
     AtomString m_defaultPosterURL;
 
@@ -198,8 +204,7 @@ private:
         }
 
         unsigned identifier { 0 };
-        Ref<VideoFrameRequestCallback> callback;
-        bool cancelled { false };
+        RefPtr<VideoFrameRequestCallback> callback;
     };
     Vector<UniqueRef<VideoFrameRequest>> m_videoFrameRequests;
     Vector<UniqueRef<VideoFrameRequest>> m_servicedVideoFrameRequests;
@@ -207,6 +212,10 @@ private:
 
 #if USE(GSTREAMER)
     bool m_enableGStreamerHolePunching { false };
+#endif
+
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    bool m_isInExternalPlayback { false };
 #endif
 };
 

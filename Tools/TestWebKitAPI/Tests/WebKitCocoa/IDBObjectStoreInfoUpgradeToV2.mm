@@ -61,9 +61,9 @@ TEST(IndexedDB, IDBObjectStoreInfoUpgradeToV2)
     // Copy database files with old ObjectStoreInfo schema to the database directory.
     NSURL *url1 = [NSBundle.test_resourcesBundle URLForResource:@"IDBObjectStoreInfoUpgrade" withExtension:@"sqlite3"];
 
-    NSString *hash = WebCore::SQLiteFileSystem::computeHashForFileName("objectstoreinfo-upgrade-test"_s);
+    RetainPtr hash = WebCore::SQLiteFileSystem::computeHashForFileName("objectstoreinfo-upgrade-test"_s).createNSString();
     NSString *originDirectory = @"~/Library/WebKit/com.apple.WebKit.TestWebKitAPI/WebsiteData/IndexedDB/v1/file__0/";
-    NSString *databaseDirectory = [[originDirectory stringByAppendingString:hash] stringByExpandingTildeInPath];
+    NSString *databaseDirectory = [[originDirectory stringByAppendingString:hash.get()] stringByExpandingTildeInPath];
     NSURL *targetURL = [NSURL fileURLWithPath:databaseDirectory];
     [[NSFileManager defaultManager] removeItemAtURL:targetURL error:nil];
     [[NSFileManager defaultManager] createDirectoryAtURL:targetURL withIntermediateDirectories:YES attributes:nil error:nil];

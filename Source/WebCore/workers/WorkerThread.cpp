@@ -144,14 +144,15 @@ Ref<Thread> WorkerThread::createThread()
 {
     if (is<WorkerMainRunLoop>(runLoop())) {
         // This worker should run on the main thread.
-        RunLoop::main().dispatch([protectedThis = Ref { *this }] {
+        RunLoop::protectedMain()->dispatch([protectedThis = Ref { *this }] {
             protectedThis->workerOrWorkletThread();
         });
         ASSERT(isMainThread());
-        return Thread::current();
+        return Thread::currentSingleton();
     }
 
-    return Thread::create(threadName(), [this] {
+    // WorkerOrWorkletThread::workerOrWorkletThread destroys the worker and expects a single reference to this.
+    SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE return Thread::create(threadName(), [this] {
         workerOrWorkletThread();
     }, ThreadType::JavaScript);
 }
@@ -221,7 +222,7 @@ SocketProvider* WorkerThread::socketProvider()
 
 WorkerGlobalScope* WorkerThread::globalScope()
 {
-    ASSERT(!thread() || thread() == &Thread::current());
+    ASSERT(!thread() || thread() == &Thread::currentSingleton());
     return downcast<WorkerGlobalScope>(WorkerOrWorkletThread::globalScope());
 }
 

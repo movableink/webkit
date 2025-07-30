@@ -129,6 +129,8 @@ public:
     void didChangeRendererForDOMNode(Node&);
     void didAddEventListener(EventTarget&);
     void willRemoveEventListener(EventTarget&);
+    void didChangeAssignedSlot(Node&);
+    void didChangeAssignedNodes(Element& slotElement);
 
     // InspectorDOMAgent hooks
     void didRemoveDOMNode(Node&, Inspector::Protocol::DOM::NodeId);
@@ -140,6 +142,8 @@ public:
         Grid = 1 << 2,
         Event = 1 << 3,
         Scrollable = 1 << 4,
+        SlotAssigned = 1 << 5,
+        SlotFilled = 1 << 6,
     };
     OptionSet<LayoutFlag> layoutFlagsForNode(Node&);
     RefPtr<JSON::ArrayOf<String /* Inspector::Protocol::CSS::LayoutFlag */>> protocolLayoutFlagsForNode(Node&);
@@ -186,7 +190,7 @@ private:
     std::unique_ptr<Inspector::CSSFrontendDispatcher> m_frontendDispatcher;
     RefPtr<Inspector::CSSBackendDispatcher> m_backendDispatcher;
 
-    Page& m_inspectedPage;
+    WeakRef<Page> m_inspectedPage;
     IdToInspectorStyleSheet m_idToInspectorStyleSheet;
     CSSStyleSheetToInspectorStyleSheet m_cssStyleSheetToInspectorStyleSheet;
     HashMap<Node*, Ref<InspectorStyleSheetForInlineStyle>> m_nodeToInspectorStyleSheet; // bogus "stylesheets" with elements' inline styles

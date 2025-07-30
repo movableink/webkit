@@ -362,8 +362,8 @@ bool TParseContext::anyMultiviewExtensionAvailable()
 
 bool TParseContext::parseVectorFields(const TSourceLoc &line,
                                       const ImmutableString &compString,
-                                      int vecSize,
-                                      TVector<int> *fieldOffsets)
+                                      uint32_t vecSize,
+                                      TVector<uint32_t> *fieldOffsets)
 {
     ASSERT(fieldOffsets);
     size_t fieldCount = compString.length();
@@ -1587,7 +1587,7 @@ bool TParseContext::declareVariable(const TSourceLoc &line,
             error(line, "gl_FragDepth can only be redeclared as float", identifier);
             return false;
         }
-        needsReservedCheck = false;
+        needsReservedCheck = (symbolType == SymbolType::UserDefined);
     }
     else if (isExtensionEnabled(TExtension::EXT_separate_shader_objects) &&
              mShaderType == GL_VERTEX_SHADER)
@@ -4721,7 +4721,7 @@ void TParseContext::checkIsNotUnsizedArray(const TSourceLoc &line,
     if (arrayType->isUnsizedArray())
     {
         error(line, errorMessage, token);
-        arrayType->sizeUnsizedArrays(TSpan<const unsigned int>());
+        arrayType->sizeUnsizedArrays(angle::Span<const unsigned int>());
     }
 }
 
@@ -4821,7 +4821,7 @@ TIntermTyped *TParseContext::addConstructor(TFunctionLookup *fnCall, const TSour
     {
         if (!checkUnsizedArrayConstructorArgumentDimensionality(arguments, type, line))
         {
-            type.sizeUnsizedArrays(TSpan<const unsigned int>());
+            type.sizeUnsizedArrays(angle::Span<const unsigned int>());
             return CreateZeroNode(type);
         }
         TIntermTyped *firstElement = arguments.at(0)->getAsTyped();
@@ -5186,12 +5186,35 @@ TIntermDeclaration *TParseContext::addInterfaceBlock(
             // is legal. See bug https://github.com/KhronosGroup/OpenGL-API/issues/7
             fieldType->setMemoryQualifier(fieldMemoryQualifier);
         }
+
+        // For per-vertex members, apply the appropriate built-in qualifiers to the members.
+        if (isGLPerVertex)
+        {
+            if (field->name() == "gl_Position")
+            {
+                fieldType->setQualifier(EvqPosition);
+            }
+            if (field->name() == "gl_PointSize")
+            {
+                fieldType->setQualifier(EvqPointSize);
+            }
+            if (field->name() == "gl_ClipDistance")
+            {
+                fieldType->setQualifier(EvqClipDistance);
+            }
+            if (field->name() == "gl_CullDistance")
+            {
+                fieldType->setQualifier(EvqCullDistance);
+            }
+        }
     }
 
     SymbolType instanceSymbolType = SymbolType::UserDefined;
     if (isGLPerVertex)
     {
         instanceSymbolType = SymbolType::BuiltIn;
+        typeQualifier.qualifier =
+            IsVaryingOut(typeQualifier.qualifier) ? EvqPerVertexOut : EvqPerVertexIn;
     }
     TInterfaceBlock *interfaceBlock = new TInterfaceBlock(&symbolTable, blockName, fieldList,
                                                           blockLayoutQualifier, instanceSymbolType);
@@ -5576,7 +5599,7 @@ TIntermTyped *TParseContext::addFieldSelectionExpression(TIntermTyped *baseExpre
 
     if (baseExpression->isVector())
     {
-        TVector<int> fieldOffsets;
+        TVector<uint32_t> fieldOffsets;
         if (!parseVectorFields(fieldLocation, fieldString, baseExpression->getNominalSize(),
                                &fieldOffsets))
         {
@@ -7065,6 +7088,52 @@ bool TParseContext::binaryOpCommonCheck(TOperator op,
             break;
     }
 
+    switch (op)
+    {
+        case EOpLogicalOr:
+        case EOpLogicalXor:
+        case EOpLogicalAnd:
+            // Above operations are only supported on booleans
+            ASSERT(!left->isArray() && !right->isArray() && !left->getType().getStruct() &&
+                   !right->getType().getStruct());
+            if (left->getBasicType() != EbtBool || !left->isScalar() || !right->isScalar())
+            {
+                return false;
+            }
+            // Basic types matching should have been already checked.
+            ASSERT(right->getBasicType() == EbtBool);
+            break;
+        case EOpAdd:
+        case EOpAddAssign:
+        case EOpSub:
+        case EOpSubAssign:
+        case EOpDiv:
+        case EOpDivAssign:
+        case EOpMul:
+        case EOpMulAssign:
+            // Above operations are not supported on booleans
+            ASSERT(!left->isArray() && !right->isArray() && !left->getType().getStruct() &&
+                   !right->getType().getStruct());
+            if (left->getBasicType() == EbtBool)
+            {
+                return false;
+            }
+            break;
+        case EOpIMod:
+        case EOpIModAssign:
+            // Mod operator only supported on integers
+            // Note that this is only for the % operator, not for mod()
+            ASSERT(!left->isArray() && !right->isArray() && !left->getType().getStruct() &&
+                   !right->getType().getStruct());
+            if (left->getBasicType() != EbtInt && left->getBasicType() != EbtUInt)
+            {
+                return false;
+            }
+            break;
+        default:
+            break;
+    }
+
     return true;
 }
 
@@ -7117,51 +7186,8 @@ TIntermTyped *TParseContext::addBinaryMathInternal(TOperator op,
                                                    const TSourceLoc &loc)
 {
     if (!binaryOpCommonCheck(op, left, right, loc))
-        return nullptr;
-
-    switch (op)
     {
-        case EOpEqual:
-        case EOpNotEqual:
-        case EOpLessThan:
-        case EOpGreaterThan:
-        case EOpLessThanEqual:
-        case EOpGreaterThanEqual:
-            break;
-        case EOpLogicalOr:
-        case EOpLogicalXor:
-        case EOpLogicalAnd:
-            ASSERT(!left->isArray() && !right->isArray() && !left->getType().getStruct() &&
-                   !right->getType().getStruct());
-            if (left->getBasicType() != EbtBool || !left->isScalar() || !right->isScalar())
-            {
-                return nullptr;
-            }
-            // Basic types matching should have been already checked.
-            ASSERT(right->getBasicType() == EbtBool);
-            break;
-        case EOpAdd:
-        case EOpSub:
-        case EOpDiv:
-        case EOpMul:
-            ASSERT(!left->isArray() && !right->isArray() && !left->getType().getStruct() &&
-                   !right->getType().getStruct());
-            if (left->getBasicType() == EbtBool)
-            {
-                return nullptr;
-            }
-            break;
-        case EOpIMod:
-            ASSERT(!left->isArray() && !right->isArray() && !left->getType().getStruct() &&
-                   !right->getType().getStruct());
-            // Note that this is only for the % operator, not for mod()
-            if (left->getBasicType() == EbtBool || left->getBasicType() == EbtFloat)
-            {
-                return nullptr;
-            }
-            break;
-        default:
-            break;
+        return nullptr;
     }
 
     if (op == EOpMul)
@@ -7187,7 +7213,7 @@ TIntermTyped *TParseContext::addBinaryMath(TOperator op,
                                            const TSourceLoc &loc)
 {
     TIntermTyped *node = addBinaryMathInternal(op, left, right, loc);
-    if (node == 0)
+    if (node == nullptr)
     {
         binaryOpError(loc, GetOperatorString(op), left->getType(), right->getType());
         return left;
@@ -7436,7 +7462,9 @@ void TParseContext::checkTextureOffset(TIntermAggregate *functionCall)
     TIntermSequence *arguments = functionCall->getSequence();
 
     if (BuiltInGroup::IsTextureOffsetNoBias(op) || BuiltInGroup::IsTextureGatherOffsetNoComp(op) ||
-        BuiltInGroup::IsTextureGatherOffsetsNoComp(op))
+        BuiltInGroup::IsTextureGatherOffsetRef(op) ||
+        BuiltInGroup::IsTextureGatherOffsetsNoComp(op) ||
+        BuiltInGroup::IsTextureGatherOffsetsRef(op))
     {
         offset = arguments->back();
     }

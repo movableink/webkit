@@ -1,3 +1,8 @@
 
-(draw-decomposed-glyphs)
+(draw-decomposed-glyphs
+  (font )
+  (decomposedGlyphs
+    (glyph-count 9)
+    (local-anchor (0,0))
+    (font-smoothing-mode antialiased)))
 

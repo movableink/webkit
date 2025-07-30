@@ -249,11 +249,10 @@ class Checkout(object):
         num_commits = 1 if sentinel.returncode else int(sentinel.stdout.rstrip())
         while num_commits > 1 and (num_commits < 50 or branch == self.repository.default_branch):
             num_commits -= 1
-            if run(
+            run(
                 [self.repository.executable(), 'push', remote, '{}~{}:{}'.format(branch, num_commits, dest_branch or branch)],
                 cwd=self.repository.root_path,
-            ).returncode:
-                break
+            )
 
         return not run(
             [self.repository.executable(), 'push', remote, '{}:{}'.format(branch, dest_branch or branch)],
@@ -261,20 +260,22 @@ class Checkout(object):
         ).returncode
 
     def forward_update(self, branch=None, tag=None, remote=None, track=False):
+        did_succeed = True
+
         for match, tos in self.forwarding:
             if match not in (remote, '{}:{}'.format(remote, branch or tag)):
                 continue
             for to in tos:
                 split = to.split(':', 1)
-                self.push_update(
+                did_succeed = did_succeed and self.push_update(
                     branch=branch,
                     tag=tag,
                     remote=split[0],
                     track=track,
                     dest_branch=split[1] if len(split) > 1 else None,
                 )
-            return
-        return
+            return did_succeed
+        return did_succeed
 
     def fetch(self, remote=REMOTE):
         return not run(
@@ -312,10 +313,10 @@ class Checkout(object):
         self.repository.cache.populate(branch=branch)
         return True
 
-    def update_all(self, remote=None, throttle=None):
+    def update_all_todos(self, remote=None):
         if not self.repository:
             sys.stderr.write("Cannot update checkout, clone still pending...\n")
-            return None
+            return []
 
         if remote is None:
             updated = set()
@@ -323,7 +324,8 @@ class Checkout(object):
                 key = key.split(':')[0]
                 if key in updated:
                     continue
-                self.update_all(remote=key, throttle=throttle)
+                for action in self.update_all_todos(remote=key):
+                    yield action
                 updated.add(key)
             return
 
@@ -335,30 +337,38 @@ class Checkout(object):
         else:
             self.repository.cache.populate(branch=self.repository.default_branch)
 
+        def action(remote, branch=None, tag=None, track=False):
+            if tag:
+                print(f'    {tag}')
+                self.forward_update(remote=remote, tag=tag)
+                return
+
+            if track:
+                run(
+                    [self.repository.executable(), 'branch', '--track', branch, 'remotes/{}/{}'.format(remote, branch)],
+                    cwd=self.repository.root_path,
+                )
+                self.repository.cache.populate(branch=branch)
+            else:
+                if not self.update_for(branch=branch, remote=remote):
+                    print("    Failed to update '{}' from '{}'".format(branch, remote or self.repository.default_remote))
+
+            self.forward_update(branch=branch, remote=remote)
+
         # First, update all branches we're already tracking
         print('Updating branches...')
         all_branches = set(self.repository.branches_for(remote=remote))
         for branch in self.repository.branches_for(remote=False):
             if branch not in all_branches:
                 continue
-            if throttle:
-                time.sleep(throttle)
             all_branches.remove(branch)
-            if not self.update_for(branch=branch, remote=remote):
-                print("    Failed to update '{}' from '{}'".format(branch, remote or self.repository.default_remote))
-            self.forward_update(branch=branch, remote=remote)
+
+            yield lambda: action(remote=remote, branch=branch)
 
         # Then, track all untracked branches
         print('Tracking new branches...')
         for branch in all_branches:
-            if throttle:
-                time.sleep(throttle)
-            run(
-                [self.repository.executable(), 'branch', '--track', branch, 'remotes/{}/{}'.format(remote, branch)],
-                cwd=self.repository.root_path,
-            )
-            self.forward_update(branch=branch, remote=remote)
-            self.repository.cache.populate(branch=branch)
+            yield lambda: action(remote=remote, branch=branch, track=True)
 
         # Sync all tags
         print('Syncing tags...')
@@ -369,7 +379,13 @@ class Checkout(object):
                 continue
             remote_tags = set(self.repository.tags(remote=target_remote))
             for tag in origin_tags - remote_tags:
-                if throttle:
-                    time.sleep(throttle)
-                print(f'    {tag}')
-                self.forward_update(tag=tag, remote=remote)
+                yield lambda: action(remote=remote, tag=tag)
+
+    def update_all(self, remote=None, throttle=None):
+        is_first = True
+        for todo in self.update_all_todos(remote=remote):
+            if throttle and is_first:
+                time.sleep(throttle)
+
+            todo()
+            is_first = False

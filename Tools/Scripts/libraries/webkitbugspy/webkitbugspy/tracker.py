@@ -29,7 +29,7 @@ from webkitcorepy import decorators, string_utils
 
 
 class Tracker(object):
-    REFERENCE_RE = re.compile(r'((https|http|rdar|radar)://[^\s><,\'\"}{\]\[)(]*[^\s><,\'\"}{\]\[)(\.\?])')
+    REFERENCE_RE = re.compile(r'^<?((https|http|rdar|radar)://[^\s><,\'\"}{\]\[)(]*[^\s><,\'\"}{\]\[)(\.\?])>?', re.MULTILINE)
 
     _trackers = []
 

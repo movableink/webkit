@@ -54,17 +54,18 @@ public:
     static constexpr bool deferSendingIfSuspended = false;
 
     explicit SendStreamBuffer(const IPC::StreamConnectionBuffer& stream)
-        : m_arguments(stream)
+        : m_stream(stream)
     {
     }
 
-    auto&& arguments()
+    template<typename Encoder>
+    void encode(Encoder& encoder)
     {
-        return WTFMove(m_arguments);
+        encoder << m_stream;
     }
 
 private:
-    std::tuple<const IPC::StreamConnectionBuffer&> m_arguments;
+    const IPC::StreamConnectionBuffer& m_stream;
 };
 
 } // namespace TestWithStreamBuffer

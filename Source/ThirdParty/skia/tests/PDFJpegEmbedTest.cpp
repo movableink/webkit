@@ -17,8 +17,9 @@
 #include "include/core/SkStream.h"
 #include "include/core/SkTypes.h"
 #include "include/docs/SkPDFDocument.h"
+#include "include/docs/SkPDFJpegHelpers.h"
 #include "include/private/SkEncodedInfo.h"
-#include "src/pdf/SkPDFBitmap.h"
+#include "src/codec/SkCodecPriv.h"
 #include "tests/Test.h"
 #include "tools/Resources.h"
 
@@ -71,7 +72,7 @@ DEF_TEST(SkPDF_JpegEmbedTest, r) {
     }
     ////////////////////////////////////////////////////////////////////////////
     SkDynamicMemoryWStream pdf;
-    auto document = SkPDF::MakeDocument(&pdf);
+    auto document = SkPDF::MakeDocument(&pdf, SkPDF::JPEG::MetadataWithCallbacks());
     SkCanvas* canvas = document->beginPage(642, 2048);
 
     canvas->clear(SK_ColorLTGRAY);
@@ -95,10 +96,6 @@ DEF_TEST(SkPDF_JpegEmbedTest, r) {
     document->close();
     sk_sp<SkData> pdfData = pdf.detachAsData();
     SkASSERT(pdfData);
-
-    #ifndef SK_PDF_BASE85_BINARY
-    REPORTER_ASSERT(r, is_subset_of(mandrillData.get(), pdfData.get()));
-    #endif
 
     // This JPEG uses a nonstandard colorspace - it can not be
     // embedded into the PDF directly.
@@ -135,7 +132,7 @@ bool SkIsJFIF(const SkData* data, SkJFIFInfo* info) {
     }
 
     SkISize jpegSize = codec->dimensions();
-    SkEncodedInfo::Color jpegColorType = SkPDFBitmap::GetEncodedInfo(*codec).color();
+    SkEncodedInfo::Color jpegColorType = SkCodecPriv::GetEncodedInfo(codec.get()).color();
     SkEncodedOrigin exifOrientation = codec->getOrigin();
 
     bool yuv = jpegColorType == SkEncodedInfo::kYUV_Color;

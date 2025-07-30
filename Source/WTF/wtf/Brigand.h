@@ -55,6 +55,7 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <wtf/StdLibExtras.h>
 
 #if !defined(BRIGAND_NO_BOOST_SUPPORT)
 #include <boost/fusion/container/vector/vector_fwd.hpp>
@@ -2480,7 +2481,8 @@ namespace brigand
     inline operator value_type() const
     {
       value_type that;
-      std::memcpy(&that, &parent::value, sizeof(value_type));
+      static_assert(sizeof(that) == sizeof(parent::value));
+      memcpySpan(asMutableByteSpan(that), asByteSpan(parent::value));
       return that;
     }
   };

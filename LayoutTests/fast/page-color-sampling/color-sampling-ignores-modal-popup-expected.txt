@@ -1,0 +1,12 @@
+PASS edgeColorsBeforeShowingPopup.top is "rgb(255, 0, 0)"
+PASS edgeColorsBeforeShowingPopup.left is "rgb(0, 128, 0)"
+PASS edgeColorsBeforeShowingPopup.right is "rgb(0, 0, 255)"
+PASS edgeColorsBeforeShowingPopup.bottom is null
+PASS edgeColorsAfterShowingPopup.top is "rgb(255, 0, 0)"
+PASS edgeColorsAfterShowingPopup.left is "rgb(0, 128, 0)"
+PASS edgeColorsAfterShowingPopup.right is "rgb(0, 0, 255)"
+PASS edgeColorsAfterShowingPopup.bottom is null
+PASS successfullyParsed is true
+
+TEST COMPLETE
+

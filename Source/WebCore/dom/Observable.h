@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "ScriptWrappable.h"
 #include "SubscriberCallback.h"
 #include "VoidCallback.h"
@@ -38,6 +37,7 @@ class InternalObserver;
 class JSSubscriptionObserverCallback;
 class MapperCallback;
 class PredicateCallback;
+class ReducerCallback;
 class ScriptExecutionContext;
 class VisitorCallback;
 struct ObservableInspector;
@@ -48,8 +48,8 @@ class Observable final : public ScriptWrappable, public RefCounted<Observable> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Observable);
 
 public:
-    using ObserverUnion = std::variant<RefPtr<JSSubscriptionObserverCallback>, SubscriptionObserver>;
-    using InspectorUnion = std::variant<RefPtr<JSSubscriptionObserverCallback>, ObservableInspector>;
+    using ObserverUnion = Variant<RefPtr<JSSubscriptionObserverCallback>, SubscriptionObserver>;
+    using InspectorUnion = Variant<RefPtr<JSSubscriptionObserverCallback>, ObservableInspector>;
 
     static Ref<Observable> create(Ref<SubscriberCallback>);
 
@@ -72,9 +72,10 @@ public:
     void find(ScriptExecutionContext&, Ref<PredicateCallback>&&, const SubscribeOptions&, Ref<DeferredPromise>&&);
     void every(ScriptExecutionContext&, Ref<PredicateCallback>&&, const SubscribeOptions&, Ref<DeferredPromise>&&);
     void some(ScriptExecutionContext&, Ref<PredicateCallback>&&, const SubscribeOptions&, Ref<DeferredPromise>&&);
+    void reduce(ScriptExecutionContext&, Ref<ReducerCallback>&&, JSC::JSValue, const SubscribeOptions&, Ref<DeferredPromise>&&);
 
 private:
-    Ref<SubscriberCallback> m_subscriberCallback;
+    const Ref<SubscriberCallback> m_subscriberCallback;
 };
 
 } // namespace WebCore

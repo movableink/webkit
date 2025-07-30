@@ -8,7 +8,8 @@
 <body>
     <script>
         description("Workers should be governed by 'child-src'.");
-        injectWorker("/security/contentSecurityPolicy/resources/alert-fail.js", EXPECT_BLOCK);
+        const isAsync = true;
+        injectWorker("/security/contentSecurityPolicy/resources/alert-fail.js", EXPECT_BLOCK, isAsync);
     </script>
     <script src="/js-test-resources/js-test-post.js"></script>
 </body>

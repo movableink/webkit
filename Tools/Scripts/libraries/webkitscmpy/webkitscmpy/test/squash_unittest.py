@@ -22,11 +22,11 @@
 
 import logging
 import os
+from unittest.mock import patch
 
-from mock import patch
-from webkitcorepy import OutputCapture, testing
-from webkitscmpy import local, program, mocks
-from webkitcorepy import run
+from webkitcorepy import OutputCapture, run, testing
+
+from webkitscmpy import local, mocks, program
 
 
 class TestSquash(testing.PathTestCase):

@@ -1,6 +1,8 @@
 // With verbose set to false, this test is successful if there is no output.  Set verbose to true to see expected matches.
 let verbose = false;
 
+let errors = 0;
+
 function arrayToString(arr)
 {
     let str = '';
@@ -30,7 +32,7 @@ function objectToString(obj)
 
         firstEntry = false;
     }
-    
+
     return "{ " + str + " }";
 }
 
@@ -139,23 +141,33 @@ function testRegExp(re, str, exp, groups)
     if (result) {
         if (verbose)
             print(re.toString() + ".exec(" + dumpValue(str) + "), passed ", dumpValue(exp));
-    } else
+    } else {
         print(re.toString() + ".exec(" + dumpValue(str) + "), FAILED test #" + testNumber + ", Expected ", dumpValue(exp), " got ", dumpValue(actual));
+        errors++;
+    }
 }
 
 function testRegExpSyntaxError(reString, flags, expError)
 {
     testNumber++;
 
+
     try {
         let re = new RegExp(reString, flags);
-        print("FAILED test #" + testNumber + ", Expected /" + reString + "/" + flags + " to throw \"" + expError);
+        print("FAILED test #" + testNumber + ", Expected /" + reString + "/" + flags + " to throw \"" + expError + "\", but it didn't");
+        errors++;
     } catch (e) {
         if (e != expError)
             print("FAILED test #" + testNumber + ", Expected /" + reString + "/" + flags + " to throw \"" + expError + "\" got \"" + e + "\"");
         else if (verbose)
             print("/" + reString + "/" + flags + " passed, it threw \"" + expError + "\" as expected");
     }
+}
+
+function printErrors()
+{
+    if (errors)
+        throw "Test had " + errors + " errors";
 }
 
 // Test 1
@@ -520,58 +532,105 @@ testRegExpSyntaxError("\\%", "u", "SyntaxError: Invalid regular expression: inva
 testRegExpSyntaxError("\\,", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("\\:", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 
-// Test 256
+// Test 261
 testRegExpSyntaxError("\\;", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("\\<", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("\\=", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("\\>", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("\\@", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 
-// Test 261
+// Test 266
 testRegExpSyntaxError("\\`", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("\\~", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("[\\&]", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("[\\!]", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("[\\#]", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 
-// Test 255
+// Test 260
 testRegExpSyntaxError("[\\%]", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("[\\,]", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("[\\:]", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("[\\;]", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("[\\<]", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 
-// Test 271
+// Test 276
 testRegExpSyntaxError("[\\=]", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("[\\>]", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("[\\@]", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("[\\`]", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("[\\~]", "u", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 
-// Test 276
+// Test 281
 testRegExpSyntaxError("\\&", "v", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("\\-", "v", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("\\!", "v", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("\\#", "v", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("\\%", "v", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 
-// Test 281
+// Test 286
 testRegExpSyntaxError("\\,", "v", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("\\:", "v", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("\\;", "v", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("\\<", "v", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("\\=", "v", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 
-// Test 286
+// Test 291
 testRegExpSyntaxError("\\>", "v", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("\\@", "v", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("\\`", "v", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("\\~", "v", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 testRegExpSyntaxError("\\q{a}", "v", "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern");
 
-// Test 291
+// Test 296
 testRegExp(/[\&\-\!\#\%\,\:\;\<\=\>\@\`\~]*/v, "&-!#%,:;<=>@`~", ["&-!#%,:;<=>@`~"]);
 testRegExp(/[\q{\&\-\!\#\%\,\:\;\<\=\>\@\`\~}X]*/v, "X&-!#%,:;<=>@`~X", ["X&-!#%,:;<=>@`~X"]);
 testRegExp(/[\q{}]/v, "", [""]);
 testRegExp(/[\q{\u{0095}|k}]/vi, "k", ["k"]);
 testRegExp(/[\q{\u{0095}|s}]/vi, "s", ["s"]);
+
+// Test 301
+testRegExp(/[f[^a-z]]/v, "f", ["f"]);
+testRegExp(/[f[^a-z]]/v, "a", null);
+testRegExp(/[f[^a-z]]/v, "2", ["2"]);
+
+// Test 304
+testRegExp(/[^f[^a-z]]/v, "f", null);
+testRegExp(/[^f[^a-z]]/v, "a", ["a"]);
+testRegExp(/[^f[^a-z]]/v, "2", null);
+
+// Test 307
+testRegExp(/[^f[a-z]]/v, "f", null);
+testRegExp(/[^f[a-z]]/v, "a", null);
+testRegExp(/[^f[a-z]]/v, "2", ["2"]);
+
+// Test 310
+testRegExp(/[^[^[^[^[^[^[^[^[^[^[^[^abc]]]]]]]]]]]]/v, "a", ["a"]);
+testRegExp(/[^[^[^[^[^[^[^[^[^[^[^[^abc]]]]]]]]]]]]/v, "d", null);
+
+testRegExp(/[^[^[^[^[^[^[^[^[^[^[^abc]]]]]]]]]]]/v, "a", null);
+testRegExp(/[^[^[^[^[^[^[^[^[^[^[^abc]]]]]]]]]]]/v, "d", ["d"]);
+
+// Test 314
+testRegExp(/[a\u{1813}[^\u{0250}-\u{3373}a]]/v, "\u{0250}", null);
+testRegExp(/[a\u{1813}[^\u{0250}-\u{3373}a]]/v, "\u{1813}", ["\u{1813}"]);
+testRegExp(/[a\u{1813}[^\u{0250}-\u{3373}a]]/v, "a", ["a"]);
+
+// Test 317
+testRegExpSyntaxError("[a-[^a-z]]", "v", "SyntaxError: Invalid regular expression: invalid class set character");
+
+// Test 318
+testRegExp(/[f[^[a-m][n-z]]]/v, "f", "f");
+testRegExp(/[f[^[a-m][n-z]]]/v, "a", null);
+testRegExp(/[f[^[a-m][n-z]]]/v, "2", "2");
+
+// Test 321
+testRegExp(/[f[^[a-z]&&[a-f]]]/v, "f", "f");
+testRegExp(/[f[^[a-z]&&[a-f]]]/v, "a", null);
+testRegExp(/[f[^[a-z]&&[a-f]]]/v, "g", "g");
+testRegExp(/[f[^[a-z]&&[a-f]]]/v, "2", "2");
+
+testRegExp(/[f[^[a-z]--[a-f]]]/v, "f", "f");
+testRegExp(/[f[^[a-z]--[a-f]]]/v, "a", "a");
+testRegExp(/[f[^[a-z]--[a-f]]]/v, "g", null);
+testRegExp(/[f[^[a-z]--[a-f]]]/v, "2", "2");
+

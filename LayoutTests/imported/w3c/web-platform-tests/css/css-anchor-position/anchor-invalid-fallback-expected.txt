@@ -2,6 +2,9 @@ X
 
 PASS Element can be anchor positioned
 PASS Element can use <length> fallback if present
+PASS Element can use <length> fallback with percentage
+PASS Element can use <length> fallback for max size with percentage
+PASS Element can use <length> fallback for margin with percentage
 PASS Invalid anchor function, left
 PASS Invalid anchor function, right
 PASS Invalid anchor function, bottom
@@ -35,5 +38,5 @@ PASS Invalid anchor function, anchor(var())
 PASS Invalid anchor function, anchor(unknown var()) (fallback)
 PASS Invalid anchor function, anchor(unknown var()) (no fallback)
 PASS Revert to invalid anchor()
-FAIL Flip to invalid anchor() assert_equals: left expected "10px" but got "9999px"
+PASS Flip to invalid anchor()
 

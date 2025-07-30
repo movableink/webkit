@@ -155,7 +155,7 @@ void MarkedBlock::Handle::stopAllocating(const FreeList& freeList)
         [&] (HeapCell* cell) {
             if constexpr (MarkedBlockInternal::verbose)
                 dataLog("Free cell: ", RawPointer(cell), "\n");
-            if (m_attributes.destruction == NeedsDestruction)
+            if (m_attributes.destruction != DoesNotNeedDestruction)
                 cell->zap(HeapCell::StopAllocating);
             block().clearNewlyAllocated(cell);
         });
@@ -259,7 +259,7 @@ void MarkedBlock::aboutToMarkSlow(HeapVersion markingVersion, HeapCell* cell)
         return;
 
     MarkedBlock::Handle* handle = header().handlePointerForNullCheck();
-    if (UNLIKELY(!handle))
+    if (!handle) [[unlikely]]
         dumpInfoAndCrashForInvalidHandleV2(locker, cell);
 
     BlockDirectory* directory = handle->directory();
@@ -470,8 +470,7 @@ void MarkedBlock::Handle::sweep(FreeList* freeList)
     ASSERT(m_directory->isInUse(this));
 
     SweepMode sweepMode = freeList ? SweepToFreeList : SweepOnly;
-    bool needsDestruction = m_attributes.destruction == NeedsDestruction
-        && m_directory->isDestructible(this);
+    bool needsDestruction = m_attributes.destruction != DoesNotNeedDestruction && m_directory->isDestructible(this);
 
     m_weakSet.sweep();
 

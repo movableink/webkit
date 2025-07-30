@@ -97,8 +97,8 @@ private:
     enum class ShouldSetSource : bool { No, Yes };
     void didReceiveRedirectResponse(WebCore::ResourceResponse&&);
     void didReceiveResponse(WebCore::ResourceResponse&&, bool needsContinueDidReceiveResponseMessage);
-    void didReceiveData(const IPC::SharedBufferReference&, uint64_t encodedDataLength);
-    void didReceiveDataFromPreloader(const WebCore::FragmentedSharedBuffer&, uint64_t encodedDataLength);
+    void didReceiveData(const IPC::SharedBufferReference&);
+    void didReceiveDataFromPreloader(const WebCore::FragmentedSharedBuffer&);
     void didReceiveFormData(const IPC::FormDataReference&);
     void didFinish(const WebCore::NetworkLoadMetrics&);
     void didFail(const WebCore::ResourceError&);
@@ -120,7 +120,7 @@ private:
 
     void workerClosed();
 
-    template<typename Message> bool sendToServiceWorker(Message&&);
+    RefPtr<IPC::Connection> serviceWorkerConnection();
     template<typename Message> bool sendToClient(Message&&);
 
     RefPtr<NetworkResourceLoader> protectedLoader() const;

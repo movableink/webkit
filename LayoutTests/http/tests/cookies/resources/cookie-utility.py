@@ -2,7 +2,7 @@
 
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs
 
 file = __file__.split(':/cygwin')[-1]
@@ -14,7 +14,7 @@ from resources.portabilityLayer import get_cookies
 cookies = get_cookies()
 
 def delete_cookie(name):
-    expires = datetime.utcnow() - timedelta(seconds=86400)
+    expires = datetime.now(timezone.utc) - timedelta(seconds=86400)
     sys.stdout.write('Set-Cookie: {}=deleted; expires={} GMT; Max-Age=0; SameSite=None; Secure; path=/\r\n'.format(name, expires.strftime('%a, %d-%b-%Y %H:%M:%S')))
 
 query_function = parse_qs(os.environ.get('QUERY_STRING', ''), keep_blank_values=True).get('queryfunction', [''])[0]
@@ -33,7 +33,7 @@ elif query_function == 'deleteCookies':
     sys.exit(0)
     
 elif query_function == 'setFooCookie':
-    expires = datetime.utcnow() + timedelta(seconds=86400)
+    expires = datetime.now(timezone.utc) + timedelta(seconds=86400)
     sys.stdout.write(
         'Set-Cookie: foo=awesomevalue; expires={} GMT; Max-Age=86400; SameSite=None; Secure; path=/\r\n\r\n'
         'Set the foo cookie'.format(expires.strftime('%a, %d-%b-%Y %H:%M:%S'))
@@ -41,7 +41,7 @@ elif query_function == 'setFooCookie':
     sys.exit(0)
     
 elif query_function == 'setFooAndBarCookie':
-    expires = datetime.utcnow() + timedelta(seconds=86400)
+    expires = datetime.now(timezone.utc) + timedelta(seconds=86400)
     sys.stdout.write(
         'Set-Cookie: foo=awesomevalue; expires={expires} GMT; Max-Age=86400; SameSite=None; Secure; path=/\r\n'
         'Set-Cookie: bar=anotherawesomevalue; expires={expires} GMT; Max-Age=86400; SameSite=None; Secure; path=/\r\n\r\n'

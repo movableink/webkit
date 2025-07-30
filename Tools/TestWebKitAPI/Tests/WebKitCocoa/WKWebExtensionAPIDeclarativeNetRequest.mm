@@ -43,8 +43,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, BlockedLoadTest)
     }, TestWebKitAPI::HTTPServer::Protocol::Http);
 
     auto *backgroundScript = Util::constructScript(@[
-        // Yield after the background page has loaded so we can load a tab.
-        @"browser.test.yield('Load Tab')"
+        @"browser.test.sendMessage('Load Tab')"
     ]);
 
     auto *declarativeNetRequestManifest = @{
@@ -64,15 +63,12 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, BlockedLoadTest)
 
     auto *rules = @"[ { \"id\" : 1, \"priority\": 1, \"action\" : { \"type\" : \"block\" }, \"condition\" : { \"urlFilter\" : \"frame\" } } ]";
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:declarativeNetRequestManifest resources:@{ @"background.js": backgroundScript, @"rules.json": rules  }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(declarativeNetRequestManifest, @{ @"background.js": backgroundScript, @"rules.json": rules  });
 
     // Grant the declarativeNetRequest permission.
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forPermission:WKWebExtensionPermissionDeclarativeNetRequest];
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Load Tab");
+    [manager runUntilTestMessage:@"Load Tab"];
 
     auto webView = manager.get().defaultTab.webView;
     auto navigationDelegate = adoptNS([TestNavigationDelegate new]);
@@ -97,8 +93,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, BlockedLoadInPrivateBrowsingTest)
     }, TestWebKitAPI::HTTPServer::Protocol::Http);
 
     auto *backgroundScript = Util::constructScript(@[
-        // Yield after the background page has loaded so we can load a tab.
-        @"browser.test.yield('Load Tab')"
+        @"browser.test.sendMessage('Load Tab')"
     ]);
 
     auto *declarativeNetRequestManifest = @{
@@ -118,15 +113,12 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, BlockedLoadInPrivateBrowsingTest)
 
     auto *rules = @"[ { \"id\" : 1, \"priority\": 1, \"action\" : { \"type\" : \"block\" }, \"condition\" : { \"urlFilter\" : \"frame\" } } ]";
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:declarativeNetRequestManifest resources:@{ @"background.js": backgroundScript, @"rules.json": rules  }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(declarativeNetRequestManifest, @{ @"background.js": backgroundScript, @"rules.json": rules  });
 
     // Grant the declarativeNetRequest permission.
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forPermission:WKWebExtensionPermissionDeclarativeNetRequest];
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Load Tab");
+    [manager runUntilTestMessage:@"Load Tab"];
 
     manager.get().context.hasAccessToPrivateData = YES;
     [manager closeWindow:manager.get().defaultWindow];
@@ -181,13 +173,12 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, GetEnabledRulesets)
 
     auto *rules = @"[ { \"id\" : 1, \"priority\": 1, \"action\" : { \"type\" : \"block\" }, \"condition\" : { \"urlFilter\" : \"frame\" } } ]";
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:declarativeNetRequestManifest resources:@{ @"background.js": backgroundScript, @"rules.json": rules  }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(declarativeNetRequestManifest, @{ @"background.js": backgroundScript, @"rules.json": rules  });
 
     // Grant the declarativeNetRequest permission.
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forPermission:WKWebExtensionPermissionDeclarativeNetRequest];
 
-    [manager loadAndRun];
+    [manager run];
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, UpdateEnabledRulesets)
@@ -245,13 +236,12 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, UpdateEnabledRulesets)
 
     auto *rules = @"[ { \"id\" : 1, \"priority\": 1, \"action\" : { \"type\" : \"block\" }, \"condition\" : { \"urlFilter\" : \"frame\" } } ]";
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:declarativeNetRequestManifest resources:@{ @"background.js": backgroundScript, @"rules.json": rules  }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(declarativeNetRequestManifest, @{ @"background.js": backgroundScript, @"rules.json": rules  });
 
     // Grant the declarativeNetRequest permission.
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forPermission:WKWebExtensionPermissionDeclarativeNetRequest];
 
-    [manager loadAndRun];
+    [manager run];
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, UpdateEnabledRulesetsPerformsCompilation)
@@ -274,8 +264,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, UpdateEnabledRulesetsPerformsCompil
         @"browser.test.assertEq(enabledRulesets.length, 1, 'One ruleset should have been enabled')",
         @"browser.test.assertEq(enabledRulesets[0], 'blockFrame', 'blockFrame should have been enabled')",
 
-        // Yield after the background page has finished updating the rulesets (and performing a compilation) so we can load a tab.
-        @"browser.test.yield('Load Tab')"
+        @"browser.test.sendMessage('Load Tab')"
     ]);
 
     auto *declarativeNetRequestManifest = @{
@@ -295,15 +284,12 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, UpdateEnabledRulesetsPerformsCompil
 
     auto *rules = @"[ { \"id\" : 1, \"priority\": 1, \"action\" : { \"type\" : \"block\" }, \"condition\" : { \"urlFilter\" : \"frame\" } } ]";
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:declarativeNetRequestManifest resources:@{ @"background.js": backgroundScript, @"rules.json": rules  }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(declarativeNetRequestManifest, @{ @"background.js": backgroundScript, @"rules.json": rules  });
 
     // Grant the declarativeNetRequest permission.
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forPermission:WKWebExtensionPermissionDeclarativeNetRequest];
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Load Tab");
+    [manager runUntilTestMessage:@"Load Tab"];
 
     auto webView = manager.get().defaultTab.webView;
     auto navigationDelegate = adoptNS([TestNavigationDelegate new]);
@@ -352,13 +338,12 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, IsRegexSupported)
         @"background": @{ @"scripts": @[ @"background.js" ], @"type": @"module", @"persistent": @NO },
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:declarativeNetRequestManifest resources:@{ @"background.js": backgroundScript  }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(declarativeNetRequestManifest, @{ @"background.js": backgroundScript  });
 
     // Grant the declarativeNetRequest permission.
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forPermission:WKWebExtensionPermissionDeclarativeNetRequest];
 
-    [manager loadAndRun];
+    [manager run];
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, SetExtensionActionOptions)
@@ -374,11 +359,10 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, SetExtensionActionOptions)
 
         @"setTimeout(() => {",
         @"  browser.declarativeNetRequest.setExtensionActionOptions({ tabUpdate: { tabId: currentTab.id, increment: 2 } })",
-        @"  browser.test.yield('Check badge text')",
+        @"  browser.test.sendMessage('Check badge text')",
         @"}, 1000)",
 
-        // Yield after the background page has loaded so we can load a tab.
-        @"browser.test.yield('Load Tab')"
+        @"browser.test.sendMessage('Load Tab')"
     ]);
 
     auto *declarativeNetRequestManifest = @{
@@ -398,16 +382,13 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, SetExtensionActionOptions)
 
     auto *rules = @"[ { \"id\" : 1, \"priority\": 1, \"action\" : { \"type\" : \"block\" }, \"condition\" : { \"urlFilter\" : \"frame\" } } ]";
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:declarativeNetRequestManifest resources:@{ @"background.js": backgroundScript, @"rules.json": rules  }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(declarativeNetRequestManifest, @{ @"background.js": backgroundScript, @"rules.json": rules  });
 
     // Grant the declarativeNetRequest and tabs permission.
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forPermission:WKWebExtensionPermissionDeclarativeNetRequest];
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forPermission:WKWebExtensionPermissionTabs];
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Load Tab");
+    [manager runUntilTestMessage:@"Load Tab"];
 
     auto *defaultTab = manager.get().defaultTab;
     auto *webView = defaultTab.webView;
@@ -429,9 +410,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, SetExtensionActionOptions)
     // The badge text should be "1" to match the one resource that was blocked.
     EXPECT_NS_EQUAL(action.badgeText, @"1");
 
-    [manager run];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Check badge text");
+    [manager runUntilTestMessage:@"Check badge text"];
 
     // The badge text should now be "3" since we incremented it by two.
     EXPECT_NS_EQUAL(action.badgeText, @"3");
@@ -454,8 +433,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, GetMatchedRules)
         @"  browser.test.notifyPass()",
         @"}, 1000)",
 
-        // Yield after the background page has loaded so we can load a tab.
-        @"browser.test.yield('Load Tab')"
+        @"browser.test.sendMessage('Load Tab')"
     ]);
 
     auto *declarativeNetRequestManifest = @{
@@ -475,8 +453,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, GetMatchedRules)
 
     auto *rules = @"[ { \"id\" : 1, \"priority\": 1, \"action\" : { \"type\" : \"block\" }, \"condition\" : { \"urlFilter\" : \"frame\" } } ]";
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:declarativeNetRequestManifest resources:@{ @"background.js": backgroundScript, @"rules.json": rules  }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(declarativeNetRequestManifest, @{ @"background.js": backgroundScript, @"rules.json": rules  });
 
     // Grant the declarativeNetRequestFeedback permission.
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forPermission:WKWebExtensionPermissionDeclarativeNetRequest];
@@ -487,9 +464,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, GetMatchedRules)
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:requestURL];
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:[requestURL URLByAppendingPathComponent:@"frame.html"]];
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Load Tab");
+    [manager runUntilTestMessage:@"Load Tab"];
 
     [manager.get().defaultTab.webView loadRequest:urlRequest];
 
@@ -510,8 +485,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, SessionRules)
         @"sessionRules = await browser.declarativeNetRequest.getSessionRules()",
         @"browser.test.assertEq(sessionRules.length, 1)",
 
-        // Yield after the background page has loaded so we can load a tab.
-        @"browser.test.yield('Load Tab')"
+        @"browser.test.sendMessage('Load Tab')"
     ]);
 
     auto *declarativeNetRequestManifest = @{
@@ -520,17 +494,15 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, SessionRules)
         @"background": @{ @"scripts": @[ @"background.js" ], @"type": @"module", @"persistent": @NO },
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:declarativeNetRequestManifest resources:@{ @"background.js": backgroundScript  }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(declarativeNetRequestManifest, @{ @"background.js": backgroundScript  });
 
     // Grant the declarativeNetRequest permission.
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forPermission:WKWebExtensionPermissionDeclarativeNetRequest];
 
     EXPECT_FALSE(manager.get().context.hasContentModificationRules);
 
-    [manager loadAndRun];
+    [manager runUntilTestMessage:@"Load Tab"];
 
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Load Tab");
     EXPECT_TRUE(manager.get().context.hasContentModificationRules);
 
     auto webView = manager.get().defaultTab.webView;
@@ -546,6 +518,69 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, SessionRules)
     [webView loadRequest:server.requestWithLocalhost()];
 
     Util::run(&receivedActionNotification);
+}
+
+TEST(WKWebExtensionAPIDeclarativeNetRequest, GetSessionRules)
+{
+    auto *backgroundScript = Util::constructScript(@[
+        @"let sessionRules = await browser.declarativeNetRequest.getSessionRules()",
+        @"browser.test.assertEq(sessionRules.length, 0)",
+
+        @"await browser.declarativeNetRequest.updateSessionRules({ addRules: [{ id: 1, priority: 1, action: {type: 'block'}, condition: { urlFilter: 'foo' } }] })",
+        @"await browser.declarativeNetRequest.updateSessionRules({ addRules: [{ id: 2, priority: 1, action: {type: 'block'}, condition: { urlFilter: 'bar' } }] })",
+        @"await browser.declarativeNetRequest.updateSessionRules({ addRules: [{ id: 3, priority: 1, action: {type: 'block'}, condition: { urlFilter: 'baz' } }] })",
+
+        @"browser.test.assertRejects(browser.declarativeNetRequest.getSessionRules({ ruleIds: 1 }))",
+        @"browser.test.assertRejects(browser.declarativeNetRequest.getSessionRules({ ruleIds: '' }))",
+        @"browser.test.assertRejects(browser.declarativeNetRequest.getSessionRules({ ruleIds: true }))",
+        @"browser.test.assertRejects(browser.declarativeNetRequest.getSessionRules({ ruleIds: { } }))",
+        @"browser.test.assertRejects(browser.declarativeNetRequest.getSessionRules({ ruleIds: function foo() { } }))",
+        @"browser.test.assertRejects(browser.declarativeNetRequest.getSessionRules({ ruleIds: [ '' ] }))",
+        @"browser.test.assertRejects(browser.declarativeNetRequest.getSessionRules({ ruleIds: [ true ] }))",
+        @"browser.test.assertRejects(browser.declarativeNetRequest.getSessionRules({ ruleIds: [ { } ] }))",
+        @"browser.test.assertRejects(browser.declarativeNetRequest.getSessionRules({ ruleIds: [ function foo() { } ] }))",
+
+        @"sessionRules = await browser.declarativeNetRequest.getSessionRules({ })",
+        @"sessionRules = sessionRules.sort((a, b) => { a.id < b.id })",
+        @"browser.test.assertEq(sessionRules.length, 3)",
+        @"browser.test.assertEq(sessionRules[0].id, 1)",
+        @"browser.test.assertEq(sessionRules[1].id, 2)",
+        @"browser.test.assertEq(sessionRules[2].id, 3)",
+
+        @"sessionRules = await browser.declarativeNetRequest.getSessionRules({ ruleIds: [ ] })",
+        @"sessionRules = sessionRules.sort((a, b) => { a.id < b.id })",
+        @"browser.test.assertEq(sessionRules.length, 3)",
+        @"browser.test.assertEq(sessionRules[0].id, 1)",
+        @"browser.test.assertEq(sessionRules[1].id, 2)",
+        @"browser.test.assertEq(sessionRules[2].id, 3)",
+
+        @"sessionRules = await browser.declarativeNetRequest.getSessionRules({ ruleIds: [ 1 ] })",
+        @"browser.test.assertEq(sessionRules.length, 1)",
+        @"browser.test.assertEq(sessionRules[0].id, 1)",
+
+        @"sessionRules = await browser.declarativeNetRequest.getSessionRules({ ruleIds: [ 1, 2 ] })",
+        @"sessionRules = sessionRules.sort((a, b) => { a.id < b.id })",
+        @"browser.test.assertEq(sessionRules.length, 2)",
+        @"browser.test.assertEq(sessionRules[0].id, 1)",
+        @"browser.test.assertEq(sessionRules[1].id, 2)",
+
+        @"sessionRules = await browser.declarativeNetRequest.getSessionRules({ ruleIds: [ 1, 2, 3 ] })",
+        @"sessionRules = sessionRules.sort((a, b) => { a.id < b.id })",
+        @"browser.test.assertEq(sessionRules.length, 3)",
+        @"browser.test.assertEq(sessionRules[0].id, 1)",
+        @"browser.test.assertEq(sessionRules[1].id, 2)",
+        @"browser.test.assertEq(sessionRules[2].id, 3)",
+
+        @"browser.test.notifyPass()"
+    ]);
+
+    auto *declarativeNetRequestManifest = @{
+        @"manifest_version": @3,
+        @"permissions": @[ @"declarativeNetRequest" ],
+        @"background": @{ @"scripts": @[ @"background.js" ], @"type": @"module", @"persistent": @NO },
+    };
+
+    Util::loadAndRunExtension(declarativeNetRequestManifest, @{ @"background.js": backgroundScript  });
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, DynamicRules)
@@ -561,11 +596,12 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, DynamicRules)
         @"  await browser.declarativeNetRequest.updateDynamicRules({ addRules: [{ id: 1, priority: 1, action: {type: 'block'}, condition: { urlFilter: 'frame' } }] })",
         @"  dynamicRules = await browser.declarativeNetRequest.getDynamicRules()",
         @"  browser.test.assertEq(dynamicRules.length, 1)",
-        // Yield after updating the dynamic rules so we can unload and re-load the extension.
-        @"  browser.test.yield('Unload extension')",
+
+        @"  browser.test.sendMessage('Unload extension')",
         @"} else {",
         @"  browser.test.assertEq(dynamicRules.length, 1)",
-        @"  browser.test.yield('Load Tab')",
+
+        @"  browser.test.sendMessage('Load Tab')",
         @"}"
     ]);
 
@@ -575,9 +611,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, DynamicRules)
         @"background": @{ @"scripts": @[ @"background.js" ], @"type": @"module", @"persistent": @NO },
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:declarativeNetRequestManifest resources:@{ @"background.js": backgroundScript  }]);
-
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get() extensionControllerConfiguration:WKWebExtensionControllerConfiguration._temporaryConfiguration]);
+    auto manager = Util::parseExtension(declarativeNetRequestManifest, @{ @"background.js": backgroundScript }, WKWebExtensionControllerConfiguration._temporaryConfiguration);
 
     // Give the extension a unique identifier so it opts into saving data in the temporary configuration.
     manager.get().context.uniqueIdentifier = @"org.webkit.test.extension (76C788B8)";
@@ -587,20 +621,18 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, DynamicRules)
 
     EXPECT_FALSE(manager.get().context.hasContentModificationRules);
 
-    [manager loadAndRun];
+    [manager load];
+    [manager runUntilTestMessage:@"Unload extension"];
 
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Unload extension");
     EXPECT_TRUE(manager.get().context.hasContentModificationRules);
 
     auto *storageDirectory = manager.get().controller.configuration._storageDirectoryPath;
     storageDirectory = [storageDirectory stringByAppendingPathComponent:manager.get().context.uniqueIdentifier];
     EXPECT_TRUE([NSFileManager.defaultManager fileExistsAtPath:[storageDirectory stringByAppendingPathComponent:@"DeclarativeNetRequestContentRuleList.data"]]);
 
-    [manager.get().controller unloadExtensionContext:manager.get().context error:nullptr];
-
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Load Tab");
+    [manager unload];
+    [manager load];
+    [manager runUntilTestMessage:@"Load Tab"];
 
     auto webView = manager.get().defaultTab.webView;
     auto navigationDelegate = adoptNS([TestNavigationDelegate new]);
@@ -617,8 +649,70 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, DynamicRules)
     Util::run(&receivedActionNotification);
 }
 
-// FIXME: rdar://116459903 (Web Process is crashing when using declarativeNetRequest to redirect a page)
-TEST(WKWebExtensionAPIDeclarativeNetRequest, DISABLED_RedirectRule)
+TEST(WKWebExtensionAPIDeclarativeNetRequest, GetDynamicRules)
+{
+    auto *backgroundScript = Util::constructScript(@[
+        @"let dynamicRules = await browser.declarativeNetRequest.getDynamicRules()",
+        @"browser.test.assertEq(dynamicRules.length, 0)",
+
+        @"await browser.declarativeNetRequest.updateDynamicRules({ addRules: [{ id: 1, priority: 1, action: {type: 'block'}, condition: { urlFilter: 'foo' } }] })",
+        @"await browser.declarativeNetRequest.updateDynamicRules({ addRules: [{ id: 2, priority: 1, action: {type: 'block'}, condition: { urlFilter: 'bar' } }] })",
+        @"await browser.declarativeNetRequest.updateDynamicRules({ addRules: [{ id: 3, priority: 1, action: {type: 'block'}, condition: { urlFilter: 'baz' } }] })",
+
+        @"browser.test.assertRejects(browser.declarativeNetRequest.getDynamicRules({ ruleIds: 1 }))",
+        @"browser.test.assertRejects(browser.declarativeNetRequest.getDynamicRules({ ruleIds: '' }))",
+        @"browser.test.assertRejects(browser.declarativeNetRequest.getDynamicRules({ ruleIds: true }))",
+        @"browser.test.assertRejects(browser.declarativeNetRequest.getDynamicRules({ ruleIds: { } }))",
+        @"browser.test.assertRejects(browser.declarativeNetRequest.getDynamicRules({ ruleIds: function foo() { } }))",
+        @"browser.test.assertRejects(browser.declarativeNetRequest.getDynamicRules({ ruleIds: [ '' ] }))",
+        @"browser.test.assertRejects(browser.declarativeNetRequest.getDynamicRules({ ruleIds: [ true ] }))",
+        @"browser.test.assertRejects(browser.declarativeNetRequest.getDynamicRules({ ruleIds: [ { } ] }))",
+        @"browser.test.assertRejects(browser.declarativeNetRequest.getDynamicRules({ ruleIds: [ function foo() { } ] }))",
+
+        @"dynamicRules = await browser.declarativeNetRequest.getDynamicRules({ })",
+        @"dynamicRules = dynamicRules.sort((a, b) => { a.id < b.id })",
+        @"browser.test.assertEq(dynamicRules.length, 3)",
+        @"browser.test.assertEq(dynamicRules[0].id, 1)",
+        @"browser.test.assertEq(dynamicRules[1].id, 2)",
+        @"browser.test.assertEq(dynamicRules[2].id, 3)",
+
+        @"dynamicRules = await browser.declarativeNetRequest.getDynamicRules({ ruleIds: [ ] })",
+        @"dynamicRules = dynamicRules.sort((a, b) => { a.id < b.id })",
+        @"browser.test.assertEq(dynamicRules.length, 3)",
+        @"browser.test.assertEq(dynamicRules[0].id, 1)",
+        @"browser.test.assertEq(dynamicRules[1].id, 2)",
+        @"browser.test.assertEq(dynamicRules[2].id, 3)",
+
+        @"dynamicRules = await browser.declarativeNetRequest.getDynamicRules({ ruleIds: [ 1 ] })",
+        @"browser.test.assertEq(dynamicRules.length, 1)",
+        @"browser.test.assertEq(dynamicRules[0].id, 1)",
+
+        @"dynamicRules = await browser.declarativeNetRequest.getDynamicRules({ ruleIds: [ 1, 2 ] })",
+        @"dynamicRules = dynamicRules.sort((a, b) => { a.id < b.id })",
+        @"browser.test.assertEq(dynamicRules.length, 2)",
+        @"browser.test.assertEq(dynamicRules[0].id, 1)",
+        @"browser.test.assertEq(dynamicRules[1].id, 2)",
+
+        @"dynamicRules = await browser.declarativeNetRequest.getDynamicRules({ ruleIds: [ 1, 2, 3 ] })",
+        @"dynamicRules = dynamicRules.sort((a, b) => { a.id < b.id })",
+        @"browser.test.assertEq(dynamicRules.length, 3)",
+        @"browser.test.assertEq(dynamicRules[0].id, 1)",
+        @"browser.test.assertEq(dynamicRules[1].id, 2)",
+        @"browser.test.assertEq(dynamicRules[2].id, 3)",
+
+        @"browser.test.notifyPass()"
+    ]);
+
+    auto *declarativeNetRequestManifest = @{
+        @"manifest_version": @3,
+        @"permissions": @[ @"declarativeNetRequest" ],
+        @"background": @{ @"scripts": @[ @"background.js" ], @"type": @"module", @"persistent": @NO },
+    };
+
+    Util::loadAndRunExtension(declarativeNetRequestManifest, @{ @"background.js": backgroundScript  });
+}
+
+TEST(WKWebExtensionAPIDeclarativeNetRequest, RedirectRule)
 {
     auto *pageScript = Util::constructScript(@[
         @"<script>",
@@ -674,7 +768,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, DISABLED_RedirectRule)
     };
 
     auto *backgroundScript = Util::constructScript(@[
-        @"browser.test.yield('Load Tab')"
+        @"browser.test.sendMessage('Load Tab')"
     ]);
 
     auto *resources = @{
@@ -682,14 +776,11 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, DISABLED_RedirectRule)
         @"rules.json": rules
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(manifest, resources);
 
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequest.URL];
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Load Tab");
+    [manager runUntilTestMessage:@"Load Tab"];
 
     [manager.get().defaultTab.webView loadRequest:urlRequest];
 
@@ -752,7 +843,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RedirectRuleWithoutHostAccessPermis
     };
 
     auto *backgroundScript = Util::constructScript(@[
-        @"browser.test.yield('Load Tab')"
+        @"browser.test.sendMessage('Load Tab')"
     ]);
 
     auto *resources = @{
@@ -760,15 +851,12 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RedirectRuleWithoutHostAccessPermis
         @"rules.json": rules
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(manifest, resources);
 
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusDeniedExplicitly forPermission:WKWebExtensionPermissionDeclarativeNetRequestWithHostAccess];
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequest.URL];
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Load Tab");
+    [manager runUntilTestMessage:@"Load Tab"];
 
     [manager.get().defaultTab.webView loadRequest:urlRequest];
 
@@ -831,7 +919,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RedirectRuleWithoutHostPermission)
     };
 
     auto *backgroundScript = Util::constructScript(@[
-        @"browser.test.yield('Load Tab')"
+        @"browser.test.sendMessage('Load Tab')"
     ]);
 
     auto *resources = @{
@@ -839,12 +927,9 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RedirectRuleWithoutHostPermission)
         @"rules.json": rules
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(manifest, resources);
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Load Tab");
+    [manager runUntilTestMessage:@"Load Tab"];
 
     [manager.get().defaultTab.webView loadRequest:urlRequest];
 
@@ -908,7 +993,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, ModifyHeadersRule)
     };
 
     auto *backgroundScript = Util::constructScript(@[
-        @"browser.test.yield('Load Tab')"
+        @"browser.test.sendMessage('Load Tab')"
     ]);
 
     auto *resources = @{
@@ -916,14 +1001,11 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, ModifyHeadersRule)
         @"rules.json": rules
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(manifest, resources);
 
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequest.URL];
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Load Tab");
+    [manager runUntilTestMessage:@"Load Tab"];
 
     [manager.get().defaultTab.webView loadRequest:urlRequest];
 
@@ -987,7 +1069,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, ModifyHeadersRuleWithoutHostAccessP
     };
 
     auto *backgroundScript = Util::constructScript(@[
-        @"browser.test.yield('Load Tab')"
+        @"browser.test.sendMessage('Load Tab')"
     ]);
 
     auto *resources = @{
@@ -995,15 +1077,12 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, ModifyHeadersRuleWithoutHostAccessP
         @"rules.json": rules
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(manifest, resources);
 
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusDeniedExplicitly forPermission:WKWebExtensionPermissionDeclarativeNetRequestWithHostAccess];
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequest.URL];
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Load Tab");
+    [manager runUntilTestMessage:@"Load Tab"];
 
     [manager.get().defaultTab.webView loadRequest:urlRequest];
 
@@ -1067,7 +1146,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, ModifyHeadersRuleWithoutHostPermiss
     };
 
     auto *backgroundScript = Util::constructScript(@[
-        @"browser.test.yield('Load Tab')"
+        @"browser.test.sendMessage('Load Tab')"
     ]);
 
     auto *resources = @{
@@ -1075,12 +1154,9 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, ModifyHeadersRuleWithoutHostPermiss
         @"rules.json": rules
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(manifest, resources);
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Load Tab");
+    [manager runUntilTestMessage:@"Load Tab"];
 
     [manager.get().defaultTab.webView loadRequest:urlRequest];
 
@@ -1322,8 +1398,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, MainFrameResourceRuleConversion)
         },
         @"trigger": @{
             @"url-filter": @"crouton\\.net",
-            @"resource-type": @[ @"document" ],
-            @"load-context": @[ @"top-frame" ],
+            @"resource-type": @[ @"top-document" ],
         },
     };
 
@@ -1348,12 +1423,11 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, SubFrameResourceRuleConversion)
 
     NSDictionary *correctRuleConversion = @{
         @"action": @{
-            @"type": @"ignore-previous-rules",
+            @"type": @"ignore-following-rules",
         },
         @"trigger": @{
             @"url-filter": @"crouton\\.net",
-            @"resource-type": @[ @"document" ],
-            @"load-context": @[ @"child-frame" ],
+            @"resource-type": @[ @"child-document" ],
 
         },
     };
@@ -1379,13 +1453,11 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RepeatedMainFrameResourceRuleConver
 
     NSDictionary *correctRuleConversion = @{
         @"action": @{
-            @"type": @"ignore-previous-rules",
+            @"type": @"ignore-following-rules",
         },
         @"trigger": @{
             @"url-filter": @"crouton\\.net",
-            @"resource-type": @[ @"document" ],
-            @"load-context": @[ @"top-frame" ],
-
+            @"resource-type": @[ @"top-document" ],
         },
     };
 
@@ -1461,19 +1533,24 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, ConvertingMultipleResourceTypes)
     };
 
     _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
-    NSDictionary *convertedRule = validatedRule.ruleInWebKitFormat.firstObject;
+    NSMutableDictionary *convertedRule = [validatedRule.ruleInWebKitFormat.firstObject mutableCopy];
     EXPECT_NOT_NULL(convertedRule);
 
-    NSDictionary *correctRuleConversion = @{
+    NSDictionary *correctRuleConversion = [@{
         @"action": @{
             @"type": @"block",
         },
-        @"trigger": @{
+        @"trigger": [@{
             @"url-filter": @"crouton\\.net",
             @"resource-type": @[ @"script", @"style-sheet", @"ping" ],
-        },
-    };
+        } mutableCopy],
+    } mutableCopy];
+    NSSet *actualResourceTypes = [NSSet setWithArray:convertedRule[@"trigger"][@"resource-type"]];
+    NSSet *expectedResourceTypes = [NSSet setWithArray:correctRuleConversion[@"trigger"][@"resource-type"]];
+    EXPECT_NS_EQUAL(actualResourceTypes, expectedResourceTypes);
 
+    convertedRule[@"trigger"][@"resource-type"] = nil;
+    correctRuleConversion[@"trigger"][@"resource-type"] = nil;
     EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
 }
 
@@ -1490,19 +1567,24 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, ConvertingXHRWebSocketAndOtherTypes
     };
 
     _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
-    NSDictionary *convertedRule = validatedRule.ruleInWebKitFormat.firstObject;
+    NSMutableDictionary *convertedRule = [validatedRule.ruleInWebKitFormat.firstObject mutableCopy];
     EXPECT_NOT_NULL(convertedRule);
 
-    NSDictionary *correctRuleConversion = @{
+    NSDictionary *correctRuleConversion = [@{
         @"action": @{
             @"type": @"block",
         },
-        @"trigger": @{
+        @"trigger": [@{
             @"url-filter": @"crouton\\.net",
             @"resource-type": @[ @"fetch", @"websocket", @"other" ],
-        },
-    };
+        } mutableCopy],
+    } mutableCopy];
+    NSSet *actualResourceTypes = [NSSet setWithArray:convertedRule[@"trigger"][@"resource-type"]];
+    NSSet *expectedResourceTypes = [NSSet setWithArray:correctRuleConversion[@"trigger"][@"resource-type"]];
+    EXPECT_NS_EQUAL(actualResourceTypes, expectedResourceTypes);
 
+    convertedRule[@"trigger"][@"resource-type"] = nil;
+    correctRuleConversion[@"trigger"][@"resource-type"] = nil;
     EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
 }
 
@@ -1522,16 +1604,6 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, UpgradeSchemeRuleConversion)
     NSArray<NSDictionary *> *convertedRules = validatedRule.ruleInWebKitFormat;
     EXPECT_EQ(convertedRules.count, 2ul);
 
-    NSDictionary *sortingRule = @{
-        @"action": @{
-            @"type": @"ignore-previous-rules",
-        },
-        @"trigger": @{
-            @"url-filter": @"crouton\\.net",
-            @"resource-type": @[ @"image" ],
-        },
-    };
-
     NSDictionary *makeHTTPSRule = @{
         @"action": @{
             @"type": @"make-https",
@@ -1542,8 +1614,19 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, UpgradeSchemeRuleConversion)
         },
     };
 
-    EXPECT_NS_EQUAL(convertedRules[0], sortingRule);
-    EXPECT_NS_EQUAL(convertedRules[1], makeHTTPSRule);
+
+    NSDictionary *sortingRule = @{
+        @"action": @{
+            @"type": @"ignore-following-rules",
+        },
+        @"trigger": @{
+            @"url-filter": @"crouton\\.net",
+            @"resource-type": @[ @"image" ],
+        },
+    };
+
+    EXPECT_NS_EQUAL(convertedRules[0], makeHTTPSRule);
+    EXPECT_NS_EQUAL(convertedRules[1], sortingRule);
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, UpgradeSchemeForMainFrameRuleConversion)
@@ -1554,59 +1637,35 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, UpgradeSchemeForMainFrameRuleConver
         @"action": @{ @"type": @"upgradeScheme" },
         @"condition": @{
             @"urlFilter": @"crouton.net",
-            @"resourceTypes": @[ @"main_frame", @"image" ],
+            @"resourceTypes": @[ @"main_frame" ],
         },
     };
 
     _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
     NSArray<NSDictionary *> *convertedRules = validatedRule.ruleInWebKitFormat;
-    EXPECT_EQ(convertedRules.count, 4ul);
+    EXPECT_EQ(convertedRules.count, 2ul);
 
-    NSDictionary *sortingRuleForMainFrame = @{
-        @"action": @{
-            @"type": @"ignore-previous-rules",
-        },
-        @"trigger": @{
-            @"url-filter": @"crouton\\.net",
-            @"resource-type": @[ @"document" ],
-            @"load-context": @[ @"top-frame" ],
-        },
-    };
-    EXPECT_NS_EQUAL(convertedRules[0], sortingRuleForMainFrame);
-
-    NSDictionary *sortingRuleForImage = @{
-        @"action": @{
-            @"type": @"ignore-previous-rules",
-        },
-        @"trigger": @{
-            @"url-filter": @"crouton\\.net",
-            @"resource-type": @[ @"image" ],
-        },
-    };
-    EXPECT_NS_EQUAL(convertedRules[1], sortingRuleForImage);
-
-    NSDictionary *makeHTTPSRuleForMainFrame = @{
+    NSDictionary *makeHTTPSRule = @{
         @"action": @{
             @"type": @"make-https",
         },
         @"trigger": @{
             @"url-filter": @"crouton\\.net",
-            @"resource-type": @[ @"document" ],
-            @"load-context": @[ @"top-frame" ],
+            @"resource-type": @[ @"top-document" ],
         },
     };
-    EXPECT_NS_EQUAL(convertedRules[2], makeHTTPSRuleForMainFrame);
+    EXPECT_NS_EQUAL(convertedRules[0], makeHTTPSRule);
 
-    NSDictionary *makeHTTPSRuleForImage = @{
+    NSDictionary *sortingRule = @{
         @"action": @{
-            @"type": @"make-https",
+            @"type": @"ignore-following-rules",
         },
         @"trigger": @{
             @"url-filter": @"crouton\\.net",
-            @"resource-type": @[ @"image" ],
+            @"resource-type": @[ @"top-document" ],
         },
     };
-    EXPECT_NS_EQUAL(convertedRules[3], makeHTTPSRuleForImage);
+    EXPECT_NS_EQUAL(convertedRules[1], sortingRule);
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleWithoutAPriority)
@@ -1648,7 +1707,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithDomainType)
         @"action": @{ @"type": @"block" },
         @"condition": @{
             @"urlFilter": @"boatnerd.com",
-            @"resourceTypes": @[ @"script", @"image", @"stylesheet" ],
+            @"resourceTypes": @[ @"script" ],
             @"domainType": @"firstParty",
         },
     };
@@ -1663,7 +1722,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithDomainType)
         },
         @"trigger": @{
             @"url-filter": @"boatnerd\\.com",
-            @"resource-type": @[ @"script", @"image", @"style-sheet" ],
+            @"resource-type": @[ @"script" ],
             @"load-type": @[ @"first-party" ],
         },
     };
@@ -1682,34 +1741,25 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithNoSpecifiedResour
     };
 
     _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
-    NSArray<NSDictionary *> *convertedRules = validatedRule.ruleInWebKitFormat;
-    EXPECT_EQ(convertedRules.count, 2ul);
+    NSMutableDictionary *convertedRule = [validatedRule.ruleInWebKitFormat.firstObject mutableCopy];
+    EXPECT_NOT_NULL(convertedRule);
 
-    NSDictionary *documentRule = @{
+    NSMutableDictionary *correctRuleConversion = [@{
         @"action": @{
-            @"type": @"ignore-previous-rules",
+            @"type": @"ignore-following-rules",
         },
-        @"trigger": @{
+        @"trigger": [@{
             @"url-filter": @".*",
-            @"resource-type": @[ @"document" ],
-            @"load-context": @[ @"child-frame" ],
-        },
-    };
-    EXPECT_NS_EQUAL(convertedRules[0], documentRule);
-
-    NSDictionary *otherResourceTypeRules = @{
-        @"action": @{
-            @"type": @"ignore-previous-rules",
-        },
-        @"trigger": @{
-            @"url-filter": @".*",
-            @"resource-type": @[ @"fetch", @"font", @"image", @"media", @"other", @"ping", @"script", @"style-sheet", @"websocket" ],
-        },
-    };
-
-    NSSet *actualResourceTypes = [NSSet setWithArray:convertedRules[1][@"trigger"][@"resource-type"]];
-    NSSet *expectedResourceTypes = [NSSet setWithArray:otherResourceTypeRules[@"trigger"][@"resource-type"]];
+            @"resource-type": @[ @"fetch", @"font", @"image", @"media", @"other", @"ping", @"script", @"style-sheet", @"websocket", @"child-document" ],
+        } mutableCopy],
+    } mutableCopy];
+    NSSet *actualResourceTypes = [NSSet setWithArray:convertedRule[@"trigger"][@"resource-type"]];
+    NSSet *expectedResourceTypes = [NSSet setWithArray:correctRuleConversion[@"trigger"][@"resource-type"]];
     EXPECT_NS_EQUAL(actualResourceTypes, expectedResourceTypes);
+
+    convertedRule[@"trigger"][@"resource-type"] = nil;
+    correctRuleConversion[@"trigger"][@"resource-type"] = nil;
+    EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithUnsupportedResourceTypes)
@@ -1795,34 +1845,25 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithUnsupportedExclud
     };
 
     _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
-    NSArray<NSDictionary *> *convertedRules = validatedRule.ruleInWebKitFormat;
-    EXPECT_EQ(convertedRules.count, 2ul);
+    NSDictionary *convertedRule = validatedRule.ruleInWebKitFormat.firstObject;
+    EXPECT_NOT_NULL(convertedRule);
 
-    NSDictionary *documentRule = @{
+    NSMutableDictionary *correctRuleConversion = [@{
         @"action": @{
             @"type": @"block",
         },
-        @"trigger": @{
+        @"trigger": [@{
             @"url-filter": @".*",
-            @"resource-type": @[ @"document" ],
-            @"load-context": @[ @"top-frame", @"child-frame" ],
-        },
-    };
-    EXPECT_NS_EQUAL(convertedRules[0], documentRule);
-
-    NSDictionary *otherResourceTypeRules = @{
-        @"action": @{
-            @"type": @"block",
-        },
-        @"trigger": @{
-            @"url-filter": @".*",
-            @"resource-type": @[ @"fetch", @"font", @"media", @"other", @"ping", @"script", @"style-sheet", @"websocket" ],
-        },
-    };
-
-    NSSet *actualResourceTypes = [NSSet setWithArray:convertedRules[1][@"trigger"][@"resource-type"]];
-    NSSet *expectedResourceTypes = [NSSet setWithArray:otherResourceTypeRules[@"trigger"][@"resource-type"]];
+            @"resource-type": @[ @"fetch", @"font", @"media", @"other", @"ping", @"script", @"style-sheet", @"websocket", @"top-document", @"child-document" ],
+        } mutableCopy],
+    } mutableCopy];
+    NSSet *actualResourceTypes = [NSSet setWithArray:convertedRule[@"trigger"][@"resource-type"]];
+    NSSet *expectedResourceTypes = [NSSet setWithArray:correctRuleConversion[@"trigger"][@"resource-type"]];
     EXPECT_NS_EQUAL(actualResourceTypes, expectedResourceTypes);
+
+    convertedRule[@"trigger"][@"resource-type"] = nil;
+    correctRuleConversion[@"trigger"][@"resource-type"] = nil;
+    EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithEmptyExcludedResourceTypes)
@@ -1837,34 +1878,26 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithEmptyExcludedReso
     };
 
     _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
-    NSArray<NSDictionary *> *convertedRules = validatedRule.ruleInWebKitFormat;
-    EXPECT_EQ(convertedRules.count, 2ul);
+    NSMutableDictionary *convertedRule = [validatedRule.ruleInWebKitFormat.firstObject mutableCopy];
+    EXPECT_NOT_NULL(convertedRule);
 
-    NSDictionary *documentRule = @{
+    NSDictionary *correctRuleConversion = [@{
         @"action": @{
             @"type": @"block",
         },
-        @"trigger": @{
+        @"trigger": [@{
             @"url-filter": @".*",
-            @"resource-type": @[ @"document" ],
-            @"load-context": @[ @"top-frame", @"child-frame" ],
-        },
-    };
-    EXPECT_NS_EQUAL(convertedRules[0], documentRule);
+            @"resource-type": @[ @"fetch", @"font", @"image", @"media", @"other", @"ping", @"script", @"style-sheet", @"websocket", @"top-document", @"child-document" ],
+        } mutableCopy],
+    } mutableCopy];
 
-    NSDictionary *otherResourceTypeRules = @{
-        @"action": @{
-            @"type": @"block",
-        },
-        @"trigger": @{
-            @"url-filter": @".*",
-            @"resource-type": @[ @"fetch", @"font", @"image", @"media", @"other", @"ping", @"script", @"style-sheet", @"websocket" ],
-        },
-    };
-
-    NSSet *actualResourceTypes = [NSSet setWithArray:convertedRules[1][@"trigger"][@"resource-type"]];
-    NSSet *expectedResourceTypes = [NSSet setWithArray:otherResourceTypeRules[@"trigger"][@"resource-type"]];
+    NSSet *actualResourceTypes = [NSSet setWithArray:convertedRule[@"trigger"][@"resource-type"]];
+    NSSet *expectedResourceTypes = [NSSet setWithArray:correctRuleConversion[@"trigger"][@"resource-type"]];
     EXPECT_NS_EQUAL(actualResourceTypes, expectedResourceTypes);
+
+    convertedRule[@"trigger"][@"resource-type"] = nil;
+    correctRuleConversion[@"trigger"][@"resource-type"] = nil;
+    EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, EmptyDomains)
@@ -1928,6 +1961,60 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithDomains)
     EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
 }
 
+TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithURLFilterAndRequestDomains)
+{
+    __auto_type testPattern = ^(NSString *requestDomain, NSString *urlFilter, NSString *expectedRegexPattern) {
+        NSMutableDictionary *rule = [@{
+            @"id": @1,
+            @"action": @{ @"type": @"block" },
+            @"condition": [@{
+                @"resourceTypes": @[ @"script" ],
+                @"requestDomains": @[ requestDomain ],
+            } mutableCopy],
+        } mutableCopy];
+
+        if (urlFilter)
+            rule[@"condition"][@"urlFilter"] = urlFilter;
+
+        _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
+        NSDictionary *convertedRule = validatedRule.ruleInWebKitFormat.firstObject;
+        EXPECT_NOT_NULL(convertedRule);
+
+        NSDictionary *correctRuleConversion = @{
+            @"action": @{
+                @"type": @"block",
+            },
+            @"trigger": @{
+                @"url-filter": expectedRegexPattern,
+                @"resource-type": @[ @"script" ],
+            },
+        };
+
+        EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
+    };
+
+    // No URL filter
+    testPattern(@"apple.com", nil, @"^[^:]+://+([^:/]+\\.)?apple\\.com");
+
+    // URL filter contains the request domain
+    testPattern(@"com", @".com/foo/bar", @"^[^:]+://+([^:/]+\\.)?\\.com/foo/bar");
+
+    // Part of the request domain is in the URL filter
+    testPattern(@"foo.com", @"bar-*.com", @"^[^:]+://+([^:/]+\\.)?bar-.*foo\\.com");
+    testPattern(@"foo.com", @"foo.*/bar/baz", @"^[^:]+://+([^:/]+\\.)?foo\\.com.*/bar/baz");
+
+    // || or :// prefix in the URL filter
+    testPattern(@"com", @"||foo", @"^[^:]+://+([^:/]+\\.)?foo.*com");
+    testPattern(@"com", @"://www.", @"://www\\..*com");
+    testPattern(@"com", @"://www.*", @"://www\\..*com");
+    testPattern(@"com", @"://www./foo/bar", @"://www\\..*com/foo/bar");
+    testPattern(@"com", @"://www.*/foo/bar", @"://www\\..*com/foo/bar");
+
+    // Concatenating the request domain and URL filter
+    testPattern(@"com", @"/foo/bar", @"^[^:]+://+([^:/]+\\.)?com.*/foo/bar");
+    testPattern(@"com", @"&foo=bar|", @"^[^:]+://+([^:/]+\\.)?com.*&foo=bar$");
+}
+
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithRequestDomains)
 {
     NSDictionary *rule = @{
@@ -1941,21 +2028,41 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithRequestDomains)
     };
 
     _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
-    NSDictionary *convertedRule = validatedRule.ruleInWebKitFormat.firstObject;
-    EXPECT_NOT_NULL(convertedRule);
+    NSArray<NSDictionary *> *convertedRules = validatedRule.ruleInWebKitFormat;
+    EXPECT_EQ(convertedRules.count, 3ul);
 
-    NSDictionary *correctRuleConversion = @{
+    NSDictionary *appleURLFilterRuleConversion = @{
         @"action": @{
             @"type": @"block",
         },
         @"trigger": @{
-            @"if-domain": @[ @"*apple.com", @"*facebook.com", @"*google.com" ],
             @"resource-type": @[ @"font" ],
-            @"url-filter": @".*",
+            @"url-filter": @"^[^:]+://+([^:/]+\\.)?apple\\.com",
         },
     };
+    EXPECT_NS_EQUAL(convertedRules[0], appleURLFilterRuleConversion);
 
-    EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
+    NSDictionary *facebookURLFilterRuleConversion = @{
+        @"action": @{
+            @"type": @"block",
+        },
+        @"trigger": @{
+            @"resource-type": @[ @"font" ],
+            @"url-filter": @"^[^:]+://+([^:/]+\\.)?facebook\\.com",
+        },
+    };
+    EXPECT_NS_EQUAL(convertedRules[1], facebookURLFilterRuleConversion);
+
+    NSDictionary *googleURLFilterRuleConversion = @{
+        @"action": @{
+            @"type": @"block",
+        },
+        @"trigger": @{
+            @"resource-type": @[ @"font" ],
+            @"url-filter": @"^[^:]+://+([^:/]+\\.)?.*google\\.com",
+        },
+    };
+    EXPECT_NS_EQUAL(convertedRules[2], googleURLFilterRuleConversion);
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithInitiatorDomains)
@@ -2035,20 +2142,20 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithExcludedInitiator
     NSArray *correctRuleConversion = @[
         @{
             @"action": @{
-                @"type": @"block",
+                @"type": @"ignore-following-rules",
             },
             @"trigger": @{
-                @"if-frame-url": @[ @"^[^:]+://+([^:/]+\\.)?example\\.com/.*" ],
+                @"if-frame-url": @[ @"^[^:]+://+([^:/]+\\.)?blog\\.example\\.com/.*" ],
                 @"resource-type": @[ @"font" ],
                 @"url-filter": @".*",
             }
         },
         @{
             @"action": @{
-                @"type": @"ignore-previous-rules",
+                @"type": @"block",
             },
             @"trigger": @{
-                @"if-frame-url": @[ @"^[^:]+://+([^:/]+\\.)?blog\\.example\\.com/.*" ],
+                @"if-frame-url": @[ @"^[^:]+://+([^:/]+\\.)?example\\.com/.*" ],
                 @"resource-type": @[ @"font" ],
                 @"url-filter": @".*",
             }
@@ -2144,21 +2251,195 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithExcludedRequestDo
     };
 
     _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
-    NSDictionary *convertedRule = validatedRule.ruleInWebKitFormat.firstObject;
-    EXPECT_NOT_NULL(convertedRule);
+    NSArray<NSDictionary *> *convertedRules = validatedRule.ruleInWebKitFormat;
+    EXPECT_EQ(convertedRules.count, 2ul);
 
-    NSDictionary *correctRuleConversion = @{
+    NSDictionary *passRuleConversion = @{
+        @"action": @{
+            @"type": @"ignore-following-rules",
+        },
+        @"trigger": @{
+            @"resource-type": @[ @"media" ],
+            @"url-filter": @"apple\\.com",
+        },
+    };
+    EXPECT_NS_EQUAL(convertedRules[0], passRuleConversion);
+
+    NSDictionary *blockRuleConversion = @{
         @"action": @{
             @"type": @"block",
         },
         @"trigger": @{
-            @"unless-domain": @[ @"*apple.com" ],
             @"resource-type": @[ @"media" ],
             @"url-filter": @".*",
         },
     };
+    EXPECT_NS_EQUAL(convertedRules[1], blockRuleConversion);
+}
 
-    EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
+TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithInvalidRequestMethods)
+{
+    NSDictionary *rule = @{
+        @"id": @1,
+        @"action": @{ @"type": @"block" },
+        @"condition": @{
+            @"requestMethods": @[ @"bad" ],
+            @"resourceTypes": @[ @"main_frame" ],
+        },
+    };
+
+    _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
+    EXPECT_NULL(validatedRule);
+}
+
+TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithInvalidExcludedRequestMethods)
+{
+    NSDictionary *rule = @{
+        @"id": @1,
+        @"action": @{ @"type": @"block" },
+        @"condition": @{
+            @"excludedRequestMethods": @[ @"bad" ],
+            @"resourceTypes": @[ @"main_frame" ],
+        },
+    };
+
+    _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
+    EXPECT_NULL(validatedRule);
+}
+
+TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithRequestMethods)
+{
+    NSDictionary *rule = @{
+        @"id": @1,
+        @"action": @{ @"type": @"block" },
+        @"condition": @{
+            @"requestMethods": @[ @"get", @"post" ],
+            @"resourceTypes": @[ @"main_frame" ],
+        },
+    };
+
+    _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
+    NSArray *convertedRules = validatedRule.ruleInWebKitFormat;
+    EXPECT_NOT_NULL(convertedRules);
+
+    NSArray *correctRuleConversion = @[
+        @{
+            @"action": @{
+                @"type": @"block",
+            },
+            @"trigger": @{
+                @"url-filter": @".*",
+                @"resource-type": @[ @"top-document" ],
+                @"request-method": @"get",
+            },
+        },
+        @{
+            @"action": @{
+                @"type": @"block",
+            },
+            @"trigger": @{
+                @"url-filter": @".*",
+                @"resource-type": @[ @"top-document" ],
+                @"request-method": @"post",
+            },
+        }
+    ];
+
+    EXPECT_NS_EQUAL(convertedRules, correctRuleConversion);
+}
+
+TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithExcludedRequestMethods)
+{
+    NSDictionary *rule = @{
+        @"id": @1,
+        @"action": @{ @"type": @"block" },
+        @"condition": @{
+            @"excludedRequestMethods": @[ @"get", @"post" ],
+            @"resourceTypes": @[ @"main_frame" ],
+        },
+    };
+
+    _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
+    NSArray *convertedRules = validatedRule.ruleInWebKitFormat;
+    EXPECT_NOT_NULL(convertedRules);
+
+    NSArray *correctRuleConversion = @[
+        @{
+            @"action": @{
+                @"type": @"ignore-following-rules",
+            },
+            @"trigger": @{
+                @"url-filter": @".*",
+                @"resource-type": @[ @"top-document" ],
+                @"request-method": @"get",
+            },
+        },
+        @{
+            @"action": @{
+                @"type": @"ignore-following-rules",
+            },
+            @"trigger": @{
+                @"url-filter": @".*",
+                @"resource-type": @[ @"top-document" ],
+                @"request-method": @"post",
+            },
+        },
+        @{
+            @"action": @{
+                @"type": @"block",
+            },
+            @"trigger": @{
+                @"url-filter": @".*",
+                @"resource-type": @[ @"top-document" ],
+            },
+        }
+    ];
+
+    EXPECT_NS_EQUAL(convertedRules, correctRuleConversion);
+}
+
+TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithRequestMethodsAndExcludedRequestMethodsAndRequestDomainsAndExcludedRequestDomains)
+{
+    NSDictionary *rule = @{
+        @"id": @1,
+        @"action": @{ @"type": @"block" },
+        @"condition": @{
+            @"requestDomains": @[ @"apple.com" ],
+            @"excludedRequestDomains": @[ @"google.com" ],
+            @"requestMethods": @[ @"get" ],
+            @"excludedRequestMethods": @[ @"post" ],
+            @"resourceTypes": @[ @"main_frame" ],
+        },
+    };
+
+    _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
+    NSArray *convertedRules = validatedRule.ruleInWebKitFormat;
+    EXPECT_NOT_NULL(convertedRules);
+
+    NSArray *correctRuleConversion = @[
+        @{
+            @"action": @{
+                @"type": @"ignore-following-rules",
+            },
+            @"trigger": @{
+                @"url-filter": @"google\\.com",
+                @"resource-type": @[ @"top-document" ],
+                @"request-method": @"post",
+            },
+        },
+        @{
+            @"action": @{
+                @"type": @"block",
+            },
+            @"trigger": @{
+                @"url-filter": @"^[^:]+://+([^:/]+\\.)?apple\\.com",
+                @"resource-type": @[ @"top-document" ],
+                @"request-method": @"get",
+            },
+        }
+    ];
+
+    EXPECT_NS_EQUAL(convertedRules, correctRuleConversion);
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, NonASCIIURLFilter)
@@ -2285,30 +2566,42 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, NoResourceTypeForAllowAllRequests)
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithAllowAllRequests)
 {
-    NSDictionary *rule = @{
-        @"id": @1,
-        @"action": @{ @"type": @"allowAllRequests" },
-        @"condition": @{
-            @"urlFilter": @"apple.com",
-            @"resourceTypes": @[ @"main_frame" ],
-        },
+    __auto_type testAllowAllRequests = ^(NSDictionary<NSString *, id> *condition, NSString *frameURL, NSArray<NSString *> *loadContext) {
+        NSDictionary *rule = @{
+            @"id": @1,
+            @"action": @{ @"type": @"allowAllRequests" },
+            @"condition": condition,
+        };
+
+        _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
+        NSMutableDictionary *convertedRule = [validatedRule.ruleInWebKitFormat.firstObject mutableCopy];
+        EXPECT_NOT_NULL(convertedRule);
+
+        NSMutableDictionary *correctRuleConversion = [@{
+            @"action": @{
+                @"type": @"ignore-following-rules",
+            },
+            @"trigger": [@{
+                @"url-filter": @".*",
+                @"if-frame-url": @[ frameURL ],
+                @"load-context": loadContext,
+            } mutableCopy],
+        } mutableCopy];
+
+        NSSet *actualLoadContext = [NSSet setWithArray:convertedRule[@"trigger"][@"load-context"]];
+        NSSet *expectedLoadContext = [NSSet setWithArray:correctRuleConversion[@"trigger"][@"load-context"]];
+        EXPECT_NS_EQUAL(actualLoadContext, expectedLoadContext);
+
+        convertedRule[@"trigger"][@"load-context"] = nil;
+        correctRuleConversion[@"trigger"][@"load-context"] = nil;
+        EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
     };
 
-    _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
-    NSDictionary *convertedRule = validatedRule.ruleInWebKitFormat.firstObject;
-    EXPECT_NOT_NULL(convertedRule);
-
-    NSDictionary *correctRuleConversion = @{
-        @"action": @{
-            @"type": @"ignore-previous-rules",
-        },
-        @"trigger": @{
-            @"url-filter": @".*",
-            @"if-top-url": @[ @"apple\\.com" ],
-        },
-    };
-
-    EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
+    testAllowAllRequests(@{ @"resourceTypes": @[ @"main_frame" ] }, @".*", @[ @"top-frame" ]);
+    testAllowAllRequests(@{ @"resourceTypes": @[ @"sub_frame" ] }, @".*", @[ @"child-frame" ]);
+    testAllowAllRequests(@{ @"resourceTypes": @[ @"main_frame", @"sub_frame" ] }, @".*", @[ @"top-frame", @"child-frame" ]);
+    testAllowAllRequests(@{ @"urlFilter": @"apple.com", @"resourceTypes": @[ @"main_frame" ] }, @"apple\\.com", @[ @"top-frame" ]);
+    testAllowAllRequests(@{ @"requestDomains": @[ @"apple.com" ], @"resourceTypes": @[ @"main_frame" ] }, @"^[^:]+://+([^:/]+\\.)?apple\\.com", @[ @"top-frame" ]);
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithRedirect)
@@ -2540,8 +2833,8 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RulesSortByPriorityFromDifferentRul
     NSArray *sortedTranslatedRules = [_WKWebExtensionDeclarativeNetRequestTranslator translateRules:rules errorStrings:nil];
     EXPECT_NOT_NULL(sortedTranslatedRules);
 
-    EXPECT_NS_EQUAL(sortedTranslatedRules[0][@"action"][@"type"], @"block");
-    EXPECT_NS_EQUAL(sortedTranslatedRules[1][@"action"][@"type"], @"ignore-previous-rules");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[0][@"action"][@"type"], @"ignore-following-rules");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[1][@"action"][@"type"], @"block");
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RulesSortWithoutExplicitPriority)
@@ -2571,9 +2864,9 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RulesSortWithoutExplicitPriority)
     NSArray *sortedTranslatedRules = [_WKWebExtensionDeclarativeNetRequestTranslator translateRules:rules errorStrings:nil];
     EXPECT_NOT_NULL(sortedTranslatedRules);
 
-    EXPECT_NS_EQUAL(sortedTranslatedRules[0][@"action"][@"type"], @"ignore-previous-rules");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[0][@"action"][@"type"], @"block");
     EXPECT_NS_EQUAL(sortedTranslatedRules[1][@"action"][@"type"], @"make-https");
-    EXPECT_NS_EQUAL(sortedTranslatedRules[2][@"action"][@"type"], @"block");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[2][@"action"][@"type"], @"ignore-following-rules");
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RulesSortByActionType)
@@ -2631,12 +2924,12 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RulesSortByActionType)
     NSArray *sortedTranslatedRules = [_WKWebExtensionDeclarativeNetRequestTranslator translateRules:rules errorStrings:nil];
     EXPECT_NOT_NULL(sortedTranslatedRules);
 
-    EXPECT_NS_EQUAL(sortedTranslatedRules[0][@"action"][@"type"], @"modify-headers");
-    EXPECT_NS_EQUAL(sortedTranslatedRules[1][@"action"][@"type"], @"ignore-previous-rules");
-    EXPECT_NS_EQUAL(sortedTranslatedRules[2][@"action"][@"type"], @"make-https");
-    EXPECT_NS_EQUAL(sortedTranslatedRules[3][@"action"][@"type"], @"block");
-    EXPECT_NS_EQUAL(sortedTranslatedRules[4][@"action"][@"type"], @"ignore-previous-rules");
-    EXPECT_NS_EQUAL(sortedTranslatedRules[5][@"action"][@"type"], @"ignore-previous-rules");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[0][@"action"][@"type"], @"ignore-following-rules");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[1][@"action"][@"type"], @"ignore-following-rules");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[2][@"action"][@"type"], @"block");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[3][@"action"][@"type"], @"make-https");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[4][@"action"][@"type"], @"ignore-following-rules");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[5][@"action"][@"type"], @"modify-headers");
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RemoveAllContentRuleListsDoesNotRemoveWebExtensionRuleLists)
@@ -2647,7 +2940,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RemoveAllContentRuleListsDoesNotRem
     }, TestWebKitAPI::HTTPServer::Protocol::Http);
 
     auto *backgroundScript = Util::constructScript(@[
-        @"browser.test.yield('Remove RuleLists and Load Tab')"
+        @"browser.test.sendMessage('Remove RuleLists and Load Tab')"
     ]);
 
     auto *declarativeNetRequestManifest = @{
@@ -2667,14 +2960,11 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RemoveAllContentRuleListsDoesNotRem
 
     auto *rules = @"[ { \"id\" : 1, \"priority\": 1, \"action\" : { \"type\" : \"block\" }, \"condition\" : { \"urlFilter\" : \"frame\" } } ]";
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:declarativeNetRequestManifest resources:@{ @"background.js": backgroundScript, @"rules.json": rules }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(declarativeNetRequestManifest, @{ @"background.js": backgroundScript, @"rules.json": rules });
 
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forPermission:WKWebExtensionPermissionDeclarativeNetRequest];
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Remove RuleLists and Load Tab");
+    [manager runUntilTestMessage:@"Remove RuleLists and Load Tab"];
 
     [manager.get().defaultTab.webView.configuration.userContentController removeAllContentRuleLists];
 

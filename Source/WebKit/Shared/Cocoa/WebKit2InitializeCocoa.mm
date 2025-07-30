@@ -40,7 +40,12 @@
 #endif
 
 #if ENABLE(LLVM_PROFILE_GENERATION)
+#if PLATFORM(IOS_FAMILY)
+#import <wtf/LLVMProfilingUtils.h>
+extern "C" char __llvm_profile_filename[] = "%t/WebKitPGO/WebKit_%m_pid%p%c.profraw";
+#else
 extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitPGO/WebKit_%m_pid%p%c.profraw";
+#endif
 #endif
 
 namespace WebKit {
@@ -53,13 +58,12 @@ static void runInitializationCode(void* = nullptr)
 {
     RELEASE_ASSERT_WITH_MESSAGE([NSThread isMainThread], "InitializeWebKit2 should be called on the main thread");
 
+    WTF::initializeMainThread();
+    JSC::initialize();
     WebCore::initializeCommonAtomStrings();
 #if PLATFORM(IOS_FAMILY)
     InitWebCoreThreadSystemInterface();
 #endif
-
-    JSC::initialize();
-    WTF::initializeMainThread();
 
     WTF::RefCountedBase::enableThreadingChecksGlobally();
 
@@ -74,7 +78,7 @@ void InitializeWebKit2()
         if ([NSThread isMainThread] || linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::InitializeWebKit2MainThreadAssertion))
             runInitializationCode();
         else
-            WorkQueue::main().dispatchSync([] { runInitializationCode(); });
+            WorkQueue::protectedMain()->dispatchSync([] { runInitializationCode(); });
     });
 }
 

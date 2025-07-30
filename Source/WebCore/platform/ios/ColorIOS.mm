@@ -31,8 +31,6 @@
 #import "ColorSpaceCG.h"
 #import <UIKit/UIKit.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 Color colorFromCocoaColor(UIColor *color)
@@ -53,7 +51,7 @@ Color colorFromCocoaColor(UIColor *color)
         // The color space conversion above can fail if the UIColor is in an incompatible color space.
         // To workaround this we simply draw a one pixel image of the color and use that pixel's color.
         uint8_t pixel[4];
-        auto bitmapContext = adoptCF(CGBitmapContextCreate(pixel, 1, 1, 8, 4, sRGBColorSpaceRef(), kCGImageAlphaPremultipliedLast));
+        auto bitmapContext = adoptCF(CGBitmapContextCreate(pixel, 1, 1, 8, 4, sRGBColorSpaceSingleton(), kCGImageAlphaPremultipliedLast));
 
         CGContextSetFillColorWithColor(bitmapContext.get(), color.CGColor);
         CGContextFillRect(bitmapContext.get(), CGRectMake(0, 0, 1, 1));
@@ -65,7 +63,5 @@ Color colorFromCocoaColor(UIColor *color)
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif

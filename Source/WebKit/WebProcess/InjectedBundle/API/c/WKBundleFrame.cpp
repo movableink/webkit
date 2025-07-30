@@ -322,9 +322,6 @@ void* WKAccessibilityRootObject(WKBundleFrameRef frameRef)
     if (!axObjectCache)
         return nullptr;
 
-    auto* root = axObjectCache->rootObject();
-    if (!root)
-        return nullptr;
-
-    return root->wrapper();
+    auto* root = axObjectCache->rootObjectForFrame(*frame);
+    return root ? root->wrapper() : nullptr;
 }

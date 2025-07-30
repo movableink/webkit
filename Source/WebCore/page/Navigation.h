@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ActiveDOMObject.h"
 #include "EventTarget.h"
 #include "JSDOMPromiseDeferred.h"
 #include "LocalDOMWindowProperty.h"
@@ -34,14 +33,15 @@
 #include "NavigationNavigationType.h"
 #include "NavigationTransition.h"
 #include <JavaScriptCore/JSCJSValue.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
 
+class DocumentLoader;
 class FormState;
 class HistoryItem;
 class SerializedScriptValue;
-class NavigateEvent;
 class NavigationActivation;
 class NavigationDestination;
 
@@ -122,8 +122,9 @@ public:
         RefPtr<DOMPromise> finished;
     };
 
-    Vector<Ref<NavigationHistoryEntry>> entries() const;
+    const Vector<Ref<NavigationHistoryEntry>>& entries() const;
     NavigationHistoryEntry* currentEntry() const;
+    RefPtr<NavigationHistoryEntry> protectedCurrentEntry() const { return currentEntry(); }
     NavigationTransition* transition() { return m_transition.get(); };
     NavigationActivation* activation() { return m_activation.get(); };
 
@@ -155,17 +156,39 @@ public:
 
     void abortOngoingNavigationIfNeeded();
 
-    RefPtr<NavigationHistoryEntry> findEntryByKey(const String& key);
+    std::optional<Ref<NavigationHistoryEntry>> findEntryByKey(const String& key);
     bool suppressNormalScrollRestoration() const { return m_suppressNormalScrollRestorationDuringOngoingNavigation; }
 
     void setFocusChanged(FocusDidChange changed) { m_focusChangedDuringOngoingNavigation = changed; }
 
+    // EventTarget.
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    RefPtr<ScriptExecutionContext> protectedScriptExecutionContext() const;
+
+    void rejectFinishedPromise(NavigationAPIMethodTracker*);
+    NavigationAPIMethodTracker* upcomingTraverseMethodTracker(const String& key) const { return m_upcomingTraverseMethodTrackers.get(key); }
+
+    class AbortHandler : public RefCountedAndCanMakeWeakPtr<AbortHandler> {
+    public:
+        bool wasAborted() const { return m_wasAborted; }
+
+    private:
+        friend class Navigation;
+
+        static Ref<AbortHandler> create() { return adoptRef(*new AbortHandler); }
+        void markAsAborted() { m_wasAborted = true; }
+
+        bool m_wasAborted { false };
+    };
+    Ref<AbortHandler> registerAbortHandler();
+
+    RefPtr<NavigateEvent> protectedOngoingNavigateEvent() { return m_ongoingNavigateEvent; }
+
 private:
     explicit Navigation(LocalDOMWindow&);
 
+    // EventTarget.
     enum EventTargetInterfaceType eventTargetInterface() const final;
-    RefPtr<ScriptExecutionContext> protectedScriptExecutionContext() const;
-    ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
@@ -175,7 +198,7 @@ private:
     DispatchResult innerDispatchNavigateEvent(NavigationNavigationType, Ref<NavigationDestination>&&, const String& downloadRequestFilename, FormState* = nullptr, SerializedScriptValue* classicHistoryAPIState = nullptr);
 
     RefPtr<NavigationAPIMethodTracker> maybeSetUpcomingNonTraversalTracker(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, JSC::JSValue info, RefPtr<SerializedScriptValue>&&);
-    RefPtr<NavigationAPIMethodTracker> addUpcomingTrarveseAPIMethodTracker(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, const String& key, JSC::JSValue info);
+    RefPtr<NavigationAPIMethodTracker> addUpcomingTraverseAPIMethodTracker(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, const String& key, JSC::JSValue info);
     void cleanupAPIMethodTracker(NavigationAPIMethodTracker*);
     void resolveFinishedPromise(NavigationAPIMethodTracker*);
     void rejectFinishedPromise(NavigationAPIMethodTracker*, const Exception&, JSC::JSValue exceptionObject);
@@ -184,13 +207,10 @@ private:
     void notifyCommittedToEntry(NavigationAPIMethodTracker*, NavigationHistoryEntry*, NavigationNavigationType);
     Result apiMethodTrackerDerivedResult(const NavigationAPIMethodTracker&);
 
-    class NavigationHistoryEntryWrapper;
-    static std::optional<size_t> getEntryIndexOfHistoryItem(const Vector<NavigationHistoryEntryWrapper>& entries, const HistoryItem&, size_t start = 0);
-
     std::optional<size_t> m_currentEntryIndex;
     RefPtr<NavigationTransition> m_transition;
     RefPtr<NavigationActivation> m_activation;
-    Vector<NavigationHistoryEntryWrapper> m_entries;
+    Vector<Ref<NavigationHistoryEntry>> m_entries;
 
     RefPtr<NavigateEvent> m_ongoingNavigateEvent;
     FocusDidChange m_focusChangedDuringOngoingNavigation { FocusDidChange::No };
@@ -198,6 +218,7 @@ private:
     RefPtr<NavigationAPIMethodTracker> m_ongoingAPIMethodTracker;
     RefPtr<NavigationAPIMethodTracker> m_upcomingNonTraverseMethodTracker;
     HashMap<String, Ref<NavigationAPIMethodTracker>> m_upcomingTraverseMethodTrackers;
+    WeakHashSet<AbortHandler> m_abortHandlers;
 };
 
 } // namespace WebCore

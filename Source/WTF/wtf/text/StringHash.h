@@ -51,15 +51,15 @@ namespace WTF {
     // closer to having all the nearly-identical hash functions in one place.
 
     struct StringHash {
-        static unsigned hash(const StringImpl* key) { return key->hash(); }
+        static unsigned hash(const StringImpl* key) { SUPPRESS_UNCOUNTED_ARG return key->hash(); }
         static inline bool equal(const StringImpl* a, const StringImpl* b)
         {
             return WTF::equal(*a, *b);
         }
 
-        static unsigned hash(const RefPtr<StringImpl>& key) { return key->hash(); }
-        static unsigned hash(const PackedPtr<StringImpl>& key) { return key->hash(); }
-        static unsigned hash(const CompactPtr<StringImpl>& key) { return key->hash(); }
+        static unsigned hash(const RefPtr<StringImpl>& key) { SUPPRESS_UNCOUNTED_ARG return key->hash(); }
+        static unsigned hash(const PackedPtr<StringImpl>& key) { SUPPRESS_UNCOUNTED_ARG return key->hash(); }
+        static unsigned hash(const CompactPtr<StringImpl>& key) { SUPPRESS_UNCOUNTED_ARG return key->hash(); }
         static bool equal(const RefPtr<StringImpl>& a, const RefPtr<StringImpl>& b)
         {
             return equal(a.get(), b.get());
@@ -99,7 +99,7 @@ namespace WTF {
             return equal(a, b.get());
         }
 
-        static unsigned hash(const String& key) { return key.impl()->hash(); }
+        static unsigned hash(const String& key) { SUPPRESS_UNCOUNTED_ARG return key.impl()->hash(); }
         static bool equal(const String& a, const String& b)
         {
             return equal(a.impl(), b.impl());

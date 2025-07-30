@@ -52,6 +52,10 @@ class Image;
 class NativeImage;
 class TransformState;
 
+#if ENABLE(MODEL_PROCESS)
+class ModelContext;
+#endif
+
 class GraphicsLayerCA : public GraphicsLayer, public PlatformCALayerClient {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(GraphicsLayerCA, WEBCORE_EXPORT);
 public:
@@ -67,6 +71,7 @@ public:
 
     WEBCORE_EXPORT PlatformLayer* platformLayer() const override;
     PlatformCALayer* platformCALayer() const { return primaryLayer(); }
+    RefPtr<PlatformCALayer> protectedPlatformCALayer() const { return platformCALayer(); }
 
     WEBCORE_EXPORT bool setChildren(Vector<Ref<GraphicsLayer>>&&) override;
     WEBCORE_EXPORT void addChild(Ref<GraphicsLayer>&&) override;
@@ -95,15 +100,23 @@ public:
     WEBCORE_EXPORT void setPreserves3D(bool) override;
     WEBCORE_EXPORT void setMasksToBounds(bool) override;
     WEBCORE_EXPORT void setDrawsContent(bool) override;
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    WEBCORE_EXPORT void setDrawsHDRContent(bool) override;
+#endif
     WEBCORE_EXPORT void setContentsVisible(bool) override;
     WEBCORE_EXPORT void setAcceleratesDrawing(bool) override;
     WEBCORE_EXPORT void setUsesDisplayListDrawing(bool) override;
     WEBCORE_EXPORT void setUserInteractionEnabled(bool) override;
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
     WEBCORE_EXPORT void setIsSeparated(bool) override;
+    WEBCORE_EXPORT void setIsSeparatedImage(bool) override;
 #if HAVE(CORE_ANIMATION_SEPARATED_PORTALS)
     WEBCORE_EXPORT void setIsSeparatedPortal(bool) override;
 #endif
+#endif
+
+#if HAVE(CORE_MATERIAL)
+    WEBCORE_EXPORT void setAppleVisualEffectData(AppleVisualEffectData) override;
 #endif
 
     WEBCORE_EXPORT void setBackgroundColor(const Color&) override;
@@ -156,7 +169,9 @@ public:
 #endif
     WEBCORE_EXPORT void setContentsToPlatformLayer(PlatformLayer*, ContentsLayerPurpose) override;
     WEBCORE_EXPORT void setContentsToPlatformLayerHost(LayerHostingContextIdentifier) override;
-    WEBCORE_EXPORT void setContentsToRemotePlatformContext(LayerHostingContextIdentifier, ContentsLayerPurpose) override;
+#if ENABLE(MODEL_PROCESS)
+    WEBCORE_EXPORT void setContentsToModelContext(Ref<ModelContext>, ContentsLayerPurpose) override;
+#endif
     WEBCORE_EXPORT void setContentsToVideoElement(HTMLVideoElement&, ContentsLayerPurpose) override;
     WEBCORE_EXPORT void setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&&, ContentsLayerPurpose) override;
     WEBCORE_EXPORT PlatformLayerIdentifier setContentsToAsyncDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>, ContentsLayerPurpose);
@@ -176,11 +191,14 @@ public:
 
     WEBCORE_EXPORT void setDebugBackgroundColor(const Color&) override;
     WEBCORE_EXPORT void setDebugBorder(const Color&, float borderWidth) override;
+    WEBCORE_EXPORT void setShowFrameProcessBorders(bool) override;
 
     WEBCORE_EXPORT void setCustomAppearance(CustomAppearance) override;
 
     WEBCORE_EXPORT void deviceOrPageScaleFactorChanged() override;
     void setShouldUpdateRootRelativeScaleFactor(bool value) override { m_shouldUpdateRootRelativeScaleFactor = value; }
+
+    float rootRelativeScaleFactor() { return m_rootRelativeScaleFactor; }
 
     FloatSize pixelAlignmentOffset() const override { return m_pixelAlignmentOffset; }
 
@@ -251,13 +269,17 @@ private:
     WEBCORE_EXPORT bool platformCALayerCSSUnprefixedBackdropFilterEnabled() const override;
     WEBCORE_EXPORT void platformCALayerLogFilledVisibleFreshTile(unsigned) override;
     WEBCORE_EXPORT bool platformCALayerNeedsPlatformContext(const PlatformCALayer*) const override;
-    bool platformCALayerContainsBitmapOnly(const PlatformCALayer*) const override { return client().layerContainsBitmapOnly(this); }
     bool platformCALayerShouldPaintUsingCompositeCopy() const override { return shouldPaintUsingCompositeCopy(); }
+
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+    bool platformCALayerAllowsDynamicContentScaling(const PlatformCALayer*) const override { return client().layerAllowsDynamicContentScaling(this); }
+#endif
 
     bool isCommittingChanges() const override { return m_isCommittingChanges; }
     bool isUsingDisplayListDrawing(PlatformCALayer*) const override { return m_usesDisplayListDrawing; }
-#if HAVE(HDR_SUPPORT)
-    bool hdrForImagesEnabled() const override { return client().hdrForImagesEnabled(); }
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    bool drawsHDRContent() const override { return m_drawsHDRContent; }
+    void updateDrawsHDRContent();
 #endif
 
     WEBCORE_EXPORT void setAllowsBackingStoreDetaching(bool) override;
@@ -282,7 +304,9 @@ private:
 
     virtual Ref<PlatformCALayer> createPlatformCALayer(PlatformCALayer::LayerType, PlatformCALayerClient* owner);
     virtual Ref<PlatformCALayer> createPlatformCALayer(PlatformLayer*, PlatformCALayerClient* owner);
-    virtual Ref<PlatformCALayer> createPlatformCALayer(LayerHostingContextIdentifier, PlatformCALayerClient*);
+#if ENABLE(MODEL_PROCESS)
+    virtual Ref<PlatformCALayer> createPlatformCALayer(Ref<ModelContext>, PlatformCALayerClient*);
+#endif
 #if ENABLE(MODEL_ELEMENT)
     virtual Ref<PlatformCALayer> createPlatformCALayer(Ref<WebCore::Model>, PlatformCALayerClient* owner);
 #endif
@@ -292,10 +316,15 @@ private:
 
     virtual void setLayerContentsToImageBuffer(PlatformCALayer*, ImageBuffer*) { }
 
+    RefPtr<PlatformCALayer> protectedLayer() const { return m_layer; }
+    RefPtr<PlatformCALayer> protectedBackdropLayer() const { return m_backdropLayer; }
+    RefPtr<PlatformCALayer> protectedStructuralLayer() const { return m_structuralLayer; }
     PlatformCALayer* primaryLayer() const { return m_structuralLayer.get() ? m_structuralLayer.get() : m_layer.get(); }
+    RefPtr<PlatformCALayer> protectedPrimaryLayer() const { return primaryLayer(); }
     PlatformCALayer* hostLayerForSublayers() const;
     PlatformCALayer* layerForSuperlayer() const;
     PlatformCALayer* animatedLayer(AnimatedProperty) const;
+    RefPtr<PlatformCALayer> protectedAnimatedLayer(AnimatedProperty property) const { return animatedLayer(property); }
 
     WEBCORE_EXPORT void setTileCoverage(TileCoverage) override;
 
@@ -514,11 +543,18 @@ private:
 #endif
     void updateContentsScalingFilters();
 
+#if HAVE(CORE_MATERIAL)
+    void updateAppleVisualEffectData();
+#endif
+
     enum StructuralLayerPurpose {
         NoStructuralLayer = 0,
         StructuralLayerForPreserves3D,
         StructuralLayerForReplicaFlattening,
-        StructuralLayerForBackdrop
+        StructuralLayerForBackdrop,
+#if HAVE(MATERIAL_HOSTING)
+        StructuralLayerForMaterial,
+#endif
     };
     bool ensureStructuralLayer(StructuralLayerPurpose);
     StructuralLayerPurpose structuralLayerPurpose() const;
@@ -627,6 +663,12 @@ private:
         ContentsScalingFiltersChanged           = 1LLU << 43,
         VideoGravityChanged                     = 1LLU << 44,
         BackdropRootChanged                     = 1LLU << 45,
+#if HAVE(CORE_MATERIAL)
+        AppleVisualEffectChanged                = 1LLU << 46,
+#endif
+#if HAVE(SUPPORT_HDR_DISPLAY)
+        DrawsHDRContentChanged                  = 1LLU << 47,
+#endif
     };
     typedef uint64_t LayerChangeFlags;
     static ASCIILiteral layerChangeAsString(LayerChange);
@@ -697,9 +739,9 @@ private:
     Vector<LayerPropertyAnimation> m_baseValueTransformAnimations;
     Vector<LayerPropertyAnimation> m_animationGroups;
 
-    Vector<FloatRect> m_dirtyRects;
+    Vector<FloatRect, 4> m_dirtyRects;
 
-    std::unique_ptr<DisplayList::DisplayList> m_displayList;
+    RefPtr<const DisplayList::DisplayList> m_displayList;
 
     float m_contentsScaleLimitingFactor { 1 };
     float m_rootRelativeScaleFactor { 1.0f };

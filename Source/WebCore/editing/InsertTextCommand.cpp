@@ -33,6 +33,7 @@
 #include "HTMLImageElement.h"
 #include "HTMLInterchange.h"
 #include "LocalFrame.h"
+#include "PositionInlines.h"
 #include "Text.h"
 #include "VisibleUnits.h"
 
@@ -82,7 +83,7 @@ void InsertTextCommand::setEndingSelectionWithoutValidation(const Position& star
     // <http://bugs.webkit.org/show_bug.cgi?id=15781>
     VisibleSelection forcedEndingSelection;
     forcedEndingSelection.setWithoutValidation(startPosition, endPosition);
-    forcedEndingSelection.setIsDirectional(endingSelection().isDirectional());
+    forcedEndingSelection.setDirectionality(endingSelection().directionality());
     setEndingSelection(forcedEndingSelection);
 }
 
@@ -103,7 +104,7 @@ bool InsertTextCommand::performTrivialReplace(const String& text, bool selectIns
 
     setEndingSelectionWithoutValidation(start, endPosition);
     if (!selectInsertedText)
-        setEndingSelection(VisibleSelection(endingSelection().visibleEnd(), endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(endingSelection().visibleEnd(), endingSelection().directionality()));
 
     return true;
 }
@@ -124,7 +125,7 @@ bool InsertTextCommand::performOverwrite(const String& text, bool selectInserted
     Position endPosition = Position(textNode.get(), start.offsetInContainerNode() + text.length());
     setEndingSelectionWithoutValidation(start, endPosition);
     if (!selectInsertedText)
-        setEndingSelection(VisibleSelection(endingSelection().visibleEnd(), endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(endingSelection().visibleEnd(), endingSelection().directionality()));
 
     return true;
 }
@@ -247,7 +248,7 @@ void InsertTextCommand::doApply()
     }
 
     if (!m_selectInsertedText)
-        setEndingSelection(VisibleSelection(endingSelection().end(), endingSelection().affinity(), endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(endingSelection().end(), endingSelection().affinity(), endingSelection().directionality()));
 }
 
 Position InsertTextCommand::insertTab(const Position& pos)

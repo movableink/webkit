@@ -36,7 +36,7 @@
 
 namespace JSC {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(DeferredWorkTimer, TicketData);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DeferredWorkTimer::TicketData);
 
 namespace DeferredWorkTimerInternal {
 static constexpr bool verbose = false;
@@ -65,6 +65,7 @@ inline VM& DeferredWorkTimer::TicketData::vm()
 
 inline void DeferredWorkTimer::TicketData::cancel()
 {
+    dataLogLnIf(DeferredWorkTimerInternal::verbose, "Canceling ticket: ", RawPointer(this));
     m_isCancelled = true;
 }
 
@@ -157,14 +158,14 @@ void DeferredWorkTimer::doWork(VM& vm)
 
     if (m_pendingTickets.isEmpty() && m_shouldStopRunLoopWhenAllTicketsFinish) {
         ASSERT(m_tasks.isEmpty());
-        RunLoop::current().stop();
+        RunLoop::currentSingleton().stop();
     }
 }
 
 void DeferredWorkTimer::runRunLoop()
 {
     ASSERT(!m_apiLock->vm()->currentThreadIsHoldingAPILock());
-    ASSERT(&RunLoop::current() == &m_apiLock->vm()->runLoop());
+    ASSERT(&RunLoop::currentSingleton() == &m_apiLock->vm()->runLoop());
     m_shouldStopRunLoopWhenAllTicketsFinish = true;
     if (!m_pendingTickets.isEmpty())
         RunLoop::run();
@@ -226,7 +227,6 @@ bool DeferredWorkTimer::cancelPendingWork(Ticket ticket)
 
     bool result = false;
     if (!ticket->isCancelled()) {
-        dataLogLnIf(DeferredWorkTimerInternal::verbose, "Canceling ticket: ", RawPointer(ticket));
         ticket->cancel();
         result = true;
     }
@@ -237,6 +237,8 @@ bool DeferredWorkTimer::cancelPendingWork(Ticket ticket)
 void DeferredWorkTimer::cancelPendingWorkSafe(JSGlobalObject* globalObject)
 {
     Locker locker { m_taskLock };
+
+    dataLogLnIf(DeferredWorkTimerInternal::verbose, "Cancel pending work for globalObject ", RawPointer(globalObject));
     for (Ref<TicketData> ticket : *globalObject->m_weakTickets) {
         if (!ticket->isCancelled())
             cancelPendingWork(ticket.ptr());
@@ -251,6 +253,7 @@ void DeferredWorkTimer::cancelPendingWork(VM& vm)
     ASSERT(vm.heap.isInPhase(CollectorPhase::End));
     Locker locker { m_taskLock };
 
+    dataLogLnIf(DeferredWorkTimerInternal::verbose, "Cancel pending work for vm ", RawPointer(&vm));
     auto isValid = [&](auto& ticket) {
         bool isTargetGlobalObjectLive = vm.heap.isMarked(ticket->target()->globalObject());
 #if ASSERT_ENABLED

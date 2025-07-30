@@ -40,6 +40,7 @@
 #include "GraphicsTypes.h"
 #include "Length.h"
 #include "ListStyleType.h"
+#include "PositionTryFallback.h"
 #include "RenderStyleConstants.h"
 #include "SVGRenderStyleDefs.h"
 #include "ScrollAxis.h"
@@ -54,6 +55,14 @@
 
 #if ENABLE(APPLE_PAY)
 #include "ApplePayButtonPart.h"
+#endif
+
+#if HAVE(CORE_MATERIAL)
+#include "AppleVisualEffect.h"
+#endif
+
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/CSSValueKeywordsAdditions.h>
 #endif
 
 namespace WebCore {
@@ -88,39 +97,39 @@ public:
 
     operator unsigned short() const
     {
-        return numericValue().resolveAsNumber<unsigned short>(m_builderState.cssToLengthConversionData());
+        return protectedNumericValue()->resolveAsNumber<unsigned short>(m_builderState.cssToLengthConversionData());
     }
 
     operator int() const
     {
-        return numericValue().resolveAsNumber<int>(m_builderState.cssToLengthConversionData());
+        return protectedNumericValue()->resolveAsNumber<int>(m_builderState.cssToLengthConversionData());
     }
 
     operator unsigned() const
     {
-        return numericValue().resolveAsNumber<unsigned>(m_builderState.cssToLengthConversionData());
+        return protectedNumericValue()->resolveAsNumber<unsigned>(m_builderState.cssToLengthConversionData());
     }
 
     operator float() const
     {
-        return numericValue().resolveAsNumber<float>(m_builderState.cssToLengthConversionData());
+        return protectedNumericValue()->resolveAsNumber<float>(m_builderState.cssToLengthConversionData());
     }
 
     operator double() const
     {
-        return numericValue().resolveAsNumber<double>(m_builderState.cssToLengthConversionData());
+        return protectedNumericValue()->resolveAsNumber<double>(m_builderState.cssToLengthConversionData());
     }
 
 private:
-    const CSSPrimitiveValue& numericValue() const
+    Ref<const CSSPrimitiveValue> protectedNumericValue() const
     {
-        auto& value = downcast<CSSPrimitiveValue>(m_value);
-        ASSERT(value.isNumberOrInteger());
+        Ref value = downcast<const CSSPrimitiveValue>(m_value);
+        ASSERT(value->isNumberOrInteger());
         return value;
     }
 
     const Style::BuilderState& m_builderState;
-    const CSSValue& m_value;
+    Ref<const CSSValue> m_value;
 };
 
 inline TypeDeducingCSSValueMapper fromCSSValueDeducingType(const Style::BuilderState& builderState, const CSSValue& value)
@@ -226,13 +235,6 @@ template<> constexpr BorderStyle fromCSSValueID(CSSValueID valueID)
     if (valueID == CSSValueAuto) // Valid for CSS outline-style
         return BorderStyle::Dotted;
     return static_cast<BorderStyle>(valueID - CSSValueNone);
-}
-
-template<> constexpr OutlineIsAuto fromCSSValueID(CSSValueID valueID)
-{
-    if (valueID == CSSValueAuto)
-        return OutlineIsAuto::On;
-    return OutlineIsAuto::Off;
 }
 
 constexpr CSSValueID toCSSValueID(CompositeOperator e, CSSPropertyID propertyID)
@@ -377,16 +379,15 @@ constexpr CSSValueID toCSSValueID(StyleAppearance e)
     case StyleAppearance::ApplePayButton:
         return CSSValueApplePayButton;
 #endif
-#if ENABLE(INPUT_TYPE_COLOR)
     case StyleAppearance::ColorWell:
-#endif
+    case StyleAppearance::ColorWellSwatch:
+    case StyleAppearance::ColorWellSwatchOverlay:
+    case StyleAppearance::ColorWellSwatchWrapper:
 #if ENABLE(SERVICE_CONTROLS)
     case StyleAppearance::ImageControlsButton:
 #endif
     case StyleAppearance::InnerSpinButton:
-#if ENABLE(DATALIST_ELEMENT)
     case StyleAppearance::ListButton:
-#endif
     case StyleAppearance::SearchFieldDecoration:
     case StyleAppearance::SearchFieldResultsDecoration:
     case StyleAppearance::SearchFieldResultsButton:
@@ -1996,6 +1997,104 @@ template<> constexpr ImageRendering fromCSSValueID(CSSValueID valueID)
     return ImageRendering::Auto;
 }
 
+#if HAVE(CORE_MATERIAL)
+
+constexpr CSSValueID toCSSValueID(AppleVisualEffect effect)
+{
+    switch (effect) {
+    case AppleVisualEffect::None:
+        return CSSValueNone;
+    case AppleVisualEffect::BlurUltraThinMaterial:
+        return CSSValueAppleSystemBlurMaterialUltraThin;
+    case AppleVisualEffect::BlurThinMaterial:
+        return CSSValueAppleSystemBlurMaterialThin;
+    case AppleVisualEffect::BlurMaterial:
+        return CSSValueAppleSystemBlurMaterial;
+    case AppleVisualEffect::BlurThickMaterial:
+        return CSSValueAppleSystemBlurMaterialThick;
+    case AppleVisualEffect::BlurChromeMaterial:
+        return CSSValueAppleSystemBlurMaterialChrome;
+#if HAVE(MATERIAL_HOSTING)
+    case AppleVisualEffect::HostedBlurMaterial:
+        return CSSValueAppleSystemHostedBlurMaterial;
+    case AppleVisualEffect::HostedThinBlurMaterial:
+        return CSSValueAppleSystemHostedThinBlurMaterial;
+    case AppleVisualEffect::HostedMediaControlsMaterial:
+        return CSSValueAppleSystemHostedMediaControlsMaterial;
+    case AppleVisualEffect::HostedThinMediaControlsMaterial:
+        return CSSValueAppleSystemHostedThinMediaControlsMaterial;
+#endif
+    case AppleVisualEffect::VibrancyLabel:
+        return CSSValueAppleSystemVibrancyLabel;
+    case AppleVisualEffect::VibrancySecondaryLabel:
+        return CSSValueAppleSystemVibrancySecondaryLabel;
+    case AppleVisualEffect::VibrancyTertiaryLabel:
+        return CSSValueAppleSystemVibrancyTertiaryLabel;
+    case AppleVisualEffect::VibrancyQuaternaryLabel:
+        return CSSValueAppleSystemVibrancyQuaternaryLabel;
+    case AppleVisualEffect::VibrancyFill:
+        return CSSValueAppleSystemVibrancyFill;
+    case AppleVisualEffect::VibrancySecondaryFill:
+        return CSSValueAppleSystemVibrancySecondaryFill;
+    case AppleVisualEffect::VibrancyTertiaryFill:
+        return CSSValueAppleSystemVibrancyTertiaryFill;
+    case AppleVisualEffect::VibrancySeparator:
+        return CSSValueAppleSystemVibrancySeparator;
+    }
+    ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
+    return CSSValueInvalid;
+}
+
+template<> constexpr AppleVisualEffect fromCSSValueID(CSSValueID valueID)
+{
+    switch (valueID) {
+    case CSSValueNone:
+        return AppleVisualEffect::None;
+    case CSSValueAppleSystemBlurMaterialUltraThin:
+        return AppleVisualEffect::BlurUltraThinMaterial;
+    case CSSValueAppleSystemBlurMaterialThin:
+        return AppleVisualEffect::BlurThinMaterial;
+    case CSSValueAppleSystemBlurMaterial:
+        return AppleVisualEffect::BlurMaterial;
+    case CSSValueAppleSystemBlurMaterialThick:
+        return AppleVisualEffect::BlurThickMaterial;
+    case CSSValueAppleSystemBlurMaterialChrome:
+        return AppleVisualEffect::BlurChromeMaterial;
+#if HAVE(MATERIAL_HOSTING)
+    case CSSValueAppleSystemHostedBlurMaterial:
+        return AppleVisualEffect::HostedBlurMaterial;
+    case CSSValueAppleSystemHostedThinBlurMaterial:
+        return AppleVisualEffect::HostedThinBlurMaterial;
+    case CSSValueAppleSystemHostedMediaControlsMaterial:
+        return AppleVisualEffect::HostedMediaControlsMaterial;
+    case CSSValueAppleSystemHostedThinMediaControlsMaterial:
+        return AppleVisualEffect::HostedThinMediaControlsMaterial;
+#endif
+    case CSSValueAppleSystemVibrancyLabel:
+        return AppleVisualEffect::VibrancyLabel;
+    case CSSValueAppleSystemVibrancySecondaryLabel:
+        return AppleVisualEffect::VibrancySecondaryLabel;
+    case CSSValueAppleSystemVibrancyTertiaryLabel:
+        return AppleVisualEffect::VibrancyTertiaryLabel;
+    case CSSValueAppleSystemVibrancyQuaternaryLabel:
+        return AppleVisualEffect::VibrancyQuaternaryLabel;
+    case CSSValueAppleSystemVibrancyFill:
+        return AppleVisualEffect::VibrancyFill;
+    case CSSValueAppleSystemVibrancySecondaryFill:
+        return AppleVisualEffect::VibrancySecondaryFill;
+    case CSSValueAppleSystemVibrancyTertiaryFill:
+        return AppleVisualEffect::VibrancyTertiaryFill;
+    case CSSValueAppleSystemVibrancySeparator:
+        return AppleVisualEffect::VibrancySeparator;
+    default:
+        break;
+    }
+    ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
+    return AppleVisualEffect::None;
+}
+
+#endif // HAVE(CORE_MATERIAL)
+
 #define TYPE InputSecurity
 #define FOR_EACH(CASE) CASE(Auto) CASE(None)
 DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
@@ -2076,7 +2175,7 @@ template<int supported> Length CSSPrimitiveValue::convertToLength(const CSSToLen
     if ((supported & AutoConversion) && valueID() == CSSValueAuto)
         return Length(LengthType::Auto);
     if ((supported & CalculatedConversion) && isCalculated())
-        return Length(cssCalcValue()->createCalculationValue(conversionData, CSSCalcSymbolTable { }));
+        return Length(protectedCssCalcValue()->createCalculationValue(conversionData, CSSCalcSymbolTable { }));
     return Length(LengthType::Undefined);
 }
 
@@ -2097,6 +2196,7 @@ DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 #undef TYPE
 #undef FOR_EACH
+
 
 #define TYPE DominantBaseline
 #define FOR_EACH(CASE) CASE(Auto) CASE(UseScript) CASE(NoChange) CASE(ResetSize) CASE(Central) \
@@ -2568,6 +2668,18 @@ DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 
 #define TYPE Style::PositionTryOrder
 #define FOR_EACH(CASE) CASE(Normal) CASE(MostWidth) CASE(MostHeight) CASE(MostBlockSize) CASE(MostInlineSize)
+DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
+#undef TYPE
+#undef FOR_EACH
+
+#define TYPE PositionVisibility
+#define FOR_EACH(CASE) CASE(AnchorsValid) CASE(AnchorsVisible) CASE(NoOverflow)
+DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
+#undef TYPE
+#undef FOR_EACH
+
+#define TYPE Style::PositionTryFallback::Tactic
+#define FOR_EACH(CASE) CASE(FlipBlock) CASE(FlipInline) CASE(FlipStart)
 DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 #undef TYPE
 #undef FOR_EACH

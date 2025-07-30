@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -86,9 +86,9 @@ public:
     void start(IDBFactory*, SecurityOrigin*, const String& databaseName);
     virtual void execute(IDBDatabase&) = 0;
     virtual BackendDispatcher::CallbackBase& requestCallback() = 0;
-    ScriptExecutionContext* context() const { return m_context; }
+    ScriptExecutionContext* context() const { return m_context.get(); }
 private:
-    ScriptExecutionContext* m_context;
+    WeakPtr<ScriptExecutionContext> m_context;
 };
 
 class OpenDatabaseCallback final : public EventListener {
@@ -128,7 +128,7 @@ private:
     OpenDatabaseCallback(ExecutableWithDatabase& executableWithDatabase)
         : EventListener(EventListener::CPPEventListenerType)
         , m_executableWithDatabase(executableWithDatabase) { }
-    Ref<ExecutableWithDatabase> m_executableWithDatabase;
+    const Ref<ExecutableWithDatabase> m_executableWithDatabase;
 };
 
 void ExecutableWithDatabase::start(IDBFactory* idbFactory, SecurityOrigin*, const String& databaseName)
@@ -165,7 +165,7 @@ static Ref<Inspector::Protocol::IndexedDB::KeyPath> keyPathFromIDBKeyPath(const 
         keyPath->setArray(WTFMove(array));
         return keyPath;
     });
-    return std::visit(visitor, idbKeyPath.value());
+    return WTF::visit(visitor, idbKeyPath.value());
 }
 
 static RefPtr<IDBTransaction> transactionForDatabase(IDBDatabase* idbDatabase, const String& objectStoreName, IDBTransactionMode mode = IDBTransactionMode::Readonly)

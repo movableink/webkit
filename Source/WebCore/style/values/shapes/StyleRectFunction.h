@@ -31,8 +31,8 @@ namespace WebCore {
 namespace Style {
 
 // NOTE: There is no Style::Rect type. Style conversion of CSS::Rect yields a Style::Inset.
-template<> struct ToStyle<CSS::Rect> { auto operator()(const CSS::Rect&, const BuilderState&, const CSSCalcSymbolTable&) -> Inset; };
-template<> struct ToStyle<CSS::RectFunction> { auto operator()(const CSS::RectFunction&, const BuilderState&, const CSSCalcSymbolTable&) -> InsetFunction; };
+template<> struct ToStyle<CSS::Rect> { auto operator()(const CSS::Rect&, const BuilderState&) -> Inset; };
+template<> struct ToStyle<CSS::RectFunction> { auto operator()(const CSS::RectFunction&, const BuilderState&) -> InsetFunction; };
 
 } // namespace Style
 } // namespace WebCore

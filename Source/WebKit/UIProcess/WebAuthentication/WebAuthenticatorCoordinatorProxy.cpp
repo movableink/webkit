@@ -98,7 +98,10 @@ void WebAuthenticatorCoordinatorProxy::getAssertion(FrameIdentifier frameId, Fra
 
 void WebAuthenticatorCoordinatorProxy::handleRequest(WebAuthenticationRequestData&& data, RequestCompletionHandler&& handler)
 {
-    auto origin = API::SecurityOrigin::create(data.frameInfo.securityOrigin.protocol(), data.frameInfo.securityOrigin.host(), data.frameInfo.securityOrigin.port());
+    if (!data.frameInfo)
+        return handler({ }, AuthenticatorAttachment::Platform, ExceptionData { ExceptionCode::InvalidStateError });
+
+    auto origin = API::SecurityOrigin::create(data.frameInfo->securityOrigin);
 
     bool shouldRequestConditionalRegistration = std::holds_alternative<PublicKeyCredentialCreationOptions>(data.options) && data.mediation == MediationRequirement::Conditional;
 
@@ -106,21 +109,23 @@ void WebAuthenticatorCoordinatorProxy::handleRequest(WebAuthenticationRequestDat
     if (shouldRequestConditionalRegistration)
         username = std::get<PublicKeyCredentialCreationOptions>(data.options).user.name;
 
-    CompletionHandler<void(bool)> afterConsent = [this, weakThis = WeakPtr { *this }, data = WTFMove(data), handler = WTFMove(handler)] (bool result) mutable {
-        if (!weakThis)
-            return;
-        Ref authenticatorManager = m_webPageProxy->websiteDataStore().authenticatorManager();
+    CompletionHandler<void(bool)> afterConsent = [weakThis = WeakPtr { *this }, data = WTFMove(data), handler = WTFMove(handler)] (bool result) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return handler({ }, AuthenticatorAttachment::Platform, ExceptionData { ExceptionCode::InvalidStateError });
+
+        Ref authenticatorManager = protectedThis->m_webPageProxy->websiteDataStore().authenticatorManager();
         if (result) {
 #if HAVE(UNIFIED_ASC_AUTH_UI) || HAVE(WEB_AUTHN_AS_MODERN)
             if (!authenticatorManager->isMock() && !authenticatorManager->isVirtual()) {
-                if (!isASCAvailable()) {
+                if (!protectedThis->isASCAvailable()) {
                     handler({ }, AuthenticatorAttachment::Platform, ExceptionData { ExceptionCode::NotSupportedError, "Not implemented."_s });
                     RELEASE_LOG_ERROR(WebAuthn, "Web Authentication is not currently supported in this environment.");
                     return;
                 }
                 // performRequest calls out to ASCAgent which will then call [_WKWebAuthenticationPanel makeCredential/getAssertionWithChallenge]
                 // which calls authenticatorManager->handleRequest(..)
-                performRequest(WTFMove(data), WTFMove(handler));
+                protectedThis->performRequest(WTFMove(data), WTFMove(handler));
                 return;
             }
 #else
@@ -136,13 +141,13 @@ void WebAuthenticatorCoordinatorProxy::handleRequest(WebAuthenticationRequestDat
             WebAuthn::Scope scope = data.parentOrigin ? WebAuthn::Scope::CrossOrigin : WebAuthn::Scope::SameOrigin;
             auto topOrigin = data.parentOrigin ? data.parentOrigin->toString() : nullString();
             WTF::switchOn(data.options, [&](const PublicKeyCredentialCreationOptions& options) {
-                clientDataJSON = buildClientDataJson(ClientDataType::Create, options.challenge, data.frameInfo.securityOrigin.securityOrigin(), scope, topOrigin);
+                clientDataJSON = buildClientDataJson(ClientDataType::Create, options.challenge, data.frameInfo->securityOrigin.securityOrigin(), scope, topOrigin);
             }, [&](const PublicKeyCredentialRequestOptions& options) {
-                clientDataJSON = buildClientDataJson(ClientDataType::Get, options.challenge, data.frameInfo.securityOrigin.securityOrigin(), scope, topOrigin);
+                clientDataJSON = buildClientDataJson(ClientDataType::Get, options.challenge, data.frameInfo->securityOrigin.securityOrigin(), scope, topOrigin);
             });
             data.hash = buildClientDataJsonHash(*clientDataJSON);
 
-            authenticatorManager->handleRequest(WTFMove(data), [handler = WTFMove(handler), clientDataJSON = WTFMove(clientDataJSON)] (std::variant<Ref<AuthenticatorResponse>, ExceptionData>&& result) mutable {
+            authenticatorManager->handleRequest(WTFMove(data), [handler = WTFMove(handler), clientDataJSON = WTFMove(clientDataJSON)] (Variant<Ref<AuthenticatorResponse>, ExceptionData>&& result) mutable {
                 ASSERT(RunLoop::isMain());
                 WTF::switchOn(result, [&](const Ref<AuthenticatorResponse>& response) {
                     auto responseData = response->data();
@@ -160,7 +165,16 @@ void WebAuthenticatorCoordinatorProxy::handleRequest(WebAuthenticationRequestDat
 
     Ref authenticatorManager = m_webPageProxy->websiteDataStore().authenticatorManager();
     if (shouldRequestConditionalRegistration && !authenticatorManager->isMock() && !authenticatorManager->isVirtual()) {
-        m_webPageProxy->uiClient().requestWebAuthenticationConditonalMediationRegistration(WTFMove(username), WTFMove(afterConsent));
+        m_webPageProxy->uiClient().requestWebAuthenticationConditonalMediationRegistration(username, [weakThis = WeakPtr { *this }, username, afterConsent = WTFMove(afterConsent), origin = origin->securityOrigin()] (std::optional<bool> consented) mutable {
+            RefPtr protectedThis = weakThis.get();
+            if (!protectedThis)
+                return afterConsent(false);
+#if HAVE(WEB_AUTHN_AS_MODERN)
+            afterConsent(consented ? *consented : protectedThis->removeMatchingAutofillEventForUsername(username, origin));
+#else
+            afterConsent(consented ? *consented : false);
+#endif
+        });
         return;
     }
 
@@ -184,6 +198,37 @@ void WebAuthenticatorCoordinatorProxy::isConditionalMediationAvailable(const Sec
     handler(false);
 }
 #endif // !HAVE(UNIFIED_ASC_AUTH_UI) && !HAVE(WEB_AUTHN_AS_MODERN)
+
+#if HAVE(WEB_AUTHN_AS_MODERN)
+
+void WebAuthenticatorCoordinatorProxy::removeExpiredAutofillEvents()
+{
+    m_recentAutofills.removeAllMatching([] (const AutofillEvent& event) {
+        constexpr Seconds autofillEventTimeout { 5 * 60 };
+        auto now = MonotonicTime::now();
+        return event.time + autofillEventTimeout < now;
+    });
+}
+
+void WebAuthenticatorCoordinatorProxy::recordAutofill(const String& username, const URL& url)
+{
+    removeExpiredAutofillEvents();
+    m_recentAutofills.append({
+        MonotonicTime::now(),
+        username,
+        url,
+    });
+}
+
+bool WebAuthenticatorCoordinatorProxy::removeMatchingAutofillEventForUsername(const String& username, const WebCore::SecurityOriginData& securityOrigin)
+{
+    removeExpiredAutofillEvents();
+    bool value = m_recentAutofills.removeLastMatching([&] (const AutofillEvent& event) {
+        return event.username == username && RegistrableDomain { event.url } == RegistrableDomain { securityOrigin };
+    });
+    return value;
+}
+#endif // HAVE(WEB_AUTHN_AS_MODERN)
 
 } // namespace WebKit
 

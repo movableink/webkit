@@ -70,7 +70,6 @@ public:
         m_hasUncommittedReplaced = true;
     }
     void commit();
-    void fitBelowFloats(bool isFirstLine = false);
     void setTrailingWhitespaceWidth(float collapsedWhitespace, float borderPaddingMargin = 0);
 
     bool isFirstLine() const { return m_isFirstLine; }
@@ -79,7 +78,6 @@ private:
     void computeAvailableWidthFromLeftAndRight();
     bool fitsOnLineExcludingTrailingCollapsedWhitespace() const;
     void updateLineDimension(LayoutUnit newLineTop, LayoutUnit newLineWidth, float newLineLeft, float newLineRight);
-    void wrapNextToShapeOutside(bool isFirstLine);
 
     RenderBlockFlow& m_block;
     float m_uncommittedWidth { 0 };

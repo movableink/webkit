@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,7 +45,7 @@ public:
     virtual ~PlaceholderRenderingContextSource() = default;
 
     // Called by the offscreen context to submit the frame.
-    void setPlaceholderBuffer(ImageBuffer&);
+    void setPlaceholderBuffer(RefPtr<ImageBuffer>&&);
 
     // Called by the placeholder context to attach to compositor layer.
     void setContentsToLayer(GraphicsLayer&);
@@ -54,6 +54,7 @@ private:
     explicit PlaceholderRenderingContextSource(PlaceholderRenderingContext&);
 
     WeakPtr<PlaceholderRenderingContext> m_placeholder; // For main thread use.
+    RefPtr<ImageBuffer> m_imageBufferForDelegate;
     Lock m_lock;
     RefPtr<GraphicsLayerAsyncContentsDisplayDelegate> m_delegate WTF_GUARDED_BY_LOCK(m_lock);
 };
@@ -64,16 +65,17 @@ public:
     static std::unique_ptr<PlaceholderRenderingContext> create(HTMLCanvasElement&);
 
     HTMLCanvasElement& canvas() const;
+    Ref<HTMLCanvasElement> protectedCanvas() const { return canvas(); }
     IntSize size() const;
     void setPlaceholderBuffer(Ref<ImageBuffer>&&);
 
-    Ref<PlaceholderRenderingContextSource> source() const { return m_source; }
+    PlaceholderRenderingContextSource& source() const { return m_source; }
 
 private:
     PlaceholderRenderingContext(HTMLCanvasElement&);
     void setContentsToLayer(GraphicsLayer&) final;
 
-    Ref<PlaceholderRenderingContextSource> m_source;
+    const Ref<PlaceholderRenderingContextSource> m_source;
 };
 
 }

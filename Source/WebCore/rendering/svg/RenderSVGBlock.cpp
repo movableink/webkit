@@ -24,6 +24,7 @@
 
 #include "LegacyRenderSVGResource.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGBlockInlines.h"
 #include "RenderView.h"
 #include "SVGGraphicsElement.h"
@@ -129,12 +130,12 @@ void RenderSVGBlock::computeOverflow(LayoutUnit oldClientAfterEdge, bool recompu
     if (document().settings().layerBasedSVGEngineEnabled())
         return;
 
-    const auto* textShadow = style().textShadow();
-    if (!textShadow)
+    const auto& textShadow = style().textShadow();
+    if (textShadow.isEmpty())
         return;
 
-    LayoutRect borderRect = borderBoxRect();
-    textShadow->adjustRectForShadow(borderRect);
+    auto borderRect = borderBoxRect();
+    Style::adjustRectForShadow(borderRect, textShadow);
     addVisualOverflow(snappedIntRect(borderRect));
 }
 
@@ -186,7 +187,7 @@ void RenderSVGBlock::mapLocalToContainer(const RenderLayerModelObject* ancestorC
     SVGRenderSupport::mapLocalToContainer(*this, ancestorContainer, transformState, wasFixed);
 }
 
-const RenderObject* RenderSVGBlock::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
+const RenderElement* RenderSVGBlock::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
 {
     if (document().settings().layerBasedSVGEngineEnabled())
         return RenderBlock::pushMappingToContainer(ancestorToStopAt, geometryMap);

@@ -108,7 +108,7 @@ public:
     void mouseIsInScrollbar(ScrollbarHoverState);
 
     NSScrollerImpPair *scrollerImpPair() const { return m_scrollerImpPair.get(); }
-    void ensureOnMainThreadWithProtectedThis(Function<void()>&&);
+    void ensureOnMainThreadWithProtectedThis(Function<void(ScrollerPairMac&)>&&);
     RefPtr<ScrollingTreeScrollingNode> protectedNode() const { return m_scrollingNode.get(); }
 
     bool mouseInContentArea() const { return m_mouseInContentArea; }

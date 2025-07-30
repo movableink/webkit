@@ -103,7 +103,7 @@ void IPIntPlan::compileFunction(FunctionCodeIndex functionIndex)
     auto parseAndCompileResult = parseAndCompileMetadata(function.data, signature, m_moduleInformation.get(), functionIndex);
     endCompilerSignpost(CompilationMode::IPIntMode, functionIndexSpace);
 
-    if (UNLIKELY(!parseAndCompileResult)) {
+    if (!parseAndCompileResult) [[unlikely]] {
         Locker locker { m_lock };
         if (!m_errorMessage) {
             // Multiple compiles could fail simultaneously. We arbitrarily choose the first.
@@ -114,10 +114,11 @@ void IPIntPlan::compileFunction(FunctionCodeIndex functionIndex)
     }
 
     if (Options::useWasmTailCalls()) {
-        Locker locker { m_lock };
-
-        for (auto successor : parseAndCompileResult->get()->tailCallSuccessors())
-            addTailCallEdge(m_moduleInformation->importFunctionCount() + parseAndCompileResult->get()->functionIndex(), successor);
+        if (parseAndCompileResult->get()->hasTailCallSuccessors()) {
+            Locker locker { m_lock };
+            for (auto successor : parseAndCompileResult->get()->tailCallSuccessors())
+                addTailCallEdge(m_moduleInformation->importFunctionCount() + parseAndCompileResult->get()->functionIndex(), successor);
+        }
 
         if (parseAndCompileResult->get()->tailCallClobbersInstance())
             m_moduleInformation->addClobberingTailCall(m_moduleInformation->toSpaceIndex(parseAndCompileResult->get()->functionIndex()));
@@ -131,13 +132,23 @@ void IPIntPlan::compileFunction(FunctionCodeIndex functionIndex)
         ASSERT(!callee->entrypoint());
 
 #if ENABLE(JIT)
-        if (Options::useWasmJIT())
-            callee->setEntrypoint(LLInt::inPlaceInterpreterEntryThunk().retaggedCode<WasmEntryPtrTag>());
+        if (Options::useWasmJIT() && Options::useBBQJIT()) {
+            if (m_moduleInformation->usesSIMD(functionIndex))
+                callee->setEntrypoint(LLInt::inPlaceInterpreterSIMDEntryThunk().retaggedCode<WasmEntryPtrTag>());
+            else
+                callee->setEntrypoint(LLInt::inPlaceInterpreterEntryThunk().retaggedCode<WasmEntryPtrTag>());
+        }
 #else
         if (false);
 #endif
-        else
+        else {
+            if (m_moduleInformation->usesSIMD(functionIndex)) {
+                Locker locker { m_lock };
+                Base::fail(makeString("JIT is disabled, but the entrypoint for "_s, functionIndex.rawIndex(), " requires JIT"_s));
+                return;
+            }
             callee->setEntrypoint(LLInt::getCodeFunctionPtr<CFunctionPtrTag>(ipint_trampoline));
+        }
         ipintCallee = callee.ptr();
         m_calleesVector[functionIndex] = WTFMove(callee);
     } else
@@ -171,7 +182,7 @@ void IPIntPlan::didCompleteCompilation()
 
     unsigned functionCount = m_wasmInternalFunctions.size();
     if (!m_callees && functionCount) {
-        m_callees = m_calleesVector.data();
+        m_callees = m_calleesVector.span().data();
         if (!m_moduleInformation->clobberingTailCalls().isEmpty())
             computeTransitiveTailCalls();
     }
@@ -229,11 +240,11 @@ void IPIntPlan::didFailInStreaming(String&& message)
         fail(WTFMove(message));
 }
 
-void IPIntPlan::work(CompilationEffort effort)
+void IPIntPlan::work()
 {
     switch (m_state) {
     case State::Prepared:
-        compileFunctions(effort);
+        compileFunctions();
         break;
     case State::Compiled:
         break;
@@ -259,7 +270,7 @@ void IPIntPlan::addTailCallEdge(uint32_t callerIndex, uint32_t calleeIndex)
 void IPIntPlan::computeTransitiveTailCalls() const
 {
     // FIXME: Use FunctionCodeIndex -> FunctionSpaceIndex by adding the right HashTraits.
-    GraphNodeWorklist<uint32_t, HashSet<uint32_t, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>> worklist;
+    GraphNodeWorklist<uint32_t, UncheckedKeyHashSet<uint32_t, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>> worklist;
 
     for (auto clobberingTailCall : m_moduleInformation->clobberingTailCalls())
         worklist.push(clobberingTailCall);

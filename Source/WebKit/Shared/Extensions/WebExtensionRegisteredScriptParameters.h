@@ -27,6 +27,7 @@
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
+#include "WebExtension.h"
 #include <WebCore/UserStyleSheetTypes.h>
 #include <wtf/Forward.h>
 
@@ -44,6 +45,8 @@ struct WebExtensionRegisteredScriptParameters {
     std::optional<Vector<String>> matchPatterns;
 
     std::optional<bool> allFrames;
+    std::optional<WebCore::UserContentMatchParentFrame> matchParentFrame;
+
     std::optional<bool> persistent;
 
     std::optional<WebExtensionContentWorldType> world;

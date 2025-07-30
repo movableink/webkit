@@ -100,6 +100,12 @@ enum class ScrollCoordinationRole {
     Positioning         = 1 << 5,
 };
 
+enum class ViewportConstrainedSublayers : uint8_t {
+    None,
+    Anchor,
+    ClippingAndAnchor,
+};
+
 static constexpr OptionSet<ScrollCoordinationRole> allScrollCoordinationRoles()
 {
     return {
@@ -244,8 +250,8 @@ public:
     void rootBackgroundColorOrTransparencyChanged();
     
     // Repaint the appropriate layers when the given RenderLayer starts or stops being composited.
-    void repaintOnCompositingChange(RenderLayer&);
-    
+    void repaintOnCompositingChange(RenderLayer&, RenderLayerModelObject* repaintContainer);
+
     void repaintInCompositedAncestor(RenderLayer&, const LayoutRect&);
     
     // Notify us that a layer has been removed
@@ -345,6 +351,7 @@ public:
     float contentsScaleMultiplierForNewTiles(const GraphicsLayer*) const override;
     float pageScaleFactor() const override;
     float zoomedOutPageScaleFactor() const override;
+    FloatSize enclosingFrameViewVisibleSize() const override;
     void didChangePlatformLayerForLayer(const GraphicsLayer*) override { }
 
     void layerTiledBackingUsageChanged(const GraphicsLayer*, bool /*usingTiledBacking*/);
@@ -371,8 +378,9 @@ public:
 
     void updateRootContentsLayerBackgroundColor();
 
+    ViewportConstrainedSublayers viewportConstrainedSublayers(const RenderLayer&, const RenderLayer* compositingAncestor) const;
+
     // FIXME: make the coordinated/async terminology consistent.
-    bool isViewportConstrainedFixedOrStickyLayer(const RenderLayer&) const;
     bool useCoordinatedScrollingForLayer(const RenderLayer&) const;
     ScrollPositioningBehavior computeCoordinatedPositioningForLayer(const RenderLayer&, const RenderLayer* compositingAncestor) const;
     bool isLayerForIFrameWithScrollCoordinatedContents(const RenderLayer&) const;
@@ -428,10 +436,9 @@ private:
     void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect&, OptionSet<GraphicsLayerPaintBehavior>) override;
     void customPositionForVisibleRectComputation(const GraphicsLayer*, FloatPoint&) const override;
     bool shouldDumpPropertyForLayer(const GraphicsLayer*, ASCIILiteral propertyName, OptionSet<LayerTreeAsTextOptions>) const override;
+    bool backdropRootIsOpaque(const GraphicsLayer*) const override;
+    bool isFlushingLayers() const override { return m_flushingLayers; }
     bool isTrackingRepaints() const override { return m_isTrackingRepaints; }
-#if HAVE(HDR_SUPPORT)
-    bool hdrForImagesEnabled() const override;
-#endif
 
     // Copy the accelerated compositing related flags from Settings
     void cacheAcceleratedCompositingFlags();
@@ -446,8 +453,9 @@ private:
 
     // Make or destroy the backing for this layer; returns true if backing changed.
     enum class BackingRequired { No, Yes, Unknown };
-    bool updateBacking(RenderLayer&, RequiresCompositingData&, BackingSharingState* = nullptr, BackingRequired = BackingRequired::Unknown);
-    bool updateLayerCompositingState(RenderLayer&, const RenderLayer* compositingAncestor, RequiresCompositingData&, BackingSharingState&);
+    bool updateBacking(RenderLayer&, RequiresCompositingData&, BackingSharingState*, BackingRequired);
+    bool updateExplicitBacking(RenderLayer&, RequiresCompositingData&, BackingRequired = BackingRequired::Unknown);
+    bool updateReflectionCompositingState(RenderLayer&, const RenderLayer* compositingAncestor, RequiresCompositingData&);
 
     template<typename ApplyFunctionType> void applyToCompositedLayerIncludingDescendants(RenderLayer&, const ApplyFunctionType&);
 
@@ -520,7 +528,8 @@ private:
     FloatRect visibleRectForLayerFlushing() const;
     
     Page& page() const;
-    
+    Ref<Page> protectedPage() const;
+
     GraphicsLayerFactory* graphicsLayerFactory() const;
     ScrollingCoordinator* scrollingCoordinator() const;
 

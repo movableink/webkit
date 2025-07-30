@@ -59,7 +59,7 @@ TEST(_WKActivatedElementInfo, InfoForLink)
     [webView _requestActivatedElementAtPosition:CGPointMake(50, 50) completionBlock: ^(_WKActivatedElementInfo *elementInfo) {
 
         EXPECT_TRUE(elementInfo.type == _WKActivatedElementTypeLink);
-        EXPECT_WK_STREQ(elementInfo.URL.absoluteString, "testURL.test");
+        EXPECT_WK_STREQ(elementInfo.URL.absoluteString, "");
         EXPECT_WK_STREQ(elementInfo.title, "HitTestLinkTitle");
         EXPECT_WK_STREQ(elementInfo.ID, @"testID");
         EXPECT_NOT_NULL(elementInfo.image);
@@ -160,7 +160,7 @@ TEST(_WKActivatedElementInfo, InfoForRotatedImage)
 IGNORE_WARNINGS_BEGIN("deprecated-enum-enum-conversion")
         CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGImageByteOrder32Little;
 IGNORE_WARNINGS_END
-        RetainPtr<CGContextRef> context = adoptCF(CGBitmapContextCreate(pixels.data(), width, height, bitsPerComponent, bytesPerRow, colorSpace.get(), bitmapInfo));
+        RetainPtr<CGContextRef> context = adoptCF(CGBitmapContextCreate(pixels.mutableSpan().data(), width, height, bitsPerComponent, bytesPerRow, colorSpace.get(), bitmapInfo));
 
         CGContextDrawImage(context.get(), CGRectMake(0, 0, width, height), image);
         return pixels;

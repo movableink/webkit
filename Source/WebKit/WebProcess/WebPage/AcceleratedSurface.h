@@ -53,8 +53,7 @@ public:
 
     virtual uint64_t window() const { ASSERT_NOT_REACHED(); return 0; }
     virtual uint64_t surfaceID() const { ASSERT_NOT_REACHED(); return 0; }
-    virtual bool hostResize(const WebCore::IntSize&);
-    virtual void clientResize(const WebCore::IntSize&) { };
+    virtual bool resize(const WebCore::IntSize&);
     virtual bool shouldPaintMirrored() const { return false; }
 
     virtual void didCreateGLContext() { }
@@ -64,7 +63,15 @@ public:
     virtual void didRenderFrame() { }
 
 #if ENABLE(DAMAGE_TRACKING)
-    virtual const WebCore::Damage& addDamage(const WebCore::Damage&) { return WebCore::Damage::invalid(); };
+    void setFrameDamage(WebCore::Damage&& damage)
+    {
+        if (!damage.isEmpty())
+            m_frameDamage = WTFMove(damage);
+        else
+            m_frameDamage = std::nullopt;
+    }
+    const std::optional<WebCore::Damage>& frameDamage() const { return m_frameDamage; }
+    virtual const std::optional<WebCore::Damage>& frameDamageSinceLastUse() { return m_frameDamage; }
 #endif
 
     virtual void didCreateCompositingRunLoop(WTF::RunLoop&) { }
@@ -77,7 +84,6 @@ public:
     virtual void visibilityDidChange(bool) { }
     virtual bool backgroundColorDidChange();
 
-    const WebCore::IntSize& size() const { return m_size; }
     void clearIfNeeded();
 
 protected:
@@ -89,6 +95,9 @@ protected:
     Function<void()> m_frameCompleteHandler;
     WebCore::IntSize m_size;
     std::atomic<bool> m_isOpaque { true };
+#if ENABLE(DAMAGE_TRACKING)
+    std::optional<WebCore::Damage> m_frameDamage;
+#endif
 };
 
 } // namespace WebKit

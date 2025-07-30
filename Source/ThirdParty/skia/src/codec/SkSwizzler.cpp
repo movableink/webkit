@@ -8,11 +8,9 @@
 #include "src/codec/SkSwizzler.h"
 
 #include "include/core/SkAlphaType.h"
-#include "include/core/SkColorPriv.h"
 #include "include/core/SkColorType.h"
 #include "include/core/SkImageInfo.h"
 #include "include/core/SkRect.h"
-#include "include/private/SkColorData.h"
 #include "include/private/SkEncodedInfo.h"
 #include "include/private/base/SkAlign.h"
 #include "include/private/base/SkCPUTypes.h"
@@ -20,6 +18,8 @@
 #include "include/private/base/SkTemplates.h"
 #include "src/base/SkHalf.h"
 #include "src/codec/SkCodecPriv.h"
+#include "src/core/SkColorData.h"
+#include "src/core/SkColorPriv.h"
 #include "src/core/SkSwizzlePriv.h"
 
 #ifdef SK_BUILD_FOR_ANDROID_FRAMEWORK
@@ -466,7 +466,7 @@ static void swizzle_rgba_to_rgba_premul(
     src += offset;
     SkPMColor* SK_RESTRICT dst = (SkPMColor*)dstRow;
     for (int x = 0; x < dstWidth; x++) {
-        dst[x] = premultiply_argb_as_rgba(src[3], src[0], src[1], src[2]);
+        dst[x] = SkCodecPriv::PremultiplyARGBasRGBA(src[3], src[0], src[1], src[2]);
         src += deltaSrc;
     }
 }
@@ -478,7 +478,7 @@ static void swizzle_rgba_to_bgra_premul(
     src += offset;
     SkPMColor* SK_RESTRICT dst = (SkPMColor*)dstRow;
     for (int x = 0; x < dstWidth; x++) {
-        dst[x] = premultiply_argb_as_bgra(src[3], src[0], src[1], src[2]);
+        dst[x] = SkCodecPriv::PremultiplyARGBasBGRA(src[3], src[0], src[1], src[2]);
         src += deltaSrc;
     }
 }
@@ -595,7 +595,7 @@ static void swizzle_rgba16_to_rgba_premul(
         void* dst, const uint8_t* src, int width, int bpp, int deltaSrc, int offset,
         const SkPMColor ctable[]) {
     auto stripAndPremul16to8 = [](const uint8_t* ptr) {
-        return premultiply_argb_as_rgba(ptr[6], ptr[0], ptr[2], ptr[4]);
+        return SkCodecPriv::PremultiplyARGBasRGBA(ptr[6], ptr[0], ptr[2], ptr[4]);
     };
 
     src += offset;
@@ -625,7 +625,7 @@ static void swizzle_rgba16_to_bgra_premul(
         void* dst, const uint8_t* src, int width, int bpp, int deltaSrc, int offset,
         const SkPMColor ctable[]) {
     auto stripAndPremul16to8 = [](const uint8_t* ptr) {
-        return premultiply_argb_as_bgra(ptr[6], ptr[0], ptr[2], ptr[4]);
+        return SkCodecPriv::PremultiplyARGBasBGRA(ptr[6], ptr[0], ptr[2], ptr[4]);
     };
 
     src += offset;
@@ -1213,20 +1213,20 @@ int SkSwizzler::onSetSampleX(int sampleX) {
 
     fSampleX = sampleX;
     fDstOffsetBytes = (fDstOffset / sampleX) * fDstBPP;
-    fSwizzleWidth = get_scaled_dimension(fSrcWidth, sampleX);
-    fAllocatedWidth = get_scaled_dimension(fDstWidth, sampleX);
+    fSwizzleWidth = SkCodecPriv::GetSampledDimension(fSrcWidth, sampleX);
+    fAllocatedWidth = SkCodecPriv::GetSampledDimension(fDstWidth, sampleX);
 
     int frameSampleX = sampleX;
     if (fSrcWidth < fDstWidth) {
         // Although SkSampledCodec adjusted sampleX so that it will never be
         // larger than the width of the image (or subset, if applicable), it
         // doesn't account for the width of a subset frame (i.e. gif). As a
-        // result, get_start_coord(sampleX) could result in fSrcOffsetUnits
+        // result, SkCodecPriv::GetStartCoord(sampleX) could result in fSrcOffsetUnits
         // being wider than fSrcWidth. Compute a sampling rate based on the
         // frame width to ensure that fSrcOffsetUnits is sensible.
         frameSampleX = fSrcWidth / fSwizzleWidth;
     }
-    fSrcOffsetUnits = (get_start_coord(frameSampleX) + fSrcOffset) * fSrcBPP;
+    fSrcOffsetUnits = (SkCodecPriv::GetStartCoord(frameSampleX) + fSrcOffset) * fSrcBPP;
 
     if (fDstOffsetBytes > 0) {
         const size_t dstSwizzleBytes   = fSwizzleWidth   * fDstBPP;

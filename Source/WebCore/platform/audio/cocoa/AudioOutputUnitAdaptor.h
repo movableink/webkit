@@ -29,6 +29,8 @@
 
 #include <AudioUnit/AudioUnit.h>
 
+OBJC_CLASS CASpatialAudioExperience;
+
 namespace WebCore {
 
 class AudioUnitRenderer {
@@ -45,6 +47,12 @@ public:
     WEBCORE_EXPORT void configure(float hardwareSampleRate, unsigned numberOfOutputChannels);
     WEBCORE_EXPORT OSStatus start();
     WEBCORE_EXPORT OSStatus stop();
+
+    WEBCORE_EXPORT size_t outputLatency() const;
+
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    WEBCORE_EXPORT void setSpatialAudioExperience(CASpatialAudioExperience *);
+#endif
 
 private:
     static OSStatus inputProc(void* userData, AudioUnitRenderActionFlags*, const AudioTimeStamp*, UInt32 busNumber, UInt32 numberOfFrames, AudioBufferList* ioData);

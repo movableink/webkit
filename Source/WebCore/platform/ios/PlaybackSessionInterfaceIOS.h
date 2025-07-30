@@ -49,6 +49,7 @@ namespace WebCore {
 
 class IntRect;
 class PlaybackSessionModel;
+class VideoPresentationInterfaceIOS;
 class WebPlaybackSessionChangeObserver;
 
 class WEBCORE_EXPORT PlaybackSessionInterfaceIOS
@@ -69,7 +70,7 @@ public:
     void currentTimeChanged(double currentTime, double anchorTime) override = 0;
     void bufferedTimeChanged(double) override = 0;
     void rateChanged(OptionSet<PlaybackSessionModel::PlaybackState>, double playbackRate, double defaultPlaybackRate) override = 0;
-    void seekableRangesChanged(const TimeRanges&, double lastModifiedTime, double liveUpdateInterval) override = 0;
+    void seekableRangesChanged(const PlatformTimeRanges&, double lastModifiedTime, double liveUpdateInterval) override = 0;
     void canPlayFastReverseChanged(bool) override = 0;
     void audioMediaSelectionOptionsChanged(const Vector<MediaSelectionOption>& options, uint64_t selectedIndex) override = 0;
     void legibleMediaSelectionOptionsChanged(const Vector<MediaSelectionOption>& options, uint64_t selectedIndex) override = 0;
@@ -81,9 +82,12 @@ public:
 
     std::optional<MediaPlayerIdentifier> playerIdentifier() const;
     void setPlayerIdentifier(std::optional<MediaPlayerIdentifier>);
+    void setVideoPresentationInterface(WeakPtr<VideoPresentationInterfaceIOS>);
 
     virtual void startObservingNowPlayingMetadata();
     virtual void stopObservingNowPlayingMetadata();
+
+    virtual void swapFullscreenModesWith(PlaybackSessionInterfaceIOS&) { }
 
 #if !RELEASE_LOG_DISABLED
     uint64_t logIdentifier() const;
@@ -98,13 +102,15 @@ protected:
 #endif
 
     PlaybackSessionInterfaceIOS(PlaybackSessionModel&);
-    PlaybackSessionModel* m_playbackSessionModel { nullptr };
+    WeakPtr<PlaybackSessionModel> m_playbackSessionModel;
 
     // CheckedPtr interface
     uint32_t checkedPtrCount() const final;
     uint32_t checkedPtrCountWithoutThreadCheck() const final;
     void incrementCheckedPtrCount() const final;
     void decrementCheckedPtrCount() const final;
+
+    WeakPtr<VideoPresentationInterfaceIOS> m_videoPresentationInterface;
 
 private:
     std::optional<MediaPlayerIdentifier> m_playerIdentifier;

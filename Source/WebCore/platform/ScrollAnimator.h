@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Google Inc. All rights reserved.
+ * Copyright (c) 2010 Google Inc. All rights reserved.
  * Copyright (C) 2015 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -164,7 +164,7 @@ private:
     void removeWheelEventTestCompletionDeferralForReason(ScrollingNodeID, WheelEventTestMonitor::DeferReason) const final;
     ScrollingNodeID scrollingNodeIDForTesting() const final;
 
-#if PLATFORM(GTK) || USE(NICOSIA)
+#if USE(COORDINATED_GRAPHICS)
     bool scrollAnimationEnabled() const final;
 #endif
 

@@ -28,6 +28,7 @@
 #include "MessageReceiver.h"
 #include "SameDocumentNavigationType.h"
 #include "WebPageProxyIdentifier.h"
+#include <WebCore/BoxExtents.h>
 #include <WebCore/Color.h>
 #include <WebCore/FloatRect.h>
 #include <WebCore/FloatSize.h>
@@ -128,10 +129,8 @@ public:
         Swipe
     };
 
-    enum class SwipeDirection {
-        Back,
-        Forward
-    };
+    enum class SwipeDirection : bool { Back, Forward };
+    enum class DeferToConflictingGestures : bool { No, Yes };
 
     typedef uint64_t GestureID;
 
@@ -159,7 +158,8 @@ public:
     void gestureEventWasNotHandledByWebCore(PlatformScrollEvent, WebCore::FloatPoint origin);
 
     void setCustomSwipeViews(Vector<RetainPtr<NSView>> views) { m_customSwipeViews = WTFMove(views); }
-    void setCustomSwipeViewsTopContentInset(float topContentInset) { m_customSwipeViewsTopContentInset = topContentInset; }
+    const WebCore::FloatBoxExtent& customSwipeViewsObscuredContentInsets() const { return m_customSwipeViewsObscuredContentInsets; }
+    void setCustomSwipeViewsObscuredContentInsets(WebCore::FloatBoxExtent&& insets) { m_customSwipeViewsObscuredContentInsets = WTFMove(insets); }
     WebCore::FloatRect windowRelativeBoundsForCustomSwipeViews() const;
     void setDidMoveSwipeSnapshotCallback(BlockPtr<void (CGRect)>&& callback) { m_didMoveSwipeSnapshotCallback = WTFMove(callback); }
 #elif PLATFORM(IOS_FAMILY)
@@ -177,7 +177,7 @@ public:
 
     void setAlternateBackForwardListSourcePage(WebPageProxy*);
 
-    bool canSwipeInDirection(SwipeDirection) const;
+    bool canSwipeInDirection(SwipeDirection, DeferToConflictingGestures) const;
 
     WebCore::Color backgroundColorForCurrentSnapshot() const { return m_backgroundColorForCurrentSnapshot; }
 
@@ -303,13 +303,13 @@ private:
 
     void willEndSwipeGesture(WebBackForwardListItem& targetItem, bool cancelled);
     void endSwipeGesture(WebBackForwardListItem* targetItem, bool cancelled);
-    bool shouldUseSnapshotForSize(ViewSnapshot&, WebCore::FloatSize swipeLayerSize, float topContentInset);
+    bool shouldUseSnapshotForSize(ViewSnapshot&, WebCore::FloatSize swipeLayerSize, WebCore::FloatBoxExtent obscuredContentInsets);
 
 #if PLATFORM(MAC)
     static double resistanceForDelta(double deltaScale, double currentScale, double minMagnification, double maxMagnification);
 
-    CALayer* determineSnapshotLayerParent() const;
-    CALayer* determineLayerAdjacentToSnapshotForParent(SwipeDirection, CALayer* snapshotLayerParent) const;
+    RetainPtr<CALayer> determineSnapshotLayerParent() const;
+    RetainPtr<CALayer> determineLayerAdjacentToSnapshotForParent(SwipeDirection, CALayer* snapshotLayerParent) const;
     void applyDebuggingPropertiesToSwipeViews();
     void didMoveSwipeSnapshotLayer();
 #endif
@@ -415,7 +415,7 @@ private:
     Vector<RetainPtr<CALayer>> m_currentSwipeLiveLayers;
 
     Vector<RetainPtr<NSView>> m_customSwipeViews;
-    float m_customSwipeViewsTopContentInset { 0 };
+    WebCore::FloatBoxExtent m_customSwipeViewsObscuredContentInsets;
     WebCore::FloatRect m_currentSwipeCustomViewBounds;
 
     BlockPtr<void (CGRect)> m_didMoveSwipeSnapshotCallback;

@@ -35,7 +35,10 @@ class Text : public CharacterData {
 public:
     static const unsigned defaultLengthLimit = 1 << 16;
 
-    static Ref<Text> create(Document&, String&&);
+    static Ref<Text> create(Document& document, String&& data)
+    {
+        return adoptRef(*new Text(document, WTFMove(data), TEXT_NODE, { }));
+    }
     static Ref<Text> createEditingText(Document&, String&&);
 
     virtual ~Text();
@@ -67,7 +70,7 @@ protected:
 
 private:
     String nodeName() const override;
-    Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
+    Ref<Node> cloneNodeInternal(Document&, CloningOperation, CustomElementRegistry*) override;
     void setDataAndUpdate(const String&, unsigned offsetOfReplacedData, unsigned oldLength, unsigned newLength, UpdateLiveRanges) final;
 
     virtual Ref<Text> virtualCreate(String&&);

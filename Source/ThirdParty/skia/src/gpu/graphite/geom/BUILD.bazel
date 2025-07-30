@@ -9,19 +9,19 @@ licenses(["notice"])
 CORE_FILES = [
     "AnalyticBlurMask.cpp",
     "AnalyticBlurMask.h",
-    "AnalyticClip.h",
     "BoundsManager.h",
     "CoverageMaskShape.h",
     "EdgeAAQuad.h",
     "Geometry.h",
     "IntersectionTree.cpp",
     "IntersectionTree.h",
+    "NonMSAAClip.h",
     "Rect.h",
     "Shape.cpp",
     "Shape.h",
     "SubRunData.h",
     "Transform.cpp",
-    "Transform_graphite.h",
+    "Transform.h",
 ]
 
 split_srcs_and_hdrs(
@@ -50,6 +50,6 @@ generate_cpp_files_for_headers(
         "Geometry.h",
         "Rect.h",
         "SubRunData.h",
-        "Transform_graphite.h",
+        "Transform.h",
     ],
 )

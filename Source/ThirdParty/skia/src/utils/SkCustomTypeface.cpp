@@ -242,12 +242,11 @@ SkTypeface::LocalizedStrings* SkUserTypeface::onCreateFamilyNameIterator() const
 
 class SkUserScalerContext : public SkScalerContext {
 public:
-    SkUserScalerContext(sk_sp<SkUserTypeface>           face,
+    SkUserScalerContext(SkUserTypeface& face,
                         const SkScalerContextEffects& effects,
-                        const SkDescriptor*           desc)
-            : SkScalerContext(std::move(face), effects, desc) {
+                        const SkDescriptor* desc)
+            : SkScalerContext(face, effects, desc) {
         fRec.getSingleMatrix(&fMatrix);
-        this->forceGenerateImageFromPath();
     }
 
     const SkUserTypeface* userTF() const {
@@ -278,13 +277,18 @@ protected:
 
             // These do not have an outline path.
             mx.neverRequestPath = true;
+        } else {
+            mx.computeFromPath = true;
         }
         return mx;
     }
 
     void generateImage(const SkGlyph& glyph, void* imageBuffer) override {
         const auto& rec = this->userTF()->fGlyphRecs[glyph.getGlyphID()];
-        SkASSERTF(rec.isDrawable(), "Only drawable-backed glyphs should reach generateImage.");
+        if (!rec.isDrawable()) {
+            this->generateImageFromPath(glyph, imageBuffer);
+            return;
+        }
 
         auto canvas = SkCanvas::MakeRasterDirectN32(glyph.width(), glyph.height(),
                                                     static_cast<SkPMColor*>(imageBuffer),
@@ -360,8 +364,7 @@ private:
 std::unique_ptr<SkScalerContext> SkUserTypeface::onCreateScalerContext(
     const SkScalerContextEffects& effects, const SkDescriptor* desc) const
 {
-    return std::make_unique<SkUserScalerContext>(
-            sk_ref_sp(const_cast<SkUserTypeface*>(this)), effects, desc);
+    return std::make_unique<SkUserScalerContext>(*const_cast<SkUserTypeface*>(this), effects, desc);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

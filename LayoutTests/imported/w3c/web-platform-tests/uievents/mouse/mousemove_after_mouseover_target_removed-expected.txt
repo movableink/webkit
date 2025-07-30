@@ -1,0 +1,8 @@
+
+FAIL "mousemove" should be fired on the parent of "mouseover" target which was removed at "mouseover" assert_equals: expected (object) Element node <div id="parent" style="width: 32px; height: 32px;">
+    ... but got (undefined) undefined
+FAIL "mousemove" should be fired on the parent of "mouseover" target which was replaced at "mouseover" (rather than new child) assert_equals: expected (object) Element node <div id="parent" style="width: 32px; height: 32px;">
+    ... but got (undefined) undefined
+FAIL "mousemove" should be fired on the grandparent of "mouseover" target which was removed at "mouseover" with the parent assert_equals: expected (object) Element node <div id="grandparent" style="width: 32px; height: 32px;">... but got (undefined) undefined
+FAIL "mousemove" should be fired on the grandparent of "mouseover" target which was replaced at "mouseover" with the parent assert_equals: expected (object) Element node <div id="grandparent" style="width: 32px; height: 32px;">... but got (undefined) undefined
+

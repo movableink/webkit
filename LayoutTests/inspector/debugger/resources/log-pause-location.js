@@ -18,7 +18,7 @@ TestPage.registerInitializer(() => {
 
     function getLineContent(sourceCode, lineNumber) {
         if (sourceCode instanceof WI.SourceMapResource)
-            return sourceCode.sourceMap.sourceContent(sourceCode.url).split("\n")[lineNumber];
+            return sourceCode.inlineContent.split("\n")[lineNumber];
 
         return lines[lineNumber];
     }

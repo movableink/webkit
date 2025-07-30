@@ -1,7 +1,10 @@
 <!-- webkit-test-runner [ enableMetalShaderValidation=true ] -->
-</style>
-</script>
+<script src="../../../resources/js-test-pre.js"></script>
 <script>
+    globalThis.testRunner?.dumpAsText();
+  globalThis.testRunner?.waitUntilDone();
+
+    
 async function window0() {
 let adapter0 = await navigator.gpu.requestAdapter({});
 let device0 = await adapter0.requestDevice({
@@ -700,5 +703,8 @@ onload = async => {
  if (e instanceof GPUPipelineError) {
  }
  }
+ debug('Pass')
+    globalThis.testRunner?.notifyDone();
 };
 </script>
+

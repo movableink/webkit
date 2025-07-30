@@ -208,10 +208,14 @@ UIProcess/API/wpe/WPEWebViewPlatform.cpp @no-unify
 
 UIProcess/Automation/libwpe/WebAutomationSessionLibWPE.cpp
 UIProcess/Automation/libwpe/WebAutomationSessionWPE.cpp
+UIProcess/Automation/glib/BidiBrowserAgentGlib.cpp @no-unify
 
 UIProcess/CoordinatedGraphics/DrawingAreaProxyCoordinatedGraphics.cpp
 
 UIProcess/Gamepad/libwpe/UIGamepadProviderLibWPE.cpp
+
+UIProcess/Gamepad/wpe/GamepadProviderWPE.cpp
+UIProcess/Gamepad/wpe/PlatformGamepadWPE.cpp
 
 UIProcess/geoclue/GeoclueGeolocationProvider.cpp
 
@@ -247,8 +251,6 @@ UIProcess/Notifications/glib/NotificationService.cpp
 UIProcess/WebsiteData/glib/WebsiteDataStoreGLib.cpp
 UIProcess/WebsiteData/soup/WebsiteDataStoreSoup.cpp
 
-UIProcess/libwpe/WebPasteboardProxyLibWPE.cpp
-
 UIProcess/linux/MemoryPressureMonitor.cpp
 
 UIProcess/soup/WebProcessPoolSoup.cpp
@@ -256,7 +258,9 @@ UIProcess/soup/WebProcessPoolSoup.cpp
 UIProcess/wpe/AcceleratedBackingStoreDMABuf.cpp
 UIProcess/wpe/ScreenManagerWPE.cpp
 UIProcess/wpe/SystemSettingsManagerProxyWPE.cpp
+UIProcess/wpe/WPEUtilities.cpp
 UIProcess/wpe/WebPageProxyWPE.cpp
+UIProcess/wpe/WebPasteboardProxyWPE.cpp
 UIProcess/wpe/WebPreferencesWPE.cpp
 
 WebProcess/GPU/graphics/gbm/RemoteGraphicsContextGLProxyGBM.cpp
@@ -286,7 +290,7 @@ WebProcess/WebCoreSupport/wpe/WebEditorClientWPE.cpp
 
 WebProcess/WebPage/AcceleratedSurface.cpp
 
-WebProcess/WebPage/CoordinatedGraphics/CoordinatedGraphicsScene.cpp
+WebProcess/WebPage/CoordinatedGraphics/CoordinatedSceneState.cpp
 WebProcess/WebPage/CoordinatedGraphics/CompositingRunLoop.cpp
 WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.cpp
 WebProcess/WebPage/CoordinatedGraphics/LayerTreeHost.cpp
@@ -297,6 +301,8 @@ WebProcess/WebPage/dmabuf/AcceleratedSurfaceDMABuf.cpp @no-unify
 WebProcess/WebPage/glib/WebPageGLib.cpp
 
 WebProcess/WebPage/libwpe/AcceleratedSurfaceLibWPE.cpp @no-unify
+
+WebProcess/WebPage/soup/WebCookieCacheSoup.cpp
 
 WebProcess/WebPage/wpe/WebPageWPE.cpp
 

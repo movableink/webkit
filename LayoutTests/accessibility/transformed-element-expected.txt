@@ -1,6 +1,4 @@
 hello
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: (null)
 AXRoleDescription: group

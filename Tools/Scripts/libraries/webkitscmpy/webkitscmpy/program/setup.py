@@ -379,6 +379,15 @@ class Setup(Command):
             sys.stderr.write('Failed to use {} as the merge strategy for this repository\n'.format('merge commits' if args.merge else 'rebase'))
             result += 1
 
+        if not local_config.get('webkitscmpy.auto-update-changelog'):
+            log.info('Setting auto-updates for commit message changelogs when amending...')
+            if run(
+                [local.Git.executable(), 'config', 'webkitscmpy.auto-update-changelog', 'true'],
+                cwd=repository.root_path,
+            ).returncode:
+                sys.stderr.write('Failed to set auto-updates for commit message changelog\n')
+                result += 1
+
         need_prompt_auto_update = args.all or not local_config.get('webkitscmpy.auto-rebase-branch')
         if not args.merge and not args.defaults and need_prompt_auto_update:
             log.info('Setting auto update on PR creation...')

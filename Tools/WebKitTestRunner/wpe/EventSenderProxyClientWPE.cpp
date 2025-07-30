@@ -264,21 +264,152 @@ void EventSenderProxyClientWPE::keyDown(WKStringRef keyRef, double time, WKEvent
 {
     unsigned modifiers = wkEventModifiersToWPE(wkModifiers);
     auto keyval = wpeKeyvalForKeyRef(keyRef, location, modifiers);
+    unsigned downModifiers = modifiers;
+    switch (keyval) {
+    case WPE_KEY_Control_L:
+    case WPE_KEY_Control_R:
+        downModifiers |= WPE_MODIFIER_KEYBOARD_CONTROL;
+        break;
+    case WPE_KEY_Shift_L:
+    case WPE_KEY_Shift_R:
+        downModifiers |= WPE_MODIFIER_KEYBOARD_SHIFT;
+        break;
+    case WPE_KEY_Alt_L:
+    case WPE_KEY_Alt_R:
+        downModifiers |= WPE_MODIFIER_KEYBOARD_ALT;
+        break;
+    case WPE_KEY_Meta_L:
+    case WPE_KEY_Meta_R:
+        downModifiers |= WPE_MODIFIER_KEYBOARD_META;
+        break;
+    case WPE_KEY_Caps_Lock:
+        downModifiers |= WPE_MODIFIER_KEYBOARD_CAPS_LOCK;
+        break;
+    }
+
     auto* view = WKViewGetView(m_testController.mainWebView()->platformView());
     unsigned keycode = 0;
-    if (auto* keymap = wpe_display_get_keymap(wpe_view_get_display(view), nullptr)) {
-        GUniqueOutPtr<WPEKeymapEntry> entries;
-        guint entriesCount;
-        if (wpe_keymap_get_entries_for_keyval(keymap, keyval, &entries.outPtr(), &entriesCount))
-            keycode = entries.get()[0].keycode;
-    }
-    auto* event = wpe_event_keyboard_new(WPE_EVENT_KEYBOARD_KEY_DOWN, view, WPE_INPUT_SOURCE_KEYBOARD, secToMsTimestamp(time), static_cast<WPEModifiers>(modifiers), keycode, keyval);
+    auto* keymap = wpe_display_get_keymap(wpe_view_get_display(view));
+    GUniqueOutPtr<WPEKeymapEntry> entries;
+    guint entriesCount;
+    if (wpe_keymap_get_entries_for_keyval(keymap, keyval, &entries.outPtr(), &entriesCount))
+        keycode = entries.get()[0].keycode;
+
+    auto* event = wpe_event_keyboard_new(WPE_EVENT_KEYBOARD_KEY_DOWN, view, WPE_INPUT_SOURCE_KEYBOARD, secToMsTimestamp(time), static_cast<WPEModifiers>(downModifiers), keycode, keyval);
     wpe_view_event(view, event);
     wpe_event_unref(event);
     event = wpe_event_keyboard_new(WPE_EVENT_KEYBOARD_KEY_UP, view, WPE_INPUT_SOURCE_KEYBOARD, secToMsTimestamp(time), static_cast<WPEModifiers>(modifiers), keycode, keyval);
     wpe_view_event(view, event);
     wpe_event_unref(event);
 }
+
+#if ENABLE(TOUCH_EVENTS)
+void EventSenderProxyClientWPE::addTouchPoint(int x, int y, double)
+{
+    uint32_t id = 0;
+    for (const auto& point : m_touchPoints) {
+        if (point.id == id)
+            id++;
+    }
+    m_touchPoints.append({ id, TouchPoint::State::Down, x, y });
+}
+
+void EventSenderProxyClientWPE::updateTouchPoint(int index, int x, int y, double)
+{
+    ASSERT(index >= 0 && static_cast<size_t>(index) < m_touchPoints.size());
+
+    auto& point = m_touchPoints[index];
+    point.x = x;
+    point.y = y;
+    point.state = TouchPoint::State::Move;
+}
+
+void EventSenderProxyClientWPE::releaseTouchPoint(int index, double)
+{
+    ASSERT(index >= 0 && static_cast<size_t>(index) < m_touchPoints.size());
+
+    auto& point = m_touchPoints[index];
+    point.state = TouchPoint::State::Up;
+}
+
+void EventSenderProxyClientWPE::cancelTouchPoint(int index, double)
+{
+    ASSERT(index >= 0 && static_cast<size_t>(index) < m_touchPoints.size());
+
+    auto& point = m_touchPoints[index];
+    point.state = TouchPoint::State::Cancel;
+}
+
+void EventSenderProxyClientWPE::clearTouchPoints()
+{
+    m_touchPoints.clear();
+}
+
+void EventSenderProxyClientWPE::touchStart(double time)
+{
+    auto* view = WKViewGetView(m_testController.mainWebView()->platformView());
+    for (auto& point : m_touchPoints) {
+        if (point.state != TouchPoint::State::Down)
+            continue;
+
+        point.state = TouchPoint::State::Stationary;
+        auto* event = wpe_event_touch_new(WPE_EVENT_TOUCH_DOWN, view, WPE_INPUT_SOURCE_TOUCHSCREEN, secToMsTimestamp(time), static_cast<WPEModifiers>(m_touchModifiers), point.id, point.x, point.y);
+        wpe_view_event(view, event);
+        wpe_event_unref(event);
+    }
+}
+
+void EventSenderProxyClientWPE::touchMove(double time)
+{
+    auto* view = WKViewGetView(m_testController.mainWebView()->platformView());
+    for (auto& point : m_touchPoints) {
+        if (point.state != TouchPoint::State::Move)
+            continue;
+
+        point.state = TouchPoint::State::Stationary;
+        auto* event = wpe_event_touch_new(WPE_EVENT_TOUCH_MOVE, view, WPE_INPUT_SOURCE_TOUCHSCREEN, secToMsTimestamp(time), static_cast<WPEModifiers>(m_touchModifiers), point.id, point.x, point.y);
+        wpe_view_event(view, event);
+        wpe_event_unref(event);
+    }
+}
+
+void EventSenderProxyClientWPE::touchEnd(double time)
+{
+    auto* view = WKViewGetView(m_testController.mainWebView()->platformView());
+    m_touchPoints.removeAllMatching([&](const auto& point) {
+        if (point.state != TouchPoint::State::Up)
+            return false;
+
+        auto* event = wpe_event_touch_new(WPE_EVENT_TOUCH_UP, view, WPE_INPUT_SOURCE_TOUCHSCREEN, secToMsTimestamp(time), static_cast<WPEModifiers>(0), point.id, point.x, point.y);
+        wpe_view_event(view, event);
+        wpe_event_unref(event);
+        return true;
+    });
+}
+
+void EventSenderProxyClientWPE::touchCancel(double time)
+{
+    auto* view = WKViewGetView(m_testController.mainWebView()->platformView());
+    m_touchPoints.removeAllMatching([&](const auto& point) {
+        if (point.state != TouchPoint::State::Cancel)
+            return false;
+
+        auto* event = wpe_event_touch_new(WPE_EVENT_TOUCH_CANCEL, view, WPE_INPUT_SOURCE_TOUCHSCREEN, secToMsTimestamp(time), static_cast<WPEModifiers>(0), point.id, point.x, point.y);
+        wpe_view_event(view, event);
+        wpe_event_unref(event);
+        return true;
+    });
+}
+
+void EventSenderProxyClientWPE::setTouchModifier(WKEventModifiers wkModifiers, bool enable)
+{
+    unsigned modifiers = wkEventModifiersToWPE(wkModifiers);
+    if (enable)
+        m_touchModifiers |= modifiers;
+    else
+        m_touchModifiers &= ~modifiers;
+}
+#endif // ENABLE(TOUCH_EVENTS)
 
 } // namespace WTR
 

@@ -609,6 +609,13 @@ class Git(Scm):
             return sorted(result.get(remote, []))
         return result
 
+    def is_suitable_branch_for_pull_request(self, branch, source_remote):
+        if branch is None or branch in self.DEFAULT_BRANCHES or self.PROD_BRANCHES.match(branch):
+            return False
+        elif branch in self.branches_for(remote=source_remote) and not self.dev_branches.match(branch):
+            return False
+        return True
+
     def _is_on_default_branch(self, hash):
         branches = self.branches_for(remote=None)
         remote_keys = [None] + self.source_remotes()
@@ -984,6 +991,23 @@ class Git(Scm):
             if log and log.poll() is None:
                 log.kill()
 
+    def last_commits_on(self, path, count=5):
+        """
+        Return the last `count` Commit objects that modified the specified file.
+        """
+        try:
+            output = run(
+                [self.executable(), 'log', f'--max-count={count}', '--follow', '--format=%H', '--', path],
+                cwd=self.root_path, capture_output=True, encoding='utf-8', check=True,
+            )
+            return [
+                self.find(commit_hash.strip())
+                for commit_hash in output.stdout.strip().splitlines()
+                if commit_hash.strip()
+            ]
+        except Exception:
+            return []
+
     def find(self, argument, include_log=True, include_identifier=True):
         if not isinstance(argument, string_utils.basestring):
             raise ValueError("Expected 'argument' to be a string, not '{}'".format(type(argument)))
@@ -1134,7 +1158,7 @@ class Git(Scm):
                     if local_bp.hash != local_head.hash:
                         log.info(" You have unsaved changes on the local branch.")
                         if prompt and Terminal.choose(
-                            "Local changes on {} will not be saved. Would you like to override the local version of this branch with the version from '{}'?".format(argument, path),
+                            "Local changes on {} will not be saved. Would you like to override the local version of this branch with the version from '{}'?".format(argument, remote_path),
                             default='No'
                         ) == 'No':
                             sys.stderr.write("Checkout aborted.\n")

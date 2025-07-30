@@ -32,6 +32,7 @@
 #include "ClipboardUtilitiesWin.h"
 #include "Color.h"
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "DocumentFragment.h"
 #include "Editor.h"
@@ -41,6 +42,7 @@
 #include "HWndDC.h"
 #include "HitTestResult.h"
 #include "Image.h"
+#include "ImageAdapter.h"
 #include "LocalFrame.h"
 #include "NotImplemented.h"
 #include "Range.h"
@@ -505,16 +507,19 @@ void Pasteboard::writeRangeToDataObject(const SimpleRange& selectedRange, LocalF
         m_writableDataObject->SetData(smartPasteFormat(), &medium, TRUE);
 }
 
-void Pasteboard::writeSelection(const SimpleRange& selectedRange, bool canSmartCopyOrDelete, LocalFrame& frame, ShouldSerializeSelectedTextForDataTransfer shouldSerializeSelectedTextForDataTransfer)
+void Pasteboard::writeSelection(const std::optional<SimpleRange>& selectedRange, bool canSmartCopyOrDelete, LocalFrame& frame, ShouldSerializeSelectedTextForDataTransfer shouldSerializeSelectedTextForDataTransfer)
 {
     clear();
+
+    if (!selectedRange)
+        return;
 
     // Put CF_HTML format on the pasteboard 
     if (::OpenClipboard(m_owner)) {
         Vector<char> data;
         // FIXME: Use ResolveURLs::YesExcludingURLsForPrivacy.
         markupToCFHTML(serializePreservingVisualAppearance(frame.selection().selection()),
-            selectedRange.start.container->document().url().string(), data);
+            selectedRange->start.container->document().url().string(), data);
         HGLOBAL cbData = createGlobalData(data);
         if (!::SetClipboardData(HTMLClipboardFormat, cbData))
             ::GlobalFree(cbData);
@@ -540,7 +545,7 @@ void Pasteboard::writeSelection(const SimpleRange& selectedRange, bool canSmartC
         }
     }
 
-    writeRangeToDataObject(selectedRange, frame);
+    writeRangeToDataObject(*selectedRange, frame);
 }
 
 void Pasteboard::writePlainTextToDataObject(const String& text, SmartReplaceOption)
@@ -1003,7 +1008,8 @@ static HGLOBAL createGlobalHDropContent(const URL& url, String& fileName, Fragme
         // windows does not enjoy a leading slash on paths
         if (localPath[0] == '/')
             localPath = localPath.substring(1);
-        LPCWSTR localPathStr = localPath.wideCharacters().data();
+        auto wideCharacters = localPath.wideCharacters();
+        LPCWSTR localPathStr = wideCharacters.data();
         if (localPathStr && wcslen(localPathStr) + 1 < MAX_PATH)
             wcscpy_s(filePath, MAX_PATH, localPathStr);
         else

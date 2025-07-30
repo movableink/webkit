@@ -10,7 +10,6 @@
 #include "include/codec/SkCodec.h"
 #include "include/codec/SkEncodedImageFormat.h"
 #include "include/core/SkBBHFactory.h"
-#include "include/core/SkColorPriv.h"
 #include "include/core/SkColorSpace.h"
 #include "include/core/SkData.h"
 #include "include/core/SkDocument.h"
@@ -22,6 +21,7 @@
 #include "src/base/SkTime.h"
 #include "src/base/SkVx.h"
 #include "src/core/SkChecksum.h"
+#include "src/core/SkColorPriv.h"
 #include "src/core/SkColorSpacePriv.h"
 #include "src/core/SkMD5.h"
 #include "src/core/SkOSFile.h"
@@ -988,8 +988,8 @@ static Sink* create_sink(const GrContextOptions& grCtxOptions,
             }
             if (gpuConfig->getTestPersistentCache()) {
                 return new GPUPersistentCacheTestingSink(gpuConfig, grCtxOptions);
-            } else if (gpuConfig->getTestPrecompile()) {
-                return new GPUPrecompileTestingSink(gpuConfig, grCtxOptions);
+            } else if (gpuConfig->getTestPrecompileGanesh()) {
+                return new GaneshPrecompileTestingSink(gpuConfig, grCtxOptions);
             } else if (gpuConfig->getUseDDLSink()) {
                 return new GPUDDLSink(gpuConfig, grCtxOptions);
             } else if (gpuConfig->getSlug()) {
@@ -1007,7 +1007,7 @@ static Sink* create_sink(const GrContextOptions& grCtxOptions,
     if (FLAGS_graphite) {
         if (const SkCommandLineConfigGraphite *graphiteConfig = config->asConfigGraphite()) {
 #if defined(SK_ENABLE_PRECOMPILE)
-            if (graphiteConfig->getTestPrecompile()) {
+            if (graphiteConfig->getTestPrecompileGraphite()) {
                 return new GraphitePrecompileTestingSink(graphiteConfig, graphiteOptions);
             } else
 #endif // SK_ENABLE_PRECOMPILE
@@ -1370,8 +1370,7 @@ struct Task {
                 return SkStringPrintf("HLGish %.3g %.3g %.3g %.3g %.3g (%.3g)",
                                       tf.a, tf.b, tf.c, tf.d, tf.e, tf.f+1);
 
-            case skcms_TFType_HLGinvish: break;
-            case skcms_TFType_Invalid: break;
+            default: break;
         }
         return SkString("non-numeric");
     }

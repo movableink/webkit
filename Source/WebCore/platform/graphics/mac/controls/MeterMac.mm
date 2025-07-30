@@ -46,13 +46,15 @@ MeterMac::MeterMac(MeterPart& owningMeterPart, ControlFactoryMac& controlFactory
     ASSERT(m_levelIndicatorCell);
 }
 
+MeterMac::~MeterMac() = default;
+
 void MeterMac::updateCellStates(const FloatRect& rect, const ControlStyle& style)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS
 
     ControlMac::updateCellStates(rect, style);
 
-    [m_levelIndicatorCell setUserInterfaceLayoutDirection:style.states.contains(ControlStyle::State::RightToLeft) ? NSUserInterfaceLayoutDirectionRightToLeft : NSUserInterfaceLayoutDirectionLeftToRight];
+    [m_levelIndicatorCell setUserInterfaceLayoutDirection:style.states.contains(ControlStyle::State::InlineFlippedWritingMode) ? NSUserInterfaceLayoutDirectionRightToLeft : NSUserInterfaceLayoutDirectionLeftToRight];
 
     auto& meterPart = owningMeterPart();
     

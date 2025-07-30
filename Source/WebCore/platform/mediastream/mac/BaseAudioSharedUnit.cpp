@@ -34,6 +34,7 @@
 #include "DeprecatedGlobalSettings.h"
 #include "Logging.h"
 #include "PlatformMediaSessionManager.h"
+#include <algorithm>
 
 namespace WebCore {
 
@@ -41,7 +42,6 @@ constexpr Seconds voiceActivityThrottlingDuration = 5_s;
 
 BaseAudioSharedUnit::BaseAudioSharedUnit()
     : m_sampleRate(AudioSession::protectedSharedSession()->sampleRate())
-    , m_voiceActivityThrottleTimer([] { })
 {
     RealtimeMediaSourceCenter::singleton().addDevicesChangedObserver(*this);
 }
@@ -80,7 +80,7 @@ void BaseAudioSharedUnit::clearClients()
     m_audioThreadClients.clear();
 }
 
-void BaseAudioSharedUnit::forEachClient(const Function<void(CoreAudioCaptureSource&)>& apply) const
+void BaseAudioSharedUnit::forEachClient(NOESCAPE const Function<void(CoreAudioCaptureSource&)>& apply) const
 {
     ASSERT(isMainThread());
     m_clients.forEach(apply);
@@ -91,6 +91,7 @@ const static OSStatus lowPriorityError2 = 561017449;
 void BaseAudioSharedUnit::startProducingData()
 {
     ASSERT(isMainThread());
+    ASSERT(m_isAllowedToStart);
 
     if (m_suspended)
         resume();
@@ -112,7 +113,7 @@ void BaseAudioSharedUnit::startProducingData()
 
 void BaseAudioSharedUnit::continueStartProducingData()
 {
-    if (!m_producingCount)
+    if (!m_producingCount || m_clients.isEmptyIgnoringNullReferences())
         return;
 
     if (isProducingData())
@@ -165,16 +166,14 @@ void BaseAudioSharedUnit::prepareForNewCapture()
     captureFailed();
 }
 
-void BaseAudioSharedUnit::setCaptureDevice(String&& persistentID, uint32_t captureDeviceID)
+void BaseAudioSharedUnit::setCaptureDevice(String&& persistentID, uint32_t captureDeviceID, bool isDefault)
 {
-    bool hasChanged = this->persistentID() != persistentID || this->captureDeviceID() != captureDeviceID;
+    bool hasChanged = this->persistentID() != persistentID || this->captureDeviceID() != captureDeviceID || m_isCapturingWithDefaultMicrophone != isDefault;
     if (hasChanged)
         willChangeCaptureDevice();
 
     m_capturingDevice = { WTFMove(persistentID), captureDeviceID };
-
-    auto devices = RealtimeMediaSourceCenter::singleton().audioCaptureFactory().audioCaptureDeviceManager().captureDevices();
-    m_isCapturingWithDefaultMicrophone = devices.size() && devices[0].persistentId() == m_capturingDevice->first;
+    m_isCapturingWithDefaultMicrophone = isDefault;
 
     if (hasChanged)
         captureDeviceChanged();
@@ -192,7 +191,7 @@ void BaseAudioSharedUnit::devicesChanged()
     if (persistentID.isEmpty())
         return;
 
-    if (WTF::anyOf(devices, [&persistentID] (auto& device) { return persistentID == device.persistentId(); })) {
+    if (std::ranges::any_of(devices, [&persistentID](auto& device) { return persistentID == device.persistentId(); })) {
         validateOutputDevice(m_outputDeviceID);
         return;
     }
@@ -224,7 +223,20 @@ void BaseAudioSharedUnit::stopProducingData()
 {
     ASSERT(isMainThread());
     ASSERT(m_producingCount);
+#if PLATFORM(MAC)
+    if (!m_suspended) {
+        prewarmAudioUnitCreation([weakThis = WeakPtr { *this }] {
+            if (RefPtr protectedThis = weakThis.get())
+                protectedThis->continueStopProducingData();
+        });
+        return;
+    }
+#endif
+    continueStopProducingData();
+}
 
+void BaseAudioSharedUnit::continueStopProducingData()
+{
     if (m_producingCount && --m_producingCount)
         return;
 
@@ -312,7 +324,7 @@ OSStatus BaseAudioSharedUnit::suspend()
         client.setMuted(true);
     });
 
-    ASSERT(!m_producingCount);
+    m_producingCount = 0;
 
     return 0;
 }
@@ -343,14 +355,24 @@ void BaseAudioSharedUnit::handleNewCurrentMicrophoneDevice(CaptureDevice&& devic
 
 void BaseAudioSharedUnit::voiceActivityDetected()
 {
-    if (m_voiceActivityThrottleTimer.isActive() || !m_voiceActivityCallback)
+    if (!m_voiceActivityThrottleTimer)
+        m_voiceActivityThrottleTimer = makeUnique<Timer>([] { });
+
+    if (m_voiceActivityThrottleTimer->isActive() || !m_voiceActivityCallback)
         return;
 
     RELEASE_LOG_INFO(WebRTC, "BaseAudioSharedUnit::voiceActivityDetected");
 
     m_voiceActivityCallback();
-    m_voiceActivityThrottleTimer.startOneShot(voiceActivityThrottlingDuration);
+    m_voiceActivityThrottleTimer->startOneShot(voiceActivityThrottlingDuration);
 }
+
+void BaseAudioSharedUnit::disableVoiceActivityThrottleTimerForTesting()
+{
+    if (m_voiceActivityThrottleTimer)
+        m_voiceActivityThrottleTimer->stop();
+}
+
 
 } // namespace WebCore
 

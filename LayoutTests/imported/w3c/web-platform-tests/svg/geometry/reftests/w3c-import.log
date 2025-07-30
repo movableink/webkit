@@ -24,6 +24,9 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/circle-004.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/circle-005-expected.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/circle-005.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/circle-calc-dynamic-viewport-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/circle-calc-dynamic-viewport-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/circle-calc-dynamic-viewport.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/circle-ref.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/ellipse-001-expected.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/ellipse-001.svg
@@ -33,6 +36,9 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/ellipse-003.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/ellipse-004-expected.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/ellipse-004.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/ellipse-calc-dynamic-viewport-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/ellipse-calc-dynamic-viewport-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/ellipse-calc-dynamic-viewport.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/ellipse-ref.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/percentage-attribute-expected.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/percentage-attribute.svg
@@ -47,4 +53,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/rect-003.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/rect-004-expected.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/rect-004.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/rect-calc-dynamic-viewport-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/rect-calc-dynamic-viewport-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/rect-calc-dynamic-viewport.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/geometry/reftests/rect-ref.svg

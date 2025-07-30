@@ -3,7 +3,12 @@
   <head>
     <meta charset="utf-8">
     <title>WebGPU triangle</title>
+    <script src="../../../resources/js-test-pre.js"></script>
     <script>
+        globalThis.testRunner?.dumpAsText();
+  globalThis.testRunner?.waitUntilDone();
+
+
 onload = async () => {
   let adapter = await navigator.gpu.requestAdapter({});
   let device = await adapter.requestDevice({
@@ -317,7 +322,11 @@ onload = async () => {
 
 
 };
+        debug('Pass')
+    globalThis.testRunner?.notifyDone();
+
   </script>
+
 </head>
 <body>
   <h1>WebGPU triangle</h1>

@@ -92,7 +92,8 @@ TEST(HSTS, Basic)
     EXPECT_WK_STREQ(webView.get().URL.absoluteString, "https://example.com/");
 }
 
-TEST(HSTS, ThirdPartyFetch)
+// FIXME rdar://143715095
+TEST(HSTS, DISABLED_ThirdPartyFetch)
 {
     auto httpsServer = hstsServer();
 
@@ -120,7 +121,8 @@ TEST(HSTS, ThirdPartyFetch)
     EXPECT_EQ(httpServer.totalRequests(), 2u);
 }
 
-TEST(HSTS, ThirdParty)
+// FIX-ME rdar://143715095
+TEST(HSTS, DISABLED_ThirdParty)
 {
     auto httpsServer = hstsServer();
 

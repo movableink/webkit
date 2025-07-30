@@ -36,14 +36,14 @@
 #include "RetrieveRecordsOptions.h"
 #include "SWServerRegistration.h"
 #include "WebCorePersistentCoders.h"
+#include <algorithm>
 #include <wtf/TZoneMallocInlines.h>
-#include <wtf/persistence/PersistentDecoder.h>
-#include <wtf/persistence/PersistentEncoder.h>
+#include <wtf/persistence/PersistentCoders.h>
 
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(BackgroundFetch);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(BackgroundFetch, Record);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BackgroundFetch::Record);
 
 static const unsigned backgroundFetchCurrentVersion = 1;
 
@@ -211,7 +211,7 @@ void BackgroundFetch::handleStoreResult(BackgroundFetchStore::StoreResult result
 
 void BackgroundFetch::recordIsCompleted()
 {
-    if (anyOf(m_records, [](auto& record) { return !record->isCompleted(); }))
+    if (std::ranges::any_of(m_records, [](auto& record) { return !record->isCompleted(); }))
         return;
     updateBackgroundFetchStatus(BackgroundFetchResult::Success, BackgroundFetchFailureReason::EmptyString);
 }

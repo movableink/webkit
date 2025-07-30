@@ -76,7 +76,7 @@ bool Data::isNull() const
     return !m_buffer;
 }
 
-bool Data::apply(const Function<bool(std::span<const uint8_t>)>& applier) const
+bool Data::apply(NOESCAPE const Function<bool(std::span<const uint8_t>)>& applier) const
 {
     if (isEmpty())
         return false;
@@ -105,10 +105,10 @@ Data concatenate(const Data& a, const Data& b)
     return Data(WTFMove(buffer));
 }
 
-Data Data::adoptMap(FileSystem::MappedFileData&& mappedFile, FileSystem::PlatformFileHandle fd)
+Data Data::adoptMap(FileSystem::MappedFileData&& mappedFile, FileSystem::FileHandle&& fileHandle)
 {
     ASSERT(mappedFile);
-    FileSystem::closeFile(fd);
+    fileHandle = { };
 
     return { WTFMove(mappedFile) };
 }

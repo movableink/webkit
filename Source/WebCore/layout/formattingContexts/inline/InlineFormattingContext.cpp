@@ -65,6 +65,16 @@ namespace Layout {
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(InlineContentCache);
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(InlineFormattingContext);
 
+static size_t estimatedDisplayBoxSize(size_t inlineItemSize)
+{
+    if (inlineItemSize == 1) {
+        // Common case of blocks with only one word where we produce 2 boxes (root inline and text box)
+        return 2;
+    }
+    // This value represents a simple average derived from typical web page content.
+    return inlineItemSize * 0.6;
+}
+
 static std::optional<InlineItemRange> partialRangeForDamage(const InlineItemList& inlineItemList, const InlineDamage& lineDamage)
 {
     auto layoutStartPosition = lineDamage.layoutStartPosition()->inlineItemPosition;
@@ -120,7 +130,8 @@ InlineLayoutResult InlineFormattingContext::layout(const ConstraintsForInlineCon
         return { { }, InlineLayoutResult::Range::Full };
     }
 
-    auto& inlineItemList = inlineContentCache().inlineItems().content();
+    auto& inlineItems = inlineContentCache().inlineItems();
+    auto& inlineItemList = inlineItems.content();
     auto needsLayoutRange = [&]() -> InlineItemRange {
         if (!InlineInvalidation::mayOnlyNeedPartialLayout(lineDamage))
             return { { }, { inlineItemList.size(), { } } };
@@ -158,12 +169,12 @@ InlineLayoutResult InlineFormattingContext::layout(const ConstraintsForInlineCon
             layoutState().setAvailableLineWidthOverride({ *constrainedLineWidths });
     }
 
-    if (TextOnlySimpleLineBuilder::isEligibleForSimplifiedTextOnlyInlineLayoutByContent(inlineContentCache().inlineItems(), layoutState().placedFloats()) && TextOnlySimpleLineBuilder::isEligibleForSimplifiedInlineLayoutByStyle(root().style())) {
-        auto simplifiedLineBuilder = TextOnlySimpleLineBuilder { *this, root(), constraints.horizontal(), inlineItemList };
+    if (TextOnlySimpleLineBuilder::isEligibleForSimplifiedTextOnlyInlineLayoutByContent(inlineItems, layoutState().placedFloats()) && TextOnlySimpleLineBuilder::isEligibleForSimplifiedInlineLayoutByStyle(root().style())) {
+        auto simplifiedLineBuilder = makeUniqueRef<TextOnlySimpleLineBuilder>(*this, root(), constraints.horizontal(), inlineItemList);
         return lineLayout(simplifiedLineBuilder, inlineItemList, needsLayoutRange, previousLine(), constraints, lineDamage);
     }
-    if (RangeBasedLineBuilder::isEligibleForRangeInlineLayout(*this, inlineContentCache().inlineItems(), layoutState().placedFloats())) {
-        auto rangeBasedLineBuilder = RangeBasedLineBuilder { *this, constraints.horizontal(), inlineItemList };
+    if (RangeBasedLineBuilder::isEligibleForRangeInlineLayout(*this, inlineItems, layoutState().placedFloats())) {
+        auto rangeBasedLineBuilder = makeUniqueRef<RangeBasedLineBuilder>(*this, constraints.horizontal(), inlineItems);
         return lineLayout(rangeBasedLineBuilder, inlineItemList, needsLayoutRange, previousLine(), constraints, lineDamage);
     }
     auto lineBuilder = makeUniqueRef<LineBuilder>(*this, constraints.horizontal(), inlineItemList, inlineContentCache().textSpacingContext());
@@ -287,7 +298,7 @@ InlineLayoutResult InlineFormattingContext::lineLayout(AbstractLineBuilder& line
 
     auto layoutResult = InlineLayoutResult { };
     if (!needsLayoutRange.start)
-        layoutResult.displayContent.boxes.reserveInitialCapacity(inlineItemList.size());
+        layoutResult.displayContent.boxes.reserveInitialCapacity(estimatedDisplayBoxSize(inlineItemList.size()));
 
     auto floatingContext = this->floatingContext();
     auto lineLogicalTop = InlineLayoutUnit { constraints.logicalTop() };
@@ -323,6 +334,7 @@ InlineLayoutResult InlineFormattingContext::lineLayout(AbstractLineBuilder& line
         if (formattingUtils().shouldDiscardRemainingContentInBlockDirection(numberOfContentfulLines)) {
             resetBoxGeometriesForDiscardedContent({ leadingInlineItemPosition, needsLayoutRange.end }, lineLayoutResult.floatContent.suspendedFloats);
             layoutResult.range = !isPartialLayout ? InlineLayoutResult::Range::Full : InlineLayoutResult::Range::FullFromDamage;
+            layoutResult.didDiscardContent = true;
             break;
         }
 

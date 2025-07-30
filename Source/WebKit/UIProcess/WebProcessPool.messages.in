@@ -20,7 +20,12 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-[SharedPreferencesNeedsConnection]
+[
+    ExceptionForEnabledBy,
+    DispatchedFrom=WebContent,
+    DispatchedTo=UI,
+    SharedPreferencesNeedsConnection
+]
 messages -> WebProcessPool {
     HandleMessage(String messageName, WebKit::UserData messageBody)
     HandleSynchronousMessage(String messageName, WebKit::UserData messageBody) -> (WebKit::UserData returnData) Synchronous
@@ -31,6 +36,11 @@ messages -> WebProcessPool {
     [EnabledBy=GamepadsEnabled] StoppedUsingGamepads() -> ()
     [EnabledBy=GamepadsEnabled] PlayGamepadEffect(unsigned gamepadIndex, String gamepadID, enum:uint8_t WebCore::GamepadHapticEffectType type, struct WebCore::GamepadEffectParameters parameters) -> (bool success)
     [EnabledBy=GamepadsEnabled] StopGamepadEffects(unsigned gamepadIndex, String gamepadID) -> ()
+#endif
+
+#if ENABLE(MODEL_PROCESS)
+    [EnabledBy=ModelElementEnabled && ModelProcessEnabled] StartedPlayingModels()
+    [EnabledBy=ModelElementEnabled && ModelProcessEnabled] StoppedPlayingModels()
 #endif
 
     ReportWebContentCPUTime(Seconds cpuTime, uint64_t activityState)

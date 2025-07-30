@@ -135,6 +135,11 @@ void ModelProcessConnection::didInitialize(std::optional<ModelProcessConnectionI
     m_hasInitialized = true;
 }
 
+void ModelProcessConnection::didUnloadModelPlayer(WebCore::ModelPlayerIdentifier modelPlayerIdentifier)
+{
+    WebProcess::singleton().modelProcessModelPlayerManager().didUnloadModelProcessModelPlayer(modelPlayerIdentifier);
+}
+
 bool ModelProcessConnection::waitForDidInitialize()
 {
     if (!m_hasInitialized) {

@@ -1,5 +1,3 @@
-//@ requireOptions("--useIteratorHelpers=1")
-
 function assert(a, b) {
     if (a !== b)
         throw new Error("Expected: " + b + " but got: " + a);

@@ -31,6 +31,7 @@
 
 #pragma once
 
+#include "ActiveDOMObject.h"
 #include "BlobPropertyBag.h"
 #include "BlobURL.h"
 #include "FileReaderLoader.h"
@@ -39,7 +40,6 @@
 #include "SecurityOriginData.h"
 #include "URLKeepingBlobAlive.h"
 #include "URLRegistry.h"
-#include <variant>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
 
@@ -63,7 +63,7 @@ struct IDLArrayBuffer;
 template<typename> class DOMPromiseDeferred;
 template<typename> class ExceptionOr;
 
-using BlobPartVariant = std::variant<RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>, RefPtr<Blob>, String>;
+using BlobPartVariant = Variant<RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>, RefPtr<Blob>, String>;
 
 class Blob : public ScriptWrappable, public URLRegistrable, public RefCounted<Blob>, public ActiveDOMObject {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(Blob, WEBCORE_EXPORT);
@@ -118,7 +118,8 @@ public:
 #endif
 
     // URLRegistrable
-    URLRegistry& registry() const override;
+    URLRegistry& registry() const final;
+    RegistrableType registrableType() const final { return RegistrableType::Blob; }
 
     Ref<Blob> slice(long long start, long long end, const String& contentType) const;
 
@@ -162,9 +163,13 @@ private:
     // into an HTML or for FileRead'ing, public blob URLs must be used for those purposes.
     URL m_internalURL;
 
-    HashSet<std::unique_ptr<BlobLoader>> m_blobLoaders;
+    UncheckedKeyHashSet<std::unique_ptr<BlobLoader>> m_blobLoaders;
 };
 
 WebCoreOpaqueRoot root(Blob*);
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::Blob)
+    static bool isType(const WebCore::URLRegistrable& registrable) { return registrable.registrableType() == WebCore::URLRegistrable::RegistrableType::Blob; }
+SPECIALIZE_TYPE_TRAITS_END()

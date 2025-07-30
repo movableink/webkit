@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/StdLibExtras.h>
+#include <wtf/cf/VectorCF.h>
 #include <wtf/text/StringConcatenate.h>
 
 #if USE(CF)
@@ -50,7 +52,7 @@ inline StringTypeAdapter<CFStringRef>::StringTypeAdapter(CFStringRef string)
 template<> inline void StringTypeAdapter<CFStringRef>::writeTo<LChar>(std::span<LChar> destination) const
 {
     if (m_string)
-        std::memcpy(destination.data(), CFStringGetCStringPtr(m_string, kCFStringEncodingISOLatin1), CFStringGetLength(m_string));
+        memcpySpan(destination, CFStringGetLatin1CStringSpan(m_string));
 }
 
 template<> inline void StringTypeAdapter<CFStringRef>::writeTo<UChar>(std::span<UChar> destination) const

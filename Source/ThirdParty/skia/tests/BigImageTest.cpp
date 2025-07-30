@@ -53,7 +53,7 @@ struct GrContextOptions;
 #include "src/gpu/graphite/Caps.h"
 #include "src/gpu/graphite/RecorderPriv.h"
 #include "src/gpu/graphite/Texture.h"
-#include "tools/GpuToolUtils.h"
+#include "tools/graphite/GraphiteToolUtils.h"
 #else
 namespace skgpu { namespace graphite { class Recorder; } }
 #endif
@@ -612,7 +612,7 @@ DEF_GRAPHITE_TEST_FOR_RENDERING_CONTEXTS(BigImageTest_Graphite,
 DEF_GRAPHITE_TEST_FOR_RENDERING_CONTEXTS(TiledDrawCacheTest_Graphite,
                                          reporter,
                                          context,
-                                         CtsEnforcement::kApiLevel_V) {
+                                         CtsEnforcement::kApiLevel_202404) {
     std::unique_ptr<skgpu::graphite::Recorder> recorder =
             context->makeRecorder(ToolUtils::CreateTestingRecorderOptions());
 

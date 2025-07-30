@@ -2,7 +2,7 @@
 
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 modified_since = os.environ.get('HTTP_IF_MODIFIED_SINCE', '')
 
@@ -13,8 +13,8 @@ if modified_since:
     sys.exit(0)
 
 one_year = 12 * 31 * 24 * 60 * 60
-last_modified = '{} +0000'.format((datetime.utcnow() - timedelta(seconds=one_year)).strftime('%a, %d %b %Y %H:%M:%S'))
-expires = '{} +0000'.format((datetime.utcnow() + timedelta(seconds=one_year)).strftime('%a, %d %b %Y %H:%M:%S'))
+last_modified = '{} +0000'.format((datetime.now(timezone.utc) - timedelta(seconds=one_year)).strftime('%a, %d %b %Y %H:%M:%S'))
+expires = '{} +0000'.format((datetime.now(timezone.utc) + timedelta(seconds=one_year)).strftime('%a, %d %b %Y %H:%M:%S'))
 
 sys.stdout.write(
     f'Cache-Control: no-cache, max-age={one_year}\r\n'

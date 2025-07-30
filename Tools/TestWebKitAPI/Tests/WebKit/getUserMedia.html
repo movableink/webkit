@@ -274,7 +274,8 @@
                     if (!devices.length) {
                         window.webkit.messageHandlers.gum.postMessage("FAIL checkEnumerateDevicesDoesNotFilter as no devices");
                     }
-                    window.webkit.messageHandlers.gum.postMessage(devices[0].label ? "PASS" : "FAIL checkEnumerateDevicesDoesNotFilter as there is no label");
+                    const devicesWithLabel = devices.filter(device => !!device.label);
+                    window.webkit.messageHandlers.gum.postMessage(devicesWithLabel.length ? "PASS" : "FAIL checkEnumerateDevicesDoesNotFilter as there is no label");
                 }, e => {
                     window.webkit.messageHandlers.gum.postMessage("FAIL checkEnumerateDevicesDoesNotFilter, " + e);
                 });

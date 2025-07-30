@@ -30,13 +30,12 @@
 
 #include "InspectorInstrumentation.h"
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 bool ScopedInspectorShaderProgramHighlight::shouldApply(WebGLRenderingContextBase& context)
 {
-    if (LIKELY(!context.m_currentProgram || !InspectorInstrumentation::isWebGLProgramHighlighted(context, *context.m_currentProgram)))
+    RefPtr currentProgram = context.m_currentProgram;
+    if (!currentProgram || !InspectorInstrumentation::isWebGLProgramHighlighted(context, *currentProgram)) [[likely]]
         return false;
     if (context.m_framebufferBinding)
         return false;
@@ -94,7 +93,5 @@ void ScopedInspectorShaderProgramHighlight::hideHighlight()
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif

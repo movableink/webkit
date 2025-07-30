@@ -78,6 +78,7 @@ void testObjectiveCAPI(const char*);
 #endif
 
 void configureJSCForTesting(void);
+int testLaunchJSCFromNonMainThread(const char* filter);
 int testCAPIViaCpp(const char* filter);
 
 bool assertTrue(bool value, const char* message);
@@ -1582,15 +1583,21 @@ int main(int argc, char* argv[])
     configureJSCForTesting();
 
 #if !OS(WINDOWS)
-    char resolvedPath[PATH_MAX];
-    if (!realpath(argv[0], resolvedPath))
-        fprintf(stdout, "Could not get the absolute pathname for: %s\n", argv[0]);
-    char* newCWD = dirname(resolvedPath);
-    if (chdir(newCWD))
-        fprintf(stdout, "Could not chdir to: %s\n", newCWD);
+    char *resolvedPath = realpath(argv[0], NULL);
+    if (!resolvedPath)
+        fprintf(stderr, "Could not get the absolute pathname for: %s\n", argv[0]);
+    else {
+        char *newCWD = dirname(resolvedPath);
+        if (chdir(newCWD))
+            fprintf(stderr, "Could not chdir to: %s\n", newCWD);
+        free(resolvedPath);
+    }
 #endif
 
     const char* filter = argc > 1 ? argv[1] : NULL;
+    // This test needs to run before anything else.
+    failed += testLaunchJSCFromNonMainThread(filter);
+
 #if JSC_OBJC_API_ENABLED
     testObjectiveCAPI(filter);
 #endif

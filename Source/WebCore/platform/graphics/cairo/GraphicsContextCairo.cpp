@@ -43,6 +43,7 @@
 #include "Gradient.h"
 #include "ImageBuffer.h"
 #include "IntRect.h"
+#include "NativeImage.h"
 #include "NotImplemented.h"
 #include "RefPtrCairo.h"
 
@@ -248,11 +249,11 @@ void GraphicsContextCairo::drawFocusRing(const Vector<FloatRect>& rects, float o
 #endif
 }
 
-void GraphicsContextCairo::drawLinesForText(const FloatPoint& point, float thickness, const DashArray& widths, bool printing, bool doubleUnderlines, StrokeStyle)
+void GraphicsContextCairo::drawLinesForText(const FloatPoint& point, float thickness, std::span<const FloatSegment> lineSegments, bool printing, bool doubleUnderlines, StrokeStyle)
 {
-    if (widths.isEmpty())
+    if (lineSegments.empty())
         return;
-    Cairo::drawLinesForText(*this, point, thickness, widths, printing, doubleUnderlines, strokeColor());
+    Cairo::drawLinesForText(*this, point, thickness, lineSegments, printing, doubleUnderlines, strokeColor());
 }
 
 void GraphicsContextCairo::drawDotsForDocumentMarker(const FloatRect& rect, DocumentMarkerLineStyle style)

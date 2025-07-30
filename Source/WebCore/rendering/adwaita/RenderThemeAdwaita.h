@@ -40,7 +40,7 @@ public:
     bool canCreateControlPartForBorderOnly(const RenderObject&) const final;
     bool canCreateControlPartForDecorations(const RenderObject&) const final;
 
-    bool isControlStyled(const RenderStyle&, const RenderStyle& userAgentStyle) const final;
+    bool isControlStyled(const RenderStyle&) const final;
 
     void setAccentColor(const Color&);
 
@@ -48,18 +48,18 @@ private:
     String extraDefaultStyleSheet() final;
 #if ENABLE(VIDEO)
     Vector<String, 2> mediaControlsScripts() final;
-    String mediaControlsStyleSheet() final;
+    Vector<String> mediaControlsStyleSheets(const HTMLMediaElement&) final;
 #endif
 
-#if ENABLE(VIDEO) && ENABLE(MODERN_MEDIA_CONTROLS)
+#if ENABLE(VIDEO)
     String mediaControlsBase64StringForIconNameAndType(const String&, const String&) final;
     String mediaControlsFormattedStringForDuration(double) final;
 
     String m_mediaControlsStyleSheet;
-#endif // ENABLE(VIDEO) && ENABLE(MODERN_MEDIA_CONTROLS)
+#endif // ENABLE(VIDEO)
 
     bool supportsHover() const final { return true; }
-    bool supportsFocusRing(const RenderStyle&) const final;
+    bool supportsFocusRing(const RenderObject&, const RenderStyle&) const final;
     bool supportsSelectionForegroundColors(OptionSet<StyleColorOptions>) const final { return false; }
     bool supportsListBoxSelectionForegroundColors(OptionSet<StyleColorOptions>) const final { return true; }
     bool shouldHaveCapsLockIndicator(const HTMLInputElement&) const final;
@@ -82,7 +82,7 @@ private:
     bool popsMenuBySpaceOrReturn() const final { return true; }
     void adjustMenuListStyle(RenderStyle&, const Element*) const override;
     void adjustMenuListButtonStyle(RenderStyle&, const Element*) const override;
-    LengthBox popupInternalPaddingBox(const RenderStyle&) const final;
+    Style::PaddingBox popupInternalPaddingBox(const RenderStyle&) const final;
 
     Seconds animationRepeatIntervalForProgressBar(const RenderProgress&) const final;
     IntRect progressBarRectForBounds(const RenderProgress&, const IntRect&) const final;
@@ -91,11 +91,13 @@ private:
 
     Color systemColor(CSSValueID, OptionSet<StyleColorOptions>) const final;
 
-#if ENABLE(DATALIST_ELEMENT)
     IntSize sliderTickSize() const final;
     int sliderTickOffsetFromTrackCenter() const final;
     void adjustListButtonStyle(RenderStyle&, const Element*) const final;
-#endif
+
+    LengthSize controlSize(StyleAppearance, const FontCascade&, const LengthSize&, float) const final;
+    LengthSize minimumControlSize(StyleAppearance, const FontCascade&, const LengthSize&, float) const final;
+    LengthBox controlBorder(StyleAppearance, const FontCascade&, const LengthBox&, float) const final;
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
     std::optional<Seconds> caretBlinkInterval() const override;

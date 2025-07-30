@@ -35,10 +35,9 @@
 #include <ImageIO/ImageIO.h>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/ScopedLambda.h>
+#include <wtf/cf/VectorCF.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/MakeString.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -100,7 +99,6 @@ static RetainPtr<CFDictionaryRef> imagePropertiesForDestinationUTIAndQuality(CFS
 {
     if (CFEqual(destinationUTI, jpegUTI()) && quality && *quality >= 0.0 && *quality <= 1.0) {
         // Apply the compression quality to the JPEG image destination.
-        quality = std::max(*quality, 0.0001); // FIXME: Remove once BigSur is unsupported (rdar://80446736)
         auto compressionQuality = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberDoubleType, &*quality));
         const void* key = kCGImageDestinationLossyCompressionQuality;
         const void* value = compressionQuality.get();
@@ -124,7 +122,7 @@ static bool encode(CGImageRef image, const String& mimeType, std::optional<doubl
     CGDataConsumerCallbacks callbacks {
         [](void* context, const void* buffer, size_t count) -> size_t {
             auto functor = *static_cast<const ScopedLambda<PutBytesCallback>*>(context);
-            return functor(std::span { static_cast<const uint8_t*>(buffer), count });
+            return functor(unsafeMakeSpan(static_cast<const uint8_t*>(buffer), count));
         },
         nullptr
     };
@@ -159,17 +157,16 @@ static bool encode(const PixelBuffer& source, const String& mimeType, std::optio
             return false;
 
         premultipliedData.grow(dataSize);
-        unsigned char* buffer = premultipliedData.data();
         for (size_t i = 0; i < dataSize; i += 4) {
             unsigned alpha = data[i + 3];
             if (alpha != 255) {
-                buffer[i + 0] = data[i + 0] * alpha / 255;
-                buffer[i + 1] = data[i + 1] * alpha / 255;
-                buffer[i + 2] = data[i + 2] * alpha / 255;
+                premultipliedData[i + 0] = data[i + 0] * alpha / 255;
+                premultipliedData[i + 1] = data[i + 1] * alpha / 255;
+                premultipliedData[i + 2] = data[i + 2] * alpha / 255;
             } else {
-                buffer[i + 0] = data[i + 0];
-                buffer[i + 1] = data[i + 1];
-                buffer[i + 2] = data[i + 2];
+                premultipliedData[i + 0] = data[i + 0];
+                premultipliedData[i + 1] = data[i + 1];
+                premultipliedData[i + 2] = data[i + 2];
             }
         }
 
@@ -198,7 +195,7 @@ static bool encode(std::span<const uint8_t> data, const String& mimeType, std::o
     if (!destinationUTI)
         return false;
 
-    auto cfData = adoptCF(CFDataCreateWithBytesNoCopy(nullptr, data.data(), data.size(), kCFAllocatorNull));
+    RetainPtr cfData = toCFDataNoCopy(data, kCFAllocatorNull);
     if (!cfData)
         return false;
 
@@ -209,7 +206,7 @@ static bool encode(std::span<const uint8_t> data, const String& mimeType, std::o
     CGDataConsumerCallbacks callbacks {
         [](void* context, const void* buffer, size_t count) -> size_t {
             auto functor = *static_cast<const ScopedLambda<PutBytesCallback>*>(context);
-            return functor(std::span { static_cast<const uint8_t*>(buffer), count });
+            return functor(unsafeMakeSpan(static_cast<const uint8_t*>(buffer), count));
         },
         nullptr
     };
@@ -274,7 +271,5 @@ String dataURL(const PixelBuffer& pixelBuffer, const String& mimeType, std::opti
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // USE(CG)

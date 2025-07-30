@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2024 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All Rights Reserved.
  * Copyright (C) 2009 Torch Mobile, Inc. http://www.torchmobile.com/
  * Copyright (C) 2010-2023 Google Inc. All Rights Reserved.
  *
@@ -124,7 +124,7 @@ public:
         if (m_tagId >= TagId::Unknown)
             return;
 
-        Ref document = protectedDocument();
+        Ref document = m_document.get();
         for (auto& attribute : attributes) {
             auto knownAttributeName = AtomString::lookUp(attribute.name.span());
             processAttribute(knownAttributeName, attribute.value.span(), pictureState);
@@ -178,7 +178,7 @@ public:
                 return nullptr;
         }
 
-        auto request = makeUnique<PreloadRequest>(initiatorFor(m_tagId), m_urlToLoad, predictedBaseURL, type.value(), m_mediaAttribute, scriptType.value_or(ScriptType::Classic), m_referrerPolicy, m_fetchPriorityHint);
+        auto request = makeUnique<PreloadRequest>(initiatorFor(m_tagId), m_urlToLoad, predictedBaseURL, type.value(), m_mediaAttribute, scriptType.value_or(ScriptType::Classic), m_referrerPolicy, m_fetchPriority);
         request->setCrossOriginMode(m_crossOriginMode);
         request->setNonce(m_nonceAttribute);
         request->setScriptIsAsync(m_scriptIsAsync);
@@ -219,7 +219,7 @@ private:
     {
         bool inPicture = !pictureState.isEmpty();
         bool alreadyMatchedSource = inPicture && pictureState.last();
-        Ref document = protectedDocument();
+        Ref document = m_document.get();
 
         switch (m_tagId) {
         case TagId::Img:
@@ -233,8 +233,8 @@ private:
                 m_sizesAttribute = attributeValue.toString();
                 break;
             }
-            if (match(attributeName, fetchpriorityAttr) && document->settings().fetchPriorityEnabled()) {
-                m_fetchPriorityHint = parseEnumerationFromString<RequestPriority>(attributeValue.toString()).value_or(RequestPriority::Auto);
+            if (match(attributeName, fetchpriorityAttr)) {
+                m_fetchPriority = parseEnumerationFromString<RequestPriority>(attributeValue.toString()).value_or(RequestPriority::Auto);
                 break;
             }
             if (match(attributeName, referrerpolicyAttr)) {
@@ -262,7 +262,7 @@ private:
             }
             if (match(attributeName, mediaAttr) && m_mediaAttribute.isNull()) {
                 m_mediaAttribute = attributeValue.toString();
-                auto mediaQueries = MQ::MediaQueryParser::parse(m_mediaAttribute, { document.get() });
+                auto mediaQueries = MQ::MediaQueryParser::parse(m_mediaAttribute, document->cssParserContext());
                 RefPtr documentElement = document->documentElement();
                 LOG(MediaQueries, "HTMLPreloadScanner %p processAttribute evaluating media queries", this);
                 m_mediaMatched = MQ::MediaQueryEvaluator { document->printing() ? printAtom() : screenAtom(), document, documentElement ? documentElement->computedStyle() : nullptr }.evaluate(mediaQueries);
@@ -292,8 +292,8 @@ private:
             } else if (match(attributeName, asyncAttr)) {
                 m_scriptIsAsync = true;
                 break;
-            } else if (match(attributeName, fetchpriorityAttr) && document->settings().fetchPriorityEnabled()) {
-                m_fetchPriorityHint = parseEnumerationFromString<RequestPriority>(attributeValue.toString()).value_or(RequestPriority::Auto);
+            } else if (match(attributeName, fetchpriorityAttr)) {
+                m_fetchPriority = parseEnumerationFromString<RequestPriority>(attributeValue.toString()).value_or(RequestPriority::Auto);
                 break;
             }
             processImageAndScriptAttribute(attributeName, attributeValue);
@@ -319,8 +319,8 @@ private:
                 m_typeAttribute = attributeValue.toString();
             else if (match(attributeName, referrerpolicyAttr))
                 m_referrerPolicy = parseReferrerPolicy(attributeValue, ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
-            else if (match(attributeName, fetchpriorityAttr) && document->settings().fetchPriorityEnabled())
-                m_fetchPriorityHint = parseEnumerationFromString<RequestPriority>(attributeValue.toString()).value_or(RequestPriority::Auto);
+            else if (match(attributeName, fetchpriorityAttr))
+                m_fetchPriority = parseEnumerationFromString<RequestPriority>(attributeValue.toString()).value_or(RequestPriority::Auto);
             break;
         case TagId::Input:
             if (match(attributeName, srcAttr))
@@ -448,7 +448,7 @@ private:
     bool m_scriptIsAsync { false };
     float m_deviceScaleFactor;
     ReferrerPolicy m_referrerPolicy { ReferrerPolicy::EmptyString };
-    RequestPriority m_fetchPriorityHint { RequestPriority::Auto };
+    RequestPriority m_fetchPriority { RequestPriority::Auto };
 };
 
 TokenPreloadScanner::TokenPreloadScanner(const URL& documentURL, float deviceScaleFactor)

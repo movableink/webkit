@@ -238,7 +238,7 @@ class DeadCellStorage {
 public:
     DeadCellStorage() = default;
     void append(MarkedBlock::AtomNumberType cell) { return m_deadCells.append(cell); }
-    std::span<const MarkedBlock::AtomNumberType> span() const { return m_deadCells.span(); }
+    std::span<const MarkedBlock::AtomNumberType> span() const LIFETIME_BOUND { return m_deadCells.span(); }
 private:
     Vector<MarkedBlock::AtomNumberType, storageSize> m_deadCells;
 };
@@ -291,7 +291,7 @@ void MarkedBlock::Handle::specializedSweep(FreeList* freeList, MarkedBlock::Hand
     auto setBits = [&] (bool isEmpty) ALWAYS_INLINE_LAMBDA {
         Locker locker { m_directory->bitvectorLock() };
         m_directory->setIsUnswept(this, false);
-        m_directory->setIsDestructible(this, false);
+        m_directory->setIsDestructible(this, m_attributes.destruction == DestructionMode::MayNeedDestruction && destructionMode != BlockHasNoDestructors && !isEmpty && m_directory->isDestructible(this));
         m_directory->setIsEmpty(this, false);
         if (sweepMode == SweepToFreeList)
             m_isFreeListed = true;
@@ -328,7 +328,7 @@ void MarkedBlock::Handle::specializedSweep(FreeList* freeList, MarkedBlock::Hand
                 destroy(cell);
         }
         if (sweepMode == SweepToFreeList) {
-            if (UNLIKELY(scribbleMode == Scribble))
+            if (scribbleMode == Scribble) [[unlikely]]
                 scribble(payloadBegin, payloadEnd - payloadBegin);
             FreeCell* interval = reinterpret_cast_ptr<FreeCell*>(payloadBegin);
             interval->makeLast(payloadEnd - payloadBegin, secret);
@@ -364,7 +364,7 @@ void MarkedBlock::Handle::specializedSweep(FreeList* freeList, MarkedBlock::Hand
         if (destructionMode != BlockHasNoDestructors)
             destroy(cell);
         if (sweepMode == SweepToFreeList) {
-            if (UNLIKELY(scribbleMode == Scribble))
+            if (scribbleMode == Scribble) [[unlikely]]
                 scribble(cell, cellSize);
 
             // The following check passing implies there was at least one live cell
@@ -373,7 +373,7 @@ void MarkedBlock::Handle::specializedSweep(FreeList* freeList, MarkedBlock::Hand
             if (i + m_atomsPerCell < previousDeadCell) {
                 size_t intervalLength = currentInterval * atomSize;
                 FreeCell* cell = reinterpret_cast_ptr<FreeCell*>(&block.atoms()[previousDeadCell]);
-                if (LIKELY(head))
+                if (head) [[likely]]
                     cell->setNext(head, intervalLength, secret);
                 else
                     cell->makeLast(intervalLength, secret);
@@ -391,7 +391,7 @@ void MarkedBlock::Handle::specializedSweep(FreeList* freeList, MarkedBlock::Hand
             size_t intervalLength = currentInterval * atomSize;
             FreeCell* cell = reinterpret_cast_ptr<FreeCell*>(&block.atoms()[previousDeadCell]);
 
-            if (LIKELY(head))
+            if (head) [[likely]]
                 cell->setNext(head, intervalLength, secret);
             else
                 cell->makeLast(intervalLength, secret);
@@ -516,7 +516,7 @@ void MarkedBlock::Handle::finishSweepKnowingHeapCellType(FreeList* freeList, con
 
 inline MarkedBlock::Handle::SweepDestructionMode MarkedBlock::Handle::sweepDestructionMode()
 {
-    if (m_attributes.destruction == NeedsDestruction) {
+    if (m_attributes.destruction != DoesNotNeedDestruction) {
         if (space()->isMarking())
             return BlockHasDestructorsAndCollectorIsRunning;
         return BlockHasDestructors;
@@ -528,6 +528,13 @@ inline bool MarkedBlock::Handle::isEmpty()
 {
     m_directory->assertIsMutatorOrMutatorIsStopped();
     return m_directory->isEmpty(this);
+}
+
+inline void MarkedBlock::Handle::setIsDestructible(bool value)
+{
+    Locker locker { m_directory->bitvectorLock() };
+    m_directory->assertIsMutatorOrMutatorIsStopped();
+    return m_directory->setIsDestructible(this, value);
 }
 
 inline MarkedBlock::Handle::EmptyMode MarkedBlock::Handle::emptyMode()

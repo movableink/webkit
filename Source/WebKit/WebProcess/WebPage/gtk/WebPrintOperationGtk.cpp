@@ -30,6 +30,7 @@
 #include "WebPage.h"
 #include "WebPageProxyMessages.h"
 #include "WebProcess.h"
+#include <WebCore/Document.h>
 #include <WebCore/DocumentLoader.h>
 #include <WebCore/FrameDestructionObserverInlines.h>
 #include <WebCore/FrameLoader.h>
@@ -58,7 +59,10 @@
 #endif
 #elif USE(SKIA)
 #include <WebCore/GraphicsContextSkia.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/docs/SkPDFDocument.h>
+#include <skia/docs/SkPDFJpegHelpers.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #endif
 
 namespace WebKit {
@@ -371,11 +375,37 @@ void WebPrintOperationGtk::endPage(SkPictureRecorder& recorder)
     }
 }
 
+static SkPDF::DateTime skiaDateTimeNow()
+{
+    GRefPtr<GDateTime> now = adoptGRef(g_date_time_new_now_local());
+    return SkPDF::DateTime {
+        .fTimeZoneMinutes = static_cast<int16_t>((g_date_time_get_utc_offset(now.get()) / G_USEC_PER_SEC) * 60),
+        .fYear = static_cast<uint16_t>(g_date_time_get_year(now.get())),
+        .fMonth = static_cast<uint8_t>(g_date_time_get_month(now.get())),
+        .fDayOfWeek = static_cast<uint8_t>(g_date_time_get_day_of_week(now.get()) % 7),
+        .fDay = static_cast<uint8_t>(g_date_time_get_day_of_month(now.get())),
+        .fHour = static_cast<uint8_t>(g_date_time_get_hour(now.get())),
+        .fMinute = static_cast<uint8_t>(g_date_time_get_minute(now.get())),
+        .fSecond = static_cast<uint8_t>(g_date_time_get_second(now.get()))
+    };
+}
+
 void WebPrintOperationGtk::endPrint()
 {
     SkDynamicMemoryWStream memoryBuffer;
+    SkPDF::Metadata metadata;
+    metadata.fCreation = skiaDateTimeNow();
+    metadata.fModified = metadata.fCreation;
+    metadata.jpegDecoder = SkPDF::JPEG::Decode;
+    metadata.jpegEncoder = SkPDF::JPEG::Encode;
+    if (m_printContext) {
+        if (auto* document = m_printContext->frame()->document()) {
+            auto title = document->title().utf8();
+            metadata.fTitle = SkString(title.data(), title.length());
+        }
+    }
 
-    auto document = SkPDF::MakeDocument(&memoryBuffer);
+    auto document = SkPDF::MakeDocument(&memoryBuffer, metadata);
     ASSERT(document);
     for (auto page : m_pages) {
         const auto& rect = page->cullRect();

@@ -28,7 +28,7 @@
 #include "ActiveDOMObject.h"
 #include "Document.h"
 #include "Element.h"
-#include "ExceptionOr.h"
+#include "EventLoop.h"
 #include "ImageBuffer.h"
 #include "MutableStyleProperties.h"
 #include "Styleable.h"
@@ -43,6 +43,10 @@ namespace JSC {
 class JSValue;
 }
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 class DOMPromise;
@@ -51,6 +55,7 @@ class RenderLayerModelObject;
 class RenderViewTransitionCapture;
 class RenderLayerModelObject;
 class ViewTransitionTypeSet;
+template<typename> class ExceptionOr;
 
 enum class ViewTransitionPhase : uint8_t {
     PendingCapture,
@@ -63,18 +68,23 @@ enum class ViewTransitionPhase : uint8_t {
 struct CapturedElement {
     WTF_MAKE_TZONE_ALLOCATED(CapturedElement);
 public:
+    struct State {
+        LayoutRect overflowRect;
+        LayoutPoint layerToLayoutOffset;
+        LayoutSize size;
+        LayoutSize subpixelOffset;
+        RefPtr<MutableStyleProperties> properties;
+        bool intersectsViewport { false };
+        bool isRootElement { false };
+    };
+
     // std::nullopt represents an non-capturable element.
     // nullptr represents an absent snapshot on an capturable element.
     std::optional<RefPtr<ImageBuffer>> oldImage;
-    LayoutRect oldOverflowRect;
-    LayoutPoint oldLayerToLayoutOffset;
-    LayoutSize oldSize;
-    RefPtr<MutableStyleProperties> oldProperties;
-    bool initiallyIntersectsViewport { false };
+    State oldState;
 
     WeakStyleable newElement;
-    LayoutRect newOverflowRect;
-    LayoutSize newSize;
+    State newState;
 
     Vector<AtomString> classList;
     RefPtr<MutableStyleProperties> groupStyleProperties;
@@ -178,6 +188,8 @@ public:
 
     void activateViewTransition();
 
+    LayoutRect containingBlockRect();
+
     UniqueRef<ViewTransitionParams> takeViewTransitionParams();
 
     DOMPromise& ready();
@@ -203,8 +215,9 @@ private:
     ViewTransition(Document&, RefPtr<ViewTransitionUpdateCallback>&&, Vector<AtomString>&&);
     ViewTransition(Document&, Vector<AtomString>&&);
 
-    Ref<MutableStyleProperties> copyElementBaseProperties(RenderLayerModelObject&, LayoutSize&, LayoutRect& overflowRect, bool& intersectsViewport);
-    bool updatePropertiesForRenderer(CapturedElement&, RenderBoxModelObject*, const AtomString&);
+    void copyElementBaseProperties(RenderLayerModelObject&, CapturedElement::State&);
+    bool updatePropertiesForGroupPseudo(CapturedElement&, const AtomString&);
+    LayoutRect captureOverflowRect(RenderLayerModelObject& renderer);
 
     // Setup view transition sub-algorithms.
     ExceptionOr<void> captureOldState();
@@ -214,8 +227,9 @@ private:
 
     void callUpdateCallback();
 
-    void updatePseudoElementStyles();
-    ExceptionOr<void> updatePseudoElementSizes();
+    ExceptionOr<void> updatePseudoElementStylesRead();
+    void updatePseudoElementStylesWrite();
+    ExceptionOr<void> updatePseudoElementRenderers();
     ExceptionOr<void> checkForViewportSizeChange();
 
     void clearViewTransition();
@@ -234,7 +248,7 @@ private:
     FloatSize m_initialLargeViewportSize;
     float m_initialPageZoom;
 
-    RefPtr<ViewTransitionUpdateCallback>  m_updateCallback;
+    RefPtr<ViewTransitionUpdateCallback> m_updateCallback;
     bool m_isCrossDocument { false };
 
     using PromiseAndWrapper = std::pair<Ref<DOMPromise>, Ref<DeferredPromise>>;
@@ -246,4 +260,6 @@ private:
     Ref<ViewTransitionTypeSet> m_types;
 };
 
-}
+WTF::TextStream& operator<<(WTF::TextStream&, ViewTransitionPhase);
+
+} // namespace WebCore

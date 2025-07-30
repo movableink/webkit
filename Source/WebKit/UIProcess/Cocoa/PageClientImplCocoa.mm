@@ -26,10 +26,14 @@
 #import "config.h"
 #import "PageClientImplCocoa.h"
 
-
+#import "APIUIClient.h"
+#import "RemoteLayerTreeTransaction.h"
 #import "WKTextAnimationType.h"
 #import "WKWebViewInternal.h"
+#import "WebFullScreenManagerProxy.h"
+#import "WebPageProxy.h"
 #import <WebCore/AlternativeTextUIController.h>
+#import <WebCore/FixedContainerEdges.h>
 #import <WebCore/TextAnimationTypes.h>
 #import <WebCore/WritingToolsTypes.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
@@ -38,6 +42,10 @@
 #import <wtf/Vector.h>
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/WTFString.h>
+
+#if ENABLE(SCREEN_TIME)
+#import <pal/cocoa/ScreenTimeSoftLink.h>
+#endif
 
 namespace WebKit {
 
@@ -49,7 +57,7 @@ PageClientImplCocoa::PageClientImplCocoa(WKWebView *webView)
 
 PageClientImplCocoa::~PageClientImplCocoa() = default;
 
-void PageClientImplCocoa::topContentInsetDidChange()
+void PageClientImplCocoa::obscuredContentInsetsDidChange()
 {
     [m_webView _recalculateViewportSizesWithMinimumViewportInset:[m_webView minimumViewportInset] maximumViewportInset:[m_webView maximumViewportInset] throwOnInvalidInput:NO];
 }
@@ -57,17 +65,11 @@ void PageClientImplCocoa::topContentInsetDidChange()
 void PageClientImplCocoa::themeColorWillChange()
 {
     [m_webView willChangeValueForKey:@"themeColor"];
-
-    // FIXME: Remove old `-[WKWebView _themeColor]` SPI <rdar://76662644>
-    [m_webView willChangeValueForKey:@"_themeColor"];
 }
 
 void PageClientImplCocoa::themeColorDidChange()
 {
     [m_webView didChangeValueForKey:@"themeColor"];
-
-    // FIXME: Remove old `-[WKWebView _themeColor]` SPI <rdar://76662644>
-    [m_webView didChangeValueForKey:@"_themeColor"];
 }
 
 void PageClientImplCocoa::underPageBackgroundColorWillChange()
@@ -77,19 +79,12 @@ void PageClientImplCocoa::underPageBackgroundColorWillChange()
 
 void PageClientImplCocoa::underPageBackgroundColorDidChange()
 {
-    [m_webView didChangeValueForKey:@"underPageBackgroundColor"];
-}
+    RetainPtr webView = this->webView();
 
-void PageClientImplCocoa::pageExtendedBackgroundColorWillChange()
-{
-    // FIXME: Remove old `-[WKWebView _pageExtendedBackgroundColor]` SPI <rdar://77789732>
-    [m_webView willChangeValueForKey:@"_pageExtendedBackgroundColor"];
-}
-
-void PageClientImplCocoa::pageExtendedBackgroundColorDidChange()
-{
-    // FIXME: Remove old `-[WKWebView _pageExtendedBackgroundColor]` SPI <rdar://77789732>
-    [m_webView didChangeValueForKey:@"_pageExtendedBackgroundColor"];
+    [webView didChangeValueForKey:@"underPageBackgroundColor"];
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    [webView _updateTopContentInsetFillCaptureColor];
+#endif
 }
 
 void PageClientImplCocoa::sampledPageTopColorWillChange()
@@ -101,6 +96,19 @@ void PageClientImplCocoa::sampledPageTopColorDidChange()
 {
     [m_webView didChangeValueForKey:@"_sampledPageTopColor"];
 }
+
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+void PageClientImplCocoa::spatialBackdropSourceWillChange()
+{
+    [m_webView willChangeValueForKey:@"_spatialBackdropSource"];
+}
+
+void PageClientImplCocoa::spatialBackdropSourceDidChange()
+{
+    [m_webView _spatialBackdropSourceDidChange];
+    [m_webView didChangeValueForKey:@"_spatialBackdropSource"];
+}
+#endif
 
 void PageClientImplCocoa::isPlayingAudioWillChange()
 {
@@ -121,7 +129,7 @@ bool PageClientImplCocoa::scrollingUpdatesDisabledForTesting()
 
 void PageClientImplCocoa::didInsertAttachment(API::Attachment& attachment, const String& source)
 {
-    [m_webView _didInsertAttachment:attachment withSource:source];
+    [m_webView _didInsertAttachment:attachment withSource:source.createNSString().get()];
 }
 
 void PageClientImplCocoa::didRemoveAttachment(API::Attachment& attachment)
@@ -136,17 +144,17 @@ void PageClientImplCocoa::didInvalidateDataForAttachment(API::Attachment& attach
 
 NSFileWrapper *PageClientImplCocoa::allocFileWrapperInstance() const
 {
-    Class cls = [m_webView configuration]._attachmentFileWrapperClass ?: [NSFileWrapper class];
-    return [cls alloc];
+    RetainPtr cls = [m_webView configuration]._attachmentFileWrapperClass ?: [NSFileWrapper class];
+    return [cls.get() alloc];
 }
 
 NSSet *PageClientImplCocoa::serializableFileWrapperClasses() const
 {
-    Class defaultFileWrapperClass = NSFileWrapper.class;
-    Class configuredFileWrapperClass = [m_webView configuration]._attachmentFileWrapperClass;
-    if (configuredFileWrapperClass && configuredFileWrapperClass != defaultFileWrapperClass)
-        return [NSSet setWithObjects:configuredFileWrapperClass, defaultFileWrapperClass, nil];
-    return [NSSet setWithObjects:defaultFileWrapperClass, nil];
+    RetainPtr<Class> defaultFileWrapperClass = NSFileWrapper.class;
+    RetainPtr<Class> configuredFileWrapperClass = [m_webView configuration]._attachmentFileWrapperClass;
+    if (configuredFileWrapperClass && configuredFileWrapperClass.get() != defaultFileWrapperClass.get())
+        return [NSSet setWithObjects:configuredFileWrapperClass.get(), defaultFileWrapperClass.get(), nil];
+    return [NSSet setWithObjects:defaultFileWrapperClass.get(), nil];
 }
 
 #endif
@@ -268,7 +276,7 @@ void PageClientImplCocoa::systemAudioCaptureChanged()
 
 WindowKind PageClientImplCocoa::windowKind()
 {
-    auto window = [m_webView window];
+    RetainPtr window = [m_webView window];
     if (!window)
         return WindowKind::Unparented;
     if ([window isKindOfClass:NSClassFromString(@"_SCNSnapshotWindow")])
@@ -279,12 +287,12 @@ WindowKind PageClientImplCocoa::windowKind()
 #if ENABLE(WRITING_TOOLS)
 void PageClientImplCocoa::proofreadingSessionShowDetailsForSuggestionWithIDRelativeToRect(const WebCore::WritingTools::TextSuggestion::ID& replacementID, WebCore::IntRect selectionBoundsInRootView)
 {
-    [m_webView _proofreadingSessionShowDetailsForSuggestionWithUUID:replacementID relativeToRect:selectionBoundsInRootView];
+    [m_webView _proofreadingSessionShowDetailsForSuggestionWithUUID:replacementID.createNSUUID().get() relativeToRect:selectionBoundsInRootView];
 }
 
 void PageClientImplCocoa::proofreadingSessionUpdateStateForSuggestionWithID(WebCore::WritingTools::TextSuggestion::State state, const WebCore::WritingTools::TextSuggestion::ID& replacementID)
 {
-    [m_webView _proofreadingSessionUpdateState:state forSuggestionWithUUID:replacementID];
+    [m_webView _proofreadingSessionUpdateState:state forSuggestionWithUUID:replacementID.createNSUUID().get()];
 }
 
 static NSString *writingToolsActiveKey = @"writingToolsActive";
@@ -311,15 +319,73 @@ bool PageClientImplCocoa::writingToolsTextReplacementsFinished()
 
 void PageClientImplCocoa::addTextAnimationForAnimationID(const WTF::UUID& uuid, const WebCore::TextAnimationData& data)
 {
-    [m_webView _addTextAnimationForAnimationID:uuid withData:data];
+    [m_webView _addTextAnimationForAnimationID:uuid.createNSUUID().get() withData:data];
 }
 
 void PageClientImplCocoa::removeTextAnimationForAnimationID(const WTF::UUID& uuid)
 {
-    [m_webView _removeTextAnimationForAnimationID:uuid];
+    [m_webView _removeTextAnimationForAnimationID:uuid.createNSUUID().get()];
 }
 
 #endif
+
+#if ENABLE(SCREEN_TIME)
+void PageClientImplCocoa::didChangeScreenTimeWebpageControllerURL()
+{
+    updateScreenTimeWebpageControllerURL(webView().get());
+}
+
+void PageClientImplCocoa::updateScreenTimeWebpageControllerURL(WKWebView *webView)
+{
+    if (!PAL::isScreenTimeFrameworkAvailable())
+        return;
+
+    RefPtr pageProxy = [webView _page].get();
+    if (pageProxy && !pageProxy->preferences().screenTimeEnabled()) {
+        [webView _uninstallScreenTimeWebpageController];
+        return;
+    }
+
+    if ([webView window])
+        [webView _installScreenTimeWebpageControllerIfNeeded];
+
+    RetainPtr screenTimeWebpageController = [webView _screenTimeWebpageController];
+    [screenTimeWebpageController setURL:[webView _mainFrameURL]];
+}
+
+void PageClientImplCocoa::setURLIsPictureInPictureForScreenTime(bool value)
+{
+    RetainPtr screenTimeWebpageController = [webView() _screenTimeWebpageController];
+    if (!screenTimeWebpageController)
+        return;
+
+    [screenTimeWebpageController setURLIsPictureInPicture:value];
+}
+
+void PageClientImplCocoa::setURLIsPlayingVideoForScreenTime(bool value)
+{
+    RetainPtr screenTimeWebpageController = [webView() _screenTimeWebpageController];
+    if (!screenTimeWebpageController)
+        return;
+
+    [screenTimeWebpageController setURLIsPlayingVideo:value];
+}
+
+#endif
+
+void PageClientImplCocoa::viewIsBecomingVisible()
+{
+#if ENABLE(SCREEN_TIME)
+    [m_webView _updateScreenTimeBasedOnWindowVisibility];
+#endif
+}
+
+void PageClientImplCocoa::viewIsBecomingInvisible()
+{
+#if ENABLE(SCREEN_TIME)
+    [m_webView _updateScreenTimeBasedOnWindowVisibility];
+#endif
+}
 
 #if ENABLE(GAMEPAD)
 void PageClientImplCocoa::setGamepadsRecentlyAccessed(GamepadsRecentlyAccessed gamepadsRecentlyAccessed)
@@ -363,6 +429,20 @@ void PageClientImplCocoa::processDidUpdateThrottleState()
 {
     [m_webView willChangeValueForKey:@"_webProcessState"];
     [m_webView didChangeValueForKey:@"_webProcessState"];
+}
+
+#if ENABLE(FULLSCREEN_API)
+void PageClientImplCocoa::setFullScreenClientForTesting(std::unique_ptr<WebFullScreenManagerProxyClient>&& client)
+{
+    m_fullscreenClientForTesting = WTFMove(client);
+}
+#endif
+
+void PageClientImplCocoa::didCommitLayerTree(const RemoteLayerTreeTransaction& transaction)
+{
+    if (auto& edges = transaction.fixedContainerEdges())
+        [webView() _updateFixedContainerEdges:*edges];
+    [webView() _updateScrollGeometryWithContentOffset:transaction.scrollPosition() contentSize:transaction.contentsSize()];
 }
 
 } // namespace WebKit

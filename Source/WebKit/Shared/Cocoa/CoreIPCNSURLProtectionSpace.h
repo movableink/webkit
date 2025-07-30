@@ -33,7 +33,6 @@
 
 #import <WebCore/ProtectionSpace.h>
 #import <wtf/RetainPtr.h>
-#import <wtf/TZoneMalloc.h>
 #import <wtf/Vector.h>
 
 OBJC_CLASS NSURLProtectionSpace;
@@ -51,7 +50,7 @@ struct CoreIPCNSURLProtectionSpaceData {
 };
 
 class CoreIPCNSURLProtectionSpace {
-    WTF_MAKE_TZONE_ALLOCATED(NSURLProtectionSpace);
+    WTF_MAKE_TZONE_ALLOCATED(CoreIPCNSURLProtectionSpace);
 public:
     CoreIPCNSURLProtectionSpace(NSURLProtectionSpace *);
     CoreIPCNSURLProtectionSpace(CoreIPCNSURLProtectionSpaceData&&);

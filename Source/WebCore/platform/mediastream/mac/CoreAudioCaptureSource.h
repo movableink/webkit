@@ -53,14 +53,15 @@ class WebAudioSourceProviderAVFObjC;
 
 class CoreAudioCaptureSource : public RealtimeMediaSource, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<CoreAudioCaptureSource, WTF::DestructionThread::MainRunLoop> {
 public:
-    WEBCORE_EXPORT static CaptureSourceOrError create(String&& deviceID, MediaDeviceHashSalts&&, const MediaConstraints*, std::optional<PageIdentifier>);
-    static CaptureSourceOrError createForTesting(String&& deviceID, AtomString&& label, MediaDeviceHashSalts&&, const MediaConstraints*, std::optional<PageIdentifier>);
+    WEBCORE_EXPORT static CaptureSourceOrError create(const CaptureDevice&, MediaDeviceHashSalts&&, const MediaConstraints*, std::optional<PageIdentifier>);
+    static CaptureSourceOrError createForTesting(String&& deviceID, AtomString&& label, MediaDeviceHashSalts&&, const MediaConstraints*, std::optional<PageIdentifier>, std::optional<bool>);
 
     WEBCORE_EXPORT static AudioCaptureFactory& factory();
 
     CMClockRef timebaseClock();
 
     void handleNewCurrentMicrophoneDevice(const CaptureDevice&);
+    void echoCancellationChanged();
 
     WTF_ABSTRACT_THREAD_SAFE_REF_COUNTED_AND_CAN_MAKE_WEAK_PTR_IMPL;
     virtual ~CoreAudioCaptureSource();
@@ -87,6 +88,7 @@ private:
 #endif
 
     std::optional<Vector<int>> discreteSampleRates() const final { return { { 8000, 16000, 32000, 44100, 48000, 96000 } }; }
+    const AudioStreamDescription* audioStreamDescription() const final;
 
     const RealtimeMediaSourceCapabilities& capabilities() final;
     const RealtimeMediaSourceSettings& settings() final;
@@ -109,7 +111,9 @@ private:
 
     bool m_canResumeAfterInterruption { true };
     bool m_isReadyToStart { false };
-    
+    bool m_echoCancellationChanging { false };
+
+    std::optional<bool> m_echoCancellationCapability;
     BaseAudioSharedUnit* m_overrideUnit { nullptr };
 };
 
@@ -120,6 +124,7 @@ public:
     virtual const CAAudioStreamDescription& format() = 0;
     virtual void captureUnitIsStarting() = 0;
     virtual void captureUnitHasStopped() = 0;
+    virtual void canRenderAudioChanged() = 0;
     // Background thread.
     virtual OSStatus produceSpeakerSamples(size_t sampleCount, AudioBufferList&, uint64_t sampleTime, double hostTime, AudioUnitRenderActionFlags&) = 0;
 };
@@ -156,7 +161,7 @@ private:
 
 inline CaptureSourceOrError CoreAudioCaptureSourceFactory::createAudioCaptureSource(const CaptureDevice& device, MediaDeviceHashSalts&& hashSalts, const MediaConstraints* constraints, std::optional<PageIdentifier> pageIdentifier)
 {
-    return CoreAudioCaptureSource::create(String { device.persistentId() }, WTFMove(hashSalts), constraints, pageIdentifier);
+    return CoreAudioCaptureSource::create(device, WTFMove(hashSalts), constraints, pageIdentifier);
 }
 
 } // namespace WebCore

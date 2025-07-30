@@ -454,7 +454,7 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
     angle::Result optimizeRenderPassForPresent(vk::ImageViewHelper *colorImageView,
                                                vk::ImageHelper *colorImage,
                                                vk::ImageHelper *colorImageMS,
-                                               vk::PresentMode presentMode,
+                                               bool isSharedPresentMode,
                                                bool *imageResolved);
 
     vk::DynamicQueryPool *getQueryPool(gl::QueryType queryType);
@@ -597,13 +597,7 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
         mRenderPassCommands->fragmentShadingRateImageRead(image);
     }
 
-    void finalizeImageLayout(const vk::ImageHelper *image, UniqueSerial imageSiblingSerial)
-    {
-        if (mRenderPassCommands->started())
-        {
-            mRenderPassCommands->finalizeImageLayout(this, image, imageSiblingSerial);
-        }
-    }
+    void finalizeImageLayout(vk::ImageHelper *image, UniqueSerial imageSiblingSerial);
 
     angle::Result getOutsideRenderPassCommandBuffer(
         const vk::CommandBufferAccess &access,
@@ -632,14 +626,7 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
     }
     angle::Result submitStagedTextureUpdates()
     {
-        // Staged updates are recorded in outside RP cammand buffer, submit them.
-        return flushOutsideRenderPassCommands();
-    }
-
-    angle::Result onEGLImageQueueChange()
-    {
-        // Flush the barrier inserted to change the queue and layout of an EGL image.  Another
-        // thread may start using this image without issuing a sync object.
+        // Staged updates are recorded in outside RP command buffer, submit them.
         return flushOutsideRenderPassCommands();
     }
 
@@ -719,7 +706,7 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
     // Either issue a submission or defer it when a sync object is initialized.  If deferred, a
     // submission will have to be incurred during client wait.
     angle::Result onSyncObjectInit(vk::SyncHelper *syncHelper, SyncFenceScope scope);
-    // Called when a sync object is waited on while its submission was deffered in onSyncObjectInit.
+    // Called when a sync object is waited on while its submission was deferred in onSyncObjectInit.
     // It's a no-op if this context doesn't have a pending submission.  Note that due to
     // mHasDeferredFlush being set, flushing the render pass leads to a submission automatically.
     angle::Result flushCommandsAndEndRenderPassIfDeferredSyncInit(RenderPassClosureReason reason);
@@ -1174,7 +1161,7 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
                         float farPlane);
     void updateFrontFace();
     void updateDepthRange(float nearPlane, float farPlane);
-    void updateMissingOutputsMask();
+    void updateMissingAttachments();
     void updateSampleMaskWithRasterizationSamples(const uint32_t rasterizationSamples);
     void updateAlphaToCoverageWithRasterizationSamples(const uint32_t rasterizationSamples);
     void updateFrameBufferFetchSamples(const uint32_t prevSamples, const uint32_t curSamples);
@@ -1206,11 +1193,12 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
     void invalidateCurrentDefaultUniforms();
     angle::Result invalidateCurrentTextures(const gl::Context *context, gl::Command command);
     angle::Result invalidateCurrentShaderResources(gl::Command command);
-    angle::Result invalidateCurrentShaderUniformBuffers(gl::Command command);
+    angle::Result invalidateCurrentShaderUniformBuffers();
     void invalidateGraphicsDriverUniforms();
     void invalidateDriverUniforms();
 
     angle::Result handleNoopDrawEvent() override;
+    angle::Result handleNoopMultiDrawEvent() override;
 
     // Handlers for graphics pipeline dirty bits.
     angle::Result handleDirtyGraphicsMemoryBarrier(DirtyBits::Iterator *dirtyBitsIterator,
@@ -1391,12 +1379,12 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
     // preserve the order of operations:
     //
     // - Transform feedback write (in render pass), then vertex/index read (in render pass)
-    // - Transform feedback write (in render pass), then ubo read (outside render pass)
+    // - Transform feedback write (in render pass), then ubo read (inside/outside render pass)
     // - Framebuffer attachment write (in render pass), then texture sample (outside render pass)
     //   * Note that texture sampling inside render pass would cause a feedback loop
     //
     angle::Result endRenderPassIfTransformFeedbackBuffer(const vk::BufferHelper *buffer);
-    angle::Result endRenderPassIfComputeReadAfterTransformFeedbackWrite();
+    angle::Result endRenderPassIfUniformBufferReadAfterTransformFeedbackWrite();
     angle::Result endRenderPassIfComputeAccessAfterGraphicsImageAccess();
 
     // Update read-only depth feedback loop mode.  Typically called from
@@ -1472,8 +1460,6 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
 
     vk::PipelineHelper *mCurrentGraphicsPipeline;
     vk::PipelineHelper *mCurrentGraphicsPipelineShaders;
-    vk::PipelineHelper *mCurrentGraphicsPipelineVertexInput;
-    vk::PipelineHelper *mCurrentGraphicsPipelineFragmentOutput;
     vk::PipelineHelper *mCurrentComputePipeline;
     gl::PrimitiveMode mCurrentDrawMode;
 
@@ -1626,11 +1612,6 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
     vk::OutsideRenderPassCommandBufferHelper *mOutsideRenderPassCommands;
     vk::RenderPassCommandBufferHelper *mRenderPassCommands;
 
-    // Allocators for the render pass command buffers. They are utilized only when shared ring
-    // buffer allocators are being used.
-    vk::SecondaryCommandMemoryAllocator mOutsideRenderPassCommandsAllocator;
-    vk::SecondaryCommandMemoryAllocator mRenderPassCommandsAllocator;
-
     // The following is used when creating debug-util markers for graphics debuggers (e.g. AGI).  A
     // given gl{Begin|End}Query command may result in commands being submitted to the outside or
     // render-pass command buffer.  The ContextVk::handleGraphicsEventLog() method records the
@@ -1742,6 +1723,8 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
     VulkanCacheStats mVulkanCacheStats;
 
     RangedSerialFactory mOutsideRenderPassSerialFactory;
+
+    uint32_t mCommandsPendingSubmissionCount;
 };
 
 ANGLE_INLINE angle::Result ContextVk::endRenderPassIfTransformFeedbackBuffer(
@@ -1806,7 +1789,7 @@ ANGLE_INLINE bool UseLineRaster(const ContextVk *contextVk, gl::PrimitiveMode mo
     return gl::IsLineMode(mode);
 }
 
-uint32_t GetDriverUniformSize(vk::Context *context, PipelineType pipelineType);
+uint32_t GetDriverUniformSize(vk::ErrorContext *context, PipelineType pipelineType);
 }  // namespace rx
 
 // Generate a perf warning, and insert an event marker in the command buffer.

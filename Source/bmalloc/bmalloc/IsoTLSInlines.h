@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if !BUSE(TZONE)
+
 #include "Environment.h"
 #include "IsoHeapImpl.h"
 #include "IsoMallocFallback.h"
@@ -33,7 +35,7 @@
 
 #if !BUSE(LIBPAS)
 
-#if BOS(DARWIN)
+#if BENABLE(MALLOC_HEAP_BREAKDOWN) || BOS(DARWIN)
 #include <malloc/malloc.h>
 #endif
 
@@ -192,3 +194,4 @@ BNO_INLINE IsoTLS* IsoTLS::ensureHeapAndEntries(api::IsoHeapBase<Type>& handle)
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)

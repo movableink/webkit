@@ -95,7 +95,7 @@ void AXGeometryManager::cacheRect(std::optional<AXID> axID, IntRect&& rect)
 
 void AXGeometryManager::scheduleObjectRegionsUpdate(bool scheduleImmediately)
 {
-    if (LIKELY(!scheduleImmediately)) {
+    if (!scheduleImmediately) [[likely]] {
         if (!m_updateObjectRegionsTimer.isActive())
             m_updateObjectRegionsTimer.startOneShot(1_s);
         return;
@@ -122,10 +122,10 @@ void AXGeometryManager::willUpdateObjectRegions()
 
 void AXGeometryManager::scheduleRenderingUpdate()
 {
-    if (!m_cache)
+    if (!m_cache || !m_cache->document())
         return;
 
-    if (RefPtr page = m_cache->document().page())
+    if (RefPtr page = m_cache->document()->page())
         page->scheduleRenderingUpdate(RenderingUpdateStep::AccessibilityRegionUpdate);
 }
 

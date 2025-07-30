@@ -28,7 +28,6 @@
 
 #if ENABLE(WEBXR)
 
-#include "ExceptionOr.h"
 #include "FakeXRBoundsPoint.h"
 #include "FakeXRInputSourceInit.h"
 #include "FakeXRViewInit.h"
@@ -43,7 +42,9 @@
 #include <wtf/Vector.h>
 
 namespace WebCore {
+
 class GraphicsContextGL;
+template<typename> class ExceptionOr;
 
 class FakeXRView final : public RefCounted<FakeXRView> {
 public:

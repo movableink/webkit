@@ -33,7 +33,6 @@
 #include "GradientColorStops.h"
 #include "GraphicsTypes.h"
 #include "RenderingResource.h"
-#include <variant>
 #include <wtf/Vector.h>
 
 #if USE(SKIA)
@@ -72,7 +71,7 @@ class AffineTransform;
 class FloatRect;
 class GraphicsContext;
 
-class Gradient : public RenderingResource {
+class Gradient final : public RenderingResource {
 public:
     struct LinearData {
         FloatPoint point0;
@@ -92,9 +91,10 @@ public:
         float angleRadians;
     };
 
-    using Data = std::variant<LinearData, RadialData, ConicData>;
+    using Data = Variant<LinearData, RadialData, ConicData>;
 
     WEBCORE_EXPORT static Ref<Gradient> create(Data&&, ColorInterpolationMethod, GradientSpreadMethod = GradientSpreadMethod::Pad, GradientColorStops&& = { }, std::optional<RenderingResourceIdentifier> = std::nullopt);
+    ~Gradient();
 
     const Data& data() const { return m_data; }
     ColorInterpolationMethod colorInterpolationMethod() const { return m_colorInterpolationMethod; }
@@ -116,7 +116,9 @@ public:
 
 #if USE(CG)
     void paint(GraphicsContext&);
-    void paint(CGContextRef);
+    // If the DestinationColorSpace is present, the gradient may cache a platform renderer using colors converted into this colorspace,
+    // which can be more efficient to render since it avoids colorspace conversions when lower level frameworks render the gradient.
+    void paint(CGContextRef, std::optional<DestinationColorSpace> = { });
 #endif
 
 #if PLATFORM(QT)

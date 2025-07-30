@@ -40,8 +40,6 @@ public:
     static Ref<AccessibilityTableRow> create(AXID, Node&);
     virtual ~AccessibilityTableRow();
 
-    // retrieves the "row" header (a th tag in the rightmost column)
-    AccessibilityObject* rowHeader() override;
     virtual AccessibilityTable* parentTable() const;
 
     void setRowIndex(unsigned);
@@ -53,8 +51,8 @@ public:
     
     void addChildren() final;
 
-    int axColumnIndex() const final;
-    int axRowIndex() const final;
+    std::optional<unsigned> axColumnIndex() const final;
+    std::optional<unsigned> axRowIndex() const final;
 
 protected:
     explicit AccessibilityTableRow(AXID, RenderObject&);

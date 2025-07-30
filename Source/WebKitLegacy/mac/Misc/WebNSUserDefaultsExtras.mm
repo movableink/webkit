@@ -35,7 +35,7 @@
 
 + (NSString *)_webkit_preferredLanguageCode
 {
-    return defaultLanguage();
+    return defaultLanguage().createNSString().autorelease();
 }
 
 @end

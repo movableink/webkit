@@ -34,7 +34,7 @@ namespace CSS {
 // <rect()> = rect( [ <length-percentage> | auto ]{4} [ round <'border-radius'> ]? )
 // https://drafts.csswg.org/css-shapes-1/#funcdef-basic-shape-rect
 struct Rect {
-    using Edge = std::variant<LengthPercentage<>, Keyword::Auto>;
+    using Edge = Variant<LengthPercentage<>, Keyword::Auto>;
 
     SpaceSeparatedRectEdges<Edge> edges;
     BorderRadius radii;
@@ -51,9 +51,9 @@ template<size_t I> const auto& get(const Rect& value)
         return value.radii;
 }
 
-template<> struct Serialize<Rect> { void operator()(StringBuilder&, const Rect&); };
+template<> struct Serialize<Rect> { void operator()(StringBuilder&, const SerializationContext&, const Rect&); };
 
 } // namespace CSS
 } // namespace WebCore
 
-CSS_TUPLE_LIKE_CONFORMANCE(Rect, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::Rect, 2)

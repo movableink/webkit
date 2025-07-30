@@ -27,29 +27,34 @@
 #import "AuxiliaryProcessProxy.h"
 
 #import "AuxiliaryProcessMessages.h"
+#import "ProcessAssertion.h"
+#import "XPCUtilities.h"
 #import <WebCore/SharedBuffer.h>
 #import <WebCore/WebMAudioUtilitiesCocoa.h>
 #import <mach/mach_init.h>
 #import <mach/task.h>
 #import <mach/task_info.h>
 #import <wtf/MonotonicTime.h>
+#import <wtf/RunLoop.h>
 #import <wtf/Scope.h>
 #import <wtf/cocoa/VectorCocoa.h>
-
-#if USE(RUNNINGBOARD)
-#include "XPCConnectionTerminationWatchdog.h"
-#endif
 
 #import <pal/cf/AudioToolboxSoftLink.h>
 
 namespace WebKit {
 
 #if HAVE(AUDIO_COMPONENT_SERVER_REGISTRATIONS)
+static RetainPtr<CFDataRef> safeAudioComponentFetchServerRegistrations()
+{
+    SUPPRESS_UNRETAINED_LOCAL CFDataRef registrations { nullptr };
+    if (PAL::AudioComponentFetchServerRegistrations(&registrations) != noErr || !registrations)
+        return nullptr;
+    return adoptCF(registrations);
+}
+
 RefPtr<WebCore::SharedBuffer> AuxiliaryProcessProxy::fetchAudioComponentServerRegistrations()
 {
     using namespace PAL;
-
-    CFDataRef registrations { nullptr };
 
     if (!PAL::isAudioToolboxCoreFrameworkAvailable() || !PAL::canLoad_AudioToolboxCore_AudioComponentFetchServerRegistrations())
         return nullptr;
@@ -57,27 +62,59 @@ RefPtr<WebCore::SharedBuffer> AuxiliaryProcessProxy::fetchAudioComponentServerRe
     WebCore::registerOpusDecoderIfNeeded();
     WebCore::registerVorbisDecoderIfNeeded();
 
-    if (noErr != AudioComponentFetchServerRegistrations(&registrations) || !registrations)
+    auto registrations = safeAudioComponentFetchServerRegistrations();
+    if (!registrations)
         return nullptr;
 
-    return WebCore::SharedBuffer::create(adoptCF(registrations).get());
+    return WebCore::SharedBuffer::create(registrations.get());
 }
 #endif
 
 Vector<String> AuxiliaryProcessProxy::platformOverrideLanguages() const
 {
-    static const NeverDestroyed<Vector<String>> overrideLanguages = makeVector<String>([[NSUserDefaults standardUserDefaults] valueForKey:@"AppleLanguages"]);
+    static const NeverDestroyed<Vector<String>> overrideLanguages = makeVector<String>([[NSUserDefaults standardUserDefaults] stringArrayForKey:@"AppleLanguages"]);
     return overrideLanguages;
 }
 
+// This may be called from the AuxiliaryProcessProxy destructor, so do not pass the `this` pointer
+// to other functions, or call any virtual functions.
 void AuxiliaryProcessProxy::platformStartConnectionTerminationWatchdog()
 {
 #if USE(RUNNINGBOARD)
+    if (m_startedTerminationWatchdog)
+        return;
+
+    m_startedTerminationWatchdog = true;
+
     // Deploy a watchdog in the UI process, since the child process may be suspended.
     // If 30s is insufficient for any outstanding activity to complete cleanly, then it will be killed.
-    ASSERT(m_connection && m_connection->xpcConnection());
-    XPCConnectionTerminationWatchdog::startConnectionTerminationWatchdog(*this, 30_s);
+    static constexpr ASCIILiteral reason = "XPCConnectionTerminationWatchdog"_s;
+
+#if USE(EXTENSIONKIT_PROCESS_TERMINATION)
+    auto maybeExtensionProcess = extensionProcess();
+    if (!maybeExtensionProcess)
+        return;
+
+    Ref assertion = ProcessAndUIAssertion::create(processID(), reason, ProcessAssertionType::Background, environmentIdentifier(), extensionProcess());
+    auto terminationHandler = [assertion = WTFMove(assertion), extensionProcess = WTFMove(*maybeExtensionProcess)] {
+        extensionProcess.invalidate();
+    };
+#else
+    if (!m_connection)
+        return;
+
+    OSObjectPtr xpcConnection = m_connection->xpcConnection();
+    if (!xpcConnection)
+        return;
+
+    Ref assertion = ProcessAndUIAssertion::create(processID(), reason, ProcessAssertionType::Background, environmentIdentifier());
+    auto terminationHandler = [assertion = WTFMove(assertion), xpcConnection = WTFMove(xpcConnection)]() {
+        terminateWithReason(xpcConnection.get(), ReasonCode::WatchdogTimerFired, reason);
+    };
 #endif
+
+    RunLoop::protectedMain()->dispatchAfter(30_s, WTFMove(terminationHandler));
+#endif // USE(RUNNINGBOARD)
 }
 
 #if USE(EXTENSIONKIT)

@@ -9,6 +9,7 @@
 
 #include "include/gpu/ShaderErrorHandler.h"
 #include "include/gpu/graphite/BackendTexture.h"
+#include "include/gpu/graphite/mtl/MtlGraphiteTypes.h"
 #include "src/sksl/SkSLProgramKind.h"
 
 #include "src/core/SkSLTypeShared.h"
@@ -42,7 +43,7 @@ const MtlSharedContext* MtlResourceProvider::mtlSharedContext() {
 
 sk_sp<MtlGraphicsPipeline> MtlResourceProvider::findOrCreateLoadMSAAPipeline(
         const RenderPassDesc& renderPassDesc) {
-    uint64_t renderPassKey =
+    uint32_t renderPassKey =
             this->mtlSharedContext()->mtlCaps().getRenderPassDescKey(renderPassDesc);
     sk_sp<MtlGraphicsPipeline> pipeline = fLoadMSAAPipelines[renderPassKey];
     if (!pipeline) {
@@ -58,12 +59,14 @@ sk_sp<MtlGraphicsPipeline> MtlResourceProvider::findOrCreateLoadMSAAPipeline(
 
 sk_sp<GraphicsPipeline> MtlResourceProvider::createGraphicsPipeline(
         const RuntimeEffectDictionary* runtimeDict,
+        const UniqueKey& pipelineKey,
         const GraphicsPipelineDesc& pipelineDesc,
         const RenderPassDesc& renderPassDesc,
-        SkEnumBitMask<PipelineCreationFlags> pipelineCreationFlags) {
+        SkEnumBitMask<PipelineCreationFlags> pipelineCreationFlags,
+        uint32_t compilationID) {
     return MtlGraphicsPipeline::Make(this->mtlSharedContext(), this,
-                                     runtimeDict, pipelineDesc, renderPassDesc,
-                                     pipelineCreationFlags);
+                                     runtimeDict, pipelineKey, pipelineDesc, renderPassDesc,
+                                     pipelineCreationFlags, compilationID);
 }
 
 sk_sp<ComputePipeline> MtlResourceProvider::createComputePipeline(
@@ -72,9 +75,8 @@ sk_sp<ComputePipeline> MtlResourceProvider::createComputePipeline(
 }
 
 sk_sp<Texture> MtlResourceProvider::createTexture(SkISize dimensions,
-                                                  const TextureInfo& info,
-                                                  skgpu::Budgeted budgeted) {
-    return MtlTexture::Make(this->mtlSharedContext(), dimensions, info, budgeted);
+                                                  const TextureInfo& info) {
+    return MtlTexture::Make(this->mtlSharedContext(), dimensions, info);
 }
 
 sk_sp<Texture> MtlResourceProvider::onCreateWrappedTexture(const BackendTexture& texture) {

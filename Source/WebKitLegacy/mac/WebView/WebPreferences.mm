@@ -423,7 +423,6 @@ public:
         @(static_cast<unsigned>(AudioSession::CategoryType::None)), WebKitAudioSessionCategoryOverride,
         @NO, WebKitAlwaysRequestGeolocationPermissionPreferenceKey,
         @(static_cast<int>(InterpolationQuality::Low)), WebKitInterpolationQualityPreferenceKey,
-        @NO, WebKitNetworkDataUsageTrackingEnabledPreferenceKey,
         @"", WebKitNetworkInterfaceNamePreferenceKey,
 #endif
         nil];
@@ -655,6 +654,16 @@ public:
     if (_private->autosaves)
         [[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithUnsignedLongLong:value] forKey:_key];
     [self _postPreferencesChangedNotification];
+}
+
+- (BOOL)_useSystemAppearance
+{
+    return [self _boolValueForKey: WebKitUseSystemAppearancePreferenceKey];
+}
+
+- (void)_setUseSystemAppearance:(BOOL)flag
+{
+    return [self _setBoolValue:flag forKey: WebKitUseSystemAppearancePreferenceKey];
 }
 
 - (NSString *)standardFontFamily
@@ -1049,16 +1058,6 @@ public:
 @end
 
 @implementation WebPreferences (WebPrivate)
-
-- (BOOL)isDNSPrefetchingEnabled
-{
-    return [self _boolValueForKey:WebKitDNSPrefetchingEnabledPreferenceKey];
-}
-
-- (void)setDNSPrefetchingEnabled:(BOOL)flag
-{
-    [self _setBoolValue:flag forKey:WebKitDNSPrefetchingEnabledPreferenceKey];
-}
 
 - (BOOL)developerExtrasEnabled
 {
@@ -1619,7 +1618,7 @@ public:
 + (void)_setInitialDefaultTextEncodingToSystemEncoding
 {
     [[NSUserDefaults standardUserDefaults] registerDefaults:
-        @{ WebKitDefaultTextEncodingNamePreferenceKey: PAL::defaultTextEncodingNameForSystemLanguage() }];
+        @{ WebKitDefaultTextEncodingNamePreferenceKey: PAL::defaultTextEncodingNameForSystemLanguage().createNSString().get() }];
 }
 
 static RetainPtr<NSString>& classIBCreatorID()
@@ -1813,16 +1812,6 @@ static RetainPtr<NSString>& classIBCreatorID()
     [self _setBoolValue:flag forKey:WebKitSpatialNavigationEnabledPreferenceKey];
 }
 
-- (BOOL)hyperlinkAuditingEnabled
-{
-    return [self _boolValueForKey:WebKitHyperlinkAuditingEnabledPreferenceKey];
-}
-
-- (void)setHyperlinkAuditingEnabled:(BOOL)flag
-{
-    [self _setBoolValue:flag forKey:WebKitHyperlinkAuditingEnabledPreferenceKey];
-}
-
 - (BOOL)usePreHTML5ParserQuirks
 {
     return [self _boolValueForKey:WebKitUsePreHTML5ParserQuirksKey];
@@ -1949,16 +1938,6 @@ static RetainPtr<NSString>& classIBCreatorID()
     }
 
     [self _setUnsignedIntValue:override forKey:WebKitAudioSessionCategoryOverride];
-}
-
-- (BOOL)networkDataUsageTrackingEnabled
-{
-    return [self _boolValueForKey:WebKitNetworkDataUsageTrackingEnabledPreferenceKey];
-}
-
-- (void)setNetworkDataUsageTrackingEnabled:(BOOL)trackingEnabled
-{
-    [self _setBoolValue:trackingEnabled forKey:WebKitNetworkDataUsageTrackingEnabledPreferenceKey];
 }
 
 - (NSString *)networkInterfaceName
@@ -2373,16 +2352,6 @@ static RetainPtr<NSString>& classIBCreatorID()
     [self _setBoolValue:flag forKey:WebKitMediaDevicesEnabledPreferenceKey];
 }
 
-- (BOOL)mediaStreamEnabled
-{
-    return [self _boolValueForKey:WebKitMediaStreamEnabledPreferenceKey];
-}
-
-- (void)setMediaStreamEnabled:(BOOL)flag
-{
-    [self _setBoolValue:flag forKey:WebKitMediaStreamEnabledPreferenceKey];
-}
-
 - (BOOL)peerConnectionEnabled
 {
     return [self _boolValueForKey:WebKitPeerConnectionEnabledPreferenceKey];
@@ -2573,16 +2542,6 @@ static RetainPtr<NSString>& classIBCreatorID()
     return [self _boolValueForKey:WebKitDirectoryUploadEnabledPreferenceKey];
 }
 
-- (BOOL)CSSOMViewScrollingAPIEnabled
-{
-    return [self _boolValueForKey:WebKitCSSOMViewScrollingAPIEnabledPreferenceKey];
-}
-
-- (void)setCSSOMViewScrollingAPIEnabled:(BOOL)flag
-{
-    [self _setBoolValue:flag forKey:WebKitCSSOMViewScrollingAPIEnabledPreferenceKey];
-}
-
 - (BOOL)mediaUserGestureInheritsFromDocument
 {
     return [self _boolValueForKey:WebKitMediaUserGestureInheritsFromDocument];
@@ -2725,7 +2684,6 @@ static RetainPtr<NSString>& classIBCreatorID()
     [self _setBoolValue:enabled forKey:WebKitSiteSpecificQuirksModeEnabledPreferenceKey];
 }
 
-
 @end
 
 @implementation WebPreferences (WebInternal)
@@ -2847,6 +2805,16 @@ static RetainPtr<NSString>& classIBCreatorID()
     [self _setBoolValue:flag forKey:WebKitContactPickerAPIEnabledPreferenceKey];
 }
 
+- (BOOL)digitalCredentialsEnabled
+{
+    return [self _boolValueForKey:WebKitDigitalCredentialsEnabledPreferenceKey];
+}
+
+- (void)setDigitalCredentialsEnabled:(BOOL)flag
+{
+    [self _setBoolValue:flag forKey:WebKitDigitalCredentialsEnabledPreferenceKey];
+}
+
 - (BOOL)visualViewportAPIEnabled
 {
     return [self _boolValueForKey:WebKitVisualViewportAPIEnabledPreferenceKey];
@@ -2855,16 +2823,6 @@ static RetainPtr<NSString>& classIBCreatorID()
 - (void)setVisualViewportAPIEnabled:(BOOL)flag
 {
     [self _setBoolValue:flag forKey:WebKitVisualViewportAPIEnabledPreferenceKey];
-}
-
-- (BOOL)CSSOMViewSmoothScrollingEnabled
-{
-    return [self _boolValueForKey:WebKitCSSOMViewSmoothScrollingEnabledPreferenceKey];
-}
-
-- (void)setCSSOMViewSmoothScrollingEnabled:(BOOL)flag
-{
-    [self _setBoolValue:flag forKey:WebKitCSSOMViewSmoothScrollingEnabledPreferenceKey];
 }
 
 - (BOOL)webAnimationsCompositeOperationsEnabled
@@ -2915,16 +2873,6 @@ static RetainPtr<NSString>& classIBCreatorID()
 - (void)setCoreMathMLEnabled:(BOOL)flag
 {
     [self _setBoolValue:flag forKey:WebKitCoreMathMLEnabledPreferenceKey];
-}
-
-- (BOOL)linkPreloadResponsiveImagesEnabled
-{
-    return [self _boolValueForKey:WebKitLinkPreloadResponsiveImagesEnabledPreferenceKey];
-}
-
-- (void)setLinkPreloadResponsiveImagesEnabled:(BOOL)flag
-{
-    [self _setBoolValue:flag forKey:WebKitLinkPreloadResponsiveImagesEnabledPreferenceKey];
 }
 
 - (BOOL)remotePlaybackEnabled
@@ -2993,6 +2941,60 @@ static RetainPtr<NSString>& classIBCreatorID()
 
 // The preferences in this category are deprecated and have no effect. They should
 // be removed when it is considered safe to do so.
+
+- (BOOL)CSSOMViewScrollingAPIEnabled
+{
+    return YES;
+}
+
+- (void)setCSSOMViewScrollingAPIEnabled:(BOOL)flag
+{
+}
+
+- (BOOL)hyperlinkAuditingEnabled
+{
+    return YES;
+}
+
+- (void)setHyperlinkAuditingEnabled:(BOOL)flag
+{
+}
+
+- (BOOL)CSSOMViewSmoothScrollingEnabled
+{
+    return YES;
+}
+
+- (void)setCSSOMViewSmoothScrollingEnabled:(BOOL)flag
+{
+}
+
+- (BOOL)mediaStreamEnabled
+{
+    return YES;
+}
+
+- (void)setMediaStreamEnabled:(BOOL)flag
+{
+}
+
+- (BOOL)isDNSPrefetchingEnabled
+{
+    return NO;
+}
+
+- (void)setDNSPrefetchingEnabled:(BOOL)flag
+{
+}
+
+- (BOOL)linkPreloadResponsiveImagesEnabled
+{
+    return YES;
+}
+
+- (void)setLinkPreloadResponsiveImagesEnabled:(BOOL)flag
+{
+}
 
 - (BOOL)constantPropertiesEnabled
 {
@@ -3332,5 +3334,15 @@ static RetainPtr<NSString>& classIBCreatorID()
 {
 }
 
+#if PLATFORM(IOS_FAMILY)
+- (BOOL)networkDataUsageTrackingEnabled
+{
+    return NO;
+}
+
+- (void)setNetworkDataUsageTrackingEnabled:(BOOL)trackingEnabled
+{
+}
+#endif // PLATFORM(IOS_FAMILY)
 
 @end

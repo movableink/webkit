@@ -59,7 +59,8 @@
 #endif
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
-#include "DMABufRendererBufferMode.h"
+#include "AvailableInputDevices.h"
+#include "RendererBufferTransportMode.h"
 #include <WebCore/SystemSettings.h>
 #include <wtf/MemoryPressureHandler.h>
 #endif
@@ -137,7 +138,6 @@ struct WebProcessCreationParameters {
     String uiProcessBundleIdentifier;
     int latencyQOS { 0 };
     int throughputQOS { 0 };
-    String presentingApplicationBundleIdentifier;
 #endif
 
     ProcessID presentingApplicationPID { 0 };
@@ -188,10 +188,6 @@ struct WebProcessCreationParameters {
 #endif
 
     std::optional<WebProcessDataStoreParameters> websiteDataStoreParameters;
-    
-#if PLATFORM(IOS) || PLATFORM(VISION)
-    Vector<SandboxExtension::Handle> compilerServiceExtensionHandles;
-#endif
 
     std::optional<SandboxExtension::Handle> mobileGestaltExtensionHandle;
     std::optional<SandboxExtension::Handle> launchServicesExtensionHandle;
@@ -201,10 +197,6 @@ struct WebProcessCreationParameters {
 #endif
     bool enableDecodingHEIC { false };
     bool enableDecodingAVIF { false };
-#endif
-
-#if PLATFORM(IOS_FAMILY)
-    Vector<SandboxExtension::Handle> dynamicIOKitExtensionHandles;
 #endif
 
 #if PLATFORM(VISION)
@@ -231,8 +223,11 @@ struct WebProcessCreationParameters {
 #endif
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
-    OptionSet<DMABufRendererBufferMode> dmaBufRendererBufferMode;
+    OptionSet<RendererBufferTransportMode> rendererBufferTransportMode;
     WebCore::SystemSettings::State systemSettings;
+    std::optional<MemoryPressureHandler::Configuration> memoryPressureHandlerConfiguration;
+    bool disableFontHintingForTesting { false };
+    OptionSet<AvailableInputDevices> availableInputDevices;
 #endif
 
 #if PLATFORM(GTK)
@@ -251,11 +246,6 @@ struct WebProcessCreationParameters {
     AccessibilityPreferences accessibilityPreferences;
 #if PLATFORM(IOS_FAMILY)
     bool applicationAccessibilityEnabled { false };
-#endif
-
-#if PLATFORM(GTK) || PLATFORM(WPE)
-    std::optional<MemoryPressureHandler::Configuration> memoryPressureHandlerConfiguration;
-    bool disableFontHintingForTesting { false };
 #endif
 
 #if USE(GLIB)
@@ -279,6 +269,10 @@ struct WebProcessCreationParameters {
 
     Seconds memoryFootprintPollIntervalForTesting;
     Vector<size_t> memoryFootprintNotificationThresholds;
+
+#if ENABLE(NOTIFY_BLOCKING)
+    Vector<std::pair<String, uint64_t>> notifyState;
+#endif
 };
 
 } // namespace WebKit

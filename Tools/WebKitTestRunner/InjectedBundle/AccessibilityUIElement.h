@@ -89,11 +89,12 @@ public:
     JSRetainPtr<JSStringRef> domIdentifier() const;
 
     RefPtr<AccessibilityUIElement> elementAtPoint(int x, int y);
-    RefPtr<AccessibilityUIElement> elementAtPointWithRemoteElementForTesting(int x, int y);
-    void elementAtPointResolvingRemoteFrameForTesting(JSContextRef, int x, int y, JSValueRef callback);
+    RefPtr<AccessibilityUIElement> elementAtPointWithRemoteElement(int x, int y);
+    void elementAtPointResolvingRemoteFrame(JSContextRef, int x, int y, JSValueRef callback);
 
     JSValueRef children(JSContextRef);
     RefPtr<AccessibilityUIElement> childAtIndex(unsigned);
+    RefPtr<AccessibilityUIElement> childAtIndexWithRemoteElement(unsigned);
     unsigned indexOfChild(AccessibilityUIElement*);
     unsigned childrenCount();
     RefPtr<AccessibilityUIElement> titleUIElement();
@@ -124,6 +125,7 @@ public:
     RefPtr<AccessibilityUIElement> focusableAncestor();
     RefPtr<AccessibilityUIElement> editableAncestor();
     RefPtr<AccessibilityUIElement> highestEditableAncestor();
+    JSRetainPtr<JSStringRef> selectedText();
 #else
     void syncPress() { press(); }
     void asyncIncrement() { }
@@ -131,7 +133,14 @@ public:
     RefPtr<AccessibilityUIElement> focusableAncestor() { return nullptr; }
     RefPtr<AccessibilityUIElement> editableAncestor() { return nullptr; }
     RefPtr<AccessibilityUIElement> highestEditableAncestor() { return nullptr; }
-#endif
+    JSRetainPtr<JSStringRef> selectedText() { return nullptr; }
+#endif // PLATFORM(MAC)
+
+#if PLATFORM(COCOA)
+    JSRetainPtr<JSStringRef> dateTimeValue() const;
+#else
+    JSRetainPtr<JSStringRef> dateTimeValue() const { return nullptr; }
+#endif // PLATFORM(COCOA)
 
     // Attributes - platform-independent implementations
     JSRetainPtr<JSStringRef> stringDescriptionOfAttributeValue(JSStringRef attribute);
@@ -169,6 +178,8 @@ public:
     JSRetainPtr<JSStringRef> orientation() const;
     JSRetainPtr<JSStringRef> liveRegionRelevant() const;
     JSRetainPtr<JSStringRef> liveRegionStatus() const;
+    double pageX();
+    double pageY();
     double x();
     double y();
     double width();
@@ -281,8 +292,8 @@ public:
     RefPtr<AccessibilityUIElement> ownerElementAtIndex(unsigned);
     RefPtr<AccessibilityUIElement> ariaOwnsElementAtIndex(unsigned);
 
-    // ARIA Drag and Drop
-    bool ariaIsGrabbed() const;
+    // Drag and drop
+    bool isGrabbed() const;
     // A space concatentated string of all the drop effects.
     JSRetainPtr<JSStringRef> ariaDropEffects() const;
     
@@ -291,6 +302,11 @@ public:
     JSRetainPtr<JSStringRef> rangeForLine(int);
     JSRetainPtr<JSStringRef> rangeForPosition(int x, int y);
     JSRetainPtr<JSStringRef> boundsForRange(unsigned location, unsigned length);
+#if PLATFORM(MAC)
+    JSRetainPtr<JSStringRef> boundsForRangeWithPagePosition(unsigned location, unsigned length);
+#else
+    JSRetainPtr<JSStringRef> boundsForRangeWithPagePosition(unsigned location, unsigned length) { return createJSString(); };
+#endif
     bool setSelectedTextRange(unsigned location, unsigned length);
     JSRetainPtr<JSStringRef> stringForRange(unsigned location, unsigned length);
     JSRetainPtr<JSStringRef> attributedStringForRange(unsigned location, unsigned length);
@@ -327,6 +343,7 @@ public:
     RefPtr<AccessibilityTextMarker> previousLineStartTextMarkerForTextMarker(AccessibilityTextMarker*);
     RefPtr<AccessibilityTextMarker> nextLineEndTextMarkerForTextMarker(AccessibilityTextMarker*);
     int lineIndexForTextMarker(AccessibilityTextMarker*) const;
+    RefPtr<AccessibilityTextMarkerRange> styleTextMarkerRangeForTextMarker(AccessibilityTextMarker*);
     RefPtr<AccessibilityTextMarkerRange> textMarkerRangeForSearchPredicate(JSContextRef, AccessibilityTextMarkerRange* startRange, bool forward, JSValueRef searchKey, JSStringRef searchText, bool visibleOnly, bool immediateDescendantsOnly);
     RefPtr<AccessibilityTextMarkerRange> misspellingTextMarkerRange(AccessibilityTextMarkerRange* start, bool forward);
     RefPtr<AccessibilityTextMarkerRange> textMarkerRangeForElement(AccessibilityUIElement*);
@@ -350,6 +367,7 @@ public:
     JSRetainPtr<JSStringRef> stringForTextMarkerRange(AccessibilityTextMarkerRange*);
     JSRetainPtr<JSStringRef> rectsForTextMarkerRange(AccessibilityTextMarkerRange*, JSStringRef);
     JSRetainPtr<JSStringRef> attributedStringForTextMarkerRange(AccessibilityTextMarkerRange*);
+    JSRetainPtr<JSStringRef> attributedStringForTextMarkerRangeWithDidSpellCheck(AccessibilityTextMarkerRange*);
     JSRetainPtr<JSStringRef> attributedStringForTextMarkerRangeWithOptions(AccessibilityTextMarkerRange*, bool);
     int textMarkerRangeLength(AccessibilityTextMarkerRange*);
     bool attributedStringForTextMarkerRangeContainsAttribute(JSStringRef, AccessibilityTextMarkerRange*);
@@ -372,6 +390,8 @@ public:
     RefPtr<AccessibilityTextMarker> nextSentenceEndTextMarkerForTextMarker(AccessibilityTextMarker*);
     RefPtr<AccessibilityTextMarker> previousSentenceStartTextMarkerForTextMarker(AccessibilityTextMarker*);
     RefPtr<AccessibilityTextMarkerRange> textMarkerRangeMatchesTextNearMarkers(JSStringRef, AccessibilityTextMarker*, AccessibilityTextMarker*);
+    JSRetainPtr<JSStringRef> textMarkerDebugDescription(AccessibilityTextMarker*);
+    JSRetainPtr<JSStringRef> textMarkerRangeDebugDescription(AccessibilityTextMarkerRange*);
 
     // Returns an ordered list of supported actions for an element.
     JSRetainPtr<JSStringRef> supportedActions() const;
@@ -406,8 +426,6 @@ public:
     bool scrollPageLeft();
     bool scrollPageRight();
     
-    bool hasDocumentRoleAncestor() const;
-    bool hasWebApplicationAncestor() const;
     bool isInDescriptionListDetail() const;
     bool isInDescriptionListTerm() const;
 

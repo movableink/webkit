@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -93,10 +93,10 @@ ASCIILiteral AXObjectCache::notificationPlatformName(AXNotification notification
     return name;
 }
 
-void AXObjectCache::relayNotification(const String& notificationName, RetainPtr<NSData> notificationData)
+void AXObjectCache::relayNotification(String&& notificationName, RetainPtr<NSData>&& notificationData)
 {
-    if (auto* page = document().page())
-        page->chrome().relayAccessibilityNotification(notificationName, notificationData);
+    if (RefPtr page = document() ? document()->page() : nullptr)
+        page->chrome().relayAccessibilityNotification(WTFMove(notificationName), WTFMove(notificationData));
 }
 
 void AXObjectCache::postPlatformNotification(AccessibilityObject& object, AXNotification notification)
@@ -116,17 +116,17 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject& object, AXNoti
 void AXObjectCache::postPlatformAnnouncementNotification(const String& message)
 {
     auto notificationName = notificationPlatformName(AXNotification::AnnouncementRequested).createNSString();
-    NSString *nsMessage = static_cast<NSString *>(message);
+    RetainPtr nsMessage = message.createNSString();
     if (RefPtr root = getOrCreate(m_document->view())) {
         [root->wrapper() accessibilityOverrideProcessNotification:notificationName.get() notificationData:[nsMessage dataUsingEncoding:NSUTF8StringEncoding]];
 
         // To simulate AX notifications for LayoutTests on the simulator, call
         // the wrapper's accessibilityPostedNotification.
-        [root->wrapper() accessibilityPostedNotification:notificationName.get() userInfo:@{ notificationName.get() : nsMessage }];
+        [root->wrapper() accessibilityPostedNotification:notificationName.get() userInfo:@{ notificationName.get() : nsMessage.get() }];
     }
 }
 
-void AXObjectCache::postTextStateChangePlatformNotification(AccessibilityObject* object, const AXTextStateChangeIntent&, const VisibleSelection&)
+void AXObjectCache::postTextSelectionChangePlatformNotification(AccessibilityObject* object, const AXTextStateChangeIntent&, const VisibleSelection&)
 {
     if (object)
         postPlatformNotification(*object, AXNotification::SelectedTextChanged);

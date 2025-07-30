@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,7 +39,7 @@ namespace JSC {
 class JSWebAssemblyGlobal final : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
 
     template<typename CellType, SubspaceAccess mode>
@@ -48,7 +48,7 @@ public:
         return vm.webAssemblyGlobalSpace<mode>();
     }
 
-    static JSWebAssemblyGlobal* tryCreate(JSGlobalObject*, VM&, Structure*, Ref<Wasm::Global>&&);
+    static JSWebAssemblyGlobal* create(VM&, Structure*, Ref<Wasm::Global>&&);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;
@@ -61,7 +61,7 @@ private:
     DECLARE_DEFAULT_FINISH_CREATION;
     DECLARE_VISIT_CHILDREN;
 
-    Ref<Wasm::Global> m_global;
+    const Ref<Wasm::Global> m_global;
 };
 
 } // namespace JSC

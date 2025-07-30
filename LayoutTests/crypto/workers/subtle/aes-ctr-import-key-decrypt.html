@@ -5,10 +5,6 @@
 </head>
 <body>
     <script>
-
-        if (window.internals)
-          internals.settings.setDeprecateAESCFBWebCryptoEnabled(false);
-
         worker = startWorker('resources/aes-ctr-import-key-decrypt.js');
     </script>
     <script src="../../../resources/js-test-post.js"></script>

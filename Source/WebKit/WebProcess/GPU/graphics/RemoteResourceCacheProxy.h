@@ -28,17 +28,17 @@
 #if ENABLE(GPU_PROCESS)
 
 #include "RenderingUpdateID.h"
-#include <WebCore/RenderingResource.h>
+#include <WebCore/DecomposedGlyphs.h>
+#include <WebCore/FilterFunction.h>
+#include <WebCore/Gradient.h>
+#include <WebCore/NativeImage.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/HashMap.h>
 
 namespace WebCore {
-class DecomposedGlyphs;
 class Filter;
 class Font;
-class Gradient;
 class ImageBuffer;
-class NativeImage;
 struct FontCustomPlatformData;
 }
 
@@ -47,20 +47,14 @@ namespace WebKit {
 class RemoteImageBufferProxy;
 class RemoteRenderingBackendProxy;
 
-class RemoteResourceCacheProxy : public WebCore::RenderingResourceObserver {
+class RemoteResourceCacheProxy final : public WebCore::RenderingResourceObserver {
 public:
+    using WeakValueType = WebCore::RenderingResourceObserver;
     RemoteResourceCacheProxy(RemoteRenderingBackendProxy&);
     ~RemoteResourceCacheProxy();
 
-    void cacheImageBuffer(RemoteImageBufferProxy&);
-    RefPtr<RemoteImageBufferProxy> cachedImageBuffer(WebCore::RenderingResourceIdentifier) const;
-    void forgetImageBuffer(WebCore::RenderingResourceIdentifier);
-
-    WebCore::NativeImage* cachedNativeImage(WebCore::RenderingResourceIdentifier) const;
-
-    void recordNativeImageUse(WebCore::NativeImage&);
+    void recordNativeImageUse(WebCore::NativeImage&, const WebCore::DestinationColorSpace&);
     void recordFontUse(WebCore::Font&);
-    void recordImageBufferUse(WebCore::ImageBuffer&);
     void recordDecomposedGlyphsUse(WebCore::DecomposedGlyphs&);
     void recordGradientUse(WebCore::Gradient&);
     void recordFilterUse(WebCore::Filter&);
@@ -68,38 +62,39 @@ public:
 
     void didPaintLayers();
 
-    void remoteResourceCacheWasDestroyed();
     void releaseMemory();
-    void releaseAllImageResources();
+    void releaseNativeImages();
     
-    unsigned imagesCount() const;
-
-    void clear();
+    unsigned nativeImageCountForTesting() const { return m_nativeImages.size(); }
 
 private:
-    using ImageBufferHashMap = HashMap<WebCore::RenderingResourceIdentifier, ThreadSafeWeakPtr<RemoteImageBufferProxy>>;
-    using RenderingResourceHashMap = HashMap<WebCore::RenderingResourceIdentifier, ThreadSafeWeakPtr<WebCore::RenderingResource>>;
-    using FontHashMap = HashMap<WebCore::RenderingResourceIdentifier, uint64_t>;
-
-    void releaseRenderingResource(WebCore::RenderingResourceIdentifier) override;
-    void clearRenderingResourceMap();
-    void clearNativeImageMap();
+    // WebCore::RenderingResourceObserver.
+    void willDestroyNativeImage(WebCore::RenderingResourceIdentifier) override;
+    void willDestroyGradient(WebCore::RenderingResourceIdentifier) override;
+    void willDestroyDecomposedGlyphs(WebCore::RenderingResourceIdentifier) override;
+    void willDestroyFilter(WebCore::RenderingResourceIdentifier) override;
 
     void finalizeRenderingUpdateForFonts();
     void prepareForNextRenderingUpdate();
-    void clearFontMap();
-    void clearFontCustomPlatformDataMap();
-    void clearImageBufferBackends();
+    void releaseFonts();
+    void releaseFontCustomPlatformDatas();
 
-    ImageBufferHashMap m_imageBuffers;
-    RenderingResourceHashMap m_renderingResources;
+    HashSet<WebCore::RenderingResourceIdentifier> m_nativeImages;
+    HashSet<WebCore::RenderingResourceIdentifier> m_gradients;
+    HashSet<WebCore::RenderingResourceIdentifier> m_decomposedGlyphs;
+    HashSet<WebCore::RenderingResourceIdentifier> m_filters;
+
+    WeakPtrFactory<WebCore::RenderingResourceObserver> m_resourceObserverWeakFactory;
+    WeakPtrFactory<WebCore::RenderingResourceObserver> m_nativeImageResourceObserverWeakFactory;
+
+    using FontHashMap = HashMap<WebCore::RenderingResourceIdentifier, uint64_t>;
     FontHashMap m_fonts;
     FontHashMap m_fontCustomPlatformDatas;
 
     unsigned m_numberOfFontsUsedInCurrentRenderingUpdate { 0 };
     unsigned m_numberOfFontCustomPlatformDatasUsedInCurrentRenderingUpdate { 0 };
 
-    CheckedRef<RemoteRenderingBackendProxy> m_remoteRenderingBackendProxy;
+    const CheckedRef<RemoteRenderingBackendProxy> m_remoteRenderingBackendProxy;
     uint64_t m_renderingUpdateID;
 };
 

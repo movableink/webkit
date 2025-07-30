@@ -204,7 +204,7 @@ SourceOrigin CallFrame::callerSourceOrigin(VM& vm)
             // instead of the source origin of the forEach function.
             if (static_cast<FunctionExecutable*>(visitor->codeBlock()->ownerExecutable())->isBuiltinFunction())
                 return IterationStatus::Continue;
-            FALLTHROUGH;
+            [[fallthrough]];
 
         case StackVisitor::Frame::CodeType::Eval:
         case StackVisitor::Frame::CodeType::Module:
@@ -302,7 +302,7 @@ void CallFrame::dump(PrintStream& out) const
     }
 
     if (CodeBlock* codeBlock = this->codeBlock()) {
-        out.print(codeBlock->inferredName(), "#", codeBlock->hashAsStringIfPossible(), " [", codeBlock->jitType(), " ", bytecodeIndex(), "]");
+        out.print(codeBlock->inferredNameWithHash(), " [", codeBlock->jitType(), " ", bytecodeIndex(), "]");
 
         out.print("(");
         thisValue().dumpForBacktrace(out);

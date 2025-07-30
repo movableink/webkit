@@ -46,7 +46,9 @@
 #import <wtf/HashMap.h>
 #import <wtf/HashSet.h>
 #import <wtf/Lock.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/Vector.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/text/WTFString.h>
 #import <wtf/text/StringHash.h>
 
@@ -407,8 +409,8 @@ inline Expected<Result, JSValueRef> performPropertyOperation(NSStringFunction st
 
     Result result;
     // If it's a NSString already, reduce indirection and just pass the NSString.
-    if ([propertyKey isKindOfClass:[NSString class]]) {
-        auto name = OpaqueJSString::tryCreate((NSString *)propertyKey);
+    if (auto *propertyKeyString = dynamic_objc_cast<NSString>(propertyKey)) {
+        auto name = OpaqueJSString::tryCreate(propertyKeyString);
         result = stringFunction([context JSGlobalContextRef], object, name.get(), arguments..., &exception);
     } else
         result = jsFunction([context JSGlobalContextRef], object, [[JSValue valueWithObject:propertyKey inContext:context] JSValueRef], arguments..., &exception);
@@ -844,6 +846,9 @@ private:
 
 inline id JSContainerConvertor::convert(JSValueRef value)
 {
+    if (!value)
+        return nil;
+
     auto iter = m_objectMap.find(value);
     if (iter != m_objectMap.end())
         return iter->value;
@@ -881,6 +886,7 @@ static void reportExceptionToInspector(JSGlobalContextRef context, JSC::JSValue 
 }
 #endif
 
+// Similar to JavaScriptEvaluationResult::toVariant.
 static JSContainerConvertor::Task valueToObjectWithoutCopy(JSGlobalContextRef context, JSValueRef value)
 {
     if (!JSValueIsObject(context, value)) {
@@ -898,10 +904,8 @@ static JSContainerConvertor::Task valueToObjectWithoutCopy(JSGlobalContextRef co
             primitive = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, jsstring.get())).bridgingAutorelease();
         } else if (JSValueIsNull(context, value))
             primitive = [NSNull null];
-        else {
-            ASSERT(JSValueIsUndefined(context, value));
+        else
             primitive = nil;
-        }
         return { value, primitive, ContainerNone };
     }
 
@@ -1145,8 +1149,8 @@ static ObjcContainerConvertor::Task objectToValueWithoutCopy(JSContext *context,
         if ([object isKindOfClass:[JSValue class]])
             return { object, ((JSValue *)object)->m_value, ContainerNone };
 
-        if ([object isKindOfClass:[NSString class]]) {
-            auto string = OpaqueJSString::tryCreate((NSString *)object);
+        if (auto *nsString = dynamic_objc_cast<NSString>(object)) {
+            auto string = OpaqueJSString::tryCreate(nsString);
             return { object, JSValueMakeString(contextRef, string.get()), ContainerNone };
         }
 
@@ -1202,8 +1206,8 @@ JSValueRef objectToValue(JSContext *context, id object)
             ASSERT([current.objc isKindOfClass:[NSDictionary class]]);
             NSDictionary *dictionary = (NSDictionary *)current.objc;
             for (id key in [dictionary keyEnumerator]) {
-                if ([key isKindOfClass:[NSString class]]) {
-                    auto propertyName = OpaqueJSString::tryCreate((NSString *)key);
+                if (auto *keyString = dynamic_objc_cast<NSString>(key)) {
+                    auto propertyName = OpaqueJSString::tryCreate(keyString);
                     JSObjectSetProperty(contextRef, js, propertyName.get(), convertor.convert([dictionary objectForKey:key]), 0, 0);
                 }
             }
@@ -1261,10 +1265,9 @@ static StructHandlers* createStructHandlerMap()
     // Step 1: find all valueWith<Foo>:inContext: class methods in JSValue.
     forEachMethodInClass(object_getClass([JSValue class]), ^(Method method){
         SEL selector = method_getName(method);
-        const char* name = sel_getName(selector);
-        size_t nameLength = strlen(name);
+        auto name = unsafeSpan(sel_getName(selector));
         // Check for valueWith<Foo>:context:
-        if (nameLength < valueWithXinContextLength || memcmp(name, "valueWith", 9) || memcmp(name + nameLength - 11, ":inContext:", 11))
+        if (name.size() < valueWithXinContextLength || !spanHasPrefix(name, "valueWith"_span) || !spanHasSuffix(name, ":inContext:"_span))
             return;
         // Check for [ id, SEL, <type>, <contextType> ]
         if (method_getNumberOfArguments(method) != 4)
@@ -1289,10 +1292,9 @@ static StructHandlers* createStructHandlerMap()
     // Step 2: find all to<Foo> instance methods in JSValue.
     forEachMethodInClass([JSValue class], ^(Method method){
         SEL selector = method_getName(method);
-        const char* name = sel_getName(selector);
-        size_t nameLength = strlen(name);
+        auto name = unsafeSpan(sel_getName(selector));
         // Check for to<Foo>
-        if (nameLength < toXLength || memcmp(name, "to", 2))
+        if (name.size() < toXLength || !spanHasPrefix(name, "to"_span))
             return;
         // Check for [ id, SEL ]
         if (method_getNumberOfArguments(method) != 2)
@@ -1305,18 +1307,18 @@ static StructHandlers* createStructHandlerMap()
         StructTagHandler& handler = iter->value;
 
         // check that strlen(<foo>) == strlen(<Foo>)
-        const char* valueWithName = sel_getName(handler.typeToValueSEL);
-        size_t valueWithLength = strlen(valueWithName);
-        if (valueWithLength - valueWithXinContextLength != nameLength - toXLength)
+        auto valueWithName = unsafeSpan(sel_getName(handler.typeToValueSEL));
+        if (valueWithName.size() - valueWithXinContextLength != name.size() - toXLength)
             return;
         // Check that <Foo> == <Foo>
-        if (memcmp(valueWithName + 9, name + 2, nameLength - toXLength - 1))
+        auto lengthToCheck = name.size() - toXLength - 1;
+        if (!equalSpans(valueWithName.subspan(9, lengthToCheck), name.subspan(2, lengthToCheck)))
             return;
         handler.valueToTypeSEL = selector;
     });
 
     // Step 3: clean up - remove entries where we found prospective valueWith<Foo>:inContext: conversions, but no matching to<Foo> methods.
-    typedef HashSet<String> RemoveSet;
+    typedef UncheckedKeyHashSet<String> RemoveSet;
     RemoveSet removeSet;
     for (StructHandlers::iterator iter = structHandlers->begin(); iter != structHandlers->end(); ++iter) {
         StructTagHandler& handler = iter->value;

@@ -115,7 +115,7 @@ void LegacyInlineFlowBox::addToLine(LegacyInlineBox* child)
         bool hasMarkers = false;
         if (auto* textBox = dynamicDowncast<LegacyInlineTextBox>(*child))
             hasMarkers = textBox->hasMarkers();
-        if (childStyle->letterSpacing() < 0 || childStyle->textShadow() || childStyle->textEmphasisMark() != TextEmphasisMark::None || childStyle->hasPositiveStrokeWidth() || hasMarkers || !childStyle->textUnderlineOffset().isAuto() || !childStyle->textDecorationThickness().isAuto() || !childStyle->textUnderlinePosition().isEmpty())
+        if (childStyle->letterSpacing() < 0 || childStyle->hasTextShadow() || childStyle->textEmphasisMark() != TextEmphasisMark::None || childStyle->hasPositiveStrokeWidth() || hasMarkers || !childStyle->textUnderlineOffset().isAuto() || !childStyle->textDecorationThickness().isAuto() || !childStyle->textUnderlinePosition().isEmpty())
             child->clearKnownToHaveNoOverflow();
     } else if (child->boxModelObject()->hasSelfPaintingLayer())
         child->clearKnownToHaveNoOverflow();
@@ -183,32 +183,6 @@ void LegacyInlineFlowBox::deleteLine()
 void LegacyInlineFlowBox::removeLineBoxFromRenderObject()
 {
     downcast<RenderInline>(renderer()).legacyLineBoxes().removeLineBox(this);
-}
-
-void LegacyInlineFlowBox::extractLine()
-{
-    if (!extracted())
-        extractLineBoxFromRenderObject();
-    for (auto* child = firstChild(); child; child = child->nextOnLine())
-        child->extractLine();
-}
-
-void LegacyInlineFlowBox::extractLineBoxFromRenderObject()
-{
-    downcast<RenderInline>(renderer()).legacyLineBoxes().extractLineBox(this);
-}
-
-void LegacyInlineFlowBox::attachLine()
-{
-    if (extracted())
-        attachLineBoxToRenderObject();
-    for (auto* child = firstChild(); child; child = child->nextOnLine())
-        child->attachLine();
-}
-
-void LegacyInlineFlowBox::attachLineBoxToRenderObject()
-{
-    downcast<RenderInline>(renderer()).legacyLineBoxes().attachLineBox(this);
 }
 
 void LegacyInlineFlowBox::adjustPosition(float dx, float dy)
@@ -285,9 +259,7 @@ void LegacyInlineFlowBox::computeOverflow(LayoutUnit lineTop, LayoutUnit lineBot
     if (knownToHaveNoOverflow())
         return;
 
-    if (m_overflow)
-        m_overflow = nullptr;
-
+    m_overflow = { };
     // Visual overflow just includes overflow for stuff we need to repaint ourselves. Self-painting layers are ignored.
     // Layout overflow is used to determine scrolling extent, so it still includes child layers and also factors in
     // transforms, relative positioning, etc.
@@ -316,7 +288,7 @@ void LegacyInlineFlowBox::setVisualOverflow(const LayoutRect& rect, LayoutUnit l
         return;
 
     if (!m_overflow)
-        m_overflow = adoptRef(new RenderOverflow(frameBox, frameBox));
+        m_overflow = makeUnique<RenderOverflow>(frameBox, frameBox);
 
     m_overflow->setVisualOverflow(rect);
 }

@@ -35,6 +35,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "RTCIceCandidate.h"
 #include "RTCIceGatheringState.h"
 #include "RTCIceTransportBackend.h"

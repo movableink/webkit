@@ -30,8 +30,6 @@
 
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebGLDrawBuffers);
@@ -53,39 +51,37 @@ void WebGLDrawBuffers::drawBuffersWEBGL(const Vector<GCGLenum>& buffers)
 {
     if (isContextLost())
         return;
-    auto& context = this->context();
+    Ref context = this->context();
     GCGLsizei n = buffers.size();
-    const GCGLenum* bufs = buffers.data();
-    if (!context.m_framebufferBinding) {
+    auto bufs = buffers.span();
+    if (!context->m_framebufferBinding) {
         if (n != 1) {
-            context.synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "drawBuffersWEBGL"_s, "more or fewer than one buffer"_s);
+            context->synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "drawBuffersWEBGL"_s, "more or fewer than one buffer"_s);
             return;
         }
         if (bufs[0] != GraphicsContextGL::BACK && bufs[0] != GraphicsContextGL::NONE) {
-            context.synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "drawBuffersWEBGL"_s, "BACK or NONE"_s);
+            context->synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "drawBuffersWEBGL"_s, "BACK or NONE"_s);
             return;
         }
         // Because the backbuffer is simulated on all current WebKit ports, we need to change BACK to COLOR_ATTACHMENT0.
         GCGLenum value[1] { bufs[0] == GraphicsContextGL::BACK ? GraphicsContextGL::COLOR_ATTACHMENT0 : GraphicsContextGL::NONE };
-        context.protectedGraphicsContextGL()->drawBuffersEXT(value);
-        context.setBackDrawBuffer(bufs[0]);
+        context->protectedGraphicsContextGL()->drawBuffersEXT(value);
+        context->setBackDrawBuffer(bufs[0]);
     } else {
-        if (n > context.maxDrawBuffers()) {
-            context.synthesizeGLError(GraphicsContextGL::INVALID_VALUE, "drawBuffersWEBGL"_s, "more than max draw buffers"_s);
+        if (n > context->maxDrawBuffers()) {
+            context->synthesizeGLError(GraphicsContextGL::INVALID_VALUE, "drawBuffersWEBGL"_s, "more than max draw buffers"_s);
             return;
         }
         for (GCGLsizei i = 0; i < n; ++i) {
             if (bufs[i] != GraphicsContextGL::NONE && bufs[i] != GraphicsContextGL::COLOR_ATTACHMENT0_EXT + i) {
-                context.synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "drawBuffersWEBGL"_s, "COLOR_ATTACHMENTi_EXT or NONE"_s);
+                context->synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "drawBuffersWEBGL"_s, "COLOR_ATTACHMENTi_EXT or NONE"_s);
                 return;
             }
         }
-        context.m_framebufferBinding->drawBuffers(buffers);
+        context->m_framebufferBinding->drawBuffers(buffers);
     }
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEBGL)

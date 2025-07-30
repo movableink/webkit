@@ -26,7 +26,9 @@
 #pragma once
 
 #include <CoreVideo/CoreVideo.h>
+#include <wtf/CheckedArithmetic.h>
 #include <wtf/SoftLinking.h>
+#include <wtf/StdLibExtras.h>
 
 typedef struct __IOSurface* IOSurfaceRef;
 
@@ -71,11 +73,11 @@ SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVPixelBufferLockBaseAddress, 
 #define CVPixelBufferLockBaseAddress softLink_CoreVideo_CVPixelBufferLockBaseAddress
 SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVPixelBufferUnlockBaseAddress, CVReturn, (CVPixelBufferRef pixelBuffer, CVOptionFlags lockFlags), (pixelBuffer, lockFlags))
 #define CVPixelBufferUnlockBaseAddress softLink_CoreVideo_CVPixelBufferUnlockBaseAddress
-SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVPixelBufferPoolCreate, CVReturn, (CFAllocatorRef allocator, CFDictionaryRef poolAttributes, CFDictionaryRef pixelBufferAttributes, CVPixelBufferPoolRef* poolOut), (allocator, poolAttributes, pixelBufferAttributes, poolOut))
+SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVPixelBufferPoolCreate, CVReturn, (CFAllocatorRef allocator, CFDictionaryRef poolAttributes, CFDictionaryRef pixelBufferAttributes, CF_RETURNS_RETAINED CVPixelBufferPoolRef* poolOut), (allocator, poolAttributes, pixelBufferAttributes, poolOut))
 #define CVPixelBufferPoolCreate softLink_CoreVideo_CVPixelBufferPoolCreate
-SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVPixelBufferPoolCreatePixelBuffer, CVReturn, (CFAllocatorRef allocator, CVPixelBufferPoolRef pixelBufferPool, CVPixelBufferRef* pixelBufferOut), (allocator, pixelBufferPool, pixelBufferOut))
+SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVPixelBufferPoolCreatePixelBuffer, CVReturn, (CFAllocatorRef allocator, CVPixelBufferPoolRef pixelBufferPool, CF_RETURNS_RETAINED CVPixelBufferRef* pixelBufferOut), (allocator, pixelBufferPool, pixelBufferOut))
 #define CVPixelBufferPoolCreatePixelBuffer softLink_CoreVideo_CVPixelBufferPoolCreatePixelBuffer
-SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVPixelBufferPoolCreatePixelBufferWithAuxAttributes, CVReturn, (CFAllocatorRef allocator, CVPixelBufferPoolRef pixelBufferPool, CFDictionaryRef auxiliaryAttributes, CVPixelBufferRef* pixelBufferOut), (allocator, pixelBufferPool, auxiliaryAttributes, pixelBufferOut))
+SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVPixelBufferPoolCreatePixelBufferWithAuxAttributes, CVReturn, (CFAllocatorRef allocator, CVPixelBufferPoolRef pixelBufferPool, CFDictionaryRef auxiliaryAttributes, CF_RETURNS_RETAINED CVPixelBufferRef* pixelBufferOut), (allocator, pixelBufferPool, auxiliaryAttributes, pixelBufferOut))
 #define CVPixelBufferPoolCreatePixelBufferWithAuxAttributes softLink_CoreVideo_CVPixelBufferPoolCreatePixelBufferWithAuxAttributes
 SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVPixelBufferGetIOSurface, IOSurfaceRef, (CVPixelBufferRef pixelBuffer), (pixelBuffer))
 #define CVPixelBufferGetIOSurface softLink_CoreVideo_CVPixelBufferGetIOSurface
@@ -94,6 +96,8 @@ SOFT_LINK_CONSTANT_FOR_HEADER(WebCore, CoreVideo, kCVPixelFormatOpenGLCompatibil
 #define kCVPixelFormatOpenGLCompatibility get_CoreVideo_kCVPixelFormatOpenGLCompatibility()
 SOFT_LINK_CONSTANT_FOR_HEADER(WebCore, CoreVideo, kCVPixelFormatOpenGLESCompatibility, CFStringRef)
 #define kCVPixelFormatOpenGLESCompatibility get_CoreVideo_kCVPixelFormatOpenGLESCompatibility()
+SOFT_LINK_CONSTANT_FOR_HEADER(WebCore, CoreVideo, kCVPixelBufferIOSurfaceCoreAnimationCompatibilityKey, CFStringRef)
+#define kCVPixelBufferIOSurfaceCoreAnimationCompatibilityKey get_CoreVideo_kCVPixelBufferIOSurfaceCoreAnimationCompatibilityKey()
 SOFT_LINK_CONSTANT_FOR_HEADER(WebCore, CoreVideo, kCVPixelBufferIOSurfacePropertiesKey, CFStringRef)
 #define kCVPixelBufferIOSurfacePropertiesKey get_CoreVideo_kCVPixelBufferIOSurfacePropertiesKey()
 SOFT_LINK_CONSTANT_FOR_HEADER(WebCore, CoreVideo, kCVPixelBufferPoolMinimumBufferCountKey, CFStringRef)
@@ -159,9 +163,36 @@ SOFT_LINK_CONSTANT_FOR_HEADER(WebCore, CoreVideo, kCVPixelBufferOpenGLCompatibil
 #define kCVPixelBufferOpenGLCompatibilityKey get_CoreVideo_kCVPixelBufferOpenGLCompatibilityKey()
 #endif
 
-SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVPixelBufferCreate, CVReturn, (CFAllocatorRef allocator, size_t width, size_t height, OSType pixelFormatType, CFDictionaryRef pixelBufferAttributes, CVPixelBufferRef *pixelBufferOut), (allocator, width, height, pixelFormatType, pixelBufferAttributes, pixelBufferOut))
+SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVPixelBufferCreate, CVReturn, (CFAllocatorRef allocator, size_t width, size_t height, OSType pixelFormatType, CFDictionaryRef pixelBufferAttributes, CF_RETURNS_RETAINED CVPixelBufferRef *pixelBufferOut), (allocator, width, height, pixelFormatType, pixelBufferAttributes, pixelBufferOut))
 #define CVPixelBufferCreate softLink_CoreVideo_CVPixelBufferCreate
-SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVPixelBufferCreateWithBytes, CVReturn, (CFAllocatorRef allocator, size_t width, size_t height, OSType pixelFormatType, void* data, size_t bytesPerRow, void (*releaseCallback)(void*, const void*), void* releasePointer, CFDictionaryRef pixelBufferAttributes, CVPixelBufferRef *pixelBufferOut), (allocator, width, height, pixelFormatType, data, bytesPerRow, releaseCallback, releasePointer, pixelBufferAttributes, pixelBufferOut))
+
+SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVPixelBufferCreateWithBytes, CVReturn, (CFAllocatorRef allocator, size_t width, size_t height, OSType pixelFormatType, void* data, size_t bytesPerRow, void (*releaseCallback)(void*, const void*), void* releasePointer, CFDictionaryRef pixelBufferAttributes, CF_RETURNS_RETAINED CVPixelBufferRef *pixelBufferOut), (allocator, width, height, pixelFormatType, data, bytesPerRow, releaseCallback, releasePointer, pixelBufferAttributes, pixelBufferOut))
 #define CVPixelBufferCreateWithBytes softLink_CoreVideo_CVPixelBufferCreateWithBytes
-SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVPixelBufferCreateWithIOSurface, CVReturn, (CFAllocatorRef allocator, IOSurfaceRef surface, CFDictionaryRef pixelBufferAttributes, CVPixelBufferRef * pixelBufferOut), (allocator, surface, pixelBufferAttributes, pixelBufferOut))
+
+// FIXME: The system header does not have CV_RETURNS_RETAINED_PARAMETER specified for pixelBufferOut. See rdar://148084567.
+SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVPixelBufferCreateWithIOSurface, CVReturn, (CFAllocatorRef allocator, IOSurfaceRef surface, CFDictionaryRef pixelBufferAttributes, CF_RETURNS_RETAINED CVPixelBufferRef * pixelBufferOut), (allocator, surface, pixelBufferAttributes, pixelBufferOut))
 #define CVPixelBufferCreateWithIOSurface softLink_CoreVideo_CVPixelBufferCreateWithIOSurface
+
+namespace WebCore {
+inline std::span<uint8_t> CVPixelBufferGetSpanOfPlane(CVPixelBufferRef pixelBuffer, size_t planeIndex)
+{
+    auto* baseAddress = static_cast<uint8_t*>(WebCore::CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, planeIndex));
+    if (!baseAddress)
+        return { };
+
+    CheckedSize bytesPerRow = WebCore::CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, planeIndex);
+    auto height = WebCore::CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
+    return unsafeMakeSpan(baseAddress, bytesPerRow * height);
+}
+
+inline std::span<uint8_t> CVPixelBufferGetSpan(CVPixelBufferRef pixelBuffer)
+{
+    auto* baseAddress = static_cast<uint8_t*>(CVPixelBufferGetBaseAddress(pixelBuffer));
+    if (!baseAddress)
+        return { };
+
+    CheckedSize bytesPerRow = WebCore::CVPixelBufferGetBytesPerRow(pixelBuffer);
+    auto height = WebCore::CVPixelBufferGetHeight(pixelBuffer);
+    return unsafeMakeSpan(baseAddress, bytesPerRow * height);
+}
+}

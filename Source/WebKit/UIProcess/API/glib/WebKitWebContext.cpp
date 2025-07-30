@@ -24,6 +24,7 @@
 #include "APIInjectedBundleClient.h"
 #include "APIProcessPoolConfiguration.h"
 #include "APIString.h"
+#include "FrameInfoData.h"
 #include "LegacyGlobalSettings.h"
 #include "NetworkProcessMessages.h"
 #include "TextChecker.h"
@@ -514,7 +515,7 @@ static void webkit_web_context_class_init(WebKitWebContextClass* webContextClass
     bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
     bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
 
-    s_serviceWorkerNotificationProvider = makeUnique<WebKitNotificationProvider>(&WebNotificationManagerProxy::sharedServiceWorkerManager(), nullptr);
+    s_serviceWorkerNotificationProvider = makeUnique<WebKitNotificationProvider>(&WebNotificationManagerProxy::serviceWorkerManagerSingleton(), nullptr);
 
     gObjectClass->get_property = webkitWebContextGetProperty;
     gObjectClass->set_property = webkitWebContextSetProperty;
@@ -1092,7 +1093,7 @@ WebKitDownload* webkit_web_context_download_uri(WebKitWebContext* context, const
 
     WebCore::ResourceRequest request(String::fromUTF8(uri));
     auto& websiteDataStore = webkitWebsiteDataManagerGetDataStore(context->priv->websiteDataManager.get());
-    auto downloadProxy = context->priv->processPool->download(websiteDataStore, nullptr, request);
+    auto downloadProxy = context->priv->processPool->download(websiteDataStore, nullptr, request, { });
     auto download = webkitDownloadCreate(downloadProxy.get());
     downloadProxy->setDidStartCallback([context = GRefPtr<WebKitWebContext> { context }, download = download.get()](auto* downloadProxy) {
         if (!downloadProxy)
@@ -1420,24 +1421,27 @@ void webkit_web_context_set_sandbox_enabled(WebKitWebContext* context, gboolean 
 }
 #endif
 
-static bool pathIsHomeDirectory(const char* path)
+static bool pathExistsAndIsNotHomeDirectory(const char* path)
 {
     std::unique_ptr<char, decltype(free)*> resolvedPath(realpath(path, nullptr), free);
     if (!resolvedPath) {
-        g_warning("Failed to canonicalize path %s: %s", path, g_strerror(errno));
-        return true;
+        if (errno == ENOENT)
+            g_warning("Path %s must be created before adding it to the sandbox", path);
+        else
+            g_warning("Failed to canonicalize path %s: %s", path, g_strerror(errno));
+        return false;
     }
 
     if (!strcmp(resolvedPath.get(), "/home"))
-        return true;
+        return false;
 
     std::unique_ptr<char, decltype(free)*> resolvedHomeDirectory(realpath(g_get_home_dir(), nullptr), free);
     if (!resolvedPath) {
         g_warning("Failed to canonicalize path %s: %s", g_get_home_dir(), g_strerror(errno));
-        return true;
+        return false;
     }
 
-    return !strcmp(resolvedPath.get(), resolvedHomeDirectory.get());
+    return strcmp(resolvedPath.get(), resolvedHomeDirectory.get());
 }
 
 static bool pathIsBlocked(const char* path)
@@ -1451,7 +1455,7 @@ static bool pathIsBlocked(const char* path)
     if (!g_path_is_absolute(path))
         return true;
 
-    if (pathIsHomeDirectory(path))
+    if (!pathExistsAndIsNotHomeDirectory(path))
         return true;
 
     GUniquePtr<char*> splitPath(g_strsplit(path, G_DIR_SEPARATOR_S, 3));
@@ -1468,9 +1472,8 @@ static bool pathIsBlocked(const char* path)
  *
  * Adds a path to be mounted in the sandbox.
  *
- * @path must exist before any web process has been created; otherwise,
- * it will be silently ignored. It is a fatal error to add paths after
- * a web process has been spawned.
+ * @path must exist before any web process has been created. It is a fatal error
+ * to add paths after a web process has been spawned.
  *
  * Paths under `/sys`, `/proc`, and `/dev` are invalid. Attempting to
  * add all of `/` is not valid. Since 2.40, adding the user's entire

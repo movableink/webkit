@@ -29,6 +29,7 @@
 #include "ReferrerPolicy.h"
 #include "RequestPriority.h"
 #include "ResourceLoadPriority.h"
+#include "ResourceLoaderOptions.h"
 #include <JavaScriptCore/ScriptFetcher.h>
 #include <wtf/text/WTFString.h>
 
@@ -39,18 +40,18 @@ class Document;
 
 class CachedScriptFetcher : public JSC::ScriptFetcher {
 public:
-    virtual CachedResourceHandle<CachedScript> requestModuleScript(Document&, const URL& sourceURL, String&& integrity) const;
+    virtual CachedResourceHandle<CachedScript> requestModuleScript(Document&, const URL& sourceURL, String&& integrity, std::optional<ServiceWorkersMode>) const;
 
     static Ref<CachedScriptFetcher> create(const AtomString& charset);
 
 protected:
-    CachedScriptFetcher(const String& nonce, ReferrerPolicy referrerPolicy, RequestPriority fetchPriorityHint, const AtomString& charset, const AtomString& initiatorType, bool isInUserAgentShadowTree)
+    CachedScriptFetcher(const String& nonce, ReferrerPolicy referrerPolicy, RequestPriority fetchPriority, const AtomString& charset, const AtomString& initiatorType, bool isInUserAgentShadowTree)
         : m_nonce(nonce)
         , m_charset(charset)
         , m_initiatorType(initiatorType)
         , m_isInUserAgentShadowTree(isInUserAgentShadowTree)
         , m_referrerPolicy(referrerPolicy)
-        , m_fetchPriorityHint(fetchPriorityHint)
+        , m_fetchPriority(fetchPriority)
     {
     }
 
@@ -59,7 +60,7 @@ protected:
     {
     }
 
-    CachedResourceHandle<CachedScript> requestScriptWithCache(Document&, const URL& sourceURL, const String& crossOriginMode, String&& integrity, std::optional<ResourceLoadPriority>) const;
+    CachedResourceHandle<CachedScript> requestScriptWithCache(Document&, const URL& sourceURL, const String& crossOriginMode, String&& integrity, std::optional<ResourceLoadPriority>, std::optional<ServiceWorkersMode>) const;
 
 private:
     String m_nonce;
@@ -67,7 +68,7 @@ private:
     AtomString m_initiatorType;
     bool m_isInUserAgentShadowTree { false };
     ReferrerPolicy m_referrerPolicy { ReferrerPolicy::EmptyString };
-    RequestPriority m_fetchPriorityHint { RequestPriority::Auto };
+    RequestPriority m_fetchPriority { RequestPriority::Auto };
 };
 
 } // namespace WebCore

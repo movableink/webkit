@@ -66,6 +66,12 @@ using ScreenDataMap = HashMap<PlatformDisplayID, ScreenData>;
 struct ScreenProperties {
     PlatformDisplayID primaryDisplayID { 0 };
     ScreenDataMap screenDataMap;
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    OptionSet<ContentsFormat> screenContentsFormatsForTesting;
+#endif
+#if ENABLE(TOUCH_EVENTS) && PLATFORM(GTK)
+    bool screenHasTouchDevice { true };
+#endif
 };
 
 } // namespace WebCore

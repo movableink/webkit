@@ -173,11 +173,12 @@ class EGLContextCompatibilityTest : public ANGLETestBase, public testing::Test
     void SetUp() final
     {
         ANGLETestBase::ANGLETestSetUp();
-        ASSERT_TRUE(eglGetPlatformDisplayEXT != nullptr);
-
-        EGLint dispattrs[] = {EGL_PLATFORM_ANGLE_TYPE_ANGLE, mRenderer, EGL_NONE};
-        mDisplay           = eglGetPlatformDisplayEXT(
-            EGL_PLATFORM_ANGLE_ANGLE, reinterpret_cast<void *>(EGL_DEFAULT_DISPLAY), dispattrs);
+#if !defined(EGL_EGL_PROTOTYPES) || !EGL_EGL_PROTOTYPES
+        ASSERT_TRUE(eglGetPlatformDisplay != nullptr);
+#endif
+        EGLAttrib dispattrs[] = {EGL_PLATFORM_ANGLE_TYPE_ANGLE, mRenderer, EGL_NONE};
+        mDisplay              = eglGetPlatformDisplay(EGL_PLATFORM_ANGLE_ANGLE,
+                                                      reinterpret_cast<void *>(EGL_DEFAULT_DISPLAY), dispattrs);
         ASSERT_TRUE(mDisplay != EGL_NO_DISPLAY);
 
         ASSERT_TRUE(eglInitialize(mDisplay, nullptr, nullptr) == EGL_TRUE);
@@ -490,11 +491,13 @@ void RegisterContextCompatibilityTests()
 
     LoadEntryPointsWithUtilLoader(angle::GLESDriverType::AngleEGL);
 
-    if (eglGetPlatformDisplayEXT == nullptr)
+#if !defined(EGL_EGL_PROTOTYPES) || !EGL_EGL_PROTOTYPES
+    if (eglGetPlatformDisplay == nullptr)
     {
-        std::cerr << "EGLContextCompatibilityTest: missing eglGetPlatformDisplayEXT\n";
+        std::cerr << "EGLContextCompatibilityTest: missing eglGetPlatformDisplay\n";
         return;
     }
+#endif
 
     for (EGLint renderer : renderers)
     {
@@ -502,12 +505,12 @@ void RegisterContextCompatibilityTests()
         if (!IsPlatformAvailable(params))
             continue;
 
-        EGLint dispattrs[] = {EGL_PLATFORM_ANGLE_TYPE_ANGLE, renderer, EGL_NONE};
-        EGLDisplay display = eglGetPlatformDisplayEXT(
+        EGLAttrib dispattrs[] = {EGL_PLATFORM_ANGLE_TYPE_ANGLE, renderer, EGL_NONE};
+        EGLDisplay display    = eglGetPlatformDisplay(
             EGL_PLATFORM_ANGLE_ANGLE, reinterpret_cast<void *>(EGL_DEFAULT_DISPLAY), dispattrs);
         if (display == EGL_NO_DISPLAY)
         {
-            std::cerr << "EGLContextCompatibilityTest: eglGetPlatformDisplayEXT error\n";
+            std::cerr << "EGLContextCompatibilityTest: eglGetPlatformDisplay error\n";
             return;
         }
 

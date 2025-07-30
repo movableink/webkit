@@ -29,6 +29,7 @@
 #import "DaemonEncoder.h"
 #import "PrivateClickMeasurementXPCUtilities.h"
 #import <wtf/NeverDestroyed.h>
+#import <wtf/darwin/XPCExtras.h>
 
 namespace WebKit::PCM {
 
@@ -49,14 +50,14 @@ void Connection::connectionReceivedEvent(xpc_object_t request)
 {
     if (xpc_get_type(request) != XPC_TYPE_DICTIONARY)
         return;
-    const char* debugMessage = xpc_dictionary_get_string(request, protocolDebugMessageKey);
+    String debugMessage = xpcDictionaryGetString(request, protocolDebugMessageKey);
     if (!debugMessage)
         return;
     auto messageLevel = static_cast<JSC::MessageLevel>(xpc_dictionary_get_uint64(request, protocolDebugMessageLevelKey));
-    auto* networkSession = m_networkSession.get();
+    CheckedPtr networkSession = m_networkSession.get();
     if (!networkSession)
         return;
-    m_networkSession->networkProcess().broadcastConsoleMessage(m_networkSession->sessionID(), MessageSource::PrivateClickMeasurement, messageLevel, String::fromUTF8(debugMessage));
+    m_networkSession->networkProcess().broadcastConsoleMessage(m_networkSession->sessionID(), MessageSource::PrivateClickMeasurement, messageLevel, debugMessage);
 }
 
 OSObjectPtr<xpc_object_t> Connection::dictionaryFromMessage(MessageType messageType, EncodedMessage&& message) const

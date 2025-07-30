@@ -67,7 +67,7 @@ void WebRemoteFrameClient::sizeDidChange(IntSize size)
 
 void WebRemoteFrameClient::postMessageToRemote(FrameIdentifier source, const String& sourceOrigin, FrameIdentifier target, std::optional<SecurityOriginData> targetOrigin, const MessageWithMessagePorts& message)
 {
-    if (auto* page = m_frame->page())
+    if (RefPtr page = m_frame->page())
         page->send(Messages::WebPageProxy::PostMessageToRemote(source, sourceOrigin, target, targetOrigin, message));
 }
 
@@ -141,8 +141,8 @@ void WebRemoteFrameClient::bindRemoteAccessibilityFrames(int processIdentifier, 
 
     auto [resultToken, processIdentifierResult] = sendResult.takeReply();
 
+#if PLATFORM(MAC)
     // Make sure AppKit system knows about our remote UI process status now.
-#if PLATFORM(COCOA)
     page->accessibilityManageRemoteElementStatus(true, processIdentifierResult);
 #endif
     completionHandler(resultToken, processIdentifierResult);
@@ -198,10 +198,11 @@ void WebRemoteFrameClient::applyWebsitePolicies(WebsitePoliciesData&& websitePol
         return;
     }
 
-    coreFrame->setCustomUserAgent(websitePolicies.customUserAgent);
-    coreFrame->setCustomUserAgentAsSiteSpecificQuirks(websitePolicies.customUserAgentAsSiteSpecificQuirks);
+    coreFrame->setCustomUserAgent(WTFMove(websitePolicies.customUserAgent));
+    coreFrame->setCustomUserAgentAsSiteSpecificQuirks(WTFMove(websitePolicies.customUserAgentAsSiteSpecificQuirks));
     coreFrame->setAdvancedPrivacyProtections(websitePolicies.advancedPrivacyProtections);
-    coreFrame->setCustomNavigatorPlatform(websitePolicies.customNavigatorPlatform);
+    coreFrame->setCustomNavigatorPlatform(WTFMove(websitePolicies.customNavigatorPlatform));
+    coreFrame->setAutoplayPolicy(core(websitePolicies.autoplayPolicy));
 }
 
 void WebRemoteFrameClient::updateScrollingMode(ScrollbarMode scrollingMode)

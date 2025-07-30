@@ -56,7 +56,8 @@ void PDFScrollingPresentationController::teardown()
 
     GraphicsLayer::unparentAndClear(m_contentsLayer);
     GraphicsLayer::unparentAndClear(m_pageBackgroundsContainerLayer);
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
+
+#if ENABLE(PDFKIT_PAINTED_SELECTIONS)
     GraphicsLayer::unparentAndClear(m_selectionLayer);
 #endif
 }
@@ -153,21 +154,22 @@ void PDFScrollingPresentationController::setupLayers(GraphicsLayer& scrolledCont
         m_contentsLayer = createGraphicsLayer("PDF contents"_s, m_plugin->isFullMainFramePlugin() ? GraphicsLayer::Type::PageTiledBacking : GraphicsLayer::Type::TiledBacking);
         m_contentsLayer->setAnchorPoint({ });
         m_contentsLayer->setDrawsContent(true);
-        m_contentsLayer->setAcceleratesDrawing(m_plugin->canPaintSelectionIntoOwnedLayer());
+        m_contentsLayer->setAcceleratesDrawing(!shouldUseInProcessBackingStore());
         scrolledContentsLayer.addChild(*m_contentsLayer);
 
         // This is the call that enables async rendering.
         asyncRenderer()->startTrackingLayer(*m_contentsLayer);
     }
 
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
+#if ENABLE(PDFKIT_PAINTED_SELECTIONS)
     if (!m_selectionLayer) {
         m_selectionLayer = createGraphicsLayer("PDF selections"_s, GraphicsLayer::Type::TiledBacking);
         m_selectionLayer->setAnchorPoint({ });
         m_selectionLayer->setDrawsContent(true);
         m_selectionLayer->setAcceleratesDrawing(true);
         m_selectionLayer->setBlendMode(BlendMode::Multiply);
-        scrolledContentsLayer.addChild(*m_selectionLayer);
+
+        // m_selectionLayer will be parented on-demand in `setSelectionLayerEnabled`.
     }
 #endif
 }
@@ -177,20 +179,18 @@ void PDFScrollingPresentationController::updateLayersOnLayoutChange(FloatSize do
     m_contentsLayer->setSize(documentSize);
     m_contentsLayer->setNeedsDisplay();
 
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
-    m_selectionLayer->setSize(documentSize);
-    m_selectionLayer->setNeedsDisplay();
-#endif
-
     TransformationMatrix transform;
     transform.scale(scaleFactor);
     transform.translate(centeringOffset.width(), centeringOffset.height());
 
     m_contentsLayer->setTransform(transform);
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
+    m_pageBackgroundsContainerLayer->setTransform(transform);
+
+#if ENABLE(PDFKIT_PAINTED_SELECTIONS)
+    m_selectionLayer->setSize(documentSize);
+    m_selectionLayer->setNeedsDisplay();
     m_selectionLayer->setTransform(transform);
 #endif
-    m_pageBackgroundsContainerLayer->setTransform(transform);
 
     updatePageBackgroundLayers();
 }
@@ -261,25 +261,12 @@ void PDFScrollingPresentationController::didGeneratePreviewForPage(PDFDocumentLa
         layer->setNeedsDisplay();
 }
 
-void PDFScrollingPresentationController::repaintForIncrementalLoad()
-{
-    auto& documentLayout = m_plugin->documentLayout();
-    auto coverageRect = FloatRect { { }, documentLayout.contentsSize() };
-
-    if (auto* tiledBacking = m_contentsLayer->tiledBacking()) {
-        coverageRect = tiledBacking->coverageRect();
-        coverageRect = m_plugin->convertDown(UnifiedPDFPlugin::CoordinateSpace::Contents, UnifiedPDFPlugin::CoordinateSpace::PDFDocumentLayout, coverageRect);
-    }
-
-    setNeedsRepaintInDocumentRect(RepaintRequirement::PDFContent, coverageRect, { });
-}
-
 void PDFScrollingPresentationController::updateIsInWindow(bool isInWindow)
 {
     m_contentsLayer->setIsInWindow(isInWindow);
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
-    if (m_selectionLayer)
-        m_selectionLayer->setIsInWindow(isInWindow);
+
+#if ENABLE(PDFKIT_PAINTED_SELECTIONS)
+    m_selectionLayer->setIsInWindow(isInWindow);
 #endif
 
     for (auto& pageLayer : m_pageBackgroundsContainerLayer->children()) {
@@ -303,7 +290,7 @@ void PDFScrollingPresentationController::updateDebugBorders(bool showDebugBorder
     if (m_contentsLayer)
         propagateSettingsToLayer(*m_contentsLayer);
 
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
+#if ENABLE(PDFKIT_PAINTED_SELECTIONS)
     if (m_selectionLayer)
         propagateSettingsToLayer(*m_selectionLayer);
 #endif
@@ -322,30 +309,32 @@ void PDFScrollingPresentationController::updateDebugBorders(bool showDebugBorder
 
 void PDFScrollingPresentationController::updateForCurrentScrollability(OptionSet<TiledBackingScrollability> scrollability)
 {
+    if (!m_contentsLayer)
+        return;
     if (auto* tiledBacking = m_contentsLayer->tiledBacking())
         tiledBacking->setScrollability(scrollability);
+
+#if ENABLE(PDFKIT_PAINTED_SELECTIONS)
+    if (auto* tiledBacking = m_selectionLayer->tiledBacking())
+        tiledBacking->setScrollability(scrollability);
+#endif
 }
 
-void PDFScrollingPresentationController::setNeedsRepaintInDocumentRect(OptionSet<RepaintRequirement> repaintRequirements, const FloatRect& rectInDocumentCoordinates, std::optional<PDFLayoutRow> layoutRow)
+auto PDFScrollingPresentationController::layerCoveragesForRepaintPageCoverage(RepaintRequirements repaintRequirements, const PDFPageCoverage& pageCoverage) -> Vector<LayerCoverage>
 {
-    if (!repaintRequirements)
-        return;
+    Vector<LayerCoverage> result;
+    FloatRect contentsRect;
+    for (auto& perPage : pageCoverage)
+        contentsRect.unite(m_plugin->convertUp(UnifiedPDFPlugin::CoordinateSpace::PDFPage, UnifiedPDFPlugin::CoordinateSpace::Contents, perPage.rectInPageLayoutCoordinates, perPage.pageIndex));
 
-    auto contentsRect = m_plugin->convertUp(UnifiedPDFPlugin::CoordinateSpace::PDFDocumentLayout, UnifiedPDFPlugin::CoordinateSpace::Contents, rectInDocumentCoordinates);
-    if (repaintRequirements.contains(RepaintRequirement::PDFContent)) {
-        if (RefPtr asyncRenderer = asyncRendererIfExists())
-            asyncRenderer->pdfContentChangedInRect(m_contentsLayer.get(), contentsRect, layoutRow);
-    }
-
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
-    if (repaintRequirements.contains(RepaintRequirement::Selection) && m_plugin->canPaintSelectionIntoOwnedLayer()) {
-        RefPtr { m_selectionLayer }->setNeedsDisplayInRect(contentsRect);
-        if (repaintRequirements.hasExactlyOneBitSet())
-            return;
-    }
+#if ENABLE(PDFKIT_PAINTED_SELECTIONS)
+    if (repaintRequirements.contains(RepaintRequirement::Selection))
+        result.append({ *m_selectionLayer, contentsRect, RepaintRequirements { RepaintRequirement::Selection } });
 #endif
 
-    RefPtr { m_contentsLayer }->setNeedsDisplayInRect(contentsRect);
+    if (repaintRequirements.contains(RepaintRequirement::PDFContent))
+        result.append({ *m_contentsLayer, contentsRect, RepaintRequirements { RepaintRequirement::PDFContent } });
+    return result;
 }
 
 void PDFScrollingPresentationController::paintBackgroundLayerForPage(const GraphicsLayer*, GraphicsContext& context, const FloatRect& clipRect, PDFDocumentLayout::PageIndex pageIndex)
@@ -368,22 +357,9 @@ std::optional<PDFDocumentLayout::PageIndex> PDFScrollingPresentationController::
 
 #pragma mark -
 
-auto PDFScrollingPresentationController::pdfPositionForCurrentView(bool preservePosition) const -> std::optional<VisiblePDFPosition>
+std::optional<PDFDocumentLayout::PageIndex> PDFScrollingPresentationController::pageIndexForCurrentView(AnchorPoint anchorPoint) const
 {
-    if (!preservePosition)
-        return { };
-
-    auto& documentLayout = m_plugin->documentLayout();
-
-    if (!documentLayout.hasLaidOutPDFDocument())
-        return { };
-
-    auto topLeftInDocumentSpace = m_plugin->convertDown(UnifiedPDFPlugin::CoordinateSpace::Plugin, UnifiedPDFPlugin::CoordinateSpace::PDFDocumentLayout, FloatPoint { });
-    auto [pageIndex, pointInPDFPageSpace] = documentLayout.pageIndexAndPagePointForDocumentYOffset(topLeftInDocumentSpace.y());
-
-    LOG_WITH_STREAM(PDF, stream << "PDFScrollingPresentationController::pdfPositionForCurrentView - point " << pointInPDFPageSpace << " in page " << pageIndex);
-
-    return VisiblePDFPosition { pageIndex, pointInPDFPageSpace };
+    return m_plugin->documentLayout().pageIndexAndPagePointForDocumentYOffset(anchorPointInDocumentSpace(anchorPoint).y()).first;
 }
 
 void PDFScrollingPresentationController::restorePDFPosition(const VisiblePDFPosition& info)
@@ -413,18 +389,23 @@ float PDFScrollingPresentationController::deviceScaleFactor() const
 std::optional<float> PDFScrollingPresentationController::customContentsScale(const GraphicsLayer* layer) const
 {
     if (pageIndexForPageBackgroundLayer(layer))
-        return m_plugin->scaleForPagePreviews();
+        return scaleForPagePreviews();
 
     return { };
 }
 
 bool PDFScrollingPresentationController::layerNeedsPlatformContext(const GraphicsLayer* layer) const
 {
-    // We need a platform context if the plugin can not paint selections into its own layer,
-    // since we would then have to vend a platform context that PDFKit can paint into.
-    // However, this constraint only applies for the contents layer. No other layer needs to be WP-backed.
-    return layer == m_contentsLayer.get() && !m_plugin->canPaintSelectionIntoOwnedLayer();
+    return shouldUseInProcessBackingStore() && (layer == m_contentsLayer || pageIndexForPageBackgroundLayer(layer));
 }
+
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+bool PDFScrollingPresentationController::layerAllowsDynamicContentScaling(const GraphicsLayer*) const
+{
+    // Provide DCS structures explicitly.
+    return false;
+}
+#endif
 
 void PDFScrollingPresentationController::tiledBackingUsageChanged(const GraphicsLayer* layer, bool usingTiledBacking)
 {
@@ -434,16 +415,17 @@ void PDFScrollingPresentationController::tiledBackingUsageChanged(const Graphics
 
 void PDFScrollingPresentationController::paintContents(const GraphicsLayer* layer, GraphicsContext& context, const FloatRect& clipRect, OptionSet<GraphicsLayerPaintBehavior>)
 {
-
     if (layer == m_contentsLayer.get()) {
         RefPtr asyncRenderer = asyncRendererIfExists();
-        m_plugin->paintPDFContent(layer, context, clipRect, { }, UnifiedPDFPlugin::PaintingBehavior::All, asyncRenderer.get());
+        m_plugin->paintPDFContent(layer, context, clipRect, { }, asyncRenderer.get());
         return;
     }
 
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
-    if (layer == m_selectionLayer.get())
-        return paintPDFSelection(layer, context, clipRect, { });
+#if ENABLE(PDFKIT_PAINTED_SELECTIONS)
+    if (layer == m_selectionLayer.get()) {
+        paintPDFSelection(layer, context, clipRect, { });
+        return;
+    }
 #endif
 
     if (auto backgroundLayerPageIndex = pageIndexForPageBackgroundLayer(layer)) {
@@ -452,12 +434,31 @@ void PDFScrollingPresentationController::paintContents(const GraphicsLayer* laye
     }
 }
 
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
 void PDFScrollingPresentationController::paintPDFSelection(const GraphicsLayer* layer, GraphicsContext& context, const FloatRect& clipRect, std::optional<PDFLayoutRow> row)
 {
     m_plugin->paintPDFSelection(layer, context, clipRect, row);
 }
+
+void PDFScrollingPresentationController::setSelectionLayerEnabled(bool enabled)
+{
+#if ENABLE(PDFKIT_PAINTED_SELECTIONS)
+    bool wasEnabled = !!m_selectionLayer->parent();
+    if (wasEnabled == enabled)
+        return;
+    if (!enabled)
+        m_selectionLayer->removeFromParent();
+    else
+        m_contentsLayer->parent()->addChild(*m_selectionLayer);
 #endif
+}
+
+std::optional<PlatformLayerIdentifier> PDFScrollingPresentationController::contentsLayerIdentifier() const
+{
+    if (!m_contentsLayer)
+        return std::nullopt;
+
+    return m_contentsLayer->primaryLayerID();
+}
 
 } // namespace WebKit
 

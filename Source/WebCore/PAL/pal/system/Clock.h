@@ -31,7 +31,7 @@
 namespace PAL {
 
 class Clock {
-    WTF_MAKE_TZONE_NONALLOCATABLE(Clock);
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(Clock);
 public:
     static std::unique_ptr<Clock> create();
     virtual ~Clock() = default;

@@ -72,7 +72,7 @@ public:
         assertObjectIsDeletedWhenTestFinishes(G_OBJECT(m_manager));
         g_signal_connect(m_manager, "start", G_CALLBACK(startCallback), this);
         g_signal_connect(m_manager, "stop", G_CALLBACK(stopCallback), this);
-        g_signal_connect(m_webView, "permission-request", G_CALLBACK(permissionRequested), this);
+        g_signal_connect(m_webView.get(), "permission-request", G_CALLBACK(permissionRequested), this);
     }
 
     ~GeolocationTest()
@@ -81,7 +81,7 @@ public:
             webkit_geolocation_position_free(m_checkPosition);
 
         g_signal_handlers_disconnect_matched(m_manager, G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, this);
-        g_signal_handlers_disconnect_matched(m_webView, G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, this);
+        g_signal_handlers_disconnect_matched(m_webView.get(), G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, this);
     }
 
     void start()

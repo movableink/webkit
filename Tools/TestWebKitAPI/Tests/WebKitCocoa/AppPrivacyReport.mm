@@ -463,7 +463,7 @@ static void softUpdateTest(IsAppInitiated isAppInitiated)
         TestWebKitAPI::HTTPServer server1({
             { "/"_s, { mainSWBytes } },
             { "/sw.js"_s, { {{ "Content-Type"_s, "application/javascript"_s }}, js } },
-        }, TestWebKitAPI::HTTPServer::Protocol::Https, nullptr, testIdentity());
+        }, TestWebKitAPI::HTTPServer::Protocol::Https, nullptr, testIdentity().get());
         serverPort = server1.port();
 
         NSURLRequest *request = server1.request();
@@ -483,7 +483,7 @@ static void softUpdateTest(IsAppInitiated isAppInitiated)
         TestWebKitAPI::HTTPServer server2({
             { "/"_s, { mainSWBytes } },
             { "/sw.js"_s, { {{ "Content-Type"_s, "application/javascript"_s }}, js } }
-        }, TestWebKitAPI::HTTPServer::Protocol::Https, nullptr, testIdentity2(), serverPort);
+        }, TestWebKitAPI::HTTPServer::Protocol::Https, nullptr, testIdentity2().get(), serverPort);
 
         NSMutableURLRequest *request2 = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:[NSString stringWithFormat:@"https://127.0.0.1:%d/", server2.port()]]];
         auto attributionValue = isAppInitiated == IsAppInitiated::Yes ? NSURLRequestAttributionDeveloper : NSURLRequestAttributionUser;

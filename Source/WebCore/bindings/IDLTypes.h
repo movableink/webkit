@@ -25,16 +25,12 @@
 
 #pragma once
 
-#include <wtf/Compiler.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 #include "BufferSource.h"
 #include "StringAdaptors.h"
 #include <JavaScriptCore/HandleTypes.h>
 #include <JavaScriptCore/Strong.h>
-#include <variant>
 #include <wtf/Brigand.h>
+#include <wtf/Compiler.h>
 #include <wtf/Markable.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/URL.h>
@@ -44,8 +40,6 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #include "WebGLAny.h"
 #include "WebGLExtensionAny.h"
 #endif
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 namespace JSC {
 class ArrayBuffer;
@@ -308,11 +302,11 @@ struct IDLError : IDLUnsupportedType { };
 struct IDLDOMException : IDLUnsupportedType { };
 
 template<typename... Ts>
-struct IDLUnion : IDLType<std::variant<typename Ts::ImplementationType...>> {
+struct IDLUnion : IDLType<Variant<typename Ts::ImplementationType...>> {
     using TypeList = brigand::list<Ts...>;
 
-    using ParameterType = const std::variant<typename Ts::ImplementationType...>&;
-    using NullableParameterType = const std::optional<std::variant<typename Ts::ImplementationType...>>&;
+    using ParameterType = const Variant<typename Ts::ImplementationType...>&;
+    using NullableParameterType = const std::optional<Variant<typename Ts::ImplementationType...>>&;
 };
 
 template<typename T> struct IDLBufferSourceBase : IDLWrapper<T> {

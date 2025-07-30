@@ -8,39 +8,30 @@
 #ifndef SkMaskFilterBase_DEFINED
 #define SkMaskFilterBase_DEFINED
 
-#include "include/core/SkBlurTypes.h"
 #include "include/core/SkFlattenable.h"
 #include "include/core/SkMaskFilter.h"
-#include "include/core/SkPaint.h"
+#include "include/core/SkPoint.h"
+#include "include/core/SkRect.h"
+#include "include/core/SkRefCnt.h"
+#include "include/core/SkScalar.h"
+#include "include/core/SkSpan.h"
 #include "include/core/SkStrokeRec.h"
 #include "include/private/base/SkNoncopyable.h"
-#include "src/base/SkTLazy.h"
 #include "src/core/SkMask.h"
 
-class GrClip;
-struct GrFPArgs;
-class GrFragmentProcessor;
-class GrPaint;
-class GrRecordingContext;
-class GrRenderTarget;
-namespace skgpu {
-namespace ganesh {
-class SurfaceDrawContext;
-}
-}  // namespace skgpu
-class GrResourceProvider;
-class GrStyledShape;
-class GrSurfaceProxyView;
-class GrTexture;
-class GrTextureProxy;
+#include <optional>
+#include <utility>
 
-class SkBitmap;
+class SkPaint;
 class SkBlitter;
+class SkImageFilter;
 class SkCachedData;
 class SkMatrix;
+class SkResourceCache;
 class SkPath;
-class SkRasterClip;
 class SkRRect;
+class SkRasterClip;
+enum SkBlurStyle : int;
 
 class SkMaskFilterBase : public SkMaskFilter {
 public:
@@ -100,10 +91,20 @@ public:
     virtual bool asABlur(BlurRec*) const;
 
     /**
-     * Return an SkImageFilter representation of this mask filter that SkCanvas can apply to an
-     * alpha-only image to produce an equivalent effect to running the mask filter directly.
+     * Return an SkImageFilter representation of this mask filter that SkCanvas can apply
+     * to an alpha-only image to produce an equivalent effect to running the mask filter directly.
+     *
+     * Additionally, return a boolean that indicates if the image filter applies shading properties.
+     * When restoring a layer, this affects whether to draw a rgba image or blend the coverage
+     * mask (A8 image).
+     *
+     * The paint parameter can be used to apply shading. Some mask filters (e.g. EmbossMaskFilter)
+     * may not produce correct results under these circumstances and different blend modes,
+     * given that the coverage mask will be blended in the mask filter as image filter impl in
+     * these cases.
      */
-    virtual sk_sp<SkImageFilter> asImageFilter(const SkMatrix& ctm) const;
+    virtual std::pair<sk_sp<SkImageFilter>, bool> asImageFilter(const SkMatrix& ctm,
+                                                                const SkPaint& paint) const;
 
     static SkFlattenable::Type GetFlattenableType() {
         return kSkMaskFilter_Type;
@@ -116,16 +117,17 @@ public:
 protected:
     SkMaskFilterBase() {}
 
-    enum FilterReturn {
-        kFalse_FilterReturn,
-        kTrue_FilterReturn,
-        kUnimplemented_FilterReturn
+    enum class FilterReturn {
+        kFalse,
+        kTrue,
+        kUnimplemented,
     };
 
-    class NinePatch : ::SkNoncopyable {
+    class NinePatch final : ::SkNoncopyable {
     public:
         NinePatch(const SkMask& mask, SkIRect outerRect, SkIPoint center, SkCachedData* cache)
             : fMask(mask), fOuterRect(outerRect), fCenter(center), fCache(cache) {}
+        NinePatch(NinePatch&&) = delete;  // the transfer of fCache makes this not work
         ~NinePatch();
 
         SkMask      fMask;      // fBounds must have [0,0] in its top-left
@@ -135,11 +137,16 @@ protected:
     };
 
     /**
+     *  As an optimization, some filters can be applied to a smaller nine-patch
+     *  instead of the full-sized rectangle. These nine-patches are not only smaller,
+     *  but more re-usable/cacheable. Then, when drawing/blitting, the ninepatch
+     *  can be expanded to the desired size.
+     *
      *  Override if your subclass can filter a rect, and return the answer as
      *  a ninepatch mask to be stretched over the returned outerRect. On success
-     *  return kTrue_FilterReturn. On failure (e.g. out of memory) return
-     *  kFalse_FilterReturn. If the normal filterMask() entry-point should be
-     *  called (the default) return kUnimplemented_FilterReturn.
+     *  return FilterReturn::kTrue. On failure (e.g. out of memory) return
+     *  FilterReturn::kFalse. If the normal filterMask() entry-point should be
+     *  called (the default) return FilterReturn::kUnimplemented.
      *
      *  By convention, the caller will take the center rol/col from the returned
      *  mask as the slice it can replicate horizontally and vertically as we
@@ -149,16 +156,18 @@ protected:
      *  the caller will call mask.fBounds.centerX() and centerY() to find the
      *  strips that will be replicated.
      */
-    virtual FilterReturn filterRectsToNine(const SkRect[], int count,
+    virtual FilterReturn filterRectsToNine(SkSpan<const SkRect>,
                                            const SkMatrix&,
                                            const SkIRect& clipBounds,
-                                           SkTLazy<NinePatch>*) const;
+                                           std::optional<NinePatch>*,
+                                           SkResourceCache*) const;
     /**
      *  Similar to filterRectsToNine, except it performs the work on a round rect.
      */
-    virtual FilterReturn filterRRectToNine(const SkRRect&, const SkMatrix&,
-                                           const SkIRect& clipBounds,
-                                           SkTLazy<NinePatch>*) const;
+    virtual std::optional<NinePatch> filterRRectToNine(const SkRRect&,
+                                                       const SkMatrix&,
+                                                       const SkIRect& clipBounds,
+                                                       SkResourceCache*) const;
 
 private:
     friend class SkDraw;
@@ -169,17 +178,22 @@ private:
      to render that mask. Returns false if filterMask() returned false.
      This method is not exported to java.
      */
-    bool filterPath(const SkPath& devPath, const SkMatrix& ctm, const SkRasterClip&, SkBlitter*,
-                    SkStrokeRec::InitStyle) const;
+    bool filterPath(const SkPath& devPath,
+                    const SkMatrix& ctm,
+                    const SkRasterClip&,
+                    SkBlitter*,
+                    SkStrokeRec::InitStyle,
+                    SkResourceCache*) const;
 
     /** Helper method that, given a roundRect in device space, will rasterize it into a kA8_Format
      mask and then call filterMask(). If this returns true, the specified blitter will be called
      to render that mask. Returns false if filterMask() returned false.
      */
-    bool filterRRect(const SkRRect& devRRect, const SkMatrix& ctm, const SkRasterClip&,
-                     SkBlitter*) const;
-
-    using INHERITED = SkFlattenable;
+    bool filterRRect(const SkRRect& devRRect,
+                     const SkMatrix& ctm,
+                     const SkRasterClip&,
+                     SkBlitter*,
+                     SkResourceCache*) const;
 };
 
 inline SkMaskFilterBase* as_MFB(SkMaskFilter* mf) {

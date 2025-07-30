@@ -24,7 +24,7 @@ import sys
 
 from .tracker import Tracker
 from .user import User
-from datetime import datetime
+from datetime import datetime, timezone
 from webkitcorepy import string_utils
 
 
@@ -49,7 +49,7 @@ class Issue(object):
         def __repr__(self):
             return '({} @ {}) {}'.format(
                 self.user,
-                datetime.utcfromtimestamp(self.timestamp) if self.timestamp else '-',
+                datetime.fromtimestamp(self.timestamp, timezone.utc) if self.timestamp else '-',
                 self.content,
             )
 
@@ -67,10 +67,13 @@ class Issue(object):
         self._creator = None
         self._description = None
         self._opened = None
+        self._state = None
+        self._substate = None
         self._assignee = None
         self._watchers = None
         self._comments = None
         self._references = None
+        self._related_links = None
 
         self._labels = None
         self._project = None
@@ -122,6 +125,21 @@ class Issue(object):
         if self._description is None:
             self.tracker.populate(self, 'description')
         return self._description
+
+    @property
+    def state(self):
+        if self._state is None:
+            self.tracker.populate(self, 'state')
+        return self._state
+
+    @property
+    def substate(self):
+        if self._substate is None:
+            self.tracker.populate(self, 'substate')
+        return self._substate
+
+    def set_state(self, state, substate=None):
+        return bool(self.tracker.set(self, state=state, substate=substate))
 
     @property
     def opened(self):
@@ -189,6 +207,15 @@ class Issue(object):
         if self._references is None:
             self.tracker.populate(self, 'references')
         return self._references or []
+
+    @property
+    def related_links(self):
+        if self._related_links is None:
+            self.tracker.populate(self, 'see_also')
+        return self._related_links
+
+    def add_related_links(self, see_also):
+        return self.tracker.set(self, see_also=see_also)
 
     def add_comment(self, text):
         return self.tracker.add_comment(self, text)

@@ -35,6 +35,7 @@
 #import <WebKit/_WKRemoteObjectInterface.h>
 #import <WebKit/_WKRemoteObjectRegistry.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/cocoa/SpanCocoa.h>
 
 @interface BundleEditingDelegatePlugIn : NSObject <WKWebProcessPlugIn, WKWebProcessPlugInEditingDelegate>
 @end
@@ -85,7 +86,7 @@
 
 - (NSDictionary<NSString *, NSData *> *)_webProcessPlugInBrowserContextController:(WKWebProcessPlugInBrowserContextController *)controller pasteboardDataForRange:(WKWebProcessPlugInRangeHandle *)range
 {
-    return @{ @"org.webkit.data" : _shouldWriteEmptyData ? NSData.data : [NSData dataWithBytesNoCopy:(void*)"hello" length:5 freeWhenDone:NO] };
+    return @{ @"org.webkit.data" : _shouldWriteEmptyData ? NSData.data : toNSDataNoCopy("hello"_span8, FreeWhenDone::No).autorelease() };
 }
 
 - (void)_webProcessPlugInBrowserContextControllerDidWriteToPasteboard:(WKWebProcessPlugInBrowserContextController *)controller

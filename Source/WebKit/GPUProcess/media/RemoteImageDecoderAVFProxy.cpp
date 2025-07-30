@@ -36,6 +36,7 @@
 #include <CoreGraphics/CGImage.h>
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/ImageDecoderAVFObjC.h>
+#include <WebCore/NativeImage.h>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -72,9 +73,9 @@ void RemoteImageDecoderAVFProxy::createDecoder(const IPC::SharedBufferReference&
     auto identifier = ImageDecoderIdentifier::generate();
     m_imageDecoders.add(identifier, imageDecoder.copyRef());
 
-    imageDecoder->setEncodedDataStatusChangeCallback([proxy = WeakPtr<MessageReceiver> { *this },  identifier](auto) mutable {
-        if (proxy)
-            static_cast<RemoteImageDecoderAVFProxy*>(proxy.get())->encodedDataStatusChanged(identifier);
+    imageDecoder->setEncodedDataStatusChangeCallback([proxy = WeakPtr { *this },  identifier](auto) mutable {
+        if (RefPtr protectedProxy = proxy.get())
+            protectedProxy->encodedDataStatusChanged(identifier);
     });
 
     imageDecoderIdentifier = identifier;
@@ -178,6 +179,14 @@ void RemoteImageDecoderAVFProxy::clearFrameBufferCache(ImageDecoderIdentifier id
 bool RemoteImageDecoderAVFProxy::allowsExitUnderMemoryPressure() const
 {
     return m_imageDecoders.isEmpty();
+}
+
+std::optional<SharedPreferencesForWebProcess> RemoteImageDecoderAVFProxy::sharedPreferencesForWebProcess() const
+{
+    if (RefPtr connectionToWebProcess = m_connectionToWebProcess.get())
+        return connectionToWebProcess->sharedPreferencesForWebProcess();
+
+    return std::nullopt;
 }
 
 }

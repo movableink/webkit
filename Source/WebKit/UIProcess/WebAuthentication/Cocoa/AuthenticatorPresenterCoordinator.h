@@ -61,6 +61,7 @@ public:
 
     void updatePresenter(WebAuthenticationStatus);
     void requestPin(uint64_t retries, CompletionHandler<void(const String&)>&&);
+    void requestNewPin(uint64_t, CompletionHandler<void(const String&)>&&);
     void selectAssertionResponse(Vector<Ref<WebCore::AuthenticatorAssertionResponse>>&&, WebAuthenticationSource, CompletionHandler<void(WebCore::AuthenticatorAssertionResponse*)>&&);
     void requestLAContextForUserVerification(CompletionHandler<void(LAContext *)>&&);
     void dimissPresenter(WebAuthenticationResult);

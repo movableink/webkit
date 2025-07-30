@@ -22,6 +22,14 @@ function testHistoryItemCount()
 }
 
 window.addEventListener("load", function () {
+    if (sessionStorage.navigateTwice) {
+        delete sessionStorage.navigateTwice;
+        document.cookie = "secondNavigation=true";
+        window.setTimeout(() => {
+            window.location = 'redirect-helper.pl?302';
+        }, 0);
+        return;
+    }
     if (window.testRunner) {
         testRunner.dumpAsText();
         testHistoryItemCount();

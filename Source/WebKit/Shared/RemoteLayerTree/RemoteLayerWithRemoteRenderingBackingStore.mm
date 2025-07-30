@@ -50,7 +50,7 @@ RemoteLayerWithRemoteRenderingBackingStore::RemoteLayerWithRemoteRenderingBackin
         return;
     }
 
-    m_bufferSet = collection->layerTreeContext().ensureRemoteRenderingBackendProxy().createRemoteImageBufferSet();
+    m_bufferSet = collection->protectedLayerTreeContext()->ensureProtectedRemoteRenderingBackendProxy()->createImageBufferSet();
 }
 
 RemoteLayerWithRemoteRenderingBackingStore::~RemoteLayerWithRemoteRenderingBackingStore()
@@ -91,7 +91,7 @@ std::unique_ptr<ThreadSafeImageBufferSetFlusher> RemoteLayerWithRemoteRenderingB
 
 void RemoteLayerWithRemoteRenderingBackingStore::createContextAndPaintContents()
 {
-    auto bufferSet = protectedBufferSet();
+    RefPtr bufferSet = m_bufferSet;
     if (!bufferSet)
         return;
 
@@ -112,9 +112,19 @@ void RemoteLayerWithRemoteRenderingBackingStore::ensureBackingStore(const Parame
     m_parameters = parameters;
     m_cleared = true;
     if (m_bufferSet) {
-        auto renderingMode = type() == RemoteLayerBackingStore::Type::IOSurface ? RenderingMode::Accelerated : RenderingMode::Unaccelerated;
-        auto renderingPurpose = m_layer->containsBitmapOnly() ? WebCore::RenderingPurpose::BitmapOnlyLayerBacking : WebCore::RenderingPurpose::LayerBacking;
-        m_bufferSet->setConfiguration(size(), scale(), colorSpace(), pixelFormat(), renderingMode, renderingPurpose);
+        RemoteImageBufferSetConfiguration configuration {
+            .logicalSize = size(),
+            .resolutionScale = scale(),
+            .colorSpace = colorSpace(),
+            .contentsFormat = contentsFormat(),
+            .pixelFormat = pixelFormat(),
+            .renderingMode = type() == RemoteLayerBackingStore::Type::IOSurface ? RenderingMode::Accelerated : RenderingMode::Unaccelerated,
+            .renderingPurpose = WebCore::RenderingPurpose::LayerBacking,
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+            .includeDisplayList = m_parameters.includeDisplayList,
+#endif
+        };
+        m_bufferSet->setConfiguration(WTFMove(configuration));
     }
 }
 
@@ -142,17 +152,19 @@ std::optional<RemoteImageBufferSetIdentifier> RemoteLayerWithRemoteRenderingBack
 }
 
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
-std::optional<ImageBufferBackendHandle> RemoteLayerWithRemoteRenderingBackingStore::displayListHandle() const
+std::optional<DynamicContentScalingDisplayList> RemoteLayerWithRemoteRenderingBackingStore::displayListHandle() const
 {
+    if (auto list = m_layer->owner()->platformCALayerDynamicContentScalingDisplayList(m_layer.ptr()))
+        return list;
     return m_bufferSet ? m_bufferSet->dynamicContentScalingDisplayList() : std::nullopt;
 }
 #endif
 
 void RemoteLayerWithRemoteRenderingBackingStore::dump(WTF::TextStream& ts) const
 {
-    ts.dumpProperty("buffer set", m_bufferSet);
-    ts.dumpProperty("cache identifiers", m_bufferCacheIdentifiers);
-    ts.dumpProperty("is opaque", isOpaque());
+    ts.dumpProperty("buffer set"_s, m_bufferSet);
+    ts.dumpProperty("cache identifiers"_s, m_bufferCacheIdentifiers);
+    ts.dumpProperty("is opaque"_s, isOpaque());
 }
 
 } // namespace WebKit

@@ -777,17 +777,13 @@ static void testCookieManagerEphemeral(CookieManagerTest* test, gconstpointer)
 #if ENABLE(2022_GLIB_API)
     GRefPtr<WebKitNetworkSession> ephemeralSession = adoptGRef(webkit_network_session_new_ephemeral());
 #endif
-    auto webView = Test::adoptView(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-#if PLATFORM(WPE)
-        "backend", Test::createWebViewBackend(),
-#endif
-        "web-context", webkit_web_view_get_context(test->m_webView),
+    auto webView = test->createWebView(
 #if ENABLE(2022_GLIB_API)
         "network-session", ephemeralSession.get(),
 #else
         "is-ephemeral", TRUE,
 #endif
-        nullptr));
+        nullptr);
 #if ENABLE(2022_GLIB_API)
     g_assert_true(webkit_web_view_get_network_session(webView.get()) == ephemeralSession.get());
 #else
@@ -813,7 +809,7 @@ static void testCookieManagerEphemeral(CookieManagerTest* test, gconstpointer)
 #if ENABLE(2022_GLIB_API)
     auto* cookieManager = webkit_network_session_get_cookie_manager(ephemeralSession.get());
 #else
-    g_assert_true(viewDataManager != webkit_web_context_get_website_data_manager(webkit_web_view_get_context(test->m_webView)));
+    g_assert_true(viewDataManager != webkit_web_context_get_website_data_manager(webkit_web_view_get_context(test->webView())));
     auto* cookieManager = webkit_website_data_manager_get_cookie_manager(viewDataManager);
 #endif
     g_assert_true(WEBKIT_IS_COOKIE_MANAGER(cookieManager));
@@ -857,6 +853,56 @@ static void testCookieManagerLongExpires(CookieManagerTest* test, gconstpointer)
 
     test->deleteAllCookies();
     g_assert_cmpint(g_strv_length(test->getDomains()), ==, 0);
+}
+
+static void testCookieSyncWithWebView(CookiePersistentStorageTest* test, gconstpointer)
+{
+    g_unlink(test->m_cookiesTextFile.get());
+    g_unlink(test->m_cookiesSQLiteFile.get());
+    test->m_cookiesTextFile.reset(g_build_filename(Test::dataDirectory(), "cookies.txt", nullptr));
+
+    // When COOKIE_CHANGE_LISTENER_API is defined the WebCookieCache is enabled which requires
+    // on every change NetworkStorageSessionSoup sends messages to the WebProcess to keep it updated.
+    // So here we are testing webkit_cookie_manager_replace_cookies() and webkit_cookie_manager_set_persistent_storage() removes everything from the cache.
+    // Some waits have been added just to be more reliable as there is a lot of IPC (UI -> Network -> WebProcess).
+
+    test->initializeWebView();
+    test->setPersistentStorage(WEBKIT_COOKIE_PERSISTENT_STORAGE_SQLITE);
+
+    GUniquePtr<SoupCookie> cookie(soup_cookie_new(kCookieName, kCookieValue, kFirstPartyDomain, kCookiePath, SOUP_COOKIE_MAX_AGE_ONE_DAY));
+    test->addCookie(cookie.get());
+
+    test->loadURI(kServer->getURIForPath("/index.html").data());
+    test->waitUntilLoadFinished();
+
+    auto* value = test->runJavaScriptAndWaitUntilFinished("document.cookie", nullptr);
+    GUniquePtr<char> cookieString(jsc_value_to_string(value));
+    g_assert_cmpstr(cookieString.get(), ==, "foo=bar");
+
+    GUniquePtr<SoupCookie> newCookie(soup_cookie_new(kCookieName, kCookieValueNew, kFirstPartyDomain, kCookiePath, SOUP_COOKIE_MAX_AGE_ONE_DAY));
+    GUniquePtr<SoupCookie> thirdPartyCookie(soup_cookie_new(kCookiePathNew, kCookieName, kThirdPartyDomain, kCookiePath, SOUP_COOKIE_MAX_AGE_ONE_DAY));
+    GUniquePtr<GList> cookies(g_list_append(g_list_append(nullptr, newCookie.get()), thirdPartyCookie.get()));
+
+    bool callbackDone = false;
+    webkit_cookie_manager_replace_cookies(test->m_cookieManager, cookies.get(), nullptr, (GAsyncReadyCallback)+[](WebKitCookieManager* manager, GAsyncResult* result, bool* done) {
+        g_assert_true(webkit_cookie_manager_replace_cookies_finish(manager, result, nullptr));
+        *done = true;
+    }, &callbackDone);
+    while (!callbackDone)
+        g_main_context_iteration(g_main_loop_get_context(test->m_mainLoop), TRUE);
+
+    test->wait(1.0);
+    value = test->runJavaScriptAndWaitUntilFinished("document.cookie", nullptr);
+    cookieString.reset(jsc_value_to_string(value));
+    g_assert_cmpstr(cookieString.get(), ==, "foo=new-value");
+
+    g_assert_true(g_file_set_contents(test->m_cookiesTextFile.get(), "127.0.0.1\tFALSE\t/\tFALSE\t-1\tbaz\tvalue\n", -1, nullptr));
+    test->setPersistentStorage(WEBKIT_COOKIE_PERSISTENT_STORAGE_TEXT);
+
+    test->wait(1.0);
+    value = test->runJavaScriptAndWaitUntilFinished("document.cookie", nullptr);
+    cookieString.reset(jsc_value_to_string(value));
+    g_assert_cmpstr(cookieString.get(), ==, "baz=value");
 }
 
 #if USE(SOUP2)
@@ -903,6 +949,7 @@ void beforeAll()
     CookieManagerTest::add("WebKitCookieManager", "persistent-storage-delete-all", testCookieManagerPersistentStorageDeleteAll);
     CookieManagerTest::add("WebKitCookieManager", "ephemeral", testCookieManagerEphemeral);
     CookieManagerTest::add("WebKitCookieManager", "long-expires", testCookieManagerLongExpires);
+    CookiePersistentStorageTest::add("WebKitCookieManager", "sync-with-webview", testCookieSyncWithWebView);
 }
 
 void afterAll()

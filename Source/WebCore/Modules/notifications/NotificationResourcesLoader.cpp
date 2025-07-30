@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2022 Igalia S.L.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -135,7 +136,7 @@ NotificationResourcesLoader::ResourceLoader::ResourceLoader(ScriptExecutionConte
     options.sendLoadCallbacks = SendCallbackPolicy::SendCallbacks;
     options.dataBufferingPolicy = DataBufferingPolicy::DoNotBufferData;
     options.contentSecurityPolicyEnforcement = context.shouldBypassMainWorldContentSecurityPolicy() ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceConnectSrcDirective;
-    m_loader = ThreadableLoader::create(context, *this, ResourceRequest(url), options);
+    m_loader = ThreadableLoader::create(context, *this, ResourceRequest(URL { url }), options);
 }
 
 NotificationResourcesLoader::ResourceLoader::~ResourceLoader()

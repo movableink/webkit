@@ -102,6 +102,9 @@ skia_wasm_lib("canvaskit") {
       "../../modules/skunicode:skunicode",
     ]
   }
+  if (skia_canvaskit_enable_bidi) {
+    deps += [ "../../modules/skunicode:skunicode" ]
+  }
   if (skia_enable_skottie) {
     deps += [
       "../../modules/skottie:skottie",
@@ -126,6 +129,12 @@ skia_wasm_lib("canvaskit") {
       "paragraph_bindings_gen.cpp",
     ]
   }
+  if (skia_canvaskit_enable_bidi) {
+    sources += [
+      "bidi_bindings.cpp",
+      "bidi_bindings_gen.cpp",
+    ]
+  }
   if (skia_enable_skottie) {
     sources += [
       "../../modules/skottie/utils/SkottieUtils.cpp",
@@ -146,6 +155,9 @@ skia_wasm_lib("canvaskit") {
     sources += [
       "$root_out_dir/modules/canvaskit/fonts/NotoMono-Regular.ttf.ninja.cpp",
     ]
+  }
+  if (skia_canvaskit_enable_rt_shader) {
+    sources += [ "../../tools/sksltrace/SkSLTraceUtils.cpp" ]
   }
 
   ldflags = []
@@ -234,10 +246,19 @@ skia_wasm_lib("canvaskit") {
     ]
   }
 
-  ldflags += [
-    "--pre-js",
-    rebase_path("paragraph.js"),
-  ]
+  if (skia_canvaskit_enable_paragraph) {
+    ldflags += [
+      "--pre-js",
+      rebase_path("paragraph.js"),
+    ]
+  }
+
+  if (skia_canvaskit_enable_bidi) {
+    ldflags += [
+      "--pre-js",
+      rebase_path("bidi.js"),
+    ]
+  }
 
   if (skia_enable_skottie) {
     ldflags += [
@@ -355,6 +376,9 @@ skia_wasm_lib("canvaskit") {
   if (skia_canvaskit_enable_paragraph) {
     defines += [ "CK_INCLUDE_PARAGRAPH" ]
   }
+  if (skia_canvaskit_enable_bidi) {
+    defines += [ "CK_ENABLE_BIDI" ]
+  }
   if (skia_canvaskit_enable_skp_serialization) {
     defines += [ "CK_SERIALIZE_SKP" ]
   }
@@ -375,7 +399,10 @@ skia_wasm_lib("canvaskit") {
     defines += [ "CK_INCLUDE_PATHOPS" ]
   }
   if (skia_canvaskit_enable_rt_shader) {
-    defines += [ "CK_INCLUDE_RUNTIME_EFFECT" ]
+    defines += [
+      "CK_INCLUDE_RUNTIME_EFFECT",
+      "CK_DEBUG_TRACE_JSON",
+    ]
   }
   if (!skia_canvaskit_enable_alias_font) {
     defines += [ "CK_NO_ALIAS_FONT" ]

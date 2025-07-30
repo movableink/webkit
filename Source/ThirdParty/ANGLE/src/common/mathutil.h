@@ -15,6 +15,7 @@
 #include <string.h>
 #include <algorithm>
 #include <limits>
+#include <ostream>
 
 #include <anglebase/numerics/safe_math.h>
 
@@ -516,11 +517,23 @@ inline float normalizedToFloat(T input)
     {
         // float has only a 23 bit mantissa, so we need to do the calculation in double precision
         constexpr double inverseMax = 1.0 / std::numeric_limits<T>::max();
+        if constexpr (std::is_signed<T>::value)
+        {
+            static_assert(static_cast<float>(std::numeric_limits<T>::min() * inverseMax) == -1.0f);
+        }
         return static_cast<float>(input * inverseMax);
     }
     else
     {
         constexpr float inverseMax = 1.0f / std::numeric_limits<T>::max();
+        if constexpr (std::is_signed<T>::value)
+        {
+            // If the input is signed and equals to the type's min value, the multiplication result
+            // would be less than -1. This step is not needed for int32_t because the difference is
+            // not representable with single-precision floats in that case. For the best codegen,
+            // std::max with the first constant parameter must be used here.
+            return std::max(-1.0f, input * inverseMax);
+        }
         return input * inverseMax;
     }
 }
@@ -529,18 +542,53 @@ template <unsigned int inputBitCount, typename T>
 inline float normalizedToFloat(T input)
 {
     static_assert(std::numeric_limits<T>::is_integer, "T must be an integer.");
-    static_assert(inputBitCount < (sizeof(T) * 8), "T must have more bits than inputBitCount.");
-    ASSERT((input & ~((1 << inputBitCount) - 1)) == 0);
+    static_assert(inputBitCount > 0u && inputBitCount < 32u);
+    if constexpr (std::is_signed<T>::value)
+    {
+        static_assert(inputBitCount > 1 && inputBitCount < sizeof(T) * 8 - 1);
+    }
+    else
+    {
+        static_assert(inputBitCount < sizeof(T) * 8);
+    }
 
-    if (inputBitCount > 23)
+    // Account for the sign bit
+    constexpr uint32_t effectiveBitCount =
+        std::is_unsigned<T>::value ? inputBitCount : inputBitCount - 1u;
+
+    constexpr T maxValue = static_cast<T>((1u << effectiveBitCount) - 1u);
+
+    // Ensure that the input value fits in the declared number of bits.
+    ASSERT(input <= maxValue);
+    if constexpr (std::is_signed<T>::value)
+    {
+        ASSERT(input >= -maxValue - 1);
+    }
+
+    if constexpr (effectiveBitCount > 23)
     {
         // float has only a 23 bit mantissa, so we need to do the calculation in double precision
-        constexpr double inverseMax = 1.0 / ((1 << inputBitCount) - 1);
+        constexpr double inverseMax = 1.0 / maxValue;
+        if constexpr (std::is_signed<T>::value)
+        {
+            if constexpr (effectiveBitCount < 25)
+            {
+                return std::max(-1.0f, static_cast<float>(input * inverseMax));
+            }
+            else
+            {
+                static_assert(static_cast<float>((-maxValue - 1) * inverseMax) == -1.0f);
+            }
+        }
         return static_cast<float>(input * inverseMax);
     }
     else
     {
-        constexpr float inverseMax = 1.0f / ((1 << inputBitCount) - 1);
+        constexpr float inverseMax = 1.0f / maxValue;
+        if constexpr (std::is_signed<T>::value)
+        {
+            return std::max(-1.0f, input * inverseMax);
+        }
         return input * inverseMax;
     }
 }
@@ -813,28 +861,44 @@ typedef Range<unsigned int> RangeUI;
 static_assert(std::is_trivially_copyable<RangeUI>(),
               "RangeUI should be trivial copyable so that we can memcpy");
 
+// Inclusive vertex index range [start(), end()].
 struct IndexRange
 {
     struct Undefined
     {};
     IndexRange(Undefined) {}
-    IndexRange() : IndexRange(0, 0, 0) {}
-    IndexRange(size_t start_, size_t end_, size_t vertexIndexCount_)
-        : start(start_), end(end_), vertexIndexCount(vertexIndexCount_)
+    IndexRange() = default;
+    IndexRange(uint32_t start_, uint32_t end_) : mStart(start_), mCount(end_ - start_ + 1)
     {
-        ASSERT(start <= end);
+        ASSERT(start_ <= end_);
+    }
+    bool isEmpty() const { return mCount == 0; }
+    uint32_t start() const
+    {
+        ASSERT(!isEmpty());
+        return mStart;
+    }
+    uint32_t end() const
+    {
+        ASSERT(!isEmpty());
+        return mStart + mCount - 1;
     }
 
     // Number of vertices in the range.
-    size_t vertexCount() const { return (end - start) + 1; }
+    uint32_t vertexCount() const { return mCount; }
 
-    // Inclusive range of indices that are not primitive restart
-    size_t start;
-    size_t end;
-
-    // Number of non-primitive restart indices
-    size_t vertexIndexCount;
+  private:
+    uint32_t mStart{0};
+    uint32_t mCount{0};
 };
+
+inline bool operator==(const IndexRange &a, const IndexRange &b)
+{
+    return a.vertexCount() == b.vertexCount() &&
+           ((a.vertexCount() == 0) || (a.start() == b.start()));
+}
+
+std::ostream &operator<<(std::ostream &s, const IndexRange &a);
 
 // Combine a floating-point value representing a mantissa (x) and an integer exponent (exp) into a
 // floating-point value. As in GLSL ldexp() built-in.

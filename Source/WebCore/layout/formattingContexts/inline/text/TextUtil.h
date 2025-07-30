@@ -61,13 +61,12 @@ public:
     enum class IncludeHyphen : bool { No, Yes };
     static FallbackFontList fallbackFontsForText(StringView, const RenderStyle&, IncludeHyphen);
 
-    struct EnclosingGlyphBounds {
+    struct EnclosingAscentDescent {
         InlineLayoutUnit ascent { 0.f };
         InlineLayoutUnit descent { 0.f };
-        InlineLayoutUnit left { 0.f };
-        InlineLayoutUnit right { 0.f };
     };
-    static EnclosingGlyphBounds enclosingGlyphBounds(StringView, const RenderStyle&, bool canUseSimpleFontCodePath = false);
+    enum class ShouldUseSimpleGlyphOverflowCodePath : bool { No, Yes };
+    static EnclosingAscentDescent enclosingGlyphBoundsForText(StringView, const RenderStyle&, ShouldUseSimpleGlyphOverflowCodePath);
 
     struct WordBreakLeft {
         size_t length { 0 };
@@ -110,6 +109,10 @@ public:
 
     static bool canUseSimplifiedTextMeasuring(StringView, const FontCascade&, bool whitespaceIsCollapsed, const RenderStyle* firstLineStyle);
     static bool hasPositionDependentContentWidth(StringView);
+
+
+    static char32_t baseCharacterFromGraphemeCluster(StringView graphemeCluster);
+    static char32_t lastBaseCharacterFromText(StringView);
 };
 
 } // namespace Layout

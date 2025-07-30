@@ -22,9 +22,10 @@
  */
 
 #include "config.h"
+#include "MockDisplayCaptureSourceGStreamer.h"
 
 #if ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
-#include "MockDisplayCaptureSourceGStreamer.h"
+#include "ContextDestructionObserverInlines.h"
 
 namespace WebCore {
 
@@ -88,6 +89,8 @@ const RealtimeMediaSourceCapabilities& MockDisplayCaptureSourceGStreamer::capabi
         capabilities.setWidth({ 1, 1920 });
         capabilities.setHeight({ 1, 1080 });
         capabilities.setFrameRate({ .01, 30.0 });
+
+        capabilities.setDeviceId(hashedId());
 
         m_capabilities = WTFMove(capabilities);
     }

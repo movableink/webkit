@@ -76,8 +76,8 @@ void RemoteBuffer::mapAsync(WebCore::WebGPU::MapModeFlags mapModeFlags, WebCore:
 
 void RemoteBuffer::getMappedRange(WebCore::WebGPU::Size64 offset, std::optional<WebCore::WebGPU::Size64> size, CompletionHandler<void(std::optional<Vector<uint8_t>>&&)>&& callback)
 {
-    protectedBacking()->getMappedRange(offset, size, [&] (auto mappedRange) {
-        m_isMapped = true;
+    protectedBacking()->getMappedRange(offset, size, [protectedThis = Ref { *this }, &callback] (auto mappedRange) {
+        protectedThis->m_isMapped = true;
         callback(mappedRange);
     });
 }
@@ -88,6 +88,23 @@ void RemoteBuffer::unmap()
         protectedBacking()->unmap();
     m_isMapped = false;
     m_mapModeFlags = { };
+}
+
+void RemoteBuffer::copyWithCopy(Vector<uint8_t>&& data, size_t offset)
+{
+    if (!m_isMapped || !m_mapModeFlags.contains(WebCore::WebGPU::MapMode::Write))
+        return;
+
+    auto buffer = protectedBacking()->getBufferContents();
+    if (buffer.empty())
+        return;
+
+    auto dataSize = data.size();
+    auto endOffset = checkedSum<size_t>(offset, dataSize);
+    if (endOffset.hasOverflowed() || endOffset.value() > buffer.size())
+        return;
+
+    memcpySpan(buffer.subspan(offset), data.span());
 }
 
 void RemoteBuffer::copy(std::optional<WebCore::SharedMemoryHandle>&& dataHandle, size_t offset, CompletionHandler<void(bool)>&& completionHandler)

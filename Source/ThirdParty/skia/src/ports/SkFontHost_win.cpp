@@ -15,7 +15,6 @@
 #include "include/core/SkStream.h"
 #include "include/core/SkString.h"
 #include "include/ports/SkTypeface_win.h"
-#include "include/private/SkColorData.h"
 #include "include/private/base/SkMacros.h"
 #include "include/private/base/SkOnce.h"
 #include "include/private/base/SkTDArray.h"
@@ -25,6 +24,7 @@
 #include "src/base/SkLeanWindows.h"
 #include "src/base/SkUTF.h"
 #include "src/core/SkAdvancedTypefaceMetrics.h"
+#include "src/core/SkColorData.h"
 #include "src/core/SkDescriptor.h"
 #include "src/core/SkFontDescriptor.h"
 #include "src/core/SkGlyph.h"
@@ -562,7 +562,7 @@ void* HDCOffscreen::draw(const SkGlyph& glyph, bool isBW, size_t* srcRBPtr) {
 
 class SkScalerContext_GDI : public SkScalerContext {
 public:
-    SkScalerContext_GDI(sk_sp<LogFontTypeface>,
+    SkScalerContext_GDI(LogFontTypeface&,
                         const SkScalerContextEffects&,
                         const SkDescriptor* desc);
     ~SkScalerContext_GDI() override;
@@ -612,6 +612,7 @@ private:
     enum Type {
         kTrueType_Type, kBitmap_Type, kLine_Type
     } fType;
+    bool fGenerateFromPath;
     TEXTMETRIC fTM;
 };
 
@@ -638,14 +639,15 @@ static BYTE compute_quality(const SkScalerContextRec& rec) {
     }
 }
 
-SkScalerContext_GDI::SkScalerContext_GDI(sk_sp<LogFontTypeface> rawTypeface,
+SkScalerContext_GDI::SkScalerContext_GDI(LogFontTypeface& rawTypeface,
                                          const SkScalerContextEffects& effects,
                                          const SkDescriptor* desc)
-        : SkScalerContext(std::move(rawTypeface), effects, desc)
+        : SkScalerContext(rawTypeface, effects, desc)
         , fDDC(nullptr)
         , fSavefont(nullptr)
         , fFont(nullptr)
         , fSC(nullptr)
+        , fGenerateFromPath(false)
 {
     LogFontTypeface* typeface = static_cast<LogFontTypeface*>(this->getTypeface());
 
@@ -741,7 +743,7 @@ SkScalerContext_GDI::SkScalerContext_GDI(sk_sp<LogFontTypeface> rawTypeface,
         fMat22.eM22 = SkFloatToFIXED(xform.eM22);
 
         if (needToRenderWithSkia(fRec)) {
-            this->forceGenerateImageFromPath();
+            fGenerateFromPath = true;
         }
 
         // Create a hires matrix if we need linear metrics.
@@ -903,6 +905,8 @@ SkScalerContext::GlyphMetrics SkScalerContext_GDI::generateMetrics(const SkGlyph
             mx.advance = fG_inv.mapXY(SkIntToScalar(gm.gmCellIncX), SkIntToScalar(gm.gmCellIncY));
         }
     }
+
+    mx.computeFromPath = fGenerateFromPath;
     return mx;
 }
 
@@ -1022,7 +1026,7 @@ static const uint8_t* getInverseGammaTableClearType() {
     return gTableClearType;
 }
 
-#include "include/private/SkColorData.h"
+#include "src/core/SkColorData.h"
 
 //Cannot assume that the input rgb is gray due to possible setting of kGenA8FromLCD_Flag.
 template<bool APPLY_PREBLEND>
@@ -1086,6 +1090,11 @@ void SkScalerContext_GDI::RGBToLcd16(
 
 void SkScalerContext_GDI::generateImage(const SkGlyph& glyph, void* imageBuffer) {
     SkASSERT(fDDC);
+
+    if (fGenerateFromPath && glyph.path()) {
+        this->generateImageFromPath(glyph, imageBuffer);
+        return;
+    }
 
     const bool isBW = SkMask::kBW_Format == fRec.fMaskFormat;
     const bool isAA = !isLCD(fRec);
@@ -2074,7 +2083,7 @@ std::unique_ptr<SkScalerContext> LogFontTypeface::onCreateScalerContext(
     const SkScalerContextEffects& effects, const SkDescriptor* desc) const
 {
     auto ctx = std::make_unique<SkScalerContext_GDI>(
-            sk_ref_sp(const_cast<LogFontTypeface*>(this)), effects, desc);
+            *const_cast<LogFontTypeface*>(this), effects, desc);
     if (ctx->isValid()) {
         return std::move(ctx);
     }
@@ -2082,13 +2091,13 @@ std::unique_ptr<SkScalerContext> LogFontTypeface::onCreateScalerContext(
     ctx.reset();
     SkStrikeCache::PurgeAll();
     ctx = std::make_unique<SkScalerContext_GDI>(
-            sk_ref_sp(const_cast<LogFontTypeface*>(this)), effects, desc);
+            *const_cast<LogFontTypeface*>(this), effects, desc);
     if (ctx->isValid()) {
         return std::move(ctx);
     }
 
     return SkScalerContext::MakeEmpty(
-            sk_ref_sp(const_cast<LogFontTypeface*>(this)), effects, desc);
+            *const_cast<LogFontTypeface*>(this), effects, desc);
 }
 
 void LogFontTypeface::onFilterRec(SkScalerContextRec* rec) const {

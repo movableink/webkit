@@ -36,6 +36,7 @@
 #include <QGuiApplication>
 #include <QKeyEvent>
 #include <QKeySequence>
+#include <WebCore/CSSSerializationContext.h>
 #include <WebCore/Editor.h>
 #include <WebCore/EventNames.h>
 #include <WebCore/FocusController.h>
@@ -50,10 +51,13 @@
 #include <WebCore/QWebPageClient.h>
 #include <WebCore/Range.h>
 #include <WebCore/Settings.h>
+#include <WebCore/SimpleRange.h>
 #include <WebCore/SpatialNavigation.h>
 #include <WebCore/StyleProperties.h>
 #include <WebCore/WindowsKeyboardCodes.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <WebCore/NodeInlines.h>
+#include <WebCore/LocalFrameInlines.h>
 #include <stdio.h>
 
 
@@ -168,7 +172,7 @@ bool EditorClientQt::shouldApplyStyle(const WebCore::StyleProperties& style, con
 {
     if (dumpEditingCallbacks)
         printf("EDITING DELEGATE: shouldApplyStyle:%s toElementsInDOMRange:%s\n",
-            QString(style.asText()).toUtf8().constData(), dumpRange(range).toUtf8().constData());
+            QString(style.asText(CSS::defaultSerializationContext())).toUtf8().constData(), dumpRange(range).toUtf8().constData());
     return acceptsEditing;
 }
 
@@ -419,7 +423,7 @@ void EditorClientQt::handleKeyboardEvent(KeyboardEvent& event)
     // FIXME: refactor all of this to use Actions or something like them
     if (start->isContentEditable()) {
         bool doSpatialNavigation = false;
-        if (isSpatialNavigationEnabled(frame.get())) {
+        if (frame->document() && frame->document()->settings().spatialNavigationEnabled()) {
             if (!kevent->modifiers()) {
                 switch (kevent->windowsVirtualKeyCode()) {
                 case VK_LEFT:
@@ -656,7 +660,7 @@ void EditorClientQt::updateEditorStateAfterLayoutIfEditabilityChanged()
 {
 }
 
-DOMPasteAccessResponse EditorClientQt::requestDOMPasteAccess(DOMPasteAccessCategory, FrameIdentifier, const WTF::String& originIdentifier)
+DOMPasteAccessResponse EditorClientQt::requestDOMPasteAccess(DOMPasteAccessCategory, FrameIdentifier, const WTF::String& /* originIdentifier */)
 {
     return WebCore::DOMPasteAccessResponse::DeniedForGesture;
 }
@@ -669,7 +673,7 @@ void EditorClientQt::didUpdateComposition()
 {
 }
 
-bool EditorClientQt::performTwoStepDrop(DocumentFragment&, const SimpleRange& destination, bool isMove)
+bool EditorClientQt::performTwoStepDrop(DocumentFragment&, const SimpleRange& /* destination */, bool /* isMove */)
 {
     return false;
 }

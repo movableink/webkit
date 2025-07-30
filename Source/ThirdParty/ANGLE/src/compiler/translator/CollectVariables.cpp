@@ -793,7 +793,7 @@ void CollectVariablesTraverser::setFieldOrVariableProperties(const TType &type,
         variableOut->precision = GLVariablePrecision(type);
     }
 
-    const TSpan<const unsigned int> &arraySizes = type.getArraySizes();
+    const angle::Span<const unsigned int> &arraySizes = type.getArraySizes();
     if (!arraySizes.empty())
     {
         variableOut->arraySizes.assign(arraySizes.begin(), arraySizes.end());
@@ -1174,6 +1174,9 @@ bool CollectVariablesTraverser::visitDeclaration(Visit, TIntermDeclaration *node
                     break;
                 case EvqUniform:
                     mUniforms->push_back(recordUniform(variable));
+                    break;
+                case EvqPerVertexIn:
+                case EvqPerVertexOut:
                     break;
                 default:
                     if (IsVaryingIn(qualifier))

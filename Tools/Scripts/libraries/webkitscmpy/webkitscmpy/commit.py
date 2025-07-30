@@ -23,7 +23,7 @@
 import json
 import re
 
-from datetime import datetime
+from datetime import datetime, timezone
 from webkitbugspy import Tracker
 from webkitscmpy import Contributor
 from webkitcorepy import string_utils
@@ -34,7 +34,8 @@ class Commit(object):
     REVISION_RE = re.compile(r'^[Rr]?(?P<revision>\d{1,10})$')
     IDENTIFIER_RE = re.compile(r'^((?P<branch_point>\d{1,10})\.)?(?P<identifier>-?\d{1,10})(@(?P<branch>\S*))?$')
     NUMBER_RE = re.compile(r'^-?\d{1,10}$')
-    TRAILER_RE = re.compile(r'^(?P<key>\S[^:()\t\/*]*): (?P<value>.+)')
+    TRAILER_RE = re.compile(r'^(?P<key>[a-zA-Z0-9\-]+|Canonical link)[\x20\t]*:(?P<value>.*)')
+    GIT_SPACE = '\t\n\r\x20'
     HASH_LABEL_SIZE = 12
     UUID_MULTIPLIER = 100
 
@@ -224,7 +225,10 @@ class Commit(object):
         self.order = order or 0
 
         if author and isinstance(author, dict) and author.get('name'):
-            self.author = Contributor(author.get('name'), author.get('emails'))
+            emails = author.get('emails', [])
+            if author.get('email'):
+                emails.append(author.get('email'))
+            self.author = Contributor(author.get('name'), emails)
         elif author and isinstance(author, string_utils.basestring) and '@' in author:
             self.author = Contributor(author, [author])
         elif author and not isinstance(author, Contributor):
@@ -265,7 +269,7 @@ class Commit(object):
         if self.author:
             result += '    by {}'.format(self.author)
             if self.timestamp:
-                result += ' @ {}'.format(datetime.utcfromtimestamp(self.timestamp))
+                result += ' @ {}'.format(datetime.fromtimestamp(self.timestamp, timezone.utc))
             result += '\n'
 
         if self.message and message:
@@ -325,12 +329,15 @@ class Commit(object):
         if not self.message:
             return []
         result = []
-        for line in reversed(self.message.splitlines()):
-            if self.TRAILER_RE.match(line):
-                result.insert(0, line)
+
+        for line in reversed(self.message.rstrip('\n').split('\n')):
+            m = self.TRAILER_RE.match(line)
+            if m:
+                value = m['value'].strip(self.GIT_SPACE)
+                result.append(f"{m['key']}: {value}")
             else:
                 break
-        return result
+        return list(reversed(result))
 
     def __repr__(self):
         if self.branch_point and self.identifier is not None and self.branch:

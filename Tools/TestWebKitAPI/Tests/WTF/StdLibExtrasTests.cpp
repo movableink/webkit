@@ -253,7 +253,7 @@ TEST(WTF_StdLibExtras, SpanReinterpretCast_DynamicExtent_ManualRuntimeErrors)
 TEST(WTF_StdLibExtras, SpanReinterpretCast_NonDynamicExtent)
 {
     Vector<int32_t> signedInt { -3, -2, -1, 0, 1, 2 };
-    std::span<const int32_t, 6> signedIntSpan { signedInt.data(), signedInt.size() };
+    std::span<const int32_t, 6> signedIntSpan { signedInt.span() };
     static_assert(std::same_as<std::span<const int32_t, 6>, decltype(signedIntSpan)>);
 
     // Cast from 4 bytes to 1 byte per item.

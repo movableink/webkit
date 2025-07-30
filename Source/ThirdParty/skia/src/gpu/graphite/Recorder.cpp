@@ -4,52 +4,64 @@
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  */
-
 #include "include/gpu/graphite/Recorder.h"
 
 #include "include/core/SkBitmap.h"
 #include "include/core/SkCanvas.h"
-#include "include/core/SkColorSpace.h"
-#include "include/core/SkTraceMemoryDump.h"
-#include "include/effects/SkRuntimeEffect.h"
+#include "include/core/SkImage.h"
+#include "include/core/SkImageInfo.h"
+#include "include/core/SkPixmap.h"
+#include "include/core/SkRect.h"
+#include "include/core/SkSize.h"
+#include "include/core/SkTypes.h"
+#include "include/gpu/GpuTypes.h"
 #include "include/gpu/graphite/BackendTexture.h"
+#include "include/gpu/graphite/Context.h"
 #include "include/gpu/graphite/GraphiteTypes.h"
 #include "include/gpu/graphite/ImageProvider.h"
 #include "include/gpu/graphite/Recording.h"
-
-#include "src/core/SkCompressedDataUtils.h"
-#include "src/core/SkConvertPixels.h"
+#include "include/gpu/graphite/TextureInfo.h"
+#include "src/core/SkMipmap.h"
 #include "src/core/SkTraceEvent.h"
 #include "src/gpu/AtlasTypes.h"
-#include "src/gpu/DataUtils.h"
+#include "src/gpu/GpuTypesPriv.h"
 #include "src/gpu/RefCntedCallback.h"
 #include "src/gpu/graphite/AtlasProvider.h"
 #include "src/gpu/graphite/BufferManager.h"
 #include "src/gpu/graphite/Caps.h"
-#include "src/gpu/graphite/CommandBuffer.h"
 #include "src/gpu/graphite/ContextPriv.h"
 #include "src/gpu/graphite/Device.h"
-#include "src/gpu/graphite/GlobalCache.h"
 #include "src/gpu/graphite/Log.h"
-#include "src/gpu/graphite/PathAtlas.h"
 #include "src/gpu/graphite/PipelineData.h"
 #include "src/gpu/graphite/ProxyCache.h"
-#include "src/gpu/graphite/RasterPathAtlas.h"
 #include "src/gpu/graphite/RecorderPriv.h"
 #include "src/gpu/graphite/RecordingPriv.h"
 #include "src/gpu/graphite/ResourceProvider.h"
+#include "src/gpu/graphite/ResourceTypes.h"
 #include "src/gpu/graphite/RuntimeEffectDictionary.h"
 #include "src/gpu/graphite/ScratchResourceManager.h"
 #include "src/gpu/graphite/SharedContext.h"
 #include "src/gpu/graphite/Texture.h"
+#include "src/gpu/graphite/TextureProxy.h"
 #include "src/gpu/graphite/UploadBufferManager.h"
-#include "src/gpu/graphite/task/CopyTask.h"
+#include "src/gpu/graphite/task/Task.h"
 #include "src/gpu/graphite/task/TaskList.h"
 #include "src/gpu/graphite/task/UploadTask.h"
-#include "src/gpu/graphite/text/TextAtlasManager.h"
 #include "src/image/SkImage_Base.h"
 #include "src/text/gpu/StrikeCache.h"
 #include "src/text/gpu/TextBlobRedrawCoordinator.h"
+
+#include <atomic>
+#include <string_view>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+#if defined(GPU_TEST_UTILS)
+#include "src/gpu/graphite/RecorderOptionsPriv.h"
+#endif
+
+enum SkColorType : int;
 
 namespace skgpu::graphite {
 
@@ -62,9 +74,7 @@ namespace skgpu::graphite {
  */
 class DefaultImageProvider final : public ImageProvider {
 public:
-    static sk_sp<DefaultImageProvider> Make() {
-        return sk_ref_sp(new DefaultImageProvider);
-    }
+    static sk_sp<DefaultImageProvider> Make() { return sk_sp(new DefaultImageProvider); }
 
     sk_sp<SkImage> findOrCreate(Recorder* recorder,
                                 const SkImage* image,
@@ -103,6 +113,9 @@ Recorder::Recorder(sk_sp<SharedContext> sharedContext,
         , fTextureDataCache(new TextureDataCache)
         , fProxyReadCounts(new ProxyReadCountMap)
         , fUniqueID(next_id())
+        , fRequireOrderedRecordings(options.fRequireOrderedRecordings.has_value()
+                                            ? *options.fRequireOrderedRecordings
+                                            : fSharedContext->caps()->requireOrderedRecordings())
         , fAtlasProvider(std::make_unique<AtlasProvider>(this))
         , fTokenTracker(std::make_unique<TokenTracker>())
         , fStrikeCache(std::make_unique<sktext::gpu::StrikeCache>())
@@ -119,15 +132,31 @@ Recorder::Recorder(sk_sp<SharedContext> sharedContext,
         fOwnedResourceProvider = fSharedContext->makeResourceProvider(
                 this->singleOwner(),
                 fUniqueID,
-                options.fGpuBudgetInBytes,
-                /* avoidBufferAlloc= */ false);
+                options.fGpuBudgetInBytes);
         fResourceProvider = fOwnedResourceProvider.get();
     }
     fUploadBufferManager = std::make_unique<UploadBufferManager>(fResourceProvider,
                                                                  fSharedContext->caps());
+
+#if defined(GPU_TEST_UTILS)
+    if (options.fRecorderOptionsPriv) {
+        if (options.fRecorderOptionsPriv->fDbmOptions.has_value()) {
+            fDrawBufferManager = std::make_unique<DrawBufferManager>(
+                    fResourceProvider,
+                    fSharedContext->caps(),
+                    fUploadBufferManager.get(),
+                    options.fRecorderOptionsPriv->fDbmOptions.value());
+        }
+    } else {
+        fDrawBufferManager = std::make_unique<DrawBufferManager>(fResourceProvider,
+                                                                 fSharedContext->caps(),
+                                                                 fUploadBufferManager.get());
+    }
+#else
     fDrawBufferManager = std::make_unique<DrawBufferManager>(fResourceProvider,
                                                              fSharedContext->caps(),
                                                              fUploadBufferManager.get());
+#endif
 
     SkASSERT(fResourceProvider);
 }
@@ -191,7 +220,8 @@ std::unique_ptr<Recording> Recorder::snap() {
     // Recorder doesn't hold a persistent manager and it can be deleted when snap() returns.
     ScratchResourceManager scratchManager{fResourceProvider, std::move(fProxyReadCounts)};
     std::unique_ptr<Recording> recording(new Recording(fNextRecordingID++,
-                                                       fUniqueID,
+                                                       fRequireOrderedRecordings ? fUniqueID
+                                                                                 : SK_InvalidGenID,
                                                        std::move(nonVolatileLazyProxies),
                                                        std::move(volatileLazyProxies),
                                                        std::move(fTargetProxyData),
@@ -221,12 +251,16 @@ std::unique_ptr<Recording> Recorder::snap() {
         fAtlasProvider->invalidateAtlases();
     }
 
+    // Process the return queue at least once to keep it from growing too large, as otherwise
+    // it's only processed during an explicit cleanup or a cache miss.
+    fResourceProvider->forceProcessReturnedResources();
+
     // Remaining cleanup that must always happen regardless of success or failure
     fRuntimeEffectDict->reset();
     fProxyReadCounts = std::make_unique<ProxyReadCountMap>();
     fTextureDataCache = std::make_unique<TextureDataCache>();
-    if (!this->priv().caps()->requireOrderedRecordings()) {
-        fAtlasProvider->textAtlasManager()->evictAtlases();
+    if (!fRequireOrderedRecordings) {
+        fAtlasProvider->invalidateAtlases();
     }
 
     return recording;
@@ -234,19 +268,14 @@ std::unique_ptr<Recording> Recorder::snap() {
 
 SkCanvas* Recorder::makeDeferredCanvas(const SkImageInfo& imageInfo,
                                        const TextureInfo& textureInfo) {
-    // Mipmaps can't reasonably be kept valid on a deferred surface with no actual texture.
-    if (textureInfo.mipmapped() == Mipmapped::kYes) {
-        SKGPU_LOG_W("Requested a deferred canvas with mipmapping; this is not supported");
-        return nullptr;
-    }
-
     if (fTargetProxyCanvas) {
         // Require snapping before requesting another canvas.
         SKGPU_LOG_W("Requested a new deferred canvas before snapping the previous one");
         return nullptr;
     }
 
-    fTargetProxyData = std::make_unique<Recording::LazyProxyData>(textureInfo);
+    fTargetProxyData = std::make_unique<Recording::LazyProxyData>(
+            this->priv().caps(), imageInfo.dimensions(), textureInfo);
     // Use kLoad for the initial load op since the purpose of a deferred canvas is to draw on top
     // of an existing, late-bound texture.
     fTargetProxyDevice = Device::Make(this,
@@ -490,6 +519,11 @@ size_t Recorder::currentPurgeableBytes() const {
 size_t Recorder::maxBudgetedBytes() const {
     ASSERT_SINGLE_OWNER
     return fResourceProvider->getResourceCacheLimit();
+}
+
+void Recorder::setMaxBudgetedBytes(size_t bytes) {
+    ASSERT_SINGLE_OWNER
+    return fResourceProvider->setResourceCacheLimit(bytes);
 }
 
 void Recorder::dumpMemoryStatistics(SkTraceMemoryDump* traceMemoryDump) const {

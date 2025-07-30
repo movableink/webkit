@@ -27,7 +27,7 @@
 #include "DOMCSSPaintWorklet.h"
 
 #include "DOMCSSNamespace.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "JSDOMPromiseDeferred.h"
 #include "PaintWorkletGlobalScope.h"
 #include "WorkletGlobalScopeProxy.h"
@@ -60,9 +60,14 @@ ASCIILiteral DOMCSSPaintWorklet::supplementName()
 // FIXME: Get rid of this override and rely on the standard-compliant Worklet::addModule() instead.
 void PaintWorklet::addModule(const String& moduleURL, WorkletOptions&&, DOMPromiseDeferred<void>&& promise)
 {
-    auto* document = this->document();
+    RefPtr document = this->document();
     if (!document) {
         promise.reject(Exception { ExceptionCode::InvalidStateError, "This frame is detached"_s });
+        return;
+    }
+
+    if (!document->hasBrowsingContext()) {
+        promise.reject(Exception { ExceptionCode::InvalidStateError, "This document does not have a browsing context"_s });
         return;
     }
 
@@ -70,7 +75,7 @@ void PaintWorklet::addModule(const String& moduleURL, WorkletOptions&&, DOMPromi
     // https://bugs.webkit.org/show_bug.cgi?id=191136
     // PaintWorklets don't have access to any sensitive APIs so we don't bother tracking taintedness there.
     auto maybeContext = PaintWorkletGlobalScope::tryCreate(*document, ScriptSourceCode(moduleURL, JSC::SourceTaintedOrigin::Untainted));
-    if (UNLIKELY(!maybeContext)) {
+    if (!maybeContext) [[unlikely]] {
         promise.reject(Exception { ExceptionCode::OutOfMemoryError });
         return;
     }

@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2002 Lars Knoll (knoll@kde.org)
  *           (C) 2002 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
- * Copyright (C) 2015 Google Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2017 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -56,7 +56,7 @@ void AutoTableLayout::recalcColumn(unsigned effCol)
             // RenderTableCols don't have the concept of preferred logical width, but we need to clear their dirty bits
             // so that if we call setPreferredWidthsDirty(true) on a col or one of its descendants, we'll mark its
             // ancestors as dirty.
-            column->clearPreferredLogicalWidthsDirtyBits();
+            column->clearNeedsPreferredLogicalWidthsUpdate();
         } else if (CheckedPtr section = dynamicDowncast<RenderTableSection>(child)) {
             unsigned numRows = section->numRows();
             for (unsigned i = 0; i < numRows; ++i) {
@@ -124,6 +124,9 @@ void AutoTableLayout::recalcColumn(unsigned effCol)
                         break;
                     }
                 } else if (!effCol || section->primaryCellAt(i, effCol - 1) != cell) {
+                    // If a cell originates in this spanning column ensure we have a min/max width of at least 1px for it.
+                    columnLayout.minLogicalWidth = std::max(columnLayout.minLogicalWidth, cell->maxPreferredLogicalWidth() ? 1.f : 0.f);
+
                     // This spanning cell originates in this column. Insert the cell into spanning cells list.
                     insertSpanCell(cell);
                 }
@@ -183,9 +186,9 @@ void AutoTableLayout::fullRecalc()
         recalcColumn(i);
 
     for (auto& section : childrenOfType<RenderTableSection>(*m_table)) {
-        section.setPreferredLogicalWidthsDirty(false);
+        section.clearNeedsPreferredWidthsUpdate();
         for (auto* row = section.firstRow(); row; row = row->nextRow())
-            row->setPreferredLogicalWidthsDirty(false);
+            row->clearNeedsPreferredWidthsUpdate();
     }
 }
 
@@ -221,10 +224,6 @@ void AutoTableLayout::computeIntrinsicLogicalWidths(LayoutUnit& minWidth, Layout
     float maxNonPercent = 0;
     bool scaleColumnsForSelf = intrinsics == TableIntrinsics::ForLayout;
 
-    // We substitute 0 percent by (epsilon / percentScaleFactor) percent in two places below to avoid division by zero.
-    // FIXME: Handle the 0% cases properly.
-    const float epsilon = 1 / 128.0f;
-
     float remainingPercent = 100;
     for (size_t i = 0; i < m_layoutStruct.size(); ++i) {
         minWidth += m_layoutStruct[i].effectiveMinLogicalWidth;
@@ -232,7 +231,12 @@ void AutoTableLayout::computeIntrinsicLogicalWidths(LayoutUnit& minWidth, Layout
         if (scaleColumnsForSelf) {
             if (m_layoutStruct[i].effectiveLogicalWidth.isPercent()) {
                 float percent = std::min(m_layoutStruct[i].effectiveLogicalWidth.percent(), remainingPercent);
-                float logicalWidth = m_layoutStruct[i].effectiveMaxLogicalWidth * 100 / std::max(percent, epsilon);
+                // When percent columns meet or exceed 100% and there are remaining
+                // columns, the other browsers (FF, Edge) use an artificially high max
+                // width, so we do too. Instead of division by zero, logicalWidth and
+                // maxNonPercent are set to tableMaxWidth.
+                // Issue: https://github.com/w3c/csswg-drafts/issues/1501
+                float logicalWidth = (percent > 0) ? m_layoutStruct[i].effectiveMaxLogicalWidth * 100 / percent : tableMaxWidth;
                 maxPercent = std::max(logicalWidth,  maxPercent);
                 remainingPercent -= percent;
             } else
@@ -241,11 +245,18 @@ void AutoTableLayout::computeIntrinsicLogicalWidths(LayoutUnit& minWidth, Layout
     }
 
     if (scaleColumnsForSelf) {
-        maxNonPercent = maxNonPercent * 100 / std::max(remainingPercent, epsilon);
-        m_scaledWidthFromPercentColumns = LayoutUnit(std::min<float>(maxNonPercent, tableMaxWidth));
-        m_scaledWidthFromPercentColumns = std::max(m_scaledWidthFromPercentColumns, LayoutUnit(std::min<float>(maxPercent, tableMaxWidth)));
+        if (maxNonPercent > 0)
+            maxNonPercent = (remainingPercent > 0) ? maxNonPercent * 100 / remainingPercent : tableMaxWidth;
+        m_scaledWidthFromPercentColumns = std::min(LayoutUnit(tableMaxWidth), LayoutUnit(std::max(maxPercent, maxNonPercent)));
         if (m_scaledWidthFromPercentColumns > maxWidth && shouldScaleColumnsForParent(*m_table))
             maxWidth = m_scaledWidthFromPercentColumns;
+    }
+
+    if (intrinsics == TableIntrinsics::ForKeyword && m_layoutStruct.isEmpty()) {
+        ASSERT(!minWidth);
+        ASSERT(!maxWidth);
+        minWidth = m_table->bordersPaddingAndSpacingInRowDirection();
+        maxWidth = minWidth;
     }
 
     maxWidth = std::max(maxWidth, LayoutUnit(spanMaxLogicalWidth));
@@ -254,7 +265,7 @@ void AutoTableLayout::computeIntrinsicLogicalWidths(LayoutUnit& minWidth, Layout
 void AutoTableLayout::applyPreferredLogicalWidthQuirks(LayoutUnit& minWidth, LayoutUnit& maxWidth) const
 {
     if (auto tableLogicalWidth = m_table->style().logicalWidth(); tableLogicalWidth.isFixed() && tableLogicalWidth.isPositive()) {
-        minWidth = std::max(minWidth, m_table->overridingLogicalWidth().value_or(LayoutUnit { tableLogicalWidth.value() }));
+        minWidth = std::max(minWidth, m_table->overridingBorderBoxLogicalWidth().value_or(LayoutUnit { tableLogicalWidth.value() }));
         maxWidth = minWidth;
     }
 }
@@ -314,10 +325,10 @@ float AutoTableLayout::calcEffectiveLogicalWidth()
                     // legacy behaviour anyway. mozilla doesn't do this so I decided we don't neither.
                     break;
                 }
-                FALLTHROUGH;
+                [[fallthrough]];
             case LengthType::Auto:
                 haveAuto = true;
-                FALLTHROUGH;
+                [[fallthrough]];
             default:
                 // If the column is a percentage width, do not let the spanning cell overwrite the
                 // width value.  This caused a mis-rendering on amazon.com.
@@ -661,84 +672,14 @@ void AutoTableLayout::layout()
 
     // If we have overallocated, reduce every cell according to the difference between desired width and minwidth
     // this seems to produce to the pixel exact results with IE. Wonder if some of this also holds for width distributing.
-    if (available < 0) {
-        // Need to reduce cells with the following prioritization:
-        // (1) Auto
-        // (2) Fixed
-        // (3) Percent
-        // This is basically the reverse of how we grew the cells.
-        if (available < 0) {
-            float logicalWidthBeyondMin = 0;
-            for (unsigned i = nEffCols; i; ) {
-                --i;
-                Length& logicalWidth = m_layoutStruct[i].effectiveLogicalWidth;
-                if (logicalWidth.isAuto())
-                    logicalWidthBeyondMin += m_layoutStruct[i].computedLogicalWidth - m_layoutStruct[i].effectiveMinLogicalWidth;
-            }
-            
-            for (unsigned i = nEffCols; i && logicalWidthBeyondMin > 0; ) {
-                --i;
-                Length& logicalWidth = m_layoutStruct[i].effectiveLogicalWidth;
-                if (logicalWidth.isAuto()) {
-                    float minMaxDiff = m_layoutStruct[i].computedLogicalWidth - m_layoutStruct[i].effectiveMinLogicalWidth;
-                    float reduce = available * minMaxDiff / logicalWidthBeyondMin;
-                    m_layoutStruct[i].computedLogicalWidth += reduce;
-                    available -= reduce;
-                    logicalWidthBeyondMin -= minMaxDiff;
-                    if (available >= 0)
-                        break;
-                }
-            }
-        }
-
-        if (available < 0) {
-            float logicalWidthBeyondMin = 0;
-            for (unsigned i = nEffCols; i; ) {
-                --i;
-                Length& logicalWidth = m_layoutStruct[i].effectiveLogicalWidth;
-                if (logicalWidth.isFixed())
-                    logicalWidthBeyondMin += m_layoutStruct[i].computedLogicalWidth - m_layoutStruct[i].effectiveMinLogicalWidth;
-            }
-            
-            for (unsigned i = nEffCols; i && logicalWidthBeyondMin > 0; ) {
-                --i;
-                Length& logicalWidth = m_layoutStruct[i].effectiveLogicalWidth;
-                if (logicalWidth.isFixed()) {
-                    float minMaxDiff = m_layoutStruct[i].computedLogicalWidth - m_layoutStruct[i].effectiveMinLogicalWidth;
-                    float reduce = available * minMaxDiff / logicalWidthBeyondMin;
-                    m_layoutStruct[i].computedLogicalWidth += reduce;
-                    available -= reduce;
-                    logicalWidthBeyondMin -= minMaxDiff;
-                    if (available >= 0)
-                        break;
-                }
-            }
-        }
-
-        if (available < 0) {
-            float logicalWidthBeyondMin = 0;
-            for (unsigned i = nEffCols; i; ) {
-                --i;
-                Length& logicalWidth = m_layoutStruct[i].effectiveLogicalWidth;
-                if (logicalWidth.isPercentOrCalculated())
-                    logicalWidthBeyondMin += m_layoutStruct[i].computedLogicalWidth - m_layoutStruct[i].effectiveMinLogicalWidth;
-            }
-            
-            for (unsigned i = nEffCols; i && logicalWidthBeyondMin > 0; ) {
-                --i;
-                Length& logicalWidth = m_layoutStruct[i].effectiveLogicalWidth;
-                if (logicalWidth.isPercentOrCalculated()) {
-                    float minMaxDiff = m_layoutStruct[i].computedLogicalWidth - m_layoutStruct[i].effectiveMinLogicalWidth;
-                    float reduce = available * minMaxDiff / logicalWidthBeyondMin;
-                    m_layoutStruct[i].computedLogicalWidth += reduce;
-                    available -= reduce;
-                    logicalWidthBeyondMin -= minMaxDiff;
-                    if (available >= 0)
-                        break;
-                }
-            }
-        }
-    }
+    // Need to reduce cells with the following prioritization:
+    // This is basically the reverse of how we grew the cells.
+    if (available < 0)
+        available = shrinkCellWidth(LengthType::Auto, available);
+    if (available < 0)
+        available = shrinkCellWidth(LengthType::Fixed, available);
+    if (available < 0)
+        available = shrinkCellWidth(LengthType::Percent, available);
 
     LayoutUnit pos;
     for (size_t i = 0; i < nEffCols; ++i) {
@@ -746,6 +687,34 @@ void AutoTableLayout::layout()
         pos += LayoutUnit::fromFloatCeil(m_layoutStruct[i].computedLogicalWidth) + m_table->hBorderSpacing();
     }
     m_table->setColumnPosition(m_table->columnPositions().size() - 1, pos);
+}
+
+float AutoTableLayout::shrinkCellWidth(const LengthType& lengthType, float available)
+{
+    unsigned nEffCols = m_table->numEffCols();
+    float logicalWidthBeyondMin = 0;
+    for (unsigned i = nEffCols; i; ) {
+        --i;
+        auto& logicalWidth = m_layoutStruct[i].effectiveLogicalWidth;
+        if (logicalWidth.type() == lengthType)
+            logicalWidthBeyondMin += m_layoutStruct[i].computedLogicalWidth - m_layoutStruct[i].effectiveMinLogicalWidth;
+    }
+
+    for (unsigned i = nEffCols; i && logicalWidthBeyondMin > 0; ) {
+        --i;
+        auto& logicalWidth = m_layoutStruct[i].effectiveLogicalWidth;
+        if (logicalWidth.type() == lengthType) {
+            float minMaxDiff = m_layoutStruct[i].computedLogicalWidth - m_layoutStruct[i].effectiveMinLogicalWidth;
+            float reduce = available * minMaxDiff / logicalWidthBeyondMin;
+            m_layoutStruct[i].computedLogicalWidth += reduce;
+            available -= reduce;
+            logicalWidthBeyondMin -= minMaxDiff;
+            if (available >= 0)
+                break;
+        }
+    }
+
+    return available;
 }
 
 }

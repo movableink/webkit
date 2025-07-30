@@ -1,9 +1,11 @@
 # META: timeout=long
 
 import pytest
+from webdriver import error
 
 from tests.classic.perform_actions.support.refine import get_keys
 from tests.support.asserts import assert_error, assert_success, assert_dialog_handled
+from tests.support.sync import Poll
 from . import perform_actions
 
 actions = [{
@@ -19,7 +21,7 @@ actions = [{
 @pytest.fixture
 def check_user_prompt_closed_without_exception(session, create_dialog, key_chain, key_reporter):
     def check_user_prompt_closed_without_exception(dialog_type, retval):
-        create_dialog(dialog_type, text=dialog_type)
+        create_dialog(dialog_type, text="cheese")
 
         response = perform_actions(session, actions)
         assert_success(response)
@@ -34,10 +36,11 @@ def check_user_prompt_closed_without_exception(session, create_dialog, key_chain
 @pytest.fixture
 def check_user_prompt_closed_with_exception(session, create_dialog, key_chain, key_reporter):
     def check_user_prompt_closed_with_exception(dialog_type, retval):
-        create_dialog(dialog_type, text=dialog_type)
+        create_dialog(dialog_type, text="cheese")
 
         response = perform_actions(session, actions)
-        assert_error(response, "unexpected alert open")
+        assert_error(response, "unexpected alert open",
+                     data={"text": "cheese"})
 
         assert_dialog_handled(session, expected_text=dialog_type, expected_retval=retval)
 
@@ -49,12 +52,13 @@ def check_user_prompt_closed_with_exception(session, create_dialog, key_chain, k
 @pytest.fixture
 def check_user_prompt_not_closed_but_exception(session, create_dialog, key_reporter):
     def check_user_prompt_not_closed_but_exception(dialog_type):
-        create_dialog(dialog_type, text=dialog_type)
+        create_dialog(dialog_type, text="cheese")
 
         response = perform_actions(session, actions)
-        assert_error(response, "unexpected alert open")
+        assert_error(response, "unexpected alert open",
+                     data={"text": "cheese"})
 
-        assert session.alert.text == dialog_type
+        assert session.alert.text == "cheese"
         session.alert.dismiss()
 
         assert get_keys(key_reporter) == ""
@@ -115,3 +119,28 @@ def test_ignore(check_user_prompt_not_closed_but_exception, dialog_type):
 ])
 def test_default(check_user_prompt_closed_with_exception, dialog_type, retval):
     check_user_prompt_closed_with_exception(dialog_type, retval)
+
+
+def test_dismissed_beforeunload(session, url, mouse_chain):
+    page_beforeunload = url("/webdriver/tests/support/html/beforeunload.html")
+    page_target = url("/webdriver/tests/support/html/default.html")
+
+    session.url = page_beforeunload
+    input = session.find.css("input", all=False)
+    input.send_keys("bar")
+
+    link = session.find.css("a", all=False)
+
+    mouse_chain.pointer_move(0, 0, origin=link) \
+        .click() \
+        .perform()
+
+    wait = Poll(
+        session,
+        timeout=5,
+        message="Target page did not load")
+    wait.until(lambda s: s.url == page_target)
+
+    # navigation auto-dismissed beforeunload prompt
+    with pytest.raises(error.NoSuchAlertException):
+        session.alert.text

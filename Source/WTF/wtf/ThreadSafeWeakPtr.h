@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/Atomics.h>
 #include <wtf/Lock.h>
 #include <wtf/MainThread.h>
 #include <wtf/RefPtr.h>
@@ -70,11 +71,11 @@ public:
     template<typename T, DestructionThread destructionThread>
     void strongDeref() const
     {
-        T* object;
+        SUPPRESS_UNCOUNTED_LOCAL T* object;
         {
             Locker locker { m_lock };
             ASSERT_WITH_SECURITY_IMPLICATION(m_object);
-            if (LIKELY(--m_strongReferenceCount))
+            if (--m_strongReferenceCount) [[likely]]
                 return;
             object = static_cast<T*>(std::exchange(m_object, nullptr));
             // We need to take a weak ref so `this` survives until the `delete object` below.
@@ -87,7 +88,7 @@ public:
             m_weakReferenceCount++;
         }
 
-        auto deleteObject = [this, object] {
+        auto deleteObject = [this, object] SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE {
             delete static_cast<const T*>(object);
 
             bool hasOtherWeakRefs;
@@ -185,14 +186,14 @@ private:
 struct ThreadSafeWeakPtrControlBlockRefDerefTraits {
     static ALWAYS_INLINE ThreadSafeWeakPtrControlBlock* refIfNotNull(ThreadSafeWeakPtrControlBlock* ptr)
     {
-        if (LIKELY(ptr))
+        if (ptr) [[likely]]
             return ptr->weakRef();
         return nullptr;
     }
 
     static ALWAYS_INLINE void derefIfNotNull(ThreadSafeWeakPtrControlBlock* ptr)
     {
-        if (LIKELY(ptr))
+        if (ptr) [[likely]]
             ptr->weakDeref();
     }
 };
@@ -239,7 +240,7 @@ public:
         if (didDerefStrongOnly) {
             if (newStrongOnlyRefCount == strongOnlyFlag) {
                 ASSERT(m_bits.exchangeOr(destructionStartedFlag) == newStrongOnlyRefCount);
-                auto deleteObject = [this] {
+                auto deleteObject = [this] SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE {
                     delete static_cast<const T*>(this);
                 };
                 switch (destructionThread) {
@@ -282,7 +283,7 @@ protected:
         // that seems unlikely since this is a one-way street. Once we add a controlBlock we don't go back
         // to strong only.
         uintptr_t bits = m_bits.loadRelaxed();
-        if (LIKELY(!isStrongOnly(bits)))
+        if (!isStrongOnly(bits)) [[likely]]
             return *std::bit_cast<ThreadSafeWeakPtrControlBlock*>(bits);
 
         auto* controlBlock = new ThreadSafeWeakPtrControlBlock(this);
@@ -461,7 +462,6 @@ public:
     bool isStrong() const { return !isWeak(); }
 
     RefPtr<T> get() const { return isWeak() ? m_weak.get() : m_strong; }
-    T* ptr() const { ASSERT(isStrong()); return m_strong.get(); }
 
     // NB. This function is not atomic so it's not safe to call get() while this transition is happening.
     RefPtr<T> convertToWeak()
@@ -481,99 +481,130 @@ public:
         m_weak.setTag(Status::Strong);
         m_weak = nullptr;
         m_strong = WTFMove(strong);
-        return ptr();
+        ASSERT(isStrong());
+        return m_strong.get();
     }
 
     ThreadSafeWeakOrStrongPtr& operator=(const ThreadSafeWeakOrStrongPtr& other)
     {
-        *this = nullptr;
-        if (other.isWeak())
-            m_weak = other.m_weak;
-        else
-            m_strong = other.m_strong;
-        ASSERT(status() == other.status());
+        ThreadSafeWeakOrStrongPtr copied(other);
+        swap(copied);
         return *this;
     }
 
     ThreadSafeWeakOrStrongPtr& operator=(ThreadSafeWeakOrStrongPtr&& other)
     {
-        *this = nullptr;
-        Status status = other.status();
-        if (status == Status::Weak)
-            m_weak = std::exchange(other.m_weak, nullptr);
-        else
-            m_strong = std::exchange(other.m_strong, nullptr);
-        ASSERT(status == this->status());
-        ASSERT(!other.ptr());
+        ThreadSafeWeakOrStrongPtr moved(WTFMove(other));
+        swap(moved);
         return *this;
     }
 
     ThreadSafeWeakOrStrongPtr& operator=(std::nullptr_t)
     {
-        if (isWeak())
-            m_weak = nullptr;
-        else
-            m_strong = nullptr;
+        ThreadSafeWeakOrStrongPtr zeroed;
+        swap(zeroed);
         return *this;
     }
 
     template<typename U>
     ThreadSafeWeakOrStrongPtr& operator=(const RefPtr<U>& strongReference)
     {
-        if (isWeak())
-            m_weak = nullptr;
-        m_strong = strongReference;
-        ASSERT(isStrong());
+        ThreadSafeWeakOrStrongPtr copied(strongReference);
+        swap(copied);
         return *this;
     }
 
     template<typename U>
     ThreadSafeWeakOrStrongPtr& operator=(RefPtr<U>&& strongReference)
     {
-        if (isWeak())
-            m_weak = nullptr;
-        m_strong = WTFMove(strongReference);
-        ASSERT(isStrong());
+        ThreadSafeWeakOrStrongPtr moved(WTFMove(strongReference));
+        swap(moved);
         return *this;
     }
 
     template<typename U>
     ThreadSafeWeakOrStrongPtr& operator=(const Ref<U>& strongReference)
     {
-        if (isWeak())
-            m_weak = nullptr;
-        m_strong = strongReference;
-        ASSERT(isStrong());
+        ThreadSafeWeakOrStrongPtr copied(strongReference);
+        swap(copied);
         return *this;
     }
 
     template<typename U>
     ThreadSafeWeakOrStrongPtr& operator=(Ref<U>&& strongReference)
     {
-        if (isWeak())
-            m_weak = nullptr;
-        m_strong = WTFMove(strongReference);
-        ASSERT(isStrong());
+        ThreadSafeWeakOrStrongPtr moved(WTFMove(strongReference));
+        swap(moved);
         return *this;
     }
 
     ThreadSafeWeakOrStrongPtr()
-        : m_weak(nullptr)
     {
         ASSERT(isStrong());
     }
 
-    template<typename U>
-    ThreadSafeWeakOrStrongPtr(const Ref<U>& strongReference) { *this = strongReference; }
+    ThreadSafeWeakOrStrongPtr(std::nullptr_t)
+    {
+        ASSERT(isStrong());
+    }
+
+    ThreadSafeWeakOrStrongPtr(const ThreadSafeWeakOrStrongPtr& other)
+    {
+        ASSERT(isStrong());
+        copyConstructFrom(other);
+    }
 
     template<typename U>
-    ThreadSafeWeakOrStrongPtr(const RefPtr<U>& strongReference) { *this = strongReference; }
+    ThreadSafeWeakOrStrongPtr(const ThreadSafeWeakOrStrongPtr<U>& other)
+    {
+        ASSERT(isStrong());
+        copyConstructFrom(other);
+    }
+
+    ThreadSafeWeakOrStrongPtr(ThreadSafeWeakOrStrongPtr&& other)
+    {
+        ASSERT(isStrong());
+        moveConstructFrom(WTFMove(other));
+    }
 
     template<typename U>
-    ThreadSafeWeakOrStrongPtr(Ref<U>&& strongReference) { *this = WTFMove(strongReference); }
+    ThreadSafeWeakOrStrongPtr(ThreadSafeWeakOrStrongPtr<U>&& other)
+    {
+        ASSERT(isStrong());
+        moveConstructFrom(WTFMove(other));
+    }
 
     template<typename U>
-    ThreadSafeWeakOrStrongPtr(RefPtr<U>&& strongReference) { *this = WTFMove(strongReference); }
+    ThreadSafeWeakOrStrongPtr(const Ref<U>& strongReference)
+    {
+        ASSERT(isStrong());
+        m_strong = strongReference;
+        ASSERT(isStrong());
+    }
+
+    template<typename U>
+    ThreadSafeWeakOrStrongPtr(const RefPtr<U>& strongReference)
+    {
+        ASSERT(isStrong());
+        m_strong = strongReference;
+        ASSERT(isStrong());
+    }
+
+    template<typename U>
+    ThreadSafeWeakOrStrongPtr(Ref<U>&& strongReference)
+    {
+        ASSERT(isStrong());
+        m_strong = WTFMove(strongReference);
+        ASSERT(isStrong());
+    }
+
+    template<typename U>
+    ThreadSafeWeakOrStrongPtr(RefPtr<U>&& strongReference)
+    {
+        ASSERT(isStrong());
+        m_strong = WTFMove(strongReference);
+        ASSERT(isStrong());
+    }
 
     ~ThreadSafeWeakOrStrongPtr()
     {
@@ -583,9 +614,65 @@ public:
             m_weak.~ThreadSafeWeakPtr<T, EnumTaggingTraits<T, Status>>();
     }
 
+    template<typename U>
+    void swap(ThreadSafeWeakOrStrongPtr<U>& other)
+    {
+        if (isStrong()) {
+            if (other.isStrong()) {
+                std::swap(m_strong, other.m_strong);
+                return;
+            }
+            auto weak = std::exchange(other.m_weak, ThreadSafeWeakPtr<U, EnumTaggingTraits<U, Status>> { });
+            ASSERT(other.isStrong());
+            other.m_strong = std::exchange(m_strong, nullptr);
+            m_weak = WTFMove(weak);
+            ASSERT(isWeak());
+            return;
+        }
+
+        if (other.isWeak()) {
+            std::swap(m_weak, other.m_weak);
+            return;
+        }
+
+        auto strong = std::exchange(other.m_strong, nullptr);
+        other.m_weak = std::exchange(m_weak, ThreadSafeWeakPtr<T, EnumTaggingTraits<T, Status>> { });
+        ASSERT(other.isWeak());
+        ASSERT(isStrong());
+        m_strong = WTFMove(strong);
+    }
+
 private:
+    template<typename U>
+    void copyConstructFrom(const ThreadSafeWeakOrStrongPtr<U>& other)
+    {
+        ASSERT(isStrong());
+        if (other.isWeak()) {
+            m_weak = other.m_weak;
+            ASSERT(isWeak());
+        } else {
+            m_strong = other.m_strong;
+            ASSERT(isStrong());
+        }
+    }
+
+    template<typename U>
+    void moveConstructFrom(ThreadSafeWeakOrStrongPtr<U>&& other)
+    {
+        ASSERT(isStrong());
+        if (other.isWeak()) {
+            m_weak = std::exchange(other.m_weak, ThreadSafeWeakPtr<U, EnumTaggingTraits<U, Status>> { });
+            ASSERT(isWeak());
+            ASSERT(other.isStrong());
+        } else {
+            m_strong = std::exchange(other.m_strong, nullptr);
+            ASSERT(isStrong());
+            ASSERT(other.isStrong());
+        }
+    }
+
     union {
-        ThreadSafeWeakPtr<T, EnumTaggingTraits<T, Status>> m_weak;
+        ThreadSafeWeakPtr<T, EnumTaggingTraits<T, Status>> m_weak { };
         RefPtr<T> m_strong;
     };
 };

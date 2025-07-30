@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -255,21 +255,6 @@ double PageLoadState::estimatedProgress() const
     return estimatedProgress(m_committedState);
 }
 
-const String& PageLoadState::pendingAPIRequestURL() const
-{
-    return m_committedState.pendingAPIRequest.url;
-}
-
-auto PageLoadState::pendingAPIRequest() const -> const PendingAPIRequest&
-{
-    return m_committedState.pendingAPIRequest;
-}
-
-const URL& PageLoadState::resourceDirectoryURL() const
-{
-    return m_committedState.resourceDirectoryURL;
-}
-
 void PageLoadState::setPendingAPIRequest(const Transaction::Token& token, PendingAPIRequest&& pendingAPIRequest, const URL& resourceDirectoryURL)
 {
     ASSERT_UNUSED(token, &token.m_pageLoadState == this);
@@ -322,7 +307,7 @@ void PageLoadState::didFailProvisionalLoad(const Transaction::Token& token)
     m_uncommittedState.unreachableURL = m_lastUnreachableURL;
 }
 
-void PageLoadState::didCommitLoad(const Transaction::Token& token, const WebCore::CertificateInfo& certificateInfo, bool hasInsecureContent, bool usedLegacyTLS, bool wasPrivateRelayed, const WebCore::SecurityOriginData& origin)
+void PageLoadState::didCommitLoad(const Transaction::Token& token, const WebCore::CertificateInfo& certificateInfo, bool hasInsecureContent, bool usedLegacyTLS, bool wasPrivateRelayed, const String& proxyName, const WebCore::ResourceResponseSource source, const WebCore::SecurityOriginData& origin)
 {
     ASSERT_UNUSED(token, &token.m_pageLoadState == this);
     ASSERT(m_uncommittedState.state == State::Provisional);
@@ -332,14 +317,15 @@ void PageLoadState::didCommitLoad(const Transaction::Token& token, const WebCore
     m_uncommittedState.certificateInfo = certificateInfo;
 
     ASSERT(!m_uncommittedState.provisionalURL.isNull());
-    m_uncommittedState.url = m_uncommittedState.provisionalURL.isNull() ? aboutBlankURL().string() : m_uncommittedState.provisionalURL;
-    m_uncommittedState.provisionalURL = String();
+    m_uncommittedState.url = m_uncommittedState.provisionalURL.isNull() ? aboutBlankURL().string() : std::exchange(m_uncommittedState.provisionalURL, { });
     m_uncommittedState.negotiatedLegacyTLS = usedLegacyTLS;
     m_uncommittedState.wasPrivateRelayed = wasPrivateRelayed;
     m_uncommittedState.origin = origin;
 
     m_uncommittedState.title = String();
     m_uncommittedState.titleFromBrowsingWarning = { };
+    m_uncommittedState.proxyName = proxyName;
+    m_uncommittedState.source = source;
 }
 
 void PageLoadState::didFinishLoad(const Transaction::Token& token)
@@ -390,10 +376,10 @@ const String& PageLoadState::title() const
     return m_committedState.title;
 }
 
-void PageLoadState::setTitle(const Transaction::Token& token, const String& title)
+void PageLoadState::setTitle(const Transaction::Token& token, String&& title)
 {
     ASSERT_UNUSED(token, &token.m_pageLoadState == this);
-    m_uncommittedState.title = title;
+    m_uncommittedState.title = WTFMove(title);
 }
 
 void PageLoadState::setTitleFromBrowsingWarning(const Transaction::Token& token, const String& title)

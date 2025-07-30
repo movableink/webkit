@@ -34,7 +34,12 @@ canvas {
         You can get the latest STP <a href="https://developer.apple.com/safari/download/">here</a>.
     </p>
 </div>
+<script src="../../../resources/js-test-pre.js"></script>
 <script>
+    globalThis.testRunner?.dumpAsText();
+  globalThis.testRunner?.waitUntilDone();
+
+
     async function helloTriangle() {
         if (!navigator.gpu || GPUBufferUsage.COPY_SRC === undefined) {
             document.body.className = 'error';
@@ -195,6 +200,9 @@ canvas {
 
     window.addEventListener("DOMContentLoaded", helloTriangle);
 
+    debug('Pass')
+    globalThis.testRunner?.notifyDone();
 </script>
+
 </body>
 </html>

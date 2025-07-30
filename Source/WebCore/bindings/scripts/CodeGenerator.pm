@@ -1072,11 +1072,30 @@ sub LinkOverloadedOperations
     }
 }
 
+sub OperationName
+{
+    my ($generator, $operation) = @_;
+
+    my $operationName = $operation->name;
+    $operationName =~ s/\-(.)/uc($1)/ge;
+    $operationName =~ s/\-//g;
+    $operationName = $generator->WK_lcfirst($operationName);
+
+    if ($operation->extendedAttributes->{"ImplementedAs"}) {
+        $operationName = $operation->extendedAttributes->{"ImplementedAs"};
+    }
+
+    return $operationName;
+}
+
 sub AttributeNameForGetterAndSetter
 {
     my ($generator, $attribute) = @_;
 
     my $attributeName = $attribute->name;
+    $attributeName =~ s/\-(.)/uc($1)/ge;
+    $attributeName =~ s/\-//g;
+
     if ($attribute->extendedAttributes->{"ImplementedAs"}) {
         $attributeName = $attribute->extendedAttributes->{"ImplementedAs"};
     }
@@ -1128,7 +1147,7 @@ sub GetterExpression
     } elsif ($attributeType->name eq "unsigned long") {
         $functionName = "getUnsignedIntegralAttribute";
     } elsif ($attributeType->name eq "Element") {
-        $functionName = "getElementAttribute";
+        $functionName = "getElementAttributeForBindings";
     } elsif ($attributeType->name eq "FrozenArray" && scalar @{$attributeType->subtypes} == 1 && @{$attributeType->subtypes}[0]->name eq "Element") {
         $functionName = "getElementsArrayAttribute";
     } else {

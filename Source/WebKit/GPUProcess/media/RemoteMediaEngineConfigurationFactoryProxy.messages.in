@@ -23,6 +23,11 @@
 
 #if ENABLE(GPU_PROCESS)
 
+[
+    DispatchedFrom=WebContent,
+    DispatchedTo=GPU,
+    EnabledBy=UseGPUProcessForMediaEnabled && MediaPlaybackEnabled
+]
 messages -> RemoteMediaEngineConfigurationFactoryProxy {
     CreateDecodingConfiguration(struct WebCore::MediaDecodingConfiguration configuration) -> (struct WebCore::MediaCapabilitiesDecodingInfo decodingInfo)
     CreateEncodingConfiguration(struct WebCore::MediaEncodingConfiguration configuration) -> (struct WebCore::MediaCapabilitiesEncodingInfo decodingInfo)

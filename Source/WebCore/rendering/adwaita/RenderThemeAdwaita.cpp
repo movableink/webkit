@@ -41,8 +41,10 @@
 #include "RenderObject.h"
 #include "RenderProgress.h"
 #include "RenderStyleSetters.h"
+#include "StylePadding.h"
 #include "ThemeAdwaita.h"
 #include "TimeRanges.h"
+#include "UserAgentScripts.h"
 #include "UserAgentStyleSheets.h"
 #include <wtf/text/Base64.h>
 
@@ -51,15 +53,16 @@
 #include <wtf/FileSystem.h>
 #endif
 
-#if ENABLE(MODERN_MEDIA_CONTROLS)
-#include "UserAgentScripts.h"
-#endif
-
 #if PLATFORM(GTK) || PLATFORM(WPE)
 #include "SystemSettings.h"
 #endif
 
+#if USE(GLIB)
+#include <wtf/glib/GSpanExtras.h>
+#endif
+
 namespace WebCore {
+using namespace CSS::Literals;
 using namespace WebCore::Adwaita;
 
 RenderTheme& RenderTheme::singleton()
@@ -75,9 +78,7 @@ bool RenderThemeAdwaita::canCreateControlPartForRenderer(const RenderObject& ren
     switch (renderer.style().usedAppearance()) {
     case StyleAppearance::Button:
     case StyleAppearance::Checkbox:
-#if ENABLE(INPUT_TYPE_COLOR)
     case StyleAppearance::ColorWell:
-#endif
     case StyleAppearance::DefaultButton:
     case StyleAppearance::InnerSpinButton:
     case StyleAppearance::Menulist:
@@ -115,7 +116,7 @@ bool RenderThemeAdwaita::canCreateControlPartForDecorations(const RenderObject& 
     return renderer.style().usedAppearance() == StyleAppearance::MenulistButton;
 }
 
-bool RenderThemeAdwaita::supportsFocusRing(const RenderStyle& style) const
+bool RenderThemeAdwaita::supportsFocusRing(const RenderObject&, const RenderStyle& style) const
 {
     switch (style.usedAppearance()) {
     case StyleAppearance::PushButton:
@@ -204,25 +205,15 @@ String RenderThemeAdwaita::extraDefaultStyleSheet()
 
 Vector<String, 2> RenderThemeAdwaita::mediaControlsScripts()
 {
-#if ENABLE(MODERN_MEDIA_CONTROLS)
     return { StringImpl::createWithoutCopying(ModernMediaControlsJavaScript) };
-#else
-    return { };
-#endif
 }
 
-String RenderThemeAdwaita::mediaControlsStyleSheet()
+Vector<String> RenderThemeAdwaita::mediaControlsStyleSheets(const HTMLMediaElement&)
 {
-#if ENABLE(MODERN_MEDIA_CONTROLS)
     if (m_mediaControlsStyleSheet.isEmpty())
         m_mediaControlsStyleSheet = StringImpl::createWithoutCopying(ModernMediaControlsUserAgentStyleSheet);
-    return m_mediaControlsStyleSheet;
-#else
-    return emptyString();
-#endif
+    return { m_mediaControlsStyleSheet };
 }
-
-#if ENABLE(MODERN_MEDIA_CONTROLS)
 
 String RenderThemeAdwaita::mediaControlsBase64StringForIconNameAndType(const String& iconName, const String& iconType)
 {
@@ -231,7 +222,7 @@ String RenderThemeAdwaita::mediaControlsBase64StringForIconNameAndType(const Str
     auto data = adoptGRef(g_resources_lookup_data(path.latin1().data(), G_RESOURCE_LOOKUP_FLAGS_NONE, nullptr));
     if (!data)
         return emptyString();
-    return base64EncodeToString({ static_cast<const uint8_t*>(g_bytes_get_data(data.get(), nullptr)), g_bytes_get_size(data.get()) });
+    return base64EncodeToString(span(data));
 #elif PLATFORM(WIN)
     auto path = webKitBundlePath(iconName, iconType, "media-controls"_s);
     auto data = FileSystem::readEntireFile(path);
@@ -248,7 +239,6 @@ String RenderThemeAdwaita::mediaControlsFormattedStringForDuration(double durati
     // FIXME: Format this somehow, maybe through GDateTime?
     return makeString(durationInSeconds);
 }
-#endif // ENABLE(MODERN_MEDIA_CONTROLS)
 #endif // ENABLE(VIDEO)
 
 Color RenderThemeAdwaita::systemColor(CSSValueID cssValueID, OptionSet<StyleColorOptions> options) const
@@ -273,7 +263,7 @@ Color RenderThemeAdwaita::systemColor(CSSValueID cssValueID, OptionSet<StyleColo
         return { Color::white, Color::Flags::Semantic };
 
     case CSSValueField:
-#if HAVE(OS_DARK_MODE_SUPPORT)
+#if PLATFORM(COCOA)
     case CSSValueWebkitControlBackground:
 #endif
         if (useDarkAppearance)
@@ -299,13 +289,13 @@ Color RenderThemeAdwaita::systemColor(CSSValueID cssValueID, OptionSet<StyleColo
     }
 }
 
-bool RenderThemeAdwaita::isControlStyled(const RenderStyle& style, const RenderStyle& userAgentStyle) const
+bool RenderThemeAdwaita::isControlStyled(const RenderStyle& style) const
 {
     auto appearance = style.usedAppearance();
     if (appearance == StyleAppearance::TextField || appearance == StyleAppearance::TextArea || appearance == StyleAppearance::SearchField || appearance == StyleAppearance::Listbox)
-        return style.border() != userAgentStyle.border();
+        return style.nativeAppearanceDisabled();
 
-    return RenderTheme::isControlStyled(style, userAgentStyle);
+    return RenderTheme::isControlStyled(style);
 }
 
 void RenderThemeAdwaita::adjustTextFieldStyle(RenderStyle& style, const Element*) const
@@ -335,16 +325,21 @@ void RenderThemeAdwaita::adjustMenuListButtonStyle(RenderStyle& style, const Ele
     adjustMenuListStyle(style, element);
 }
 
-LengthBox RenderThemeAdwaita::popupInternalPaddingBox(const RenderStyle& style) const
+Style::PaddingBox RenderThemeAdwaita::popupInternalPaddingBox(const RenderStyle& style) const
 {
     if (style.usedAppearance() == StyleAppearance::None)
-        return { };
+        return { 0_css_px };
 
     auto zoomedArrowSize = menuListButtonArrowSize * style.usedZoom();
     int leftPadding = menuListButtonPadding + (style.writingMode().isBidiRTL() ? zoomedArrowSize : 0);
     int rightPadding = menuListButtonPadding + (style.writingMode().isBidiLTR() ? zoomedArrowSize : 0);
 
-    return { menuListButtonPadding, rightPadding, menuListButtonPadding, leftPadding };
+    return {
+        Style::Length<CSS::Nonnegative> { static_cast<float>(menuListButtonPadding) },
+        Style::Length<CSS::Nonnegative> { static_cast<float>(rightPadding) },
+        Style::Length<CSS::Nonnegative> { static_cast<float>(menuListButtonPadding) },
+        Style::Length<CSS::Nonnegative> { static_cast<float>(leftPadding) },
+    };
 }
 
 Seconds RenderThemeAdwaita::animationRepeatIntervalForProgressBar(const RenderProgress& renderer) const
@@ -352,9 +347,10 @@ Seconds RenderThemeAdwaita::animationRepeatIntervalForProgressBar(const RenderPr
     return renderer.page().preferredRenderingUpdateInterval();
 }
 
-IntRect RenderThemeAdwaita::progressBarRectForBounds(const RenderProgress&, const IntRect& bounds) const
+IntRect RenderThemeAdwaita::progressBarRectForBounds(const RenderProgress& renderer, const IntRect& bounds) const
 {
-    return { bounds.x(), bounds.y(), bounds.width(), progressBarSize };
+    bool isHorizontal = renderer.isHorizontalWritingMode();
+    return { bounds.x(), bounds.y(), isHorizontal ? bounds.width() : progressBarSize, isHorizontal ? progressBarSize : bounds.height() };
 }
 
 void RenderThemeAdwaita::adjustSliderThumbSize(RenderStyle& style, const Element*) const
@@ -367,7 +363,6 @@ void RenderThemeAdwaita::adjustSliderThumbSize(RenderStyle& style, const Element
     style.setHeight(Length(sliderThumbSize, LengthType::Fixed));
 }
 
-#if ENABLE(DATALIST_ELEMENT)
 IntSize RenderThemeAdwaita::sliderTickSize() const
 {
     return { 1, 7 };
@@ -382,11 +377,68 @@ void RenderThemeAdwaita::adjustListButtonStyle(RenderStyle& style, const Element
 {
     // Add a margin to place the button at end of the input field.
     if (style.isLeftToRightDirection())
-        style.setMarginRight(Length(-2, LengthType::Fixed));
+        style.setMarginRight(-2_css_px);
     else
-        style.setMarginLeft(Length(-2, LengthType::Fixed));
+        style.setMarginLeft(-2_css_px);
 }
-#endif // ENABLE(DATALIST_ELEMENT)
+
+LengthSize RenderThemeAdwaita::controlSize(StyleAppearance appearance, const FontCascade& fontCascade, const LengthSize& zoomedSize, float zoomFactor) const
+{
+    if (!zoomedSize.width.isIntrinsicOrAuto() && !zoomedSize.height.isIntrinsicOrAuto())
+        return RenderTheme::controlSize(appearance, fontCascade, zoomedSize, zoomFactor);
+
+    switch (appearance) {
+    case StyleAppearance::Checkbox:
+    case StyleAppearance::Radio: {
+        auto buttonSize = zoomedSize;
+        if (buttonSize.width.isIntrinsicOrAuto())
+            buttonSize.width = Length(12 * zoomFactor, LengthType::Fixed);
+        if (buttonSize.height.isIntrinsicOrAuto())
+            buttonSize.height = Length(12 * zoomFactor, LengthType::Fixed);
+        return buttonSize;
+    }
+    case StyleAppearance::InnerSpinButton: {
+        auto spinButtonSize = zoomedSize;
+        if (spinButtonSize.width.isIntrinsicOrAuto())
+            spinButtonSize.width = Length(static_cast<int>(arrowSize * zoomFactor), LengthType::Fixed);
+        if (spinButtonSize.height.isIntrinsicOrAuto() || fontCascade.size() > arrowSize)
+            spinButtonSize.height = Length(fontCascade.size(), LengthType::Fixed);
+        return spinButtonSize;
+    }
+    default:
+        break;
+    }
+
+    return RenderTheme::controlSize(appearance, fontCascade, zoomedSize, zoomFactor);
+}
+
+LengthSize RenderThemeAdwaita::minimumControlSize(StyleAppearance, const FontCascade&, const LengthSize& zoomedSize, float) const
+{
+    if (!zoomedSize.width.isIntrinsicOrAuto() && !zoomedSize.height.isIntrinsicOrAuto())
+        return zoomedSize;
+
+    auto minSize = zoomedSize;
+    if (minSize.width.isIntrinsicOrAuto())
+        minSize.width = Length(0, LengthType::Fixed);
+    if (minSize.height.isIntrinsicOrAuto())
+        minSize.height = Length(0, LengthType::Fixed);
+    return minSize;
+}
+
+LengthBox RenderThemeAdwaita::controlBorder(StyleAppearance appearance, const FontCascade& font, const LengthBox& zoomedBox, float zoomFactor) const
+{
+    switch (appearance) {
+    case StyleAppearance::PushButton:
+    case StyleAppearance::DefaultButton:
+    case StyleAppearance::Button:
+    case StyleAppearance::SquareButton:
+        return zoomedBox;
+    default:
+        break;
+    }
+
+    return RenderTheme::controlBorder(appearance, font, zoomedBox, zoomFactor);
+}
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
 std::optional<Seconds> RenderThemeAdwaita::caretBlinkInterval() const

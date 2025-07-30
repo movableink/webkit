@@ -563,6 +563,8 @@ bool AccessibilityUIElement::boolAttributeValue(JSStringRef attribute)
         return checkElementState(m_element.get(), WebCore::Atspi::State::Modal);
     if (attributeName == "AXSupportsAutoCompletion"_s)
         return checkElementState(m_element.get(), WebCore::Atspi::State::SupportsAutocompletion);
+    if (attributeName == "AXVisited"_s)
+        return checkElementState(m_element.get(), WebCore::Atspi::State::Visited);
     if (attributeName == "AXInterfaceTable"_s)
         return m_element->interfaces().contains(WebCore::AccessibilityObjectAtspi::Interface::Table);
     if (attributeName == "AXInterfaceTableCell"_s)
@@ -745,8 +747,6 @@ static String roleValueToString(WebCore::Atspi::Role roleValue)
         return "AXEmbedded"_s;
     case WebCore::Atspi::Role::Entry:
         return "AXTextField"_s;
-    case WebCore::Atspi::Role::Footer:
-        return "AXFooter"_s;
     case WebCore::Atspi::Role::Footnote:
         return "AXFootnote"_s;
     case WebCore::Atspi::Role::Form:
@@ -813,6 +813,10 @@ static String roleValueToString(WebCore::Atspi::Role roleValue)
         return "AXRowHeader"_s;
     case WebCore::Atspi::Role::Ruler:
         return "AXRuler"_s;
+    case WebCore::Atspi::Role::SectionFooter:
+        return "AXSectionFooter"_s;
+    case WebCore::Atspi::Role::SectionHeader:
+        return "AXSectionHeader"_s;
     case WebCore::Atspi::Role::ScrollBar:
         return "AXScrollBar"_s;
     case WebCore::Atspi::Role::ScrollPane:
@@ -995,6 +999,16 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::helpText() const
     return OpaqueJSString::tryCreate(builder.toString()).leakRef();
 }
 
+double AccessibilityUIElement::pageX()
+{
+    return 0;
+}
+
+double AccessibilityUIElement::pageY()
+{
+    return 0;
+}
+
 double AccessibilityUIElement::x()
 {
     m_element->updateBackingStore();
@@ -1163,7 +1177,7 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::speakAs()
     return JSStringCreateWithCharacters(nullptr, 0);
 }
 
-bool AccessibilityUIElement::ariaIsGrabbed() const
+bool AccessibilityUIElement::isGrabbed() const
 {
     m_element->updateBackingStore();
     return m_element->attributes().get("grabbed"_s) == "true"_s;
@@ -1712,6 +1726,11 @@ RefPtr<AccessibilityUIElement> AccessibilityUIElement::accessibilityElementForTe
 }
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::attributedStringForTextMarkerRange(AccessibilityTextMarkerRange*)
+{
+    return nullptr;
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::attributedStringForTextMarkerRangeWithDidSpellCheck(AccessibilityTextMarkerRange*)
 {
     return nullptr;
 }

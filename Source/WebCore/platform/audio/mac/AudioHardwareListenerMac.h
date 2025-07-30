@@ -48,7 +48,7 @@ private:
     void processIsRunningChanged();
     void outputDeviceChanged();
 
-    void propertyChanged(UInt32, const AudioObjectPropertyAddress[]);
+    void propertyChanged(std::span<const AudioObjectPropertyAddress>);
 
     AudioObjectPropertyListenerBlock m_block;
 };

@@ -55,12 +55,24 @@
 namespace WebKit {
 using namespace WebCore;
 
-Ref<ModelConnectionToWebProcess> ModelConnectionToWebProcess::create(ModelProcess& modelProcess, WebCore::ProcessIdentifier webProcessIdentifier, PAL::SessionID sessionID, IPC::Connection::Handle&& connectionHandle, ModelProcessConnectionParameters&& parameters)
+Ref<ModelConnectionToWebProcess> ModelConnectionToWebProcess::create(
+    ModelProcess& modelProcess,
+    WebCore::ProcessIdentifier webProcessIdentifier,
+    PAL::SessionID sessionID,
+    IPC::Connection::Handle&& connectionHandle,
+    ModelProcessConnectionParameters&& parameters,
+    const std::optional<String>& attributionTaskID)
 {
-    return adoptRef(*new ModelConnectionToWebProcess(modelProcess, webProcessIdentifier, sessionID, WTFMove(connectionHandle), WTFMove(parameters)));
+    return adoptRef(*new ModelConnectionToWebProcess(modelProcess, webProcessIdentifier, sessionID, WTFMove(connectionHandle), WTFMove(parameters), attributionTaskID));
 }
 
-ModelConnectionToWebProcess::ModelConnectionToWebProcess(ModelProcess& modelProcess, WebCore::ProcessIdentifier webProcessIdentifier, PAL::SessionID sessionID, IPC::Connection::Handle&& connectionHandle, ModelProcessConnectionParameters&& parameters)
+ModelConnectionToWebProcess::ModelConnectionToWebProcess(
+    ModelProcess& modelProcess,
+    WebCore::ProcessIdentifier webProcessIdentifier,
+    PAL::SessionID sessionID,
+    IPC::Connection::Handle&& connectionHandle,
+    ModelProcessConnectionParameters&& parameters,
+    const std::optional<String>& attributionTaskID)
     : m_modelProcessModelPlayerManagerProxy(ModelProcessModelPlayerManagerProxy::create(*this))
     , m_connection(IPC::Connection::createClientConnection(IPC::Connection::Identifier { WTFMove(connectionHandle) }))
     , m_modelProcess(modelProcess)
@@ -73,6 +85,7 @@ ModelConnectionToWebProcess::ModelConnectionToWebProcess(ModelProcess& modelProc
 #if ENABLE(IPC_TESTING_API)
     , m_ipcTester(IPCTester::create())
 #endif
+    , m_attributionTaskID(attributionTaskID)
     , m_sharedPreferencesForWebProcess(WTFMove(parameters.sharedPreferencesForWebProcess))
 {
     RELEASE_ASSERT(RunLoop::isMain());
@@ -112,7 +125,7 @@ void ModelConnectionToWebProcess::didClose(IPC::Connection& connection)
 #if HAVE(VISIBILITY_PROPAGATION_VIEW)
 void ModelConnectionToWebProcess::createVisibilityPropagationContextForPage(WebPageProxyIdentifier pageProxyID, WebCore::PageIdentifier pageID, bool canShowWhileLocked)
 {
-    auto contextForVisibilityPropagation = LayerHostingContext::createForExternalHostingProcess({ canShowWhileLocked });
+    auto contextForVisibilityPropagation = LayerHostingContext::create({ canShowWhileLocked });
     RELEASE_LOG(Process, "ModelConnectionToWebProcess::createVisibilityPropagationContextForPage: pageProxyID=%" PRIu64 ", webPageID=%" PRIu64 ", contextID=%u", pageProxyID.toUInt64(), pageID.toUInt64(), contextForVisibilityPropagation->contextID());
     modelProcess().send(Messages::ModelProcessProxy::DidCreateContextForVisibilityPropagation(pageProxyID, pageID, contextForVisibilityPropagation->contextID()));
     m_visibilityPropagationContexts.add(std::make_pair(pageProxyID, pageID), WTFMove(contextForVisibilityPropagation));
@@ -147,6 +160,11 @@ void ModelConnectionToWebProcess::configureLoggingChannel(const String& channelN
     UNUSED_PARAM(state);
     UNUSED_PARAM(level);
 #endif
+}
+
+void ModelConnectionToWebProcess::didUnloadModelPlayer(WebCore::ModelPlayerIdentifier modelPlayerIdentifier)
+{
+    m_connection->send(Messages::ModelProcessConnection::DidUnloadModelPlayer(modelPlayerIdentifier), 0);
 }
 
 bool ModelConnectionToWebProcess::allowsExitUnderMemoryPressure() const

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 
 #include "AudioNodeInput.h"
 #include "AudioNodeOutput.h"
+#include "ExceptionOr.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -75,28 +76,28 @@ AnalyserNode::~AnalyserNode()
 
 void AnalyserNode::process(size_t framesToProcess)
 {
-    AudioBus* outputBus = output(0)->bus();
+    AudioBus& outputBus = output(0)->bus();
 
     if (!isInitialized()) {
-        outputBus->zero();
+        outputBus.zero();
         return;
     }
 
-    AudioBus* inputBus = input(0)->bus();
-    
+    AudioBus& inputBus = input(0)->bus();
+
     // Give the analyser the audio which is passing through this AudioNode. This must always
     // be done so that the state of the Analyser reflects the current input.
     m_analyser.writeInput(inputBus, framesToProcess);
 
     if (!input(0)->isConnected()) {
-        outputBus->zero();
+        outputBus.zero();
         return;
     }
 
     // For in-place processing, our override of pullInputs() will just pass the audio data through unchanged if the channel count matches from input to output
     // (resulting in inputBus == outputBus). Otherwise, do an up-mix to stereo.
-    if (inputBus != outputBus)
-        outputBus->copyFrom(*inputBus);
+    if (&inputBus != &outputBus)
+        outputBus.copyFrom(inputBus);
 }
 
 ExceptionOr<void> AnalyserNode::setFftSize(unsigned size)

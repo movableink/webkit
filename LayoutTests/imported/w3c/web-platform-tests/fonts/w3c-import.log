@@ -23,6 +23,8 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/fonts/CanvasTest.ttf
 /LayoutTests/imported/w3c/web-platform-tests/fonts/CanvasTest.ttf.headers
 /LayoutTests/imported/w3c/web-platform-tests/fonts/GentiumPlus-R.woff
+/LayoutTests/imported/w3c/web-platform-tests/fonts/Lato-Medium-Liga.ttf
+/LayoutTests/imported/w3c/web-platform-tests/fonts/Lato-Medium.ttf
 /LayoutTests/imported/w3c/web-platform-tests/fonts/META.yml
 /LayoutTests/imported/w3c/web-platform-tests/fonts/README.md
 /LayoutTests/imported/w3c/web-platform-tests/fonts/Revalia.woff

@@ -32,7 +32,7 @@
 #include "ChromeClient.h"
 #include "CommonAtomStrings.h"
 #include "DocumentInlines.h"
-#include "Editing.h"
+#include "EditingInlines.h"
 #include "Editor.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementInlines.h"
@@ -53,10 +53,12 @@
 #include "LayoutDisallowedScope.h"
 #include "LocalFrame.h"
 #include "Logging.h"
+#include "NodeInlines.h"
 #include "NodeTraversal.h"
 #include "Page.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "RenderLineBreak.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleSetters.h"
 #include "RenderTextControlSingleLine.h"
 #include "RenderTheme.h"
@@ -98,7 +100,7 @@ Node::InsertedIntoAncestorResult HTMLTextFormControlElement::insertedIntoAncesto
     InsertedIntoAncestorResult InsertedIntoAncestorResult = HTMLFormControlElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     if (insertionType.connectedToDocument) {
         String initialValue = value();
-        setTextAsOfLastFormControlChangeEvent(initialValue.isNull() ? emptyString() : initialValue);
+        setTextAsOfLastFormControlChangeEvent(initialValue.isNull() ? String(emptyString()) : WTFMove(initialValue));
     }
     return InsertedIntoAncestorResult;
 }
@@ -145,14 +147,14 @@ void HTMLTextFormControlElement::dispatchBlurEvent(RefPtr<Element>&& newFocusedE
     HTMLFormControlElement::dispatchBlurEvent(WTFMove(newFocusedElement));
 }
 
-void HTMLTextFormControlElement::didEditInnerTextValue()
+void HTMLTextFormControlElement::didEditInnerTextValue(bool wasUserEdit)
 {
     if (!renderer() || !isTextField())
         return;
 
     LOG(Editing, "HTMLTextFormControlElement %p didEditInnerTextValue", this);
 
-    m_lastChangeWasUserEdit = true;
+    m_lastChangeWasUserEdit = wasUserEdit;
     subtreeHasChanged();
 }
 
@@ -217,6 +219,8 @@ void HTMLTextFormControlElement::setSelectionDirection(const String& direction)
 
 void HTMLTextFormControlElement::select(SelectionRevealMode revealMode, const AXTextStateChangeIntent& intent)
 {
+    FocusOptions focusOptions { .preventScroll = true };
+    focus(focusOptions);
     if (setSelectionRange(0, std::numeric_limits<unsigned>::max(), SelectionHasNoDirection, revealMode, intent))
         scheduleSelectEvent();
 }
@@ -225,13 +229,14 @@ String HTMLTextFormControlElement::selectedText() const
 {
     if (!isTextField())
         return String();
-    return value().substring(selectionStart(), selectionEnd() - selectionStart());
+    return value()->substring(selectionStart(), selectionEnd() - selectionStart());
 }
 
 void HTMLTextFormControlElement::dispatchFormControlChangeEvent()
 {
-    if (m_textAsOfLastFormControlChangeEvent != value()) {
-        setTextAsOfLastFormControlChangeEvent(value());
+    auto value = this->value();
+    if (m_textAsOfLastFormControlChangeEvent != value.get()) {
+        setTextAsOfLastFormControlChangeEvent(String { value });
         dispatchChangeEvent();
     }
     setChangedSinceLastFormControlChangeEvent(false);
@@ -326,22 +331,23 @@ bool HTMLTextFormControlElement::setSelectionRange(unsigned start, unsigned end,
         if (!isConnected())
             return cacheSelection(start, end, direction);
 
+#if PLATFORM(COCOA)
+        bool cacheSelectionIfNotFocusedOrSelected = WTF::linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::SetSelectionRangeCachesSelectionIfNotFocusedOrSelected);
+#else
+        bool cacheSelectionIfNotFocusedOrSelected = true;
+#endif
+        // Cache selection if neither selection or focus is on the input.
+        if (cacheSelectionIfNotFocusedOrSelected && frame && enclosingTextFormControl(frame->selection().selection().start()) != this)
+            return cacheSelection(start, end, direction);
+
         // FIXME: Removing this synchronous layout requires fixing setSelectionWithoutUpdatingAppearance not needing up-to-date style.
         protectedDocument()->updateLayoutIgnorePendingStylesheets();
 
-        if (!isTextField())
-            return false;
-
-        // Double-check our connected state after the layout update.
-        if (!isConnected())
-            return cacheSelection(start, end, direction);
-
-        // Double-check the state of innerTextElement after the layout.
-        innerText = innerTextElement();
-        auto* rendererTextControl = renderer();
-
-        if (innerText && rendererTextControl && (rendererTextControl->style().visibility() == Visibility::Hidden || !innerText->renderBox() || !innerText->renderBox()->height()))
-            return cacheSelection(start, end, direction);
+        // Cache selection if renderer is invisible.
+        if (CheckedPtr renderer = this->renderer()) {
+            if (renderer->style().visibility() == Visibility::Hidden || !innerText->renderBox() || !innerText->renderBox()->height())
+                return cacheSelection(start, end, direction);
+        }
     }
 
     auto previousSelectionStart = m_cachedSelectionStart;
@@ -489,7 +495,7 @@ TextFieldSelectionDirection HTMLTextFormControlElement::computeSelectionDirectio
         return SelectionHasNoDirection;
 
     const VisibleSelection& selection = frame->selection().selection();
-    return selection.isDirectional() ? (selection.isBaseFirst() ? SelectionHasForwardDirection : SelectionHasBackwardDirection) : SelectionHasNoDirection;
+    return selection.directionality() == Directionality::Strong ? (selection.isBaseFirst() ? SelectionHasForwardDirection : SelectionHasBackwardDirection) : SelectionHasNoDirection;
 }
 
 static void setContainerAndOffsetForRange(Node& node, unsigned offset, RefPtr<Node>& containerNode, unsigned& offsetInContainer)
@@ -801,7 +807,7 @@ String HTMLTextFormControlElement::valueWithHardLineBreaks() const
     if (!renderer)
         return value();
 
-    Node* breakNode = nullptr;
+    RefPtr<Node> breakNode;
     unsigned breakOffset = 0;
     auto currentLineBox = InlineIterator::firstLineBoxFor(*renderer);
     if (!currentLineBox)
@@ -809,7 +815,7 @@ String HTMLTextFormControlElement::valueWithHardLineBreaks() const
 
     auto skipToNextSoftLineBreakPosition = [&] {
         while (currentLineBox) {
-            auto lastRun = currentLineBox->lastLeafBox();
+            auto lastRun = currentLineBox->lineRightmostLeafBox();
             ASSERT(lastRun);
             // Skip last line.
             currentLineBox.traverseNext();

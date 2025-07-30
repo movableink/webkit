@@ -197,6 +197,9 @@ void AudioSessionIOS::setCategory(CategoryType newCategory, Mode newMode, RouteS
     NSString *categoryString;
     AVAudioSessionCategoryOptions options = 0;
 
+#if PLATFORM(IOS_FAMILY_SIMULATOR)
+    m_isFakingPlayAndRecordForTesting = false;
+#endif
     switch (newCategory) {
     case CategoryType::AmbientSound:
         categoryString = AVAudioSessionCategoryAmbient;
@@ -211,8 +214,21 @@ void AudioSessionIOS::setCategory(CategoryType newCategory, Mode newMode, RouteS
         categoryString = AVAudioSessionCategoryRecord;
         break;
     case CategoryType::PlayAndRecord:
+#if PLATFORM(IOS_FAMILY_SIMULATOR)
+        // We prevent setting category to AVAudioSessionCategoryPlayAndRecord as it may trigger TCC prompts.
+        m_isFakingPlayAndRecordForTesting = true;
+        categoryString = AVAudioSessionCategoryPlayback;
+#else
         categoryString = AVAudioSessionCategoryPlayAndRecord;
-        options |= AVAudioSessionCategoryOptionAllowBluetooth | AVAudioSessionCategoryOptionAllowBluetoothA2DP | AVAudioSessionCategoryOptionDefaultToSpeaker | AVAudioSessionCategoryOptionAllowAirPlay;
+        // FIXME: Stop using `AVAudioSessionCategoryOptionAllowBluetooth` as it is deprecated (rdar://145294046).
+        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+        options |= AVAudioSessionCategoryOptionAllowBluetooth | AVAudioSessionCategoryOptionAllowBluetoothA2DP | AVAudioSessionCategoryOptionAllowAirPlay;
+        ALLOW_DEPRECATED_DECLARATIONS_END
+#if ENABLE(MEDIA_STREAM)
+        if (!AVAudioSessionCaptureDeviceManager::singleton().isReceiverPreferredSpeaker())
+#endif
+            options |= AVAudioSessionCategoryOptionDefaultToSpeaker;
+#endif
         break;
     case CategoryType::AudioProcessing:
         categoryString = AVAudioSessionCategoryAudioProcessing;
@@ -227,6 +243,10 @@ void AudioSessionIOS::setCategory(CategoryType newCategory, Mode newMode, RouteS
         case Mode::MoviePlayback:
             return AVAudioSessionModeMoviePlayback;
         case Mode::VideoChat:
+#if ENABLE(MEDIA_STREAM)
+            if (AVAudioSessionCaptureDeviceManager::singleton().isReceiverPreferredSpeaker())
+                return AVAudioSessionModeVoiceChat;
+#endif
             return AVAudioSessionModeVideoChat;
         case Mode::Default:
             break;
@@ -236,12 +256,12 @@ void AudioSessionIOS::setCategory(CategoryType newCategory, Mode newMode, RouteS
 
     bool needDeviceUpdate = false;
 #if ENABLE(MEDIA_STREAM)
-    auto preferredDeviceUID = AVAudioSessionCaptureDeviceManager::singleton().preferredAudioSessionDeviceUID();
-    if ((newCategory == CategoryType::PlayAndRecord || newCategory == CategoryType::RecordAudio) && !preferredDeviceUID.isEmpty()) {
-        if (m_lastSetPreferredAudioDeviceUID != preferredDeviceUID)
+    auto preferredMicrophoneID = AVAudioSessionCaptureDeviceManager::singleton().preferredMicrophoneID();
+    if ((newCategory == CategoryType::PlayAndRecord || newCategory == CategoryType::RecordAudio) && !preferredMicrophoneID.isEmpty()) {
+        if (m_lastSetPreferredMicrophoneID != preferredMicrophoneID)
             needDeviceUpdate = true;
     } else
-        m_lastSetPreferredAudioDeviceUID = emptyString();
+        m_lastSetPreferredMicrophoneID = emptyString();
 #endif
 
     AVAudioSession *session = [PAL::getAVAudioSessionClass() sharedInstance];
@@ -265,9 +285,9 @@ void AudioSessionIOS::setCategory(CategoryType newCategory, Mode newMode, RouteS
 
 #if ENABLE(MEDIA_STREAM)
     if (needDeviceUpdate) {
-        AVAudioSessionCaptureDeviceManager::singleton().configurePreferredAudioCaptureDevice();
-        m_lastSetPreferredAudioDeviceUID = AVAudioSessionCaptureDeviceManager::singleton().preferredAudioSessionDeviceUID();
-        ALWAYS_LOG(identifier, "prefered device = ", m_lastSetPreferredAudioDeviceUID);
+        AVAudioSessionCaptureDeviceManager::singleton().configurePreferredMicrophone();
+        m_lastSetPreferredMicrophoneID = AVAudioSessionCaptureDeviceManager::singleton().preferredMicrophoneID();
+        ALWAYS_LOG(identifier, "prefered microphone = ", m_lastSetPreferredMicrophoneID);
     }
 #endif
     for (auto& observer : audioSessionCategoryChangedObservers())
@@ -281,8 +301,13 @@ AudioSession::CategoryType AudioSessionIOS::category() const
         return CategoryType::AmbientSound;
     if ([categoryString isEqual:AVAudioSessionCategorySoloAmbient])
         return CategoryType::SoloAmbientSound;
-    if ([categoryString isEqual:AVAudioSessionCategoryPlayback])
+    if ([categoryString isEqual:AVAudioSessionCategoryPlayback]) {
+#if PLATFORM(IOS_FAMILY_SIMULATOR)
+        if (m_isFakingPlayAndRecordForTesting)
+            return CategoryType::PlayAndRecord;
+#endif
         return CategoryType::MediaPlayback;
+    }
     if ([categoryString isEqual:AVAudioSessionCategoryRecord])
         return CategoryType::RecordAudio;
     if ([categoryString isEqual:AVAudioSessionCategoryPlayAndRecord])
@@ -296,7 +321,7 @@ AudioSession::Mode AudioSessionIOS::mode() const
 {
     AVAudioSession *session = [PAL::getAVAudioSessionClass() sharedInstance];
     NSString *modeString = [session mode];
-    if ([modeString isEqual:AVAudioSessionModeVideoChat])
+    if ([modeString isEqual:AVAudioSessionModeVideoChat] || [modeString isEqual:AVAudioSessionModeVoiceChat])
         return Mode::VideoChat;
     if ([modeString isEqual:AVAudioSessionModeMoviePlayback])
         return Mode::MoviePlayback;
@@ -369,6 +394,12 @@ void AudioSessionIOS::setPreferredBufferSize(size_t bufferSize)
     ASSERT(!error);
 }
 
+size_t AudioSessionIOS::outputLatency() const
+{
+    auto latency = [[PAL::getAVAudioSessionClass() sharedInstance] outputLatency];
+    return latency * sampleRate();
+}
+
 bool AudioSessionIOS::isMuted() const
 {
     return false;
@@ -401,7 +432,7 @@ void AudioSessionIOS::updateSpatialExperience()
         [session setIntendedSpatialExperience:AVAudioSessionSpatialExperienceHeadTracked options:@{
             @"AVAudioSessionSpatialExperienceOptionSoundStageSize" : @(size),
             @"AVAudioSessionSpatialExperienceOptionAnchoringStrategy" : @(AVAudioSessionAnchoringStrategyScene),
-            @"AVAudioSessionSpatialExperienceOptionSceneIdentifier" : (NSString *)m_sceneIdentifier
+            @"AVAudioSessionSpatialExperienceOptionSceneIdentifier" : m_sceneIdentifier.createNSString().get()
         } error:&error];
     } else {
         [session setIntendedSpatialExperience:AVAudioSessionSpatialExperienceHeadTracked options:@{

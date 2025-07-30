@@ -51,6 +51,7 @@ _log = logging.getLogger(__name__)
 
 class GtkPort(GLibPort):
     port_name = "gtk"
+    webdriver_name = "WebKitWebDriver"
     supports_localhost_aliases = True
 
     def _port_flag_for_scripts(self):
@@ -75,7 +76,6 @@ class GtkPort(GLibPort):
     def setup_environ_for_server(self, server_name=None):
         environment = super(GtkPort, self).setup_environ_for_server(server_name)
         environment['LIBOVERLAY_SCROLLBAR'] = '0'
-        environment['WEBKIT_NICOSIA_PAINTING_THREADS'] = '0'
 
         # Configure the software libgl renderer if jhbuild ready and we test inside a virtualized window system
         if self._driver_class() in [XvfbDriver, WestonDriver] and (self._should_use_jhbuild() or self._is_flatpak()):
@@ -95,6 +95,9 @@ class GtkPort(GLibPort):
                 environment['LIBGL_DRIVERS_PATH'] = dri_libgl_path
             else:
                 _log.warning("Can't find Gallium llvmpipe driver. Try to run update-webkitgtk-libs or update-webkit-flatpak")
+
+        # Gtk uses hybrid painting mode by default (preferring GPU) -- for deterministic tests we always want to use the GPU for Gtk.
+        environment['WEBKIT_SKIA_CPU_PAINTING_THREADS'] = '0'
         return environment
 
     def _generate_all_test_configurations(self):
@@ -201,4 +204,3 @@ class GtkPort(GLibPort):
 
         except (webkitpy.common.system.executive.ScriptError, IOError, OSError):
             return False
-        return False

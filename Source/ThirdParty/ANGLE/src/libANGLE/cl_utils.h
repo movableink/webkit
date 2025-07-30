@@ -30,9 +30,9 @@
         }                                                  \
     } while (0)
 
-#define ANGLE_CL_IMPL_TRY(EXPR) ANGLE_TRY_TEMPLATE(EXPR, (void))
+#define ANGLE_CL_IMPL_TRY(EXPR) ANGLE_TRY_TEMPLATE(EXPR, static_cast<void>(0), (void))
 #define ANGLE_CL_IMPL_TRY_ERROR(EXPR, ERROR) \
-    ANGLE_TRY_TEMPLATE(EXPR, ANGLE_CL_RETURN_ERROR(ERROR); (void))
+    ANGLE_TRY_TEMPLATE(EXPR, static_cast<void>(0), ANGLE_CL_RETURN_ERROR(ERROR); (void))
 
 namespace cl
 {
@@ -54,6 +54,12 @@ bool IsValidImageFormat(const cl_image_format *imageFormat, const rx::CLExtensio
 
 bool IsImageType(cl::MemObjectType memObjectType);
 bool IsBufferType(cl::MemObjectType memObjectType);
+bool IsArrayType(cl::MemObjectType memObjectType);
+bool Is3DImage(cl::MemObjectType memObjectType);
+bool Is2DImage(cl::MemObjectType memObjectType);
+bool Is1DImage(cl::MemObjectType memObjectType);
+
+cl::Extents GetExtentFromDescriptor(cl::ImageDescriptor desc);
 
 extern thread_local cl_int gClErrorTls;
 

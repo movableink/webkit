@@ -89,12 +89,14 @@ private:
     std::pair<Vector<Ref<Node>>, RefPtr<Element>> findNodes(const String& searchText);
     std::pair<Vector<Ref<Node>>, RefPtr<Element>> findNodes(const TargetedElementSelectors&);
 
-    Vector<TargetedElementInfo> extractTargets(Vector<Ref<Node>>&&, RefPtr<Element>&& innerElement, bool canIncludeNearbyElements);
+    enum class IncludeNearbyElements : bool { No, Yes };
+    enum class CheckViewportAreaRatio : bool { No, Yes };
+    Vector<TargetedElementInfo> extractTargets(Vector<Ref<Node>>&&, RefPtr<Element>&& innerElement, CheckViewportAreaRatio, IncludeNearbyElements);
 
     void recomputeAdjustedElementsIfNeeded();
 
-    void topologicallySortElementsHelper(ElementIdentifier currentElementID, Vector<ElementIdentifier>& depthSortedIDs, HashSet<ElementIdentifier>& processingIDs, HashSet<ElementIdentifier>& unprocessedIDs, const UncheckedKeyHashMap<ElementIdentifier, HashSet<ElementIdentifier>>& elementIDToOccludedElementIDs);
-    Vector<ElementIdentifier> topologicallySortElements(const UncheckedKeyHashMap<ElementIdentifier, HashSet<ElementIdentifier>>& elementIDToOccludedElementIDs);
+    void topologicallySortElementsHelper(ElementIdentifier currentElementID, Vector<ElementIdentifier>& depthSortedIDs, UncheckedKeyHashSet<ElementIdentifier>& processingIDs, UncheckedKeyHashSet<ElementIdentifier>& unprocessedIDs, const UncheckedKeyHashMap<ElementIdentifier, UncheckedKeyHashSet<ElementIdentifier>>& elementIDToOccludedElementIDs);
+    Vector<ElementIdentifier> topologicallySortElements(const UncheckedKeyHashMap<ElementIdentifier, UncheckedKeyHashSet<ElementIdentifier>>& elementIDToOccludedElementIDs);
 
     WeakPtr<Page> m_page;
     DeferrableOneShotTimer m_recentAdjustmentClientRectsCleanUpTimer;

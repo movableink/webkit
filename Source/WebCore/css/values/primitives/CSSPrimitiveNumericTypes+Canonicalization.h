@@ -27,50 +27,45 @@
 #include "CSSPrimitiveNumericTypes.h"
 
 namespace WebCore {
+
+struct NoConversionDataRequiredToken;
+
 namespace CSS {
 
 // MARK: Angle
 
-double canonicalizeAngle(double value, CSSUnitType);
+double canonicalizeAngle(double value, AngleUnit);
 
-template<auto R> double canonicalize(AngleRaw<R> raw)
+template<auto R, typename V> double canonicalize(AngleRaw<R, V> raw)
 {
-    return canonicalizeAngle(raw.value, raw.type);
+    return canonicalizeAngle(raw.value, raw.unit);
 }
-
-// MARK: Length
-
-double canonicalizeLengthNoConversionDataRequired(double, CSSUnitType);
-double canonicalizeLength(double, CSSUnitType, const CSSToLengthConversionData&);
-float clampLengthToAllowedLimits(double);
-float canonicalizeAndClampLengthNoConversionDataRequired(double, CSSUnitType);
-float canonicalizeAndClampLength(double, CSSUnitType, const CSSToLengthConversionData&);
 
 // MARK: Time
 
-double canonicalizeTime(double, CSSUnitType);
+double canonicalizeTime(double, TimeUnit);
 
-template<auto R> double canonicalize(TimeRaw<R> raw)
+template<auto R, typename V> double canonicalize(TimeRaw<R, V> raw)
 {
-    return canonicalizeTime(raw.value, raw.type);
+    return canonicalizeTime(raw.value, raw.unit);
 }
 
 // MARK: Frequency
 
-double canonicalizeFrequency(double, CSSUnitType);
+double canonicalizeFrequency(double, FrequencyUnit);
 
-template<auto R> double canonicalize(FrequencyRaw<R> raw)
+template<auto R, typename V> double canonicalize(FrequencyRaw<R, V> raw)
 {
-    return canonicalizeFrequency(raw.value, raw.type);
+    return canonicalizeFrequency(raw.value, raw.unit);
 }
 
 // MARK: Resolution
 
-double canonicalizeResolution(double, CSSUnitType);
+double canonicalizeResolution(double, ResolutionUnit);
 
-template<auto R> double canonicalize(ResolutionRaw<R> raw)
+template<auto R, typename V> double canonicalize(ResolutionRaw<R, V> raw)
 {
-    return canonicalizeResolution(raw.value, raw.type);
+    return canonicalizeResolution(raw.value, raw.unit);
 }
 
 } // namespace CSS

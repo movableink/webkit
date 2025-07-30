@@ -22,7 +22,6 @@
 
 #include "APIFeature.h"
 #include "WebKitFeaturePrivate.h"
-#include <wtf/Algorithms.h>
 #include <wtf/RefPtr.h>
 
 static inline WebKitFeatureStatus toFeatureStatus(API::FeatureStatus status)
@@ -342,7 +341,8 @@ struct _WebKitFeatureList {
 
     ~_WebKitFeatureList()
     {
-        forEach(items, webkit_feature_unref);
+        for (auto* item : items)
+            webkit_feature_unref(item);
     }
 
     Vector<WebKitFeature*> items;

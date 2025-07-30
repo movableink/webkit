@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2004, 2005, 2006, 2007, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2008 Rob Buis <buis@kde.org>
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2024 Google Inc. All rights reserved.
  * Copyright (C) 2008 Alp Toker <alp@atoker.com>
  * Copyright (C) 2009 Cameron McCormack <cam@mcc.id.au>
  * Copyright (C) 2013 Samsung Electronics. All rights reserved.
@@ -28,11 +29,13 @@
 
 #include "CSSPrimitiveValueMappings.h"
 #include "CSSPropertyParser.h"
-#include "ComputedStyleExtractor.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
+#include "DocumentClasses.h"
 #include "ElementChildIteratorInlines.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
@@ -49,6 +52,7 @@
 #include "SVGGraphicsElement.h"
 #include "SVGImageElement.h"
 #include "SVGNames.h"
+#include "SVGParsingError.h"
 #include "SVGPropertyAnimatorFactory.h"
 #include "SVGRenderStyle.h"
 #include "SVGRenderSupport.h"
@@ -58,6 +62,7 @@
 #include "SVGUseElement.h"
 #include "ShadowRoot.h"
 #include "StyleAdjuster.h"
+#include "StyleExtractor.h"
 #include "StyleResolver.h"
 #include "XMLNames.h"
 #include <wtf/HashMap.h>
@@ -75,6 +80,7 @@ SVGElement::SVGElement(const QualifiedName& tagName, Document& document, UniqueR
     : StyledElement(tagName, document, typeFlags | TypeFlag::IsSVGElement | TypeFlag::HasCustomStyleResolveCallbacks)
     , m_propertyAnimatorFactory(makeUnique<SVGPropertyAnimatorFactory>())
     , m_propertyRegistry(WTFMove(propertyRegistry))
+    , m_className(SVGAnimatedString::create(this))
 {
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
@@ -101,13 +107,13 @@ SVGElement::~SVGElement()
     }
 }
 
-void SVGElement::willRecalcStyle(Style::Change change)
+void SVGElement::willRecalcStyle(OptionSet<Style::Change> change)
 {
     if (!m_svgRareData || styleResolutionShouldRecompositeLayer())
         return;
     // If the style changes because of a regular property change (not induced by SMIL animations themselves)
     // reset the "computed style without SMIL style properties", so the base value change gets reflected.
-    if (change > Style::Change::None || needsStyleRecalc())
+    if (change || needsStyleRecalc())
         m_svgRareData->setNeedsOverrideComputedStyleUpdate();
 }
 
@@ -153,19 +159,19 @@ bool SVGElement::isOutermostSVGSVGElement() const
 
 void SVGElement::reportAttributeParsingError(SVGParsingError error, const QualifiedName& name, const AtomString& value)
 {
-    if (error == NoError)
+    if (error == SVGParsingError::None)
         return;
 
     auto errorString = makeString('<', tagName(), "> attribute "_s, name.toString(), "=\""_s, value, "\""_s);
     Ref document = this->document();
     CheckedRef extensions = document->svgExtensions();
 
-    if (error == NegativeValueForbiddenError) {
+    if (error == SVGParsingError::ForbiddenNegativeValue) {
         extensions->reportError(makeString("Invalid negative value for "_s, errorString));
         return;
     }
 
-    if (error == ParsingAttributeFailedError) {
+    if (error == SVGParsingError::ParsingFailed) {
         extensions->reportError(makeString("Invalid value for "_s, errorString));
         return;
     }
@@ -206,6 +212,9 @@ void SVGElement::removedFromAncestor(RemovalType removalType, ContainerNode& old
 
 SVGSVGElement* SVGElement::ownerSVGElement() const
 {
+    if (isOutermostSVGSVGElement())
+        return nullptr;
+
     SUPPRESS_UNCOUNTED_LOCAL auto* node = parentNode();
     while (node) {
         if (auto* svg = dynamicDowncast<SVGSVGElement>(*node))
@@ -621,7 +630,7 @@ void SVGElement::animatorWillBeDeleted(const QualifiedName& attributeName)
     propertyAnimatorFactory().animatorWillBeDeleted(attributeName);
 }
 
-std::optional<Style::ResolvedStyle> SVGElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle*)
+std::optional<Style::UnadjustedStyle> SVGElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle*)
 {
     // If the element is in a <use> tree we get the style from the definition tree.
     if (RefPtr styleElement = this->correspondingElement()) {
@@ -629,9 +638,7 @@ std::optional<Style::ResolvedStyle> SVGElement::resolveCustomStyle(const Style::
         // Can't use the state since we are going to another part of the tree.
         styleElementResolutionContext.selectorMatchingState = nullptr;
         styleElementResolutionContext.isSVGUseTreeRoot = true;
-        auto resolvedStyle = styleElement->resolveStyle(styleElementResolutionContext);
-        Style::Adjuster::adjustSVGElementStyle(*resolvedStyle.style, *this);
-        return resolvedStyle;
+        return styleElement->resolveStyle(styleElementResolutionContext);
     }
 
     return resolveStyle(resolutionContext);
@@ -688,7 +695,7 @@ ColorInterpolation SVGElement::colorInterpolation() const
         return renderer->style().svgStyle().colorInterpolationFilters();
 
     // Try to determine the property value from the computed style.
-    if (auto value = ComputedStyleExtractor(const_cast<SVGElement*>(this)).propertyValue(CSSPropertyColorInterpolationFilters, ComputedStyleExtractor::UpdateLayout::No))
+    if (auto value = Style::Extractor(const_cast<SVGElement*>(this)).propertyValue(CSSPropertyColorInterpolationFilters, Style::Extractor::UpdateLayout::No))
         return fromCSSValue<ColorInterpolation>(*value);
 
     return ColorInterpolation::Auto;
@@ -819,10 +826,14 @@ bool SVGElement::filterOutAnimatableAttribute(const QualifiedName&) const
 
 String SVGElement::title() const
 {
+    RefPtr page = document().page();
+    if (!page)
+        return String();
+
     // According to spec, for stand-alone SVG documents we should not return a title when
     // hovering over the rootmost SVG element (the first <title> element is the title of
     // the document, not a tooltip) so we instantly return.
-    if (isOutermostSVGSVGElement() && document().topDocument().isSVGDocument())
+    if (isOutermostSVGSVGElement() && page->topDocumentHasDocumentClass(DocumentClass::SVG))
         return String();
     RefPtr firstTitle = childrenOfType<SVGTitleElement>(*this).first();
     return firstTitle ? const_cast<SVGTitleElement&>(*firstTitle).innerText() : String();
@@ -900,7 +911,8 @@ CSSPropertyID SVGElement::cssPropertyIdForSVGAttributeName(const QualifiedName& 
     case AttributeNames::font_size_adjustAttr:
         return CSSPropertyFontSizeAdjust;
     case AttributeNames::font_stretchAttr:
-        return CSSPropertyFontStretch;
+    case AttributeNames::font_widthAttr:
+        return CSSPropertyFontWidth;
     case AttributeNames::font_styleAttr:
         return CSSPropertyFontStyle;
     case AttributeNames::font_variantAttr:
@@ -1115,7 +1127,7 @@ void SVGElement::setInstanceUpdatesBlocked(bool value)
         m_svgRareData->setInstanceUpdatesBlocked(value);
 }
 
-AffineTransform SVGElement::localCoordinateSpaceTransform(SVGLocatable::CTMScope) const
+AffineTransform SVGElement::localCoordinateSpaceTransform(CTMScope) const
 {
     // To be overridden by SVGGraphicsElement (or as special case SVGTextElement and SVGPatternElement)
     return AffineTransform();

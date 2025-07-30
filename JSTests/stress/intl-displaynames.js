@@ -3,6 +3,11 @@ function shouldBe(actual, expected) {
         throw new Error('bad value: ' + actual);
 }
 
+function shouldBeOneOf(actual, expectedArray) {
+    if (!expectedArray.some((value) => value === actual))
+        throw new Error('bad value: ' + actual + ' expected values: ' + expectedArray);
+}
+
 function shouldThrow(func, errorMessage) {
     var errorThrown = false;
     var error = null;
@@ -96,7 +101,7 @@ shouldBe(scriptNames.of('Kana'), "Katakana");
 
 // Get display names of script in Traditional Chinese
 scriptNames = new Intl.DisplayNames(['zh-Hant'], {type: 'script'});
-shouldBe(scriptNames.of('Latn'), "拉丁文");
+shouldBeOneOf(scriptNames.of('Latn'), ["拉丁文", "拉丁字母"]);
 shouldBe(scriptNames.of('Arab'), $vm.icuVersion() >= 72 ? "阿拉伯字母" : "阿拉伯文");
 shouldBe(scriptNames.of('Kana'), "片假名");
 

@@ -44,13 +44,10 @@ class RegExp final : public JSCell {
 public:
     using Base = JSCell;
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
 
     template<typename CellType, SubspaceAccess mode>
-    static GCClient::IsoSubspace* subspaceFor(VM& vm)
-    {
-        return &vm.regExpSpace();
-    }
+    static GCClient::IsoSubspace* subspaceFor(VM&); // Defined in RegExpInlines.h
 
     JS_EXPORT_PRIVATE static RegExp* create(VM&, const String& pattern, OptionSet<Yarr::Flags>);
     static void destroy(JSCell*);
@@ -68,7 +65,7 @@ public:
     const String& pattern() const { return m_patternString; }
 
     bool isValid() const { return !Yarr::hasError(m_constructionErrorCode); }
-    const char* errorMessage() const { return Yarr::errorMessage(m_constructionErrorCode); }
+    ASCIILiteral errorMessage() const { return Yarr::errorMessage(m_constructionErrorCode); }
     JSObject* errorToThrow(JSGlobalObject* globalObject) { return Yarr::errorToThrow(globalObject, m_constructionErrorCode); }
     void reset()
     {
@@ -118,6 +115,7 @@ public:
         return m_rareData->m_captureGroupNames[i];
     }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     template <typename Offsets>
     unsigned subpatternIdForGroupName(StringView groupName, const Offsets ovector) const
     {
@@ -131,6 +129,7 @@ public:
 
         return ovector[offsetVectorBaseForNamedCaptures() + it->value[0] - 1];
     }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     bool hasCode()
     {
@@ -170,7 +169,7 @@ public:
 
     bool hasValidAtom() const { return !m_atom.isNull(); }
     const String& atom() const { return m_atom; }
-    void setAtom(String&& atom) { m_atom = WTFMove(atom); }
+    Yarr::SpecificPattern specificPattern() const { return m_specificPattern; }
 
 private:
     friend class RegExpCache;
@@ -221,6 +220,7 @@ private:
     String m_patternString;
     String m_atom;
     RegExpState m_state { NotCompiled };
+    Yarr::SpecificPattern m_specificPattern { Yarr::SpecificPattern::None };
     OptionSet<Yarr::Flags> m_flags;
     Yarr::ErrorCode m_constructionErrorCode { Yarr::ErrorCode::NoError };
     unsigned m_numSubpatterns { 0 };

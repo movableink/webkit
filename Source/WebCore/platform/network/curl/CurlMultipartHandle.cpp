@@ -122,7 +122,7 @@ bool CurlMultipartHandle::processContent()
 {
     switch (m_state) {
     case State::FindBoundaryStart:
-        FALLTHROUGH;
+        [[fallthrough]];
     case State::InBody: {
         auto result = findBoundary();
         if (result.isSyntaxError) {
@@ -135,7 +135,7 @@ bool CurlMultipartHandle::processContent()
             m_client->didReceiveDataFromMultipart({ m_buffer.data(), result.dataEnd });
 
         if (result.processed)
-            m_buffer.remove(0, result.processed);
+            m_buffer.removeAt(0, result.processed);
 
         if (!result.hasBoundary || result.hasCloseDelimiter) {
             if (m_didCompleteMessage) {
@@ -312,7 +312,7 @@ CurlMultipartHandle::ParseHeadersResult CurlMultipartHandle::parseHeadersIfPossi
         m_headers.append(makeString(name, ": "_s, value, "\r\n"_s));
     }
 
-    m_buffer.remove(0, end - contentStartPtr);
+    m_buffer.removeAt(0, end - contentStartPtr);
     return ParseHeadersResult::Success;
 }
 

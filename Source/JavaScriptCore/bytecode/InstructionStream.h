@@ -162,12 +162,12 @@ private:
     };
 
 public:
-    inline iterator begin() const
+    inline iterator begin() const LIFETIME_BOUND
     {
         return iterator { m_instructions, 0 };
     }
 
-    inline iterator end() const
+    inline iterator end() const LIFETIME_BOUND
     {
         return iterator { m_instructions, m_instructions.size() };
     }
@@ -186,7 +186,7 @@ public:
 
     const void* rawPointer() const
     {
-        return m_instructions.data();
+        return m_instructions.span().data();
     }
 
     bool contains(InstructionType* instruction) const
@@ -300,7 +300,7 @@ public:
 
         InstructionBuffer resultBuffer(m_instructions.size());
         RELEASE_ASSERT(m_instructions.sizeInBytes() == resultBuffer.sizeInBytes());
-        memcpy(resultBuffer.data(), m_instructions.data(), m_instructions.sizeInBytes());
+        memcpy(resultBuffer.mutableSpan().data(), m_instructions.span().data(), m_instructions.sizeInBytes());
 
         usedBuffer = WTFMove(m_instructions);
 

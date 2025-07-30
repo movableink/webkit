@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -101,7 +101,7 @@ void EarlyHintsResourceLoader::handleEarlyHintsResponse(ResourceResponse&& respo
 
 ResourceRequest EarlyHintsResourceLoader::constructPreconnectRequest(const ResourceRequest& originalRequest, const URL& url)
 {
-    ResourceRequest request { url };
+    ResourceRequest request { URL { url } };
 
     // firstPartyForCookies and user agent are part of the HTTP socket pool keys in CFNetwork: rdar://59434166
     auto firstPartyForCookies = originalRequest.firstPartyForCookies();
@@ -118,18 +118,19 @@ ResourceRequest EarlyHintsResourceLoader::constructPreconnectRequest(const Resou
 void EarlyHintsResourceLoader::startPreconnectTask(const URL& baseURL, const LinkHeader& header, const ContentSecurityPolicy& contentSecurityPolicy)
 {
 #if ENABLE(SERVER_PRECONNECT)
-    if (!m_loader || !m_loader->parameters().linkPreconnectEarlyHintsEnabled)
+    RefPtr loader = m_loader.get();
+    if (!loader || !loader->parameters().linkPreconnectEarlyHintsEnabled)
         return;
 
     URL url(baseURL, header.url());
     if (!url.isValid() || url.protocol() != "https"_s)
         return;
 
-    const auto& originalRequest = m_loader->originalRequest();
+    const auto& originalRequest = loader->originalRequest();
     if (!contentSecurityPolicy.allowConnectToSource(url, ContentSecurityPolicy::RedirectResponseReceived::No, originalRequest.url()))
         return;
 
-    auto* networkSession = m_loader->protectedConnectionToWebProcess()->networkSession();
+    CheckedPtr networkSession = loader->protectedConnectionToWebProcess()->networkSession();
     if (!networkSession)
         return;
 
@@ -144,7 +145,8 @@ void EarlyHintsResourceLoader::startPreconnectTask(const URL& baseURL, const Lin
     parameters.shouldPreconnectOnly = PreconnectOnly::Yes;
     parameters.request = constructPreconnectRequest(originalRequest, url);
     parameters.isNavigatingToAppBoundDomain = m_loader->parameters().isNavigatingToAppBoundDomain;
-    (new PreconnectTask(*networkSession, WTFMove(parameters), [](const WebCore::ResourceError&, const WebCore::NetworkLoadMetrics&) { }))->start();
+    Ref preconnectTask = PreconnectTask::create(*networkSession, WTFMove(parameters));
+    preconnectTask->start();
 
     addConsoleMessage(MessageSource::Network, MessageLevel::Info, makeString("Preconnecting to "_s, url.string(), " due to early hint"_s));
 #else

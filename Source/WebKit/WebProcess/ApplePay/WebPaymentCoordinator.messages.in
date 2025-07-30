@@ -24,6 +24,10 @@
 
 #if ENABLE(APPLE_PAY)
 
+// Currently DispatchedFrom=Networking when APPLE_PAY_REMOTE_UI and DispatchedFrom=UI when !APPLE_PAY_REMOTE_UI
+[
+    DispatchedTo=WebContent
+]
 messages -> WebPaymentCoordinator {
 
     ValidateMerchant(String validationURLString)

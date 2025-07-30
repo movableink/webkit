@@ -31,6 +31,7 @@
 #import "CommonAtomStrings.h"
 #import "DragData.h"
 #import "Image.h"
+#import "ImageAdapter.h"
 #import "LegacyNSPasteboardTypes.h"
 #import "LoaderNSURLExtras.h"
 #import "MIMETypeRegistry.h"
@@ -42,14 +43,13 @@
 #import "WebNSAttributedStringExtras.h"
 #import <pal/spi/cg/CoreGraphicsSPI.h>
 #import <pal/spi/mac/HIServicesSPI.h>
+#import <wtf/MallocSpan.h>
 #import <wtf/ProcessPrivilege.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/URL.h>
 #import <wtf/text/StringBuilder.h>
 #import <wtf/unicode/CharacterNames.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -83,7 +83,7 @@ static Vector<String> writableTypesForImage()
 
 NSArray *Pasteboard::supportedFileUploadPasteboardTypes()
 {
-    return @[ (NSString *)legacyFilesPromisePasteboardType(), (NSString *)legacyFilenamesPasteboardType() ];
+    return @[ legacyFilesPromisePasteboardType(), legacyFilenamesPasteboardType() ];
 }
 
 Pasteboard::Pasteboard(std::unique_ptr<PasteboardContext>&& context)
@@ -210,27 +210,27 @@ static long writeURLForTypes(const Vector<String>& types, const String& pasteboa
     
     ASSERT(!pasteboardURL.url.isEmpty());
     
-    NSURL *cocoaURL = pasteboardURL.url;
-    NSString *userVisibleString = pasteboardURL.userVisibleForm;
-    NSString *title = (NSString *)pasteboardURL.title;
+    RetainPtr nsURL = pasteboardURL.url.createNSURL();
+    RetainPtr userVisibleString = pasteboardURL.userVisibleForm.createNSString();
+    RetainPtr title = pasteboardURL.title.createNSString();
     if (![title length]) {
-        title = [[cocoaURL path] lastPathComponent];
+        title = [[nsURL path] lastPathComponent];
         if (![title length])
             title = userVisibleString;
     }
 
     if (types.contains(WebURLsWithTitlesPboardType)) {
-        PasteboardURL url = { pasteboardURL.url, String(title).trim(deprecatedIsSpaceOrNewline), emptyString() };
+        PasteboardURL url = { pasteboardURL.url, String(title.get()).trim(deprecatedIsSpaceOrNewline), emptyString() };
         newChangeCount = platformStrategies()->pasteboardStrategy()->setURL(url, pasteboardName, context);
     }
     if (types.contains(String(legacyURLPasteboardType())))
-        newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType([cocoaURL absoluteString], legacyURLPasteboardType(), pasteboardName, context);
+        newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType([nsURL absoluteString], legacyURLPasteboardType(), pasteboardName, context);
     if (types.contains(WebURLPboardType))
-        newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType(userVisibleString, WebURLPboardType, pasteboardName, context);
+        newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType(userVisibleString.get(), WebURLPboardType, pasteboardName, context);
     if (types.contains(WebURLNamePboardType))
-        newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType(title, WebURLNamePboardType, pasteboardName, context);
+        newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType(title.get(), WebURLNamePboardType, pasteboardName, context);
     if (types.contains(String(legacyStringPasteboardType())))
-        newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType(userVisibleString, legacyStringPasteboardType(), pasteboardName, context);
+        newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType(userVisibleString.get(), legacyStringPasteboardType(), pasteboardName, context);
 
     return newChangeCount;
 }
@@ -256,7 +256,7 @@ void Pasteboard::write(const Color& color)
 static NSFileWrapper* fileWrapper(const PasteboardImage& pasteboardImage)
 {
     auto wrapper = adoptNS([[NSFileWrapper alloc] initRegularFileWithContents:pasteboardImage.resourceData->makeContiguous()->createNSData().get()]);
-    [wrapper setPreferredFilename:suggestedFilenameWithMIMEType(pasteboardImage.url.url, pasteboardImage.resourceMIMEType)];
+    [wrapper setPreferredFilename:suggestedFilenameWithMIMEType(pasteboardImage.url.url.createNSURL().get(), pasteboardImage.resourceMIMEType)];
     return wrapper.autorelease();
 }
 
@@ -444,7 +444,7 @@ void Pasteboard::read(PasteboardWebContentReader& reader, WebContentReadingPolic
 {
     auto& strategy = *platformStrategies()->pasteboardStrategy();
     auto platformTypesFromItems = [](const Vector<PasteboardItemInfo>& items) {
-        HashSet<String> types;
+        UncheckedKeyHashSet<String> types;
         for (auto& item : items) {
             for (auto& type : item.platformTypesByFidelity)
                 types.add(type);
@@ -452,7 +452,7 @@ void Pasteboard::read(PasteboardWebContentReader& reader, WebContentReadingPolic
         return types;
     };
 
-    HashSet<String> nonTranscodedTypes;
+    UncheckedKeyHashSet<String> nonTranscodedTypes;
     Vector<String> types;
     if (itemIndex) {
         if (auto itemInfo = strategy.informationForItemAtIndex(*itemIndex, m_pasteboardName, m_changeCount, context())) {
@@ -610,9 +610,9 @@ bool Pasteboard::hasData()
 
 static String cocoaTypeFromHTMLClipboardType(const String& type)
 {
-    if (NSString *platformType = PlatformPasteboard::platformPasteboardTypeForSafeTypeForDOMToReadAndWrite(type)) {
-        if (platformType.length)
-            return platformType;
+    if (RetainPtr platformType = PlatformPasteboard::platformPasteboardTypeForSafeTypeForDOMToReadAndWrite(type).createNSString().get()) {
+        if (platformType.get().length)
+            return platformType.get();
     }
 
     // Reject types that might contain subframe information.
@@ -649,7 +649,7 @@ Vector<String> Pasteboard::readPlatformValuesAsStrings(const String& domType, in
     auto values = strategy.allStringsForType(cocoaType, pasteboardName, context());
     if (cocoaType == String(legacyStringPasteboardType())) {
         values = values.map([&] (auto& value) -> String {
-            return [value precomposedStringWithCanonicalMapping];
+            return [value.createNSString() precomposedStringWithCanonicalMapping];
         });
     }
 
@@ -704,7 +704,7 @@ void Pasteboard::writeString(const String& type, const String& data)
 
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     if (cocoaType == String(legacyURLPasteboardType()) || cocoaType == String(kUTTypeFileURL)) {
-        NSURL *url = [NSURL URLWithString:cocoaData];
+        RetainPtr url = adoptNS([[NSURL alloc] initWithString:cocoaData.createNSString().get()]);
         if ([url isFileURL])
             return;
         platformStrategies()->pasteboardStrategy()->setTypes({ cocoaType }, m_pasteboardName, context());
@@ -743,20 +743,19 @@ Vector<String> Pasteboard::readFilePaths()
 #if ENABLE(DRAG_SUPPORT)
 static void flipImageSpec(CoreDragImageSpec* imageSpec)
 {
-    unsigned char* tempRow = (unsigned char*)fastMalloc(imageSpec->bytesPerRow);
+    auto tempRow = MallocSpan<uint8_t>::malloc(imageSpec->bytesPerRow);
     int planes = imageSpec->isPlanar ? imageSpec->samplesPerPixel : 1;
-
-    for (int p = 0; p < planes; ++p) {
-        unsigned char* topRow = const_cast<unsigned char*>(imageSpec->data[p]);
-        unsigned char* botRow = topRow + (imageSpec->pixelsHigh - 1) * imageSpec->bytesPerRow;
-        for (int i = 0; i < imageSpec->pixelsHigh / 2; ++i, topRow += imageSpec->bytesPerRow, botRow -= imageSpec->bytesPerRow) {
-            bcopy(topRow, tempRow, imageSpec->bytesPerRow);
-            bcopy(botRow, topRow, imageSpec->bytesPerRow);
-            bcopy(tempRow, botRow, imageSpec->bytesPerRow);
+    for (auto* plane : std::span { imageSpec->data }.first(planes)) {
+        auto planeSpan = unsafeMakeSpan(const_cast<uint8_t*>(plane), imageSpec->bytesPerRow * imageSpec->pixelsHigh);
+        for (int i = 0; i < imageSpec->pixelsHigh / 2; ++i) {
+            auto topRow = planeSpan.first(imageSpec->bytesPerRow);
+            auto bottomRow = planeSpan.last(imageSpec->bytesPerRow);
+            memmoveSpan(tempRow.mutableSpan(), topRow);
+            memmoveSpan(topRow, bottomRow);
+            memmoveSpan(bottomRow, tempRow.span());
+            planeSpan = planeSpan.subspan(imageSpec->bytesPerRow, planeSpan.size() - 2 * imageSpec->bytesPerRow);
         }
     }
-
-    fastFree(tempRow);
 }
 
 static void setDragImageImpl(NSImage *image, NSPoint offset)
@@ -887,7 +886,5 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // PLATFORM(MAC)

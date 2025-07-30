@@ -32,6 +32,7 @@
 
 #include <WebCore/FormState.h>
 #include <WebCore/LocalFrameLoaderClient.h>
+#include <WebCore/ProcessSwapDisposition.h>
 #include <WebCore/ResourceResponse.h>
 #include <WebCore/ResourceError.h>
 
@@ -145,20 +146,11 @@ public:
 
     void updateGlobalHistory() override;
     void updateGlobalHistoryRedirectLinks() override;
-    bool shouldGoToHistoryItem(HistoryItem&) const override;
+    ShouldGoToHistoryItem shouldGoToHistoryItem(HistoryItem&, IsSameDocumentNavigation, ProcessSwapDisposition processSwapDisposition) const override;
+    bool supportsAsyncShouldGoToHistoryItem() const override;
+    void shouldGoToHistoryItemAsync(HistoryItem&, CompletionHandler<void(ShouldGoToHistoryItem)>&&) const override;
     void didDisplayInsecureContent() override;
     void didRunInsecureContent(SecurityOrigin&) override;
-
-    ResourceError cancelledError(const ResourceRequest&) const override;
-    ResourceError blockedError(const ResourceRequest&) const override;
-    ResourceError cannotShowURLError(const ResourceRequest&) const override;
-    ResourceError interruptedForPolicyChangeError(const ResourceRequest&) const override;
-
-    ResourceError cannotShowMIMETypeError(const ResourceResponse&) const override;
-    ResourceError fileDoesNotExistError(const ResourceResponse&) const override;
-    ResourceError httpsUpgradeRedirectLoopError(const ResourceRequest&) const override;
-    ResourceError httpNavigationWithHTTPSOnlyError(const ResourceRequest&) const override;
-    ResourceError pluginWillHandleLoadError(const ResourceResponse&) const override;
 
     void loadStorageAccessQuirksIfNeeded() final { }
 
@@ -177,7 +169,7 @@ public:
     void didFinishLoad() override;
     void prepareForDataSourceReplacement() override;
 
-    Ref<WebCore::DocumentLoader> createDocumentLoader(const WebCore::ResourceRequest&, const WebCore::SubstituteData&) override;
+    Ref<WebCore::DocumentLoader> createDocumentLoader(WebCore::ResourceRequest&&, WebCore::SubstituteData&&) override;
     void setTitle(const StringWithDirection&, const URL&) override;
 
     String userAgent(const WTF::URL&) const override;
@@ -204,7 +196,6 @@ public:
 
     void willReplaceMultipartContent() override;
     void didReplaceMultipartContent() override;
-    ResourceError blockedByContentBlockerError(const ResourceRequest &) const override;
     void updateCachedDocumentLoader(DocumentLoader &) override;
     void prefetchDNS(const WTF::String &) override;
 
@@ -220,6 +211,8 @@ public:
 
     void updateSandboxFlags(WebCore::SandboxFlags) override { }
     void updateOpener(const WebCore::Frame&) override { }
+
+    RefPtr<HistoryItem> createHistoryItemTree(bool clipAtTarget, BackForwardItemIdentifier itemID) const override;
 
     static bool dumpFrameLoaderCallbacks;
     static bool dumpUserGestureInFrameLoaderCallbacks;

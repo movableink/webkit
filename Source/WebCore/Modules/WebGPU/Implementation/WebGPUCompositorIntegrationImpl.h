@@ -101,7 +101,7 @@ private:
     WTF::Function<void(CompletionHandler<void()>&&)> m_onSubmittedWorkScheduledCallback;
 
     RefPtr<PresentationContextImpl> m_presentationContext;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
     WeakPtr<Device> m_device;
 };
 

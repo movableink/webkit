@@ -103,6 +103,7 @@ struct _WebKitUserStyleSheet {
             String::fromUTF8(source), URL { },
             toStringVector(allowList), toStringVector(blockList),
             toUserContentInjectedFrames(injectedFrames),
+            UserContentMatchParentFrame::Never,
             toUserStyleLevel(level) }, world)))
         , referenceCount(1)
     {
@@ -178,7 +179,7 @@ WebKitUserStyleSheet* webkit_user_style_sheet_new(const gchar* source, WebKitUse
 {
     g_return_val_if_fail(source, nullptr);
     WebKitUserStyleSheet* userStyleSheet = static_cast<WebKitUserStyleSheet*>(fastMalloc(sizeof(WebKitUserStyleSheet)));
-    new (userStyleSheet) WebKitUserStyleSheet(source, injectedFrames, level, allowList, blockList, API::ContentWorld::pageContentWorld());
+    new (userStyleSheet) WebKitUserStyleSheet(source, injectedFrames, level, allowList, blockList, API::ContentWorld::pageContentWorldSingleton());
     return userStyleSheet;
 }
 
@@ -229,7 +230,7 @@ struct _WebKitUserScript {
             String::fromUTF8(source), URL { },
             toStringVector(allowList), toStringVector(blockList),
             toUserScriptInjectionTime(injectionTime),
-            toUserContentInjectedFrames(injectedFrames), WebCore::WaitForNotificationBeforeInjecting::No }, world)))
+            toUserContentInjectedFrames(injectedFrames) }, world)))
         , referenceCount(1)
     {
     }
@@ -304,7 +305,7 @@ WebKitUserScript* webkit_user_script_new(const gchar* source, WebKitUserContentI
 {
     g_return_val_if_fail(source, nullptr);
     WebKitUserScript* userScript = static_cast<WebKitUserScript*>(fastMalloc(sizeof(WebKitUserScript)));
-    new (userScript) WebKitUserScript(source, injectedFrames, injectionTime, allowList, blockList, API::ContentWorld::pageContentWorld());
+    new (userScript) WebKitUserScript(source, injectedFrames, injectionTime, allowList, blockList, API::ContentWorld::pageContentWorldSingleton());
     return userScript;
 }
 

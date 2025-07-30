@@ -1,7 +1,5 @@
 Anchor connection
 ----------------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXStaticText
 AXSubrole: (null)
 AXRoleDescription: text
@@ -31,8 +29,8 @@ AXFocusableAncestor: <AXStaticText>
 AXEditableAncestor: (null)
 AXHighestEditableAncestor: (null)
 AXVisibleCharacterRange: NSRange: {0, 9}
-AXIntersectionWithSelectionRange: (null)
 AXElementBusy: 0
+AXIntersectionWithSelectionRange: (null)
 AXPath: (null)
 
 ------------

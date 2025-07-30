@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Cameron Zwarich <cwzwarich@uwaterloo.ca>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -50,6 +50,7 @@
 #include "InlineCallFrame.h"
 #include "Instruction.h"
 #include "InstructionStream.h"
+#include "Integrity.h" // FIXME: rdar://149223818
 #include "IsoCellSetInlines.h"
 #include "JIT.h"
 #include "JITMathIC.h"
@@ -73,6 +74,7 @@
 #include "ProgramCodeBlock.h"
 #include "ReduceWhitespace.h"
 #include "SlotVisitorInlines.h"
+#include "SourceProvider.h"
 #include "StackVisitor.h"
 #include "StructureStubInfo.h"
 #include "TypeLocationCache.h"
@@ -119,23 +121,36 @@ CString CodeBlock::inferredName() const
     }
 }
 
+String CodeBlock::inferredNameWithHash() const
+{
+    return makeString(inferredName(), "#"_s, hash());
+}
+
 bool CodeBlock::hasHash() const
 {
     return !!m_hash;
 }
 
-bool CodeBlock::isSafeToComputeHash() const
-{
-    return !isCompilationThread();
-}
-
 CodeBlockHash CodeBlock::hash() const
 {
-    if (!m_hash) {
-        RELEASE_ASSERT(isSafeToComputeHash());
-        m_hash = CodeBlockHash(ownerExecutable()->source(), specializationKind());
-    }
-    return m_hash;
+    if (auto hash = m_hash)
+        return hash;
+
+    // Do not copy. It is not allowed from the concurrent compiler thread. But so long as this CodeBlock is alive, it is ensured that this reference is valid.
+    const auto& source = ownerExecutable()->source();
+
+    // Why do we need this guard? WebCore can replace underlying source with NetworkProcess cached data in the main thread.
+    // If we are reading source from the main thread, we cannot have conflict. But if we are reading the source from the compiler thread,
+    // it is possible that the main thread is now replacing it with the cached new content. SourceProviderBufferGuard allows us to keep
+    // the old one until this scope gets destroyed.
+    std::optional<SourceProviderBufferGuard> guard;
+    if (isCompilationThread() || Thread::mayBeGCThread())
+        guard.emplace(source.provider());
+
+    auto hash = CodeBlockHash(source, specializationKind());
+    WTF::storeStoreFence();
+    m_hash = hash;
+    return hash;
 }
 
 CString CodeBlock::sourceCodeForTools() const
@@ -154,16 +169,9 @@ CString CodeBlock::sourceCodeOnOneLine() const
     return reduceWhitespace(sourceCodeForTools());
 }
 
-CString CodeBlock::hashAsStringIfPossible() const
-{
-    if (hasHash() || isSafeToComputeHash())
-        return toCString(hash());
-    return "<no-hash>";
-}
-
 void CodeBlock::dumpAssumingJITType(PrintStream& out, JITType jitType) const
 {
-    out.print(inferredName(), "#", hashAsStringIfPossible());
+    out.print(inferredNameWithHash());
     out.print(":[", RawPointer(this), "->");
     if (!!m_alternative)
         out.print(RawPointer(alternative()), "->");
@@ -200,7 +208,7 @@ void CodeBlock::dump(PrintStream& out) const
 
 void CodeBlock::dumpSimpleName(PrintStream& out) const
 {
-    out.print(inferredName(), "#", hashAsStringIfPossible());
+    out.print(inferredNameWithHash());
 }
 
 void CodeBlock::dumpSource()
@@ -312,6 +320,8 @@ CodeBlock::CodeBlock(VM& vm, Structure* structure, CopyParsedBlockTag, CodeBlock
 
     ASSERT(m_couldBeTainted == (taintednessToTriState(source().provider()->sourceTaintedOrigin()) != TriState::False));
     vm.heap.codeBlockSet().add(this);
+    checker().set(CrashChecker::This, checker().hash(this));
+    checker().set(CrashChecker::Metadata, checker().hash(this, m_metadata.get()));
 }
 
 void CodeBlock::finishCreation(VM& vm, CopyParsedBlockTag, CodeBlock& other)
@@ -360,6 +370,8 @@ CodeBlock::CodeBlock(VM& vm, Structure* structure, ScriptExecutable* ownerExecut
 
     m_couldBeTainted = source().provider()->couldBeTainted();
     vm.heap.codeBlockSet().add(this);
+    checker().set(CrashChecker::This, checker().hash(this));
+    checker().set(CrashChecker::Metadata, checker().hash(this, m_metadata.get()));
 }
 
 // The main purpose of this function is to generate linked bytecode from unlinked bytecode. The process
@@ -436,7 +448,7 @@ bool CodeBlock::finishCreation(VM& vm, ScriptExecutable* ownerExecutable, Unlink
     }
 
     // Bookkeep the strongly referenced module environments.
-    HashSet<JSModuleEnvironment*> stronglyReferencedModuleEnvironments;
+    UncheckedKeyHashSet<JSModuleEnvironment*> stronglyReferencedModuleEnvironments;
 
     auto link_objectAllocationProfile = [&](const auto& /*instruction*/, auto bytecode, auto& metadata) {
         metadata.m_objectAllocationProfile.initializeProfile(vm, m_globalObject.get(), this, m_globalObject->objectPrototype(), bytecode.m_inlineCapacity);
@@ -740,11 +752,6 @@ bool CodeBlock::finishCreation(VM& vm, ScriptExecutable* ownerExecutable, Unlink
     if (m_unlinkedCode->wasCompiledWithControlFlowProfilerOpcodes())
         insertBasicBlockBoundariesForControlFlowProfiler();
 
-    // If the concurrent thread will want the code block's hash, then compute it here
-    // synchronously.
-    if (Options::alwaysComputeHash())
-        hash();
-
     if (Options::dumpGeneratedBytecodes())
         dumpBytecode();
 
@@ -758,6 +765,16 @@ bool CodeBlock::finishCreation(VM& vm, ScriptExecutable* ownerExecutable, Unlink
 }
 
 #if ENABLE(JIT)
+void CodeBlock::setBaselineJITData(std::unique_ptr<BaselineJITData>&& jitData)
+{
+    ASSERT(!m_jitData);
+    WTF::storeStoreFence(); // m_jitData is accessed from concurrent GC threads.
+    m_jitData = jitData.release();
+    checker().set(CrashChecker::BaselineJITData, checker().hash(this, m_jitData));
+    auto* baselineJITData = std::bit_cast<BaselineJITData*>(m_jitData);
+    checker().set(CrashChecker::StubInfoCount, checker().hash(this, baselineJITData->stubInfos().size()));
+}
+
 void CodeBlock::setupWithUnlinkedBaselineCode(Ref<BaselineJITCode> jitCode)
 {
     setJITCode(jitCode.copyRef());
@@ -824,9 +841,31 @@ void CodeBlock::setupWithUnlinkedBaselineCode(Ref<BaselineJITCode> jitCode)
 
 CodeBlock::~CodeBlock()
 {
+    auto& cc = checker();
+    if (cc.isEnabled) {
+        RELEASE_ASSERT(cc.get(CrashChecker::This) == cc.hash(this),
+            CrashChecker::This, cc.value(), cc.hash(this), this);
+        RELEASE_ASSERT(!cc.get(CrashChecker::Destructed),
+            CrashChecker::Destructed, cc.value(), cc.hash(this), this);
+        RELEASE_ASSERT(cc.get(CrashChecker::Metadata) == cc.hash(this, m_metadata.get()),
+            CrashChecker::Metadata, cc.value(), cc.hash(this, m_metadata.get()), this, m_metadata.get());
+    }
+
     VM& vm = *m_vm;
 
     if (JITCode::isBaselineCode(jitType())) {
+#if ENABLE(JIT)
+        if (cc.isEnabled && m_jitData) {
+            RELEASE_ASSERT(cc.get(CrashChecker::BaselineJITData) == cc.hash(this, m_jitData),
+                CrashChecker::BaselineJITData, cc.value(), cc.hash(this, m_jitData), this, m_jitData);
+            auto stubInfoCount = std::bit_cast<BaselineJITData*>(m_jitData)->stubInfos().size();
+            RELEASE_ASSERT(cc.get(CrashChecker::StubInfoCount) == cc.hash(this, stubInfoCount),
+                CrashChecker::StubInfoCount, cc.value(),
+                cc.hash(this, stubInfoCount), this, m_jitData, stubInfoCount);
+            RELEASE_ASSERT(!cc.get(CrashChecker::DFGJITData),
+                CrashChecker::DFGJITData, cc.value(), cc.hash(this, m_jitData), this, m_jitData);
+        }
+#endif
         if (m_metadata) {
             m_metadata->forEach<OpCatch>([&](auto& metadata) {
                 if (metadata.m_buffer)
@@ -856,10 +895,10 @@ CodeBlock::~CodeBlock()
         jitCode()->dfgCommon()->clearWatchpoints();
 #endif
 
-    if (UNLIKELY(vm.m_perBytecodeProfiler))
+    if (vm.m_perBytecodeProfiler) [[unlikely]]
         vm.m_perBytecodeProfiler->notifyDestruction(this);
 
-    if (LIKELY(!vm.heap.isShuttingDown())) {
+    if (!vm.heap.isShuttingDown()) [[likely]] {
         // FIXME: This check should really not be necessary, see https://webkit.org/b/272787
         ASSERT(!m_metadata || m_metadata->unlinkedMetadata());
         if (m_metadata && !m_metadata->isDestroyed()) {
@@ -886,6 +925,20 @@ CodeBlock::~CodeBlock()
     // destructors.
 
 #if ENABLE(JIT)
+    if (cc.isEnabled && m_jitData) {
+        if (JSC::JITCode::isOptimizingJIT(jitType())) {
+            RELEASE_ASSERT(cc.get(CrashChecker::DFGJITData) == cc.hash(this, m_jitData),
+                CrashChecker::DFGJITData, cc.value(), cc.hash(this, m_jitData), this, m_jitData);
+            RELEASE_ASSERT(!cc.get(CrashChecker::BaselineJITData),
+                CrashChecker::BaselineJITData, cc.value(), cc.hash(this, m_jitData), this, m_jitData);
+        } else {
+            RELEASE_ASSERT(cc.get(CrashChecker::BaselineJITData) == cc.hash(this, m_jitData),
+                CrashChecker::BaselineJITData, cc.value(), cc.hash(this, m_jitData), this, m_jitData);
+            auto stubInfoCount = std::bit_cast<BaselineJITData*>(m_jitData)->stubInfos().size();
+            RELEASE_ASSERT(cc.get(CrashChecker::StubInfoCount) == cc.hash(this, stubInfoCount),
+                CrashChecker::StubInfoCount, cc.value(), cc.hash(this, stubInfoCount), this, m_jitData, stubInfoCount);
+        }
+    }
     forEachStructureStubInfo([&](StructureStubInfo& stubInfo) {
         stubInfo.aboutToDie();
         stubInfo.deref();
@@ -905,6 +958,55 @@ CodeBlock::~CodeBlock()
         }
     }
 #endif // ENABLE(JIT)
+    if (cc.isEnabled) {
+        if (!m_llintGetByIdWatchpointMap.isEmpty()) {
+            // Do some spot checks.
+            auto iterator = m_llintGetByIdWatchpointMap.begin();
+            FixedVector<LLIntPrototypeLoadAdaptiveStructureWatchpoint>& watchpoints = iterator.get()->value;
+            auto numberOfWatchpoints = watchpoints.size();
+            RELEASE_ASSERT(numberOfWatchpoints);
+
+            auto checkWatchpointLink = [&] (auto& watchpoint, unsigned index) {
+                if (!watchpoint.isOnList())
+                    return;
+                auto* prev = watchpoint.prev();
+                auto* next = watchpoint.next();
+                if (!Integrity::isSanePointer(prev) || !Integrity::isSanePointer(next)) [[unlikely]] {
+                    uintptr_t status = 0;
+                    if (Integrity::isSanePointer(prev))
+                        status |= 0x5;
+                    if (Integrity::isSanePointer(next))
+                        status |= 0xa << 4;
+                    CrashChecker actual;
+                    actual.set(CrashChecker::This, actual.hash(this));
+                    actual.set(CrashChecker::Metadata, actual.hash(this, m_metadata.get()));
+                    if (JITCode::isOptimizingJIT(jitType()))
+                        status |= 0xc << 8; // We expect this path to never be taken because this path is only for LLint.
+                    else if (JITCode::isBaselineCode(jitType()))
+                        status |= 0xb << 8;
+                    if (cc.get(CrashChecker::Destructed))
+                        status |= 0xd << 12;
+#if ENABLE(JIT)
+                    status |= std::bit_cast<uintptr_t>(m_jitData) << 16;
+#endif
+
+                    RELEASE_ASSERT(Integrity::isSanePointer(prev) && Integrity::isSanePointer(next),
+                        status, index, numberOfWatchpoints, prev, next, &watchpoints, cc.value());
+                }
+            };
+            checkWatchpointLink(watchpoints.first(), 0);
+            if (numberOfWatchpoints > 1) {
+                checkWatchpointLink(watchpoints.last(), numberOfWatchpoints - 1);
+                if (numberOfWatchpoints > 2) {
+                    size_t mid = numberOfWatchpoints / 2;
+                    checkWatchpointLink(watchpoints.at(mid), mid);
+                }
+            }
+
+            m_llintGetByIdWatchpointMap.clear();
+        }
+        cc.set(CrashChecker::Destructed, 0xdd);
+    }
 }
 
 bool CodeBlock::isConstantOwnedByUnlinkedCodeBlock(VirtualRegister reg) const
@@ -1106,7 +1208,7 @@ bool CodeBlock::shouldVisitStrongly(const ConcurrentJSLocker& locker, Visitor& v
         return false;
     }
 
-    if (UNLIKELY(m_visitChildrenSkippedDueToOldAge)) {
+    if (m_visitChildrenSkippedDueToOldAge) [[unlikely]] {
         RELEASE_ASSERT(Options::verifyGC());
         return false;
     }
@@ -1132,7 +1234,7 @@ bool CodeBlock::shouldJettisonDueToWeakReference(VM& vm)
 
 static Seconds timeToLive(JITType jitType)
 {
-    if (UNLIKELY(Options::useEagerCodeBlockJettisonTiming())) {
+    if (Options::useEagerCodeBlockJettisonTiming()) [[unlikely]] {
         switch (jitType) {
         case JITType::InterpreterThunk:
             return 10_ms;
@@ -1169,7 +1271,7 @@ ALWAYS_INLINE bool CodeBlock::shouldJettisonDueToOldAge(const ConcurrentJSLocker
     if (visitor.isMarked(this))
         return false;
 
-    if (UNLIKELY(Options::forceCodeBlockToJettisonDueToOldAge()))
+    if (Options::forceCodeBlockToJettisonDueToOldAge()) [[unlikely]]
         return true;
     
     if (timeSinceCreation() < timeToLive(jitType()))
@@ -1825,7 +1927,7 @@ void CodeBlock::stronglyVisitStrongReferences(const ConcurrentJSLocker& locker, 
     visitor.append(m_unlinkedCode);
     if (m_rareData)
         m_rareData->m_directEvalCodeCache.visitAggregate(visitor);
-    visitor.appendValues(m_constantRegisters.data(), m_constantRegisters.size());
+    visitor.appendValues(m_constantRegisters.span().data(), m_constantRegisters.size());
     for (auto& functionExpr : m_functionExprs)
         visitor.append(functionExpr);
     for (auto& functionDecl : m_functionDecls)
@@ -2033,7 +2135,7 @@ void CodeBlock::removeExceptionHandlerForCallSite(DisposableCallSiteIndex callSi
     for (size_t i = 0; i < exceptionHandlers.size(); ++i) {
         HandlerInfo& handler = exceptionHandlers[i];
         if (handler.start <= index && handler.end > index) {
-            exceptionHandlers.remove(i);
+            exceptionHandlers.removeAt(i);
             return;
         }
     }
@@ -2169,6 +2271,17 @@ void CodeBlock::jettison(Profiler::JettisonReason reason, ReoptimizationMode mod
     CODEBLOCK_LOG_EVENT(codeBlock, "jettison", ("due to ", reason, ", counting = ", mode == CountReoptimization, ", detail = ", pointerDump(detail)));
 
     RELEASE_ASSERT(reason != Profiler::NotJettisoned);
+
+#if ENABLE(JIT)
+    {
+        ConcurrentJSLocker locker(m_lock);
+        forEachStructureStubInfo([&](StructureStubInfo& stubInfo) {
+            stubInfo.reset(locker, this);
+            return IterationStatus::Continue;
+        });
+    }
+#endif
+
     
 #if ENABLE(DFG_JIT)
     if (DFG::shouldDumpDisassembly()) {
@@ -2216,7 +2329,7 @@ void CodeBlock::jettison(Profiler::JettisonReason reason, ReoptimizationMode mod
     
     if (reason != Profiler::JettisonDueToOldAge) {
         Profiler::Compilation* compilation = jitCode()->dfgCommon()->compilation.get();
-        if (UNLIKELY(compilation))
+        if (compilation) [[unlikely]]
             compilation->setJettisonReason(reason, detail);
         
         // This accomplishes (1), and does its own book-keeping about whether it has already happened.
@@ -2766,7 +2879,7 @@ bool CodeBlock::hasIdentifier(UniquedStringImpl* uid)
         if (m_cachedIdentifierUids.size() != numberOfIdentifiers) {
             Locker locker(m_cachedIdentifierUidsLock);
             createRareDataIfNecessary();
-            HashSet<UniquedStringImpl*> cachedIdentifierUids;
+            UncheckedKeyHashSet<UniquedStringImpl*> cachedIdentifierUids;
             cachedIdentifierUids.reserveInitialCapacity(numberOfIdentifiers);
             for (unsigned index = 0; index < unlinkedIdentifiers; ++index) {
                 const Identifier& identifier = unlinkedCode->identifier(index);
@@ -3480,6 +3593,17 @@ CodePtr<JSEntryPtrTag> CodeBlock::addressForCallConcurrently(const ConcurrentJSL
     return m_jitCode->addressForCall(arityCheck);
 }
 
+unsigned CodeBlock::bytecodeCost() const
+{
+#if ENABLE(FTL_JIT)
+    if (jitType() == JITType::FTLJIT) {
+        if (auto* jitCode = static_cast<FTL::JITCode*>(m_jitCode.get()))
+            return std::min(static_cast<unsigned>(jitCode->numberOfCompiledDFGNodes() * Options::ratioFTLNodesToBytecodeCost()), m_bytecodeCost);
+    }
+#endif
+    return m_bytecodeCost;
+}
+
 bool CodeBlock::hasInstalledVMTrapsBreakpoints() const
 {
 #if ENABLE(SIGNAL_BASED_VM_TRAPS)
@@ -3575,7 +3699,7 @@ namespace WTF {
     
 void printInternal(PrintStream& out, JSC::CodeBlock* codeBlock)
 {
-    if (UNLIKELY(!codeBlock)) {
+    if (!codeBlock) [[unlikely]] {
         out.print("<null codeBlock>");
         return;
     }

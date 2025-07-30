@@ -50,16 +50,11 @@ struct GPUProcessCreationParameters {
 #if USE(MODERN_AVCONTENTKEYSESSION)
     bool shouldUseModernAVContentKeySession { false };
 #endif
-    ProcessID parentPID;
 
 #if USE(SANDBOX_EXTENSIONS_FOR_CACHE_AND_TEMP_DIRECTORY_ACCESS)
     SandboxExtension::Handle containerCachesDirectoryExtensionHandle;
     SandboxExtension::Handle containerTemporaryDirectoryExtensionHandle;
     String containerCachesDirectory;
-#endif
-#if PLATFORM(IOS_FAMILY)
-    Vector<SandboxExtension::Handle> compilerServiceExtensionHandles;
-    Vector<SandboxExtension::Handle> dynamicIOKitExtensionHandles;
 #endif
     std::optional<SandboxExtension::Handle> mobileGestaltExtensionHandle;
 #if PLATFORM(COCOA) && ENABLE(REMOTE_INSPECTOR)

@@ -53,7 +53,7 @@ public:
     int trackPosition(Scrollbar&) final;
     int trackLength(Scrollbar&) final;
 
-    int scrollbarThickness(ScrollbarWidth = ScrollbarWidth::Auto, ScrollbarExpansionState = ScrollbarExpansionState::Expanded) final;
+    int scrollbarThickness(ScrollbarWidth = ScrollbarWidth::Auto, ScrollbarExpansionState = ScrollbarExpansionState::Expanded, OverlayScrollbarSizeRelevancy = OverlayScrollbarSizeRelevancy::IncludeOverlayScrollbarSize) final;
 
     QStyleFacade* qStyle() { return m_qStyle.get(); }
 

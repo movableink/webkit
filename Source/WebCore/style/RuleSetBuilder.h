@@ -67,7 +67,7 @@ private:
         struct DynamicContext {
             const MQ::MediaQueryList& queries;
             Vector<size_t> affectedRulePositions { };
-            HashSet<Ref<const StyleRule>> affectedRules { };
+            UncheckedKeyHashSet<Ref<const StyleRule>> affectedRules { };
         };
         Vector<DynamicContext> dynamicContextStack { };
 
@@ -89,7 +89,8 @@ private:
     RuleSet::CascadeLayerIdentifier m_currentCascadeLayerIdentifier { 0 };
     Vector<const CSSSelectorList*> m_selectorListStack;
     Vector<CSSParserEnum::NestedContextType> m_ancestorStack;
-    const ShouldResolveNesting m_shouldResolveNesting { ShouldResolveNesting::No };
+    const ShouldResolveNesting m_builderShouldResolveNesting { ShouldResolveNesting::No };
+    bool m_shouldResolveNestingForSheet { false };
 
     RuleSet::ContainerQueryIdentifier m_currentContainerQueryIdentifier { 0 };
     RuleSet::ScopeRuleIdentifier m_currentScopeIdentifier { 0 };

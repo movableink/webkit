@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/text/ASCIILiteral.h>
+
 namespace WebKit {
 
 enum class WebsiteDataType : uint32_t {
@@ -50,6 +52,99 @@ enum class WebsiteDataType : uint32_t {
 #endif
     FileSystem = 1 << 19,
     BackgroundFetchStorage = 1 << 20,
+#if ENABLE(SCREEN_TIME)
+    ScreenTime = 1 << 21,
+#endif
 };
 
+inline ASCIILiteral toString(WebsiteDataType type)
+{
+    switch (type) {
+    case WebsiteDataType::Cookies:
+        return "Cookies"_s;
+    case WebsiteDataType::DiskCache:
+        return "DiskCache"_s;
+    case WebsiteDataType::MemoryCache:
+        return "MemoryCache"_s;
+    case WebsiteDataType::OfflineWebApplicationCache:
+        return "OfflineWebApplicationCache"_s;
+    case WebsiteDataType::SessionStorage:
+        return "SessionStorage"_s;
+    case WebsiteDataType::LocalStorage:
+        return "LocalStorage"_s;
+    case WebsiteDataType::WebSQLDatabases:
+        return "WebSQLDatabases"_s;
+    case WebsiteDataType::IndexedDBDatabases:
+        return "IndexedDBDatabases"_s;
+    case WebsiteDataType::MediaKeys:
+        return "MediaKeys"_s;
+    case WebsiteDataType::HSTSCache:
+        return "HSTSCache"_s;
+    case WebsiteDataType::SearchFieldRecentSearches:
+        return "SearchFieldRecentSearches"_s;
+    case WebsiteDataType::ResourceLoadStatistics:
+        return "ResourceLoadStatistics"_s;
+    case WebsiteDataType::Credentials:
+        return "Credentials"_s;
+    case WebsiteDataType::ServiceWorkerRegistrations:
+        return "ServiceWorkerRegistrations"_s;
+    case WebsiteDataType::DOMCache:
+        return "DOMCache"_s;
+    case WebsiteDataType::DeviceIdHashSalt:
+        return "DeviceIdHashSalt"_s;
+    case WebsiteDataType::PrivateClickMeasurements:
+        return "PrivateClickMeasurements"_s;
+#if HAVE(ALTERNATIVE_SERVICE)
+    case WebsiteDataType::AlternativeServices:
+        return "AlternativeServices"_s;
+#endif
+    case WebsiteDataType::FileSystem:
+        return "FileSystem"_s;
+    case WebsiteDataType::BackgroundFetchStorage:
+        return "BackgroundFetchStorage"_s;
+#if ENABLE(SCREEN_TIME)
+    case WebsiteDataType::ScreenTime:
+        return "ScreenTime"_s;
+#endif
+    default:
+        break;
+    }
+    return "Unknown"_s;
+}
+
 } // namespace WebKit
+
+namespace WTF {
+
+template<> struct EnumTraitsForPersistence<WebKit::WebsiteDataType> {
+    using values = EnumValues<
+        WebKit::WebsiteDataType,
+        WebKit::WebsiteDataType::Cookies,
+        WebKit::WebsiteDataType::DiskCache,
+        WebKit::WebsiteDataType::MemoryCache,
+        WebKit::WebsiteDataType::OfflineWebApplicationCache,
+        WebKit::WebsiteDataType::SessionStorage,
+        WebKit::WebsiteDataType::LocalStorage,
+        WebKit::WebsiteDataType::WebSQLDatabases,
+        WebKit::WebsiteDataType::IndexedDBDatabases,
+        WebKit::WebsiteDataType::MediaKeys,
+        WebKit::WebsiteDataType::HSTSCache,
+        WebKit::WebsiteDataType::SearchFieldRecentSearches,
+        WebKit::WebsiteDataType::ResourceLoadStatistics,
+        WebKit::WebsiteDataType::Credentials,
+        WebKit::WebsiteDataType::ServiceWorkerRegistrations,
+        WebKit::WebsiteDataType::DOMCache,
+        WebKit::WebsiteDataType::DeviceIdHashSalt,
+        WebKit::WebsiteDataType::PrivateClickMeasurements,
+#if HAVE(ALTERNATIVE_SERVICE)
+        WebKit::WebsiteDataType::AlternativeServices,
+#endif
+        WebKit::WebsiteDataType::FileSystem,
+        WebKit::WebsiteDataType::BackgroundFetchStorage
+#if ENABLE(SCREEN_TIME)
+        , WebKit::WebsiteDataType::ScreenTime
+#endif
+    >;
+};
+
+} // namespace WTF

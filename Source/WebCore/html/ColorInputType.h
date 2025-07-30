@@ -31,8 +31,6 @@
 
 #pragma once
 
-#if ENABLE(INPUT_TYPE_COLOR)
-
 #include "BaseClickableWithKeyInputType.h"
 #include "ColorChooser.h"
 #include "ColorChooserClient.h"
@@ -75,8 +73,8 @@ private:
     bool isPresentingAttachedView() const final;
     const AtomString& formControlType() const final;
     bool supportsRequired() const final;
-    String fallbackValue() const final;
-    String sanitizeValue(const String&) const final;
+    ValueOrReference<String> fallbackValue() const final;
+    ValueOrReference<String> sanitizeValue(const String& value LIFETIME_BOUND) const final;
     void createShadowSubtree() final;
     void setValue(const String&, bool valueChanged, TextFieldEventBehavior, TextControlSetValueSelection) final;
     void attributeChanged(const QualifiedName&) final;
@@ -97,5 +95,3 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_INPUT_TYPE(ColorInputType, Type::Color)
-
-#endif // ENABLE(INPUT_TYPE_COLOR)

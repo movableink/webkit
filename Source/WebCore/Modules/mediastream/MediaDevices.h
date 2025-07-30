@@ -36,7 +36,7 @@
 #include "ActiveDOMObject.h"
 #include "EventNames.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
+#include "EventTargetInterfaces.h"
 #include "IDLTypes.h"
 #include "MediaTrackConstraints.h"
 #include "RealtimeMediaSourceCenter.h"
@@ -80,22 +80,23 @@ public:
     };
 
     struct StreamConstraints {
-        std::variant<bool, MediaTrackConstraints> video;
-        std::variant<bool, MediaTrackConstraints> audio;
+        Variant<bool, MediaTrackConstraints> video;
+        Variant<bool, MediaTrackConstraints> audio;
     };
     void getUserMedia(StreamConstraints&&, Promise&&);
 
     struct DisplayMediaStreamConstraints {
-        std::variant<bool, MediaTrackConstraints> video;
-        std::variant<bool, MediaTrackConstraints> audio;
+        Variant<bool, MediaTrackConstraints> video;
+        Variant<bool, MediaTrackConstraints> audio;
     };
     void getDisplayMedia(DisplayMediaStreamConstraints&&, Promise&&);
 
     void enumerateDevices(EnumerateDevicesPromise&&);
     MediaTrackSupportedConstraints getSupportedConstraints();
 
-    String deviceIdToPersistentId(const String& deviceId) const { return m_audioOutputDeviceIdToPersistentId.get(deviceId); }
-    String hashedGroupId(const String& groupId);
+    String deviceIdToPersistentId(const String&) const;
+
+    void willStartMediaCapture(bool microphone, bool camera);
 
 private:
     explicit MediaDevices(Document&);
@@ -125,18 +126,22 @@ private:
     };
     bool computeUserGesturePriviledge(GestureAllowedRequest);
 
+    enum class UserActivation : bool { No, Yes };
+    void queueTaskForDeviceChangeEvent(UserActivation);
+
     RunLoop::Timer m_scheduledEventTimer;
     Markable<UserMediaClient::DeviceChangeObserverToken> m_deviceChangeToken;
     const EventNames& m_eventNames; // Need to cache this so we can use it from GC threads.
     bool m_listeningForDeviceChanges { false };
-
-    String m_groupIdHashSalt;
 
     OptionSet<GestureAllowedRequest> m_requestTypesForCurrentGesture;
     WeakPtr<UserGestureToken> m_currentGestureToken;
 
     MemoryCompactRobinHoodHashMap<String, String> m_audioOutputDeviceIdToPersistentId;
     String m_audioOutputDeviceId;
+
+    bool m_hasRestrictedCameraDevices { true };
+    bool m_hasRestrictedMicrophoneDevices { true };
 };
 
 } // namespace WebCore

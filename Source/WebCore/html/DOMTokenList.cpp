@@ -26,6 +26,7 @@
 #include "config.h"
 #include "DOMTokenList.h"
 
+#include "ExceptionOr.h"
 #include "SpaceSplitString.h"
 #include <wtf/HashSet.h>
 #include <wtf/SetForScope.h>
@@ -175,9 +176,9 @@ static inline void replaceInOrderedSet(Vector<AtomString, 1>& tokens, size_t tok
 
     if (newTokenIndex > tokenIndex) {
         tokens[tokenIndex] = newToken;
-        tokens.remove(newTokenIndex);
+        tokens.removeAt(newTokenIndex);
     } else
-        tokens.remove(tokenIndex);
+        tokens.removeAt(tokenIndex);
 }
 
 // https://dom.spec.whatwg.org/#dom-domtokenlist-replace
@@ -227,7 +228,7 @@ void DOMTokenList::updateTokensFromAttributeValue(const AtomString& value)
     // Clear tokens but not capacity.
     m_tokens.shrink(0);
 
-    HashSet<AtomString> addedTokens;
+    UncheckedKeyHashSet<AtomString> addedTokens;
     // https://dom.spec.whatwg.org/#ordered%20sets
     for (unsigned start = 0; ; ) {
         while (start < value.length() && isASCIIWhitespace(value[start]))

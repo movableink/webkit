@@ -26,6 +26,7 @@
 #import "config.h"
 
 #import "PlatformUtilities.h"
+#import "TestCocoa.h"
 #import "TestWKWebView.h"
 #import "UIKitSPIForTesting.h"
 #import <CoreServices/CoreServices.h>
@@ -66,12 +67,8 @@
 static RetainPtr<TestWKWebView> createWebViewForClipboardTests()
 {
 #if PLATFORM(IOS_FAMILY)
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        // UIPasteboard's type coercion codepaths only take effect when the UIApplication has been initialized.
-        UIApplicationInitialize();
-    });
-#endif // PLATFORM(IOS_FAMILY)
+    TestWebKitAPI::Util::instantiateUIApplicationIfNeeded();
+#endif
 
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
     [[configuration preferences] _setDOMPasteAllowed:YES];
@@ -139,7 +136,12 @@ static RetainPtr<NSString> readMarkupFromPasteboard()
     return adoptNS([[NSString alloc] initWithData:rawData encoding:NSUTF8StringEncoding]);
 }
 
+// rdar://138144869
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(ClipboardTests, DISABLED_ReadMultipleItems)
+#else
 TEST(ClipboardTests, ReadMultipleItems)
+#endif
 {
     auto webView = createWebViewForClipboardTests();
     writeMultipleObjectsToPlatformPasteboard();

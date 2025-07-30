@@ -102,7 +102,7 @@ public:
 
     static void faviconChangedCallback(WebKitFaviconDatabase* database, const char* pageURI, const char* faviconURI, FaviconDatabaseTest* test)
     {
-        if (!g_strcmp0(webkit_web_view_get_uri(test->m_webView), pageURI)) {
+        if (!g_strcmp0(webkit_web_view_get_uri(test->webView()), pageURI)) {
             test->m_faviconURI = faviconURI;
             if (test->m_waitingForFaviconURI)
                 test->quitMainLoop();
@@ -111,7 +111,7 @@ public:
 
     static void viewFaviconChangedCallback(WebKitWebView* webView, GParamSpec* pspec, FaviconDatabaseTest* test)
     {
-        g_assert_true(test->m_webView == webView);
+        g_assert_true(test->webView() == webView);
         test->m_faviconNotificationReceived = true;
 #if USE(GTK4)
         test->m_favicon = webkit_web_view_get_favicon(webView);
@@ -124,7 +124,7 @@ public:
 
     static void viewLoadChangedCallback(WebKitWebView* webView, WebKitLoadEvent loadEvent, FaviconDatabaseTest* test)
     {
-        g_assert_true(test->m_webView == webView);
+        g_assert_true(test->webView() == webView);
         if (loadEvent != WEBKIT_LOAD_FINISHED)
             return;
 
@@ -147,9 +147,9 @@ public:
     void waitUntilFaviconChanged()
     {
         m_faviconNotificationReceived = false;
-        unsigned long handlerID = g_signal_connect(m_webView, "notify::favicon", G_CALLBACK(viewFaviconChangedCallback), this);
+        unsigned long handlerID = g_signal_connect(m_webView.get(), "notify::favicon", G_CALLBACK(viewFaviconChangedCallback), this);
         g_main_loop_run(m_mainLoop);
-        g_signal_handler_disconnect(m_webView, handlerID);
+        g_signal_handler_disconnect(m_webView.get(), handlerID);
     }
 
     void waitUntilLoadFinishedAndFaviconChanged()
@@ -161,11 +161,11 @@ public:
         m_favicon = nullptr;
         m_faviconNotificationReceived = false;
         m_loadFinished = false;
-        unsigned long faviconChangedID = g_signal_connect(m_webView, "notify::favicon", G_CALLBACK(viewFaviconChangedCallback), this);
-        unsigned long loadChangedID = g_signal_connect(m_webView, "load-changed", G_CALLBACK(viewLoadChangedCallback), this);
+        unsigned long faviconChangedID = g_signal_connect(m_webView.get(), "notify::favicon", G_CALLBACK(viewFaviconChangedCallback), this);
+        unsigned long loadChangedID = g_signal_connect(m_webView.get(), "load-changed", G_CALLBACK(viewLoadChangedCallback), this);
         g_main_loop_run(m_mainLoop);
-        g_signal_handler_disconnect(m_webView, faviconChangedID);
-        g_signal_handler_disconnect(m_webView, loadChangedID);
+        g_signal_handler_disconnect(m_webView.get(), faviconChangedID);
+        g_signal_handler_disconnect(m_webView.get(), loadChangedID);
     }
 
     void getFaviconForPageURIAndWaitUntilReady(const char* pageURI)
@@ -312,12 +312,12 @@ static void testFaviconDatabaseGetFavicon(FaviconDatabaseTest* test, gconstpoint
 
     // Loading an icon that is already in the database should emit
     // WebKitWebView::notify::favicon, but not WebKitFaviconDatabase::icon-changed.
-    g_assert_null(webkit_web_view_get_favicon(test->m_webView));
+    g_assert_null(webkit_web_view_get_favicon(test->webView()));
     test->m_faviconURI = { };
     test->loadURI(kServer->getURIForPath("/foo").data());
     test->waitUntilFaviconChanged();
     g_assert_true(test->m_faviconURI.isNull());
-    g_assert_nonnull(webkit_web_view_get_favicon(test->m_webView));
+    g_assert_nonnull(webkit_web_view_get_favicon(test->webView()));
 }
 
 static void ephemeralViewFaviconChanged(WebKitWebView* webView, GParamSpec*, WebViewTest* test)
@@ -354,14 +354,13 @@ static void testFaviconDatabaseEphemeral(FaviconDatabaseTest* test, gconstpointe
     g_assert_nonnull(webkit_favicon_database_get_favicon_uri(test->m_database.get(), kServer->getURIForPath("/foo").data()));
 
     // An ephemeral web view doesn't write to the database.
-    auto webView = Test::adoptView(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-        "web-context", test->m_webContext.get(),
+    auto webView = test->createWebView(
 #if ENABLE(2022_GLIB_API)
         "network-session", ephemeralSession.get(),
 #else
         "is-ephemeral", TRUE,
 #endif
-        nullptr));
+        nullptr);
     g_signal_connect(webView.get(), "notify::favicon", G_CALLBACK(ephemeralViewFaviconChanged), test);
     webkit_web_view_load_uri(webView.get(), kServer->getURIForPath("/bar").data());
     g_main_loop_run(test->m_mainLoop);

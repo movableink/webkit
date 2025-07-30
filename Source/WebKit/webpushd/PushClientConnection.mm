@@ -41,6 +41,7 @@
 #import <WebCore/PushPermissionState.h>
 #import <wtf/ASCIICType.h>
 #import <wtf/HexNumber.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/Vector.h>
 #import <wtf/cocoa/Entitlements.h>
@@ -145,7 +146,7 @@ RefPtr<PushClientConnection> PushClientConnection::create(xpc_connection_t conne
     audit_token_t peerAuditToken;
     xpc_connection_get_audit_token(connection, &peerAuditToken);
     if (bool peerHasPushInjectEntitlement = WTF::hasEntitlement(peerAuditToken, "com.apple.private.webkit.webpush.inject"_s))
-        return adoptRef(new PushClientConnection(connection, WTFMove(configuration.bundleIdentifierOverride), peerHasPushInjectEntitlement, WTFMove(configuration.pushPartitionString), WTFMove(configuration.dataStoreIdentifier)));
+        return adoptRef(new PushClientConnection(connection, WTFMove(configuration.bundleIdentifierOverride), peerHasPushInjectEntitlement, WTFMove(configuration.pushPartitionString), WTFMove(configuration.dataStoreIdentifier), configuration.declarativeWebPushEnabled));
 
 #if USE(EXTENSIONKIT)
     pid_t pid = xpc_connection_get_pid(connection);
@@ -169,7 +170,7 @@ RefPtr<PushClientConnection> PushClientConnection::create(xpc_connection_t conne
         return nullptr;
     }
 
-    memcpy(&hostAppAuditToken, configuration.hostAppAuditTokenData.data(), sizeof(hostAppAuditToken));
+    memcpySpan(asMutableByteSpan(hostAppAuditToken), configuration.hostAppAuditTokenData.span());
 #endif
 
     bool hostAppHasWebPushEntitlement = hostAppHasEntitlement(hostAppAuditToken, hostAppWebPushEntitlement);
@@ -198,16 +199,23 @@ RefPtr<PushClientConnection> PushClientConnection::create(xpc_connection_t conne
         return nullptr;
     }
 
-    return adoptRef(new PushClientConnection(connection, WTFMove(hostAppCodeSigningIdentifier), hostAppHasPushInjectEntitlement, WTFMove(pushPartition), WTFMove(configuration.dataStoreIdentifier)));
+    return adoptRef(new PushClientConnection(connection, WTFMove(hostAppCodeSigningIdentifier), hostAppHasPushInjectEntitlement, WTFMove(pushPartition), WTFMove(configuration.dataStoreIdentifier), configuration.declarativeWebPushEnabled));
 }
 
-PushClientConnection::PushClientConnection(xpc_connection_t connection, String&& hostAppCodeSigningIdentifier, bool hostAppHasPushInjectEntitlement, String&& pushPartitionString, std::optional<WTF::UUID>&& dataStoreIdentifier)
+PushClientConnection::PushClientConnection(xpc_connection_t connection, String&& hostAppCodeSigningIdentifier, bool hostAppHasPushInjectEntitlement, String&& pushPartitionString, std::optional<WTF::UUID>&& dataStoreIdentifier, bool declarativeWebPushEnabled)
     : m_xpcConnection(connection)
     , m_hostAppCodeSigningIdentifier(WTFMove(hostAppCodeSigningIdentifier))
     , m_hostAppHasPushInjectEntitlement(hostAppHasPushInjectEntitlement)
     , m_pushPartitionString(pushPartitionString)
     , m_dataStoreIdentifier(WTFMove(dataStoreIdentifier))
+    , m_declarativeWebPushEnabled(declarativeWebPushEnabled)
 {
+}
+
+PushClientConnection::~PushClientConnection()
+{
+    for (auto& origin : m_inspectedServiceWorkerOrigins)
+        WebPushDaemon::singleton().setServiceWorkerOriginIsBeingInspected(origin, false);
 }
 
 void PushClientConnection::initializeConnection(WebPushDaemonConnectionConfiguration&&)
@@ -384,6 +392,24 @@ void PushClientConnection::getAppBadgeForTesting(CompletionHandler<void(std::opt
 void PushClientConnection::setProtocolVersionForTesting(unsigned version, CompletionHandler<void()>&& completionHandler)
 {
     WebPushDaemon::singleton().setProtocolVersionForTesting(*this, version, WTFMove(completionHandler));
+}
+
+void PushClientConnection::setServiceWorkerIsBeingInspected(URL&& scopeURL, bool isInspected, CompletionHandler<void()>&& completionHandler)
+{
+    auto origin = WebCore::SecurityOriginData::fromURL(scopeURL);
+    if (origin.isOpaque() || origin.isNull())
+        return;
+
+    bool didChange = false;
+    if (!isInspected && m_inspectedServiceWorkerOrigins.remove(origin))
+        didChange = true;
+    else if (isInspected && m_inspectedServiceWorkerOrigins.add(origin).isNewEntry)
+        didChange = true;
+
+    if (didChange)
+        WebPushDaemon::singleton().setServiceWorkerOriginIsBeingInspected(origin, isInspected);
+
+    completionHandler();
 }
 
 } // namespace WebPushD

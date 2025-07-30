@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,7 @@
 
 #include "EventListener.h"
 #include "FloatRect.h"
-#include "HTMLMediaElementEnums.h"
+#include "HTMLMediaElement.h"
 #include "MediaPlayerEnums.h"
 #include "MediaPlayerIdentifier.h"
 #include "PlatformLayer.h"
@@ -48,8 +48,17 @@ class HTMLVideoElement;
 class TextTrack;
 class PlaybackSessionModelMediaElement;
 
-class VideoPresentationModelVideoElement final : public VideoPresentationModel {
+enum class AudioSessionCategory : uint8_t;
+enum class AudioSessionMode : uint8_t;
+enum class RouteSharingPolicy : uint8_t;
+
+class VideoPresentationModelVideoElement final
+    : public VideoPresentationModel
+    , public HTMLMediaElementClient {
 public:
+    void ref() const final { VideoPresentationModel::ref(); }
+    void deref() const final { VideoPresentationModel::deref(); }
+
     static Ref<VideoPresentationModelVideoElement> create()
     {
         return adoptRef(*new VideoPresentationModelVideoElement());
@@ -71,6 +80,7 @@ public:
     WEBCORE_EXPORT void fullscreenModeChanged(HTMLMediaElementEnums::VideoFullscreenMode) final;
     FloatSize videoDimensions() const final { return m_videoDimensions; }
     bool hasVideo() const final { return m_hasVideo; }
+    bool isChildOfElementFullscreen() const final { return m_isChildOfElementFullscreen; }
 
     WEBCORE_EXPORT void setVideoSizeFenced(const FloatSize&, WTF::MachSendRight&&);
 
@@ -120,20 +130,28 @@ private:
     void updateForEventName(const AtomString&);
     void cleanVideoListeners();
     void documentVisibilityChanged();
+#if ENABLE(FULLSCREEN_API)
+    void documentFullscreenChanged();
+#endif
+    void videoInteractedWith();
 
-    Ref<VideoListener> m_videoListener;
+    // HTMLMediaElementClient
+    void audioSessionCategoryChanged(AudioSessionCategory, AudioSessionMode, RouteSharingPolicy) final;
+
+    const Ref<VideoListener> m_videoListener;
     RefPtr<HTMLVideoElement> m_videoElement;
     RetainPtr<PlatformLayer> m_videoFullscreenLayer;
     bool m_isListening { false };
-    HashSet<CheckedPtr<VideoPresentationModelClient>> m_clients;
+    UncheckedKeyHashSet<CheckedPtr<VideoPresentationModelClient>> m_clients;
     bool m_hasVideo { false };
     bool m_documentIsVisible { true };
+    bool m_isChildOfElementFullscreen { false };
     FloatSize m_videoDimensions;
     FloatRect m_videoFrame;
     Vector<RefPtr<TextTrack>> m_legibleTracksForMenu;
     Vector<RefPtr<AudioTrack>> m_audioTracksForMenu;
     std::optional<MediaPlayerIdentifier> m_playerIdentifier;
-
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
 #if !RELEASE_LOG_DISABLED
     mutable uint64_t m_childIdentifierSeed { 0 };
 #endif

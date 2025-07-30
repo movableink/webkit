@@ -33,6 +33,7 @@
 #include "AccessibilityTable.h"
 #include "AccessibilityTableCell.h"
 #include "AccessibilityTableRow.h"
+#include "DocumentInlines.h"
 #include "FrameSelection.h"
 #include "LocalFrameView.h"
 #include "Page.h"
@@ -49,9 +50,9 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(AXIsolatedTree);
 
 static const Seconds CreationFeedbackInterval { 3_s };
 
-UncheckedKeyHashMap<PageIdentifier, Ref<AXIsolatedTree>>& AXIsolatedTree::treePageCache()
+HashMap<PageIdentifier, Ref<AXIsolatedTree>>& AXIsolatedTree::treePageCache()
 {
-    static NeverDestroyed<UncheckedKeyHashMap<PageIdentifier, Ref<AXIsolatedTree>>> map;
+    static NeverDestroyed<HashMap<PageIdentifier, Ref<AXIsolatedTree>>> map;
     return map;
 }
 
@@ -87,8 +88,7 @@ Ref<AXIsolatedTree> AXIsolatedTree::createEmpty(AXObjectCache& axObjectCache)
 
     auto tree = adoptRef(*new AXIsolatedTree(axObjectCache));
 
-    RefPtr axRoot = axObjectCache.getOrCreate(axObjectCache.document().view());
-    if (axRoot) {
+    if (RefPtr axRoot = axObjectCache.document() ? axObjectCache.getOrCreate(axObjectCache.document()->view()) : nullptr) {
         tree->updatingSubtree(axRoot.get());
         tree->createEmptyContent(*axRoot);
     }
@@ -112,9 +112,9 @@ void AXIsolatedTree::createEmptyContent(AccessibilityObject& axRoot)
     m_isEmptyContentTree = true;
 
     // Create the IsolatedObjects for the root/ScrollView and WebArea.
-    auto root = AXIsolatedObject::create(axRoot, this);
-    root->setProperty(AXPropertyName::ScreenRelativePosition, axRoot.screenRelativePosition());
-    NodeChange rootAppend { root, axRoot.wrapper(), AttachWrapper::OnMainThread };
+    auto rootData = createIsolatedObjectData(axRoot, *this);
+    rootData.setProperty(AXProperty::ScreenRelativePosition, axRoot.screenRelativePosition());
+    NodeChange rootAppend { WTFMove(rootData), axRoot.wrapper() };
 
     RefPtr axWebArea = Accessibility::findUnignoredChild(axRoot, [] (auto& object) {
         return object->isWebArea();
@@ -123,22 +123,22 @@ void AXIsolatedTree::createEmptyContent(AccessibilityObject& axRoot)
         ASSERT_NOT_REACHED();
         return;
     }
-    auto webArea = AXIsolatedObject::create(*axWebArea, this);
-    webArea->setProperty(AXPropertyName::ScreenRelativePosition, axWebArea->screenRelativePosition());
-    NodeChange webAreaAppend { webArea, axWebArea->wrapper(), AttachWrapper::OnMainThread };
+    auto webAreaData = createIsolatedObjectData(*axWebArea, *this);
+    webAreaData.setProperty(AXProperty::ScreenRelativePosition, axWebArea->screenRelativePosition());
+    NodeChange webAreaAppend { WTFMove(webAreaData), axWebArea->wrapper() };
 
-    m_nodeMap.set(root->objectID(), ParentChildrenIDs { std::nullopt, { webArea->objectID() } });
-    m_nodeMap.set(webArea->objectID(), ParentChildrenIDs { root->objectID(), { } });
+    m_nodeMap.set(axRoot.objectID(), ParentChildrenIDs { std::nullopt, { axWebArea->objectID() } });
+    m_nodeMap.set(axWebArea->objectID(), ParentChildrenIDs { axRoot.objectID(), { } });
 
     {
         Locker locker { m_changeLogLock };
-        setRootNode(root.ptr());
-        m_pendingFocusedNodeID = webArea->objectID();
+        setPendingRootNodeIDLocked(axRoot.objectID());
+        m_pendingFocusedNodeID = axWebArea->objectID();
     }
     queueAppendsAndRemovals({ rootAppend, webAreaAppend }, { });
 }
 
-Ref<AXIsolatedTree> AXIsolatedTree::create(AXObjectCache& axObjectCache)
+RefPtr<AXIsolatedTree> AXIsolatedTree::create(AXObjectCache& axObjectCache)
 {
     AXTRACE("AXIsolatedTree::create"_s);
     ASSERT(isMainThread());
@@ -148,22 +148,24 @@ Ref<AXIsolatedTree> AXIsolatedTree::create(AXObjectCache& axObjectCache)
     if (RefPtr existingTree = isolatedTreeForID(tree->treeID()))
         tree->m_replacingTree = existingTree;
 
-    auto& document = axObjectCache.document();
-    if (!Accessibility::inRenderTreeOrStyleUpdate(document))
-        document.updateLayoutIgnorePendingStylesheets();
-
-    tree->m_maxTreeDepth = document.settings().maximumHTMLParserDOMTreeDepth();
-    ASSERT(tree->m_maxTreeDepth);
+    RefPtr document = axObjectCache.document();
+    if (!document)
+        return nullptr;
+    if (!Accessibility::inRenderTreeOrStyleUpdate(*document))
+        document->updateLayoutIgnorePendingStylesheets();
 
     // Generate the nodes of the tree and set its root and focused objects.
     // For this, we need the root and focused objects of the AXObject tree.
-    auto* axRoot = axObjectCache.getOrCreate(document.view());
+    auto* axRoot = axObjectCache.getOrCreate(document->view());
     if (axRoot)
         tree->generateSubtree(*axRoot);
-    auto* axFocus = axObjectCache.focusedObjectForPage(document.page());
+
+    auto* axFocus = axObjectCache.focusedObjectForPage(document->page());
     if (axFocus)
         tree->setFocusedNodeID(axFocus->objectID());
-
+    tree->setSelectedTextMarkerRange(document->selection().selection());
+    tree->setInitialSortedLiveRegions(axIDs(axObjectCache.sortedLiveRegions()));
+    tree->setInitialSortedNonRootWebAreas(axIDs(axObjectCache.sortedNonRootWebAreas()));
     tree->updateLoadingProgress(axObjectCache.loadingProgress());
 
     const auto relations = axObjectCache.relations();
@@ -180,12 +182,31 @@ Ref<AXIsolatedTree> AXIsolatedTree::create(AXObjectCache& axObjectCache)
     return tree;
 }
 
-void AXIsolatedTree::storeTree(AXObjectCache& axObjectCache, const Ref<AXIsolatedTree>& tree)
+void AXIsolatedTree::applyPendingRootNodeLocked()
 {
+    ASSERT(!isMainThread());
+    ASSERT(m_changeLogLock.isLocked());
+
+    if (m_pendingRootNodeID) {
+        if (RefPtr root = objectForID(m_pendingRootNodeID)) {
+            m_rootNode = WTFMove(root);
+            m_pendingRootNodeID = std::nullopt;
+        }
+    }
+}
+
+void AXIsolatedTree::storeTree(AXObjectCache& cache, const Ref<AXIsolatedTree>& tree)
+{
+    ASSERT(isMainThread());
+
+    // Once we set this tree in the AXTreeStore, the secondary thread can start using it,
+    // and we can no longer access AXIsolatedTree::rootNode off the main-thread. Set the
+    // root now while we still can.
+    cache.setIsolatedTree(tree);
     AXTreeStore::set(tree->treeID(), tree.ptr());
     tree->m_replacingTree = nullptr;
     Locker locker { s_storeLock };
-    treePageCache().set(*axObjectCache.pageID(), tree.copyRef());
+    treePageCache().set(*cache.pageID(), tree.copyRef());
 }
 
 double AXIsolatedTree::loadingProgress()
@@ -210,7 +231,7 @@ void AXIsolatedTree::reportLoadingProgress(double processingProgress)
     WeakPtr cache = axObjectCache();
     if (RefPtr axWebArea = cache ? cache->rootWebArea() : nullptr) {
         overrideNodeProperties(axWebArea->objectID(), {
-            { AXPropertyName::TitleAttributeValue, WTFMove(title) },
+            { AXProperty::TitleAttributeValue, WTFMove(title) },
         });
         if (cache)
             cache->postPlatformNotification(*axWebArea, AXNotification::LayoutComplete);
@@ -237,11 +258,10 @@ RefPtr<AXIsolatedTree> AXIsolatedTree::treeForPageID(PageIdentifier pageID)
     return nullptr;
 }
 
-RefPtr<AXIsolatedObject> AXIsolatedTree::objectForID(std::optional<AXID> axID) const
+AXIsolatedObject* AXIsolatedTree::objectForID(AXID axID) const
 {
     ASSERT(!isMainThread());
-
-    return axID ? m_readerThreadNodeMap.get(*axID) : nullptr;
+    return m_readerThreadNodeMap.get(axID);
 }
 
 void AXIsolatedTree::generateSubtree(AccessibilityObject& axObject)
@@ -268,7 +288,7 @@ bool AXIsolatedTree::shouldCreateNodeChange(AccessibilityObject& axObject)
             || m_unconnectedNodes.contains(axObject.objectID()));
 }
 
-std::optional<AXIsolatedTree::NodeChange> AXIsolatedTree::nodeChangeForObject(Ref<AccessibilityObject> axObject, AttachWrapper attachWrapper)
+std::optional<AXIsolatedTree::NodeChange> AXIsolatedTree::nodeChangeForObject(Ref<AccessibilityObject> axObject)
 {
     ASSERT(isMainThread());
     ASSERT(!axObject->isDetached());
@@ -276,17 +296,14 @@ std::optional<AXIsolatedTree::NodeChange> AXIsolatedTree::nodeChangeForObject(Re
     if (!shouldCreateNodeChange(axObject.get()))
         return std::nullopt;
 
-    auto object = AXIsolatedObject::create(axObject, this);
     ASSERT(axObject->wrapper());
-    NodeChange nodeChange { object, axObject->wrapper(), attachWrapper };
+    auto data = createIsolatedObjectData(axObject, *this);
+    Markable parentID = data.parentID;
+    m_nodeMap.set(axObject->objectID(), ParentChildrenIDs { parentID, data.childrenIDs });
+    NodeChange nodeChange { WTFMove(data), axObject->wrapper() };
 
-    m_nodeMap.set(axObject->objectID(), ParentChildrenIDs { nodeChange.isolatedObject->parent(), axObject->childrenIDs() });
-
-    if (!nodeChange.isolatedObject->parent() && nodeChange.isolatedObject->isScrollView()) {
-        Locker locker { m_changeLogLock };
-        setRootNode(nodeChange.isolatedObject.ptr());
-    }
-
+    if (!parentID && axObject->isScrollView())
+        setPendingRootNodeID(axObject->objectID());
     return nodeChange;
 }
 
@@ -297,13 +314,13 @@ void AXIsolatedTree::queueChange(const NodeChange& nodeChange)
 
     m_pendingAppends.append(nodeChange);
 
-    auto parentID = nodeChange.isolatedObject->parent();
+    Markable parentID = nodeChange.data.parentID;
     if (parentID) {
         auto siblingsIDs = m_nodeMap.get(*parentID).childrenIDs;
         m_pendingChildrenUpdates.append({ *parentID, WTFMove(siblingsIDs) });
     }
 
-    AXID objectID = nodeChange.isolatedObject->objectID();
+    AXID objectID = nodeChange.data.axID;
     ASSERT_WITH_MESSAGE(objectID != parentID, "object ID was the same as its parent ID (%s) when queueing a node change", objectID.loggingString().utf8().data());
     ASSERT_WITH_MESSAGE(m_nodeMap.contains(objectID), "node map should've contained objectID: %s", objectID.loggingString().utf8().data());
     auto childrenIDs = m_nodeMap.get(objectID).childrenIDs;
@@ -335,10 +352,7 @@ void AXIsolatedTree::addUnconnectedNode(Ref<AccessibilityObject> axObject)
     // Instead, just directly create and queue the node change so m_readerThreadNodeMap can hold a reference
     // to it. It will be removed from m_readerThreadNodeMap when the corresponding DOM element, renderer, or
     // other entity is removed from the page.
-    auto object = AXIsolatedObject::create(axObject, this);
-    object->attachPlatformWrapper(axObject->wrapper());
-
-    NodeChange nodeChange { object, nullptr };
+    NodeChange nodeChange { createIsolatedObjectData(axObject, *this), axObject->wrapper() };
     Locker locker { m_changeLogLock };
     m_pendingAppends.append(WTFMove(nodeChange));
     m_unconnectedNodes.add(objectID);
@@ -386,18 +400,18 @@ Vector<AXIsolatedTree::NodeChange> AXIsolatedTree::resolveAppends()
     // The process of resolving appends can add more IDs to m_unresolvedPendingAppends as we iterate over it, so
     // iterate over an exchanged map instead. Any late-appended IDs will get picked up in the next cycle.
     auto unresolvedPendingAppends = std::exchange(m_unresolvedPendingAppends, { });
-    for (const auto& unresolvedAppend : unresolvedPendingAppends) {
+    for (const auto& axID : unresolvedPendingAppends) {
         if (m_replacingTree) {
             ++counter;
             if (MonotonicTime::now() - lastFeedbackTime > CreationFeedbackInterval) {
-                m_replacingTree->reportLoadingProgress(counter / m_unresolvedPendingAppends.size());
+                m_replacingTree->reportLoadingProgress(counter / unresolvedPendingAppends.size());
                 lastFeedbackTime = MonotonicTime::now();
             }
         }
 
-        if (auto* axObject = cache->objectForID(unresolvedAppend.key)) {
-            if (auto nodeChange = nodeChangeForObject(*axObject, unresolvedAppend.value))
-                resolvedAppends.append(*nodeChange);
+        if (RefPtr axObject = cache->objectForID(axID)) {
+            if (std::optional nodeChange = nodeChangeForObject(*axObject))
+                resolvedAppends.append(WTFMove(*nodeChange));
         }
     }
     resolvedAppends.shrinkToFit();
@@ -412,11 +426,8 @@ void AXIsolatedTree::queueAppendsAndRemovals(Vector<NodeChange>&& appends, Vecto
     ASSERT(isMainThread());
 
     Locker locker { m_changeLogLock };
-    for (const auto& append : appends) {
-        if (append.attachWrapper == AttachWrapper::OnMainThread)
-            append.isolatedObject->attachPlatformWrapper(append.wrapper.get());
+    for (const auto& append : appends)
         queueChange(append);
-    }
 
     auto parentUpdateIDs = std::exchange(m_needsParentUpdate, { });
     for (const auto& axID : parentUpdateIDs) {
@@ -438,9 +449,7 @@ void AXIsolatedTree::collectNodeChangesForSubtree(AccessibilityObject& axObject)
         return;
     }
 
-    SetForScope collectingAtTreeLevel(m_collectingNodeChangesAtTreeLevel, m_collectingNodeChangesAtTreeLevel + 1);
-    if (m_collectingNodeChangesAtTreeLevel >= m_maxTreeDepth)
-        return;
+    SetForScope isCollectingNodeChanges(m_isCollectingNodeChanges, true);
 
     auto* axParent = axObject.parentInCoreTree();
     auto parentID = axParent ? std::optional { axParent->objectID() } : std::nullopt;
@@ -448,7 +457,7 @@ void AXIsolatedTree::collectNodeChangesForSubtree(AccessibilityObject& axObject)
 
     auto iterator = m_nodeMap.find(axObject.objectID());
     if (iterator == m_nodeMap.end()) {
-        m_unresolvedPendingAppends.set(axObject.objectID(), AttachWrapper::OnMainThread);
+        m_unresolvedPendingAppends.add(axObject.objectID());
 
         Vector<AXID> axChildrenIDs;
         axChildrenIDs.reserveInitialCapacity(axChildrenCopy.size());
@@ -503,16 +512,14 @@ void AXIsolatedTree::updateNode(AccessibilityObject& axObject)
     // AccessibilityRenderObject::updateRoleAfterChildrenCreation), queue the append up to be resolved with the rest
     // of the collected changes. This prevents us from creating two node changes for the same object.
     if (isCollectingNodeChanges() || !m_unresolvedPendingAppends.isEmpty()) {
-        m_unresolvedPendingAppends.ensure(axObject.objectID(), [] {
-            return AttachWrapper::OnAXThread;
-        });
+        m_unresolvedPendingAppends.add(axObject.objectID());
         return;
     }
 
     // Otherwise, resolve the change immediately and queue it up.
     // In both cases, we can't attach the wrapper immediately on the main thread, since the wrapper could be in use
     // on the AX thread (because this function updates an existing node).
-    if (auto change = nodeChangeForObject(axObject, AttachWrapper::OnAXThread)) {
+    if (auto change = nodeChangeForObject(axObject)) {
         Locker locker { m_changeLogLock };
         queueChange(WTFMove(*change));
         return;
@@ -526,7 +533,7 @@ void AXIsolatedTree::updateNode(AccessibilityObject& axObject)
     if (!axParent)
         return;
 
-    if (auto change = nodeChangeForObject(*axParent, AttachWrapper::OnAXThread)) {
+    if (auto change = nodeChangeForObject(*axParent)) {
         Locker locker { m_changeLogLock };
         queueChange(WTFMove(*change));
     }
@@ -540,25 +547,25 @@ void AXIsolatedTree::objectChangedIgnoredState(const AccessibilityObject& object
     if (auto* cell = dynamicDowncast<AccessibilityTableCell>(object)) {
         if (auto* parentTable = cell->parentTable()) {
             // FIXME: This should be as simple as:
-            //     queueNodeUpdate(*parentTable->objectID(), { { AXPropertyName::Cells, AXPropertyName::CellSlots, AXPropertyName::Columns } });
+            //     queueNodeUpdate(*parentTable->objectID(), { { AXProperty::Cells, AXProperty::CellSlots, AXProperty::Columns } });
             // As these are the table properties that depend on cells. But we can't do that, because we compute "new" column accessibility objects
-            // every time we clearChildren() and addChildren(), so just re-computing AXPropertyName::Columns means that we won't have AXIsolatedObjects
+            // every time we clearChildren() and addChildren(), so just re-computing AXProperty::Columns means that we won't have AXIsolatedObjects
             // for the columns. Instead we have to do a significantly more wasteful children update.
             queueNodeUpdate(parentTable->objectID(), NodeUpdateOptions::childrenUpdate());
-            queueNodeUpdate(parentTable->objectID(), { { AXPropertyName::Cells, AXPropertyName::CellSlots } });
+            queueNodeUpdate(parentTable->objectID(), { { AXProperty::Cells, AXProperty::CellSlots } });
         }
     }
 
     if (object.isLink()) {
         if (RefPtr webArea = m_axObjectCache ? m_axObjectCache->rootWebArea() : nullptr)
-            queueNodeUpdate(webArea->objectID(), { AXPropertyName::DocumentLinks });
+            queueNodeUpdate(webArea->objectID(), { AXProperty::DocumentLinks });
     }
 #else
     UNUSED_PARAM(object);
 #endif // ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
 }
 
-void AXIsolatedTree::updatePropertiesForSelfAndDescendants(AccessibilityObject& axObject, const AXPropertyNameSet& properties)
+void AXIsolatedTree::updatePropertiesForSelfAndDescendants(AccessibilityObject& axObject, const AXPropertySet& propertySet)
 {
     AXTRACE("AXIsolatedTree::updatePropertiesForSelfAndDescendants"_s);
     ASSERT(isMainThread());
@@ -566,16 +573,12 @@ void AXIsolatedTree::updatePropertiesForSelfAndDescendants(AccessibilityObject& 
     if (isUpdatingSubtree())
         return;
 
-    AXPropertyNameSet propertySet;
-    for (const auto& property : properties)
-        propertySet.add(property);
-
     Accessibility::enumerateDescendantsIncludingIgnored<AXCoreObject>(axObject, true, [&propertySet, this] (auto& descendant) {
         queueNodeUpdate(descendant.objectID(), { propertySet });
     });
 }
 
-void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const AXPropertyNameSet& properties)
+void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const AXPropertySet& propertySet)
 {
     AXTRACE("AXIsolatedTree::updateNodeProperties"_s);
     AXLOG(makeString("Updating properties for objectID "_s, axObject.objectID().loggingString(), ": "_s));
@@ -584,255 +587,297 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
     if (isUpdatingSubtree())
         return;
 
-    AXPropertyMap propertyMap;
-    for (const auto& property : properties) {
+    AXPropertyVector properties;
+    properties.reserveInitialCapacity(propertySet.size());
+    for (const auto& property : propertySet) {
         AXLOG(makeString("Property: "_s, property));
         switch (property) {
-        case AXPropertyName::AccessKey:
-            propertyMap.set(AXPropertyName::AccessKey, axObject.accessKey().isolatedCopy());
+        case AXProperty::AccessKey:
+            properties.append({ AXProperty::AccessKey, axObject.accessKey().isolatedCopy() });
             break;
-        case AXPropertyName::AccessibilityText: {
+        case AXProperty::AccessibilityText: {
             Vector<AccessibilityText> texts;
             axObject.accessibilityText(texts);
             auto axTextValue = texts.map([] (const auto& text) -> AccessibilityText {
                 return { text.text.isolatedCopy(), text.textSource };
             });
-            propertyMap.set(AXPropertyName::AccessibilityText, axTextValue);
+            properties.append({ AXProperty::AccessibilityText, WTFMove(axTextValue) });
             break;
         }
-        case AXPropertyName::ARIATreeRows:
-            propertyMap.set(AXPropertyName::ARIATreeRows, axIDs(axObject.ariaTreeRows()));
+        case AXProperty::ARIARoleDescription:
+            properties.append({ AXProperty::ARIARoleDescription, axObject.ariaRoleDescription().isolatedCopy() });
             break;
-        case AXPropertyName::ValueAutofillButtonType:
-            propertyMap.set(AXPropertyName::ValueAutofillButtonType, static_cast<int>(axObject.valueAutofillButtonType()));
-            propertyMap.set(AXPropertyName::IsValueAutofillAvailable, axObject.isValueAutofillAvailable());
+        case AXProperty::ARIALevel:
+            properties.append({ AXProperty::ARIALevel, axObject.ariaLevel() });
             break;
-        case AXPropertyName::AXColumnCount:
-            propertyMap.set(AXPropertyName::AXColumnCount, axObject.axColumnCount());
+        case AXProperty::ValueAutofillButtonType:
+            properties.append({ AXProperty::ValueAutofillButtonType, static_cast<int>(axObject.valueAutofillButtonType()) });
+            properties.append({ AXProperty::IsValueAutofillAvailable, axObject.isValueAutofillAvailable() });
             break;
-        case AXPropertyName::BrailleLabel:
-            propertyMap.set(AXPropertyName::BrailleLabel, axObject.brailleLabel().isolatedCopy());
+        case AXProperty::AXColumnCount:
+            properties.append({ AXProperty::AXColumnCount, axObject.axColumnCount() });
             break;
-        case AXPropertyName::BrailleRoleDescription:
-            propertyMap.set(AXPropertyName::BrailleRoleDescription, axObject.brailleRoleDescription().isolatedCopy());
+        case AXProperty::BrailleLabel:
+            properties.append({ AXProperty::BrailleLabel, axObject.brailleLabel().isolatedCopy() });
             break;
-        case AXPropertyName::AXColumnIndex:
-            propertyMap.set(AXPropertyName::AXColumnIndex, axObject.axColumnIndex());
+        case AXProperty::BrailleRoleDescription:
+            properties.append({ AXProperty::BrailleRoleDescription, axObject.brailleRoleDescription().isolatedCopy() });
             break;
-        case AXPropertyName::CanSetFocusAttribute:
-            propertyMap.set(AXPropertyName::CanSetFocusAttribute, axObject.canSetFocusAttribute());
+        case AXProperty::AXColumnIndex: {
+            if (std::optional<unsigned> columnIndex = axObject.axColumnIndex())
+                properties.append({ AXProperty::AXColumnIndex, *columnIndex });
             break;
-        case AXPropertyName::CanSetValueAttribute:
-            propertyMap.set(AXPropertyName::CanSetValueAttribute, axObject.canSetValueAttribute());
+        }
+        case AXProperty::CanSetFocusAttribute:
+            properties.append({ AXProperty::CanSetFocusAttribute, axObject.canSetFocusAttribute() });
             break;
-        case AXPropertyName::Cells:
-            propertyMap.set(AXPropertyName::Cells, axIDs(axObject.cells()));
+        case AXProperty::CanSetSelectedAttribute:
+            properties.append({ AXProperty::CanSetSelectedAttribute, axObject.canSetSelectedAttribute() });
             break;
-        case AXPropertyName::CellSlots:
-            propertyMap.set(AXPropertyName::CellSlots, axObject.cellSlots());
+        case AXProperty::CanSetValueAttribute:
+            properties.append({ AXProperty::CanSetValueAttribute, axObject.canSetValueAttribute() });
             break;
-        case AXPropertyName::ColumnIndex:
-            propertyMap.set(AXPropertyName::ColumnIndex, axObject.columnIndex());
+        case AXProperty::Cells:
+            properties.append({ AXProperty::Cells, axIDs(axObject.cells()) });
             break;
-        case AXPropertyName::ColumnIndexRange:
-            propertyMap.set(AXPropertyName::ColumnIndexRange, axObject.columnIndexRange());
+        case AXProperty::CellSlots:
+            properties.append({ AXProperty::CellSlots, axObject.cellSlots() });
             break;
-        case AXPropertyName::CurrentState:
-            propertyMap.set(AXPropertyName::CurrentState, static_cast<int>(axObject.currentState()));
+        case AXProperty::ColumnIndex:
+            properties.append({ AXProperty::ColumnIndex, axObject.columnIndex() });
             break;
-        case AXPropertyName::DisclosedRows:
-            propertyMap.set(AXPropertyName::DisclosedRows, axIDs(axObject.disclosedRows()));
+        case AXProperty::ColumnIndexRange:
+            properties.append({ AXProperty::ColumnIndexRange, axObject.columnIndexRange() });
             break;
-        case AXPropertyName::DocumentLinks:
-            propertyMap.set(AXPropertyName::DocumentLinks, axIDs(axObject.documentLinks()));
+        case AXProperty::CurrentState:
+            properties.append({ AXProperty::CurrentState, static_cast<int>(axObject.currentState()) });
             break;
-        case AXPropertyName::ExtendedDescription:
-            propertyMap.set(AXPropertyName::ExtendedDescription, axObject.extendedDescription().isolatedCopy());
+        case AXProperty::DatetimeAttributeValue:
+            properties.append({ AXProperty::DatetimeAttributeValue, axObject.datetimeAttributeValue().isolatedCopy() });
             break;
-        case AXPropertyName::HasClickHandler:
-            propertyMap.set(AXPropertyName::HasClickHandler, axObject.hasClickHandler());
+        case AXProperty::DisclosedRows:
+            properties.append({ AXProperty::DisclosedRows, axIDs(axObject.disclosedRows()) });
             break;
-        case AXPropertyName::IdentifierAttribute:
-            propertyMap.set(AXPropertyName::IdentifierAttribute, axObject.identifierAttribute().isolatedCopy());
+        case AXProperty::DocumentLinks:
+            properties.append({ AXProperty::DocumentLinks, axIDs(axObject.documentLinks()) });
             break;
-        case AXPropertyName::InternalLinkElement: {
+        case AXProperty::ExplicitOrientation: {
+            if (std::optional<AccessibilityOrientation> orientation = axObject.explicitOrientation())
+                properties.append({ AXProperty::ExplicitOrientation, *orientation });
+            break;
+        }
+        case AXProperty::ExtendedDescription:
+            properties.append({ AXProperty::ExtendedDescription, axObject.extendedDescription().isolatedCopy() });
+            break;
+        case AXProperty::HasClickHandler:
+            properties.append({ AXProperty::HasClickHandler, axObject.hasClickHandler() });
+            break;
+        case AXProperty::IdentifierAttribute:
+            properties.append({ AXProperty::IdentifierAttribute, axObject.identifierAttribute().isolatedCopy() });
+            break;
+        case AXProperty::InputType:
+            if (std::optional inputType = axObject.inputType())
+                properties.append({ AXProperty::InputType, *inputType });
+            break;
+        case AXProperty::InternalLinkElement: {
             auto* linkElement = axObject.internalLinkElement();
-            propertyMap.set(AXPropertyName::InternalLinkElement, linkElement ? std::optional { linkElement->objectID() } : std::nullopt);
+            properties.append({ AXProperty::InternalLinkElement, linkElement ? std::optional { linkElement->objectID() } : std::nullopt });
             break;
         }
-        case AXPropertyName::IsChecked:
+        case AXProperty::IsChecked:
             ASSERT(axObject.supportsCheckedState());
-            propertyMap.set(AXPropertyName::IsChecked, axObject.isChecked());
-            propertyMap.set(AXPropertyName::ButtonState, axObject.checkboxOrRadioValue());
+            properties.append({ AXProperty::IsChecked, axObject.isChecked() });
+            properties.append({ AXProperty::ButtonState, axObject.checkboxOrRadioValue() });
             break;
-        case AXPropertyName::IsColumnHeader:
-            propertyMap.set(AXPropertyName::IsColumnHeader, axObject.isColumnHeader());
+        case AXProperty::IsColumnHeader:
+            properties.append({ AXProperty::IsColumnHeader, axObject.isColumnHeader() });
             break;
-        case AXPropertyName::IsEnabled:
-            propertyMap.set(AXPropertyName::IsEnabled, axObject.isEnabled());
+        case AXProperty::IsEditableWebArea:
+            properties.append({ AXProperty::IsEditableWebArea, axObject.isEditableWebArea() });
             break;
-        case AXPropertyName::IsExpanded:
-            propertyMap.set(AXPropertyName::IsExpanded, axObject.isExpanded());
+        case AXProperty::IsEnabled:
+            properties.append({ AXProperty::IsEnabled, axObject.isEnabled() });
             break;
-        case AXPropertyName::IsIgnored:
-            propertyMap.set(AXPropertyName::IsIgnored, axObject.isIgnored());
+        case AXProperty::IsExpanded:
+            properties.append({ AXProperty::IsExpanded, axObject.isExpanded() });
             break;
-        case AXPropertyName::IsRequired:
-            propertyMap.set(AXPropertyName::IsRequired, axObject.isRequired());
+        case AXProperty::IsIgnored:
+            properties.append({ AXProperty::IsIgnored, axObject.isIgnored() });
             break;
-        case AXPropertyName::IsSelected:
-            propertyMap.set(AXPropertyName::IsSelected, axObject.isSelected());
+        case AXProperty::IsRequired:
+            properties.append({ AXProperty::IsRequired, axObject.isRequired() });
             break;
-        case AXPropertyName::IsRowHeader:
-            propertyMap.set(AXPropertyName::IsRowHeader, axObject.isRowHeader());
+        case AXProperty::IsSelected:
+            properties.append({ AXProperty::IsSelected, axObject.isSelected() });
             break;
-        case AXPropertyName::IsVisible:
-            propertyMap.set(AXPropertyName::IsVisible, axObject.isVisible());
+        case AXProperty::IsRowHeader:
+            properties.append({ AXProperty::IsRowHeader, axObject.isRowHeader() });
             break;
-        case AXPropertyName::MaxValueForRange:
-            propertyMap.set(AXPropertyName::MaxValueForRange, axObject.maxValueForRange());
+        case AXProperty::IsVisible:
+            properties.append({ AXProperty::IsVisible, axObject.isVisible() });
             break;
-        case AXPropertyName::MinValueForRange:
-            propertyMap.set(AXPropertyName::MinValueForRange, axObject.minValueForRange());
+        case AXProperty::IsVisited:
+            properties.append({ AXProperty::IsVisited, axObject.isVisited() });
             break;
-        case AXPropertyName::Orientation:
-            propertyMap.set(AXPropertyName::Orientation, static_cast<int>(axObject.orientation()));
+        case AXProperty::MaxValueForRange:
+            properties.append({ AXProperty::MaxValueForRange, axObject.maxValueForRange() });
             break;
-        case AXPropertyName::NameAttribute:
-            propertyMap.set(AXPropertyName::NameAttribute, axObject.nameAttribute().isolatedCopy());
+        case AXProperty::MinValueForRange:
+            properties.append({ AXProperty::MinValueForRange, axObject.minValueForRange() });
             break;
-        case AXPropertyName::PosInSet:
-            propertyMap.set(AXPropertyName::PosInSet, axObject.posInSet());
+        case AXProperty::NameAttribute:
+            properties.append({ AXProperty::NameAttribute, axObject.nameAttribute().isolatedCopy() });
             break;
-        case AXPropertyName::RemoteFramePlatformElement:
-            propertyMap.set(AXPropertyName::RemoteFramePlatformElement, axObject.remoteFramePlatformElement());
+        case AXProperty::PosInSet:
+            properties.append({ AXProperty::PosInSet, axObject.posInSet() });
             break;
-        case AXPropertyName::StringValue:
-            propertyMap.set(AXPropertyName::StringValue, axObject.stringValue().isolatedCopy());
+        case AXProperty::RemoteFramePlatformElement:
+            properties.append({ AXProperty::RemoteFramePlatformElement, axObject.remoteFramePlatformElement() });
             break;
-        case AXPropertyName::HasRemoteFrameChild:
-            propertyMap.set(AXPropertyName::HasRemoteFrameChild, axObject.hasRemoteFrameChild());
+        case AXProperty::StringValue:
+            properties.append({ AXProperty::StringValue, axObject.stringValue().isolatedCopy() });
             break;
-        case AXPropertyName::RoleDescription:
-            propertyMap.set(AXPropertyName::RoleDescription, axObject.roleDescription().isolatedCopy());
+        case AXProperty::HasRemoteFrameChild:
+            properties.append({ AXProperty::HasRemoteFrameChild, axObject.hasRemoteFrameChild() });
             break;
-        case AXPropertyName::RowIndex:
-            propertyMap.set(AXPropertyName::RowIndex, axObject.rowIndex());
+        case AXProperty::RowIndex:
+            properties.append({ AXProperty::RowIndex, axObject.rowIndex() });
             break;
-        case AXPropertyName::RowIndexRange:
-            propertyMap.set(AXPropertyName::RowIndexRange, axObject.rowIndexRange());
+        case AXProperty::RowIndexRange:
+            properties.append({ AXProperty::RowIndexRange, axObject.rowIndexRange() });
             break;
-        case AXPropertyName::AXRowIndex:
-            propertyMap.set(AXPropertyName::AXRowIndex, axObject.axRowIndex());
+        case AXProperty::AXRowIndex: {
+            if (std::optional<unsigned> rowIndex = axObject.axRowIndex())
+                properties.append({ AXProperty::AXRowIndex, *rowIndex });
             break;
-        case AXPropertyName::CellScope:
-            propertyMap.set(AXPropertyName::CellScope, axObject.cellScope().isolatedCopy());
+        }
+        case AXProperty::CellScope:
+            properties.append({ AXProperty::CellScope, axObject.cellScope().isolatedCopy() });
             break;
-        case AXPropertyName::ScreenRelativePosition:
-            propertyMap.set(AXPropertyName::ScreenRelativePosition, axObject.screenRelativePosition());
+        case AXProperty::ScreenRelativePosition:
+            properties.append({ AXProperty::ScreenRelativePosition, axObject.screenRelativePosition() });
             break;
-        case AXPropertyName::SelectedTextRange:
-            propertyMap.set(AXPropertyName::SelectedTextRange, axObject.selectedTextRange());
+        case AXProperty::SelectedTextRange:
+            properties.append({ AXProperty::SelectedTextRange, axObject.selectedTextRange() });
             break;
-        case AXPropertyName::SetSize:
-            propertyMap.set(AXPropertyName::SetSize, axObject.setSize());
+        case AXProperty::SetSize:
+            properties.append({ AXProperty::SetSize, axObject.setSize() });
             break;
-        case AXPropertyName::SortDirection:
-            propertyMap.set(AXPropertyName::SortDirection, static_cast<int>(axObject.sortDirection()));
+        case AXProperty::SortDirection:
+            properties.append({ AXProperty::SortDirection, static_cast<int>(axObject.sortDirection()) });
             break;
-        case AXPropertyName::KeyShortcuts:
-            propertyMap.set(AXPropertyName::SupportsKeyShortcuts, axObject.supportsKeyShortcuts());
-            propertyMap.set(AXPropertyName::KeyShortcuts, axObject.keyShortcuts().isolatedCopy());
+        case AXProperty::SpeakAs:
+            properties.append({ AXProperty::SpeakAs, axObject.speakAs() });
             break;
-        case AXPropertyName::SelectedChildren:
-            if (auto selectedChildren = axObject.selectedChildren())
-                propertyMap.set(AXPropertyName::SelectedChildren, axIDs(*selectedChildren));
+        case AXProperty::KeyShortcuts:
+            properties.append({ AXProperty::SupportsKeyShortcuts, axObject.supportsKeyShortcuts() });
+            properties.append({ AXProperty::KeyShortcuts, axObject.keyShortcuts().isolatedCopy() });
             break;
-        case AXPropertyName::SupportsARIAOwns:
-            propertyMap.set(AXPropertyName::SupportsARIAOwns, axObject.supportsARIAOwns());
+        case AXProperty::SupportsARIAOwns:
+            properties.append({ AXProperty::SupportsARIAOwns, axObject.supportsARIAOwns() });
             break;
-        case AXPropertyName::SupportsExpanded:
-            propertyMap.set(AXPropertyName::SupportsExpanded, axObject.supportsExpanded());
+        case AXProperty::SupportsExpanded:
+            properties.append({ AXProperty::SupportsExpanded, axObject.supportsExpanded() });
             break;
-        case AXPropertyName::SupportsPosInSet:
-            propertyMap.set(AXPropertyName::SupportsPosInSet, axObject.supportsPosInSet());
+        case AXProperty::SupportsDragging:
+            properties.append({ AXProperty::SupportsDragging, axObject.supportsDragging() });
             break;
-        case AXPropertyName::SupportsSetSize:
-            propertyMap.set(AXPropertyName::SupportsSetSize, axObject.supportsSetSize());
+        case AXProperty::SupportsPosInSet:
+            properties.append({ AXProperty::SupportsPosInSet, axObject.supportsPosInSet() });
             break;
-        case AXPropertyName::TextInputMarkedTextMarkerRange: {
-            std::pair<Markable<AXID>, CharacterRange> value;
+        case AXProperty::SupportsSetSize:
+            properties.append({ AXProperty::SupportsSetSize, axObject.supportsSetSize() });
+            break;
+        case AXProperty::TextInputMarkedTextMarkerRange: {
+            AXIDAndCharacterRange value;
             auto range = axObject.textInputMarkedTextMarkerRange();
             if (auto characterRange = range.characterRange(); range && characterRange)
                 value = { range.start().objectID(), *characterRange };
-            propertyMap.set(AXPropertyName::TextInputMarkedTextMarkerRange, value);
+            properties.append({ AXProperty::TextInputMarkedTextMarkerRange, std::make_shared<AXIDAndCharacterRange>(value) });
             break;
         }
 #if ENABLE(AX_THREAD_TEXT_APIS)
-        case AXPropertyName::BackgroundColor:
-            propertyMap.set(AXPropertyName::BackgroundColor, axObject.backgroundColor());
+        case AXProperty::BackgroundColor:
+            properties.append({ AXProperty::BackgroundColor, axObject.backgroundColor() });
             break;
-        case AXPropertyName::Font:
-            propertyMap.set(AXPropertyName::Font, axObject.font());
+        case AXProperty::Font: {
+            if (RefPtr parent = axObject.parentObject()) {
+                RetainPtr font = axObject.font();
+                if (font != parent->font()) {
+                    properties.append({ AXProperty::Font, WTFMove(font) });
+                    break;
+                }
+            }
+            properties.append({ AXProperty::Font, nullptr });
             break;
-        case AXPropertyName::HasLinethrough:
-            propertyMap.set(AXPropertyName::HasLinethrough, axObject.lineDecorationStyle().hasLinethrough);
+        }
+        case AXProperty::HasLinethrough:
+            properties.append({ AXProperty::HasLinethrough, axObject.lineDecorationStyle().hasLinethrough });
             break;
-        case AXPropertyName::HasTextShadow:
-            propertyMap.set(AXPropertyName::HasTextShadow, axObject.hasTextShadow());
+        case AXProperty::HasTextShadow:
+            properties.append({ AXProperty::HasTextShadow, axObject.hasTextShadow() });
             break;
-        case AXPropertyName::HasUnderline:
-            propertyMap.set(AXPropertyName::HasUnderline, axObject.lineDecorationStyle().hasUnderline);
+        case AXProperty::HasUnderline:
+            properties.append({ AXProperty::HasUnderline, axObject.lineDecorationStyle().hasUnderline });
             break;
-        case AXPropertyName::IsSubscript:
-            propertyMap.set(AXPropertyName::IsSubscript, axObject.isSubscript());
+        case AXProperty::IsSubscript:
+            properties.append({ AXProperty::IsSubscript, axObject.isSubscript() });
             break;
-        case AXPropertyName::IsSuperscript:
-            propertyMap.set(AXPropertyName::IsSuperscript, axObject.isSuperscript());
+        case AXProperty::IsSuperscript:
+            properties.append({ AXProperty::IsSuperscript, axObject.isSuperscript() });
             break;
-        case AXPropertyName::LinethroughColor:
-            propertyMap.set(AXPropertyName::LinethroughColor, axObject.lineDecorationStyle().linethroughColor);
+        case AXProperty::LinethroughColor:
+            properties.append({ AXProperty::LinethroughColor, axObject.lineDecorationStyle().linethroughColor });
             break;
-        case AXPropertyName::TextColor:
-            propertyMap.set(AXPropertyName::TextColor, axObject.textColor());
+        case AXProperty::TextColor: {
+            if (RefPtr parent = axObject.parentObject()) {
+                auto color = axObject.textColor();
+                if (color != parent->textColor()) {
+                    properties.append({ AXProperty::TextColor, color });
+                    break;
+                }
+            }
+            // Setting text color to nullptr will remove it from the property map, and allow it to be inherited from an ancestor.
+            properties.append({ AXProperty::TextColor, nullptr });
             break;
-        case AXPropertyName::TextRuns:
-            propertyMap.set(AXPropertyName::TextRuns, axObject.textRuns());
+        }
+        case AXProperty::TextRuns:
+            properties.append({ AXProperty::TextRuns, std::make_shared<AXTextRuns>(axObject.textRuns()) });
             break;
-        case AXPropertyName::UnderlineColor:
-            propertyMap.set(AXPropertyName::UnderlineColor, axObject.lineDecorationStyle().underlineColor);
+        case AXProperty::UnderlineColor:
+            properties.append({ AXProperty::UnderlineColor, axObject.lineDecorationStyle().underlineColor });
             break;
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
-        case AXPropertyName::Title:
-            propertyMap.set(AXPropertyName::Title, axObject.title().isolatedCopy());
+        case AXProperty::Title:
+            properties.append({ AXProperty::Title, axObject.title().isolatedCopy() });
             break;
-        case AXPropertyName::URL:
-            propertyMap.set(AXPropertyName::URL, std::make_shared<URL>(axObject.url().isolatedCopy()));
+        case AXProperty::URL:
+            properties.append({ AXProperty::URL, std::make_shared<URL>(axObject.url().isolatedCopy()) });
             break;
-        case AXPropertyName::ValueForRange:
-            propertyMap.set(AXPropertyName::ValueForRange, axObject.valueForRange());
+        case AXProperty::ValueForRange:
+            properties.append({ AXProperty::ValueForRange, axObject.valueForRange() });
             break;
         default:
             break;
         }
     }
 
-    if (propertyMap.isEmpty())
+    if (properties.isEmpty())
         return;
 
     Locker locker { m_changeLogLock };
-    m_pendingPropertyChanges.append({ axObject.objectID(), propertyMap });
+    m_pendingPropertyChanges.append({ axObject.objectID(), WTFMove(properties) });
 }
 
-void AXIsolatedTree::overrideNodeProperties(AXID axID, AXPropertyMap&& propertyMap)
+void AXIsolatedTree::overrideNodeProperties(AXID axID, AXPropertyVector&& properties)
 {
     ASSERT(isMainThread());
 
-    if (propertyMap.isEmpty())
+    if (properties.isEmpty())
         return;
 
     Locker locker { m_changeLogLock };
-    m_pendingPropertyChanges.append({ axID, WTFMove(propertyMap) });
+    m_pendingPropertyChanges.append({ axID, WTFMove(properties) });
 }
 
 void AXIsolatedTree::updateDependentProperties(AccessibilityObject& axObject)
@@ -844,7 +889,7 @@ void AXIsolatedTree::updateDependentProperties(AccessibilityObject& axObject)
             queueNodeUpdate(labeledObject->objectID(), NodeUpdateOptions::nodeUpdate());
 
         for (const auto& describedByObject : object.descriptionForObjects())
-            queueNodeUpdate(describedByObject->objectID(), { { AXPropertyName::AccessibilityText, AXPropertyName::ExtendedDescription } });
+            queueNodeUpdate(describedByObject->objectID(), { { AXProperty::AccessibilityText, AXProperty::ExtendedDescription } });
     };
     updateRelatedObjects(axObject);
 
@@ -854,12 +899,6 @@ void AXIsolatedTree::updateDependentProperties(AccessibilityObject& axObject)
     updateTableAncestorColumns = updateTableAncestorColumns || isRowGroup(axObject.node());
 #endif
     for (RefPtr ancestor = axObject.parentObject(); ancestor; ancestor = ancestor->parentObject()) {
-        if (ancestor->isTree()) {
-            queueNodeUpdate(ancestor->objectID(), { AXPropertyName::ARIATreeRows });
-            if (!updateTableAncestorColumns)
-                break;
-        }
-
         if (updateTableAncestorColumns && is<AccessibilityTable>(*ancestor)) {
             // Only `updateChildren` if the table is unignored, because otherwise `updateChildren` will ascend and update the next highest unignored ancestor, which doesn't accomplish our goal of updating table columns.
             if (ancestor->isIgnored())
@@ -935,7 +974,7 @@ void AXIsolatedTree::updateChildren(AccessibilityObject& axObject, ResolveNodeCh
                 // Add it to the nodemap so the recursive call to updateChildren below properly builds the subtree for this object.
                 auto* parent = axObject.parentInCoreTree();
                 m_nodeMap.set(liveChild->objectID(), ParentChildrenIDs { parent ? std::optional { parent->objectID() } : std::nullopt, liveChild->childrenIDs() });
-                m_unresolvedPendingAppends.set(liveChild->objectID(), AttachWrapper::OnMainThread);
+                m_unresolvedPendingAppends.add(liveChild->objectID());
             }
 
             AXLOG(makeString(
@@ -944,7 +983,7 @@ void AXIsolatedTree::updateChildren(AccessibilityObject& axObject, ResolveNodeCh
             // Don't immediately resolve node changes in these recursive calls to updateChildren. This avoids duplicate node change creation in this scenario:
             //   1. Some subtree is updated in the below call to updateChildren.
             //   2. Later in this function, when updating axAncestor, we update some higher subtree that includes the updated subtree from step 1.
-            updateChildren(liveChild, ResolveNodeChanges::No);
+            queueNodeUpdate(liveChild->objectID(), NodeUpdateOptions::childrenUpdate());
         }
     }
 #endif // !ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
@@ -961,11 +1000,11 @@ void AXIsolatedTree::updateChildren(AccessibilityObject& axObject, ResolveNodeCh
         size_t index = oldChildrenIDs.find(newChildrenIDs[i]);
         if (index != notFound) {
             // Prevent deletion of this object below by removing it from oldChildrenIDs.
-            oldChildrenIDs.remove(index);
+            oldChildrenIDs.removeAt(index);
 
             // Propagate any subtree updates downwards for this already-existing child.
             if (auto* liveChild = dynamicDowncast<AccessibilityObject>(newChildren[i].get()); liveChild && liveChild->hasDirtySubtree())
-                updateChildren(*liveChild, ResolveNodeChanges::No);
+                queueNodeUpdate(liveChild->objectID(), NodeUpdateOptions::childrenUpdate());
         } else {
             // This is a new child, add it to the tree.
             childrenChanged = true;
@@ -982,7 +1021,7 @@ void AXIsolatedTree::updateChildren(AccessibilityObject& axObject, ResolveNodeCh
     // What is left in oldChildrenIDs are the IDs that are no longer children of axAncestor.
     // Thus, remove them from m_nodeMap and queue them to be removed from the tree.
     for (auto& axID : oldChildrenIDs)
-        removeSubtreeFromNodeMap(axID, axAncestor);
+        removeSubtreeFromNodeMap(axID, axAncestor->objectID());
 
     auto unconditionallyUpdate = [] (AccessibilityRole role) {
         // These are the roles that should be updated even if AX children don't change. This is necessary because
@@ -1008,8 +1047,8 @@ void AXIsolatedTree::updateChildren(AccessibilityObject& axObject, ResolveNodeCh
     };
 
     // Also queue updates to the target node itself and any properties that depend on children().
-    if (childrenChanged || unconditionallyUpdate(axAncestor->roleValue())) {
-        updateNode(*axAncestor);
+    if (childrenChanged || unconditionallyUpdate(axAncestor->role())) {
+        queueNodeUpdate(axAncestor->objectID(), NodeUpdateOptions::nodeUpdate());
         updateDependentProperties(*axAncestor);
     }
 
@@ -1027,7 +1066,7 @@ void AXIsolatedTree::updateChildrenForObjects(const ListHashSet<Ref<Accessibilit
 
     AXAttributeCacheEnabler enableCache(axObjectCache());
     for (auto& axObject : axObjects)
-        updateChildren(axObject.get(), ResolveNodeChanges::No);
+        queueNodeUpdate(axObject->objectID(), NodeUpdateOptions::childrenUpdate());
 
     queueRemovalsAndUnresolvedChanges();
 }
@@ -1052,6 +1091,32 @@ OptionSet<ActivityState> AXIsolatedTree::lockedPageActivityState() const
     return m_pageActivityState;
 }
 
+AXCoreObject::AccessibilityChildrenVector AXIsolatedTree::sortedLiveRegions()
+{
+    ASSERT(!isMainThread());
+    return objectsForIDs(m_sortedLiveRegionIDs);
+}
+
+AXCoreObject::AccessibilityChildrenVector AXIsolatedTree::sortedNonRootWebAreas()
+{
+    ASSERT(!isMainThread());
+    return objectsForIDs(m_sortedNonRootWebAreaIDs);
+}
+
+void AXIsolatedTree::setInitialSortedLiveRegions(Vector<AXID> liveRegionIDs)
+{
+    ASSERT(isMainThread());
+
+    m_sortedLiveRegionIDs = WTFMove(liveRegionIDs);
+}
+
+void AXIsolatedTree::setInitialSortedNonRootWebAreas(Vector<AXID> webAreaIDs)
+{
+    ASSERT(isMainThread());
+
+    m_sortedNonRootWebAreaIDs = WTFMove(webAreaIDs);
+}
+
 std::optional<AXID> AXIsolatedTree::focusedNodeID()
 {
     ASSERT(!isMainThread());
@@ -1071,13 +1136,6 @@ RefPtr<AXIsolatedObject> AXIsolatedTree::focusedNode()
     return objectForID(focusedNodeID());
 }
 
-RefPtr<AXIsolatedObject> AXIsolatedTree::rootNode()
-{
-    AXTRACE("AXIsolatedTree::rootNode"_s);
-    Locker locker { m_changeLogLock };
-    return m_rootNode;
-}
-
 RefPtr<AXIsolatedObject> AXIsolatedTree::rootWebArea()
 {
     AXTRACE("AXIsolatedTree::rootWebArea"_s);
@@ -1089,15 +1147,19 @@ RefPtr<AXIsolatedObject> AXIsolatedTree::rootWebArea()
     }) : nullptr;
 }
 
-void AXIsolatedTree::setRootNode(AXIsolatedObject* root)
+void AXIsolatedTree::setPendingRootNodeID(AXID axID)
 {
-    AXTRACE("AXIsolatedTree::setRootNode"_s);
+    Locker locker { m_changeLogLock };
+    setPendingRootNodeIDLocked(axID);
+}
+
+void AXIsolatedTree::setPendingRootNodeIDLocked(AXID axID)
+{
+    AXTRACE("AXIsolatedTree::setPendingRootNodeIDLocked"_s);
     ASSERT(isMainThread());
     ASSERT(m_changeLogLock.isLocked());
-    ASSERT(!m_rootNode);
-    ASSERT(root);
 
-    m_rootNode = root;
+    m_pendingRootNodeID = axID;
 }
 
 void AXIsolatedTree::setFocusedNodeID(std::optional<AXID> axID)
@@ -1110,7 +1172,7 @@ void AXIsolatedTree::setFocusedNodeID(std::optional<AXID> axID)
     m_pendingFocusedNodeID = axID;
 }
 
-void AXIsolatedTree::updateRelations(const UncheckedKeyHashMap<AXID, AXRelations>& relations)
+void AXIsolatedTree::updateRelations(const HashMap<AXID, AXRelations>& relations)
 {
     AXTRACE("AXIsolatedTree::updateRelations"_s);
     ASSERT(isMainThread());
@@ -1153,12 +1215,12 @@ void AXIsolatedTree::updateFrame(AXID axID, IntRect&& newFrame)
     if (isUpdatingSubtree())
         return;
 
-    AXPropertyMap propertyMap;
-    propertyMap.set(AXPropertyName::RelativeFrame, WTFMove(newFrame));
+    AXPropertyVector properties;
+    properties.append({ AXProperty::RelativeFrame, WTFMove(newFrame) });
     // We can clear the initially-cached rough frame, since the object's frame has been cached
-    propertyMap.set(AXPropertyName::InitialFrameRect, FloatRect());
+    properties.append({ AXProperty::InitialFrameRect, FloatRect() });
     Locker locker { m_changeLogLock };
-    m_pendingPropertyChanges.append({ axID, WTFMove(propertyMap) });
+    m_pendingPropertyChanges.append({ axID, WTFMove(properties) });
 }
 
 void AXIsolatedTree::updateRootScreenRelativePosition()
@@ -1166,34 +1228,23 @@ void AXIsolatedTree::updateRootScreenRelativePosition()
     AXTRACE("AXIsolatedTree::updateRootScreenRelativePosition"_s);
     ASSERT(isMainThread());
 
-    if (!rootNode())
-        return;
-
-    if (auto* axRoot = rootNode()->associatedAXObject())
-        updateNodeProperties(*axRoot, { AXPropertyName::ScreenRelativePosition });
+    CheckedPtr cache = m_axObjectCache.get();
+    if (auto* axRoot = cache && cache->document() ? cache->getOrCreate(cache->document()->view()) : nullptr)
+        queueNodeUpdate(axRoot->objectID(), { AXProperty::ScreenRelativePosition });
 }
 
-void AXIsolatedTree::removeNode(const AccessibilityObject& axObject)
+void AXIsolatedTree::removeNode(AXID axID, std::optional<AXID> parentID)
 {
     AXTRACE("AXIsolatedTree::removeNode"_s);
-    AXLOG(makeString("objectID "_s, axObject.objectID().loggingString()));
+    AXLOG(makeString("objectID "_s, axID.loggingString()));
     ASSERT(isMainThread());
 
-    auto labeledObjectIDs = axObjectCache() ? axObjectCache()->relatedObjectIDsFor(axObject, AXRelationType::LabelFor, AXObjectCache::UpdateRelations::No) : std::nullopt;
-    if (labeledObjectIDs) {
-        // Update the labeled objects since axObject is one of their labels and it is being removed.
-        for (AXID labeledObjectID : *labeledObjectIDs) {
-            // The label/title of an isolated object is computed based on its AccessibilityText property, thus update it.
-            queueNodeUpdate(labeledObjectID, { AXPropertyName::AccessibilityText });
-        }
-    }
-
-    m_unresolvedPendingAppends.remove(axObject.objectID());
-    removeSubtreeFromNodeMap(axObject.objectID(), axObject.parentInCoreTree());
-    queueRemovals({ axObject.objectID() });
+    m_unresolvedPendingAppends.remove(axID);
+    removeSubtreeFromNodeMap(axID, parentID);
+    queueRemovals({ axID });
 }
 
-void AXIsolatedTree::removeSubtreeFromNodeMap(std::optional<AXID> objectID, AccessibilityObject* axParent)
+void AXIsolatedTree::removeSubtreeFromNodeMap(std::optional<AXID> objectID, std::optional<AXID> axParentID)
 {
     AXTRACE("AXIsolatedTree::removeSubtreeFromNodeMap"_s);
     AXLOG(makeString("Removing subtree for objectID "_s,  objectID ? objectID->loggingString() : ""_str));
@@ -1210,9 +1261,10 @@ void AXIsolatedTree::removeSubtreeFromNodeMap(std::optional<AXID> objectID, Acce
         return;
     }
 
-    auto axParentID = axParent ? std::optional { axParent->objectID() } : std::nullopt;
-    auto actualParentID = m_nodeMap.get(*objectID).parentID;
-    if (axParentID != actualParentID) {
+    Markable<AXID> actualParentID = m_nodeMap.get(*objectID).parentID;
+    // If the axParentID and actualParentID differ in whether they are null, or if the values differ, break early.
+    // If both are null, we are likely at the parent.
+    if (static_cast<bool>(axParentID) != static_cast<bool>(actualParentID) || axParentID != actualParentID) {
         AXLOG(makeString("Tried to remove object ID "_s, objectID->loggingString(), " from a different parent "_s, axParentID ? axParentID->loggingString() : ""_str, ", actual parent "_s, actualParentID ? actualParentID->loggingString() : ""_str, ", bailing out."_s));
         return;
     }
@@ -1231,7 +1283,7 @@ void AXIsolatedTree::removeSubtreeFromNodeMap(std::optional<AXID> objectID, Acce
     }
 }
 
-std::optional<ListHashSet<AXID>> AXIsolatedTree::relatedObjectIDsFor(const AXIsolatedObject& object, AXRelationType relationType)
+std::optional<ListHashSet<AXID>> AXIsolatedTree::relatedObjectIDsFor(const AXIsolatedObject& object, AXRelation relation)
 {
     ASSERT(!isMainThread());
     Locker locker { m_changeLogLock };
@@ -1240,10 +1292,16 @@ std::optional<ListHashSet<AXID>> AXIsolatedTree::relatedObjectIDsFor(const AXIso
     if (relationsIterator == m_relations.end())
         return std::nullopt;
 
-    auto targetsIterator = relationsIterator->value.find(static_cast<uint8_t>(relationType));
+    auto targetsIterator = relationsIterator->value.find(static_cast<uint8_t>(relation));
     if (targetsIterator == relationsIterator->value.end())
         return std::nullopt;
     return targetsIterator->value;
+}
+
+bool AXIsolatedTree::willBeDestroyed()
+{
+    Locker locker { m_changeLogLock };
+    return m_queuedForDestruction;
 }
 
 void AXIsolatedTree::applyPendingChanges()
@@ -1253,7 +1311,7 @@ void AXIsolatedTree::applyPendingChanges()
 
     Locker locker { m_changeLogLock };
 
-    if (UNLIKELY(m_queuedForDestruction)) {
+    if (m_queuedForDestruction) [[unlikely]] {
         for (const auto& object : m_readerThreadNodeMap.values())
             object->detach(AccessibilityDetachmentType::CacheDestroyed);
 
@@ -1290,32 +1348,31 @@ void AXIsolatedTree::applyPendingChanges()
     }
     m_pendingProtectedFromDeletionIDs.clear();
 
-    for (const auto& item : m_pendingAppends) {
-        auto axID = item.isolatedObject->objectID();
+    for (auto& item : m_pendingAppends) {
+        auto axID = item.data.axID;
         AXLOG(makeString("appending axID "_s, axID.loggingString()));
 
-        auto& wrapper = item.attachWrapper == AttachWrapper::OnAXThread ? item.wrapper : item.isolatedObject->wrapper();
+        auto& wrapper = item.wrapper;
         if (!wrapper)
             continue;
+        Ref newObject = AXIsolatedObject::create(WTFMove(item.data));
 
-        if (auto existingObject = m_readerThreadNodeMap.get(axID)) {
-            if (existingObject != &item.isolatedObject.get()
-                && existingObject->wrapper() == wrapper.get()) {
+        if (RefPtr existingObject = m_readerThreadNodeMap.take(axID)) {
+            if (existingObject->wrapper() == wrapper.get()) {
                 // The new IsolatedObject is a replacement for an existing object
                 // as the result of an update. Thus detach the existing object
                 // and attach the wrapper to the new one.
                 existingObject->detach(AccessibilityDetachmentType::ElementChanged);
-                item.isolatedObject->attachPlatformWrapper(wrapper.get());
+                newObject->attachPlatformWrapper(wrapper.get());
             }
-            m_readerThreadNodeMap.remove(axID);
         }
 
         // If the new object hasn't been attached to a wrapper yet, or if it was detached from
         // the wrapper when processing removals above, we must attach / re-attach it.
-        if (item.isolatedObject->isDetached())
-            item.isolatedObject->attachPlatformWrapper(wrapper.get());
+        if (newObject->isDetached())
+            newObject->attachPlatformWrapper(wrapper.get());
 
-        auto addResult = m_readerThreadNodeMap.add(axID, item.isolatedObject.get());
+        auto addResult = m_readerThreadNodeMap.add(axID, WTFMove(newObject));
         // The newly added object must have a wrapper.
         ASSERT_UNUSED(addResult, addResult.iterator->value->wrapper());
         // The reference count of the just added IsolatedObject must be 2
@@ -1340,10 +1397,37 @@ void AXIsolatedTree::applyPendingChanges()
     for (auto& change : m_pendingPropertyChanges) {
         if (RefPtr object = objectForID(change.axID)) {
             for (auto& property : change.properties)
-                object->setProperty(property.key, WTFMove(property.value));
+                object->setProperty(property.first, WTFMove(property.second));
+            object->shrinkPropertiesAfterUpdates();
         }
     }
     m_pendingPropertyChanges.clear();
+
+    if (m_pendingSortedLiveRegionIDs)
+        m_sortedLiveRegionIDs = std::exchange(m_pendingSortedLiveRegionIDs, std::nullopt).value();
+
+    if (m_pendingSortedNonRootWebAreaIDs)
+        m_sortedNonRootWebAreaIDs = std::exchange(m_pendingSortedNonRootWebAreaIDs, std::nullopt).value();
+
+    // Do this at the end because it requires looking up the root node by ID, so doing it at the end
+    // ensures all additions to m_readerThreadNodeMap have been made by now.
+    applyPendingRootNodeLocked();
+}
+
+void AXIsolatedTree::sortedLiveRegionsDidChange(Vector<AXID> liveRegionIDs)
+{
+    ASSERT(isMainThread());
+
+    Locker locker { m_changeLogLock };
+    m_pendingSortedLiveRegionIDs = WTFMove(liveRegionIDs);
+}
+
+void AXIsolatedTree::sortedNonRootWebAreasDidChange(Vector<AXID> webAreaIDs)
+{
+    ASSERT(isMainThread());
+
+    Locker locker { m_changeLogLock };
+    m_pendingSortedNonRootWebAreaIDs = WTFMove(webAreaIDs);
 }
 
 AXTreePtr findAXTree(Function<bool(AXTreePtr)>&& match)
@@ -1398,6 +1482,27 @@ void AXIsolatedTree::queueNodeUpdate(AXID objectID, const NodeUpdateOptions& opt
         cache->startUpdateTreeSnapshotTimer();
 }
 
+void AXIsolatedTree::queueNodeRemoval(const AccessibilityObject& axObject)
+{
+    ASSERT(isMainThread());
+
+    std::optional labeledObjectIDs = axObjectCache() ? axObjectCache()->relatedObjectIDsFor(axObject, AXRelation::LabelFor, AXObjectCache::UpdateRelations::No) : std::nullopt;
+    if (labeledObjectIDs) {
+        // Update the labeled objects since axObject is one of their labels and it is being removed.
+        for (AXID labeledObjectID : *labeledObjectIDs) {
+            // The label/title of an isolated object is computed based on its AccessibilityText property, thus update it.
+            queueNodeUpdate(labeledObjectID, { AXProperty::AccessibilityText });
+        }
+    }
+
+    auto* parent = axObject.parentInCoreTree();
+    std::optional<AXID> parentID = parent ? std::optional { parent->objectID() } : std::nullopt;
+
+    m_needsNodeRemoval.add(axObject.objectID(), parentID);
+    if (auto* cache = axObjectCache())
+        cache->startUpdateTreeSnapshotTimer();
+}
+
 void AXIsolatedTree::processQueuedNodeUpdates()
 {
     ASSERT(isMainThread());
@@ -1405,6 +1510,10 @@ void AXIsolatedTree::processQueuedNodeUpdates()
     WeakPtr cache = axObjectCache();
     if (!cache)
         return;
+
+    for (const auto& nodeIDs : m_needsNodeRemoval)
+        removeNode(nodeIDs.key, nodeIDs.value);
+    m_needsNodeRemoval.clear();
 
     for (AXID nodeID : m_needsUpdateChildren) {
         if (!cache)
@@ -1415,11 +1524,8 @@ void AXIsolatedTree::processQueuedNodeUpdates()
     }
     m_needsUpdateChildren.clear();
 
-    for (AXID objectID : m_needsUpdateNode) {
-        m_unresolvedPendingAppends.ensure(objectID, [] {
-            return AttachWrapper::OnAXThread;
-        });
-    }
+    for (AXID objectID : m_needsUpdateNode)
+        m_unresolvedPendingAppends.add(objectID);
     m_needsUpdateNode.clear();
 
     for (const auto& propertyUpdate : m_needsPropertyUpdates) {
@@ -1464,6 +1570,521 @@ AXTextMarker AXIsolatedTree::lastMarker()
 }
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
 
-} // namespace WebCore
+std::optional<AXPropertyFlag> convertToPropertyFlag(AXProperty property)
+{
+    switch (property) {
+    case AXProperty::CanSetFocusAttribute:
+        return AXPropertyFlag::CanSetFocusAttribute;
+    case AXProperty::CanSetSelectedAttribute:
+        return AXPropertyFlag::CanSetSelectedAttribute;
+    case AXProperty::CanSetValueAttribute:
+        return AXPropertyFlag::CanSetValueAttribute;
+    case AXProperty::HasBoldFont:
+        return AXPropertyFlag::HasBoldFont;
+    case AXProperty::HasClickHandler:
+        return AXPropertyFlag::HasClickHandler;
+    case AXProperty::HasItalicFont:
+        return AXPropertyFlag::HasItalicFont;
+    case AXProperty::HasPlainText:
+        return AXPropertyFlag::HasPlainText;
+    case AXProperty::IsEnabled:
+        return AXPropertyFlag::IsEnabled;
+    case AXProperty::IsExposedTableCell:
+        return AXPropertyFlag::IsExposedTableCell;
+    case AXProperty::IsGrabbed:
+        return AXPropertyFlag::IsGrabbed;
+    case AXProperty::IsIgnored:
+        return AXPropertyFlag::IsIgnored;
+    case AXProperty::IsInlineText:
+        return AXPropertyFlag::IsInlineText;
+    case AXProperty::IsKeyboardFocusable:
+        return AXPropertyFlag::IsKeyboardFocusable;
+    case AXProperty::IsNonLayerSVGObject:
+        return AXPropertyFlag::IsNonLayerSVGObject;
+    case AXProperty::IsTableRow:
+        return AXPropertyFlag::IsTableRow;
+    case AXProperty::IsVisited:
+        return AXPropertyFlag::IsVisited;
+    case AXProperty::SupportsCheckedState:
+        return AXPropertyFlag::SupportsCheckedState;
+    case AXProperty::SupportsDragging:
+        return AXPropertyFlag::SupportsDragging;
+    case AXProperty::SupportsExpanded:
+        return AXPropertyFlag::SupportsExpanded;
+    case AXProperty::SupportsPath:
+        return AXPropertyFlag::SupportsPath;
+    case AXProperty::SupportsPosInSet:
+        return AXPropertyFlag::SupportsPosInSet;
+    case AXProperty::SupportsSetSize:
+        return AXPropertyFlag::SupportsSetSize;
+    default:
+        return std::nullopt;
+    }
+}
 
+void setPropertyIn(AXProperty property, AXPropertyValueVariant&& value, AXPropertyVector& properties, OptionSet<AXPropertyFlag>& propertyFlags)
+{
+    if (const bool* boolValue = std::get_if<bool>(&value); boolValue && *boolValue) {
+        if (std::optional propertyFlag = convertToPropertyFlag(property)) {
+            propertyFlags.add(*propertyFlag);
+            return;
+        }
+    }
+
+    if (!isDefaultValue(property, value))
+        properties.append(std::pair(property, WTFMove(value)));
+}
+
+static bool shouldCacheElementName(ElementName name)
+{
+    switch (name) {
+    case ElementName::HTML_body:
+    case ElementName::HTML_h1:
+    case ElementName::HTML_h2:
+    case ElementName::HTML_h3:
+    case ElementName::HTML_h4:
+    case ElementName::HTML_h5:
+    case ElementName::HTML_h6:
+    case ElementName::HTML_th:
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    case ElementName::HTML_mark:
+    case ElementName::HTML_attachment:
+    case ElementName::HTML_thead:
+    case ElementName::HTML_tbody:
+    case ElementName::HTML_tfoot:
+    case ElementName::HTML_output:
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+        return true;
+    default:
+        return false;
+    }
+}
+
+static bool canBeMultilineTextField(AccessibilityObject& object)
+{
+    if (object.isNonNativeTextControl())
+        return !object.hasAttribute(aria_multilineAttr) || object.ariaIsMultiline();
+
+    auto* renderer = object.renderer();
+    if (renderer && renderer->isRenderTextControl())
+        return renderer->isRenderTextControlMultiLine();
+
+    // If we're not sure, return true, it means we can't use this as an optimization to avoid computing the line index.
+    return true;
+}
+
+// Allocate a capacity based on the minimum properties an object has (based on measurements from a real webpage).
+static constexpr unsigned unignoredSizeToReserve = 2;
+IsolatedObjectData createIsolatedObjectData(const Ref<AccessibilityObject>& axObject, Ref<AXIsolatedTree> tree)
+{
+    auto& object = axObject.get();
+
+    bool getsGeometryFromChildren = false;
+    AXPropertyVector properties;
+    OptionSet<AXPropertyFlag> propertyFlags;
+    auto setProperty = [&] (AXProperty property, AXPropertyValueVariant&& value) {
+        setPropertyIn(property, WTFMove(value), properties, propertyFlags);
+    };
+    auto setObjectProperty = [&] (AXProperty property, AXCoreObject* object) {
+        setProperty(property, object ? Markable { object->objectID() } : std::nullopt);
+    };
+    auto setObjectVectorProperty = [&] (AXProperty property, const AXCoreObject::AccessibilityChildrenVector& objects) {
+        setProperty(property, axIDs(objects));
+    };
+    auto setMathscripts = [&] (AXProperty property, AccessibilityObject& object) {
+        AXCoreObject::AccessibilityMathMultiscriptPairs pairs;
+        if (property == AXProperty::MathPrescripts)
+            object.mathPrescripts(pairs);
+        else if (property == AXProperty::MathPostscripts)
+            object.mathPostscripts(pairs);
+
+        if (pairs.isEmpty())
+            return;
+
+        auto idPairs = pairs.map([](auto& mathPair) {
+            return std::pair { mathPair.first ? Markable { mathPair.first->objectID() } : std::nullopt, mathPair.second ? Markable { mathPair.second->objectID() } : std::nullopt };
+        });
+        setProperty(property, WTFMove(idPairs));
+    };
+
+    auto reserveCapacityAndCacheBaseProperties = [&] (unsigned sizeToReserve) {
+        if (sizeToReserve)
+            properties.reserveInitialCapacity(sizeToReserve);
+
+        // These properties are cached for all objects, ignored and unignored.
+        setProperty(AXProperty::HasClickHandler, object.hasClickHandler());
+        auto elementName = object.elementName();
+        if (shouldCacheElementName(elementName))
+            setProperty(AXProperty::ElementName, elementName);
+
+#if ENABLE(AX_THREAD_TEXT_APIS)
+        setProperty(AXProperty::TextRuns, std::make_shared<AXTextRuns>(object.textRuns()));
+        setProperty(AXProperty::TextEmissionBehavior, object.textEmissionBehavior());
+        if (object.role() == AccessibilityRole::ListMarker) {
+            setProperty(AXProperty::ListMarkerText, object.listMarkerText().isolatedCopy());
+            setProperty(AXProperty::ListMarkerLineID, object.listMarkerLineID());
+        }
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+
+        String language = object.language();
+        if (!language.isEmpty())
+            setProperty(AXProperty::Language, WTFMove(language).isolatedCopy());
+        setProperty(AXProperty::IsEnabled, object.isEnabled());
+        appendBasePlatformProperties(properties, propertyFlags, axObject);
+    };
+
+    bool needsAllProperties = true;
+#if ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
+    if (object.includeIgnoredInCoreTree()) {
+        bool isIgnored = object.isIgnored();
+        setProperty(AXProperty::IsIgnored, isIgnored);
+        // Maintain full properties for objects meeting this criteria:
+        //   - Unconnected objects, which are involved in relations or outgoing notifications
+        //   - Static text. We sometimes ignore static text (e.g. because it descends from a text field),
+        //     but need full properties for proper text marker behavior.
+        // FIXME: We shouldn't cache all properties for empty / non-rendered text?
+        needsAllProperties = !isIgnored || tree->isUnconnectedNode(object.objectID()) || is<RenderText>(object.renderer());
+    }
+#else
+    reserveCapacityAndCacheBaseProperties(unignoredSizeToReserve);
+#endif // ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
+
+    if (!needsAllProperties)
+        reserveCapacityAndCacheBaseProperties(0);
+    else {
+        reserveCapacityAndCacheBaseProperties(unignoredSizeToReserve);
+
+        setProperty(AXProperty::IsAttachment, object.isAttachment());
+        setProperty(AXProperty::IsBusy, object.isBusy());
+        setProperty(AXProperty::IsExpanded, object.isExpanded());
+
+        // FIXME: Caching isSecureField would require caching an additional property (on top of input type), so for now, let's still cache this.
+        setProperty(AXProperty::IsSecureField, object.isSecureField());
+
+        setProperty(AXProperty::IsIndeterminate, object.isIndeterminate());
+        setProperty(AXProperty::IsInlineText, object.isInlineText());
+        setProperty(AXProperty::IsMultiSelectable, object.isMultiSelectable());
+        setProperty(AXProperty::IsRequired, object.isRequired());
+        setProperty(AXProperty::IsSelected, object.isSelected());
+        setProperty(AXProperty::IsVisited, object.isVisited());
+        setProperty(AXProperty::IsValueAutofillAvailable, object.isValueAutofillAvailable());
+        setProperty(AXProperty::ARIARoleDescription, object.ariaRoleDescription().isolatedCopy());
+        setProperty(AXProperty::SubrolePlatformString, object.subrolePlatformString().isolatedCopy());
+        setProperty(AXProperty::CanSetFocusAttribute, object.canSetFocusAttribute());
+        setProperty(AXProperty::CanSetValueAttribute, object.canSetValueAttribute());
+        setProperty(AXProperty::CanSetSelectedAttribute, object.canSetSelectedAttribute());
+        setProperty(AXProperty::ValueDescription, object.valueDescription().isolatedCopy());
+        setProperty(AXProperty::ValueForRange, object.valueForRange());
+        setProperty(AXProperty::MaxValueForRange, object.maxValueForRange());
+        setProperty(AXProperty::MinValueForRange, object.minValueForRange());
+        setProperty(AXProperty::SupportsARIAOwns, object.supportsARIAOwns());
+        setProperty(AXProperty::ExplicitPopupValue, object.explicitPopupValue().isolatedCopy());
+        setProperty(AXProperty::ExplicitInvalidStatus, object.explicitInvalidStatus().isolatedCopy());
+        setProperty(AXProperty::SupportsExpanded, object.supportsExpanded());
+        setProperty(AXProperty::SortDirection, static_cast<int>(object.sortDirection()));
+#if !LOG_DISABLED
+        // Eagerly cache ID when logging is enabled so that we can log isolated objects without constant deadlocks.
+        // Don't cache ID when logging is disabled because we don't expect non-test AX clients to actually request it.
+        setProperty(AXProperty::IdentifierAttribute, object.identifierAttribute().isolatedCopy());
+#endif
+        // FIXME: We never update AXProperty::SupportsDropping.
+        setProperty(AXProperty::SupportsDropping, object.supportsDropping());
+        setProperty(AXProperty::SupportsDragging, object.supportsDragging());
+        setProperty(AXProperty::IsGrabbed, object.isGrabbed());
+        setProperty(AXProperty::PlaceholderValue, object.placeholderValue().isolatedCopy());
+        setProperty(AXProperty::ValueAutofillButtonType, static_cast<int>(object.valueAutofillButtonType()));
+        setProperty(AXProperty::URL, std::make_shared<URL>(object.url().isolatedCopy()));
+        setProperty(AXProperty::AccessKey, object.accessKey().isolatedCopy());
+        setProperty(AXProperty::ExplicitAutoCompleteValue, object.explicitAutoCompleteValue().isolatedCopy());
+        setProperty(AXProperty::ColorValue, object.colorValue());
+        if (std::optional orientation = object.explicitOrientation())
+            setProperty(AXProperty::ExplicitOrientation, *orientation);
+        setProperty(AXProperty::ExplicitLiveRegionStatus, object.explicitLiveRegionStatus().isolatedCopy());
+        setProperty(AXProperty::ExplicitLiveRegionRelevant, object.explicitLiveRegionRelevant().isolatedCopy());
+        setProperty(AXProperty::LiveRegionAtomic, object.liveRegionAtomic());
+        setProperty(AXProperty::HasBoldFont, object.hasBoldFont());
+        setProperty(AXProperty::HasItalicFont, object.hasItalicFont());
+        setProperty(AXProperty::HasPlainText, object.hasPlainText());
+#if !ENABLE(AX_THREAD_TEXT_APIS)
+        setProperty(AXProperty::HasUnderline, object.hasUnderline());
+        setProperty(AXProperty::TextContentPrefixFromListMarker, object.textContentPrefixFromListMarker());
+#endif
+        setProperty(AXProperty::IsKeyboardFocusable, object.isKeyboardFocusable());
+        setProperty(AXProperty::BrailleRoleDescription, object.brailleRoleDescription().isolatedCopy());
+        setProperty(AXProperty::BrailleLabel, object.brailleLabel().isolatedCopy());
+        setProperty(AXProperty::IsNonLayerSVGObject, object.isNonLayerSVGObject());
+
+        // Only cache input types on things that are an input.
+        if (std::optional inputType = axObject->inputType())
+            setProperty(AXProperty::InputType, *inputType);
+
+        bool isWebArea = axObject->isWebArea();
+        bool isScrollArea = axObject->isScrollView();
+        if (isScrollArea && !axObject->parentObject()) {
+            // Eagerly cache the screen relative position for the root. AXIsolatedObject::screenRelativePosition()
+            // of non-root objects depend on the root object's screen relative position, so make sure it's there
+            // from the start. We keep this up-to-date via AXIsolatedTree::updateRootScreenRelativePosition().
+            setProperty(AXProperty::ScreenRelativePosition, axObject->screenRelativePosition());
+            // FIXME: We never update this property, e.g. when the iframe is moved in the hosting web content process.
+            setProperty(AXProperty::RemoteFrameOffset, object.remoteFrameOffset());
+        }
+
+        RefPtr geometryManager = tree->geometryManager();
+        std::optional frame = geometryManager ? geometryManager->cachedRectForID(object.objectID()) : std::nullopt;
+        if (frame)
+            setProperty(AXProperty::RelativeFrame, WTFMove(*frame));
+        else if (isScrollArea || isWebArea || object.isScrollbar()) {
+            // The GeometryManager does not have a relative frame for ScrollViews, WebAreas, or scrollbars yet. We need to get it from the
+            // live object so that we don't need to hit the main thread in the case a request comes in while the whole isolated tree is being built.
+            setProperty(AXProperty::RelativeFrame, enclosingIntRect(object.relativeFrame()));
+        } else if (!object.renderer() && object.node() && is<AccessibilityNodeObject>(object)) {
+            // The frame of node-only AX objects is made up of their children.
+            getsGeometryFromChildren = true;
+        } else if (object.isMenuListPopup()) {
+            // AccessibilityMenuListPopup's elementRect is hardcoded to return an empty rect, so preserve that behavior.
+            setProperty(AXProperty::RelativeFrame, IntRect());
+        } else
+            setProperty(AXProperty::InitialFrameRect, object.frameRect());
+
+        if (isWebArea)
+            setProperty(AXProperty::IsEditableWebArea, object.isEditableWebArea());
+
+        if (object.supportsPath()) {
+            setProperty(AXProperty::SupportsPath, true);
+            setProperty(AXProperty::Path, std::make_shared<Path>(object.elementPath()));
+        }
+
+        if (object.supportsKeyShortcuts()) {
+            setProperty(AXProperty::SupportsKeyShortcuts, true);
+            setProperty(AXProperty::KeyShortcuts, object.keyShortcuts().isolatedCopy());
+        }
+
+        if (object.supportsCurrent()) {
+            setProperty(AXProperty::SupportsCurrent, true);
+            setProperty(AXProperty::CurrentState, static_cast<int>(object.currentState()));
+        }
+
+        if (object.supportsSetSize()) {
+            setProperty(AXProperty::SupportsSetSize, true);
+            setProperty(AXProperty::SetSize, object.setSize());
+        }
+
+        if (object.supportsPosInSet()) {
+            setProperty(AXProperty::SupportsPosInSet, true);
+            setProperty(AXProperty::PosInSet, object.posInSet());
+        }
+
+        if (object.supportsExpandedTextValue()) {
+            setProperty(AXProperty::SupportsExpandedTextValue, true);
+            setProperty(AXProperty::ExpandedTextValue, object.expandedTextValue().isolatedCopy());
+        }
+
+        if (object.supportsDatetimeAttribute()) {
+            setProperty(AXProperty::SupportsDatetimeAttribute, true);
+            setProperty(AXProperty::DatetimeAttributeValue, object.datetimeAttributeValue().isolatedCopy());
+        }
+
+        if (object.supportsCheckedState()) {
+            setProperty(AXProperty::SupportsCheckedState, true);
+            setProperty(AXProperty::IsChecked, object.isChecked());
+            setProperty(AXProperty::ButtonState, object.checkboxOrRadioValue());
+        }
+
+        if (object.isTable()) {
+            setProperty(AXProperty::IsTable, true);
+            setProperty(AXProperty::IsExposable, object.isExposable());
+            setObjectVectorProperty(AXProperty::Columns, object.columns());
+            setObjectVectorProperty(AXProperty::Rows, object.rows());
+            setObjectVectorProperty(AXProperty::Cells, object.cells());
+            setObjectVectorProperty(AXProperty::VisibleRows, object.visibleRows());
+            setProperty(AXProperty::AXColumnCount, object.axColumnCount());
+            setProperty(AXProperty::AXRowCount, object.axRowCount());
+            setProperty(AXProperty::CellSlots, object.cellSlots());
+        }
+
+        if (object.isExposedTableCell()) {
+            setProperty(AXProperty::IsExposedTableCell, true);
+            setProperty(AXProperty::ColumnIndexRange, object.columnIndexRange());
+            setProperty(AXProperty::RowIndexRange, object.rowIndexRange());
+            if (std::optional columnIndex = object.axColumnIndex())
+                setProperty(AXProperty::AXColumnIndex, *columnIndex);
+            if (std::optional rowIndex = object.axRowIndex())
+                setProperty(AXProperty::AXRowIndex, *rowIndex);
+            setProperty(AXProperty::IsColumnHeader, object.isColumnHeader());
+            setProperty(AXProperty::IsRowHeader, object.isRowHeader());
+            setProperty(AXProperty::CellScope, object.cellScope().isolatedCopy());
+        }
+
+        bool isTableRow = object.isTableRow();
+        if (isTableRow) {
+            setProperty(AXProperty::IsTableRow, true);
+            setProperty(AXProperty::RowIndex, object.rowIndex());
+        } else if (object.isTableColumn())
+            setProperty(AXProperty::ColumnIndex, object.columnIndex());
+
+        if (object.isARIATreeGridRow()) {
+            setProperty(AXProperty::IsARIATreeGridRow, true);
+            setObjectVectorProperty(AXProperty::DisclosedRows, object.disclosedRows());
+            setObjectProperty(AXProperty::DisclosedByRow, object.disclosedByRow());
+        } else if (object.isAccessibilityARIAGridRowInstance())
+            setProperty(AXProperty::IsARIAGridRow, true);
+
+        bool isTreeItem = object.isTreeItem();
+        if (isTreeItem) {
+            setProperty(AXProperty::IsTreeItem, true);
+            setObjectVectorProperty(AXProperty::DisclosedRows, object.disclosedRows());
+        }
+
+        setProperty(AXProperty::IsTree, object.isTree());
+        if (object.isRadioButton()) {
+            setProperty(AXProperty::NameAttribute, object.nameAttribute().isolatedCopy());
+            // FIXME: This property doesn't get updated when a page changes dynamically.
+            setObjectVectorProperty(AXProperty::RadioButtonGroup, object.radioButtonGroup());
+        }
+
+        if (object.isImage())
+            setProperty(AXProperty::EmbeddedImageDescription, object.embeddedImageDescription().isolatedCopy());
+
+        // On macOS, we only advertise support for the visible children attribute for lists and listboxes.
+        if (object.isList() || object.isListBox())
+            setObjectVectorProperty(AXProperty::VisibleChildren, object.visibleChildren());
+
+        if (object.isDateTime()) {
+            setProperty(AXProperty::DateTimeValue, object.dateTimeValue().isolatedCopy());
+            setProperty(AXProperty::DateTimeComponentsType, object.dateTimeComponentsType());
+        }
+
+        if (object.isSpinButton()) {
+            setObjectProperty(AXProperty::DecrementButton, object.decrementButton());
+            setObjectProperty(AXProperty::IncrementButton, object.incrementButton());
+        }
+
+        if (object.isMathElement()) {
+            setProperty(AXProperty::IsMathElement, true);
+            setProperty(AXProperty::IsMathFraction, object.isMathFraction());
+            setProperty(AXProperty::IsMathFenced, object.isMathFenced());
+            setProperty(AXProperty::IsMathSubscriptSuperscript, object.isMathSubscriptSuperscript());
+            setProperty(AXProperty::IsMathRow, object.isMathRow());
+            setProperty(AXProperty::IsMathUnderOver, object.isMathUnderOver());
+            setProperty(AXProperty::IsMathTable, object.isMathTable());
+            setProperty(AXProperty::IsMathTableRow, object.isMathTableRow());
+            setProperty(AXProperty::IsMathTableCell, object.isMathTableCell());
+            setProperty(AXProperty::IsMathMultiscript, object.isMathMultiscript());
+            setProperty(AXProperty::IsMathToken, object.isMathToken());
+            setProperty(AXProperty::MathFencedOpenString, object.mathFencedOpenString().isolatedCopy());
+            setProperty(AXProperty::MathFencedCloseString, object.mathFencedCloseString().isolatedCopy());
+            setProperty(AXProperty::MathLineThickness, object.mathLineThickness());
+            setProperty(AXProperty::IsAnonymousMathOperator, object.isAnonymousMathOperator());
+
+            bool isMathRoot = object.isMathRoot();
+            setProperty(AXProperty::IsMathRoot, isMathRoot);
+            setProperty(AXProperty::IsMathSquareRoot, object.isMathSquareRoot());
+            if (isMathRoot) {
+                if (auto radicand = object.mathRadicand())
+                    setObjectVectorProperty(AXProperty::MathRadicand, *radicand);
+
+                setObjectProperty(AXProperty::MathRootIndexObject, object.mathRootIndexObject());
+            }
+
+            setObjectProperty(AXProperty::MathUnderObject, object.mathUnderObject());
+            setObjectProperty(AXProperty::MathOverObject, object.mathOverObject());
+            setObjectProperty(AXProperty::MathNumeratorObject, object.mathNumeratorObject());
+            setObjectProperty(AXProperty::MathDenominatorObject, object.mathDenominatorObject());
+            setObjectProperty(AXProperty::MathBaseObject, object.mathBaseObject());
+            setObjectProperty(AXProperty::MathSubscriptObject, object.mathSubscriptObject());
+            setObjectProperty(AXProperty::MathSuperscriptObject, object.mathSuperscriptObject());
+            setMathscripts(AXProperty::MathPrescripts, object);
+            setMathscripts(AXProperty::MathPostscripts, object);
+        }
+
+        Vector<AccessibilityText> texts;
+        object.accessibilityText(texts);
+        auto axTextValue = texts.map([] (const auto& text) -> AccessibilityText {
+            return { text.text.isolatedCopy(), text.textSource };
+        });
+        setProperty(AXProperty::AccessibilityText, axTextValue);
+
+        if (isScrollArea) {
+            setObjectProperty(AXProperty::VerticalScrollBar, object.scrollBar(AccessibilityOrientation::Vertical));
+            setObjectProperty(AXProperty::HorizontalScrollBar, object.scrollBar(AccessibilityOrientation::Horizontal));
+            setProperty(AXProperty::HasRemoteFrameChild, object.hasRemoteFrameChild());
+        } else if (isWebArea && !tree->isEmptyContentTree()) {
+            // We expose DocumentLinks only for the web area objects when the tree is not an empty content tree. This property is expensive and makes no sense in an empty content tree.
+            // FIXME: compute DocumentLinks on the AX thread instead of caching it.
+            setObjectVectorProperty(AXProperty::DocumentLinks, object.documentLinks());
+        }
+
+        if (object.isWidget()) {
+            if (object.isPlugin()) {
+                // Plugins are a subclass of widget, so we only need to cache IsPlugin, and we implicitly know
+                // this is also a widget (see AXIsolatedObject::isWidget).
+                setProperty(AXProperty::IsPlugin, true);
+            } else
+                setProperty(AXProperty::IsWidget, true);
+
+            setProperty(AXProperty::IsVisible, object.isVisible());
+        }
+
+        auto descriptor = object.title();
+        if (descriptor.length())
+            setProperty(AXProperty::Title, descriptor.isolatedCopy());
+
+        descriptor = object.description();
+        if (descriptor.length())
+            setProperty(AXProperty::Description, descriptor.isolatedCopy());
+
+        descriptor = object.extendedDescription();
+        if (descriptor.length())
+            setProperty(AXProperty::ExtendedDescription, descriptor.isolatedCopy());
+
+        if (object.isTextControl()) {
+            // FIXME: We don't keep this property up-to-date, and we can probably just compute it using
+            // AXIsolatedObject::selectedTextMarkerRange() (which does stay up-to-date).
+            setProperty(AXProperty::SelectedTextRange, object.selectedTextRange());
+
+            auto range = object.textInputMarkedTextMarkerRange();
+            if (auto characterRange = range.characterRange(); range && characterRange)
+                setProperty(AXProperty::TextInputMarkedTextMarkerRange, std::make_shared<AXIDAndCharacterRange>(AXIDAndCharacterRange(range.start().objectID(), *characterRange)));
+
+            setProperty(AXProperty::CanBeMultilineTextField, canBeMultilineTextField(object));
+        }
+
+        if (object.isHeading() || isTableRow || isTreeItem)
+            setProperty(AXProperty::ARIALevel, object.ariaLevel());
+
+        // These properties are only needed on the AXCoreObject interface due to their use in ATSPI,
+        // so only cache them for ATSPI.
+#if USE(ATSPI)
+        // We cache IsVisible on all platforms just for Widgets above. In ATSPI, this should be cached on all objects.
+        if (!object.isWidget())
+            setProperty(AXProperty::IsVisible, object.isVisible());
+
+        setProperty(AXProperty::ActionVerb, object.actionVerb().isolatedCopy());
+        setProperty(AXProperty::IsFieldset, object.isFieldset());
+        setProperty(AXProperty::IsPressed, object.isPressed());
+        setProperty(AXProperty::IsSelectedOptionActive, object.isSelectedOptionActive());
+        setProperty(AXProperty::LocalizedActionVerb, object.localizedActionVerb().isolatedCopy());
+#endif // USE(ATSPI)
+        setObjectProperty(AXProperty::InternalLinkElement, object.internalLinkElement());
+    }
+
+    appendPlatformProperties(properties, propertyFlags, axObject);
+
+    auto* axParent = object.parentInCoreTree();
+    Markable<AXID> parentID = axParent ? std::optional(axParent->objectID()) : std::nullopt;
+
+    properties.shrinkToFit();
+    return {
+        object.childrenIDs(),
+        WTFMove(properties),
+        WTFMove(tree),
+        parentID,
+        object.objectID(),
+        object.role(),
+        propertyFlags,
+        getsGeometryFromChildren
+    };
+}
+
+} // namespace WebCore
 #endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)

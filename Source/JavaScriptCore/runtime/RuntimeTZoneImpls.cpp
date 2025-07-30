@@ -36,11 +36,4 @@ namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(CheckpointOSRExitSideState);
 
-using ObjectPropertyChangeAdaptiveWatchpointInlineWatchpointSet = ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>;
-
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(ObjectPropertyChangeAdaptiveWatchpointInlineWatchpointSet);
-
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED_TEMPLATE(JSGlobalObject, WeakGCSetJSCustomGetterFunction);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED_TEMPLATE(JSGlobalObject, WeakGCSetJSCustomSetterFunction);
-
 } // namespace JSC

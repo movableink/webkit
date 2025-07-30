@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2015 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,6 +43,8 @@
 #include "MediaProducer.h"
 #include "MediaResourceSniffer.h"
 #include "MediaUniqueIdentifier.h"
+#include "MessageTargetForTesting.h"
+#include "PlatformDynamicRangeLimit.h"
 #include "ReducedResolutionSeconds.h"
 #include "TextTrackClient.h"
 #include "URLKeepingBlobAlive.h"
@@ -94,6 +96,7 @@ class Event;
 class HTMLSourceElement;
 class HTMLTrackElement;
 class InbandTextTrackPrivate;
+class AggregateMessageClientForTesting;
 class JSDOMGlobalObject;
 class MediaController;
 class MediaControls;
@@ -107,6 +110,7 @@ class MediaSource;
 class MediaSourceHandle;
 class MediaSourceInterfaceProxy;
 class MediaStream;
+class MessageClientForTesting;
 class PausableIntervalTimer;
 class RenderMedia;
 class ScriptController;
@@ -121,7 +125,10 @@ class VideoTrackList;
 class VideoTrackPrivate;
 class WebKitMediaKeys;
 
+enum class AudioSessionCategory : uint8_t;
+enum class AudioSessionMode : uint8_t;
 enum class DynamicRangeMode : uint8_t;
+enum class RouteSharingPolicy : uint8_t;
 
 template<typename> class DOMPromiseDeferred;
 template<typename, typename> class PODInterval;
@@ -143,7 +150,7 @@ enum class HTMLMediaElementSourceType : uint8_t {
     StoredStream,
 };
 
-using MediaProvider = std::optional < std::variant <
+using MediaProvider = std::optional < Variant <
 #if ENABLE(MEDIA_STREAM)
     RefPtr<MediaStream>,
 #endif
@@ -155,12 +162,21 @@ using MediaProvider = std::optional < std::variant <
 #endif
     RefPtr<Blob>>>;
 
+class HTMLMediaElementClient
+    : public AbstractRefCountedAndCanMakeWeakPtr<HTMLMediaElementClient> {
+public:
+    virtual ~HTMLMediaElementClient() = default;
+
+    virtual void audioSessionCategoryChanged(AudioSessionCategory, AudioSessionMode, RouteSharingPolicy) { }
+};
+
 class HTMLMediaElement
     : public HTMLElement
     , public ActiveDOMObject
     , public MediaControllerInterface
     , public PlatformMediaSessionClient
     , public Identified<HTMLMediaElementIdentifier>
+    , private MessageTargetForTesting
     , private MediaCanStartListener
     , private MediaPlayerClient
     , private MediaProducer
@@ -187,6 +203,7 @@ public:
     // ActiveDOMObject.
     void ref() const final { HTMLElement::ref(); }
     void deref() const final { HTMLElement::deref(); }
+    using HTMLElement::protectedScriptExecutionContext;
 
     MediaPlayer* player() const { return m_player.get(); }
     RefPtr<MediaPlayer> protectedPlayer() const { return m_player; }
@@ -246,6 +263,7 @@ public:
 
     WEBCORE_EXPORT bool isActiveNowPlayingSession() const;
     void isActiveNowPlayingSessionChanged() final;
+    std::optional<ProcessID> mediaSessionPresentingApplicationPID() const final;
 
 // DOM API
 // error state
@@ -303,6 +321,7 @@ public:
     void updatePlaybackRate();
     Ref<TimeRanges> played() override;
     Ref<TimeRanges> seekable() const override;
+    PlatformTimeRanges platformSeekable() const;
     double seekableTimeRangesLastModifiedTime() const;
     double liveUpdateInterval() const;
     WEBCORE_EXPORT bool ended() const;
@@ -417,6 +436,7 @@ public:
     void mediaPlayerDidRemoveAudioTrack(AudioTrackPrivate&) final;
     void mediaPlayerDidRemoveTextTrack(InbandTextTrackPrivate&) final;
     void mediaPlayerDidRemoveVideoTrack(VideoTrackPrivate&) final;
+    void mediaPlayerDidReportGPUMemoryFootprint(size_t) final;
 
     Vector<RefPtr<PlatformTextTrack>> outOfBandTrackSources() final;
 
@@ -434,6 +454,7 @@ public:
     void audioTrackKindChanged(AudioTrack&) final;
     void audioTrackLabelChanged(AudioTrack&) final;
     void audioTrackLanguageChanged(AudioTrack&) final;
+    void audioTrackConfigurationChanged(AudioTrack&) final;
     void willRemoveAudioTrack(AudioTrack&) final;
 
     // TextTrackClient
@@ -452,6 +473,7 @@ public:
     void videoTrackLabelChanged(VideoTrack&) final;
     void videoTrackLanguageChanged(VideoTrack&) final;
     void videoTrackSelectedChanged(VideoTrack&) final;
+    void videoTrackConfigurationChanged(VideoTrack&) final;
     void willRemoveVideoTrack(VideoTrack&) final;
 
     void setTextTrackRepresentataionBounds(const IntRect&);
@@ -499,10 +521,11 @@ public:
     // of one of them here.
     using HTMLElement::scriptExecutionContext;
 
-    bool didPassCORSAccessCheck() const { return m_player && m_player->didPassCORSAccessCheck(); }
+    bool didPassCORSAccessCheck() const { return m_player && protectedPlayer()->didPassCORSAccessCheck(); }
     bool taintsOrigin(const SecurityOrigin&) const;
     
     WEBCORE_EXPORT bool isFullscreen() const override;
+    bool isInFullscreenOrPictureInPicture() const;
     bool isStandardFullscreen() const;
     void toggleStandardFullscreenState();
 
@@ -510,9 +533,14 @@ public:
     VideoFullscreenMode fullscreenMode() const { return m_videoFullscreenMode; }
 
     void enterFullscreen(VideoFullscreenMode);
+    WEBCORE_EXPORT void setPlayerIdentifierForVideoElement();
     WEBCORE_EXPORT void enterFullscreen() override;
     WEBCORE_EXPORT void exitFullscreen();
     WEBCORE_EXPORT void prepareForVideoFullscreenStandby();
+
+#if ENABLE(FULLSCREEN_API)
+    void documentFullscreenChanged(bool isChildOfElementFullscreen);
+#endif
 
     bool hasClosedCaptions() const override;
     bool closedCaptionsVisible() const override;
@@ -559,6 +587,7 @@ public:
     RefPtr<VideoPlaybackQuality> getVideoPlaybackQuality() const;
 
     MediaPlayer::Preload preloadValue() const { return m_preload; }
+    MediaPlayer::Preload effectivePreloadValue() const;
     MediaElementSession* mediaSessionIfExists() const { return m_mediaSession.get(); }
     WEBCORE_EXPORT MediaElementSession& mediaSession() const;
 
@@ -593,7 +622,7 @@ public:
 
     double playbackStartedTime() const { return m_playbackStartedTime; }
 
-    bool isTemporarilyAllowingInlinePlaybackAfterFullscreen() const {return m_temporarilyAllowingInlinePlaybackAfterFullscreen; }
+    bool isTemporarilyAllowingInlinePlaybackAfterFullscreen() const { return m_temporarilyAllowingInlinePlaybackAfterFullscreen; }
 
     void isVisibleInViewportChanged();
     void updateRateChangeRestrictions();
@@ -611,7 +640,7 @@ public:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return *m_logger.get(); }
-    Ref<Logger> protectedLogger() const;
+    using PlatformMediaSessionClient::protectedLogger;
     uint64_t logIdentifier() const final { return m_logIdentifier; }
     ASCIILiteral logClassName() const final { return "HTMLMediaElement"_s; }
     WTFLogChannel& logChannel() const final;
@@ -647,6 +676,8 @@ public:
 
     WEBCORE_EXPORT void setOverridePreferredDynamicRangeMode(DynamicRangeMode);
     void setPreferredDynamicRangeMode(DynamicRangeMode);
+    void dynamicRangeLimitDidChange(PlatformDynamicRangeLimit);
+    void shouldSuppressHDRDidChange();
 
     void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument&) override;
 
@@ -696,6 +727,21 @@ public:
 #endif
 
     void mediaSourceWasDetached();
+    WEBCORE_EXPORT void setFullscreenMode(VideoFullscreenMode);
+
+    void addClient(HTMLMediaElementClient&);
+    void removeClient(const HTMLMediaElementClient&);
+
+    void addMessageClientForTesting(MessageClientForTesting&) override;
+    void removeMessageClientForTesting(const MessageClientForTesting&) override;
+
+    void audioSessionCategoryChanged(AudioSessionCategory, AudioSessionMode, RouteSharingPolicy);
+
+    // CheckedPtr interface
+    uint32_t checkedPtrCount() const { return CanMakeCheckedPtr<Node>::checkedPtrCount(); }
+    uint32_t checkedPtrCountWithoutThreadCheck() const { return CanMakeCheckedPtr<Node>::checkedPtrCountWithoutThreadCheck(); }
+    void incrementCheckedPtrCount() const { CanMakeCheckedPtr<Node>::incrementCheckedPtrCount(); }
+    void decrementCheckedPtrCount() const { CanMakeCheckedPtr<Node>::decrementCheckedPtrCount(); }
 
 protected:
     HTMLMediaElement(const QualifiedName&, Document&, bool createdByParser);
@@ -725,7 +771,6 @@ protected:
 
     bool mediaControlsDependOnPageScaleFactor() const { return m_mediaControlsDependOnPageScaleFactor; }
     void setMediaControlsDependOnPageScaleFactor(bool);
-    void updateMediaControlsAfterPresentationModeChange();
 
     void scheduleEvent(const AtomString&);
     template<typename T> void scheduleEventOn(T& target, Ref<Event>&&);
@@ -762,6 +807,9 @@ protected:
 
     void ignoreFullscreenPermissionPolicyOnNextCallToEnterFullscreen() { m_ignoreFullscreenPermissionsPolicy = true; }
 
+    SoundStageSize soundStageSize() const { return m_soundStageSize; }
+    void setSoundStageSize(SoundStageSize);
+
 protected:
     // ActiveDOMObject
     void stop() override;
@@ -772,17 +820,15 @@ private:
     void createMediaPlayer();
 
     bool supportsFocus() const override;
-    bool isMouseFocusable() const override;
     bool rendererIsNeeded(const RenderStyle&) override;
     bool childShouldCreateRenderer(const Node&) const override;
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
     void didFinishInsertingNode() override;
     void removedFromAncestor(RemovalType, ContainerNode&) override;
-    void didRecalcStyle(Style::Change) override;
+    void didRecalcStyle(OptionSet<Style::Change>) override;
     bool canStartSelection() const override { return false; } 
     bool isInteractiveContent() const override;
 
-    void setFullscreenMode(VideoFullscreenMode);
     void willStopBeingFullscreenElement() override;
 
     // ActiveDOMObject.
@@ -877,14 +923,14 @@ private:
     const std::optional<Vector<FourCC>>& allowedMediaCaptionFormatTypes() const final;
 
     void mediaPlayerBufferedTimeRangesChanged() final;
-    bool mediaPlayerPrefersSandboxedParsing() const final;
 
     bool mediaPlayerShouldDisableHDR() const final { return shouldDisableHDR(); }
 
     FloatSize mediaPlayerVideoLayerSize() const final { return videoLayerSize(); }
     void mediaPlayerVideoLayerSizeDidChange(const FloatSize& size) final { m_videoLayerSize = size; }
 
-    std::optional<MediaPlayerClientIdentifier> mediaPlayerClientIdentifier() const final { return identifier(); }
+    MediaPlayerClientIdentifier mediaPlayerClientIdentifier() const final { return identifier(); }
+    SoundStageSize mediaPlayerSoundStageSize() const final { return soundStageSize(); }
 
     void pendingActionTimerFired();
     void progressEventTimerFired();
@@ -910,7 +956,7 @@ private:
 
     void selectMediaResource();
     void queueLoadMediaResourceTask();
-    void loadResource(const URL&, const ContentType&, const String& keySystem);
+    void loadResource(const URL&, const ContentType&);
     void scheduleNextSourceChild();
     void loadNextSourceChild();
     void userCancelledLoad();
@@ -921,7 +967,7 @@ private:
     void waitForSourceChange();
     void prepareToPlay();
 
-    URL selectNextSourceChild(ContentType*, String* keySystem, InvalidURLAction);
+    URL selectNextSourceChild(ContentType*, InvalidURLAction);
 
     bool ignoreTrackDisplayUpdateRequests() const;
     void beginIgnoringTrackDisplayUpdateRequests();
@@ -987,8 +1033,7 @@ private:
 
     void mediaCanStart(Document&) final;
 
-    void invalidateCachedTime() const;
-    void refreshCachedTime() const;
+    void invalidateOfficialPlaybackPosition();
 
     void configureMediaControls();
 
@@ -1030,10 +1075,13 @@ private:
     bool shouldOverridePauseDuringRouteChange() const final;
     bool isNowPlayingEligible() const final;
     std::optional<NowPlayingInfo> nowPlayingInfo() const final;
-    WeakPtr<PlatformMediaSession> selectBestMediaSession(const Vector<WeakPtr<PlatformMediaSession>>&, PlatformMediaSession::PlaybackControlsPurpose) final;
+    WeakPtr<PlatformMediaSessionInterface> selectBestMediaSession(const Vector<WeakPtr<PlatformMediaSessionInterface>>&, PlatformMediaSession::PlaybackControlsPurpose) final;
 
     void visibilityAdjustmentStateDidChange() final;
     void pageMutedStateDidChange() override;
+#if PLATFORM(IOS_FAMILY)
+    void sceneIdentifierDidChange() final;
+#endif
 
 #if USE(AUDIO_SESSION) && PLATFORM(MAC)
     void hardwareMutedStateDidChange(const AudioSession&) final;
@@ -1056,7 +1104,7 @@ private:
     bool ensureMediaControls();
 
     using JSSetupFunction = Function<bool(JSDOMGlobalObject&, JSC::JSGlobalObject&, ScriptController&, DOMWrapperWorld&)>;
-    bool setupAndCallJS(const JSSetupFunction&);
+    bool setupAndCallJS(NOESCAPE const JSSetupFunction&);
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
     void prepareForDocumentSuspension() final;
@@ -1113,6 +1161,8 @@ private:
 #endif
 
     bool shouldDisableHDR() const;
+    WEBCORE_EXPORT PlatformDynamicRangeLimit computePlayerDynamicRangeLimit() const;
+    void updatePlayerDynamicRangeLimit() const;
 
     bool shouldLogWatchtimeEvent() const;
     bool isWatchtimeTimerActive() const;
@@ -1128,6 +1178,10 @@ private:
     enum ForceMuteChange { False, True };
     void setMutedInternal(bool muted, ForceMuteChange);
     bool implicitlyMuted() const { return m_implicitlyMuted.value_or(false); }
+
+    bool limitedMatroskaSupportEnabled() const;
+
+    void maybeUpdatePlayerPreload() const;
 
     Timer m_progressEventTimer;
     Timer m_playbackProgressTimer;
@@ -1148,9 +1202,7 @@ private:
     TaskCancellationGroup m_updateShouldAutoplayTaskCancellationGroup;
     RefPtr<TimeRanges> m_playedTimeRanges;
     TaskCancellationGroup m_asyncEventsCancellationGroup;
-#if PLATFORM(IOS_FAMILY)
     TaskCancellationGroup m_volumeRevertTaskCancellationGroup;
-#endif
 
     PlayPromiseVector m_pendingPlayPromises;
 
@@ -1200,6 +1252,9 @@ private:
 
     VideoFullscreenMode m_videoFullscreenMode { VideoFullscreenModeNone };
     bool m_videoFullscreenStandby { false };
+#if ENABLE(FULLSCREEN_API)
+    bool m_isChildOfElementFullscreen { false };
+#endif
     bool m_preparedForInline;
     Function<void()> m_preparedForInlineCompletionHandler;
 
@@ -1225,9 +1280,7 @@ private:
 #endif
 
     MediaTime m_defaultPlaybackStartPosition = MediaTime::zeroTime();
-    mutable MediaTime m_cachedTime;
-    mutable MonotonicTime m_clockTimeAtLastCachedTimeUpdate;
-    mutable MonotonicTime m_minimumClockTimeToUpdateCachedTime;
+    mutable MediaTime m_officialPlaybackPosition { MediaTime::invalidTime() };
 
     MediaTime m_fragmentStartTime;
     MediaTime m_fragmentEndTime;
@@ -1293,13 +1346,11 @@ private:
     bool m_tracksAreReady : 1;
     bool m_haveVisibleTextTrack : 1;
     bool m_processingPreferenceChange : 1;
-    bool m_shouldAudioPlaybackRequireUserGesture : 1;
-    bool m_shouldVideoPlaybackRequireUserGesture : 1;
+    bool m_shouldAudioPlaybackRequireUserGesture : 1 { true };
+    bool m_shouldVideoPlaybackRequireUserGesture : 1 { true };
     bool m_volumeLocked : 1;
     bool m_cachedIsInVisibilityAdjustmentSubtree : 1 { false };
     bool m_requiresTextTrackRepresentation : 1 { false };
-    bool m_isResumingPlayback : 1 { false };
-    bool m_seekAfterPlaybackEnded : 1 { false };
 
     IntRect m_textTrackRepresentationBounds;
 
@@ -1343,6 +1394,7 @@ private:
     WeakPtr<const MediaResourceLoader> m_lastMediaResourceLoaderForTesting;
 
     std::optional<DynamicRangeMode> m_overrideDynamicRangeMode;
+    PlatformDynamicRangeLimit m_platformDynamicRangeLimit { PlatformDynamicRangeLimit::initialValueForVideos() };
 
     friend class TrackDisplayUpdateScope;
 
@@ -1362,7 +1414,7 @@ private:
     bool m_playbackBlockedWaitingForKey { false };
 #endif
 
-    std::unique_ptr<MediaElementSession> m_mediaSession;
+    RefPtr<MediaElementSession> m_mediaSession;
     size_t m_reportedExtraMemoryCost { 0 };
 
     friend class MediaControlsHost;
@@ -1430,7 +1482,7 @@ private:
 #endif
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
-    Ref<RemotePlayback> m_remote;
+    const Ref<RemotePlayback> m_remote;
 #endif
 
     bool m_isChangingReadyStateWhileSuspended { false };
@@ -1440,6 +1492,13 @@ private:
     RefPtr<WTF::Stopwatch> m_bufferingStopwatch;
 
     bool m_ignoreFullscreenPermissionsPolicy { false };
+    SoundStageSize m_soundStageSize { SoundStageSize::Auto };
+
+    WeakHashSet<HTMLMediaElementClient> m_clients;
+
+    bool m_hasEverPreparedToPlay { false };
+
+    RefPtr<AggregateMessageClientForTesting> m_internalMessageClient;
 };
 
 String convertEnumerationToString(HTMLMediaElement::AutoplayEventPlaybackState);

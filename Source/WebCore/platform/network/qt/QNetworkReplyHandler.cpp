@@ -141,7 +141,7 @@ void FormDataIODevice::moveToNextElement()
         m_currentFile->close();
     m_currentDelta = 0;
 
-    m_formElements.remove(0);
+    m_formElements.removeAt(0);
 
     prepareCurrentElement();
 }
@@ -611,14 +611,14 @@ void QNetworkReplyHandler::sendResponseIfNeeded()
         mimeType = MIMETypeRegistry::mimeTypeForPath(String(m_replyWrapper->reply()->url().path()));
     }
 
-    URL url(m_replyWrapper->reply()->url());
     // FIXME: we might not need convertToASCIILowercase() because MIME types should always be matched case-insensitively
-    ResourceResponse response(url, mimeType.convertToASCIILowercase(),
+    ResourceResponse response(URL(m_replyWrapper->reply()->url()), 
+                              mimeType.convertToASCIILowercase(),
                               m_replyWrapper->reply()->header(QNetworkRequest::ContentLengthHeader).toLongLong(),
-                              m_replyWrapper->encoding());
+                              String(m_replyWrapper->encoding()));
 
 
-    if (url.protocolIsInHTTPFamily()) {
+    if (response.url().protocolIsInHTTPFamily()) {
         // The status code is equal to 0 for protocols not in the HTTP family.
         int statusCode = m_replyWrapper->reply()->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         response.setHTTPStatusCode(statusCode);

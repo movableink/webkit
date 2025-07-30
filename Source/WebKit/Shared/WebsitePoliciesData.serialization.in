@@ -50,6 +50,12 @@ enum class WebKit::WebContentMode : uint8_t {
     Desktop
 };
 
+enum class WebKit::WebsiteInlineMediaPlaybackPolicy : uint8_t {
+    Default,
+    RequiresPlaysInlineAttribute,
+    DoesNotRequirePlaysInlineAttribute
+};
+
 struct WebKit::WebsitePoliciesData {
     HashMap<String, Vector<String>> activeContentRuleListActionPatterns;
     Vector<WebCore::CustomHeaderFields> customHeaderFields;
@@ -76,11 +82,12 @@ struct WebKit::WebsitePoliciesData {
     WebCore::ColorSchemePreference colorSchemePreference;
     WebKit::WebContentMode preferredContentMode;
 #if ENABLE(DEVICE_ORIENTATION)
-    WebCore::DeviceOrientationOrMotionPermissionState deviceOrientationAndMotionAccessState;
+    std::optional<WebCore::DeviceOrientationOrMotionPermissionState> deviceOrientationAndMotionAccessState;
 #endif
     WebCore::HTTPSByDefaultMode httpsByDefaultMode;
     bool idempotentModeAutosizingOnlyHonorsPercentages;
     bool allowPrivacyProxy;
     bool allowSiteSpecificQuirksToOverrideContentMode;
     WebKit::WebsitePushAndNotificationsEnabledPolicy pushAndNotificationsEnabledPolicy;
+    WebKit::WebsiteInlineMediaPlaybackPolicy inlineMediaPlaybackPolicy;
 };

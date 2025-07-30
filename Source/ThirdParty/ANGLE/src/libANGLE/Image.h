@@ -49,6 +49,7 @@ class ImageSibling : public gl::FramebufferAttachmentObject
     gl::InitState sourceEGLImageInitState() const;
     void setSourceEGLImageInitState(gl::InitState initState) const;
 
+    bool isAttachmentSpecified(const gl::ImageIndex &imageIndex) const override;
     bool isRenderable(const gl::Context *context,
                       GLenum binding,
                       const gl::ImageIndex &imageIndex) const override;
@@ -60,6 +61,10 @@ class ImageSibling : public gl::FramebufferAttachmentObject
     const gl::FoveationState *getFoveationState() const override { return nullptr; }
 
   protected:
+    static constexpr size_t kSourcesOfSetSize = 2;
+    using UnorderedSetSiblingSource           = angle::FlatUnorderedSet<Image *, kSourcesOfSetSize>;
+
+    const UnorderedSetSiblingSource &getSiblingSourcesOf() const { return mSourcesOf; }
     // Set the image target of this sibling
     void setTargetImage(const gl::Context *context, egl::Image *imageTarget);
 
@@ -78,8 +83,8 @@ class ImageSibling : public gl::FramebufferAttachmentObject
     // Called from Image only to remove a source image when the Image is being deleted
     void removeImageSource(egl::Image *imageSource);
 
-    static constexpr size_t kSourcesOfSetSize = 2;
-    angle::FlatUnorderedSet<Image *, kSourcesOfSetSize> mSourcesOf;
+    UnorderedSetSiblingSource mSourcesOf;
+
     BindingPointer<Image> mTargetOf;
 };
 
@@ -194,6 +199,7 @@ class Image final : public ThreadSafeRefCountObject, public LabeledObject
     size_t getSamples() const;
     GLuint getLevelCount() const;
     bool hasProtectedContent() const;
+    bool isFixedRatedCompression(const gl::Context *context) const;
     EGLenum getColorspaceAttribute() const { return mState.colorspace; }
 
     Error initialize(const Display *display, const gl::Context *context);
@@ -207,6 +213,8 @@ class Image final : public ThreadSafeRefCountObject, public LabeledObject
     Error exportVkImage(void *vkImage, void *vkImageCreateInfo);
 
     ContextMutex *getContextMutex() const { return mContextMutex; }
+
+    const gl::ImageIndex &getSourceImageIndex() const { return mState.imageIndex; }
 
   private:
     friend class ImageSibling;

@@ -27,19 +27,25 @@
 #include "Session.h"
 
 #include "CommandResult.h"
+#include "Logging.h"
 #include "SessionHost.h"
 #include "WebDriverAtoms.h"
+#include <optional>
+#include <wtf/ASCIICType.h>
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/FileSystem.h>
 #include <wtf/HashSet.h>
 #include <wtf/HexNumber.h>
+#include <wtf/JSONValues.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/UUID.h>
 #include <wtf/text/MakeString.h>
 
 #if ENABLE(WEBDRIVER_BIDI)
 #include "WebSocketServer.h"
 #include <cstdint>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/WTFString.h>
 #endif
 
 namespace WebDriver {
@@ -81,6 +87,7 @@ Session::Session(Ref<SessionHost>&& host, WeakPtr<WebSocketServer>&& bidiServer)
     : Session(WTFMove(host))
 {
     m_bidiServer = WTFMove(bidiServer);
+    m_host->setBidiHandler(this);
 }
 #endif
 
@@ -738,7 +745,10 @@ void Session::switchToFrame(RefPtr<JSON::Value>&& frameID, Function<void(Command
             parameters->setString("frameHandle"_s, m_currentBrowsingContext.value());
 
         if (auto frameIndex = frameID->asInteger()) {
-            ASSERT(*frameIndex >= 0 && *frameIndex < std::numeric_limits<unsigned short>::max());
+            if (*frameIndex < 0 || *frameIndex > std::numeric_limits<unsigned short>::max()) {
+                completionHandler(CommandResult::fail(CommandResult::ErrorCode::InvalidArgument));
+                return;
+            }
             parameters->setInteger("ordinal"_s, *frameIndex);
         } else {
             String frameElementID = extractElementID(*frameID);
@@ -2879,6 +2889,8 @@ void Session::performActions(Vector<Vector<Action>>&& actionsByTick, Function<vo
                         currentState.pressedButton = action.button.value();
                         break;
                     case Action::Subtype::PointerMove: {
+                        if (!action.x || !action.y)
+                            return completionHandler(CommandResult::fail(CommandResult::ErrorCode::InvalidArgument, "Pointer move action must have x and y coordinates."_s));
                         state->setString("origin"_s, automationOriginType(action.origin->type));
                         auto location = JSON::Object::create();
                         location->setInteger("x"_s, action.x.value());
@@ -2886,7 +2898,7 @@ void Session::performActions(Vector<Vector<Action>>&& actionsByTick, Function<vo
                         state->setObject("location"_s, WTFMove(location));
                         if (action.origin->type == PointerOrigin::Type::Element)
                             state->setString("nodeHandle"_s, action.origin->elementID.value());
-                        FALLTHROUGH;
+                        [[fallthrough]];
                     }
                     case Action::Subtype::Pause:
                         if (action.duration)
@@ -2948,6 +2960,10 @@ void Session::performActions(Vector<Vector<Action>>&& actionsByTick, Function<vo
                 case Action::Type::Wheel:
                     switch (action.subtype) {
                     case Action::Subtype::Scroll: {
+                        if (!action.x || !action.y)
+                            return completionHandler(CommandResult::fail(CommandResult::ErrorCode::InvalidArgument, "Scroll action must have x and y coordinates."_s));
+                        if (!action.deltaX || !action.deltaY)
+                            return completionHandler(CommandResult::fail(CommandResult::ErrorCode::InvalidArgument, "Scroll action must have deltaX and deltaY values."_s));
                         state->setString("origin"_s, automationOriginType(action.origin->type));
                         auto location = JSON::Object::create();
                         location->setInteger("x"_s, action.x.value());
@@ -2961,7 +2977,7 @@ void Session::performActions(Vector<Vector<Action>>&& actionsByTick, Function<vo
 
                         if (action.origin->type == PointerOrigin::Type::Element)
                             state->setString("nodeHandle"_s, action.origin->elementID.value());
-                        FALLTHROUGH;
+                        [[fallthrough]];
                     }
                     case Action::Subtype::Pause:
                         if (action.duration)
@@ -3143,5 +3159,267 @@ void Session::takeScreenshot(std::optional<String> elementID, std::optional<bool
         });
     });
 }
+
+#if ENABLE(WEBDRIVER_BIDI)
+void Session::dispatchBidiMessage(RefPtr<JSON::Object>&& message)
+{
+    // Validate bidi message
+    auto params = message->getObject("params"_s);
+    if (!params) {
+        RELEASE_LOG(WebDriverBiDi, "Session::dispatchBidiMessage: Missing 'params' field in payload");
+        m_bidiServer->sendErrorResponse(this->id(), std::nullopt, CommandResult::ErrorCode::UnknownError, "Received malformed bidi message from browser: Missing 'params' field."_s);
+        return;
+    }
+
+    auto bidiMessageString = params->getString("message"_s);
+    if (!bidiMessageString) {
+        RELEASE_LOG(WebDriverBiDi, "Session::dispatchBidiMessage: Missing actual bidi message in payload");
+        m_bidiServer->sendErrorResponse(this->id(), std::nullopt, CommandResult::ErrorCode::UnknownError, "Received malformed bidi message from browser: Missing 'message' field."_s);
+        return;
+    }
+
+    auto bidiMessageValue = JSON::Value::parseJSON(bidiMessageString);
+    if (!bidiMessageValue) {
+        RELEASE_LOG(WebDriverBiDi, "Session::dispatchBidiMessage: Bidi message with invalid JSON.");
+        m_bidiServer->sendErrorResponse(this->id(), std::nullopt, CommandResult::ErrorCode::UnknownError, "Received malformed bidi message from browser: Invalid JSON message."_s);
+        return;
+    }
+
+    auto bidiMessage = bidiMessageValue->asObject();
+    LOG(WebDriverBiDi, "Session::dispatchBidiMessage: received bidi message %s", bidiMessageValue->toJSONString().utf8().data());
+
+    // FIXME: Move event subscription into the browser
+    if (bidiMessage->getString("type"_s) == "event"_s) {
+        if (bidiMessage->size() < 3 || (bidiMessage->find("method"_s) == bidiMessage->end()) || (bidiMessage->find("params"_s) == bidiMessage->end())) {
+            RELEASE_LOG(WebDriverBiDi, "Session::dispatchBidiMessage: Malformed bidi event: %s", bidiMessageValue->toJSONString().utf8().data());
+            return;
+        }
+
+        auto bidiMethod = bidiMessage->getString("method"_s);
+        if (!eventIsEnabled(bidiMethod, { m_toplevelBrowsingContext.value() })) {
+            RELEASE_LOG(WebDriverBiDi, "Message %s is an unknown event or not enabled, ignoring.", bidiMethod.utf8().data());
+            return;
+        }
+        if (bidiMethod == "log.entryAdded"_s)
+            doLogEntryAdded(WTFMove(bidiMessage));
+        return;
+    }
+
+    m_bidiServer->sendMessage(this->id(), bidiMessage->toJSONString());
+}
+
+void Session::doLogEntryAdded(RefPtr<JSON::Object>&& message)
+{
+    // https://w3c.github.io/webdriver-bidi/#event-log-entryAdded
+    auto params = message->getObject("params"_s);
+    if (!params) {
+        RELEASE_LOG(WebDriverBiDi, "Log event without parameter information, ignoring.");
+        return;
+    }
+
+    auto method = params->getString("method"_s);
+
+    String level;
+    if (method == "error"_s || method == "assert"_s)
+        level = "error"_s;
+    else if (method == "debug"_s || method == "trace"_s)
+        level = "debug"_s;
+    else if (method == "warn"_s)
+        level = "warn"_s;
+    else
+        level = "info"_s;
+
+    // WebDriver uses the ECMA time format, which is the number of milliseconds since the Unix epoch.
+    // https://tc39.es/ecma262/#sec-time-values-and-time-range
+    RefPtr<JSON::Value> timestampValue = JSON::Value::create(params->getDouble("timestamp"_s).value_or(0));
+    auto messageText = params->getString("text"_s);
+
+    // TODO Get the source from the current realm record
+    // https://bugs.webkit.org/show_bug.cgi?id=282978
+
+    // TODO Get the current stacktrace for assert, error, trace, and warn messages
+    // https://bugs.webkit.org/show_bug.cgi?id=282979
+
+    auto messageType = params->getString("type"_s);
+
+    auto entry = JSON::Object::create();
+    entry->setString("type"_s, messageType);
+    entry->setString("level"_s, level);
+    entry->setString("text"_s, messageText);
+    entry->setValue("timestamp"_s, *timestampValue);
+
+    if (messageType == "console"_s) {
+        // TODO Support formatter string and multiple arguments
+        // This will require changes either on `Automation.json::doLogEntryAdded`, adding the arguments,
+        // or moving the actual event processing to the browser, so we just relay it back to the client.
+        // https://bugs.webkit.org/show_bug.cgi?id=282976
+        // TODO Implement the full serialization algorithm
+        // https://bugs.webkit.org/show_bug.cgi?id=282977
+        auto args = JSON::Array::create();
+        auto arg = JSON::Object::create();
+        arg->setString("type"_s, "string"_s);
+        arg->setString("value"_s, messageText);
+        args->pushObject(WTFMove(arg));
+
+        entry->setString("method"_s, method);
+        entry->setArray("args"_s, args);
+    } else if (messageType == "javascript"_s) {
+        // Despite not having the stack information, the spec requires this
+        // field for JavaScript messages.
+        entry->setString("stackTrace"_s, emptyString());
+    }
+
+    auto body = JSON::Object::create();
+    body->setObject("params"_s, WTFMove(entry));
+
+    emitEvent("log.entryAdded"_s, WTFMove(body));
+
+    // TODO Implement event buffering, to save the log entries for later emission when the user subscribes to it
+    // https://bugs.webkit.org/show_bug.cgi?id=282980
+}
+
+void Session::emitEvent(const String& eventName, RefPtr<JSON::Object>&& body)
+{
+    // https://w3c.github.io/webdriver-bidi/#emit-an-event
+    body->setString("type"_s, "event"_s);
+    body->setString("method"_s, eventName);
+    m_bidiServer->sendMessage(this->id(), body->toJSONString());
+}
+
+bool Session::eventIsEnabled(const String& eventName, const Vector<String>&)
+{
+    // https://w3c.github.io/webdriver-bidi/#event-is-enabled
+
+    AtomString atomEventName { eventName };
+
+    if (!m_eventSubscriptionCounts.contains(atomEventName))
+        return false;
+
+    for (const auto& subscription : m_eventSubscriptions) {
+        // FIXME: Add support to subscribe to specific browsing contexts
+        // https://bugs.webkit.org/show_bug.cgi?id=282981
+        if (!subscription.value.isGlobal())
+            continue;
+
+        if (subscription.value.events.contains(atomEventName))
+            return true;
+    }
+
+    return false;
+}
+
+void Session::subscribeForEvents(const Vector<String>& events, Vector<String>&& browsingContextIDs, Vector<String>&& userContextIDs, Function<void(CommandResult&&)>&& completionHandler)
+{
+    // FIXME: Process/validate list of event names (e.g. expanding if given only the module name)
+    // https://bugs.webkit.org/show_bug.cgi?id=291371
+    auto subscriptionID = WTF::createVersion4UUIDString();
+
+    for (const auto& event : events) {
+        auto addResult = m_eventSubscriptionCounts.add(AtomString { event }, 1);
+        if (!addResult.isNewEntry)
+            addResult.iterator->value++;
+    }
+
+    Vector<AtomString> atomEventNames;
+    for (const auto& event : events)
+        atomEventNames.append(AtomString { event });
+
+    m_eventSubscriptions.add(subscriptionID, EventSubscription { subscriptionID, WTFMove(atomEventNames), WTFMove(browsingContextIDs), WTFMove(userContextIDs) });
+    completionHandler(CommandResult::success(JSON::Value::create(subscriptionID)));
+}
+
+void Session::unsubscribeByIDs(const Vector<EventSubscriptionID>& subscriptionIDs, Function<void(CommandResult&&)>&& completionHandler)
+{
+    for (const auto& id : subscriptionIDs) {
+        if (!m_eventSubscriptions.contains(id)) {
+            completionHandler(CommandResult::fail(CommandResult::ErrorCode::InvalidArgument, "At least one subscription id is unknown"_s));
+            return;
+        }
+    }
+
+    for (const auto& id : subscriptionIDs) {
+        const auto& subscription = m_eventSubscriptions.get(id);
+
+        for (const auto& event : subscription.events) {
+            auto removeResult = m_eventSubscriptionCounts.find(event);
+            if (removeResult != m_eventSubscriptionCounts.end()) {
+                if (!(--removeResult->value))
+                    m_eventSubscriptionCounts.remove(event);
+            }
+        }
+        m_eventSubscriptions.remove(id);
+    }
+    completionHandler(CommandResult::success());
+}
+
+void Session::unsubscribeByEventName(const Vector<String>& eventNames, Function<void(CommandResult&&)>&& completionHandler)
+
+{
+    HashMap<String, EventSubscription> subscriptionsToKeep;
+    HashSet<String> matchedEvents;
+    // FIXME: Process/validate list of event names (e.g. expanding if given only the module name)
+    // https://bugs.webkit.org/show_bug.cgi?id=291371
+    for (const auto& eventName : eventNames) {
+        auto atomEventName = AtomString { eventName };
+        for (const auto& subscription : m_eventSubscriptions) {
+            if (!subscription.value.events.contains(atomEventName)) {
+                subscriptionsToKeep.add(subscription.value.id, subscription.value);
+                continue;
+            }
+
+            // FIXME: Add support to subscribe to specific browsing contexts
+            // https://bugs.webkit.org/show_bug.cgi?id=282981
+            // In this case, only process them if we were given the "contexts" parameter
+            if (!subscription.value.isGlobal()) {
+                subscriptionsToKeep.add(subscription.value.id, subscription.value);
+                continue;
+            }
+
+            auto currentSubscriptionEventNames = subscription.value.events;
+            currentSubscriptionEventNames.removeAll(atomEventName);
+            matchedEvents.add(eventName);
+            if (!currentSubscriptionEventNames.isEmpty()) {
+                auto clonedSubscription = subscription.value;
+                clonedSubscription.events = currentSubscriptionEventNames;
+                subscriptionsToKeep.add(clonedSubscription.id, WTFMove(clonedSubscription));
+            }
+        }
+    }
+
+    if (matchedEvents.size() != eventNames.size()) {
+        completionHandler(CommandResult::fail(CommandResult::ErrorCode::InvalidArgument));
+        return;
+    }
+
+    // Only modify the actual subscriptions after we validated all requested events.
+    m_eventSubscriptions = WTFMove(subscriptionsToKeep);
+    m_eventSubscriptionCounts.clear();
+    for (const auto& subscription : m_eventSubscriptions.values()) {
+        for (const auto& event : subscription.events) {
+            auto addResult = m_eventSubscriptionCounts.add(event, 1);
+            if (!addResult.isNewEntry)
+                addResult.iterator->value++;
+        }
+    }
+
+    completionHandler(CommandResult::success());
+}
+
+void Session::relayBidiCommand(const String& message, unsigned commandId, Function<void(WebSocketMessageHandler::Message&&)>&& completionHandler)
+{
+    auto parameters = JSON::Object::create();
+    parameters->setString("message"_s, message);
+    m_host->sendCommandToBackend("processBidiMessage"_s, WTFMove(parameters), [protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler), commandId](SessionHost::CommandResponse&& response) {
+        if (response.isError) {
+            auto errorCode = CommandResult::ErrorCode::UnknownError;
+            std::optional<String> errorMessage;
+            if (response.responseObject)
+                errorMessage = response.responseObject->getString("message"_s);
+            completionHandler(WebSocketMessageHandler::Message::fail(errorCode, std::nullopt, errorMessage, { commandId }));
+        }
+    });
+}
+
+#endif // ENABLE(WEBDRIVER_BIDI)
 
 } // namespace WebDriver

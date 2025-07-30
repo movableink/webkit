@@ -116,7 +116,9 @@ public:
     void setInspectorClient(std::unique_ptr<API::InspectorClient>&&);
 
     // Public APIs
+    WebPageProxy* inspectedPage() const { return m_inspectedPage.get(); }
     RefPtr<WebPageProxy> protectedInspectedPage() const { return m_inspectedPage.get(); }
+    WebPageProxy* inspectorPage() const { return m_inspectorPage.get(); }
     RefPtr<WebPageProxy> protectedInspectorPage() const { return m_inspectorPage.get(); }
 
 #if ENABLE(INSPECTOR_EXTENSIONS)
@@ -199,6 +201,7 @@ public:
     void toggleElementSelection();
 
     bool isUnderTest() const { return m_underTest; }
+    void markAsUnderTest() { m_underTest = true; }
 
     void setDiagnosticLoggingAvailable(bool);
 
@@ -255,7 +258,7 @@ private:
     void platformLoad(const String& path, CompletionHandler<void(const String&)>&&);
     void platformPickColorFromScreen(CompletionHandler<void(const std::optional<WebCore::Color>&)>&&);
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) || PLATFORM(GTK) || PLATFORM(WIN)
     bool platformCanAttach(bool webProcessCanAttach);
 #elif PLATFORM(WPE)
     bool platformCanAttach(bool) { return false; }
@@ -264,9 +267,10 @@ private:
 #endif
 
     // Called by WebInspectorUIProxy messages
-    void openLocalInspectorFrontend(bool canAttach, bool underTest);
+    void requestOpenLocalInspectorFrontend();
     void setFrontendConnection(IPC::Connection::Handle&&);
 
+    void openLocalInspectorFrontend();
     void sendMessageToBackend(const String&);
     void frontendLoaded();
     void didClose();
@@ -367,3 +371,7 @@ private:
 };
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebInspectorUIProxy)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::Inspector; }
+SPECIALIZE_TYPE_TRAITS_END()

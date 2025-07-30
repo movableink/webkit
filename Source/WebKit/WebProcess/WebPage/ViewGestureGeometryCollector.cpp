@@ -28,6 +28,7 @@
 
 #include "Logging.h"
 #include "MessageSenderInlines.h"
+#include "PluginView.h"
 #include "ViewGestureGeometryCollectorMessages.h"
 #include "WebFrame.h"
 #include "WebPage.h"
@@ -42,6 +43,8 @@
 #include <WebCore/Range.h>
 #include <WebCore/RenderView.h>
 #include <WebCore/TextIterator.h>
+#include <ranges>
+#include <wtf/HashCountedSet.h>
 #include <wtf/TZoneMallocInlines.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -150,13 +153,14 @@ void ViewGestureGeometryCollector::collectGeometryForSmartMagnificationGesture(F
 
 #if PLATFORM(IOS_FAMILY)
 
-struct FontSizeAndCount {
-    unsigned fontSize;
-    unsigned count;
-};
-
 std::optional<std::pair<double, double>> ViewGestureGeometryCollector::computeTextLegibilityScales(double& viewportMinimumScale, double& viewportMaximumScale)
 {
+    struct FontSizeAndCount {
+        unsigned fontSize { 0 };
+        unsigned count { 0 };
+    };
+    using FontSizeCounter = HashCountedSet<unsigned>;
+
     static const unsigned fontSizeBinningInterval = 2;
     static const double maximumNumberOfTextRunsToConsider = 200;
 
@@ -181,7 +185,7 @@ std::optional<std::pair<double, double>> ViewGestureGeometryCollector::computeTe
     document->updateLayout(LayoutOptions::IgnorePendingStylesheets);
 
     HashSet<Ref<Node>> allTextNodes;
-    HashMap<unsigned, unsigned> fontSizeToCountMap;
+    FontSizeCounter fontSizeCounter;
     unsigned numberOfIterations = 0;
     unsigned totalSampledTextLength = 0;
 
@@ -197,21 +201,21 @@ std::optional<std::pair<double, double>> ViewGestureGeometryCollector::computeTe
         if (!textLength || !textNode.renderer() || allTextNodes.contains(textNode))
             continue;
 
+        unsigned fontSizeBin = fontSizeBinningInterval * round(textNode.renderer()->style().fontCascade().size() / fontSizeBinningInterval);
+        if (!FontSizeCounter::isValidValue(fontSizeBin))
+            continue;
+
         allTextNodes.add(textNode);
 
-        unsigned fontSizeBin = fontSizeBinningInterval * round(textNode.renderer()->style().fontCascade().size() / fontSizeBinningInterval);
-        auto entry = fontSizeToCountMap.find(fontSizeBin);
-        fontSizeToCountMap.set(fontSizeBin, textLength + (entry == fontSizeToCountMap.end() ? 0 : entry->value));
+        fontSizeCounter.add(fontSizeBin, textLength);
         totalSampledTextLength += textLength;
     }
 
-    auto sortedFontSizesAndCounts = WTF::map(fontSizeToCountMap, [](auto& entry) {
+    auto sortedFontSizesAndCounts = WTF::map(fontSizeCounter, [](auto& entry) {
         return FontSizeAndCount { entry.key, entry.value };
     });
 
-    std::sort(sortedFontSizesAndCounts.begin(), sortedFontSizesAndCounts.end(), [] (auto& first, auto& second) {
-        return first.fontSize < second.fontSize;
-    });
+    std::ranges::sort(sortedFontSizesAndCounts, { }, &FontSizeAndCount::fontSize);
 
     double defaultScale = clampTo<double>(defaultTextLegibilityZoomScale, viewportMinimumScale, viewportMaximumScale);
     double textLegibilityScale = defaultScale;
@@ -240,8 +244,8 @@ void ViewGestureGeometryCollector::computeZoomInformationForNode(Node& node, Flo
 {
     absoluteBoundingRect = node.absoluteBoundingRect(&isReplaced);
     if (node.document().isImageDocument()) {
-        if (HTMLImageElement* imageElement = static_cast<ImageDocument&>(node.document()).imageElement()) {
-            if (&node != imageElement) {
+        if (RefPtr imageElement = downcast<ImageDocument>(node.document()).imageElement()) {
+            if (&node != imageElement.get()) {
                 absoluteBoundingRect = imageElement->absoluteBoundingRect(&isReplaced);
                 FloatPoint newOrigin = origin;
                 if (origin.x() < absoluteBoundingRect.x() || origin.x() > absoluteBoundingRect.maxX())
@@ -252,7 +256,15 @@ void ViewGestureGeometryCollector::computeZoomInformationForNode(Node& node, Flo
             }
             isReplaced = true;
         }
+    }  else {
+#if ENABLE(PDF_PLUGIN)
+        if (RefPtr pluginView = m_webPage->mainFramePlugIn()) {
+            absoluteBoundingRect = pluginView->absoluteBoundingRectForSmartMagnificationAtPoint(origin);
+            isReplaced = false;
+        }
+#endif
     }
+
     computeMinimumAndMaximumViewportScales(viewportMinimumScale, viewportMaximumScale);
 }
 

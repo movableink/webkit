@@ -405,7 +405,7 @@ NSURL *ensureDirectoryExists(NSURL *directory)
 {
     ASSERT(directory.isFileURL);
     if (!FileSystem::makeAllDirectories(directory.path)) {
-        RELEASE_LOG_ERROR(Extensions, "Failed to create directory: %{private}@", (NSString *)directory);
+        RELEASE_LOG_ERROR(Extensions, "Failed to create directory: %{private}@", directory.absoluteString);
         return nil;
     }
 
@@ -472,7 +472,7 @@ NSSet *toAPI(const HashSet<URL>& set)
 {
     NSMutableSet *result = [[NSMutableSet alloc] initWithCapacity:set.size()];
     for (auto& element : set)
-        [result addObject:static_cast<NSURL *>(element)];
+        [result addObject:element.createNSURL().get()];
     return [result copy];
 }
 
@@ -480,7 +480,7 @@ NSSet *toAPI(const HashSet<String>& set)
 {
     NSMutableSet *result = [[NSMutableSet alloc] initWithCapacity:set.size()];
     for (auto& element : set)
-        [result addObject:static_cast<NSString *>(element)];
+        [result addObject:element.createNSString().get()];
     return [result copy];
 }
 
@@ -488,7 +488,7 @@ NSArray *toAPIArray(const HashSet<String>& set)
 {
     NSMutableArray *result = [[NSMutableArray alloc] initWithCapacity:set.size()];
     for (auto& element : set)
-        [result addObject:static_cast<NSString *>(element)];
+        [result addObject:element.createNSString().get()];
     return [result copy];
 }
 
@@ -505,9 +505,9 @@ HashSet<String> toImpl(NSSet *set)
     return result;
 }
 
-HashMap<String, Ref<API::Data>> toDataMap(NSDictionary *dictionary)
+DataMap toDataMap(NSDictionary *dictionary)
 {
-    HashMap<String, Ref<API::Data>> result;
+    DataMap result;
     result.reserveInitialCapacity(dictionary.count);
 
     for (id key in dictionary) {
@@ -519,7 +519,7 @@ HashMap<String, Ref<API::Data>> toDataMap(NSDictionary *dictionary)
 
         id value = dictionary[key];
         if (auto *valueString = dynamic_objc_cast<NSString>(value)) {
-            result.add(keyString, API::Data::create(String(valueString).utf8().span()));
+            result.add(keyString, valueString);
             continue;
         }
 
@@ -530,11 +530,11 @@ HashMap<String, Ref<API::Data>> toDataMap(NSDictionary *dictionary)
 
         if (isValidJSONObject(value, JSONOptions::FragmentsAllowed)) {
             NSError *error;
-            auto *jsonData = encodeJSONData(value, JSONOptions::FragmentsAllowed, &error);
-            if (!jsonData || error)
+            auto *jsonString = encodeJSONString(value, JSONOptions::FragmentsAllowed, &error);
+            if (!jsonString || error)
                 continue;
 
-            result.add(keyString, API::Data::createWithoutCopying(jsonData));
+            result.add(keyString, jsonString);
             continue;
         }
 

@@ -113,7 +113,7 @@ WorkerMessagingProxy::WorkerMessagingProxy(Worker& workerObject)
     , m_workerObject(&workerObject)
 {
     ASSERT((is<Document>(*m_scriptExecutionContext) && isMainThread())
-        || (is<WorkerGlobalScope>(*m_scriptExecutionContext) && downcast<WorkerGlobalScope>(*m_scriptExecutionContext).thread().thread() == &Thread::current()));
+        || (is<WorkerGlobalScope>(*m_scriptExecutionContext) && downcast<WorkerGlobalScope>(*m_scriptExecutionContext).thread().thread() == &Thread::currentSingleton()));
 
     // Nobody outside this class ref counts this object. The original ref
     // is balanced by the deref in workerGlobalScopeDestroyedInternal.
@@ -124,7 +124,7 @@ WorkerMessagingProxy::~WorkerMessagingProxy()
     ASSERT(!m_workerObject);
     ASSERT(!m_scriptExecutionContext
         || (is<Document>(*m_scriptExecutionContext) && isMainThread())
-        || (is<WorkerGlobalScope>(*m_scriptExecutionContext) && downcast<WorkerGlobalScope>(*m_scriptExecutionContext).thread().thread() == &Thread::current()));
+        || (is<WorkerGlobalScope>(*m_scriptExecutionContext) && downcast<WorkerGlobalScope>(*m_scriptExecutionContext).thread().thread() == &Thread::currentSingleton()));
 
     if (m_workerThread)
         m_workerThread->clearProxies();
@@ -174,7 +174,7 @@ void WorkerMessagingProxy::startWorkerGlobalScope(const URL& scriptURL, PAL::Ses
     workerThreadCreated(thread.get());
     thread->start();
 
-    m_inspectorProxy->workerStarted(m_scriptExecutionContext.get(), thread.ptr(), scriptURL, name);
+    m_inspectorProxy->workerStarted(*m_scriptExecutionContext, thread.ptr(), scriptURL, name);
 }
 
 void WorkerMessagingProxy::postMessageToWorkerObject(MessageWithMessagePorts&& message)
@@ -190,7 +190,7 @@ void WorkerMessagingProxy::postMessageToWorkerObject(MessageWithMessagePorts&& m
             return;
 
         auto ports = MessagePort::entanglePorts(context, WTFMove(message.transferredPorts));
-        ActiveDOMObject::queueTaskKeepingObjectAlive(*workerObject, TaskSource::PostedMessageQueue, [worker = Ref { *workerObject }, message = WTFMove(message), userGestureForwarder = WTFMove(userGestureForwarder), ports = WTFMove(ports)] () mutable {
+        ActiveDOMObject::queueTaskKeepingObjectAlive(*workerObject, TaskSource::PostedMessageQueue, [worker = Ref { *workerObject }, message = WTFMove(message), userGestureForwarder = WTFMove(userGestureForwarder), ports = WTFMove(ports)](auto&) mutable {
             if (!worker->scriptExecutionContext())
                 return;
 
@@ -202,7 +202,7 @@ void WorkerMessagingProxy::postMessageToWorkerObject(MessageWithMessagePorts&& m
             auto scope = DECLARE_CATCH_SCOPE(vm);
             UserGestureIndicator userGestureIndicator(userGestureForwarder ? userGestureForwarder->userGestureToForward() : nullptr);
             auto event = MessageEvent::create(*globalObject, message.message.releaseNonNull(), { }, { }, { }, WTFMove(ports));
-            if (UNLIKELY(scope.exception())) {
+            if (scope.exception()) [[unlikely]] {
                 // Currently, we assume that the only way we can get here is if we have a termination.
                 RELEASE_ASSERT(vm.hasPendingTerminationException());
                 return;
@@ -248,7 +248,7 @@ void WorkerMessagingProxy::postMessageToWorkerGlobalScope(MessageWithMessagePort
 
         auto ports = MessagePort::entanglePorts(scriptContext, WTFMove(message.transferredPorts));
         auto event = MessageEvent::create(*globalObject, message.message.releaseNonNull(), { }, { }, std::nullopt, WTFMove(ports));
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             // Currently, we assume that the only way we can get here is if we have a termination.
             RELEASE_ASSERT(vm.hasPendingTerminationException());
             return;
@@ -351,7 +351,7 @@ void WorkerMessagingProxy::reportErrorToWorkerObject(const String& errorMessage)
 
 void WorkerMessagingProxy::postMessageToDebugger(const String& message)
 {
-    RunLoop::main().dispatch([this, protectedThis = Ref { *this }, message = message.isolatedCopy()]() mutable {
+    RunLoop::protectedMain()->dispatch([this, protectedThis = Ref { *this }, message = message.isolatedCopy()]() mutable {
         if (!m_mayBeDestroyed)
             m_inspectorProxy->sendMessageFromWorkerToFrontend(WTFMove(message));
     });
@@ -369,7 +369,7 @@ void WorkerMessagingProxy::setResourceCachingDisabledByWebInspector(bool disable
 void WorkerMessagingProxy::workerThreadCreated(DedicatedWorkerThread& workerThread)
 {
     ASSERT(!m_askedToTerminate);
-    m_workerThread = &workerThread;
+    m_workerThread = workerThread;
 
     if (m_askedToSuspend) {
         m_askedToSuspend = false;

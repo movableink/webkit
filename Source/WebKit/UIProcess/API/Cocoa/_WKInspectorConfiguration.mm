@@ -74,8 +74,8 @@
 - (void)applyToWebViewConfiguration:(WKWebViewConfiguration *)configuration
 {
     for (auto pair : _configuration->urlSchemeHandlers()) {
-        auto& handler = static_cast<WebKit::WebURLSchemeHandlerCocoa&>(pair.first.get());
-        [configuration setURLSchemeHandler:handler.apiHandler() forURLScheme:pair.second];
+        auto& handler = downcast<WebKit::WebURLSchemeHandlerCocoa>(pair.first.get());
+        [configuration setURLSchemeHandler:handler.apiHandler() forURLScheme:pair.second.createNSString().get()];
     }
 
     if (auto* processPool = self.processPool)
@@ -90,8 +90,8 @@
     _WKInspectorConfiguration *configuration = [(_WKInspectorConfiguration *)[[self class] allocWithZone:zone] init];
 
     for (auto pair : _configuration->urlSchemeHandlers()) {
-        auto& handler = static_cast<WebKit::WebURLSchemeHandlerCocoa&>(pair.first.get());
-        [configuration setURLSchemeHandler:handler.apiHandler() forURLScheme:pair.second];
+        auto& handler = downcast<WebKit::WebURLSchemeHandlerCocoa>(pair.first.get());
+        [configuration setURLSchemeHandler:handler.apiHandler() forURLScheme:pair.second.createNSString().get()];
     }
 
     if (auto* processPool = self.processPool)

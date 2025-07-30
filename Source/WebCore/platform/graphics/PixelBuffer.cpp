@@ -27,9 +27,8 @@
 #include "PixelBuffer.h"
 
 #include <JavaScriptCore/TypedArrayInlines.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/TextStream.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -38,14 +37,18 @@ bool PixelBuffer::supportedPixelFormat(PixelFormat pixelFormat)
     switch (pixelFormat) {
     case PixelFormat::RGBA8:
     case PixelFormat::BGRA8:
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
     case PixelFormat::RGBA16F:
 #endif
         return true;
 
     case PixelFormat::BGRX8:
+#if ENABLE(PIXEL_FORMAT_RGB10)
     case PixelFormat::RGB10:
+#endif
+#if ENABLE(PIXEL_FORMAT_RGB10A8)
     case PixelFormat::RGB10A8:
+#endif
         return false;
     }
 
@@ -86,7 +89,7 @@ CheckedUint32 PixelBuffer::computeBufferSize(PixelFormat pixelFormat, const IntS
 {
     // FIXME: Implement a better way to deal with sizes of diffferent formats.
     unsigned bytesPerPixelComponent =
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
         (pixelFormat == PixelFormat::RGBA16F) ? 2 :
 #endif
         1;
@@ -108,7 +111,7 @@ bool PixelBuffer::setRange(std::span<const uint8_t> data, size_t byteOffset)
     if (!isSumSmallerThanOrEqual(byteOffset, data.size(), m_bytes.size()))
         return false;
 
-    memmove(m_bytes.data() + byteOffset, data.data(), data.size());
+    memmoveSpan(m_bytes.subspan(byteOffset), data);
     return true;
 }
 
@@ -117,7 +120,7 @@ bool PixelBuffer::zeroRange(size_t byteOffset, size_t rangeByteLength)
     if (!isSumSmallerThanOrEqual(byteOffset, rangeByteLength, m_bytes.size()))
         return false;
 
-    memset(m_bytes.data() + byteOffset, 0, rangeByteLength);
+    zeroSpan(m_bytes.subspan(byteOffset, rangeByteLength));
     return true;
 }
 
@@ -134,5 +137,3 @@ void PixelBuffer::set(size_t index, double value)
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

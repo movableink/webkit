@@ -27,13 +27,19 @@ media.addEventListener("play", async function() {
 
     await shouldBecomeDifferent("media.textTracks[0].mode", "'disabled'");
 
+    await shouldBecomeEqual("media.textTracks[0].cues.length", "2");
+
     debug("Tapping overflow button...");
-    await pressOnElement(shadowRoot.querySelector("button.overflow"));
-    await UIHelper.waitForContextMenuToShow();
+    await Promise.all([
+        pressOnElement(shadowRoot.querySelector("button.overflow")),
+        UIHelper.waitForContextMenuToShow()
+    ]);
 
     debug("Selecting first chapter cue...");
-    await UIHelper.chooseMenuAction("ipsum");
-    await UIHelper.waitForContextMenuToHide();
+    await Promise.all([
+        UIHelper.chooseMenuAction("ipsum"),
+        UIHelper.waitForContextMenuToHide()
+    ]);
 
     await shouldBecomeEqual("media.currentTime >= 5", "true");
 

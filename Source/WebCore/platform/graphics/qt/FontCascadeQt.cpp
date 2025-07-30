@@ -290,7 +290,7 @@ void FontCascade::initFormatForTextLayout(QTextLayout* layout, const TextRun& ru
 //    return false;
 //}
 
-void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode)
+void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& point, FontSmoothingMode)
 {
     //qDebug() << Q_FUNC_INFO << __LINE__;
     if (!font.platformData().size())
@@ -307,6 +307,8 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
 
     QVector<quint32> glyphIndexes;
     QVector<QPointF> positions;
+
+    unsigned numGlyphs = glyphs.size();
 
     glyphIndexes.reserve(numGlyphs);
     positions.reserve(numGlyphs);
@@ -360,7 +362,7 @@ ResolvedEmojiPolicy FontCascade::resolveEmojiPolicy(FontVariantEmoji fontVariant
 
 QFont FontCascade::syntheticFont() const
 {
-    QRawFont rawFont(primaryFont().getQtRawFont());
+    QRawFont rawFont(primaryFont()->getQtRawFont());
     QFont f(rawFont.familyName());
     if (rawFont.pixelSize())
         f.setPixelSize(rawFont.pixelSize());
@@ -376,7 +378,7 @@ QFont FontCascade::syntheticFont() const
 
 QRawFont FontCascade::rawFont() const
 {
-    return primaryFont().getQtRawFont();
+    return primaryFont()->getQtRawFont();
 }
 
 }

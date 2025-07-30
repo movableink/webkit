@@ -61,6 +61,7 @@ enum Token
     kConfigIntel,
     kConfigVMWare,
     kConfigApple,
+    kConfigQualcomm,
     // build type
     kConfigRelease,
     kConfigDebug,
@@ -73,6 +74,7 @@ enum Token
     kConfigSwiftShader,
     kConfigMetal,
     kConfigWgpu,
+    kConfigNative,
     // Android devices
     kConfigNexus5X,
     kConfigPixel2,
@@ -86,8 +88,8 @@ enum Token
     kConfigGalaxyA54,
     kConfigGalaxyS22,
     kConfigGalaxyS23,
-    kConfigGalaxyS24,
-    kConfigGalaxyQualcomm,
+    kConfigGalaxyS24Exynos,
+    kConfigGalaxyS24Qualcomm,
     kConfigFindX6,
     kConfigPineapple,
     // GPU devices
@@ -185,6 +187,7 @@ constexpr TokenInfo kTokenData[kNumberOfTokens] = {
     {"intel", GPUTestConfig::kConditionIntel},
     {"vmware", GPUTestConfig::kConditionVMWare},
     {"apple", GPUTestConfig::kConditionApple},
+    {"qualcomm", GPUTestConfig::kConditionQualcomm},
     {"release", GPUTestConfig::kConditionRelease},
     {"debug", GPUTestConfig::kConditionDebug},
     {"d3d9", GPUTestConfig::kConditionD3D9},
@@ -192,6 +195,7 @@ constexpr TokenInfo kTokenData[kNumberOfTokens] = {
     {"opengl", GPUTestConfig::kConditionGLDesktop},
     {"gles", GPUTestConfig::kConditionGLES},
     {"vulkan", GPUTestConfig::kConditionVulkan},
+    {"native", GPUTestConfig::kConditionNative},
     {"swiftshader", GPUTestConfig::kConditionSwiftShader},
     {"metal", GPUTestConfig::kConditionMetal},
     {"wgpu", GPUTestConfig::kConditionWgpu},
@@ -207,8 +211,8 @@ constexpr TokenInfo kTokenData[kNumberOfTokens] = {
     {"galaxya54", GPUTestConfig::kConditionGalaxyA54},
     {"galaxys22", GPUTestConfig::kConditionGalaxyS22},
     {"galaxys23", GPUTestConfig::kConditionGalaxyS23},
-    {"galaxys24", GPUTestConfig::kConditionGalaxyS24},
-    {"galaxyqualcomm", GPUTestConfig::kConditionGalaxyQualcomm},
+    {"galaxys24exynos", GPUTestConfig::kConditionGalaxyS24Exynos},
+    {"galaxys24qualcomm", GPUTestConfig::kConditionGalaxyS24Qualcomm},
     {"findx6", GPUTestConfig::kConditionFindX6},
     {"pineapple", GPUTestConfig::kConditionPineapple},
     {"quadrop400", GPUTestConfig::kConditionNVIDIAQuadroP400},
@@ -518,6 +522,7 @@ bool GPUTestExpectationsParser::parseLine(const GPUTestConfig *config,
             case kConfigIntel:
             case kConfigVMWare:
             case kConfigApple:
+            case kConfigQualcomm:
             case kConfigRelease:
             case kConfigDebug:
             case kConfigD3D9:
@@ -528,6 +533,7 @@ bool GPUTestExpectationsParser::parseLine(const GPUTestConfig *config,
             case kConfigSwiftShader:
             case kConfigMetal:
             case kConfigWgpu:
+            case kConfigNative:
             case kConfigNexus5X:
             case kConfigPixel2:
             case kConfigPixel4:
@@ -540,8 +546,8 @@ bool GPUTestExpectationsParser::parseLine(const GPUTestConfig *config,
             case kConfigGalaxyA54:
             case kConfigGalaxyS22:
             case kConfigGalaxyS23:
-            case kConfigGalaxyS24:
-            case kConfigGalaxyQualcomm:
+            case kConfigGalaxyS24Exynos:
+            case kConfigGalaxyS24Qualcomm:
             case kConfigFindX6:
             case kConfigPineapple:
             case kConfigNVIDIAQuadroP400:

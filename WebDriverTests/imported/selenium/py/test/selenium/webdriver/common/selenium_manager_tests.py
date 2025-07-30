@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 import json
+import platform
 import sys
 from pathlib import Path
 from unittest import mock
@@ -30,9 +31,10 @@ def test_gets_results(monkeypatch):
     expected_output = {"driver_path": "/path/to/driver"}
     lib_path = "selenium.webdriver.common.selenium_manager.SeleniumManager"
 
-    with mock.patch(lib_path + "._get_binary", return_value="/path/to/sm") as mock_get_binary, mock.patch(
-        lib_path + "._run", return_value=expected_output
-    ) as mock_run:
+    with (
+        mock.patch(lib_path + "._get_binary", return_value="/path/to/sm") as mock_get_binary,
+        mock.patch(lib_path + "._run", return_value=expected_output) as mock_run,
+    ):
         SeleniumManager().binary_paths([])
 
         mock_get_binary.assert_called_once()
@@ -59,10 +61,14 @@ def test_uses_windows(monkeypatch):
 
 def test_uses_linux(monkeypatch):
     monkeypatch.setattr(sys, "platform", "linux")
-    binary = SeleniumManager()._get_binary()
 
-    project_root = Path(selenium.__file__).parent.parent
-    assert binary == project_root.joinpath("selenium/webdriver/common/linux/selenium-manager")
+    if platform.machine() == "arm64":
+        with pytest.raises(WebDriverException, match="Unsupported platform/architecture combination: linux/arm64"):
+            SeleniumManager()._get_binary()
+    else:
+        binary = SeleniumManager()._get_binary()
+        project_root = Path(selenium.__file__).parent.parent
+        assert binary == project_root.joinpath("selenium/webdriver/common/linux/selenium-manager")
 
 
 def test_uses_mac(monkeypatch):

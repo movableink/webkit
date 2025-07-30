@@ -32,7 +32,7 @@ namespace TestWebKitAPI {
 
 TEST(WTF_VariantList, Basic)
 {
-    WTF::VariantList<std::variant<int, float>> variantList;
+    WTF::VariantList<Variant<int, float>> variantList;
     EXPECT_TRUE(variantList.isEmpty());
 
     variantList.append(0);
@@ -42,7 +42,7 @@ TEST(WTF_VariantList, Basic)
     for (auto proxy : variantList) {
         EXPECT_TRUE(proxy.holds_alternative<int>());
 
-        proxy.visit(
+        WTF::switchOn(proxy,
             [&](int value) { EXPECT_EQ(0, value); },
             [&](float) { FAIL(); }
         );
@@ -65,7 +65,7 @@ TEST(WTF_VariantList, Basic)
 
 TEST(WTF_VariantList, Basic_InlineCapacity)
 {
-    WTF::VariantList<std::variant<int, float>, 8> variantList;
+    WTF::VariantList<Variant<int, float>, 8> variantList;
     EXPECT_TRUE(variantList.isEmpty());
 
     variantList.append(0);
@@ -75,7 +75,7 @@ TEST(WTF_VariantList, Basic_InlineCapacity)
     for (auto proxy : variantList) {
         EXPECT_TRUE(proxy.holds_alternative<int>());
 
-        proxy.visit(
+        WTF::switchOn(proxy,
             [&](int value) { EXPECT_EQ(0, value); },
             [&](float) { FAIL(); }
         );
@@ -98,7 +98,7 @@ TEST(WTF_VariantList, Basic_InlineCapacity)
 
 TEST(WTF_VariantList, MoveOnly)
 {
-    WTF::VariantList<std::variant<int, MoveOnly, float>> variantList;
+    WTF::VariantList<Variant<int, MoveOnly, float>> variantList;
 
     variantList.append(MoveOnly(0));
     variantList.append(MoveOnly(1));
@@ -108,7 +108,7 @@ TEST(WTF_VariantList, MoveOnly)
     for (auto proxy : variantList) {
         EXPECT_TRUE(proxy.holds_alternative<MoveOnly>());
 
-        proxy.visit(
+        WTF::switchOn(proxy,
             [&](int) { FAIL(); },
             [&](const MoveOnly& value) { EXPECT_EQ(iterations, value.value()); },
             [&](float) { FAIL(); }
@@ -122,7 +122,7 @@ TEST(WTF_VariantList, MoveOnly)
 
 TEST(WTF_VariantList, EmptyMove)
 {
-    WTF::VariantList<std::variant<int, MoveOnly, float>> variantList;
+    WTF::VariantList<Variant<int, MoveOnly, float>> variantList;
     EXPECT_TRUE(variantList.isEmpty());
 
     auto moved = WTFMove(variantList);
@@ -131,7 +131,7 @@ TEST(WTF_VariantList, EmptyMove)
 
 TEST(WTF_VariantList, EmptyCopy)
 {
-    WTF::VariantList<std::variant<int, float>> variantList;
+    WTF::VariantList<Variant<int, float>> variantList;
     EXPECT_TRUE(variantList.isEmpty());
 
     auto copied = variantList;
@@ -141,7 +141,7 @@ TEST(WTF_VariantList, EmptyCopy)
 
 TEST(WTF_VariantList, MoveWithItems)
 {
-    WTF::VariantList<std::variant<int, MoveOnly, float>> variantList;
+    WTF::VariantList<Variant<int, MoveOnly, float>> variantList;
     variantList.append(0);
     variantList.append(MoveOnly(1u));
     variantList.append(2.0f);
@@ -151,7 +151,7 @@ TEST(WTF_VariantList, MoveWithItems)
     unsigned iterations = 0;
 
     for (auto proxy : moved) {
-        proxy.visit(
+        WTF::switchOn(proxy,
             [&](int value) { EXPECT_EQ(0, value); },
             [&](const MoveOnly& value) { EXPECT_EQ(1u, value.value()); },
             [&](float value) { EXPECT_EQ(2.0f, value); }
@@ -165,7 +165,7 @@ TEST(WTF_VariantList, MoveWithItems)
 
 TEST(WTF_VariantList, CopyWithItems)
 {
-    WTF::VariantList<std::variant<int, float>> variantList;
+    WTF::VariantList<Variant<int, float>> variantList;
     variantList.append(0);
     variantList.append(1.0f);
 
@@ -174,7 +174,7 @@ TEST(WTF_VariantList, CopyWithItems)
     unsigned iterations = 0;
 
     for (auto proxy : variantList) {
-        proxy.visit(
+        WTF::switchOn(proxy,
             [&](int value) { EXPECT_EQ(0, value); },
             [&](float value) { EXPECT_EQ(1.0f, value); }
         );
@@ -187,7 +187,7 @@ TEST(WTF_VariantList, CopyWithItems)
     iterations = 0;
 
     for (auto proxy : copied) {
-        proxy.visit(
+        WTF::switchOn(proxy,
             [&](int value) { EXPECT_EQ(0, value); },
             [&](float value) { EXPECT_EQ(1.0f, value); }
         );
@@ -200,8 +200,8 @@ TEST(WTF_VariantList, CopyWithItems)
 
 TEST(WTF_VariantList, Equality)
 {
-    WTF::VariantList<std::variant<int, float, double>> a;
-    WTF::VariantList<std::variant<int, float, double>> b;
+    WTF::VariantList<Variant<int, float, double>> a;
+    WTF::VariantList<Variant<int, float, double>> b;
 
     // Test self equality when empty.
     EXPECT_EQ(a, a);
@@ -232,7 +232,7 @@ TEST(WTF_VariantList, Equality)
 
 TEST(WTF_VariantList, Grow)
 {
-    WTF::VariantList<std::variant<int, float, double>> variantList;
+    WTF::VariantList<Variant<int, float, double>> variantList;
     EXPECT_EQ(0u, variantList.capacityInBytes());
 
     constexpr auto firstCapacity = 32u;
@@ -249,7 +249,7 @@ TEST(WTF_VariantList, Grow)
 
 TEST(WTF_VariantList, Sizer)
 {
-    using List = WTF::VariantList<std::variant<int, float, double>>;
+    using List = WTF::VariantList<Variant<int, float, double>>;
 
     // Create a sizer for the list.
     auto sizer = List::Sizer { };
@@ -285,7 +285,7 @@ TEST(WTF_VariantList, Sizer)
 
 TEST(WTF_VariantList, InlineCapacity)
 {
-    using List = WTF::VariantList<std::variant<int, double>, 8>;
+    using List = WTF::VariantList<Variant<int, double>, 8>;
 
     List list;
     EXPECT_EQ(8u, list.capacityInBytes());

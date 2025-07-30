@@ -178,6 +178,8 @@ private:
     void platformInvalidate();
     void platformDestroy();
 
+    CheckedPtr<Client> checkedClient() const;
+
 #if PLATFORM(COCOA)
     void terminateXPCConnection();
 #endif
@@ -212,7 +214,6 @@ private:
 
 #if USE(GLIB) && OS(LINUX)
     GSocketMonitor m_socketMonitor;
-    int m_pidServerSocket { -1 };
 #endif
 };
 

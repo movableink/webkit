@@ -50,7 +50,7 @@ public:
     void getSize(const String& path, std::optional<WallTime> expectedModificationTime);
     void openForRead(const String& path, long long offset, long long length);
     void close();
-    void read(void* buffer, int length);
+    void read(std::span<uint8_t> buffer);
 
 private:
     void start();

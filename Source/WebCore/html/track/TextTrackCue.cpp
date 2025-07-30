@@ -43,6 +43,7 @@
 #include "HTMLDivElement.h"
 #include "HTMLStyleElement.h"
 #include "Logging.h"
+#include "NodeInlines.h"
 #include "NodeTraversal.h"
 #include "Page.h"
 #include "ScriptDisallowedScope.h"
@@ -192,7 +193,7 @@ ExceptionOr<Ref<TextTrackCue>> TextTrackCue::create(Document& document, double s
         if (result.hasException())
             return result.releaseException();
     }
-    cueFragment.cloneChildNodes(fragment);
+    cueFragment.cloneChildNodes(document, nullptr, fragment);
 
     OptionSet<RequiredNodes> nodeTypes = { };
     for (Node* node = fragment->firstChild(); node; node = node->nextSibling()) {
@@ -243,6 +244,11 @@ ScriptExecutionContext* TextTrackCue::scriptExecutionContext() const
 Document* TextTrackCue::document() const
 {
     return downcast<Document>(scriptExecutionContext());
+}
+
+RefPtr<Document> TextTrackCue::protectedDocument() const
+{
+    return document();
 }
 
 void TextTrackCue::willChange()
@@ -452,7 +458,7 @@ RefPtr<DocumentFragment> TextTrackCue::getCueAsHTML()
         return nullptr;
 
     auto clonedFragment = DocumentFragment::create(*document);
-    m_cueNode->cloneChildNodes(clonedFragment);
+    m_cueNode->cloneChildNodes(*document, nullptr, clonedFragment);
 
     for (Node* node = clonedFragment->firstChild(); node; node = node->nextSibling())
         removeUserAgentPartAttributes(*node);
@@ -513,7 +519,7 @@ void TextTrackCue::rebuildDisplayTree()
 
     m_displayTree->removeChildren();
     auto clonedFragment = DocumentFragment::create(*document);
-    m_cueNode->cloneChildNodes(clonedFragment);
+    m_cueNode->cloneChildNodes(*document, nullptr, clonedFragment);
     m_displayTree->appendChild(clonedFragment);
 
     if (m_fontSize) {

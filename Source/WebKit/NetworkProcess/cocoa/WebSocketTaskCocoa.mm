@@ -43,8 +43,8 @@ using namespace WebCore;
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WebSocketTask);
 
-WebSocketTask::WebSocketTask(NetworkSocketChannel& channel, WebPageProxyIdentifier webProxyPageID, std::optional<FrameIdentifier> frameID, std::optional<PageIdentifier> pageID, WeakPtr<SessionSet>&& sessionSet, const WebCore::ResourceRequest& request, const WebCore::ClientOrigin& clientOrigin, RetainPtr<NSURLSessionWebSocketTask>&& task, ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking, WebCore::StoredCredentialsPolicy storedCredentialsPolicy)
-    : NetworkTaskCocoa(*channel.session(), shouldRelaxThirdPartyCookieBlocking)
+WebSocketTask::WebSocketTask(NetworkSocketChannel& channel, WebPageProxyIdentifier webProxyPageID, std::optional<FrameIdentifier> frameID, std::optional<PageIdentifier> pageID, WeakPtr<SessionSet>&& sessionSet, const WebCore::ResourceRequest& request, const WebCore::ClientOrigin& clientOrigin, RetainPtr<NSURLSessionWebSocketTask>&& task, WebCore::StoredCredentialsPolicy storedCredentialsPolicy)
+    : NetworkTaskCocoa(*channel.session())
     , m_channel(channel)
     , m_task(WTFMove(task))
     , m_webProxyPageID(webProxyPageID)
@@ -60,9 +60,9 @@ WebSocketTask::WebSocketTask(NetworkSocketChannel& channel, WebPageProxyIdentifi
         m_topOrigin = clientOrigin.topOrigin;
 
     bool shouldBlockCookies = storedCredentialsPolicy == WebCore::StoredCredentialsPolicy::EphemeralStateless;
-    if (auto* networkStorageSession = networkSession() ? networkSession()->networkStorageSession() : nullptr) {
+    if (CheckedPtr networkStorageSession = networkSession() ? networkSession()->networkStorageSession() : nullptr) {
         if (!shouldBlockCookies)
-            shouldBlockCookies = networkStorageSession->shouldBlockCookies(request, frameID, pageID, shouldRelaxThirdPartyCookieBlocking);
+            shouldBlockCookies = networkStorageSession->shouldBlockCookies(request, frameID, pageID, shouldRelaxThirdPartyCookieBlocking());
     }
     if (shouldBlockCookies)
         blockCookies();
@@ -70,7 +70,9 @@ WebSocketTask::WebSocketTask(NetworkSocketChannel& channel, WebPageProxyIdentifi
     readNextMessage();
     protectedChannel()->didSendHandshakeRequest(ResourceRequest { [m_task currentRequest] });
 
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
     updateTaskWithStoragePartitionIdentifier(request);
+#endif
 }
 
 WebSocketTask::~WebSocketTask() = default;
@@ -82,24 +84,25 @@ RefPtr<NetworkSocketChannel> WebSocketTask::protectedChannel() const
 
 void WebSocketTask::readNextMessage()
 {
-    [m_task receiveMessageWithCompletionHandler:makeBlockPtr([this, weakThis = WeakPtr { *this }](NSURLSessionWebSocketMessage* _Nullable message, NSError * _Nullable error) {
-        if (!weakThis)
+    [m_task receiveMessageWithCompletionHandler:makeBlockPtr([weakThis = WeakPtr { *this }](NSURLSessionWebSocketMessage* _Nullable message, NSError * _Nullable error) {
+        CheckedPtr checkedThis = weakThis.get();
+        if (!checkedThis)
             return;
 
-        RefPtr channel = m_channel.get();
+        RefPtr channel = checkedThis->m_channel.get();
         if (error) {
             // If closeCode is not zero, we are closing the connection and didClose will be called for us.
-            if ([m_task closeCode])
+            if ([checkedThis->m_task closeCode])
                 return;
 
-            if (!m_receivedDidConnect) {
-                ResourceResponse response { [m_task response] };
+            if (!checkedThis->m_receivedDidConnect) {
+                ResourceResponse response { [checkedThis->m_task response] };
                 if (!response.isNull())
                     channel->didReceiveHandshakeResponse(WTFMove(response));
             }
 
             channel->didReceiveMessageError([error localizedDescription]);
-            didClose(WebCore::ThreadableWebSocketChannel::CloseEventCodeAbnormalClosure, emptyString());
+            checkedThis->didClose(WebCore::ThreadableWebSocketChannel::CloseEventCodeAbnormalClosure, emptyString());
             return;
         }
         if (message.type == NSURLSessionWebSocketMessageTypeString)
@@ -107,7 +110,7 @@ void WebSocketTask::readNextMessage()
         else
             channel->didReceiveBinaryData(span(message.data));
 
-        readNextMessage();
+        checkedThis->readNextMessage();
     }).get()];
 }
 
@@ -124,9 +127,9 @@ void WebSocketTask::resume()
 void WebSocketTask::didConnect(const String& protocol)
 {
     String extensionsValue;
-    auto response = [m_task response];
-    if (auto *httpResponse  = dynamic_objc_cast<NSHTTPURLResponse>(response))
-        extensionsValue = [httpResponse  valueForHTTPHeaderField:@"Sec-WebSocket-Extensions"];
+    RetainPtr response = [m_task response];
+    if (RetainPtr httpResponse  = dynamic_objc_cast<NSHTTPURLResponse>(response.get()))
+        extensionsValue = [httpResponse valueForHTTPHeaderField:@"Sec-WebSocket-Extensions"];
 
     m_receivedDidConnect = true;
     RefPtr channel = m_channel.get();
@@ -170,7 +173,7 @@ void WebSocketTask::close(int32_t code, const String& reason)
     if (code == WebCore::ThreadableWebSocketChannel::CloseEventCodeNotSpecified)
         code = NSURLSessionWebSocketCloseCodeInvalid;
     auto utf8 = reason.utf8();
-    RetainPtr nsData = toNSData(utf8.span());
+    RetainPtr nsData = toNSData(byteCast<uint8_t>(utf8.span()));
     if ([m_task respondsToSelector:@selector(_sendCloseCode:reason:)]) {
         [m_task _sendCloseCode:(NSURLSessionWebSocketCloseCode)code reason:nsData.get()];
         return;
@@ -185,7 +188,7 @@ WebSocketTask::TaskIdentifier WebSocketTask::identifier() const
 
 NetworkSessionCocoa* WebSocketTask::networkSession()
 {
-    return static_cast<NetworkSessionCocoa*>(protectedChannel()->session());
+    return downcast<NetworkSessionCocoa>(protectedChannel()->session());
 }
 
 NSURLSessionTask* WebSocketTask::task() const

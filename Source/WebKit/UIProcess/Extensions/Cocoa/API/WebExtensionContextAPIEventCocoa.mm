@@ -46,13 +46,21 @@ void WebExtensionContext::addListener(WebCore::FrameIdentifier frameIdentifier, 
     if (!frame)
         return;
 
-    RELEASE_LOG_DEBUG(Extensions, "Registered event listener for type %{public}hhu in %{public}@ world", enumToUnderlyingType(listenerType), (NSString *)toDebugString(contentWorldType));
+    RELEASE_LOG_DEBUG(Extensions, "Registered event listener for type %{public}hhu in %{public}@ world", enumToUnderlyingType(listenerType), toDebugString(contentWorldType).createNSString().get());
 
     if (!protectedExtension()->backgroundContentIsPersistent() && isBackgroundPage(frameIdentifier))
         m_backgroundContentEventListeners.add(listenerType);
 
     auto result = m_eventListenerFrames.add({ listenerType, contentWorldType }, WeakFrameCountedSet { });
     result.iterator->value.add(*frame);
+
+    if (listenerType == WebExtensionEventListenerType::TestOnMessage) {
+        if (!hasTestMessageEventListeners()) {
+            m_testMessageListenersCount++;
+            flushTestMessageQueueIfNeeded();
+        } else
+            m_testMessageListenersCount++;
+    }
 }
 
 void WebExtensionContext::removeListener(WebCore::FrameIdentifier frameIdentifier, WebExtensionEventListenerType listenerType, WebExtensionContentWorldType contentWorldType, size_t removedCount)
@@ -63,7 +71,7 @@ void WebExtensionContext::removeListener(WebCore::FrameIdentifier frameIdentifie
     if (!frame)
         return;
 
-    RELEASE_LOG_DEBUG(Extensions, "Unregistered %{public}zu event listener(s) for type %{public}hhu in %{public}@ world", removedCount, enumToUnderlyingType(listenerType), (NSString *)toDebugString(contentWorldType));
+    RELEASE_LOG_DEBUG(Extensions, "Unregistered %{public}zu event listener(s) for type %{public}hhu in %{public}@ world", removedCount, enumToUnderlyingType(listenerType), toDebugString(contentWorldType).createNSString().get());
 
     if (!protectedExtension()->backgroundContentIsPersistent() && isBackgroundPage(frameIdentifier)) {
         for (size_t i = 0; i < removedCount; ++i)
@@ -81,6 +89,9 @@ void WebExtensionContext::removeListener(WebCore::FrameIdentifier frameIdentifie
         return;
 
     m_eventListenerFrames.remove(iterator);
+
+    if (listenerType == WebExtensionEventListenerType::TestOnMessage && hasTestMessageEventListeners())
+        m_testMessageListenersCount--;
 }
 
 } // namespace WebKit

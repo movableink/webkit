@@ -28,6 +28,7 @@
 
 #if ENABLE(MEDIA_STREAM) && USE(LIBWEBRTC)
 
+#include "AudioMediaStreamTrackRenderer.h"
 #include "AudioMediaStreamTrackRendererUnit.h"
 #include "AudioSampleDataSource.h"
 #include "LibWebRTCAudioFormat.h"
@@ -76,15 +77,19 @@ std::pair<bool, Vector<Ref<AudioSampleDataSource>>> IncomingAudioMediaStreamTrac
     return std::make_pair(shouldStart, copyToVector(mixer.sources));
 }
 
-void IncomingAudioMediaStreamTrackRendererUnit::addSource(const String& deviceID, Ref<AudioSampleDataSource>&& source)
+void IncomingAudioMediaStreamTrackRendererUnit::addSource(const String& identifier, Ref<AudioSampleDataSource>&& source)
 {
+    AudioMediaStreamTrackRendererUnit::singleton().setLastDeviceUsed(identifier);
+
+    String deviceID = AudioMediaStreamTrackRendererUnit::supportsPerDeviceRendering() ? identifier : AudioMediaStreamTrackRenderer::defaultDeviceID();
+
 #if !RELEASE_LOG_DISABLED
     source->logger().logAlways(LogWebRTC, "IncomingAudioMediaStreamTrackRendererUnit::addSource ", source->logIdentifier());
 #endif
     ASSERT(isMainThread());
 #if !RELEASE_LOG_DISABLED
         if (!m_logger)
-            m_logger = &source->logger();
+            m_logger = source->logger();
 #endif
 
     ASSERT(source->outputDescription());
@@ -141,8 +146,10 @@ std::pair<bool, Vector<Ref<AudioSampleDataSource>>> IncomingAudioMediaStreamTrac
     return std::make_pair(shouldStop, copyToVector(mixer.sources));
 }
 
-void IncomingAudioMediaStreamTrackRendererUnit::removeSource(const String& deviceID, AudioSampleDataSource& source)
+void IncomingAudioMediaStreamTrackRendererUnit::removeSource(const String& identifier, AudioSampleDataSource& source)
 {
+    String deviceID = AudioMediaStreamTrackRendererUnit::supportsPerDeviceRendering() ? identifier : AudioMediaStreamTrackRenderer::defaultDeviceID();
+
 #if !RELEASE_LOG_DISABLED
     source.logger().logAlways(LogWebRTC, "IncomingAudioMediaStreamTrackRendererUnit::removeSource ", source.logIdentifier());
 #endif

@@ -67,3 +67,6 @@ PRODUCT_BUNDLE_IDENTIFIER = com.google.$(PRODUCT_NAME:rfc1034identifier);
 
 SUPPORTED_PLATFORMS = iphoneos iphonesimulator macosx appletvos appletvsimulator watchos watchsimulator xros xrsimulator;
 SUPPORTS_MACCATALYST = YES;
+
+CODE_SIGN_IDENTITY[sdk=embedded] = $(CODE_SIGN_IDENTITY_EMBEDDED_$(USE_INTERNAL_SDK));
+CODE_SIGN_IDENTITY_EMBEDDED_YES = -;

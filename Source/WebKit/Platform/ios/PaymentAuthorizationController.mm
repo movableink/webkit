@@ -49,7 +49,11 @@
     if (!(self = [super _initWithRequest:request presenter:presenter]))
         return nil;
 
-    _presentingWindow = presenter.checkedClient()->presentingWindowForPaymentAuthorization(presenter);
+    RefPtr client = presenter.client();
+    if (!client)
+        return nil;
+
+    _presentingWindow = client->presentingWindowForPaymentAuthorization(presenter);
     return self;
 }
 
@@ -126,7 +130,7 @@
 - (NSString *)presentationSceneBundleIdentifierForPaymentAuthorizationController:(PKPaymentAuthorizationController *)controller
 {
     if (!_presenter)
-        return applicationBundleIdentifier();
+        return applicationBundleIdentifier().createNSString().autorelease();
     return nsStringNilIfEmpty(_presenter->bundleIdentifier());
 }
 #endif

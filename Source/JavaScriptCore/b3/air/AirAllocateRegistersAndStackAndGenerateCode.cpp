@@ -39,6 +39,7 @@
 #include "DisallowMacroScratchRegisterUsage.h"
 #include "Reg.h"
 #include <wtf/ListDump.h>
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/TZoneMallocInlines.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -49,7 +50,7 @@ namespace GenerateAndAllocateRegistersInternal {
 static constexpr bool verbose = false;
 }
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL(GenerateAndAllocateRegisters);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(GenerateAndAllocateRegisters);
 
 GenerateAndAllocateRegisters::GenerateAndAllocateRegisters(Code& code)
     : m_code(code)
@@ -398,7 +399,7 @@ void GenerateAndAllocateRegisters::prepareForGeneration()
     });
 #endif
 
-    m_liveness = makeUnique<UnifiedTmpLiveness>(m_code);
+    m_liveness = makeUniqueWithoutFastMallocCheck<UnifiedTmpLiveness>(m_code);
 
     {
         buildLiveRanges(*m_liveness);
@@ -507,8 +508,8 @@ void GenerateAndAllocateRegisters::prepareForGeneration()
         UnifiedTmpLiveness liveness(m_code);
         for (BasicBlock* block : m_code) {
             auto assertLivenessAreEqual = [&] (auto a, auto b) {
-                HashSet<Tmp> livenessA;
-                HashSet<Tmp> livenessB;
+                UncheckedKeyHashSet<Tmp> livenessA;
+                UncheckedKeyHashSet<Tmp> livenessB;
                 for (Tmp tmp : a) {
                     if (tmp.isReg() && isDisallowedRegister(tmp.reg()))
                         continue;

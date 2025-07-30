@@ -48,19 +48,43 @@ void FillTextureFormatCaps(vk::Renderer *renderer,
 
     if (outTextureCaps->renderbuffer)
     {
+        VkPhysicalDeviceImageFormatInfo2 imageFormatInfo = {};
+        imageFormatInfo.sType  = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2;
+        imageFormatInfo.format = GetVkFormatFromFormatID(renderer, formatID);
+        imageFormatInfo.type   = VK_IMAGE_TYPE_2D;
+        imageFormatInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        imageFormatInfo.usage  = VK_IMAGE_USAGE_SAMPLED_BIT;
         if (hasColorAttachmentFeatureBit)
         {
-            vk_gl::AddSampleCounts(physicalDeviceLimits.framebufferColorSampleCounts,
-                                   &outTextureCaps->sampleCounts);
+            imageFormatInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         }
         if (hasDepthAttachmentFeatureBit)
         {
-            // Some drivers report different depth and stencil sample counts.  We'll AND those
-            // counts together, limiting all depth and/or stencil formats to the lower number of
-            // sample counts.
-            vk_gl::AddSampleCounts((physicalDeviceLimits.framebufferDepthSampleCounts &
-                                    physicalDeviceLimits.framebufferStencilSampleCounts),
-                                   &outTextureCaps->sampleCounts);
+            imageFormatInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        }
+
+        VkImageFormatProperties2 imageFormatProperties2 = {};
+        imageFormatProperties2.sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2;
+        VkResult result              = vkGetPhysicalDeviceImageFormatProperties2(
+            renderer->getPhysicalDevice(), &imageFormatInfo, &imageFormatProperties2);
+        if (result == VK_SUCCESS)
+        {
+            if (hasColorAttachmentFeatureBit)
+            {
+                vk_gl::AddSampleCounts(imageFormatProperties2.imageFormatProperties.sampleCounts &
+                                           physicalDeviceLimits.framebufferColorSampleCounts,
+                                       &outTextureCaps->sampleCounts);
+            }
+            if (hasDepthAttachmentFeatureBit)
+            {
+                // Some drivers report different depth and stencil sample counts.  We'll AND those
+                // counts together, limiting all depth and/or stencil formats to the lower number of
+                // sample counts.
+                vk_gl::AddSampleCounts((imageFormatProperties2.imageFormatProperties.sampleCounts &
+                                        physicalDeviceLimits.framebufferDepthSampleCounts &
+                                        physicalDeviceLimits.framebufferStencilSampleCounts),
+                                       &outTextureCaps->sampleCounts);
+            }
         }
     }
 }
@@ -317,7 +341,7 @@ angle::FormatID ExternalFormatTable::getOrAllocExternalFormatID(uint64_t externa
 
     if (mExternalYuvFormats.size() >= kMaxExternalFormatCountSupported)
     {
-        ERR() << "ANGLE only suports maximum " << kMaxExternalFormatCountSupported
+        ERR() << "ANGLE only supports maximum " << kMaxExternalFormatCountSupported
               << " external renderable formats";
         return angle::FormatID::NONE;
     }
@@ -570,6 +594,76 @@ angle::FormatID GetTranscodeBCFormatID(angle::FormatID formatID)
     ASSERT(IsETCFormat(formatID));
     return kEtcToBcFormatMapping[static_cast<uint32_t>(formatID) -
                                  static_cast<uint32_t>(angle::FormatID::EAC_R11G11_SNORM_BLOCK)];
+}
+
+VkFormat AdjustASTCFormatForHDR(const vk::Renderer *renderer, VkFormat vkFormat)
+{
+    ASSERT(renderer != nullptr);
+    const bool hdrEnabled = renderer->supportsAstcHdr();
+    if (hdrEnabled == false)
+    {
+        return vkFormat;
+    }
+
+    // When KHR_texture_compression_astc_hdr is enabled,
+    // VK_FORMAT_ASTC_nxm_UNORM_BLOCK should be converted to VK_FORMAT_ASTC_nxm_SFLOAT_BLOCK
+    auto transformFormat = [](VkFormat vkFormat) -> VkFormat {
+        if (vkFormat >= VK_FORMAT_ASTC_4x4_UNORM_BLOCK &&
+            vkFormat <= VK_FORMAT_ASTC_12x12_UNORM_BLOCK && (vkFormat & 1) == 1)
+        {
+            return static_cast<VkFormat>(((vkFormat - VK_FORMAT_ASTC_4x4_UNORM_BLOCK) >> 1) +
+                                         VK_FORMAT_ASTC_4x4_SFLOAT_BLOCK);
+        }
+        return vkFormat;
+    };
+
+    static_assert(
+        transformFormat(VK_FORMAT_ASTC_4x4_UNORM_BLOCK) == VK_FORMAT_ASTC_4x4_SFLOAT_BLOCK,
+        "VK_FORMAT_ASTC_4x4_UNORM_BLOCK should be converted to VK_FORMAT_ASTC_4x4_SFLOAT_BLOCK");
+    static_assert(
+        transformFormat(VK_FORMAT_ASTC_5x4_UNORM_BLOCK) == VK_FORMAT_ASTC_5x4_SFLOAT_BLOCK,
+        "VK_FORMAT_ASTC_5x4_UNORM_BLOCK should be converted to VK_FORMAT_ASTC_5x4_SFLOAT_BLOCK");
+    static_assert(
+        transformFormat(VK_FORMAT_ASTC_5x5_UNORM_BLOCK) == VK_FORMAT_ASTC_5x5_SFLOAT_BLOCK,
+        "VK_FORMAT_ASTC_5x5_UNORM_BLOCK should be converted to VK_FORMAT_ASTC_5x5_SFLOAT_BLOCK");
+    static_assert(
+        transformFormat(VK_FORMAT_ASTC_6x5_UNORM_BLOCK) == VK_FORMAT_ASTC_6x5_SFLOAT_BLOCK,
+        "VK_FORMAT_ASTC_6x5_UNORM_BLOCK should be converted to VK_FORMAT_ASTC_6x5_SFLOAT_BLOCK");
+    static_assert(
+        transformFormat(VK_FORMAT_ASTC_6x6_UNORM_BLOCK) == VK_FORMAT_ASTC_6x6_SFLOAT_BLOCK,
+        "VK_FORMAT_ASTC_6x6_UNORM_BLOCK should be converted to VK_FORMAT_ASTC_6x6_SFLOAT_BLOCK");
+    static_assert(
+        transformFormat(VK_FORMAT_ASTC_8x5_UNORM_BLOCK) == VK_FORMAT_ASTC_8x5_SFLOAT_BLOCK,
+        "VK_FORMAT_ASTC_8x5_UNORM_BLOCK should be converted to VK_FORMAT_ASTC_8x5_SFLOAT_BLOCK");
+    static_assert(
+        transformFormat(VK_FORMAT_ASTC_8x6_UNORM_BLOCK) == VK_FORMAT_ASTC_8x6_SFLOAT_BLOCK,
+        "VK_FORMAT_ASTC_8x6_UNORM_BLOCK should be converted to VK_FORMAT_ASTC_8x6_SFLOAT_BLOCK");
+    static_assert(
+        transformFormat(VK_FORMAT_ASTC_8x8_UNORM_BLOCK) == VK_FORMAT_ASTC_8x8_SFLOAT_BLOCK,
+        "VK_FORMAT_ASTC_8x8_UNORM_BLOCK should be converted to VK_FORMAT_ASTC_8x8_SFLOAT_BLOCK");
+    static_assert(
+        transformFormat(VK_FORMAT_ASTC_10x5_UNORM_BLOCK) == VK_FORMAT_ASTC_10x5_SFLOAT_BLOCK,
+        "VK_FORMAT_ASTC_10x5_UNORM_BLOCK should be converted to VK_FORMAT_ASTC_10x5_SFLOAT_BLOCK");
+    static_assert(
+        transformFormat(VK_FORMAT_ASTC_10x6_UNORM_BLOCK) == VK_FORMAT_ASTC_10x6_SFLOAT_BLOCK,
+        "VK_FORMAT_ASTC_10x6_UNORM_BLOCK should be converted to VK_FORMAT_ASTC_10x6_SFLOAT_BLOCK");
+    static_assert(
+        transformFormat(VK_FORMAT_ASTC_10x8_UNORM_BLOCK) == VK_FORMAT_ASTC_10x8_SFLOAT_BLOCK,
+        "VK_FORMAT_ASTC_10x8_UNORM_BLOCK should be converted to VK_FORMAT_ASTC_10x8_SFLOAT_BLOCK");
+    static_assert(
+        transformFormat(VK_FORMAT_ASTC_10x10_UNORM_BLOCK) == VK_FORMAT_ASTC_10x10_SFLOAT_BLOCK,
+        "VK_FORMAT_ASTC_10x10_UNORM_BLOCK should be converted to"
+        "VK_FORMAT_ASTC_10x10_SFLOAT_BLOCK");
+    static_assert(
+        transformFormat(VK_FORMAT_ASTC_12x10_UNORM_BLOCK) == VK_FORMAT_ASTC_12x10_SFLOAT_BLOCK,
+        "VK_FORMAT_ASTC_12x10_UNORM_BLOCK should be converted to"
+        "VK_FORMAT_ASTC_12x10_SFLOAT_BLOCK");
+    static_assert(
+        transformFormat(VK_FORMAT_ASTC_12x12_UNORM_BLOCK) == VK_FORMAT_ASTC_12x12_SFLOAT_BLOCK,
+        "VK_FORMAT_ASTC_12x12_UNORM_BLOCK should be converted to"
+        "VK_FORMAT_ASTC_12x12_SFLOAT_BLOCK");
+
+    return transformFormat(vkFormat);
 }
 
 GLenum GetSwizzleStateComponent(const gl::SwizzleState &swizzleState, GLenum component)

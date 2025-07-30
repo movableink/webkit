@@ -230,4 +230,8 @@ FAIL Import from a non-extractable: importKey(jwk (public) , {name: X448}, true,
 FAIL Invalid 'use' field: importKey(jwk(private), {name: X448}, true, [deriveKey, deriveBits]) assert_equals: Invalid 'use' field not supported. expected "DataError" but got "NotSupportedError"
 FAIL Invalid 'crv' field: importKey(jwk(private), {name: X448}, true, [deriveKey, deriveBits]) assert_equals: Invalid 'crv' field not supported. expected "DataError" but got "NotSupportedError"
 FAIL Invalid 'crv' field: importKey(jwk (public) , {name: X448}, true, []) assert_equals: Invalid 'crv' field not supported. expected "DataError" but got "NotSupportedError"
+FAIL Invalid 'alg' field 'x448': importKey(jwk(private), {name: X448}, true, [deriveKey, deriveBits]) assert_equals: Invalid 'alg' field 'x448' not supported. expected "DataError" but got "NotSupportedError"
+FAIL Invalid 'alg' field 'X448': importKey(jwk(private), {name: X448}, true, [deriveKey, deriveBits]) assert_equals: Invalid 'alg' field 'X448' not supported. expected "DataError" but got "NotSupportedError"
+FAIL Invalid 'alg' field 'x448': importKey(jwk (public) , {name: X448}, true, []) assert_equals: Invalid 'alg' field 'x448' not supported. expected "DataError" but got "NotSupportedError"
+FAIL Invalid 'alg' field 'X448': importKey(jwk (public) , {name: X448}, true, []) assert_equals: Invalid 'alg' field 'X448' not supported. expected "DataError" but got "NotSupportedError"
 

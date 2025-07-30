@@ -96,6 +96,7 @@ Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Inspector::Protocol::Consol
     addLogChannel(Inspector::Protocol::Console::ChannelSource::Appcache);
     addLogChannel(Inspector::Protocol::Console::ChannelSource::Rendering);
     addLogChannel(Inspector::Protocol::Console::ChannelSource::CSS);
+    addLogChannel(Inspector::Protocol::Console::ChannelSource::Accessibility);
     addLogChannel(Inspector::Protocol::Console::ChannelSource::Security);
     addLogChannel(Inspector::Protocol::Console::ChannelSource::ContentBlocker);
     addLogChannel(Inspector::Protocol::Console::ChannelSource::Media);
@@ -113,15 +114,15 @@ Inspector::Protocol::ErrorStringOr<void> PageConsoleAgent::setLoggingChannelLeve
 {
     switch (level) {
     case Inspector::Protocol::Console::ChannelLevel::Off:
-        m_inspectedPage.configureLoggingChannel(Inspector::Protocol::Helpers::getEnumConstantValue(source), WTFLogChannelState::Off, WTFLogLevel::Error);
+        m_inspectedPage->configureLoggingChannel(Inspector::Protocol::Helpers::getEnumConstantValue(source), WTFLogChannelState::Off, WTFLogLevel::Error);
         return { };
 
     case Inspector::Protocol::Console::ChannelLevel::Basic:
-        m_inspectedPage.configureLoggingChannel(Inspector::Protocol::Helpers::getEnumConstantValue(source), WTFLogChannelState::On, WTFLogLevel::Info);
+        m_inspectedPage->configureLoggingChannel(Inspector::Protocol::Helpers::getEnumConstantValue(source), WTFLogChannelState::On, WTFLogLevel::Info);
         return { };
 
     case Inspector::Protocol::Console::ChannelLevel::Verbose:
-        m_inspectedPage.configureLoggingChannel(Inspector::Protocol::Helpers::getEnumConstantValue(source), WTFLogChannelState::On, WTFLogLevel::Debug);
+        m_inspectedPage->configureLoggingChannel(Inspector::Protocol::Helpers::getEnumConstantValue(source), WTFLogChannelState::On, WTFLogLevel::Debug);
         return { };
     }
 

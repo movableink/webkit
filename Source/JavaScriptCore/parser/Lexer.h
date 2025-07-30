@@ -49,8 +49,7 @@ bool isLexerKeyword(const Identifier&);
 template <typename T>
 class Lexer {
     WTF_MAKE_NONCOPYABLE(Lexer);
-    WTF_MAKE_TZONE_ALLOCATED(Lexer);
-
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(Lexer);
 public:
     Lexer(VM&, JSParserBuiltinMode, JSParserScriptMode);
     ~Lexer();
@@ -93,6 +92,14 @@ public:
     String sourceURLDirective() const { return m_sourceURLDirective; }
     String sourceMappingURLDirective() const { return m_sourceMappingURLDirective; }
     void clear();
+    void clearErrorCodeAndBuffers()
+    {
+        m_error = 0;
+        m_lexErrorMessage = String();
+
+        m_buffer8.shrink(0);
+        m_buffer16.shrink(0);
+    }
     void setOffset(int offset, int lineStartOffset)
     {
         m_error = 0;
@@ -104,7 +111,7 @@ public:
 
         m_buffer8.shrink(0);
         m_buffer16.shrink(0);
-        if (LIKELY(m_code < m_codeEnd))
+        if (m_code < m_codeEnd) [[likely]]
             m_current = *m_code;
         else
             m_current = 0;
@@ -185,7 +192,7 @@ private:
     template <bool shouldBuildStrings> ALWAYS_INLINE StringParseResult parseComplexEscape(bool strictMode);
     ALWAYS_INLINE StringParseResult parseTemplateLiteral(JSTokenData*, RawStringsBuildMode);
     
-    using NumberParseResult = std::variant<double, const Identifier*>;
+    using NumberParseResult = Variant<double, const Identifier*>;
     ALWAYS_INLINE std::optional<NumberParseResult> parseHex();
     ALWAYS_INLINE std::optional<NumberParseResult> parseBinary();
     ALWAYS_INLINE std::optional<NumberParseResult> parseOctal();
@@ -239,10 +246,14 @@ private:
     JSParserScriptMode m_scriptMode;
 };
 
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<typename T>, Lexer<T>);
+
+JS_EXPORT_PRIVATE extern const WTF::BitSet<256> whiteSpaceTable;
+
 template <>
 ALWAYS_INLINE bool Lexer<LChar>::isWhiteSpace(LChar ch)
 {
-    return ch == ' ' || ch == '\t' || ch == 0xB || ch == 0xC || ch == 0xA0;
+    return whiteSpaceTable.get(ch);
 }
 
 template <>

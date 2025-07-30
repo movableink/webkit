@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,14 +55,14 @@
 namespace WebKit {
 using namespace WebCore;
 
-DownloadProxy::DownloadProxy(DownloadProxyMap& downloadProxyMap, WebsiteDataStore& dataStore, API::DownloadClient& client, const ResourceRequest& resourceRequest, const FrameInfoData& frameInfoData, WebPageProxy* originatingPage)
+DownloadProxy::DownloadProxy(DownloadProxyMap& downloadProxyMap, WebsiteDataStore& dataStore, API::DownloadClient& client, const ResourceRequest& resourceRequest, const std::optional<FrameInfoData>& frameInfoData, WebPageProxy* originatingPage)
     : m_downloadProxyMap(downloadProxyMap)
     , m_dataStore(&dataStore)
     , m_client(client)
     , m_downloadID(DownloadID::generate())
     , m_request(resourceRequest)
     , m_originatingPage(originatingPage)
-    , m_frameInfo(API::FrameInfo::create(FrameInfoData { frameInfoData }, originatingPage))
+    , m_frameInfo(frameInfoData ? API::FrameInfo::create(FrameInfoData { *frameInfoData }, originatingPage) : API::FrameInfo::create(legacyEmptyFrameInfo(ResourceRequest { URL { aboutBlankURL() } }), originatingPage))
 #if HAVE(MODERN_DOWNLOADPROGRESS)
     , m_assertion(ProcessAssertion::create(getCurrentProcessID(), "WebKit DownloadProxy DecideDestination"_s, ProcessAssertionType::FinishTaskInterruptable))
 #endif
@@ -84,6 +84,7 @@ static RefPtr<API::Data> createData(std::span<const uint8_t> data)
 
 void DownloadProxy::cancel(CompletionHandler<void(API::Data*)>&& completionHandler)
 {
+    m_downloadIsCancelled = true;
     if (m_dataStore) {
         protectedDataStore()->protectedNetworkProcess()->sendWithAsyncReply(Messages::NetworkProcess::CancelDownload(m_downloadID), [weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)] (std::span<const uint8_t> resumeData) mutable {
             RefPtr protectedThis = weakThis.get();
@@ -106,7 +107,7 @@ void DownloadProxy::invalidate()
 
 void DownloadProxy::processDidClose()
 {
-    m_client->processDidCrash(*this);
+    protectedClient()->processDidCrash(*this);
 }
 
 WebPageProxy* DownloadProxy::originatingPage() const
@@ -124,7 +125,7 @@ void DownloadProxy::didStart(const ResourceRequest& request, const String& sugge
 
     if (m_didStartCallback)
         m_didStartCallback(this);
-    m_client->legacyDidStart(*this);
+    protectedClient()->legacyDidStart(*this);
 }
 
 void DownloadProxy::didReceiveAuthenticationChallenge(AuthenticationChallenge&& authenticationChallenge, AuthenticationChallengeIdentifier challengeID)
@@ -147,7 +148,7 @@ void DownloadProxy::willSendRequest(ResourceRequest&& proposedRequest, const Res
 
 void DownloadProxy::didReceiveData(uint64_t bytesWritten, uint64_t totalBytesWritten, uint64_t totalBytesExpectedToWrite)
 {
-    m_client->didReceiveData(*this, bytesWritten, totalBytesWritten, totalBytesExpectedToWrite);
+    protectedClient()->didReceiveData(*this, bytesWritten, totalBytesWritten, totalBytesExpectedToWrite);
 }
 
 void DownloadProxy::decideDestinationWithSuggestedFilename(const WebCore::ResourceResponse& response, String&& suggestedFilename, DecideDestinationCallback&& completionHandler)
@@ -190,7 +191,7 @@ void DownloadProxy::decideDestinationWithSuggestedFilename(const WebCore::Resour
 
 void DownloadProxy::didCreateDestination(const String& path)
 {
-    m_client->didCreateDestination(*this, path);
+    protectedClient()->didCreateDestination(*this, path);
 }
 
 #if PLATFORM(MAC)
@@ -223,7 +224,9 @@ void DownloadProxy::didFinish()
 #if PLATFORM(MAC)
     updateQuarantinePropertiesIfPossible();
 #endif
-    m_client->didFinish(*this);
+    protectedClient()->didFinish(*this);
+    if (m_downloadIsCancelled)
+        return;
 
     // This can cause the DownloadProxy object to be deleted.
     if (RefPtr downloadProxyMap = m_downloadProxyMap.get())
@@ -232,9 +235,12 @@ void DownloadProxy::didFinish()
 
 void DownloadProxy::didFail(const ResourceError& error, std::span<const uint8_t> resumeData)
 {
+    if (m_downloadIsCancelled)
+        return;
+
     m_legacyResumeData = createData(resumeData);
 
-    m_client->didFail(*this, error, m_legacyResumeData.get());
+    protectedClient()->didFail(*this, error, m_legacyResumeData.get());
 
     // This can cause the DownloadProxy object to be deleted.
     if (RefPtr downloadProxyMap = m_downloadProxyMap.get())

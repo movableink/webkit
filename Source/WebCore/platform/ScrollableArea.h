@@ -89,7 +89,7 @@ public:
 
     WEBCORE_EXPORT bool scroll(ScrollDirection, ScrollGranularity, unsigned stepCount = 1);
     WEBCORE_EXPORT void scrollToPositionWithAnimation(const FloatPoint&, const ScrollPositionChangeOptions& options = ScrollPositionChangeOptions::createProgrammatic());
-    WEBCORE_EXPORT void scrollToPositionWithoutAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
+    WEBCORE_EXPORT bool scrollToPositionWithoutAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
 
     WEBCORE_EXPORT void scrollToOffsetWithoutAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
     WEBCORE_EXPORT void scrollToOffsetWithoutAnimation(ScrollbarOrientation, float offset);
@@ -184,7 +184,7 @@ public:
     WEBCORE_EXPORT bool scrollbarsCanBeActive() const;
 
     WEBCORE_EXPORT virtual void didAddScrollbar(Scrollbar*, ScrollbarOrientation);
-    WEBCORE_EXPORT virtual void willRemoveScrollbar(Scrollbar*, ScrollbarOrientation);
+    WEBCORE_EXPORT virtual void willRemoveScrollbar(Scrollbar&, ScrollbarOrientation);
 
     WEBCORE_EXPORT virtual void contentsResized();
 
@@ -436,6 +436,10 @@ public:
     virtual IntSize totalScrollbarSpace() const { return { }; }
     virtual int insetForLeftScrollbarSpace() const { return 0; }
 
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    virtual bool vectorBasedControlsEnabled() const { return false; }
+#endif
+
 protected:
     WEBCORE_EXPORT ScrollableArea();
     WEBCORE_EXPORT virtual ~ScrollableArea();
@@ -491,7 +495,7 @@ private:
     ScrollElasticity m_verticalScrollElasticity { ScrollElasticity::None };
     ScrollElasticity m_horizontalScrollElasticity { ScrollElasticity::None };
 
-    ScrollbarOverlayStyle m_scrollbarOverlayStyle { ScrollbarOverlayStyle::ScrollbarOverlayStyleDefault };
+    ScrollbarOverlayStyle m_scrollbarOverlayStyle { ScrollbarOverlayStyle::Default };
 
     ScrollType m_currentScrollType { ScrollType::User };
     ScrollAnimationStatus m_scrollAnimationStatus { ScrollAnimationStatus::NotAnimating };

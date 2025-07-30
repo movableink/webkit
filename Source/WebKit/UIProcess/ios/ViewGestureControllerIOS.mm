@@ -54,10 +54,6 @@
 - (_UINavigationInteractiveTransitionBase *)transitionForDirection:(WebKit::ViewGestureController::SwipeDirection)direction;
 @end
 
-@interface _UIViewControllerTransitionContext (WKDetails)
-@property (nonatomic, copy, setter=_setInteractiveUpdateHandler:)  void (^_interactiveUpdateHandler)(BOOL interactionIsOver, CGFloat percentComplete, BOOL transitionCompleted, _UIViewControllerTransitionContext *);
-@end
-
 @implementation WKSwipeTransitionController
 {
     WebKit::ViewGestureController *_gestureController;
@@ -107,7 +103,9 @@ static const float swipeSnapshotRemovalRenderTreeSizeTargetFraction = 0.5;
 
 - (BOOL)shouldBeginInteractiveTransition:(_UINavigationInteractiveTransitionBase *)transition
 {
-    return _gestureController->canSwipeInDirection([self directionForTransition:transition]);
+    using enum WebKit::ViewGestureController::DeferToConflictingGestures;
+    auto deferToConflictingGestures = transition.gestureRecognizer.state == UIGestureRecognizerStateFailed ? Yes : No;
+    return _gestureController->canSwipeInDirection([self directionForTransition:transition], deferToConflictingGestures);
 }
 
 - (BOOL)interactiveTransition:(_UINavigationInteractiveTransitionBase *)transition gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
@@ -120,15 +118,21 @@ static const float swipeSnapshotRemovalRenderTreeSizeTargetFraction = 0.5;
     return YES;
 }
 
-- (UIPanGestureRecognizer *)gestureRecognizerForInteractiveTransition:(_UINavigationInteractiveTransitionBase *)transition WithTarget:(id)target action:(SEL)action
+static Class interactiveTransitionGestureRecognizerClass()
 {
 #if HAVE(UI_PARALLAX_TRANSITION_GESTURE_RECOGNIZER)
 ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN
-    auto recognizer = adoptNS([[_UIParallaxTransitionPanGestureRecognizer alloc] initWithTarget:target action:action]);
+    return [_UIParallaxTransitionPanGestureRecognizer class];
 ALLOW_NEW_API_WITHOUT_GUARDS_END
 #else
-    auto recognizer = adoptNS([[UIScreenEdgePanGestureRecognizer alloc] initWithTarget:target action:action]);
+    return [UIScreenEdgePanGestureRecognizer class];
 #endif
+}
+
+- (UIPanGestureRecognizer *)gestureRecognizerForInteractiveTransition:(_UINavigationInteractiveTransitionBase *)transition WithTarget:(id)target action:(SEL)action
+{
+    RetainPtr recognizer = adoptNS([[interactiveTransitionGestureRecognizerClass() alloc] initWithTarget:target action:action]);
+
     bool isLTR = [UIView userInterfaceLayoutDirectionForSemanticContentAttribute:[_gestureRecognizerView.get() semanticContentAttribute]] == UIUserInterfaceLayoutDirectionLeftToRight;
 
     switch ([self directionForTransition:transition]) {
@@ -144,7 +148,13 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
 
 - (BOOL)isNavigationSwipeGestureRecognizer:(UIGestureRecognizer *)recognizer
 {
-    return recognizer == [_backTransitionController gestureRecognizer] || recognizer == [_forwardTransitionController gestureRecognizer];
+    if (recognizer == [_backTransitionController gestureRecognizer] || recognizer == [_forwardTransitionController gestureRecognizer])
+        return YES;
+
+    if ([recognizer isKindOfClass:interactiveTransitionGestureRecognizerClass()])
+        return recognizer.delegate == _backTransitionController || recognizer.delegate == _forwardTransitionController;
+
+    return NO;
 }
 
 @end
@@ -223,7 +233,7 @@ void ViewGestureController::beginSwipeGesture(_UINavigationInteractiveTransition
         WebCore::FloatSize swipeLayerSizeInDeviceCoordinates(liveSwipeViewFrame.size);
         swipeLayerSizeInDeviceCoordinates.scale(deviceScaleFactor);
         
-        BOOL shouldRestoreScrollPosition = targetItem->rootFrameState().shouldRestoreScrollPosition;
+        BOOL shouldRestoreScrollPosition = targetItem->mainFrameState()->shouldRestoreScrollPosition;
         WebCore::IntPoint currentScrollPosition = WebCore::roundedIntPoint(page->viewScrollPosition());
 
         if (snapshot->hasImage() && snapshot->size() == swipeLayerSizeInDeviceCoordinates && deviceScaleFactor == snapshot->deviceScaleFactor() && (shouldRestoreScrollPosition || (currentScrollPosition == snapshot->viewScrollPosition())))
@@ -269,9 +279,9 @@ void ViewGestureController::beginSwipeGesture(_UINavigationInteractiveTransition
     m_didCallWillEndSwipeGesture = false;
     m_didCallEndSwipeGesture = false;
     m_removeSnapshotImmediatelyWhenGestureEnds = false;
-    [m_swipeTransitionContext _setInteractiveUpdateHandler:^(BOOL finish, CGFloat percent, BOOL transitionCompleted, _UIViewControllerTransitionContext *) {
-        if (finish)
-            willEndSwipeGesture(*targetItem, !transitionCompleted);
+    [[m_swipeTransitionContext _transitionCoordinator] notifyWhenInteractionChangesUsingBlock:^(id<UIViewControllerTransitionCoordinatorContext> context) {
+        if (!context.interactive)
+            willEndSwipeGesture(*targetItem, context.cancelled);
     }];
     auto pageID = page->identifier();
     GestureID gestureID = m_currentGestureID;
@@ -458,7 +468,7 @@ void ViewGestureController::reset()
 
 bool ViewGestureController::beginSimulatedSwipeInDirectionForTesting(SwipeDirection direction)
 {
-    if (!canSwipeInDirection(direction))
+    if (!canSwipeInDirection(direction, DeferToConflictingGestures::No))
         return false;
 
     _UINavigationInteractiveTransitionBase *transition = [m_swipeInteractiveTransitionDelegate transitionForDirection:direction];

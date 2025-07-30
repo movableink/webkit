@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -82,7 +82,7 @@ private:
 
     ThreadSafeWeakPtr<GPUProcessConnection> m_gpuProcessConnection;
     WeakPtr<SampleBufferDisplayLayerManager> m_manager;
-    Ref<IPC::Connection> m_connection;
+    const Ref<IPC::Connection> m_connection;
 
     PlatformLayerContainer m_videoLayer;
     bool m_didFail { false };

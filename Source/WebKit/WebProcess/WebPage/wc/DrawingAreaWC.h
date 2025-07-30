@@ -57,14 +57,13 @@ private:
     void scroll(const WebCore::IntRect& scrollRect, const WebCore::IntSize& scrollDelta) override;
     void updateRenderingWithForcedRepaintAsync(WebPage&, CompletionHandler<void()>&&) override;
     void triggerRenderingUpdate() override;
-    void deviceOrPageScaleFactorChanged() override { }
     bool enterAcceleratedCompositingModeIfNeeded() override { return false; }
     void setLayerTreeStateIsFrozen(bool) override;
     bool layerTreeStateIsFrozen() const override { return m_isRenderingSuspended; }
 #if USE(GRAPHICS_LAYER_TEXTURE_MAPPER)    
     void updateGeometry(const WebCore::IntSize&, CompletionHandler<void()>&&) override { }
 #endif
-    void updateGeometryWC(uint64_t, WebCore::IntSize, float deviceScaleFactor) override;
+    void updateGeometryWC(uint64_t, WebCore::IntSize, float deviceScaleFactor, float intrinsicDeviceScaleFactor) override;
     void setRootCompositingLayer(WebCore::Frame&, WebCore::GraphicsLayer*) override;
     void addRootFrame(WebCore::FrameIdentifier) override;
     void attachViewOverlayGraphicsLayer(WebCore::FrameIdentifier, WebCore::GraphicsLayer*) override;
@@ -93,7 +92,7 @@ private:
     RootLayerInfo* rootLayerInfoWithFrameIdentifier(WebCore::FrameIdentifier);
 
     WebCore::GraphicsLayerClient m_rootLayerClient;
-    std::unique_ptr<RemoteWCLayerTreeHostProxy> m_remoteWCLayerTreeHostProxy;
+    const std::unique_ptr<RemoteWCLayerTreeHostProxy> m_remoteWCLayerTreeHostProxy;
     WCLayerFactory m_layerFactory;
     DoublyLinkedList<GraphicsLayerWC> m_liveGraphicsLayers;
     WebCore::Timer m_updateRenderingTimer;
@@ -104,7 +103,7 @@ private:
     bool m_isForceRepaintCompletionHandlerDeferred { false };
     WCUpdateInfo m_updateInfo;
     Vector<RootLayerInfo, 1> m_rootLayers;
-    Ref<WorkQueue> m_commitQueue;
+    const Ref<WorkQueue> m_commitQueue;
     int64_t m_backingStoreStateID { 0 };
     WebCore::Region m_dirtyRegion;
     WebCore::IntRect m_scrollRect;

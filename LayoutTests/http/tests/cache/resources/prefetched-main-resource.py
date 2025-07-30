@@ -3,7 +3,7 @@
 import os
 import sys
 
-purpose = os.environ.get('HTTP_PURPOSE', '')
+purpose = os.environ.get('HTTP_SEC_PURPOSE', '')
 
 sys.stdout.write(
     'Cache-Control: max-age=3600\r\n'

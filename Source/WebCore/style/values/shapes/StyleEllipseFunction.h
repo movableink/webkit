@@ -35,7 +35,7 @@ namespace Style {
 struct Ellipse {
     using Extent = CSS::Ellipse::Extent;
     using Length = Style::LengthPercentage<CSS::Nonnegative>;
-    using RadialSize = std::variant<Length, Extent>;
+    using RadialSize = Variant<Length, Extent>;
 
     SpaceSeparatedPair<RadialSize> radii;
     std::optional<Position> position;
@@ -68,4 +68,4 @@ template<> struct Blending<Ellipse> {
 } // namespace Style
 } // namespace WebCore
 
-STYLE_TUPLE_LIKE_CONFORMANCE(Ellipse, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::Ellipse, 2)

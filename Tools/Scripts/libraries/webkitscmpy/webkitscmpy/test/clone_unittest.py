@@ -22,12 +22,15 @@
 
 import os
 import time
+from unittest.mock import patch
 
-from mock import patch
+from webkitbugspy import Tracker, radar
+from webkitbugspy import mocks as bmocks
 from webkitcorepy import OutputCapture, testing
-from webkitcorepy.mocks import Terminal as MockTerminal, Environment
-from webkitbugspy import Tracker, radar, mocks as bmocks
-from webkitscmpy import program, mocks
+from webkitcorepy.mocks import Environment
+from webkitcorepy.mocks import Terminal as MockTerminal
+
+from webkitscmpy import mocks, program
 
 
 class TestClone(testing.PathTestCase):

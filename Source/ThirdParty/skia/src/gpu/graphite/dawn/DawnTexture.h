@@ -9,7 +9,9 @@
 #define skgpu_graphite_DawnTexture_DEFINED
 
 #include "include/core/SkRefCnt.h"
+#include "include/gpu/graphite/dawn/DawnGraphiteTypes.h"
 #include "src/gpu/graphite/Texture.h"
+#include "src/gpu/graphite/TextureInfoPriv.h"
 
 #include "webgpu/webgpu_cpp.h"  // NO_G3_REWRITE
 
@@ -24,8 +26,7 @@ public:
 
     static sk_sp<Texture> Make(const DawnSharedContext*,
                                SkISize dimensions,
-                               const TextureInfo&,
-                               skgpu::Budgeted);
+                               const TextureInfo&);
 
     static sk_sp<Texture> MakeWrapped(const DawnSharedContext*,
                                       SkISize dimensions,
@@ -43,6 +44,10 @@ public:
     const wgpu::TextureView& sampleTextureView() const { return fSampleTextureView; }
     const wgpu::TextureView& renderTextureView() const { return fRenderTextureView; }
 
+    const DawnTextureInfo& dawnTextureInfo() const {
+        return TextureInfoPriv::Get<DawnTextureInfo>(this->textureInfo());
+    }
+
 private:
     DawnTexture(const DawnSharedContext*,
                 SkISize dimensions,
@@ -50,8 +55,7 @@ private:
                 wgpu::Texture,
                 wgpu::TextureView sampleTextureView,
                 wgpu::TextureView renderTextureView,
-                Ownership,
-                skgpu::Budgeted);
+                Ownership);
 
     void freeGpuData() override;
 

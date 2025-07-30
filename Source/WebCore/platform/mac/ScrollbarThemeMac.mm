@@ -50,13 +50,15 @@
 #import <wtf/SetForScope.h>
 #import <wtf/StdLibExtras.h>
 
-// FIXME: There are repainting problems due to Aqua scroll bar buttons' visual overflow.
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/ScrollbarThemeMacAdditions.mm>)
+#import <WebKitAdditions/ScrollbarThemeMacAdditions.mm>
+#endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+// FIXME: There are repainting problems due to Aqua scroll bar buttons' visual overflow.
 
 namespace WebCore {
 
-using ScrollbarSet = HashSet<SingleThreadWeakRef<Scrollbar>>;
+using ScrollbarSet = UncheckedKeyHashSet<SingleThreadWeakRef<Scrollbar>>;
 
 static ScrollbarSet& scrollbarMap()
 {
@@ -91,7 +93,7 @@ using WebCore::ScrollbarSet;
     if (theme.isMockTheme())
         return;
 
-    static_cast<ScrollbarThemeMac&>(theme).preferencesChanged();
+    downcast<ScrollbarThemeMac>(theme).preferencesChanged();
 
     for (auto& scrollbar : scrollbarMap()) {
         scrollbar->styleChanged();
@@ -107,7 +109,7 @@ using WebCore::ScrollbarSet;
     if (theme.isMockTheme())
         return;
 
-    static_cast<ScrollbarThemeMac&>(theme).preferencesChanged();
+    downcast<ScrollbarThemeMac>(theme).preferencesChanged();
 }
 
 + (void)registerAsObserver
@@ -128,13 +130,13 @@ ScrollbarTheme& ScrollbarTheme::nativeTheme()
 }
 
 // FIXME: Get these numbers from CoreUI.
-static const int cRealButtonLength[] = { 28, 21 };
-static const int cButtonHitInset[] = { 3, 2 };
+static constexpr std::array cRealButtonLength { 28, 21 };
+static constexpr std::array cButtonHitInset { 3, 2 };
 // cRealButtonLength - cButtonInset
-static const int cButtonLength[] = { 14, 10 };
+static constexpr std::array cButtonLength { 14, 10 };
 
-static const int cOuterButtonLength[] = { 16, 14 }; // The outer button in a double button pair is a bit bigger.
-static const int cOuterButtonOverlap = 2;
+static constexpr std::array cOuterButtonLength { 16, 14 }; // The outer button in a double button pair is a bit bigger.
+static constexpr int cOuterButtonOverlap = 2;
 
 static bool gJumpOnTrackClick = false;
 static bool gUsesOverlayScrollbars = false;
@@ -223,10 +225,10 @@ void ScrollbarThemeMac::preferencesChanged()
     usesOverlayScrollbarsChanged();
 }
 
-int ScrollbarThemeMac::scrollbarThickness(ScrollbarWidth scrollbarWidth, ScrollbarExpansionState expansionState)
+int ScrollbarThemeMac::scrollbarThickness(ScrollbarWidth scrollbarWidth, ScrollbarExpansionState expansionState, OverlayScrollbarSizeRelevancy overlayRelevancy)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS
-    if (scrollbarWidth == ScrollbarWidth::None)
+    if (scrollbarWidth == ScrollbarWidth::None || (usesOverlayScrollbars() && overlayRelevancy == OverlayScrollbarSizeRelevancy::IgnoreOverlayScrollbarSize))
         return 0;
     NSScrollerImp *scrollerImp = [NSScrollerImp scrollerImpWithStyle:ScrollerStyle::recommendedScrollerStyle() controlSize:nsControlSizeFromScrollbarWidth(scrollbarWidth) horizontal:NO replacingScrollerImp:nil];
     [scrollerImp setExpanded:(expansionState == ScrollbarExpansionState::Expanded)];
@@ -249,13 +251,13 @@ void ScrollbarThemeMac::updateScrollbarOverlayStyle(Scrollbar& scrollbar)
     BEGIN_BLOCK_OBJC_EXCEPTIONS
     NSScrollerImp *painter = scrollerImpForScrollbar(scrollbar);
     switch (scrollbar.scrollableArea().scrollbarOverlayStyle()) {
-    case ScrollbarOverlayStyleDefault:
+    case ScrollbarOverlayStyle::Default:
         [painter setKnobStyle:NSScrollerKnobStyleDefault];
         break;
-    case ScrollbarOverlayStyleDark:
+    case ScrollbarOverlayStyle::Dark:
         [painter setKnobStyle:NSScrollerKnobStyleDark];
         break;
-    case ScrollbarOverlayStyleLight:
+    case ScrollbarOverlayStyle::Light:
         [painter setKnobStyle:NSScrollerKnobStyleLight];
         break;
     }
@@ -552,12 +554,14 @@ bool ScrollbarThemeMac::paint(Scrollbar& scrollbar, GraphicsContext& context, co
         context.translate(scrollbarRect.location());
         paintScrollbar(scrollbar, context);
     } else {
-        auto imageBuffer = [&] {
-            auto buffer = context.createImageBuffer(scrollbarRect.size(), scrollbar.deviceScaleFactor(), DestinationColorSpace::SRGB(), context.renderingMode(), RenderingMethod::Local);
-            paintScrollbar(scrollbar, buffer->context());
-            return buffer;
-        }();
-        context.drawImageBuffer(*imageBuffer, scrollbarRect);
+        if (auto imageBuffer = [&] -> RefPtr<ImageBuffer> {
+            if (auto buffer = context.createImageBuffer(scrollbarRect.size(), scrollbar.deviceScaleFactor(), DestinationColorSpace::SRGB(), context.renderingMode(), RenderingMethod::Local)) {
+                paintScrollbar(scrollbar, buffer->context());
+                return buffer;
+            }
+            return nullptr;
+        }())
+            context.drawImageBuffer(*imageBuffer, scrollbarRect);
     }
 
     return true;
@@ -571,6 +575,10 @@ void ScrollbarThemeMac::paintScrollCorner(ScrollableArea& area, GraphicsContext&
     // Keep this in sync with ScrollAnimatorMac's effectiveAppearanceForScrollerImp:.
     LocalDefaultSystemAppearance localAppearance(area.useDarkAppearanceForScrollbars());
 
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintScrollCornerForVectorBasedControls(area, context, cornerRect))
+        return;
+#endif
     context.drawSystemImage(ScrollbarTrackCornerSystemImageMac::create(), cornerRect);
 }
 
@@ -600,7 +608,5 @@ void ScrollbarThemeMac::removeOverhangAreaShadow(CALayer *layer)
 #endif
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // PLATFORM(MAC)

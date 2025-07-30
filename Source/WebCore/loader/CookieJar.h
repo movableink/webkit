@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,6 +47,7 @@ struct CookieStoreGetOptions;
 class NetworkStorageSession;
 class StorageSessionProvider;
 struct SameSiteInfo;
+enum class ShouldPartitionCookie : bool;
 
 class WEBCORE_EXPORT CookieJar : public RefCountedAndCanMakeWeakPtr<CookieJar> {
 public:
@@ -64,7 +65,7 @@ public:
     virtual void remoteCookiesEnabled(const Document&, CompletionHandler<void(bool)>&&) const;
     virtual std::pair<String, SecureCookiesAccessed> cookieRequestHeaderFieldValue(const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, IncludeSecureCookies) const;
     virtual bool getRawCookies(Document&, const URL&, Vector<Cookie>&) const;
-    virtual void setRawCookie(const Document&, const Cookie&);
+    virtual void setRawCookie(const Document&, const Cookie&, ShouldPartitionCookie);
     virtual void deleteCookie(const Document&, const URL&, const String& cookieName, CompletionHandler<void()>&&);
 
     virtual void getCookiesAsync(Document&, const URL&, const CookieStoreGetOptions&, CompletionHandler<void(std::optional<Vector<Cookie>>&&)>&&) const;
@@ -86,8 +87,7 @@ protected:
     CookieJar(Ref<StorageSessionProvider>&&);
 
 private:
-    Ref<StorageSessionProvider> m_storageSessionProvider;
-    Ref<StorageSessionProvider> protectedStorageSessionProvider() const;
+    const Ref<StorageSessionProvider> m_storageSessionProvider;
 };
 
 } // namespace WebCore

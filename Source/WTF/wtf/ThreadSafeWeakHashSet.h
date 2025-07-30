@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include <wtf/Algorithms.h>
 #include <wtf/HashSet.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/Vector.h>
@@ -234,7 +233,7 @@ private:
         }
     }
 
-    mutable HashSet<std::pair<ControlBlockRefPtr, const T*>> m_set WTF_GUARDED_BY_LOCK(m_lock);
+    mutable UncheckedKeyHashSet<std::pair<ControlBlockRefPtr, const T*>> m_set WTF_GUARDED_BY_LOCK(m_lock);
     mutable unsigned m_operationCountSinceLastCleanup WTF_GUARDED_BY_LOCK(m_lock) { 0 };
     mutable unsigned m_maxOperationCountWithoutCleanup WTF_GUARDED_BY_LOCK(m_lock) { 0 };
     mutable Lock m_lock;

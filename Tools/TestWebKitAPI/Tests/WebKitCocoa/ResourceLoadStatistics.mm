@@ -979,12 +979,8 @@ TEST(ResourceLoadStatistics, MigrateDataFromIncorrectCreateTableSchema)
     TestWebKitAPI::Util::run(&doneFlag);
 }
 
-// rdar://136535465
-#if PLATFORM(MAC)
+// FIXME when rdar://136535465 is resolved
 TEST(ResourceLoadStatistics, DISABLED_MigrateDataFromMissingTopFrameUniqueRedirectSameSiteStrictTableSchema)
-#else
-TEST(ResourceLoadStatistics, MigrateDataFromMissingTopFrameUniqueRedirectSameSiteStrictTableSchema)
-#endif
 {
     auto *sharedProcessPool = [WKProcessPool _sharedProcessPool];
 
@@ -1165,8 +1161,8 @@ TEST(ResourceLoadStatistics, DataSummaryWithCachedProcess)
     [webView setNavigationDelegate:delegate.get()];
 
     for (unsigned i = 0; i < maxSuspendedPageCount + 1; i++) {
-        NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:makeString("resource-load-statistics://www.domain-"_s, i, ".com"_s)]];
-        [webView loadRequest:request];
+        RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:makeString("resource-load-statistics://www.domain-"_s, i, ".com"_s).createNSString().get()]).get()]);
+        [webView loadRequest:request.get()];
         [delegate waitForDidFinishNavigation];
 
         EXPECT_EQ(i + 1, [processPool _webProcessCount]);
@@ -1174,8 +1170,8 @@ TEST(ResourceLoadStatistics, DataSummaryWithCachedProcess)
         EXPECT_FALSE([processPool _hasPrewarmedWebProcess]);
     }
     
-    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:makeString("resource-load-statistics://www.domain-"_s, maxSuspendedPageCount + 1, ".com"_s)]];
-    [webView loadRequest:request];
+    RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:makeString("resource-load-statistics://www.domain-"_s, maxSuspendedPageCount + 1, ".com"_s).createNSString().get()]).get()]);
+    [webView loadRequest:request.get()];
     [delegate waitForDidFinishNavigation];
 
     // This will timeout if waiting for IPC from a cached process.
@@ -1223,6 +1219,10 @@ TEST(ResourceLoadStatistics, BackForwardPerPageData)
     doneFlag = false;
     [dataStore _loadedSubresourceDomainsFor:webView.get() completionHandler:^(NSArray<NSString *> *domains) {
         EXPECT_EQ(static_cast<int>([domains count]), 1);
+        if (domains.count != 1) {
+            doneFlag = true;
+            return;
+        }
         EXPECT_WK_STREQ([domains objectAtIndex:0], @"example1.com");
         doneFlag = true;
     }];
@@ -1236,6 +1236,10 @@ TEST(ResourceLoadStatistics, BackForwardPerPageData)
     doneFlag = false;
     [dataStore _loadedSubresourceDomainsFor:webView.get() completionHandler:^(NSArray<NSString *> *domains) {
         EXPECT_EQ(static_cast<int>([domains count]), 1);
+        if (domains.count != 1) {
+            doneFlag = true;
+            return;
+        }
         EXPECT_WK_STREQ([domains objectAtIndex:0], @"example2.com");
         doneFlag = true;
     }];
@@ -1249,6 +1253,10 @@ TEST(ResourceLoadStatistics, BackForwardPerPageData)
     doneFlag = false;
     [dataStore _loadedSubresourceDomainsFor:webView.get() completionHandler:^(NSArray<NSString *> *domains) {
         EXPECT_EQ(static_cast<int>([domains count]), 1);
+        if (domains.count != 1) {
+            doneFlag = true;
+            return;
+        }
         EXPECT_WK_STREQ([domains objectAtIndex:0], @"example1.com");
         doneFlag = true;
     }];
@@ -1262,6 +1270,10 @@ TEST(ResourceLoadStatistics, BackForwardPerPageData)
     doneFlag = false;
     [dataStore _loadedSubresourceDomainsFor:webView.get() completionHandler:^(NSArray<NSString *> *domains) {
         EXPECT_EQ(static_cast<int>([domains count]), 1);
+        if (domains.count != 1) {
+            doneFlag = true;
+            return;
+        }
         EXPECT_WK_STREQ([domains objectAtIndex:0], @"example2.com");
         doneFlag = true;
     }];
@@ -1269,12 +1281,8 @@ TEST(ResourceLoadStatistics, BackForwardPerPageData)
     TestWebKitAPI::Util::run(&doneFlag);
 }
 
-// rdar://136535465
-#if PLATFORM(MAC)
+// FIXME when rdar://136535465 is resolved
 TEST(ResourceLoadStatistics, DISABLED_MigrateDistinctDataFromTableWithMissingIndexes)
-#else
-TEST(ResourceLoadStatistics, MigrateDistinctDataFromTableWithMissingIndexes)
-#endif
 {
     auto *sharedProcessPool = [WKProcessPool _sharedProcessPool];
 
@@ -1713,7 +1721,12 @@ TEST(ResourceLoadStatistics, StorageAccessOnRedirectSitesWithOutQuirk)
     TestWebKitAPI::Util::run(&done);
 }
 
+// rdar://136524076
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 150000
+TEST(ResourceLoadStatistics, DISABLED_StorageAccessOnRedirectSitesWithQuirk)
+#else
 TEST(ResourceLoadStatistics, StorageAccessOnRedirectSitesWithQuirk)
+#endif
 {
     using namespace TestWebKitAPI;
     HTTPServer httpServer({
@@ -1827,6 +1840,204 @@ TEST(ResourceLoadStatistics, StorageAccessOnRedirectSitesWithQuirk)
     TestWebKitAPI::Util::run(&done);
 }
 
+TEST(ResourceLoadStatistics, BlockUnpartitionedThirdPartyCookies)
+{
+    using namespace TestWebKitAPI;
+    HTTPServer httpServer({
+        { "http://site1.example/load-resource"_s, { "<body><img src=\"http://site2.example/img.jpg\"></body>"_s  } },
+        { "http://site2.example/page1"_s,         { "Body"_s } },
+        { "http://site2.example/set-cookie"_s,    { 200, {{ "Set-Cookie"_s, "setBy=firstParty"_s }}, "Body"_s } },
+        { "http://site2.example/img.jpg"_s,       { 200, {{ "Content-Type"_s, "image/jpg"_s }, { "Set-Cookie"_s, "setBy=Img"_s }}, ""_s } },
+    });
+
+    RetainPtr storeConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] initNonPersistentConfiguration]);
+    [storeConfiguration setProxyConfiguration:@{
+        (NSString *)kCFStreamPropertyHTTPProxyHost: @"127.0.0.1",
+        (NSString *)kCFStreamPropertyHTTPProxyPort: @(httpServer.port()),
+    }];
+
+    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    RetainPtr dataStore = adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:storeConfiguration.get()]);
+    [configuration setWebsiteDataStore:dataStore.get()];
+    [dataStore _setResourceLoadStatisticsEnabled:YES];
+
+    __block bool done = false;
+    RetainPtr delegate = adoptNS([TestNavigationDelegate new]);
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 100, 100) configuration:configuration.get()]);
+    [webView setNavigationDelegate:delegate.get()];
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"http://site2.example/page1"]]];
+    [delegate waitForDidFinishNavigation];
+
+    [webView evaluateJavaScript:@"document.cookie" completionHandler:^(id value, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_TRUE([value isKindOfClass:[NSString class]]);
+        EXPECT_WK_STREQ(@"", (NSString *)value);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"http://site1.example/load-resource"]]];
+    [delegate waitForDidFinishNavigation];
+
+    [webView evaluateJavaScript:@"document.cookie" completionHandler:^(id value, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_TRUE([value isKindOfClass:[NSString class]]);
+        EXPECT_WK_STREQ(@"", (NSString *)value);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"http://site2.example/page1"]]];
+    [delegate waitForDidFinishNavigation];
+
+    [webView evaluateJavaScript:@"document.cookie" completionHandler:^(id value, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_TRUE([value isKindOfClass:[NSString class]]);
+        EXPECT_WK_STREQ(@"", (NSString *)value);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"http://site2.example/set-cookie"]]];
+    [delegate waitForDidFinishNavigation];
+
+    [webView evaluateJavaScript:@"document.cookie" completionHandler:^(id value, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_TRUE([value isKindOfClass:[NSString class]]);
+        EXPECT_WK_STREQ(@"setBy=firstParty", (NSString *)value);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"http://site1.example/load-resource"]]];
+    [delegate waitForDidFinishNavigation];
+
+    [webView evaluateJavaScript:@"document.cookie" completionHandler:^(id value, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_TRUE([value isKindOfClass:[NSString class]]);
+        EXPECT_WK_STREQ(@"", (NSString *)value);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"http://site2.example/page1"]]];
+    [delegate waitForDidFinishNavigation];
+
+    [webView evaluateJavaScript:@"document.cookie" completionHandler:^(id value, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_TRUE([value isKindOfClass:[NSString class]]);
+        EXPECT_WK_STREQ(@"setBy=firstParty", (NSString *)value);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+}
+
+TEST(ResourceLoadStatistics, BlockUnpartitionedAndAllowPartitionedThirdPartyCookies)
+{
+    using namespace TestWebKitAPI;
+    HTTPServer httpsServer({
+        { "/load-img-resource"_s,       { "<body><img src=\"https://site2.example/img-with-cookies.jpg\"></body>"_s  } },
+        { "/load-iframe"_s,             { "<body><iframe src=\"https://site2.example/img-with-cookies.jpg\"></body>"_s  } },
+        { "/bodyPage"_s,                { "Body"_s } },
+        { "/set-first-party-cookie"_s,  { 200, {{ "Set-Cookie"_s, "cookieSetBy1=firstParty"_s }, { "Set-Cookie"_s, "cookieSetBy2=firstParty"_s }}, "Body"_s } },
+        { "/img-with-cookies.jpg"_s,    { 200, {{ "Content-Type"_s, "image/jpg"_s }, { "Set-Cookie"_s, "cookieSetBy1=Img"_s }, { "Set-Cookie"_s, "cookieSetBy2=Img;Secure;SameSite=None;Partitioned"_s }}, ""_s } },
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    RetainPtr storeConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] initNonPersistentConfiguration]);
+    storeConfiguration.get().httpsProxy = [NSURL URLWithString:[NSString stringWithFormat:@"https://127.0.0.1:%d/", httpsServer.port()]];
+
+    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    RetainPtr dataStore = adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:storeConfiguration.get()]);
+    [configuration setWebsiteDataStore:dataStore.get()];
+    [dataStore _setResourceLoadStatisticsEnabled:YES];
+
+    __block bool done = false;
+    RetainPtr delegate = adoptNS([TestNavigationDelegate new]);
+    [delegate allowAnyTLSCertificate];
+
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 100, 100) configuration:configuration.get()]);
+    [webView setNavigationDelegate:delegate.get()];
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://site2.example/bodyPage"]]];
+    [delegate waitForDidFinishNavigation];
+
+    [webView evaluateJavaScript:@"document.cookie" completionHandler:^(id value, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_TRUE([value isKindOfClass:[NSString class]]);
+        EXPECT_WK_STREQ(@"", (NSString *)value);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://site1.example/load-img-resource"]]];
+    [delegate waitForDidFinishNavigation];
+
+    [webView evaluateJavaScript:@"document.cookie" completionHandler:^(id value, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_TRUE([value isKindOfClass:[NSString class]]);
+        EXPECT_WK_STREQ(@"", (NSString *)value);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://site2.example/bodyPage"]]];
+    [delegate waitForDidFinishNavigation];
+
+    [webView evaluateJavaScript:@"document.cookie" completionHandler:^(id value, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_TRUE([value isKindOfClass:[NSString class]]);
+        EXPECT_WK_STREQ(@"", (NSString *)value);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://site2.example/set-first-party-cookie"]]];
+    [delegate waitForDidFinishNavigation];
+
+    [webView evaluateJavaScript:@"document.cookie" completionHandler:^(id value, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_TRUE([value isKindOfClass:[NSString class]]);
+        EXPECT_WK_STREQ(@"cookieSetBy1=firstParty", (NSString *)value);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://site1.example/load-img-resource"]]];
+    [delegate waitForDidFinishNavigation];
+
+    [webView evaluateJavaScript:@"document.cookie" completionHandler:^(id value, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_TRUE([value isKindOfClass:[NSString class]]);
+        EXPECT_WK_STREQ(@"", (NSString *)value);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://site2.example/bodyPage"]]];
+    [delegate waitForDidFinishNavigation];
+
+    [webView evaluateJavaScript:@"document.cookie" completionHandler:^(id value, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_TRUE([value isKindOfClass:[NSString class]]);
+        EXPECT_WK_STREQ(@"cookieSetBy1=firstParty", (NSString *)value);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+}
+
 TEST(ResourceLoadStatistics, EnableResourceLoadStatisticsAfterNetworkProcessCreation)
 {
     __block bool done = false;
@@ -1892,7 +2103,7 @@ TEST(ResourceLoadStatistics, StorageAccessSupportMultipleSubFrameDomains)
 {
     using namespace TestWebKitAPI;
 
-    HTTPServer httpServer { HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> Task {
+    HTTPServer httpServer { HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> ConnectionTask {
         while (true) {
             auto request = co_await connection.awaitableReceiveHTTPRequest();
 
@@ -2004,7 +2215,12 @@ TEST(ResourceLoadStatistics, StorageAccessSupportMultipleSubFrameDomains)
     gotRequestStorageAccessPanelForQuirksForDomain = false;
 }
 
+// rdar://136524076
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 150000
+TEST(ResourceLoadStatistics, DISABLED_StorageAccessGrantMultipleSubFrameDomains)
+#else
 TEST(ResourceLoadStatistics, StorageAccessGrantMultipleSubFrameDomains)
+#endif
 {
     using namespace TestWebKitAPI;
 
@@ -2023,7 +2239,7 @@ TEST(ResourceLoadStatistics, StorageAccessGrantMultipleSubFrameDomains)
 
     bool didSetSite2CookieHeader { false };
     bool didSendSite2CookieHeader { false };
-    HTTPServer httpServer { HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> Task {
+    HTTPServer httpServer { HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> ConnectionTask {
         while (true) {
             auto request = co_await connection.awaitableReceiveHTTPRequest();
 

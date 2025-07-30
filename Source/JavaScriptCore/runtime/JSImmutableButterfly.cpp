@@ -76,8 +76,8 @@ JSImmutableButterfly* JSImmutableButterfly::createFromClonedArguments(JSGlobalOb
     unsigned vectorLength = arguments->getVectorLength();
     RETURN_IF_EXCEPTION(scope, nullptr);
 
-    JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithContiguous) - NumberOfIndexingShapes].get(), length);
-    if (UNLIKELY(!result)) {
+    JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), length);
+    if (!result) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -124,8 +124,8 @@ static ALWAYS_INLINE JSImmutableButterfly* createFromNonClonedArguments(JSGlobal
 
     unsigned length = arguments->internalLength();
 
-    JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithContiguous) - NumberOfIndexingShapes].get(), length);
-    if (UNLIKELY(!result)) {
+    JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), length);
+    if (!result) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -168,8 +168,8 @@ JSImmutableButterfly* JSImmutableButterfly::createFromString(JSGlobalObject* glo
 
     unsigned length = holder->length();
     if (holder->is8Bit()) {
-        JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithContiguous) - NumberOfIndexingShapes].get(), length);
-        if (UNLIKELY(!result)) {
+        JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), length);
+        if (!result) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return nullptr;
         }
@@ -211,8 +211,8 @@ JSImmutableButterfly* JSImmutableButterfly::createFromString(JSGlobalObject* glo
         return IterationStatus::Continue;
     });
 
-    JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithContiguous) - NumberOfIndexingShapes].get(), codePointLength);
-    if (UNLIKELY(!result)) {
+    JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), codePointLength);
+    if (!result) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -240,8 +240,8 @@ JSImmutableButterfly* JSImmutableButterfly::createFromString(JSGlobalObject* glo
 
 JSImmutableButterfly* JSImmutableButterfly::tryCreateFromArgList(VM& vm, ArgList argList)
 {
-    JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithContiguous) - NumberOfIndexingShapes].get(), argList.size());
-    if (UNLIKELY(!result))
+    JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), argList.size());
+    if (!result) [[unlikely]]
         return nullptr;
     gcSafeMemcpy(std::bit_cast<EncodedJSValue*>(result->toButterfly()->contiguous().data()), argList.data(), argList.size() * sizeof(EncodedJSValue));
     vm.writeBarrier(result);

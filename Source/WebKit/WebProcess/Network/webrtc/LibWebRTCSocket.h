@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/Identified.h>
+#include <wtf/StdMap.h>
 #include <wtf/TZoneMalloc.h>
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
@@ -89,7 +90,7 @@ private:
     int GetOption(rtc::Socket::Option, int*) final;
     int SetOption(rtc::Socket::Option, int) final;
 
-    CheckedRef<LibWebRTCSocketFactory> m_factory;
+    const CheckedRef<LibWebRTCSocketFactory> m_factory;
     Type m_type;
     rtc::SocketAddress m_localAddress;
     rtc::SocketAddress m_remoteAddress;
@@ -97,8 +98,7 @@ private:
     int m_error { 0 };
     State m_state { STATE_BINDING };
 
-    static const unsigned MAX_SOCKET_OPTION { rtc::Socket::OPT_RTP_SENDTIME_EXTN_ID + 1 };
-    std::array<std::optional<int>, MAX_SOCKET_OPTION> m_options;
+    StdMap<rtc::Socket::Option, int> m_options;
 
     bool m_isSuspended { false };
     WebCore::ScriptExecutionContextIdentifier m_contextIdentifier;

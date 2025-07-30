@@ -25,6 +25,8 @@
 
 #pragma once
 
+DECLARE_SYSTEM_HEADER
+
 #if ENABLE(LEGACY_PDFKIT_PLUGIN)
 
 #import <PDFKit/PDFKit.h>
@@ -168,10 +170,6 @@ typedef NS_ENUM(NSInteger, PDFLayerControllerCursorType) {
 - (id)accessibilityElementForAnnotation:(PDFAnnotation *)annotation;
 - (void)setDeviceColorSpace:(CGColorSpaceRef)colorSpace;
 
-@end
-
-@interface PDFAnnotation (AccessibilityPrivate)
-- (id)accessibilityNode;
 @end
 
 #endif // ENABLE(LEGACY_PDFKIT_PLUGIN)

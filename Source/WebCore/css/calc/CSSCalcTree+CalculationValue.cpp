@@ -25,18 +25,22 @@
 #include "config.h"
 #include "CSSCalcTree+CalculationValue.h"
 
+#include "CSSCalcRandomCachingKey.h"
 #include "CSSCalcSymbolTable.h"
 #include "CSSCalcTree+Evaluation.h"
+#include "CSSCalcTree+Mappings.h"
 #include "CSSCalcTree+Simplification.h"
 #include "CSSCalcTree+Traversal.h"
 #include "CSSCalcTree.h"
-#include "CSSPrimitiveValue.h"
+#include "CSSUnevaluatedCalc.h"
 #include "CalculationCategory.h"
 #include "CalculationExecutor.h"
 #include "CalculationTree.h"
 #include "CalculationValue.h"
 #include "RenderStyle.h"
 #include "RenderStyleInlines.h"
+#include "StyleBuilderState.h"
+#include "StyleLengthResolution.h"
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
 
@@ -53,9 +57,10 @@ struct ToConversionOptions {
     EvaluationOptions evaluation;
 };
 
-static auto fromCalculationValue(const Calculation::None&, const FromConversionOptions&) -> CSS::NoneRaw;
+static auto fromCalculationValue(const Calculation::Random::Fixed&, const FromConversionOptions&) -> Random::Sharing;
+static auto fromCalculationValue(const Calculation::None&, const FromConversionOptions&) -> CSS::Keyword::None;
 static auto fromCalculationValue(const Calculation::ChildOrNone&, const FromConversionOptions&) -> ChildOrNone;
-static auto fromCalculationValue(const Vector<Calculation::Child>&, const FromConversionOptions&) -> Children;
+static auto fromCalculationValue(const Calculation::Children&, const FromConversionOptions&) -> Children;
 static auto fromCalculationValue(const std::optional<Calculation::Child>&, const FromConversionOptions&) -> std::optional<Child>;
 static auto fromCalculationValue(const Calculation::Child&, const FromConversionOptions&) -> Child;
 static auto fromCalculationValue(const Calculation::Number&, const FromConversionOptions&) -> Child;
@@ -64,8 +69,9 @@ static auto fromCalculationValue(const Calculation::Dimension&, const FromConver
 static auto fromCalculationValue(const Calculation::IndirectNode<Calculation::Blend>&, const FromConversionOptions&) -> Child;
 template<typename CalculationOp> auto fromCalculationValue(const Calculation::IndirectNode<CalculationOp>&, const FromConversionOptions&) -> Child;
 
+static auto toCalculationValue(const Random::Sharing&, const ToConversionOptions&) -> Calculation::Random::Fixed;
 static auto toCalculationValue(const std::optional<Child>&, const ToConversionOptions&) -> std::optional<Calculation::Child>;
-static auto toCalculationValue(const CSS::NoneRaw&, const ToConversionOptions&) -> Calculation::None;
+static auto toCalculationValue(const CSS::Keyword::None&, const ToConversionOptions&) -> Calculation::None;
 static auto toCalculationValue(const ChildOrNone&, const ToConversionOptions&) -> Calculation::ChildOrNone;
 static auto toCalculationValue(const Children&, const ToConversionOptions&) -> Calculation::Children;
 static auto toCalculationValue(const Child&, const ToConversionOptions&) -> Calculation::Child;
@@ -74,9 +80,13 @@ static auto toCalculationValue(const Percentage&, const ToConversionOptions&) ->
 static auto toCalculationValue(const CanonicalDimension&, const ToConversionOptions&) -> Calculation::Child;
 static auto toCalculationValue(const NonCanonicalDimension&, const ToConversionOptions&) -> Calculation::Child;
 static auto toCalculationValue(const Symbol&, const ToConversionOptions&) -> Calculation::Child;
-template<typename Op> auto toCalculationValue(const IndirectNode<Op>&, const ToConversionOptions&) -> Calculation::Child;
+static auto toCalculationValue(const SiblingCount&, const ToConversionOptions&) -> Calculation::Child;
+static auto toCalculationValue(const SiblingIndex&, const ToConversionOptions&) -> Calculation::Child;
+static auto toCalculationValue(const IndirectNode<MediaProgress>&, const ToConversionOptions&) -> Calculation::Child;
+static auto toCalculationValue(const IndirectNode<ContainerProgress>&, const ToConversionOptions&) -> Calculation::Child;
 static auto toCalculationValue(const IndirectNode<Anchor>&, const ToConversionOptions&) -> Calculation::Child;
 static auto toCalculationValue(const IndirectNode<AnchorSize>&, const ToConversionOptions&) -> Calculation::Child;
+template<typename Op> auto toCalculationValue(const IndirectNode<Op>&, const ToConversionOptions&) -> Calculation::Child;
 
 static CanonicalDimension::Dimension determineCanonicalDimension(Calculation::Category category)
 {
@@ -105,9 +115,14 @@ static CanonicalDimension::Dimension determineCanonicalDimension(Calculation::Ca
 
 // MARK: - From
 
-CSS::NoneRaw fromCalculationValue(const Calculation::None&, const FromConversionOptions&)
+Random::Sharing fromCalculationValue(const Calculation::Random::Fixed& randomFixed, const FromConversionOptions&)
 {
-    return CSS::NoneRaw { };
+    return Random::SharingFixed { randomFixed.baseValue };
+}
+
+CSS::Keyword::None fromCalculationValue(const Calculation::None&, const FromConversionOptions&)
+{
+    return CSS::Keyword::None { };
 }
 
 ChildOrNone fromCalculationValue(const Calculation::ChildOrNone& root, const FromConversionOptions& options)
@@ -115,9 +130,9 @@ ChildOrNone fromCalculationValue(const Calculation::ChildOrNone& root, const Fro
     return WTF::switchOn(root, [&](const auto& root) { return ChildOrNone { fromCalculationValue(root, options) }; });
 }
 
-Children fromCalculationValue(const Vector<Calculation::Child>& children, const FromConversionOptions& options)
+Children fromCalculationValue(const Calculation::Children& children, const FromConversionOptions& options)
 {
-    return WTF::map(children, [&](const auto& child) -> Child { return fromCalculationValue(child, options); });
+    return WTF::map(children.value, [&](const auto& child) -> Child { return fromCalculationValue(child, options); });
 }
 
 std::optional<Child> fromCalculationValue(const std::optional<Calculation::Child>& root, const FromConversionOptions& options)
@@ -190,9 +205,9 @@ Child fromCalculationValue(const Calculation::IndirectNode<Calculation::Blend>& 
 
 template<typename CalculationOp> Child fromCalculationValue(const Calculation::IndirectNode<CalculationOp>& root, const FromConversionOptions& options)
 {
-    using Op = typename ReverseMapping<CalculationOp>::Op;
+    using CalcOp = ToCalcTreeOp<CalculationOp>;
 
-    auto op = WTF::apply([&](const auto& ...x) -> Op { return Op { fromCalculationValue(x, options)... }; } , *root);
+    auto op = WTF::apply([&](const auto& ...x) { return CalcOp { fromCalculationValue(x, options)... }; } , *root);
 
     if (auto replacement = simplify(op, options.simplification))
         return WTFMove(*replacement);
@@ -203,6 +218,37 @@ template<typename CalculationOp> Child fromCalculationValue(const Calculation::I
 
 // MARK: - To.
 
+auto toCalculationValue(const Random::Sharing& randomSharing, const ToConversionOptions& options) -> Calculation::Random::Fixed
+{
+    ASSERT(options.evaluation.conversionData);
+    ASSERT(options.evaluation.conversionData->styleBuilderState());
+
+    return WTF::switchOn(randomSharing,
+        [&](const Random::SharingOptions& sharingOptions) -> Calculation::Random::Fixed {
+            if (!sharingOptions.elementShared.has_value()) {
+                ASSERT(options.evaluation.conversionData->styleBuilderState()->element());
+            }
+
+            auto baseValue = options.evaluation.conversionData->styleBuilderState()->lookupCSSRandomBaseValue(
+                sharingOptions.identifier,
+                sharingOptions.elementShared
+            );
+
+            return Calculation::Random::Fixed { baseValue };
+        },
+        [&](const Random::SharingFixed& sharingFixed) -> Calculation::Random::Fixed {
+            return WTF::switchOn(sharingFixed.value,
+                [&](const CSS::Number<CSS::ClosedUnitRange>::Raw& raw) -> Calculation::Random::Fixed {
+                    return Calculation::Random::Fixed { raw.value };
+                },
+                [&](const CSS::Number<CSS::ClosedUnitRange>::Calc& calc) -> Calculation::Random::Fixed {
+                    return Calculation::Random::Fixed { calc.evaluate(Calculation::Category::Number, *options.evaluation.conversionData->styleBuilderState()) };
+                }
+            );
+        }
+    );
+}
+
 std::optional<Calculation::Child> toCalculationValue(const std::optional<Child>& optionalChild, const ToConversionOptions& options)
 {
     if (optionalChild)
@@ -210,7 +256,7 @@ std::optional<Calculation::Child> toCalculationValue(const std::optional<Child>&
     return std::nullopt;
 }
 
-Calculation::None toCalculationValue(const CSS::NoneRaw&, const ToConversionOptions&)
+Calculation::None toCalculationValue(const CSS::Keyword::None&, const ToConversionOptions&)
 {
     return Calculation::None { };
 }
@@ -246,7 +292,7 @@ Calculation::Child toCalculationValue(const CanonicalDimension& root, const ToCo
 
     switch (root.dimension) {
     case CanonicalDimension::Dimension::Length:
-        return Calculation::dimension(CSSPrimitiveValue::computeNonCalcLengthDouble(*options.evaluation.conversionData, CSSUnitType::CSS_PX, root.value));
+        return Calculation::dimension(Style::computeNonCalcLengthDouble(root.value, CSS::LengthUnit::Px, *options.evaluation.conversionData));
 
     case CanonicalDimension::Dimension::Angle:
     case CanonicalDimension::Dimension::Time:
@@ -271,11 +317,28 @@ Calculation::Child toCalculationValue(const Symbol&, const ToConversionOptions&)
     return Calculation::number(0);
 }
 
-template<typename Op> Calculation::Child toCalculationValue(const IndirectNode<Op>& root, const ToConversionOptions& options)
+Calculation::Child toCalculationValue(const SiblingCount&, const ToConversionOptions&)
 {
-    using CalculationOp = typename Op::Base;
+    ASSERT_NOT_REACHED("Unevaluated sibling-count() functions are not supported in the Calculation::Tree");
+    return Calculation::number(0);
+}
 
-    return Calculation::makeChild(WTF::apply([&](const auto& ...x) { return CalculationOp { toCalculationValue(x, options)... }; } , *root));
+Calculation::Child toCalculationValue(const SiblingIndex&, const ToConversionOptions&)
+{
+    ASSERT_NOT_REACHED("Unevaluated sibling-index() functions are not supported in the Calculation::Tree");
+    return Calculation::number(0);
+}
+
+Calculation::Child toCalculationValue(const IndirectNode<MediaProgress>&, const ToConversionOptions&)
+{
+    ASSERT_NOT_REACHED("Unevaluated media-progress() functions are not supported in the Calculation::Tree");
+    return Calculation::number(0);
+}
+
+Calculation::Child toCalculationValue(const IndirectNode<ContainerProgress>&, const ToConversionOptions&)
+{
+    ASSERT_NOT_REACHED("Unevaluated container-progress() functions are not supported in the Calculation::Tree");
+    return Calculation::number(0);
 }
 
 Calculation::Child toCalculationValue(const IndirectNode<Anchor>&, const ToConversionOptions&)
@@ -290,22 +353,28 @@ Calculation::Child toCalculationValue(const IndirectNode<AnchorSize>&, const ToC
     return Calculation::number(0);
 }
 
+template<typename Op> Calculation::Child toCalculationValue(const IndirectNode<Op>& root, const ToConversionOptions& options)
+{
+    using CalculationOp = ToCalculationTreeOp<Op>;
+
+    return Calculation::makeChild(WTF::apply([&](const auto& ...x) { return CalculationOp { toCalculationValue(x, options)... }; } , *root));
+}
+
 // MARK: - Exposed functions
 
 Tree fromCalculationValue(const CalculationValue& calculationValue, const RenderStyle& style)
 {
-    auto category = calculationValue.tree().category;
-    auto range = calculationValue.tree().range;
+    auto category = calculationValue.category();
+    auto range = calculationValue.range();
 
     auto conversionOptions = FromConversionOptions {
         .canonicalDimension = determineCanonicalDimension(category),
         .simplification = SimplificationOptions {
             .category = category,
+            .range = { range.min, range.max },
             .conversionData = std::nullopt,
             .symbolTable = { },
             .allowZeroValueLengthRemovalFromSum = true,
-            .allowUnresolvedUnits = false,
-            .allowNonMatchingUnits = false
         },
         .style = style,
     };
@@ -316,26 +385,23 @@ Tree fromCalculationValue(const CalculationValue& calculationValue, const Render
     return Tree {
         .root = WTFMove(root),
         .type = type,
-        .category = category,
         .stage = CSSCalc::Stage::Computed,
-        .range = { range.min, range.max }
     };
 }
 
 Ref<CalculationValue> toCalculationValue(const Tree& tree, const EvaluationOptions& options)
 {
-    ASSERT(tree.category == Calculation::Category::LengthPercentage || tree.category == Calculation::Category::AnglePercentage);
+    ASSERT(options.category == Calculation::Category::LengthPercentage || options.category == Calculation::Category::AnglePercentage);
 
-    auto category = tree.category;
-    auto range = tree.range;
+    auto category = options.category;
+    auto range = options.range;
 
     auto simplificationOptions = SimplificationOptions {
         .category = category,
+        .range = range,
         .conversionData = options.conversionData,
         .symbolTable = options.symbolTable,
         .allowZeroValueLengthRemovalFromSum = true,
-        .allowUnresolvedUnits = false,
-        .allowNonMatchingUnits = false
     };
     auto simplifiedTree = copyAndSimplify(tree, simplificationOptions);
 
@@ -345,11 +411,9 @@ Ref<CalculationValue> toCalculationValue(const Tree& tree, const EvaluationOptio
     auto root = toCalculationValue(simplifiedTree.root, conversionOptions);
 
     return CalculationValue::create(
-        Calculation::Tree {
-            .root = WTFMove(root),
-            .category = category,
-            .range = { range.min, range.max }
-        }
+        category,
+        Calculation::Range { range.min, range.max },
+        Calculation::Tree { WTFMove(root) }
     );
 }
 

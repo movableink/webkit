@@ -158,11 +158,11 @@ private:
         webkitWebViewAcceptCurrentScriptDialog(webView);
     }
 
-    String messageOfCurrentJavaScriptDialogOnPage(WebAutomationSession&, WebPageProxy& page) override
+    std::optional<String> messageOfCurrentJavaScriptDialogOnPage(WebAutomationSession&, WebPageProxy& page) override
     {
         auto* webView = webkitWebContextGetWebViewForPage(m_session->priv->webContext, &page);
         if (!webView)
-            return { };
+            return std::nullopt;
         return webkitWebViewGetCurrentScriptDialogMessage(webView);
     }
 

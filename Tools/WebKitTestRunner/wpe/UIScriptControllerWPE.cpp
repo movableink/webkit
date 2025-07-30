@@ -34,6 +34,10 @@
 #include <WebKit/WKTextCheckerGLib.h>
 #include <wtf/RunLoop.h>
 
+#if ENABLE(WPE_PLATFORM)
+#include <wpe/wpe-platform.h>
+#endif
+
 namespace WTR {
 
 Ref<UIScriptController> UIScriptController::create(UIScriptContext& context)
@@ -44,7 +48,7 @@ Ref<UIScriptController> UIScriptController::create(UIScriptContext& context)
 void UIScriptControllerWPE::doAsyncTask(JSValueRef callback)
 {
     unsigned callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
-    RunLoop::main().dispatch([this, protectedThis = Ref { *this }, callbackID] {
+    RunLoop::protectedMain()->dispatch([this, protectedThis = Ref { *this }, callbackID] {
         if (!m_context)
             return;
         m_context->asyncTaskComplete(callbackID);
@@ -56,8 +60,17 @@ void UIScriptControllerWPE::setContinuousSpellCheckingEnabled(bool enabled)
     WKTextCheckerSetContinuousSpellCheckingEnabled(enabled);
 }
 
-void UIScriptControllerWPE::copyText(JSStringRef)
+void UIScriptControllerWPE::copyText(JSStringRef text)
 {
+#if ENABLE(WPE_PLATFORM)
+    if (!TestController::singleton().useWPELegacyAPI()) {
+        auto* clipboard = wpe_display_get_clipboard(wpe_display_get_primary());
+        auto* content = wpe_clipboard_content_new();
+        wpe_clipboard_content_set_text(content, text->string().utf8().data());
+        wpe_clipboard_set_content(clipboard, content);
+        wpe_clipboard_content_unref(content);
+    }
+#endif
     // FIXME: implement.
 }
 
@@ -86,7 +99,7 @@ void UIScriptControllerWPE::activateAtPoint(long x, long y, JSValueRef callback)
     eventSender->mouseDown(0, 0);
     eventSender->mouseUp(0, 0);
 
-    RunLoop::main().dispatch([this, protectedThis = Ref { *this }, callbackID] {
+    RunLoop::protectedMain()->dispatch([this, protectedThis = Ref { *this }, callbackID] {
         if (!m_context)
             return;
         m_context->asyncTaskComplete(callbackID);
@@ -105,7 +118,7 @@ void UIScriptControllerWPE::removeViewFromWindow(JSValueRef callback)
     auto* mainWebView = TestController::singleton().mainWebView();
     mainWebView->removeFromWindow();
 
-    RunLoop::main().dispatch([this, protectedThis = Ref { *this }, callbackID] {
+    RunLoop::protectedMain()->dispatch([this, protectedThis = Ref { *this }, callbackID] {
         if (!m_context)
             return;
         m_context->asyncTaskComplete(callbackID);
@@ -118,7 +131,7 @@ void UIScriptControllerWPE::addViewToWindow(JSValueRef callback)
     auto* mainWebView = TestController::singleton().mainWebView();
     mainWebView->addToWindow();
 
-    RunLoop::main().dispatch([this, protectedThis = Ref { *this }, callbackID] {
+    RunLoop::protectedMain()->dispatch([this, protectedThis = Ref { *this }, callbackID] {
         if (!m_context)
             return;
         m_context->asyncTaskComplete(callbackID);

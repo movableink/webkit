@@ -1,24 +1,3 @@
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare
-CONSOLE MESSAGE: TypeError: Module name, 'data:text/javascript,log.push('data:to-bare')' does not resolve to a valid URL.
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare
 
 
 PASS data:text/javascript,log.push('data:foo'): <script src type=module>

@@ -124,7 +124,7 @@ size_t StringView::find(AdaptiveStringSearcherTables& tables, StringView matchSt
     if (!matchLength)
         return start;
 
-    if (UNLIKELY(subjectLength > INT32_MAX || matchLength > INT32_MAX))
+    if (subjectLength > INT32_MAX || matchLength > INT32_MAX) [[unlikely]]
         return find(matchString, start);
 
     if (is8Bit()) {
@@ -301,7 +301,7 @@ template<typename CharacterType>
 static AtomString convertASCIILowercaseAtom(std::span<const CharacterType> input)
 {
     for (auto character : input) {
-        if (UNLIKELY(isASCIIUpper(character)))
+        if (isASCIIUpper(character)) [[unlikely]]
             return makeAtomString(asASCIILowercase(input));
     }
     // Fast path when the StringView is already all lowercase.
@@ -448,7 +448,7 @@ String makeStringByReplacingAll(StringView string, UChar target, UChar replaceme
     return StringImpl::createByReplacingInCharacters(characters, target, replacement, i);
 }
 
-int codePointCompare(StringView lhs, StringView rhs)
+std::strong_ordering codePointCompare(StringView lhs, StringView rhs)
 {
     bool lhsIs8Bit = lhs.is8Bit();
     bool rhsIs8Bit = rhs.is8Bit();
@@ -480,7 +480,7 @@ template<typename CharacterType> static String makeStringBySimplifyingNewLinesSl
         }
     }
     if (resultLength < length)
-        result = StringImpl::createSubstringSharingImpl(*result.impl(), 0, resultLength);
+        result = StringImpl::createSubstringSharingImpl(Ref { *result.impl() }, 0, resultLength);
     return result;
 }
 

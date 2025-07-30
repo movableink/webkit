@@ -25,8 +25,6 @@
 #include <wtf/Hasher.h>
 #include <wtf/text/StringBuilder.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 CSSValueContainingVector::CSSValueContainingVector(ClassType type, ValueSeparator separator)
@@ -49,7 +47,7 @@ CSSValueContainingVector::CSSValueContainingVector(ClassType type, ValueSeparato
     } else {
         for (unsigned i = 0; i < maxInlineSize; ++i)
             m_inlineStorage[i] = &values[i].leakRef();
-        m_additionalStorage = static_cast<const CSSValue**>(fastMalloc(sizeof(const CSSValue*) * (m_size - maxInlineSize)));
+        m_additionalStorage = MallocSpan<const CSSValue*>::malloc(sizeof(const CSSValue*) * (m_size - maxInlineSize));
         for (unsigned i = maxInlineSize; i < m_size; ++i)
             m_additionalStorage[i - maxInlineSize] = &values[i].leakRef();
     }
@@ -218,21 +216,21 @@ CSSValueListBuilder CSSValueContainingVector::copyValues() const
     });
 }
 
-void CSSValueContainingVector::serializeItems(StringBuilder& builder) const
+void CSSValueContainingVector::serializeItems(StringBuilder& builder, const CSS::SerializationContext& context) const
 {
-    builder.append(interleave(*this, [](auto& value) { return value.cssText(); }, separatorCSSText()));
+    builder.append(interleave(*this, [&](auto& value) { return value.cssText(context); }, separatorCSSText()));
 }
 
-String CSSValueContainingVector::serializeItems() const
+String CSSValueContainingVector::serializeItems(const CSS::SerializationContext& context) const
 {
     StringBuilder result;
-    serializeItems(result);
+    serializeItems(result, context);
     return result.toString();
 }
 
-String CSSValueList::customCSSText() const
+String CSSValueList::customCSSText(const CSS::SerializationContext& context) const
 {
-    return serializeItems();
+    return serializeItems(context);
 }
 
 bool CSSValueContainingVector::itemsEqual(const CSSValueContainingVector& other) const
@@ -268,7 +266,7 @@ bool CSSValueContainingVector::addDerivedHash(Hasher& hasher) const
     return true;
 }
 
-bool CSSValueContainingVector::customTraverseSubresources(const Function<bool(const CachedResource&)>& handler) const
+bool CSSValueContainingVector::customTraverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>& handler) const
 {
     for (auto& value : *this) {
         if (value.traverseSubresources(handler))
@@ -277,19 +275,7 @@ bool CSSValueContainingVector::customTraverseSubresources(const Function<bool(co
     return false;
 }
 
-void CSSValueContainingVector::customSetReplacementURLForSubresources(const UncheckedKeyHashMap<String, String>& replacementURLStrings)
-{
-    for (auto& value : *this)
-        const_cast<CSSValue&>(value).setReplacementURLForSubresources(replacementURLStrings);
-}
-
-void CSSValueContainingVector::customClearReplacementURLForSubresources()
-{
-    for (auto& value : *this)
-        const_cast<CSSValue&>(value).clearReplacementURLForSubresources();
-}
-
-IterationStatus CSSValueContainingVector::customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+IterationStatus CSSValueContainingVector::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
 {
     for (auto& value : *this) {
         if (func(const_cast<CSSValue&>(value)) == IterationStatus::Done)
@@ -299,5 +285,3 @@ IterationStatus CSSValueContainingVector::customVisitChildren(const Function<Ite
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

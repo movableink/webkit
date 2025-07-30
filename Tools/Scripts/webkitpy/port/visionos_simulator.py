@@ -41,7 +41,9 @@ class VisionOSSimulatorPort(VisionOSPort):
 
     DEVICE_MANAGER = SimulatedDeviceManager
 
-    DEFAULT_DEVICE_TYPES = [DeviceType(software_variant='visionOS', hardware_family='Vision', hardware_type='Pro')]
+    DEFAULT_DEVICE_TYPES = apple_additions().get_default_visionos_device_types() if apple_additions() else [
+        DeviceType(software_variant='visionOS', hardware_family='Vision', hardware_type='Pro')
+    ]
     SDK = apple_additions().get_sdk('xrsimulator') if apple_additions() else 'xrsimulator'
 
     def architecture(self):

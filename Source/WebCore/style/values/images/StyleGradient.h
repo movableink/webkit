@@ -97,14 +97,14 @@ template<> struct ToCSS<GradientAngularColorStop> { auto operator()(const Gradie
 template<> struct ToCSS<GradientLinearColorStop> { auto operator()(const GradientLinearColorStop&, const RenderStyle&) -> CSS::GradientLinearColorStop; };
 template<> struct ToCSS<GradientDeprecatedColorStop> { auto operator()(const GradientDeprecatedColorStop&, const RenderStyle&) -> CSS::GradientDeprecatedColorStop; };
 
-template<> struct ToStyle<CSS::GradientAngularColorStop> { auto operator()(const CSS::GradientAngularColorStop&, const BuilderState&, const CSSCalcSymbolTable&) -> GradientAngularColorStop; };
-template<> struct ToStyle<CSS::GradientLinearColorStop> { auto operator()(const CSS::GradientLinearColorStop&, const BuilderState&, const CSSCalcSymbolTable&) -> GradientLinearColorStop; };
-template<> struct ToStyle<CSS::GradientDeprecatedColorStop> { auto operator()(const CSS::GradientDeprecatedColorStop&, const BuilderState&, const CSSCalcSymbolTable&) -> GradientDeprecatedColorStop; };
+template<> struct ToStyle<CSS::GradientAngularColorStop> { auto operator()(const CSS::GradientAngularColorStop&, const BuilderState&) -> GradientAngularColorStop; };
+template<> struct ToStyle<CSS::GradientLinearColorStop> { auto operator()(const CSS::GradientLinearColorStop&, const BuilderState&) -> GradientLinearColorStop; };
+template<> struct ToStyle<CSS::GradientDeprecatedColorStop> { auto operator()(const CSS::GradientDeprecatedColorStop&, const BuilderState&) -> GradientDeprecatedColorStop; };
 
 // MARK: - LinearGradient
 
 struct LinearGradient {
-    using GradientLine = std::variant<Angle<>, Horizontal, Vertical, SpaceSeparatedTuple<Horizontal, Vertical>>;
+    using GradientLine = Variant<Angle<>, Horizontal, Vertical, SpaceSeparatedTuple<Horizontal, Vertical>>;
 
     GradientColorInterpolationMethod colorInterpolationMethod;
     GradientLine gradientLine;
@@ -128,7 +128,7 @@ DEFINE_TYPE_MAPPING(CSS::LinearGradient, LinearGradient)
 // MARK: - PrefixedLinearGradient
 
 struct PrefixedLinearGradient {
-    using GradientLine = std::variant<Angle<>, Horizontal, Vertical, SpaceSeparatedTuple<Horizontal, Vertical>>;
+    using GradientLine = Variant<Angle<>, Horizontal, Vertical, SpaceSeparatedTuple<Horizontal, Vertical>>;
 
     GradientColorInterpolationMethod colorInterpolationMethod;
     GradientLine gradientLine;
@@ -179,17 +179,17 @@ struct RadialGradient {
     using Extent = CSS::RadialGradient::Extent;
     struct Ellipse {
         using Size = SpaceSeparatedArray<LengthPercentage<CSS::Nonnegative>, 2>;
-        std::variant<Size, Extent> size;
+        Variant<Size, Extent> size;
         std::optional<Position> position;
         bool operator==(const Ellipse&) const = default;
     };
     struct Circle {
         using Length = Style::Length<CSS::Nonnegative>;
-        std::variant<Length, Extent> size;
+        Variant<Length, Extent> size;
         std::optional<Position> position;
         bool operator==(const Circle&) const = default;
     };
-    using GradientBox = std::variant<Ellipse, Circle>;
+    using GradientBox = Variant<Ellipse, Circle>;
 
     GradientColorInterpolationMethod colorInterpolationMethod;
     GradientBox gradientBox;
@@ -234,7 +234,7 @@ struct PrefixedRadialGradient {
     using Extent = CSS::PrefixedRadialGradient::Extent;
     struct Ellipse {
         using Size = SpaceSeparatedArray<LengthPercentage<CSS::Nonnegative>, 2>;
-        std::optional<std::variant<Size, Extent>> size;
+        std::optional<Variant<Size, Extent>> size;
         std::optional<Position> position;
         bool operator==(const Ellipse&) const = default;
     };
@@ -243,7 +243,7 @@ struct PrefixedRadialGradient {
         std::optional<Position> position;
         bool operator==(const Circle&) const = default;
     };
-    using GradientBox = std::variant<Ellipse, Circle>;
+    using GradientBox = Variant<Ellipse, Circle>;
 
     GradientColorInterpolationMethod colorInterpolationMethod;
     GradientBox gradientBox;
@@ -366,7 +366,7 @@ DEFINE_TYPE_MAPPING(CSS::ConicGradient, ConicGradient)
 
 // MARK: - Gradient (variant)
 
-using Gradient = std::variant<
+using Gradient = Variant<
     // Linear
     FunctionNotation<CSSValueLinearGradient, LinearGradient>,
     FunctionNotation<CSSValueRepeatingLinearGradient, LinearGradient>,
@@ -390,7 +390,7 @@ using Gradient = std::variant<
 Ref<WebCore::Gradient> createPlatformGradient(const Gradient&, const FloatSize&, const RenderStyle&);
 
 // Returns whether it caching based on the gradient's stops is allowed.
-bool stopsAreCacheable(const Gradient&);
+WEBCORE_EXPORT bool stopsAreCacheable(const Gradient&);
 
 // Returns whether the gradient is opaque.
 bool isOpaque(const Gradient&, const RenderStyle&);
@@ -398,19 +398,19 @@ bool isOpaque(const Gradient&, const RenderStyle&);
 } // namespace Style
 } // namespace WebCore
 
-STYLE_TUPLE_LIKE_CONFORMANCE(LinearGradient, 3)
-STYLE_TUPLE_LIKE_CONFORMANCE(PrefixedLinearGradient, 3)
-STYLE_TUPLE_LIKE_CONFORMANCE(DeprecatedLinearGradient, 3)
-STYLE_TUPLE_LIKE_CONFORMANCE(RadialGradient::Ellipse, 2)
-STYLE_TUPLE_LIKE_CONFORMANCE(RadialGradient::Circle, 2)
-STYLE_TUPLE_LIKE_CONFORMANCE(RadialGradient, 3)
-STYLE_TUPLE_LIKE_CONFORMANCE(PrefixedRadialGradient::Ellipse, 2)
-STYLE_TUPLE_LIKE_CONFORMANCE(PrefixedRadialGradient::Circle, 2)
-STYLE_TUPLE_LIKE_CONFORMANCE(PrefixedRadialGradient, 3)
-STYLE_TUPLE_LIKE_CONFORMANCE(DeprecatedRadialGradient::GradientBox, 4)
-STYLE_TUPLE_LIKE_CONFORMANCE(DeprecatedRadialGradient, 3)
-STYLE_TUPLE_LIKE_CONFORMANCE(ConicGradient::GradientBox, 2)
-STYLE_TUPLE_LIKE_CONFORMANCE(ConicGradient, 3)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::LinearGradient, 3)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::PrefixedLinearGradient, 3)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::DeprecatedLinearGradient, 3)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::RadialGradient::Ellipse, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::RadialGradient::Circle, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::RadialGradient, 3)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::PrefixedRadialGradient::Ellipse, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::PrefixedRadialGradient::Circle, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::PrefixedRadialGradient, 3)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::DeprecatedRadialGradient::GradientBox, 4)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::DeprecatedRadialGradient, 3)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::ConicGradient::GradientBox, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::ConicGradient, 3)
 
 template<typename C, typename P> inline constexpr bool WebCore::TreatAsTupleLike<WebCore::Style::GradientColorStop<C, P>> = true;
 

@@ -30,6 +30,7 @@
 #include <mutex>
 #include <wtf/PrintStream.h>
 #include <wtf/glib/GRefPtr.h>
+#include <wtf/glib/GUniquePtr.h>
 #include <wtf/glib/WTFGType.h>
 
 GST_DEBUG_CATEGORY(webkit_workarounds_debug);
@@ -317,7 +318,6 @@ void installBaseSinkPositionFlushWorkaroundIfNeeded(GstBaseSink* basesink)
 struct WebKitAppSinkWithWorkaroundsPrivate {
 };
 
-#define webkit_app_sink_with_workarounds_parent_class parent_class
 WEBKIT_DEFINE_TYPE(WebKitAppSinkWithWorkarounds, webkit_app_sink_with_workarounds, GST_TYPE_APP_SINK);
 
 static void webkitAppSinkWithWorkAroundsConstructed(GObject* object)

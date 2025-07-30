@@ -30,6 +30,7 @@
 
 #include "ContextDestructionObserverInlines.h"
 #include "CryptoKeyRaw.h"
+#include "EventTargetInlines.h"
 #include "JSDOMConvertBufferSource.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSRTCEncodedAudioFrame.h"
@@ -48,8 +49,6 @@
 #include "WritableStream.h"
 #include <wtf/EnumTraits.h>
 #include <wtf/TZoneMallocInlines.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -175,7 +174,7 @@ void RTCRtpSFrameTransform::initializeTransformer(RTCRtpTransformBackend& backen
         if (!result)
             return;
 
-        frame->setData({ result.value().data(), result.value().size() });
+        frame->setData(result.value().span());
 
         backend->processTransformedFrame(frame.get());
     });
@@ -206,12 +205,13 @@ static void transformFrame(std::span<const uint8_t> data, JSDOMGlobalObject& glo
 template<typename Frame>
 void transformFrame(Frame& frame, JSDOMGlobalObject& globalObject, RTCRtpSFrameTransformer& transformer, SimpleReadableStreamSource& source, ScriptExecutionContextIdentifier identifier, const ThreadSafeWeakPtr<RTCRtpSFrameTransform>& weakTransform)
 {
-    auto rtcFrame = frame.rtcFrame();
+    Ref vm = globalObject.vm();
+    auto rtcFrame = frame.rtcFrame(vm, RTCEncodedFrame::ShouldNeuter::No);
     auto chunk = rtcFrame->data();
     auto result = processFrame(chunk, transformer, identifier, weakTransform);
     std::span<const uint8_t> transformedChunk;
     if (result)
-        transformedChunk = { result->data(), result->size() };
+        transformedChunk = result->span();
     rtcFrame->setData(transformedChunk);
     source.enqueue(toJS(&globalObject, &globalObject, frame));
 }
@@ -234,7 +234,7 @@ ExceptionOr<void> RTCRtpSFrameTransform::createStreams()
         auto scope = DECLARE_THROW_SCOPE(globalObject.vm());
 
         auto frameConversionResult = convert<IDLUnion<IDLArrayBuffer, IDLArrayBufferView, IDLInterface<RTCEncodedAudioFrame>, IDLInterface<RTCEncodedVideoFrame>>>(globalObject, value);
-        if (UNLIKELY(frameConversionResult.hasException(scope)))
+        if (frameConversionResult.hasException(scope)) [[unlikely]]
             return Exception { ExceptionCode::ExistingExceptionError };
         auto frame = frameConversionResult.releaseReturnValue();
 
@@ -290,7 +290,5 @@ bool RTCRtpSFrameTransform::virtualHasPendingActivity() const
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_RTC)

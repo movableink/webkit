@@ -53,20 +53,18 @@ typedef uint32_t SkFontTableTag;
 class SK_API SkTypeface : public SkWeakRefCnt {
 public:
     /** Returns the typeface's intrinsic style attributes. */
-    SkFontStyle fontStyle() const {
-        return fStyle;
-    }
+    SkFontStyle fontStyle() const;
 
     /** Returns true if style() has the kBold bit set. */
-    bool isBold() const { return fStyle.weight() >= SkFontStyle::kSemiBold_Weight; }
+    bool isBold() const;
 
     /** Returns true if style() has the kItalic bit set. */
-    bool isItalic() const { return fStyle.slant() != SkFontStyle::kUpright_Slant; }
+    bool isItalic() const;
 
     /** Returns true if the typeface claims to be fixed-pitch.
      *  This is a style bit, advance widths may vary even if this returns true.
      */
-    bool isFixedPitch() const { return fIsFixedPitch; }
+    bool isFixedPitch() const;
 
     /** Copy into 'coordinates' (allocated by the caller) the design variation coordinates.
      *
@@ -363,13 +361,15 @@ protected:
     /** Sets the font style. If used, must be called in the constructor. */
     void setFontStyle(SkFontStyle style) { fStyle = style; }
 
+    virtual SkFontStyle onGetFontStyle() const; // TODO: = 0;
+
+    virtual bool onGetFixedPitch() const; // TODO: = 0;
+
     // Must return a valid scaler context. It can not return nullptr.
-    virtual std::unique_ptr<SkScalerContext> onCreateScalerContext(const SkScalerContextEffects&,
-                                                                   const SkDescriptor*) const = 0;
+    virtual std::unique_ptr<SkScalerContext> onCreateScalerContext(
+        const SkScalerContextEffects&, const SkDescriptor*) const = 0;
     virtual std::unique_ptr<SkScalerContext> onCreateScalerContextAsProxyTypeface
-                                                                  (const SkScalerContextEffects&,
-                                                                   const SkDescriptor*,
-                                                                   sk_sp<SkTypeface>) const;
+        (const SkScalerContextEffects&, const SkDescriptor*, SkTypeface* proxyTypeface) const;
     virtual void onFilterRec(SkScalerContextRec*) const = 0;
     friend class SkScalerContext;  // onFilterRec
 
@@ -439,9 +439,9 @@ private:
     std::unique_ptr<SkAdvancedTypefaceMetrics> getAdvancedMetrics() const;
     friend class SkRandomTypeface;   // getAdvancedMetrics
     friend class SkPDFFont;          // getAdvancedMetrics
-    friend class SkTypeface_fontconfig;
-
+    friend class SkTypeface_proxy;
     friend class SkFontPriv;         // getGlyphToUnicodeMap
+    friend void TestSkTypefaceGlyphToUnicodeMap(SkTypeface&, SkUnichar*);
 
 private:
     SkTypefaceID        fUniqueID;

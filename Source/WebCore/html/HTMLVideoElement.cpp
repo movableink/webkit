@@ -63,6 +63,8 @@
 #include "PictureInPictureObserver.h"
 #endif
 
+#define HTMLVIDEOELEMENT_RELEASE_LOG(fmt, ...) RELEASE_LOG_FORWARDABLE(Media, fmt, identifier().toUInt64(), ##__VA_ARGS__)
+
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLVideoElement);
@@ -111,7 +113,7 @@ void HTMLVideoElement::didAttachRenderers()
 
     if (shouldDisplayPosterImage()) {
         if (!m_imageLoader)
-            m_imageLoader = makeUniqueWithoutRefCountedCheck<HTMLImageLoader>(*this);
+            lazyInitialize(m_imageLoader, makeUniqueWithoutRefCountedCheck<HTMLImageLoader>(*this));
         m_imageLoader->updateFromElement();
         if (CheckedPtr renderer = this->renderer())
             renderer->checkedImageResource()->setCachedImage(m_imageLoader->protectedImage());
@@ -130,7 +132,7 @@ bool HTMLVideoElement::supportsAcceleratedRendering() const
 
 void HTMLVideoElement::mediaPlayerRenderingModeChanged()
 {
-    ALWAYS_LOG(LOGIDENTIFIER);
+    HTMLVIDEOELEMENT_RELEASE_LOG(HTMLVIDEOELEMENT_MEDIAPLAYERRENDERINGMODECHANGED);
 
     // Kick off a fake recalcStyle that will update the compositing tree.
     computeAcceleratedRenderingStateAndUpdateMediaPlayer();
@@ -191,7 +193,7 @@ void HTMLVideoElement::attributeChanged(const QualifiedName& name, const AtomStr
     if (name == posterAttr) {
         if (shouldDisplayPosterImage()) {
             if (!m_imageLoader)
-                m_imageLoader = makeUniqueWithoutRefCountedCheck<HTMLImageLoader>(*this);
+                lazyInitialize(m_imageLoader, makeUniqueWithoutRefCountedCheck<HTMLImageLoader>(*this));
             m_imageLoader->updateFromElementIgnoringPreviousError();
         } else {
             if (CheckedPtr renderer = this->renderer()) {
@@ -236,7 +238,7 @@ bool HTMLVideoElement::supportsFullscreen(HTMLMediaElementEnums::VideoFullscreen
         return true;
 #endif
 
-    if (videoFullscreenMode == HTMLMediaElementEnums::VideoFullscreenModeStandard && !page->isFullscreenManagerEnabled())
+    if (videoFullscreenMode == HTMLMediaElementEnums::VideoFullscreenModeStandard && !page->isDocumentFullscreenEnabled())
         return false;
 
     // If the full screen API is enabled and is supported for the current element
@@ -633,6 +635,24 @@ void HTMLVideoElement::didExitFullscreenOrPictureInPicture()
     HTMLMediaElement::didStopBeingFullscreenElement();
 }
 
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+void HTMLVideoElement::didEnterExternalPlayback()
+{
+    m_isInExternalPlayback = true;
+
+    if (RefPtr player = this->player())
+        player->setInFullscreenOrPictureInPicture(true);
+}
+
+void HTMLVideoElement::didExitExternalPlayback()
+{
+    m_isInExternalPlayback = false;
+
+    if (RefPtr player = this->player())
+        player->setInFullscreenOrPictureInPicture(false);
+}
+#endif
+
 bool HTMLVideoElement::isChangingPresentationMode() const
 {
     return isChangingVideoFullscreenMode();
@@ -690,14 +710,14 @@ void HTMLVideoElement::cancelVideoFrameCallback(unsigned identifier)
     // Search first the requests currently being serviced, and mark them as cancelled if found.
     auto index = m_servicedVideoFrameRequests.findIf([identifier](auto& request) { return request->identifier == identifier; });
     if (index != notFound) {
-        m_servicedVideoFrameRequests[index]->cancelled = true;
+        m_servicedVideoFrameRequests[index]->callback = nullptr;
         return;
     }
 
     index = m_videoFrameRequests.findIf([identifier](auto& request) { return request->identifier == identifier; });
     if (index == notFound)
         return;
-    m_videoFrameRequests.remove(index);
+    m_videoFrameRequests.removeAt(index);
 
     if (m_videoFrameRequests.isEmpty()) {
         if (RefPtr player = this->player())
@@ -708,7 +728,10 @@ void HTMLVideoElement::cancelVideoFrameCallback(unsigned identifier)
 void HTMLVideoElement::stop()
 {
     m_videoFrameRequests.clear();
-    m_servicedVideoFrameRequests.clear();
+
+    for (auto& request : m_servicedVideoFrameRequests)
+        request->callback = nullptr;
+
     HTMLMediaElement::stop();
 }
 
@@ -743,10 +766,8 @@ void HTMLVideoElement::serviceRequestVideoFrameCallbacks(ReducedResolutionSecond
 
     m_videoFrameRequests.swap(m_servicedVideoFrameRequests);
     for (auto& request : m_servicedVideoFrameRequests) {
-        if (!request->cancelled) {
-            Ref { request->callback }->handleEvent(std::round(now.milliseconds()), *videoFrameMetadata);
-            request->cancelled = true;
-        }
+        if (RefPtr callback = std::exchange(request->callback, { }))
+            callback->invoke(std::round(now.milliseconds()), *videoFrameMetadata);
     }
     m_servicedVideoFrameRequests.clear();
 

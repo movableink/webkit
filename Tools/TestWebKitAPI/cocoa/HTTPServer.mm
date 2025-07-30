@@ -33,9 +33,11 @@
 #import <wtf/CallbackAggregator.h>
 #import <wtf/CompletionHandler.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/ThreadSafeRefCounted.h>
 #import <wtf/text/Base64.h>
 #import <wtf/text/MakeString.h>
+#import <wtf/text/ParsingUtilities.h>
 #import <wtf/text/StringBuilder.h>
 #import <wtf/text/WTFString.h>
 
@@ -53,7 +55,8 @@ struct HTTPServer::RequestData : public ThreadSafeRefCounted<RequestData, WTF::D
     size_t requestCount { 0 };
     HashMap<String, HTTPResponse> requestMap;
     Vector<Connection> connections;
-    Vector<CoroutineHandle<Task::promise_type>> coroutineHandles;
+    Vector<CoroutineHandle<ConnectionTask::promise_type>> coroutineHandles;
+    String lastRequestCookies;
 };
 
 static RetainPtr<nw_protocol_definition_t> proxyDefinition(HTTPServer::Protocol protocol)
@@ -85,7 +88,7 @@ static RetainPtr<nw_protocol_definition_t> proxyDefinition(HTTPServer::Protocol 
                 }
                 case State::DidRequestCredentials:
                     EXPECT_TRUE(strnstr(byteCast<char>(buffer), "Proxy-Authorization: Basic dGVzdHVzZXI6dGVzdHBhc3N3b3Jk\r\n", bufferLength));
-                    FALLTHROUGH;
+                    [[fallthrough]];
                 case State::WillNotRequestCredentials: {
                     const char* negotiationResponse = ""
                         "HTTP/1.1 200 Connection Established\r\n"
@@ -131,8 +134,12 @@ RetainPtr<nw_parameters_t> HTTPServer::listenerParameters(Protocol protocol, Cer
         auto options = adoptNS(nw_tls_copy_sec_protocol_options(protocolOptions));
         auto identity = adoptNS(sec_identity_create(testIdentity.get()));
         sec_protocol_options_set_local_identity(options.get(), identity.get());
-        if (protocol == Protocol::HttpsWithLegacyTLS)
+        if (protocol == Protocol::HttpsWithLegacyTLS) {
+#if ENABLE(TLS_1_2_DEFAULT_MINIMUM)
+            sec_protocol_options_set_min_tls_protocol_version(options.get(), tls_protocol_version_TLSv10);
+#endif
             sec_protocol_options_set_max_tls_protocol_version(options.get(), tls_protocol_version_TLSv10);
+        }
         if (verifier) {
             sec_protocol_options_set_peer_authentication_required(options.get(), true);
             sec_protocol_options_set_verify_block(options.get(), makeBlockPtr([verifier = WTFMove(verifier)](sec_protocol_metadata_t metadata, sec_trust_t trust, sec_protocol_verify_complete_t completion) {
@@ -199,9 +206,9 @@ void HTTPServer::terminateAllConnections(CompletionHandler<void()>&& completionH
         connection.terminate([aggregator] { });
 }
 
-HTTPServer::HTTPServer(std::initializer_list<std::pair<String, HTTPResponse>> responses, Protocol protocol, CertificateVerifier&& verifier, RetainPtr<SecIdentityRef>&& identity, std::optional<uint16_t> port)
+HTTPServer::HTTPServer(std::initializer_list<std::pair<String, HTTPResponse>> responses, Protocol protocol, CertificateVerifier&& verifier, SecIdentityRef identity, std::optional<uint16_t> port)
     : m_requestData(adoptRef(*new RequestData(responses)))
-    , m_listener(adoptNS(nw_listener_create(listenerParameters(protocol, WTFMove(verifier), WTFMove(identity), port).get())))
+    , m_listener(adoptNS(nw_listener_create(listenerParameters(protocol, WTFMove(verifier), identity, port).get())))
     , m_protocol(protocol)
 {
     nw_listener_set_queue(m_listener.get(), dispatch_get_main_queue());
@@ -229,7 +236,7 @@ HTTPServer::HTTPServer(Function<void(Connection)>&& connectionHandler, Protocol 
     startListening(m_listener.get());
 }
 
-HTTPServer::HTTPServer(UseCoroutines, WTF::Function<Task(Connection)>&& connectionHandler, Protocol protocol)
+HTTPServer::HTTPServer(UseCoroutines, Function<ConnectionTask(Connection)>&& connectionHandler, Protocol protocol)
     : m_requestData(adoptRef(*new RequestData({ })))
     , m_listener(adoptNS(nw_listener_create(listenerParameters(protocol, nullptr, nullptr, { }).get())))
     , m_protocol(protocol)
@@ -301,6 +308,11 @@ size_t HTTPServer::totalRequests() const
     return m_requestData->requestCount;
 }
 
+String HTTPServer::lastRequestCookies() const
+{
+    return m_requestData->lastRequestCookies;
+}
+
 static ASCIILiteral statusText(unsigned statusCode)
 {
     switch (statusCode) {
@@ -316,6 +328,8 @@ static ASCIILiteral statusText(unsigned statusCode)
         return "Found"_s;
     case 303:
         return "See Other"_s;
+    case 304:
+        return "Not Modified"_s;
     case 404:
         return "Not Found"_s;
     case 503:
@@ -325,36 +339,89 @@ static ASCIILiteral statusText(unsigned statusCode)
     return "Unknown Status Code"_s;
 }
 
-static void appendUTF8ToVector(Vector<uint8_t>& vector, const String& string)
+static Vector<uint8_t> toUTF8Vector(const String& string)
 {
-    vector.append(string.utf8().span());
+    Vector<uint8_t> result;
+    string.tryGetUTF8([&](std::span<const char8_t> utf8) {
+        result.append(byteCast<uint8_t>(utf8));
+        return true;
+    });
+    return result;
+}
+
+static Vector<uint8_t> serialize304Response(const HashMap<String, String>& headerFields)
+{
+    constexpr int statusCode = 304;
+
+    StringBuilder responseBuilder;
+    responseBuilder.append("HTTP/1.1 "_s, statusCode, ' ', statusText(statusCode), "\r\n"_s);
+    for (auto& pair : headerFields)
+        responseBuilder.append(pair.key, ": "_s, pair.value, "\r\n"_s);
+    responseBuilder.append("\r\n"_s);
+
+    return toUTF8Vector(responseBuilder.toString());
 }
 
 String HTTPServer::parsePath(const Vector<char>& request)
 {
     if (!request.size())
         return { };
-    const char* getPathPrefix = "GET ";
-    const char* postPathPrefix = "POST ";
-    const char* pathSuffix = " HTTP/1.1\r\n";
-    const char* pathEnd = strnstr(request.data(), pathSuffix, request.size());
-    ASSERT_WITH_MESSAGE(pathEnd, "HTTPServer assumes request is HTTP 1.1");
+    auto getPathPrefix = "GET "_s;
+    auto postPathPrefix = "POST "_s;
+    size_t pathEnd = find(request.span(), " HTTP/1.1\r\n"_span);
+    ASSERT_WITH_MESSAGE(pathEnd != notFound, "HTTPServer assumes request is HTTP 1.1");
     size_t pathPrefixLength = 0;
-    if (!memcmp(request.data(), getPathPrefix, strlen(getPathPrefix)))
-        pathPrefixLength = strlen(getPathPrefix);
-    else if (!memcmp(request.data(), postPathPrefix, strlen(postPathPrefix)))
-        pathPrefixLength = strlen(postPathPrefix);
+    if (spanHasPrefix(request.span(), getPathPrefix.span()))
+        pathPrefixLength = getPathPrefix.length();
+    else if (spanHasPrefix(request.span(), postPathPrefix.span()))
+        pathPrefixLength = postPathPrefix.length();
     ASSERT_WITH_MESSAGE(pathPrefixLength, "HTTPServer assumes request is GET or POST");
-    size_t pathLength = pathEnd - request.data() - pathPrefixLength;
+    size_t pathLength = pathEnd - pathPrefixLength;
     return request.subspan(pathPrefixLength, pathLength);
+}
+
+String HTTPServer::parseCookies(const Vector<char>& characters)
+{
+    if (!characters.size())
+        return { };
+
+    String request { characters.span() };
+    ASCIILiteral cookiePrefix = "Cookie: "_s;
+    size_t cookieStringStart = request.find(cookiePrefix);
+    if (cookieStringStart == notFound)
+        return { };
+    cookieStringStart += cookiePrefix.length();
+
+    size_t cookieStringEnd = request.find("\r\n"_s, cookieStringStart);
+    if (cookieStringEnd == notFound)
+        return { };
+
+    return request.substring(cookieStringStart, cookieStringEnd - cookieStringStart);
 }
 
 String HTTPServer::parseBody(const Vector<char>& request)
 {
-    const char* headerEndBytes = "\r\n\r\n";
-    const char* headerEnd = strnstr(request.data(), headerEndBytes, request.size()) + strlen(headerEndBytes);
-    size_t headerLength = headerEnd - request.data();
-    return request.subspan(headerLength);
+    auto headerEndBytes = "\r\n\r\n"_s;
+    size_t headerEnd = find(request.span(), headerEndBytes.span()) + strlen(headerEndBytes);
+    return request.subspan(headerEnd);
+}
+
+static bool isConditionalRequest(std::span<const char> request)
+{
+    auto endOfHeaders = find(request, "\r\n\r\n"_span);
+    if (endOfHeaders == notFound)
+        return false;
+    auto headers = request.first(endOfHeaders);
+    constexpr auto newLine = "\r\n"_span;
+    while (!headers.empty()) {
+        if (spanHasPrefixIgnoringASCIICase(headers, "If-None-Match:"_span))
+            return true;
+        size_t endOfLine = find(headers, newLine);
+        if (endOfLine == notFound)
+            return false;
+        skip(headers, endOfLine + newLine.size());
+    }
+    return false;
 }
 
 void HTTPServer::respondToRequests(Connection connection, Ref<RequestData> requestData)
@@ -362,14 +429,24 @@ void HTTPServer::respondToRequests(Connection connection, Ref<RequestData> reque
     connection.receiveHTTPRequest([connection, requestData] (Vector<char>&& request) mutable {
         if (!request.size())
             return;
+
         requestData->requestCount++;
+        requestData->lastRequestCookies = parseCookies(request);
 
         auto path = parsePath(request);
         ASSERT_WITH_MESSAGE(requestData->requestMap.contains(path), "This HTTPServer does not know how to respond to a request for %s", path.utf8().data());
 
         auto response = requestData->requestMap.get(path);
+        if (response.shouldRespondWith304ToConditionalRequests) {
+            if (isConditionalRequest(request.span())) {
+                return connection.send(serialize304Response(response.headerFieldsFor304), [connection, requestData] {
+                    respondToRequests(connection, requestData);
+                });
+            }
+        }
+
         switch (response.behavior) {
-        case HTTPResponse::Behavior::TerminateConnectionAfterReceivingResponse:
+        case HTTPResponse::Behavior::TerminateConnectionAfterReceivingRequest:
             return connection.terminate();
         case HTTPResponse::Behavior::SendResponseNormally:
             return connection.send(response.serialize(), [connection, requestData] {
@@ -431,9 +508,7 @@ WKWebViewConfiguration *HTTPServer::httpsProxyConfiguration() const
 
 Vector<uint8_t> HTTPResponse::bodyFromString(const String& string)
 {
-    Vector<uint8_t> vector;
-    appendUTF8ToVector(vector, string);
-    return vector;
+    return toUTF8Vector(string);
 }
 
 Vector<uint8_t> HTTPResponse::serialize(IncludeContentLength includeContentLength) const
@@ -446,8 +521,7 @@ Vector<uint8_t> HTTPResponse::serialize(IncludeContentLength includeContentLengt
         responseBuilder.append(pair.key, ": "_s, pair.value, "\r\n"_s);
     responseBuilder.append("\r\n"_s);
     
-    Vector<uint8_t> bytesToSend;
-    appendUTF8ToVector(bytesToSend, responseBuilder.toString());
+    auto bytesToSend = toUTF8Vector(responseBuilder.toString());
     bytesToSend.appendVector(body);
     return bytesToSend;
 }
@@ -493,8 +567,8 @@ void H2::Connection::receive(CompletionHandler<void(Frame&&)>&& completionHandle
             });
             return;
         }
-        ASSERT(!memcmp(m_receiveBuffer.data(), "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n", clientConnectionPrefaceLength));
-        m_receiveBuffer.remove(0, clientConnectionPrefaceLength);
+        ASSERT(spanHasPrefix(m_receiveBuffer.span(), "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"_span));
+        m_receiveBuffer.removeAt(0, clientConnectionPrefaceLength);
         m_expectClientConnectionPreface = false;
         return receive(WTFMove(completionHandler));
     }
@@ -514,7 +588,7 @@ void H2::Connection::receive(CompletionHandler<void(Frame&&)>&& completionHandle
                 + (static_cast<uint32_t>(m_receiveBuffer[8]) << 0);
             Vector<uint8_t> payload;
             payload.append(m_receiveBuffer.subspan(frameHeaderLength, payloadLength));
-            m_receiveBuffer.remove(0, frameHeaderLength + payloadLength);
+            m_receiveBuffer.removeAt(0, frameHeaderLength + payloadLength);
             return completionHandler(Frame(type, flags, streamID, WTFMove(payload)));
         }
     }

@@ -94,7 +94,6 @@ void WindowProxy::detachFromFrame()
 void WindowProxy::replaceFrame(Frame& frame)
 {
     ASSERT(m_frame);
-    ASSERT(is<LocalFrame>(m_frame) != is<LocalFrame>(frame));
     m_frame = frame;
     setDOMWindow(frame.window());
 }

@@ -13,6 +13,7 @@
 #include "include/core/SkCanvas.h"
 #include "include/core/SkPicture.h"
 #include "include/docs/SkMultiPictureDocument.h"
+#include "include/gpu/graphite/PrecompileContext.h"
 #include "tools/flags/CommonFlagsConfig.h"
 #include "tools/gpu/MemoryCache.h"
 
@@ -25,8 +26,14 @@
 
 //#define TEST_VIA_SVG
 
+namespace skgpu {
+class UniqueKey;
+}
 namespace skiagm::verifiers {
 class VerifierList;
+}
+namespace skiatools::graphite {
+    class PipelineCallBackHandler;
 }
 namespace DM {
 
@@ -450,9 +457,9 @@ private:
     using INHERITED = GPUSink;
 };
 
-class GPUPrecompileTestingSink : public GPUSink {
+class GaneshPrecompileTestingSink : public GPUSink {
 public:
-    GPUPrecompileTestingSink(const SkCommandLineConfigGpu*, const GrContextOptions&);
+    GaneshPrecompileTestingSink(const SkCommandLineConfigGpu*, const GrContextOptions&);
 
     Result draw(const Src&, SkBitmap*, SkWStream*, SkString*) const override;
 
@@ -613,12 +620,25 @@ public:
     }
 
 private:
+
     Result drawSrc(const Src&,
                    skgpu::graphite::Context*,
-                   skiatest::graphite::GraphiteTestContext*) const;
-    Result resetAndRecreatePipelines(skgpu::graphite::Context*) const;
+                   skiatest::graphite::GraphiteTestContext*,
+                   skgpu::graphite::Recorder*) const;
+    Result resetAndRecreatePipelines(skiatools::graphite::PipelineCallBackHandler*,
+                                     skgpu::graphite::PrecompileContext*) const;
 
-    mutable std::unique_ptr<skgpu::graphite::Recorder> fRecorder;
+#ifdef SK_DEBUG
+    static void LogMissingKey(skgpu::graphite::PrecompileContext*,
+                              const skgpu::UniqueKey& missingKey,
+                              const char* missingKeyName,
+                              const std::vector<skgpu::UniqueKey>& pool,
+                              const char* poolName);
+#endif
+
+    static void CompareKeys(skgpu::graphite::PrecompileContext*,
+                            const std::vector<skgpu::UniqueKey>& vA, const char* aName,
+                            const std::vector<skgpu::UniqueKey>& vB, const char* bName);
 };
 #endif // SK_ENABLE_PRECOMPILE
 #endif // SK_GRAPHITE

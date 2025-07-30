@@ -24,10 +24,9 @@ import io
 import logging
 import math
 import multiprocessing
+import queue as Queue
 import signal
 import sys
-
-import queue as Queue
 
 from webkitcorepy import OutputCapture, Timeout, log
 
@@ -374,7 +373,6 @@ class TaskPool(object):
     Queue = _Queue
     Process = _Process
 
-
     class Exception(RuntimeError):
         pass
 
@@ -386,7 +384,7 @@ class TaskPool(object):
         mutually_exclusive_groups=None,
     ):
         # Ensure tblib is installed before creating child processes
-        import tblib
+        import tblib  # noqa: F401
 
         name = name or 'worker'
         if name == self.Process.name:
@@ -426,8 +424,6 @@ class TaskPool(object):
                 self._setup_args[0](*self._setup_args[1], **self._setup_args[2])
             TaskPool.Process.working = True
             return self
-
-        from mock import patch
 
         self.queue = self.BiDirectionalQueue()
         self._group_queues = {

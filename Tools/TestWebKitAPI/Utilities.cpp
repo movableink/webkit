@@ -36,13 +36,13 @@ namespace TestWebKitAPI::Util {
 void run(bool* done)
 {
     while (!*done)
-        RunLoop::current().cycle();
+        RunLoop::currentSingleton().cycle();
 }
 
 void spinRunLoop(uint64_t count)
 {
     while (count--)
-        RunLoop::current().cycle();
+        RunLoop::currentSingleton().cycle();
 }
 #endif
 
@@ -52,17 +52,17 @@ bool runFor(bool* done, Seconds duration)
     while (!*done) {
         if (ApproximateTime::now() - start > duration)
             return false;
-        RunLoop::current().cycle();
+        RunLoop::currentSingleton().cycle();
     }
     return true;
 }
 
 void runFor(Seconds duration)
 {
-    RunLoop::current().dispatchAfter(duration, [] {
-        RunLoop::current().stop();
+    RunLoop::currentSingleton().dispatchAfter(duration, [] {
+        RunLoop::currentSingleton().stop();
     });
-    RunLoop::current().run();
+    RunLoop::currentSingleton().run();
 }
 
 #endif

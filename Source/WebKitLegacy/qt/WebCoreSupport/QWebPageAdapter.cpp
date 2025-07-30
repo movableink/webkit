@@ -65,6 +65,7 @@
 #include <WebCore/CacheStorageProvider.h>
 #include <WebCore/Chrome.h>
 #include <WebCore/CompositionHighlight.h>
+#include <WebCore/ContainerNodeInlines.h>
 #include <WebCore/ContextMenu.h>
 #include <WebCore/ContextMenuClient.h>
 #include <WebCore/ContextMenuController.h>
@@ -187,6 +188,7 @@ static inline Qt::DropAction dragOpToDropAction(std::variant<std::optional<DragO
         else if (*action == DragOperation::Link)
             result = Qt::LinkAction;
     }
+    return result;
 }
 
 static inline QWebPageAdapter::VisibilityState webCoreVisibilityStateToWebPageVisibilityState(WebCore::VisibilityState state)
@@ -304,7 +306,7 @@ void QWebPageAdapter::initializeWebCorePage()
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),
         WebBroadcastChannelRegistry::getOrCreate(isPrivateBrowsingEnabled),
         makeUniqueRef<WebCore::DummyStorageProvider>(),
-        makeUniqueRef<WebCore::DummyModelPlayerProvider>(),
+        WebCore::DummyModelPlayerProvider::create(),
         WebCore::EmptyBadgeClient::create(),
         LegacyHistoryItemClient::singleton(),
 #if ENABLE(CONTEXT_MENUS)
@@ -782,7 +784,6 @@ void QWebPageAdapter::inputMethodEvent(QInputMethodEvent *ev)
                 frame->selection().removeCaretVisibilitySuppressionReason(CaretVisibilitySuppressionReason::IsNotFocusedOrActive);
                 RenderObject* caretRenderer = frame->selection().caretRendererWithoutUpdatingLayout();
                 if (caretRenderer) {
-                    QColor qcolor = a.value.value<QColor>();
 //                    caretRenderer->style().setColor(qcolor);
                 }
             } else {
@@ -877,7 +878,7 @@ QVariant QWebPageAdapter::inputMethodQuery(Qt::InputMethodQuery property) const
     }
     case Qt::ImSurroundingText: {
         if (renderTextControl) {
-            QString text = renderTextControl->textFormControlElement().value();
+            QString text = renderTextControl->textFormControlElement().value().get();
             std::optional<SimpleRange> range = editor.compositionRange();
             if (range)
                 text.remove(range->startOffset(), range->endOffset() - range->startOffset());
@@ -890,7 +891,7 @@ QVariant QWebPageAdapter::inputMethodQuery(Qt::InputMethodQuery property) const
             int start = frame->selection().selection().start().offsetInContainerNode();
             int end = frame->selection().selection().end().offsetInContainerNode();
             if (end > start)
-                return QVariant(QString(renderTextControl->textFormControlElement().value()).mid(start, end - start));
+                return QVariant(QString(renderTextControl->textFormControlElement().value().get()).mid(start, end - start));
         }
         return QVariant();
 

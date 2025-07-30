@@ -39,6 +39,7 @@
 #import "WKWebsiteDataStoreInternal.h"
 #import "WebExtensionContextProxyMessages.h"
 #import "WebExtensionCookieParameters.h"
+#import "WebExtensionPermission.h"
 #import "WebExtensionUtilities.h"
 #import "WebsiteDataStore.h"
 #import <WebCore/Cookie.h>
@@ -70,9 +71,9 @@ static inline URL toURL(const WebCore::Cookie& cookie)
     return URL { makeString(cookie.secure ? "https"_s : "http"_s, "://"_s, domain, cookie.path) };
 }
 
-bool WebExtensionContext::isCookiesMessageAllowed()
+bool WebExtensionContext::isCookiesMessageAllowed(IPC::Decoder& message)
 {
-    return isLoaded() && hasPermission(WKWebExtensionPermissionCookies);
+    return isLoadedAndPrivilegedMessage(message) && hasPermission(WebExtensionPermission::cookies());
 }
 
 void WebExtensionContext::fetchCookies(WebsiteDataStore& dataStore, const URL& url, const WebExtensionCookieFilterParameters& filterParameters, CompletionHandler<void(Expected<Vector<WebExtensionCookieParameters>, WebExtensionError>&&)>&& completionHandler)
@@ -118,7 +119,7 @@ void WebExtensionContext::cookiesGet(std::optional<PAL::SessionID> sessionID, co
 {
     RefPtr dataStore = websiteDataStore(sessionID);
     if (!dataStore) {
-        completionHandler(toWebExtensionError(@"cookies.get()", nil, @"cookie store not found"));
+        completionHandler(toWebExtensionError(@"cookies.get()", nullString(), @"cookie store not found"));
         return;
     }
 
@@ -150,7 +151,7 @@ void WebExtensionContext::cookiesGetAll(std::optional<PAL::SessionID> sessionID,
 {
     RefPtr dataStore = websiteDataStore(sessionID);
     if (!dataStore) {
-        completionHandler(toWebExtensionError(@"cookies.getAll()", nil, @"cookie store not found"));
+        completionHandler(toWebExtensionError(@"cookies.getAll()", nullString(), @"cookie store not found"));
         return;
     }
 
@@ -163,7 +164,7 @@ void WebExtensionContext::cookiesSet(std::optional<PAL::SessionID> sessionID, co
 {
     RefPtr dataStore = websiteDataStore(sessionID);
     if (!dataStore) {
-        completionHandler(toWebExtensionError(@"cookies.set()", nil, @"cookie store not found"));
+        completionHandler(toWebExtensionError(@"cookies.set()", nullString(), @"cookie store not found"));
         return;
     }
 
@@ -171,7 +172,7 @@ void WebExtensionContext::cookiesSet(std::optional<PAL::SessionID> sessionID, co
 
     requestPermissionToAccessURLs({ url }, nullptr, [this, protectedThis = Ref { *this }, dataStore, url, cookieParameters, completionHandler = WTFMove(completionHandler)](auto&& requestedURLs, auto&& allowedURLs, auto expirationDate) mutable {
         if (!hasPermission(url)) {
-            completionHandler(toWebExtensionError(@"cookies.set()", nil, @"host permissions are missing or not granted"));
+            completionHandler(toWebExtensionError(@"cookies.set()", nullString(), @"host permissions are missing or not granted"));
             return;
         }
 
@@ -185,13 +186,13 @@ void WebExtensionContext::cookiesRemove(std::optional<PAL::SessionID> sessionID,
 {
     RefPtr dataStore = websiteDataStore(sessionID);
     if (!dataStore) {
-        completionHandler(toWebExtensionError(@"cookies.remove()", nil, @"cookie store not found"));
+        completionHandler(toWebExtensionError(@"cookies.remove()", nullString(), @"cookie store not found"));
         return;
     }
 
     requestPermissionToAccessURLs({ url }, nullptr, [this, protectedThis = Ref { *this }, dataStore, name, url, completionHandler = WTFMove(completionHandler)](auto&& requestedURLs, auto&& allowedURLs, auto expirationDate) mutable {
         if (!hasPermission(url)) {
-            completionHandler(toWebExtensionError(@"cookies.remove()", nil, @"host permissions are missing or not granted"));
+            completionHandler(toWebExtensionError(@"cookies.remove()", nullString(), @"host permissions are missing or not granted"));
             return;
         }
 

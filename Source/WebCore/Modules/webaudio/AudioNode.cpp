@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  * Copyright (C) 2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,6 +35,8 @@
 #include "AudioNodeOutput.h"
 #include "AudioParam.h"
 #include "ContextDestructionObserverInlines.h"
+#include "EventTargetInterfaces.h"
+#include "ExceptionOr.h"
 #include "Logging.h"
 #include <wtf/Atomics.h>
 #include <wtf/MainThread.h>
@@ -45,15 +47,13 @@
 #include <stdio.h>
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AudioNode);
 
 String convertEnumerationToString(AudioNode::NodeType enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 21> values {
         MAKE_STATIC_STRING_IMPL("NodeTypeDestination"),
         MAKE_STATIC_STRING_IMPL("NodeTypeOscillator"),
         MAKE_STATIC_STRING_IMPL("NodeTypeAudioBufferSource"),
@@ -514,7 +514,7 @@ void AudioNode::pullInputs(size_t framesToProcess)
 bool AudioNode::inputsAreSilent()
 {
     for (auto& input : m_inputs) {
-        if (!input->bus()->isSilent())
+        if (!input->bus().isSilent())
             return false;
     }
     return true;
@@ -523,7 +523,7 @@ bool AudioNode::inputsAreSilent()
 void AudioNode::silenceOutputs()
 {
     for (auto& output : m_outputs)
-        output->bus()->zero();
+        output->bus().zero();
 }
 
 void AudioNode::enableOutputsIfNecessary()
@@ -772,7 +772,5 @@ WTFLogChannel& AudioNode::logChannel() const
 #endif
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

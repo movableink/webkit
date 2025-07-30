@@ -31,6 +31,7 @@
 #include "WebPage.h"
 #include <WebCore/Animation.h>
 #include <WebCore/GraphicsLayer.h>
+#include <WebCore/GraphicsLayerFactory.h>
 #include <WebCore/InspectorController.h>
 #include <WebCore/LocalFrame.h>
 #include <WebCore/Page.h>
@@ -102,7 +103,7 @@ void WebInspectorClient::frontendCountChanged(unsigned count)
 Inspector::FrontendChannel* WebInspectorClient::openLocalFrontend(InspectorController* controller)
 {
     if (RefPtr page = m_page.get())
-        page->inspector()->openLocalInspectorFrontend(controller->isUnderTest());
+        page->inspector()->openLocalInspectorFrontend();
     return nullptr;
 }
 

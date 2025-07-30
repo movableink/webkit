@@ -128,9 +128,9 @@ RuleFeature::RuleFeature(const RuleData& ruleData, MatchElement matchElement, Is
 {
 }
 
-RuleFeatureWithInvalidationSelector::RuleFeatureWithInvalidationSelector(const RuleData& data, MatchElement matchElement, IsNegation isNegation, const CSSSelector* invalidationSelector)
+RuleFeatureWithInvalidationSelector::RuleFeatureWithInvalidationSelector(const RuleData& data, MatchElement matchElement, IsNegation isNegation, CSSSelectorList&& invalidationSelector)
     : RuleFeature(data, matchElement, isNegation)
-    , invalidationSelector(invalidationSelector)
+    , invalidationSelector(WTFMove(invalidationSelector))
 {
 }
 
@@ -312,9 +312,6 @@ DoesBreakScope RuleFeatureSet::recursivelyCollectFeaturesFromSelector(SelectorFe
                 canBreakScope = CanBreakScope::Yes;
         }
 
-        if (!selectorFeatures.hasSiblingSelector && selector->isSiblingSelector())
-            selectorFeatures.hasSiblingSelector = true;
-
         if (const CSSSelectorList* selectorList = selector->selectorList()) {
             auto subSelectorIsNegation = isNegation;
             if (selector->match() == CSSSelector::Match::PseudoClass && selector->pseudoClass() == CSSSelector::PseudoClass::Not)
@@ -404,10 +401,6 @@ void RuleFeatureSet::collectFeatures(const RuleData& ruleData, const Vector<Ref<
         collectSelectorList(scopeRule->scopeEnd());
     }
 
-    if (selectorFeatures.hasSiblingSelector)
-        siblingRules.append({ ruleData });
-    if (ruleData.containsUncommonAttributeSelector())
-        uncommonAttributeRules.append({ ruleData });
     if (ruleData.isStartingStyle() == IsStartingStyle::Yes)
         hasStartingStyleRules = true;
 
@@ -436,7 +429,12 @@ void RuleFeatureSet::collectFeatures(const RuleData& ruleData, const Vector<Ref<
         auto& [selector, matchElement, isNegation] = entry;
         attributeRules.ensure(selector->attribute().localNameLowercase(), [] {
             return makeUnique<Vector<RuleFeatureWithInvalidationSelector>>();
-        }).iterator->value->append({ ruleData, matchElement, isNegation, selector });
+        }).iterator->value->append({
+            ruleData,
+            matchElement,
+            isNegation,
+            CSSSelectorList::makeCopyingSimpleSelector(*selector)
+        });
         if (matchElement == MatchElement::Host)
             attributesAffectingHost.add(selector->attribute().localNameLowercase());
         setUsesMatchElement(matchElement);
@@ -460,7 +458,12 @@ void RuleFeatureSet::collectFeatures(const RuleData& ruleData, const Vector<Ref<
         // The selector argument points to a selector inside :has() selector list instead of :has() itself.
         hasPseudoClassRules.ensure(makePseudoClassInvalidationKey(CSSSelector::PseudoClass::Has, *selector), [] {
             return makeUnique<Vector<RuleFeatureWithInvalidationSelector>>();
-        }).iterator->value->append({ ruleData, matchElement, isNegation, selector });
+        }).iterator->value->append({
+            ruleData,
+            matchElement,
+            isNegation,
+            CSSSelectorList::makeCopyingComplexSelector(*selector)
+        });
 
         if (doesBreakScope == DoesBreakScope::Yes)
             scopeBreakingHasPseudoClassRules.append({ ruleData });
@@ -476,8 +479,6 @@ void RuleFeatureSet::add(const RuleFeatureSet& other)
     attributeLowercaseLocalNamesInRules.add(other.attributeLowercaseLocalNamesInRules.begin(), other.attributeLowercaseLocalNamesInRules.end());
     attributeLocalNamesInRules.add(other.attributeLocalNamesInRules.begin(), other.attributeLocalNamesInRules.end());
     contentAttributeNamesInRules.add(other.contentAttributeNamesInRules.begin(), other.contentAttributeNamesInRules.end());
-    siblingRules.appendVector(other.siblingRules);
-    uncommonAttributeRules.appendVector(other.uncommonAttributeRules);
 
     auto addMap = [&](auto& map, auto& otherMap) {
         for (auto& keyValuePair : otherMap) {
@@ -524,8 +525,6 @@ void RuleFeatureSet::clear()
     attributeLowercaseLocalNamesInRules.clear();
     attributeLocalNamesInRules.clear();
     contentAttributeNamesInRules.clear();
-    siblingRules.clear();
-    uncommonAttributeRules.clear();
     idRules.clear();
     classRules.clear();
     hasPseudoClassRules.clear();
@@ -543,8 +542,6 @@ void RuleFeatureSet::clear()
 
 void RuleFeatureSet::shrinkToFit()
 {
-    siblingRules.shrinkToFit();
-    uncommonAttributeRules.shrinkToFit();
     scopeBreakingHasPseudoClassRules.shrinkToFit();
     for (auto& rules : idRules.values())
         rules->shrinkToFit();

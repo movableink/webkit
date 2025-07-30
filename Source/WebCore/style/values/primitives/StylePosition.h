@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,9 +25,14 @@
 #pragma once
 
 #include "CSSPosition.h"
+#include "FloatPoint.h"
 #include "StylePrimitiveNumericTypes.h"
 
 namespace WebCore {
+
+struct Length;
+struct LengthPoint;
+
 namespace Style {
 
 struct TwoComponentPositionHorizontal {
@@ -35,16 +40,16 @@ struct TwoComponentPositionHorizontal {
 
     bool operator==(const TwoComponentPositionHorizontal&) const = default;
 };
-DEFINE_TYPE_WRAPPER(TwoComponentPositionHorizontal, offset);
+DEFINE_TYPE_WRAPPER_GET(TwoComponentPositionHorizontal, offset);
 
 struct TwoComponentPositionVertical {
     LengthPercentage<> offset;
 
     bool operator==(const TwoComponentPositionVertical&) const = default;
 };
-DEFINE_TYPE_WRAPPER(TwoComponentPositionVertical, offset);
+DEFINE_TYPE_WRAPPER_GET(TwoComponentPositionVertical, offset);
 
-struct Position  {
+struct Position {
     Position(TwoComponentPositionHorizontal&& x, TwoComponentPositionVertical&& y)
         : value { WTFMove(x.offset), WTFMove(y.offset) }
     {
@@ -61,7 +66,7 @@ struct Position  {
     }
 
     Position(FloatPoint point)
-        : value { LengthPercentage<> { Length<> { point.x() } }, LengthPercentage<> { Length<> { point.y() } } }
+        : value { LengthPercentage<>::Dimension { point.x() }, LengthPercentage<>::Dimension { point.y() } }
     {
     }
 
@@ -78,27 +83,52 @@ template<size_t I> const auto& get(const Position& position)
     return get<I>(position.value);
 }
 
+struct PositionX {
+    LengthPercentage<> value;
+
+    bool operator==(const PositionX&) const = default;
+};
+DEFINE_TYPE_WRAPPER_GET(PositionX, value);
+
+struct PositionY {
+    LengthPercentage<> value;
+
+    bool operator==(const PositionY&) const = default;
+};
+DEFINE_TYPE_WRAPPER_GET(PositionY, value);
+
 // MARK: - Conversion
 
 // Specialization is needed for ToStyle to implement resolution of keyword value to <length-percentage>.
 template<> struct ToCSSMapping<TwoComponentPositionHorizontal> { using type = CSS::TwoComponentPositionHorizontal; };
-template<> struct ToStyle<CSS::TwoComponentPositionHorizontal> { auto operator()(const CSS::TwoComponentPositionHorizontal&, const BuilderState&, const CSSCalcSymbolTable&) -> TwoComponentPositionHorizontal; };
+template<> struct ToStyle<CSS::TwoComponentPositionHorizontal> { auto operator()(const CSS::TwoComponentPositionHorizontal&, const BuilderState&) -> TwoComponentPositionHorizontal; };
 template<> struct ToCSSMapping<TwoComponentPositionVertical> { using type = CSS::TwoComponentPositionVertical; };
-template<> struct ToStyle<CSS::TwoComponentPositionVertical> { auto operator()(const CSS::TwoComponentPositionVertical&, const BuilderState&, const CSSCalcSymbolTable&) -> TwoComponentPositionVertical; };
+template<> struct ToStyle<CSS::TwoComponentPositionVertical> { auto operator()(const CSS::TwoComponentPositionVertical&, const BuilderState&) -> TwoComponentPositionVertical; };
 
-// Specialization is needed for both ToCSS and ToStyle due to differences in type structure.
 template<> struct ToCSS<Position> { auto operator()(const Position&, const RenderStyle&) -> CSS::Position; };
-template<> struct ToStyle<CSS::Position> { auto operator()(const CSS::Position&, const BuilderState&, const CSSCalcSymbolTable&) -> Position; };
+template<> struct ToStyle<CSS::Position> { auto operator()(const CSS::Position&, const BuilderState&) -> Position; };
+
+template<> struct ToCSS<PositionX> { auto operator()(const PositionX&, const RenderStyle&) -> CSS::PositionX; };
+template<> struct ToStyle<CSS::PositionX> { auto operator()(const CSS::PositionX&, const BuilderState&) -> PositionX; };
+
+template<> struct ToCSS<PositionY> { auto operator()(const PositionY&, const RenderStyle&) -> CSS::PositionY; };
+template<> struct ToStyle<CSS::PositionY> { auto operator()(const CSS::PositionY&, const BuilderState&) -> PositionY; };
 
 // MARK: - Evaluation
 
-FloatPoint evaluate(const Position&, FloatSize referenceBox);
-float evaluate(const TwoComponentPositionHorizontal&, float referenceWidth);
-float evaluate(const TwoComponentPositionVertical&, float referenceHeight);
+template<> struct Evaluation<Position> { auto operator()(const Position&, FloatSize) -> FloatPoint; };
+
+// MARK: - Platform
+
+auto toPlatform(const Position&) -> WebCore::LengthPoint;
+auto toPlatform(const PositionX&) -> WebCore::Length;
+auto toPlatform(const PositionY&) -> WebCore::Length;
 
 } // namespace Style
 } // namespace WebCore
 
-STYLE_TUPLE_LIKE_CONFORMANCE(TwoComponentPositionHorizontal, 1)
-STYLE_TUPLE_LIKE_CONFORMANCE(TwoComponentPositionVertical, 1)
-STYLE_TUPLE_LIKE_CONFORMANCE(Position, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::TwoComponentPositionHorizontal, 1)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::TwoComponentPositionVertical, 1)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::Position, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::PositionX, 1)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::PositionY, 1)

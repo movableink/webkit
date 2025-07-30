@@ -93,6 +93,9 @@ class PlatformInfo(object):
     def is_watchos(self):
         return self.os_name == 'watchos'
 
+    def is_visionos(self):
+        return self.os_name == 'visionos'
+
     def is_win(self):
         return self.os_name == 'win'
 
@@ -101,6 +104,9 @@ class PlatformInfo(object):
 
     def is_cygwin(self):
         return self._is_cygwin
+
+    def is_haiku(self):
+        return self.os_name == 'haiku'
 
     def is_linux(self):
         return self.os_name == 'linux'
@@ -234,6 +240,10 @@ class PlatformInfo(object):
             return 'mac'
         if sys_platform == 'ios' or sys_platform == 'watchos':
             return 'ios'
+        if sys_platform == 'visionos':
+            return 'visionos'
+        if sys_platform.startswith('haiku'):
+            return 'haiku'
         if sys_platform.startswith('linux'):
             return 'linux'
         if sys_platform.startswith('win') or sys_platform == 'cygwin':

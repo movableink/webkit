@@ -13,6 +13,9 @@
 
 #include "common/PackedEnums.h"
 #include "libANGLE/capture/FrameCapture.h"
+#ifdef ANGLE_ENABLE_CL
+#    include "common/PackedCLEnums_autogen.h"
+#endif
 
 namespace egl
 {
@@ -323,6 +326,12 @@ angle::CallCapture CaptureReleaseDeviceANGLE(egl::Thread *thread,
                                              bool isCallValid,
                                              egl::Device *devicePacked,
                                              EGLBoolean returnValue);
+angle::CallCapture CaptureLockVulkanQueueANGLE(egl::Thread *thread,
+                                               bool isCallValid,
+                                               egl::Display *dpyPacked);
+angle::CallCapture CaptureUnlockVulkanQueueANGLE(egl::Thread *thread,
+                                                 bool isCallValid,
+                                                 egl::Display *dpyPacked);
 angle::CallCapture CaptureAcquireExternalContextANGLE(egl::Thread *thread,
                                                       bool isCallValid,
                                                       egl::Display *dpyPacked,
@@ -417,12 +426,6 @@ angle::CallCapture CaptureStreamPostD3DTextureANGLE(egl::Thread *thread,
                                                     void *texture,
                                                     const AttributeMap &attrib_listPacked,
                                                     EGLBoolean returnValue);
-angle::CallCapture CaptureSwapBuffersWithFrameTokenANGLE(egl::Thread *thread,
-                                                         bool isCallValid,
-                                                         egl::Display *dpyPacked,
-                                                         SurfaceID surfacePacked,
-                                                         EGLFrameTokenANGLE frametoken,
-                                                         EGLBoolean returnValue);
 angle::CallCapture CaptureGetMscRateANGLE(egl::Thread *thread,
                                           bool isCallValid,
                                           egl::Display *dpyPacked,
@@ -501,6 +504,15 @@ angle::CallCapture CaptureGetPlatformDisplayEXT(egl::Thread *thread,
                                                 void *native_display,
                                                 const AttributeMap &attrib_listPacked,
                                                 EGLDisplay returnValue);
+angle::CallCapture CaptureQuerySupportedCompressionRatesEXT(egl::Thread *thread,
+                                                            bool isCallValid,
+                                                            egl::Display *dpyPacked,
+                                                            egl::Config *configPacked,
+                                                            const EGLAttrib *attrib_list,
+                                                            EGLint *rates,
+                                                            EGLint rate_size,
+                                                            EGLint *num_rates,
+                                                            EGLBoolean returnValue);
 angle::CallCapture CaptureDebugMessageControlKHR(egl::Thread *thread,
                                                  bool isCallValid,
                                                  EGLDEBUGPROCKHR callback,

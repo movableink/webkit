@@ -29,12 +29,12 @@
 #import "Test.h"
 #import "TestNavigationDelegate.h"
 #import <WebKit/WKContextPrivate.h>
-#import <WebKit/WKProcessGroupPrivate.h>
 #import <WebKit/WKProcessPoolPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/WKWebsiteDataStorePrivate.h>
 #import <WebKit/WebKit.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/StdLibExtras.h>
 
 static bool loadedOrCrashed = false;
 static bool loaded = false;
@@ -69,7 +69,7 @@ TEST(WebKit, NetworkProcessCrashWithPendingConnection)
 
     // FIXME: Adopt the new API once it's added in webkit.org/b/174061.
     WKContextClientV0 client;
-    memset(&client, 0, sizeof(client));
+    zeroBytes(client);
     client.networkProcessDidCrash = [](WKContextRef context, const void* clientInfo) {
         networkProcessCrashed = true;
     };
@@ -136,7 +136,7 @@ TEST(WebKit, NetworkProcessRelaunchOnLaunchFailure)
     networkProcessCrashed = false;
 
     WKContextClientV0 client;
-    memset(&client, 0, sizeof(client));
+    zeroBytes(client);
     client.networkProcessDidCrash = [](WKContextRef context, const void* clientInfo) {
         networkProcessCrashed = true;
     };

@@ -31,6 +31,7 @@
 
 #include "CAAudioStreamDescription.h"
 #include "RealtimeIncomingAudioSource.h"
+#include "Timer.h"
 #include "WebAudioBufferList.h"
 #include <CoreAudio/CoreAudioTypes.h>
 

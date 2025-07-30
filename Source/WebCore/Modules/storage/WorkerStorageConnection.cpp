@@ -28,6 +28,7 @@
 
 #include "ClientOrigin.h"
 #include "Document.h"
+#include "ExceptionOr.h"
 #include "StorageEstimate.h"
 #include "WorkerFileSystemStorageConnection.h"
 #include "WorkerGlobalScope.h"

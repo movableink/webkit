@@ -35,8 +35,6 @@
 #import <pal/spi/mac/CoreUISPI.h>
 #import <pal/spi/mac/NSAppearanceSPI.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ProgressBarMac);
@@ -45,6 +43,8 @@ ProgressBarMac::ProgressBarMac(ProgressBarPart& owningPart, ControlFactoryMac& c
     : ControlMac(owningPart, controlFactory)
 {
 }
+
+ProgressBarMac::~ProgressBarMac() = default;
 
 IntSize ProgressBarMac::cellSize(NSControlSize controlSize, const ControlStyle&) const
 {
@@ -60,12 +60,12 @@ IntSize ProgressBarMac::cellSize(NSControlSize controlSize, const ControlStyle&)
 
 IntOutsets ProgressBarMac::cellOutsets(NSControlSize controlSize, const ControlStyle&) const
 {
-    static const IntOutsets cellOutsets[] = {
+    static const std::array cellOutsets {
         // top right bottom left
-        { 0, 0, 1, 0 },
-        { 0, 0, 1, 0 },
-        { 0, 0, 1, 0 },
-        { 0, 0, 1, 0 },
+        IntOutsets { 0, 0, 1, 0 },
+        IntOutsets { 0, 0, 1, 0 },
+        IntOutsets { 0, 0, 1, 0 },
+        IntOutsets { 0, 0, 1, 0 },
     };
     return cellOutsets[controlSize];
 }
@@ -128,6 +128,8 @@ void ProgressBarMac::draw(GraphicsContext& context, const FloatRoundedRect& bord
         case NSControlSizeRegular:
         case NSControlSizeLarge:
             return kCUISizeRegular;
+        default:
+            return kCUISizeRegular;
         }
         ASSERT_NOT_REACHED();
         return nullptr;
@@ -154,7 +156,7 @@ void ProgressBarMac::draw(GraphicsContext& context, const FloatRoundedRect& bord
         context.translate(-inflatedRect.location());
     }
 
-    if (style.states.contains(ControlStyle::State::RightToLeft)) {
+    if (style.states.contains(ControlStyle::State::InlineFlippedWritingMode)) {
         context.translate(2 * inflatedRect.x() + inflatedRect.width(), 0);
         context.scale(FloatSize(-1, 1));
     }
@@ -163,7 +165,5 @@ void ProgressBarMac::draw(GraphicsContext& context, const FloatRoundedRect& bord
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // PLATFORM(MAC)

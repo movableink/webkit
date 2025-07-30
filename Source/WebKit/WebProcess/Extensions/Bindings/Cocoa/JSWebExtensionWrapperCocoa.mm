@@ -209,12 +209,12 @@ NSString *toNSString(JSContextRef context, JSValueRef value, NullStringPolicy nu
     case NullStringPolicy::NullAndUndefinedAsNullString:
         if (JSValueIsUndefined(context, value))
             return nil;
-        FALLTHROUGH;
+        [[fallthrough]];
 
     case NullStringPolicy::NullAsNullString:
         if (JSValueIsNull(context, value))
             return nil;
-        FALLTHROUGH;
+        [[fallthrough]];
 
     case NullStringPolicy::NoNullString:
         // Don't try to convert other objects into strings.
@@ -283,7 +283,7 @@ JSValueRef toJSValueRef(JSContextRef context, NSString *string, NullOrEmptyStrin
     case NullOrEmptyString::NullStringAsNull:
         if (!string)
             return JSValueMakeNull(context);
-        FALLTHROUGH;
+        [[fallthrough]];
 
     case NullOrEmptyString::NullStringAsEmptyString:
         return JSValueMakeString(context, toJSString(string).get());
@@ -368,7 +368,7 @@ JSValueRef toJSValueRefOrJSNull(JSContextRef context, id object)
 NSArray *toNSArray(JSContextRef context, JSValueRef value, Class containingObjectsOfClass)
 {
     ASSERT(containingObjectsOfClass);
-    return toNSObject(context, value, containingObjectsOfClass);
+    return dynamic_objc_cast<NSArray>(toNSObject(context, value, containingObjectsOfClass));
 }
 
 JSContext *toJSContext(JSContextRef context)

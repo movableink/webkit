@@ -1,7 +1,0 @@
-
-PASS ShadowRoot.registry is null if not explicitly specified
-PASS Attach the global registry to a shadow root
-PASS Attach a non-global registry to a shadow root
-PASS Attach the same registry to multiple shadow roots
-PASS Attaching registry to shadow root can only be done during initialization
-

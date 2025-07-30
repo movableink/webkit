@@ -81,7 +81,7 @@ public:
     RefPtr<WebCore::NativeImage> createNativeImageReference() final;
 
     void getPixelBuffer(const WebCore::IntRect&, WebCore::PixelBuffer&) final;
-    void putPixelBuffer(const WebCore::PixelBuffer&, const WebCore::IntRect& srcRect, const WebCore::IntPoint& destPoint, WebCore::AlphaPremultiplication destFormat) final;
+    void putPixelBuffer(const WebCore::PixelBufferSourceView&, const WebCore::IntRect& srcRect, const WebCore::IntPoint& destPoint, WebCore::AlphaPremultiplication destFormat) final;
 
 private:
     unsigned bytesPerRow() const final;
@@ -90,7 +90,7 @@ private:
     ImageBufferBackendSharing* toBackendSharing() final { return this; }
     void releaseGraphicsContext() final { /* Do nothing. This is only relevant for IOSurface backends */ }
 
-    Ref<WebCore::ShareableBitmap> m_bitmap;
+    const Ref<WebCore::ShareableBitmap> m_bitmap;
     std::unique_ptr<WebCore::GraphicsContext> m_context;
 };
 

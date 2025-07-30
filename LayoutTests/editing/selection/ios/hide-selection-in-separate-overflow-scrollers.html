@@ -1,4 +1,4 @@
-<!DOCTYPE html> <!-- webkit-test-runner [ useFlexibleViewport=true AsyncOverflowScrollingEnabled=true SelectionHonorsOverflowScrolling=false ] -->
+<!DOCTYPE html> <!-- webkit-test-runner [ useFlexibleViewport=true AsyncOverflowScrollingEnabled=true SelectionHonorsOverflowScrolling=true ] -->
 <html>
 <script src="../../../resources/ui-helper.js"></script>
 <script src="../../../resources/js-test.js"></script>
@@ -47,7 +47,6 @@ addEventListener("load", async () => {
     await UIHelper.waitForSelectionToAppear();
     testPassed("Selection appeared");
 
-    // Make the selection start in the main scroll view and end in an overflow scroller.
     getSelection().setBaseAndExtent(start, 0, end, 1);
     await UIHelper.ensurePresentationUpdate();
 

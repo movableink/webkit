@@ -62,12 +62,12 @@ struct ViewportAttributes {
 };
 
 struct ViewportArguments {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
     enum class Type : uint8_t {
         // These are ordered in increasing importance.
         Implicit,
 #if PLATFORM(IOS_FAMILY)
-        PluginDocument,
         ImageDocument,
 #endif
         ViewportMeta,
@@ -83,6 +83,11 @@ struct ViewportArguments {
         : type(type)
     {
     }
+
+    ViewportArguments(ViewportArguments&&) = default;
+    ViewportArguments(const ViewportArguments&) = default;
+    ViewportArguments& operator=(ViewportArguments&&) = default;
+    ViewportArguments& operator=(const ViewportArguments&) = default;
 
     ViewportArguments(Type type, float width, float height, float zoom, float minZoom, float maxZoom, float userZoom, float orientation, float shrinkToFit, ViewportFit viewportFit, bool widthWasExplicit)
         : type(type)
@@ -144,7 +149,7 @@ WEBCORE_EXPORT float computeMinimumScaleFactorForContentContained(const Viewport
 
 typedef Function<void(ViewportErrorCode, const String&)> ViewportErrorHandler;
 void setViewportFeature(ViewportArguments&, Document&, StringView key, StringView value);
-WEBCORE_EXPORT void setViewportFeature(ViewportArguments&, StringView key, StringView value, const ViewportErrorHandler&);
+WEBCORE_EXPORT void setViewportFeature(ViewportArguments&, StringView key, StringView value, NOESCAPE const ViewportErrorHandler&);
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const ViewportArguments&);
 

@@ -59,7 +59,8 @@ AutoInstall.register(Package('pylint', Version(2, 13, 9)))
 AutoInstall.register(
     Package("pytest", Version(7, 2, 0),
             implicit_deps=["attr", "pluggy", "iniconfig"]
-            + (["exceptiongroup"] if sys.version_info < (3, 11) else [])
+            + (["exceptiongroup"] if sys.version_info < (3, 11) else []),
+            aliases=["_pytest"]  # Technically also a stub "py" module, but this conflicts with the py project.
             )
 )
 AutoInstall.register(Package('pytest_asyncio', Version(0, 18, 3), pypi_name='pytest-asyncio', implicit_deps=['pytest'], wheel=True))
@@ -70,11 +71,11 @@ if sys.version_info < (3, 11):
     AutoInstall.register(Package('exceptiongroup', Version(1, 1, 0), wheel=True))
 
 AutoInstall.register(Package('importlib_metadata', Version(4, 8, 1)))
-AutoInstall.register(Package('typing_extensions', Version(4, 8, 0), wheel=True))
+AutoInstall.register(Package('typing_extensions', Version(4, 12, 2), wheel=True))
 AutoInstall.register(Package('atomicwrites', Version(1, 1, 5)))
-AutoInstall.register(Package('attr', Version(21, 3, 0), pypi_name='attrs'))
+AutoInstall.register(Package('attrs', Version(21, 3, 0), aliases=['attr']))
 AutoInstall.register(Package('bs4', Version(4, 12, 0), pypi_name='beautifulsoup4'))
-AutoInstall.register(Package('configparser', Version(4, 0, 2), implicit_deps=['pyparsing']))
+AutoInstall.register(Package('configparser', Version(4, 0, 2), implicit_deps=['pyparsing'], aliases=['backports.configparser']))
 AutoInstall.register(Package('contextlib2', Version(0, 6, 0)))
 AutoInstall.register(Package('coverage', Version(7, 6, 1), wheel=True))
 AutoInstall.register(Package('funcsigs', Version(1, 0, 2)))
@@ -86,13 +87,13 @@ AutoInstall.register(Package('mozprocess', Version(1, 3, 0)))
 AutoInstall.register(Package('mozlog', Version(7, 1, 0), wheel=True))
 AutoInstall.register(Package('mozterm', Version(1, 0, 0)))
 AutoInstall.register(Package('pluggy', Version(0, 13, 1)))
-AutoInstall.register(Package('py', Version(1, 11, 0)))
 AutoInstall.register(Package('pycodestyle', Version(2, 5, 0)))
-AutoInstall.register(Package('pyfakefs', Version(5, 2, 4)))
+AutoInstall.register(Package('pyfakefs', Version(5, 7, 3)))
 AutoInstall.register(Package('soupsieve', Version(2, 2, 1)))
 
 if sys.platform == 'linux':
-    AutoInstall.register(Package('selenium', Version(4, 19, 0), wheel=True))
+    AutoInstall.register(Package('selenium', Version(4, 24, 0), wheel=True, implicit_deps=[
+        Package('websocket', Version(1, 8, 0), pypi_name='websocket-client')]))
 else:
     AutoInstall.register(Package('selenium', Version(4, 12, 0), wheel=True))
 
@@ -101,10 +102,9 @@ AutoInstall.register(Package('wcwidth', Version(0, 2, 5)))
 AutoInstall.register(Package('webencodings', Version(0, 5, 1)))
 AutoInstall.register(Package('zipp', Version(1, 2, 0)))
 AutoInstall.register(Package('zope.interface', Version(7, 0, 1), aliases=['zope'], pypi_name='zope-interface', wheel=True))
-AutoInstall.register(Package('reporelaypy', Version(0, 4, 1)), local=True)
-AutoInstall.register(Package('webkitflaskpy', Version(0, 3, 0)), local=True)
 AutoInstall.register(Package('webkitscmpy', Version(4, 0, 0)), local=True)
 AutoInstall.register(Package('webkitbugspy', Version(0, 3, 1)), local=True)
+AutoInstall.register(Package('yaml', Version(6, 0, 2), pypi_name='PyYAML'))
 
 import webkitscmpy
 

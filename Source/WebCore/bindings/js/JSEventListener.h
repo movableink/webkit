@@ -24,6 +24,7 @@
 #include "EventNames.h"
 #include "HTMLElement.h"
 #include "LocalDOMWindow.h"
+#include "NodeInlines.h"
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/StrongInlines.h>
 #include <JavaScriptCore/Weak.h>
@@ -134,7 +135,7 @@ inline JSC::JSObject* JSEventListener::ensureJSFunction(ScriptExecutionContext& 
 {
     // initializeJSFunction can trigger code that deletes this event listener
     // before we're done. It should always return null in this case.
-    if (UNLIKELY(!m_isolatedWorld))
+    if (!m_isolatedWorld) [[unlikely]]
         return nullptr;
 
     JSC::VM& vm = m_isolatedWorld->vm();

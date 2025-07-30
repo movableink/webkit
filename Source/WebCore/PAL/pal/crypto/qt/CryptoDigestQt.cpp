@@ -37,7 +37,7 @@ static QCryptographicHash::Algorithm toQtAlgorithm(CryptoDigest::Algorithm algor
     case CryptoDigest::Algorithm::SHA_1:
         return QCryptographicHash::Sha1;
 
-    case CryptoDigest::Algorithm::SHA_224:
+    case CryptoDigest::Algorithm::DEPRECATED_SHA_224:
         return QCryptographicHash::Sha224;
 
     case CryptoDigest::Algorithm::SHA_256:

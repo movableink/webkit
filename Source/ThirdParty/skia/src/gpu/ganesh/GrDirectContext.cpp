@@ -429,6 +429,10 @@ skgpu::ganesh::SmallPathAtlasMgr* GrDirectContext::onGetSmallPathAtlasMgr() {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+skgpu::GpuStatsFlags GrDirectContext::supportedGpuStats() const {
+    return this->caps()->supportedGpuStats();
+}
+
 GrSemaphoresSubmitted GrDirectContext::flush(const GrFlushInfo& info) {
     ASSERT_SINGLE_OWNER
     if (this->abandoned()) {
@@ -530,7 +534,7 @@ void GrDirectContext::flush(SkSurface* surface) {
 
 void GrDirectContext::checkAsyncWorkCompletion() {
     if (fGpu) {
-        fGpu->checkFinishProcs();
+        fGpu->checkFinishedCallbacks();
     }
 }
 
@@ -543,9 +547,29 @@ void GrDirectContext::syncAllOutstandingGpuWork(bool shouldExecuteWhileAbandoned
 
 ////////////////////////////////////////////////////////////////////////////////
 
+bool GrDirectContext::canDetectNewVkPipelineCacheData() const {
+    if (!fGpu) {
+        return false;
+    }
+
+    return fGpu->canDetectNewVkPipelineCacheData();
+}
+
+bool GrDirectContext::hasNewVkPipelineCacheData() const {
+    if (!fGpu) {
+        return false;
+    }
+
+    return fGpu->hasNewVkPipelineCacheData();
+}
+
 void GrDirectContext::storeVkPipelineCacheData() {
+    this->storeVkPipelineCacheData(SIZE_MAX);
+}
+
+void GrDirectContext::storeVkPipelineCacheData(size_t maxSize) {
     if (fGpu) {
-        fGpu->storeVkPipelineCacheData();
+        fGpu->storeVkPipelineCacheData(maxSize);
     }
 }
 

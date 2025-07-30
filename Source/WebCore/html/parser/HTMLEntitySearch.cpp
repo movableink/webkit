@@ -28,6 +28,7 @@
 #include "HTMLEntitySearch.h"
 
 #include "HTMLEntityTable.h"
+#include <numeric>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -35,7 +36,7 @@ namespace WebCore {
 
 static const HTMLEntityTableEntry* midpoint(const HTMLEntityTableEntry* left, const HTMLEntityTableEntry* right)
 {
-    return &left[(right - left) / 2];
+    return std::midpoint(left, right);
 }
 
 HTMLEntitySearch::HTMLEntitySearch()

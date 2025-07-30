@@ -46,7 +46,7 @@
     BOOL _hasActiveNowPlayingSession;
     BOOL _registeredAsNowPlayingApplication;
 }
-- (BOOL)hasActiveNowPlayingSession
+- (void)requestActiveNowPlayingSessionInfo
 {
     _receivedNowPlayingInfoResponse = false;
 
@@ -64,18 +64,31 @@
     [self _requestActiveNowPlayingSessionInfo:completionHandler];
 
     TestWebKitAPI::Util::run(&_receivedNowPlayingInfoResponse);
-
-    return _hasActiveNowPlayingSession;
 }
 
 - (void)expectHasActiveNowPlayingSession:(BOOL)hasActiveNowPlayingSession
 {
+    [self requestActiveNowPlayingSessionInfo];
+
     bool finishedWaiting = false;
     while (!finishedWaiting) {
         [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantPast]];
         finishedWaiting = self.hasActiveNowPlayingSession == hasActiveNowPlayingSession;
     }
 }
+
+#if ENABLE(REQUIRES_PAGE_VISIBILITY_FOR_NOW_PLAYING)
+- (void)expectRegisteredAsNowPlayingApplication:(BOOL)registeredAsNowPlayingApplication
+{
+    [self requestActiveNowPlayingSessionInfo];
+
+    bool finishedWaiting = false;
+    while (!finishedWaiting) {
+        [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantPast]];
+        finishedWaiting = self.registeredAsNowPlayingApplication == registeredAsNowPlayingApplication;
+    }
+}
+#endif
 
 - (void)setWindowVisible:(BOOL)isVisible
 {
@@ -127,6 +140,32 @@ TEST(NowPlayingControlsTests, NowPlayingControlsShowForBackgroundPage)
     ASSERT_EQ(10, webView.get().lastUpdatedDuration);
     ASSERT_GE(webView.get().lastUpdatedElapsedTime, 0);
 }
+
+#if ENABLE(REQUIRES_PAGE_VISIBILITY_FOR_NOW_PLAYING)
+TEST(NowPlayingControlsTests, NowPlayingApplicationNotRegisteredForBackgroundPage)
+{
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [configuration setMediaTypesRequiringUserActionForPlayback:WKAudiovisualMediaTypeNone];
+    [configuration preferences]._requiresPageVisibilityForVideoToBeNowPlayingForTesting = YES;
+    auto webView = adoptNS([[NowPlayingTestWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    [webView loadTestPageNamed:@"large-video-test-now-playing"];
+    [webView waitForMessage:@"playing"];
+
+    [webView setWindowVisible:NO];
+    [webView.get().window resignKeyWindow];
+
+    [webView expectRegisteredAsNowPlayingApplication:NO];
+
+    [webView setWindowVisible:YES];
+    [webView.get().window makeKeyWindow];
+
+    [webView expectRegisteredAsNowPlayingApplication:YES];
+
+    ASSERT_STREQ("foo", webView.get().lastUpdatedTitle.UTF8String);
+    ASSERT_EQ(10, webView.get().lastUpdatedDuration);
+    ASSERT_GE(webView.get().lastUpdatedElapsedTime, 0);
+}
+#endif // ENABLE(REQUIRES_PAGE_VISIBILITY_FOR_NOW_PLAYING)
 
 TEST(NowPlayingControlsTests, NowPlayingControlsHideAfterShowingKeepsSessionActive)
 {

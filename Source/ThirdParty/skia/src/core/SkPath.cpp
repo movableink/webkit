@@ -9,6 +9,7 @@
 
 #include "include/core/SkArc.h"
 #include "include/core/SkPathBuilder.h"
+#include "include/core/SkPathTypes.h"
 #include "include/core/SkRRect.h"
 #include "include/core/SkStream.h"
 #include "include/core/SkString.h"
@@ -262,6 +263,12 @@ bool SkPath::interpolate(const SkPath& ending, SkScalar weight, SkPath* out) con
     return true;
 }
 
+SkPath SkPath::makeInterpolate(const SkPath& ending, SkScalar weight) const {
+    SkPath out;
+    this->interpolate(ending, weight, &out);
+    return out;
+}
+
 static inline bool check_edge_against_rect(const SkPoint& p0,
                                            const SkPoint& p1,
                                            const SkRect& rect,
@@ -451,6 +458,30 @@ void SkPath::setBounds(const SkRect& rect) {
 
 SkPathConvexity SkPath::getConvexityOrUnknown() const {
     return (SkPathConvexity)fConvexity.load(std::memory_order_relaxed);
+}
+
+SkPath SkPath::makeFillType(SkPathFillType ft) const {
+    return SkPath(fPathRef,
+                  ft,
+                  fIsVolatile,
+                  this->getConvexityOrUnknown(),
+                  this->getFirstDirection());
+}
+
+SkPath SkPath::makeToggleInverseFillType() const {
+    return SkPath(fPathRef,
+                  static_cast<SkPathFillType>(fFillType ^ 2),
+                  fIsVolatile,
+                  this->getConvexityOrUnknown(),
+                  this->getFirstDirection());
+}
+
+SkPath SkPath::makeIsVolatile(bool v) const {
+    return SkPath(fPathRef,
+                  static_cast<SkPathFillType>(fFillType),
+                  v,
+                  this->getConvexityOrUnknown(),
+                  this->getFirstDirection());
 }
 
 #ifdef SK_DEBUG
@@ -3459,7 +3490,7 @@ bool SkPath::IsCubicDegenerate(const SkPoint& p1, const SkPoint& p2,
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-SkPathVerbAnalysis sk_path_analyze_verbs(const uint8_t vbs[], int verbCount) {
+SkPathVerbAnalysis SkPathPriv::AnalyzeVerbs(const uint8_t vbs[], int verbCount) {
     SkPathVerbAnalysis info = {false, 0, 0, 0};
     bool needMove = true;
     bool invalid = false;
@@ -3521,7 +3552,7 @@ SkPath SkPath::Make(const SkPoint pts[], int pointCount,
         return SkPath();
     }
 
-    const auto info = sk_path_analyze_verbs(vbs, verbCount);
+    const auto info = SkPathPriv::AnalyzeVerbs(vbs, verbCount);
     if (!info.valid || info.points > pointCount || info.weights > wCount) {
         SkDEBUGFAIL("invalid verbs and number of points/weights");
         return SkPath();

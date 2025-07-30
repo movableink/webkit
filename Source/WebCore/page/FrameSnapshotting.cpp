@@ -105,8 +105,12 @@ RefPtr<ImageBuffer> snapshotFrameRectWithClip(LocalFrame& frame, const IntRect& 
         paintBehavior.add(PaintBehavior::SelectionAndBackgroundsOnly);
     if (options.flags.contains(SnapshotFlags::PaintEverythingExcludingSelection))
         paintBehavior.add(PaintBehavior::ExcludeSelection);
-    if (options.flags.contains(SnapshotFlags::ExcludeReplacedContent))
-        paintBehavior.add(PaintBehavior::ExcludeReplacedContent);
+    if (options.flags.contains(SnapshotFlags::ExcludeReplacedContentExceptForIFrames))
+        paintBehavior.add(PaintBehavior::ExcludeReplacedContentExceptForIFrames);
+    if (options.flags.contains(SnapshotFlags::ExcludeText))
+        paintBehavior.add(PaintBehavior::ExcludeText);
+    if (options.flags.contains(SnapshotFlags::FixedAndStickyLayersOnly))
+        paintBehavior.add(PaintBehavior::FixedAndStickyLayersOnly);
 
     // Other paint behaviors are set by paintContentsForSnapshot.
     frame.view()->setPaintBehavior(paintBehavior);
@@ -175,7 +179,12 @@ RefPtr<ImageBuffer> snapshotNode(LocalFrame& frame, Node& node, SnapshotOptions&
 
 static bool styleContainsComplexBackground(const RenderStyle& style)
 {
-    return style.hasBlendMode() || style.hasBackgroundImage() || style.hasBackdropFilter();
+    return style.hasBlendMode()
+        || style.hasBackgroundImage()
+#if HAVE(CORE_MATERIAL)
+        || style.hasAppleVisualEffectRequiringBackdropFilter()
+#endif
+        || style.hasBackdropFilter();
 }
 
 Color estimatedBackgroundColorForRange(const SimpleRange& range, const LocalFrame& frame)

@@ -57,6 +57,7 @@ public:
     void takeBounds(const RenderInline&, LayoutRect&& /* paintRect */);
     void takeBounds(const RenderText&, FloatRect /* paintRect */);
     void takeBounds(const RenderView&, LayoutPoint&& /* paintOffset */);
+    void takeBounds(const RenderLineBreak*, const LayoutPoint& /* paintOffset */);
 
     // This group of methods serves only as a notification that the given object is
     // being painted. From there, we construct the geometry we need ourselves

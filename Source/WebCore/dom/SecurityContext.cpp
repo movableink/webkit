@@ -28,6 +28,7 @@
 #include "SecurityContext.h"
 
 #include "ContentSecurityPolicy.h"
+#include "IntegrityPolicy.h"
 #include "PolicyContainer.h"
 #include "SecurityOrigin.h"
 #include "SecurityOriginPolicy.h"
@@ -230,4 +231,24 @@ CheckedPtr<ContentSecurityPolicy> SecurityContext::checkedContentSecurityPolicy(
     return contentSecurityPolicy();
 }
 
+const IntegrityPolicy* SecurityContext::integrityPolicy() const
+{
+    return m_integrityPolicy.get();
 }
+
+void SecurityContext::setIntegrityPolicy(std::unique_ptr<IntegrityPolicy>&& policy)
+{
+    m_integrityPolicy = WTFMove(policy);
+}
+
+const IntegrityPolicy* SecurityContext::integrityPolicyReportOnly() const
+{
+    return m_integrityPolicyReportOnly.get();
+}
+
+void SecurityContext::setIntegrityPolicyReportOnly(std::unique_ptr<IntegrityPolicy>&& policy)
+{
+    m_integrityPolicyReportOnly = WTFMove(policy);
+}
+
+} // namespace WebCore

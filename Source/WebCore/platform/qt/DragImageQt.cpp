@@ -27,6 +27,7 @@
 #include "DragImage.h"
 
 #include "Image.h"
+#include "NativeImage.h"
 #include <QImage>
 
 namespace WebCore {
@@ -60,7 +61,7 @@ DragImageRef dissolveDragImageToFraction(DragImageRef image, float)
     return image;
 }
 
-DragImageRef createDragImageFromImage(Image* image, ImageOrientation)
+DragImageRef createDragImageFromImage(Image* image, ImageOrientation, GraphicsClient*, float)
 {
     if (!image/* || !image->currentNativeImage()*/)
         return QImage();

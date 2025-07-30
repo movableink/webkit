@@ -43,10 +43,10 @@ PlatformWebView::PlatformWebView(WKPageConfigurationRef configuration, const Tes
     , m_options(options)
 {
 #if PLATFORM(WPE) && ENABLE(WPE_PLATFORM)
-    if (TestController::singleton().useWPEPlatformAPI())
-        m_window = new PlatformWebViewClientWPE(configuration);
-    else
+    if (TestController::singleton().useWPELegacyAPI())
         m_window = new PlatformWebViewClientLibWPE(configuration);
+    else
+        m_window = new PlatformWebViewClientWPE(configuration);
 #else
     m_window = new PlatformWebViewClientLibWPE(configuration);
 #endif
@@ -70,6 +70,7 @@ WKPageRef PlatformWebView::page()
 
 void PlatformWebView::focus()
 {
+    m_window->focus();
 }
 
 WKRect PlatformWebView::windowFrame()

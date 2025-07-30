@@ -64,7 +64,15 @@ void Visitor::visit(AST::Directive& directive)
     }
 }
 
-void Visitor::visit(AST::DiagnosticDirective&)
+void Visitor::visit(AST::DiagnosticDirective& directive)
+{
+    visit(directive.diagnostic());
+}
+
+
+// Diagnostic
+
+void Visitor::visit(AST::Diagnostic&)
 {
 }
 
@@ -169,8 +177,9 @@ void Visitor::visit(AST::ConstAttribute&)
 {
 }
 
-void Visitor::visit(AST::DiagnosticAttribute&)
+void Visitor::visit(AST::DiagnosticAttribute& attribute)
 {
+    visit(attribute.diagnostic());
 }
 
 void Visitor::visit(AST::BuiltinAttribute&)

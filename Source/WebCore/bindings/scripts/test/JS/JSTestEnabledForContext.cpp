@@ -22,7 +22,8 @@
 #include "JSTestEnabledForContext.h"
 
 #include "ActiveDOMObject.h"
-#include "Document.h"
+#include "ContextDestructionObserverInlines.h"
+#include "DocumentInlines.h"
 #include "ExtendedDOMClientIsoSubspaces.h"
 #include "ExtendedDOMIsoSubspaces.h"
 #include "JSDOMAttribute.h"
@@ -33,6 +34,7 @@
 #include "JSDOMWrapperCache.h"
 #include "JSTestSubObj.h"
 #include "ScriptExecutionContext.h"
+#include "Settings.h"
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/FunctionPrototype.h>
 #include <JavaScriptCore/HeapAnalyzer.h>
@@ -165,7 +167,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestEnabledForContextConstructor, (JSGlobalObject* le
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestEnabledForContextPrototype*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestEnabledForContext::getConstructor(vm, prototype->globalObject()));
 }

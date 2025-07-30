@@ -48,6 +48,9 @@ public:
     virtual void visit(AST::Directive&);
     virtual void visit(AST::DiagnosticDirective&);
 
+    // Diagnostic
+    virtual void visit(AST::Diagnostic&);
+
     // Declaration
     virtual void visit(AST::Declaration&);
     virtual void visit(AST::Function&);

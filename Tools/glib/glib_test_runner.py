@@ -92,9 +92,10 @@ class Message(object):
 
 class GLibTestRunner(object):
 
-    def __init__(self, test_binary, timeout, is_slow_function=None, slow_timeout=0):
+    def __init__(self, test_binary, timeout, wpe_legacy_api=False, is_slow_function=None, slow_timeout=0):
         self._test_binary = test_binary
         self._timeout = timeout
+        self._wpe_legacy_api = wpe_legacy_api
         if is_slow_function is not None:
             self._is_test_slow = is_slow_function
         else:
@@ -240,6 +241,8 @@ class GLibTestRunner(object):
         command = [self._test_binary, '--quiet', '--keep-going', '--GTestLogFD=%d' % pipe_w]
         if self._results:
             command.append('--GTestSkipCount=%d' % len(self._results))
+        if self._wpe_legacy_api:
+            command.append('--wpe-legacy-api')
         for subtest in subtests:
             command.extend(['-p', subtest])
         for skip in skipped:

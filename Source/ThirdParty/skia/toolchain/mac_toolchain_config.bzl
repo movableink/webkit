@@ -24,10 +24,11 @@ load(
     "tool",
     "variable_with_value",
 )
+load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
 load(":clang_layering_check.bzl", "make_layering_check_features")
 
 # The location of the created clang toolchain.
-EXTERNAL_TOOLCHAIN = "external/clang_mac"
+EXTERNAL_TOOLCHAIN = "external/+_repo_rules2+clang_mac"
 
 # Root of our symlinks. These symlinks are created in download_mac_toolchain.bzl
 XCODE_MACSDK_SYMLINK = EXTERNAL_TOOLCHAIN + "/symlinks/xcode/MacSDK"
@@ -40,7 +41,7 @@ _platform_constraints_to_import = {
 def _mac_toolchain_info(ctx):
     action_configs = _make_action_configs()
     features = []
-    features += _make_default_flags()
+    features += _make_default_flags(ctx)
     features += make_layering_check_features()
     features += _make_diagnostic_flags()
     features += _make_target_specific_flags(ctx)
@@ -253,7 +254,7 @@ def _make_action_configs():
 # https://docs.bazel.build/versions/3.3.0/be/objective-c.html#objc_library
 #
 # Note: These values must be kept in sync with those defined in cmake_exporter.go.
-def _make_default_flags():
+def _make_default_flags(ctx):
     """Here we define the flags for certain actions that are always applied.
 
     For any flag that might be conditionally applied, it should be defined in //bazel/copts.bzl.
@@ -262,6 +263,13 @@ def _make_default_flags():
     this toolchain, even third_party deps.
 
     """
+
+    # Must stay in sync with download_mac_toolchain.bzl.
+    if _has_platform_constraint(ctx, "@platforms//cpu:arm64"):
+        clang_ver = "17"
+    else:
+        clang_ver = "15.0.1"
+
     cxx_compile_includes = flag_set(
         actions = [
             ACTION_NAMES.c_compile,
@@ -281,7 +289,7 @@ def _make_default_flags():
                     "-isystem",
                     XCODE_MACSDK_SYMLINK + "/usr/include",
                     "-isystem",
-                    EXTERNAL_TOOLCHAIN + "/lib/clang/15.0.1/include",
+                    EXTERNAL_TOOLCHAIN + "/lib/clang/" + clang_ver + "/include",
                     # Set the framework path to the Mac SDK framework directory. This has
                     # subfolders like OpenGL.framework
                     # We want -iframework so Clang hides diagnostic warnings from those header

@@ -32,6 +32,7 @@
 #import <mutex>
 #import <wtf/Function.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/URL.h>
 #import <wtf/URLHelpers.h>
 #import <wtf/Vector.h>
@@ -50,6 +51,7 @@ static BOOL readIDNAllowedScriptListFile(NSString *filename)
     if (!file)
         return NO;
     
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     // Read a word at a time.
     // Allow comments, starting with # character to the end of the line.
     while (1) {
@@ -68,6 +70,8 @@ static BOOL readIDNAllowedScriptListFile(NSString *filename)
             URLHelpers::addScriptToIDNAllowedScriptList(word);
         }
     }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
     fclose(file);
     return YES;
 }
@@ -101,7 +105,9 @@ NSString *decodeHostName(NSString *string)
     std::optional<String> host = URLHelpers::mapHostName(string, nullptr);
     if (!host)
         return nil;
-    return !*host ? string : (NSString *)*host;
+    if (!*host)
+        return string;
+    return host->createNSString().autorelease();
 }
 
 NSString *encodeHostName(NSString *string)
@@ -109,7 +115,9 @@ NSString *encodeHostName(NSString *string)
     std::optional<String> host = URLHelpers::mapHostName(string, decodePercentEscapes);
     if (!host)
         return nil;
-    return !*host ? string : (NSString *)*host;
+    if (!*host)
+        return string;
+    return host->createNSString().autorelease();
 }
 
 static RetainPtr<NSString> stringByTrimmingWhitespace(NSString *string)
@@ -130,9 +138,9 @@ NSURL *URLByTruncatingOneCharacterBeforeComponent(NSURL *URL, CFURLComponentType
 
     auto bytes = bytesAsVector(bridge_cast(URL));
 
-    auto result = adoptCF(CFURLCreateWithBytes(nullptr, bytes.data(), range.location - 1, kCFStringEncodingUTF8, nullptr));
+    auto result = adoptCF(CFURLCreateWithBytes(nullptr, bytes.span().data(), range.location - 1, kCFStringEncodingUTF8, nullptr));
     if (!result)
-        result = adoptCF(CFURLCreateWithBytes(nullptr, bytes.data(), range.location - 1, kCFStringEncodingISOLatin1, nullptr));
+        result = adoptCF(CFURLCreateWithBytes(nullptr, bytes.span().data(), range.location - 1, kCFStringEncodingISOLatin1, nullptr));
 
     return result ? result.bridgingAutorelease() : URL;
 }
@@ -190,7 +198,7 @@ static RetainPtr<NSData> dataWithUserTypedString(NSString *string)
     
     auto outBytesSpan = outBytes.releaseBuffer().leakSpan();
     return adoptNS([[NSData alloc] initWithBytesNoCopy:outBytesSpan.data() length:outBytesSpan.size() deallocator:^(void* bytes, NSUInteger) {
-        FastMalloc::free(bytes);
+        VectorBufferMalloc::free(bytes);
     }]); // adopts outBytes
 }
 
@@ -210,7 +218,7 @@ NSURL *URLWithUserTypedString(NSString *string, NSURL *)
 
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=186057
     // We should be able to use url.createCFURL instead of using directly CFURL parsing routines.
-    RetainPtr data = dataWithUserTypedString(mappedString);
+    RetainPtr data = dataWithUserTypedString(mappedString.createNSString().get());
     if (!data)
         return [NSURL URLWithString:@""];
 
@@ -288,7 +296,7 @@ static NSURL *URLByRemovingComponentAndSubsequentCharacter(NSURL *URL, CFURLComp
     if (numBytes < range.location + range.length)
         range.length = numBytes - range.location;
 
-    memmove(urlBytes.subspan(range.location).data(), urlBytes.subspan(range.location + range.length).data(), numBytes - range.location + range.length);
+    memmoveSpan(urlBytes.subspan(range.location), urlBytes.subspan(range.location + range.length, numBytes - range.location + range.length));
 
     auto result = adoptCF(CFURLCreateWithBytes(nullptr, urlBytes.data(), numBytes - range.length, kCFStringEncodingUTF8, nullptr));
     if (!result)
@@ -304,6 +312,8 @@ NSURL *URLByRemovingUserInfo(NSURL *URL)
 
 NSData *originalURLData(NSURL *URL)
 {
+    if (!URL)
+        return nil;
     auto data = bridge_cast(bytesAsCFData(bridge_cast(URL)));
     if (auto baseURL = bridge_cast(CFURLGetBaseURL(bridge_cast(URL))))
         return originalURLData(URLWithData(data.get(), baseURL));
@@ -312,7 +322,7 @@ NSData *originalURLData(NSURL *URL)
 
 NSString *userVisibleString(NSURL *URL)
 {
-    return URLHelpers::userVisibleURL(span(originalURLData(URL)));
+    return URLHelpers::userVisibleURL(span(originalURLData(URL))).createNSString().autorelease();
 }
 
 BOOL isUserVisibleURL(NSString *string)
@@ -322,7 +332,7 @@ BOOL isUserVisibleURL(NSString *string)
 
     std::array<char, 1024> buffer;
     auto success = CFStringGetCString(bridge_cast(string), buffer.data(), buffer.size() - 1, kCFStringEncodingUTF8);
-    auto characters = success ? span(buffer.data()) : span([string UTF8String]);
+    auto characters = success ? unsafeSpan(buffer.data()) : unsafeSpan([string UTF8String]);
 
     // Check for control characters, %-escape sequences that are non-ASCII, and xn--: these
     // are the things that might lead the userVisibleString function to actually change the string.

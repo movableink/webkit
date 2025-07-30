@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <atomic>
 #include <functional>
+#include <ranges>
 #include <wtf/Logging.h>
 #include <wtf/MemoryFootprint.h>
 #include <wtf/NeverDestroyed.h>
@@ -215,7 +216,7 @@ void MemoryPressureHandler::setMemoryFootprintNotificationThresholds(Vector<size
     if (thresholds.isEmpty() || !handler)
         return;
 
-    std::sort(thresholds.begin(), thresholds.end(), std::greater<>());
+    std::ranges::sort(thresholds, std::greater<>());
     m_memoryFootprintNotificationThresholds = WTFMove(thresholds);
     m_memoryFootprintNotificationHandler = WTFMove(handler);
 }

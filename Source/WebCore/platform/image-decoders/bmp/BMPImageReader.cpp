@@ -30,6 +30,8 @@
 
 #include "config.h"
 #include "BMPImageReader.h"
+
+#include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -52,7 +54,7 @@ BMPImageReader::BMPImageReader(ScalableImageDecoder* parent, size_t decodedAndHe
     , m_andMaskState(usesAndMask ? NotYetDecoded : None)
 {
     // Clue-in decodeBMP() that we need to detect the correct info header size.
-    memset(&m_infoHeader, 0, sizeof(m_infoHeader));
+    zeroBytes(m_infoHeader);
 }
 
 bool BMPImageReader::decodeBMP(bool onlySize)
@@ -255,12 +257,10 @@ bool BMPImageReader::readInfoHeader()
     // to pay attention to the alpha mask here, so there's a special case in
     // processBitmasks() that doesn't always overwrite that value.
     if (isWindowsV4Plus()) {
-        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         m_bitMasks[0] = readUint32(40);
         m_bitMasks[1] = readUint32(44);
         m_bitMasks[2] = readUint32(48);
         m_bitMasks[3] = readUint32(52);
-        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
 
     // Detect top-down BMPs.
@@ -378,7 +378,6 @@ bool BMPImageReader::isInfoHeaderValid() const
     return true;
 }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 bool BMPImageReader::processBitmasks()
 {
     // Create m_bitMasks[] values.
@@ -473,7 +472,6 @@ bool BMPImageReader::processBitmasks()
 
     return true;
 }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 bool BMPImageReader::processColorTable()
 {
@@ -625,9 +623,7 @@ bool BMPImageReader::processRLEData()
                 // RLE8 has one color index that gets repeated; RLE4 has two
                 // color indexes in the upper and lower 4 bits of the byte,
                 // which are alternated.
-                WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-                size_t colorIndexes[2] = {code, code};
-                WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+                std::array<size_t, 2> colorIndexes { code, code };
                 if (m_infoHeader.biCompression == RLE4) {
                     colorIndexes[0] = (colorIndexes[0] >> 4) & 0xf;
                     colorIndexes[1] &= 0xf;

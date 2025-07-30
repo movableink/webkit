@@ -147,7 +147,6 @@ protected:
     void imagesEnabledChanged();
     void userStyleSheetLocationChanged();
     void usesBackForwardCacheChanged();
-    void dnsPrefetchingEnabledChanged();
     void storageBlockingPolicyChanged();
     void backgroundShouldExtendBeyondPageChanged();
     void scrollingPerformanceTestingEnabledChanged();
@@ -166,6 +165,9 @@ protected:
 #if USE(MODERN_AVCONTENTKEYSESSION)
     void shouldUseModernAVContentKeySessionChanged();
 #endif
+    void useSystemAppearanceChanged();
+    void fontFallbackPrefersPictographsChanged();
+    RefPtr<Page> protectedPage() const;
 
     WeakPtr<Page> m_page;
 

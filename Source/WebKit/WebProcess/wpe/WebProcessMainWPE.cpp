@@ -47,6 +47,12 @@
 #include <wtf/SystemTracing.h>
 #endif
 
+#if USE(SKIA_OPENTYPE_SVG)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+#include <skia/modules/svg/SkSVGOpenTypeSVGDecoder.h>
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+#endif
+
 namespace WebKit {
 using namespace WebCore;
 
@@ -64,6 +70,9 @@ public:
 
 #if USE(SKIA)
         SkGraphics::Init();
+#if USE(SKIA_OPENTYPE_SVG)
+        SkGraphics::SetOpenTypeSVGDecoderFactory(SkSVGOpenTypeSVGDecoder::Make);
+#endif
 #endif
 
 #if ENABLE(DEVELOPER_MODE)

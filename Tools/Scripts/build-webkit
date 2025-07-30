@@ -82,7 +82,6 @@ my $ltoMode = "default";
 my $useWorkspace = 1;
 my $startTime = time();
 my $archs32bit = 0;
-my $skipLibraryUpdate = 0;
 my $useCCache = -1;
 my $exportCompileCommands = 0;
 
@@ -123,6 +122,8 @@ Usage: $programName [options] [options to pass to build system]
   --simulator                       DEPRECATED alias of --ios-simulator
   --tvos-device                     Use "appletvos.internal" SDK if installed, else "appletvos" SDK (tvOS only)
   --tvos-simulator                  Use "appletvsimulator" (tvOS only)
+  --visionos-device                 Use "xros.internal" SDK if installed, else "xros" SDK (visionOS only)
+  --visionos-simulator              Use "xrsimulator" (visionOS only) 
   --watchos-device                  Use "watchos.internal" SDK if installed, else "watchos" SDK (watchOS only)
   --watchos-simulator               Use "watchsimulator" (watchOS only)
   --coverage                        Enable code coverage support (Mac only)
@@ -132,6 +133,7 @@ Usage: $programName [options] [options to pass to build system]
   --cross-target=<target_machine>   Use the cross-toolchain-helper to build WebKit for the specified machine (Linux platforms only)
 
   --gtk                             Build the GTK+ port
+  --haiku                           Build the Haiku port
   --qt                              Build the Qt port
   --wpe                             Build the WPE port
   --win                             Build the Windows port
@@ -174,7 +176,6 @@ my %options = (
     'no-experimental-features' => \$noExperimentalFeatures,
     'lto-mode=s' => \$ltoMode,
     'use-workspace!' => \$useWorkspace,
-    'skip-library-update' => \$skipLibraryUpdate,
     'use-ccache!' => \$useCCache,
     'export-compile-commands' => \$exportCompileCommands
 );
@@ -182,7 +183,7 @@ my %options = (
 # Build usage text and options list from features
 foreach (@features) {
     my $opt = sprintf("%-35s", "  --[no-]$_->{option}");
-    $usage .= "$opt $_->{desc}\n";
+    $usage .= "$opt $_->{desc}\n" if not $_->{hidden};
     $options{"$_->{option}!"} = $_->{value};
 }
 
@@ -228,8 +229,12 @@ if (!isCMakeBuild()) {
     }
 }
 
-if ((isAppleWebKit() || isWin() || isPlayStation()) && !-d "WebKitLibraries") {
+if ((isAppleWebKit() || isPlayStation()) && !-d "WebKitLibraries") {
     die "Error: No WebKitLibraries directory found. Please do a fresh checkout.\n";
+}
+
+if (shouldUseVcpkg() && ! defined $ENV{"VCPKG_ROOT"}) {
+    die "Error: VCPKG_ROOT is unset. Please set that environment variable to the location of vcpkg.exe.\n";
 }
 
 my @options = ();
@@ -292,8 +297,6 @@ if (isAppleCocoaWebKit()) {
         push @projects, ("Tools/DumpRenderTree", "Tools/WebKitTestRunner", "Source/ThirdParty/gtest", "Tools/TestWebKitAPI");
     }
 
-} elsif (isWin() && !$skipLibraryUpdate) {
-    (system("python Tools/Scripts/update-webkit-win-libs.py") == 0) or die;
 } elsif (isQt() && isAnyWindows()) {
     (system("perl Tools/Scripts/update-qtwebkit-win-libs") == 0) or die;
 }
@@ -334,9 +337,11 @@ if (isCMakeBuild() && (!isAnyWindows() || isQt())) {
 }
 
 my $baseProductDir = baseProductDir();
-if (isWin() || isPlayStation()) {
+if (isWin() || isPlayStation() || (isJSCOnly() && isWindows())) {
     my @featureArgs = cmakeArgsFromFeatures(@features, !$noExperimentalFeatures);
     removeCMakeCache(@featureArgs);
+
+    push @cmakeArgs, vcpkgArgsFromFeatures(@features, !$noExperimentalFeatures) if shouldUseVcpkg();
 
     chdirWebKit();
     if (exitStatus(generateBuildSystemFromCMakeProject($prefixPath, @featureArgs, @cmakeArgs))) {

@@ -81,20 +81,51 @@ class WebElement(BaseWebElement):
 
     @property
     def tag_name(self) -> str:
-        """This element's ``tagName`` property."""
+        """This element's ``tagName`` property.
+
+        Returns:
+        --------
+        str : The tag name of the element.
+
+        Example:
+        --------
+        >>> element = driver.find_element(By.ID, 'foo')
+        """
         return self._execute(Command.GET_ELEMENT_TAG_NAME)["value"]
 
     @property
     def text(self) -> str:
-        """The text of the element."""
+        """The text of the element.
+
+        Returns:
+        --------
+        str : The text of the element.
+
+        Example:
+        --------
+        >>> element = driver.find_element(By.ID, 'foo')
+        >>> print(element.text)
+        """
         return self._execute(Command.GET_ELEMENT_TEXT)["value"]
 
     def click(self) -> None:
-        """Clicks the element."""
+        """Clicks the element.
+
+        Example:
+        --------
+        >>> element = driver.find_element(By.ID, 'foo')
+        >>> element.click()
+        """
         self._execute(Command.CLICK_ELEMENT)
 
     def submit(self) -> None:
-        """Submits a form."""
+        """Submits a form.
+
+        Example:
+        --------
+        >>> form = driver.find_element(By.NAME, 'login')
+        >>> form.submit()
+        """
         script = (
             "/* submitForm */var form = arguments[0];\n"
             'while (form.nodeName != "FORM" && form.parentNode) {\n'
@@ -113,19 +144,30 @@ class WebElement(BaseWebElement):
             raise WebDriverException("To submit an element, it must be nested inside a form element") from exc
 
     def clear(self) -> None:
-        """Clears the text if it's a text entry element."""
+        """Clears the text if it's a text entry element.
+
+        Example:
+        --------
+        >>> text_field = driver.find_element(By.NAME, 'username')
+        >>> text_field.clear()
+        """
         self._execute(Command.CLEAR_ELEMENT)
 
     def get_property(self, name) -> str | bool | WebElement | dict:
         """Gets the given property of the element.
 
-        :Args:
-            - name - Name of the property to retrieve.
+        Parameters:
+        -----------
+        name : str
+            - Name of the property to retrieve.
 
-        :Usage:
-            ::
+        Returns:
+        -------
+        str | bool | WebElement | dict : The value of the property.
 
-                text_length = target_element.get_property("text_length")
+        Example:
+        -------
+        >>> text_length = target_element.get_property("text_length")
         """
         try:
             return self._execute(Command.GET_ELEMENT_PROPERTY, {"name": name})["value"]
@@ -138,13 +180,18 @@ class WebElement(BaseWebElement):
         :func:`~selenium.webdriver.remote.BaseWebElement.get_attribute`, this
         method only returns attributes declared in the element's HTML markup.
 
-        :Args:
-            - name - Name of the attribute to retrieve.
+        Parameters:
+        -----------
+        name : str
+            - Name of the attribute to retrieve.
 
-        :Usage:
-            ::
+        Returns:
+        -------
+        str : The value of the attribute.
 
-                text_length = target_element.get_dom_attribute("class")
+        Example:
+        -------
+        >>> text_length = target_element.get_dom_attribute("class")
         """
         return self._execute(Command.GET_ELEMENT_ATTRIBUTE, {"name": name})["value"]
 
@@ -165,13 +212,19 @@ class WebElement(BaseWebElement):
         use :func:`~selenium.webdriver.remote.BaseWebElement.get_dom_attribute` or
         :func:`~selenium.webdriver.remote.BaseWebElement.get_property` methods respectively.
 
-        :Args:
-            - name - Name of the attribute/property to retrieve.
+        Parameters:
+        -----------
+        name : str
+            - Name of the attribute/property to retrieve.
 
-        Example::
+        Returns:
+        -------
+        str | bool | None : The value of the attribute/property.
 
-            # Check if the "active" CSS class is applied to an element.
-            is_active = "active" in target_element.get_attribute("class")
+        Example:
+        --------
+        >>> # Check if the "active" CSS class is applied to an element.
+        >>> is_active = "active" in target_element.get_attribute("class")
         """
         if getAttribute_js is None:
             _load_js()
@@ -183,35 +236,54 @@ class WebElement(BaseWebElement):
     def is_selected(self) -> bool:
         """Returns whether the element is selected.
 
-        Can be used to check if a checkbox or radio button is selected.
+        Example:
+        --------
+        >>> is_selected = element.is_selected()
+
+        Notes:
+        ------
+            - This method is generally used on checkboxes, options in a select
+            and radio buttons.
         """
         return self._execute(Command.IS_ELEMENT_SELECTED)["value"]
 
     def is_enabled(self) -> bool:
-        """Returns whether the element is enabled."""
+        """Returns whether the element is enabled.
+
+        Example:
+        --------
+        >>> is_enabled = element.is_enabled()
+        """
         return self._execute(Command.IS_ELEMENT_ENABLED)["value"]
 
     def send_keys(self, *value: str) -> None:
         """Simulates typing into the element.
 
-        :Args:
-            - value - A string for typing, or setting form fields.  For setting
-              file inputs, this could be a local file path.
+        Parameters:
+        -----------
+        value : str
+            - A string for typing, or setting form fields.  For setting
+            file inputs, this could be a local file path.
 
-        Use this to send simple key events or to fill out form fields::
+        Notes:
+        ------
+            - Use this to send simple key events or to fill out form fields
+            - This can also be used to set file inputs.
 
-            form_textfield = driver.find_element(By.NAME, 'username')
-            form_textfield.send_keys("admin")
+        Examples:
+        --------
+        To send a simple key event::
+        >>> form_textfield = driver.find_element(By.NAME, 'username')
+        >>> form_textfield.send_keys("admin")
 
-        This can also be used to set file inputs.
-
-        ::
-
-            file_input = driver.find_element(By.NAME, 'profilePic')
-            file_input.send_keys("path/to/profilepic.gif")
-            # Generally it's better to wrap the file path in one of the methods
-            # in os.path to return the actual path to support cross OS testing.
-            # file_input.send_keys(os.path.abspath("path/to/profilepic.gif"))
+        or to set a file input field::
+        >>> file_input = driver.find_element(By.NAME, 'profilePic')
+        >>> file_input.send_keys("path/to/profilepic.gif")
+        >>> # Generally it's better to wrap the file path in one of the methods
+        >>> # in os.path to return the actual path to support cross OS testing.
+        >>> # file_input.send_keys(os.path.abspath("path/to/profilepic.gif"))
+        >>> # When using Cygwin, the path need to be provided in Windows format.
+        >>> # file_input.send_keys(f"C:/cygwin{os.path.abspath('path/to/profilepic.gif').replace('/', '\\')}")
         """
         # transfer file to another machine only if remote driver is used
         # the same behaviour as for java binding
@@ -226,7 +298,7 @@ class WebElement(BaseWebElement):
                 remote_files = []
                 for file in local_files:
                     remote_files.append(self._upload(file))
-                value = "\n".join(remote_files)
+                value = tuple("\n".join(remote_files))
 
         self._execute(
             Command.SEND_KEYS_TO_ELEMENT, {"text": "".join(keys_to_typing(value)), "value": keys_to_typing(value)}
@@ -237,15 +309,31 @@ class WebElement(BaseWebElement):
         """Returns a shadow root of the element if there is one or an error.
         Only works from Chromium 96, Firefox 96, and Safari 16.4 onwards.
 
-        :Returns:
-          - ShadowRoot object or
-          - NoSuchShadowRoot - if no shadow root was attached to element
+        Returns:
+        -------
+        ShadowRoot : object
+
+        Raises:
+        -------
+        NoSuchShadowRoot - if no shadow root was attached to element
+
+        Example:
+        --------
+        >>> try:
+        ...     shadow_root = element.shadow_root
+        >>> except NoSuchShadowRoot:
+        ...     print("No shadow root attached to element")
         """
         return self._execute(Command.GET_SHADOW_ROOT)["value"]
 
     # RenderedWebElement Items
     def is_displayed(self) -> bool:
-        """Whether the element is visible to a user."""
+        """Whether the element is visible to a user.
+
+        Example:
+        --------
+        >>> is_displayed = element.is_displayed()
+        """
         # Only go into this conditional for browsers that don't use the atom themselves
         if isDisplayed_js is None:
             _load_js()
@@ -257,8 +345,14 @@ class WebElement(BaseWebElement):
         on the screen an element is so that we can click it. This method should
         cause the element to be scrolled into view.
 
-        Returns the top lefthand corner location on the screen, or zero
-        coordinates if the element is not visible.
+        Returns:
+        --------
+        dict: the top lefthand corner location on the screen, or zero
+            coordinates if the element is not visible.
+
+        Example:
+        --------
+        >>> loc = element.location_once_scrolled_into_view
         """
         old_loc = self._execute(
             Command.W3C_EXECUTE_SCRIPT,
@@ -271,35 +365,94 @@ class WebElement(BaseWebElement):
 
     @property
     def size(self) -> dict:
-        """The size of the element."""
+        """The size of the element.
+
+        Returns:
+        --------
+        dict: The width and height of the element.
+
+        Example:
+        --------
+        >>> size = element.size
+        """
         size = self._execute(Command.GET_ELEMENT_RECT)["value"]
         new_size = {"height": size["height"], "width": size["width"]}
         return new_size
 
     def value_of_css_property(self, property_name) -> str:
-        """The value of a CSS property."""
+        """The value of a CSS property.
+
+        Parameters:
+        -----------
+        property_name : str
+            - The name of the CSS property to get the value of.
+
+        Returns:
+        --------
+        str : The value of the CSS property.
+
+        Example:
+        --------
+        >>> value = element.value_of_css_property('color')
+        """
         return self._execute(Command.GET_ELEMENT_VALUE_OF_CSS_PROPERTY, {"propertyName": property_name})["value"]
 
     @property
     def location(self) -> dict:
-        """The location of the element in the renderable canvas."""
+        """The location of the element in the renderable canvas.
+
+        Returns:
+        --------
+        dict: The x and y coordinates of the element.
+
+        Example:
+        --------
+        >>> loc = element.location
+        """
         old_loc = self._execute(Command.GET_ELEMENT_RECT)["value"]
         new_loc = {"x": round(old_loc["x"]), "y": round(old_loc["y"])}
         return new_loc
 
     @property
     def rect(self) -> dict:
-        """A dictionary with the size and location of the element."""
+        """A dictionary with the size and location of the element.
+
+        Returns:
+        --------
+        dict: The size and location of the element.
+
+        Example:
+        --------
+        >>> rect = element.rect
+        """
         return self._execute(Command.GET_ELEMENT_RECT)["value"]
 
     @property
     def aria_role(self) -> str:
-        """Returns the ARIA role of the current web element."""
+        """Returns the ARIA role of the current web element.
+
+        Returns:
+        --------
+        str : The ARIA role of the element.
+
+        Example:
+        --------
+        >>> role = element.aria_role
+        """
         return self._execute(Command.GET_ELEMENT_ARIA_ROLE)["value"]
 
     @property
     def accessible_name(self) -> str:
-        """Returns the ARIA Level of the current webelement."""
+        """Returns the ARIA Level of the current webelement.
+
+        Returns:
+        --------
+        str : The ARIA Level of the element.
+
+        Example:
+        --------
+        >>> name = element.accessible_name
+        """
         return self._execute(Command.GET_ELEMENT_ARIA_LABEL)["value"]
 
     @property
@@ -307,10 +460,13 @@ class WebElement(BaseWebElement):
         """Gets the screenshot of the current element as a base64 encoded
         string.
 
-        :Usage:
-            ::
+        Returns:
+        --------
+        str : The screenshot of the element as a base64 encoded string.
 
-                img_b64 = element.screenshot_as_base64
+        Example:
+        --------
+        >>> img_b64 = element.screenshot_as_base64
         """
         return self._execute(Command.ELEMENT_SCREENSHOT)["value"]
 
@@ -318,10 +474,13 @@ class WebElement(BaseWebElement):
     def screenshot_as_png(self) -> bytes:
         """Gets the screenshot of the current element as a binary data.
 
-        :Usage:
-            ::
+        Returns:
+        --------
+        bytes : The screenshot of the element as binary data.
 
-                element_png = element.screenshot_as_png
+        Example:
+        --------
+        >>> element_png = element.screenshot_as_png
         """
         return b64decode(self.screenshot_as_base64.encode("ascii"))
 
@@ -330,14 +489,19 @@ class WebElement(BaseWebElement):
         Returns False if there is any IOError, else returns True. Use full
         paths in your filename.
 
-        :Args:
-         - filename: The full path you wish to save your screenshot to. This
-           should end with a `.png` extension.
+        Returns:
+        --------
+        bool : True if the screenshot was saved successfully, False otherwise.
 
-        :Usage:
-            ::
+        Parameters:
+        -----------
+        filename : str
+            The full path you wish to save your screenshot to. This
+            should end with a `.png` extension.
 
-                element.screenshot('/Screenshots/foo.png')
+        Element:
+        --------
+        >>> element.screenshot('/Screenshots/foo.png')
         """
         if not filename.lower().endswith(".png"):
             warnings.warn(
@@ -357,7 +521,13 @@ class WebElement(BaseWebElement):
     @property
     def parent(self):
         """Internal reference to the WebDriver instance this element was found
-        from."""
+        from.
+
+        Example:
+        --------
+        >>> element = driver.find_element(By.ID, 'foo')
+        >>> parent_element = element.parent
+        """
         return self._parent
 
     @property
@@ -367,8 +537,10 @@ class WebElement(BaseWebElement):
         This is mainly for internal use. Simple use cases such as checking if 2
         webelements refer to the same element, can be done using ``==``::
 
-            if element1 == element2:
-                print("These 2 are equal")
+        Example:
+        --------
+        >>> if element1 == element2:
+        ...     print("These 2 are equal")
         """
         return self._id
 
@@ -382,11 +554,16 @@ class WebElement(BaseWebElement):
     def _execute(self, command, params=None):
         """Executes a command against the underlying HTML element.
 
-        Args:
-          command: The name of the command to _execute as a string.
-          params: A dictionary of named parameters to send with the command.
+        Parameters:
+        -----------
+        command : any
+            The name of the command to _execute as a string.
+
+        params : dict
+            A dictionary of named Parameters to send with the command.
 
         Returns:
+        -------
           The command's JSON response loaded into a dictionary object.
         """
         if not params:
@@ -397,45 +574,59 @@ class WebElement(BaseWebElement):
     def find_element(self, by=By.ID, value=None) -> WebElement:
         """Find an element given a By strategy and locator.
 
-        :Usage:
-            ::
+        Parameters:
+        -----------
+        by : selenium.webdriver.common.by.By
+            The locating strategy to use. Default is `By.ID`. Supported values include:
+            - By.ID: Locate by element ID.
+            - By.NAME: Locate by the `name` attribute.
+            - By.XPATH: Locate by an XPath expression.
+            - By.CSS_SELECTOR: Locate by a CSS selector.
+            - By.CLASS_NAME: Locate by the `class` attribute.
+            - By.TAG_NAME: Locate by the tag name (e.g., "input", "button").
+            - By.LINK_TEXT: Locate a link element by its exact text.
+            - By.PARTIAL_LINK_TEXT: Locate a link element by partial text match.
+            - RelativeBy: Locate elements relative to a specified root element.
 
-                element = element.find_element(By.ID, 'foo')
+        Example:
+        --------
+        element = driver.find_element(By.ID, 'foo')
 
-        :rtype: WebElement
+        Returns:
+        -------
+        WebElement
+            The first matching `WebElement` found on the page.
         """
-        if by == By.ID:
-            by = By.CSS_SELECTOR
-            value = f'[id="{value}"]'
-        elif by == By.CLASS_NAME:
-            by = By.CSS_SELECTOR
-            value = f".{value}"
-        elif by == By.NAME:
-            by = By.CSS_SELECTOR
-            value = f'[name="{value}"]'
-
+        by, value = self._parent.locator_converter.convert(by, value)
         return self._execute(Command.FIND_CHILD_ELEMENT, {"using": by, "value": value})["value"]
 
     def find_elements(self, by=By.ID, value=None) -> List[WebElement]:
         """Find elements given a By strategy and locator.
 
-        :Usage:
-            ::
+        Parameters:
+        -----------
+        by : selenium.webdriver.common.by.By
+            The locating strategy to use. Default is `By.ID`. Supported values include:
+            - By.ID: Locate by element ID.
+            - By.NAME: Locate by the `name` attribute.
+            - By.XPATH: Locate by an XPath expression.
+            - By.CSS_SELECTOR: Locate by a CSS selector.
+            - By.CLASS_NAME: Locate by the `class` attribute.
+            - By.TAG_NAME: Locate by the tag name (e.g., "input", "button").
+            - By.LINK_TEXT: Locate a link element by its exact text.
+            - By.PARTIAL_LINK_TEXT: Locate a link element by partial text match.
+            - RelativeBy: Locate elements relative to a specified root element.
 
-                element = element.find_elements(By.CLASS_NAME, 'foo')
+        Example:
+        --------
+        >>> element = driver.find_elements(By.ID, 'foo')
 
-        :rtype: list of WebElement
+        Returns:
+        -------
+        List[WebElement]
+            list of `WebElements` matching locator strategy found on the page.
         """
-        if by == By.ID:
-            by = By.CSS_SELECTOR
-            value = f'[id="{value}"]'
-        elif by == By.CLASS_NAME:
-            by = By.CSS_SELECTOR
-            value = f".{value}"
-        elif by == By.NAME:
-            by = By.CSS_SELECTOR
-            value = f'[name="{value}"]'
-
+        by, value = self._parent.locator_converter.convert(by, value)
         return self._execute(Command.FIND_CHILD_ELEMENTS, {"using": by, "value": value})["value"]
 
     def __hash__(self) -> int:

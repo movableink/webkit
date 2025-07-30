@@ -1,5 +1,7 @@
-</style>
+<!-- webkit-test-runner [ enableMetalDebugDevice=true ] -->
+<script src="../../../resources/js-test-pre.js"></script>
 <script>
+    
 async function videoWithData() {
  Promise(resolve => {
  });
@@ -308,10 +310,14 @@ let = device1.createBuffer({
 try {
 } catch {}
  } catch {
- if (e instanceof GPUPipelineError) {
- {
  }
- }
- }
+ debug('Pass')
+    globalThis.testRunner?.notifyDone();
 };
+    
+    globalThis.testRunner?.dumpAsText();
+  globalThis.testRunner?.waitUntilDone();
+
+
 </script>
+

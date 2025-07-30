@@ -27,10 +27,14 @@
 
 #import "CGImagePixelReader.h"
 #import "PlatformUtilities.h"
+#import "Test.h"
 #import "TestUIDelegate.h"
 #import "TestWKWebView.h"
+#import <WebCore/Color.h>
 #import <WebKit/WKFrameInfoPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebViewPrivateForTesting.h>
+#import <WebKit/WKWebpagePreferencesPrivate.h>
 #import <WebKit/_WKFrameTreeNode.h>
 #import <WebKit/_WKTargetedElementInfo.h>
 #import <WebKit/_WKTargetedElementRequest.h>
@@ -49,7 +53,7 @@
         result = image;
         done = true;
     }];
-    Util::run(&done);
+    TestWebKitAPI::Util::run(&done);
     return result.autorelease();
 }
 
@@ -426,6 +430,31 @@ TEST(ElementTargeting, RequestElementsFromSelectors)
     EXPECT_FALSE(didAdjustVisibility);
 }
 
+TEST(ElementTargeting, AdjustVisibilityFromSelectorsAfterDelay)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 600, 480)]);
+    RetainPtr preferences = adoptNS([WKWebpagePreferences new]);
+    [preferences _setVisibilityAdjustmentSelectors:[NSSet setWithObject:@".popup"]];
+
+    RetainPtr delegate = adoptNS([TestUIDelegate new]);
+    __block bool didAdjustVisibility = false;
+    [delegate setWebViewDidAdjustVisibilityWithSelectors:^(WKWebView *, NSArray<NSString *> *) {
+        didAdjustVisibility = true;
+    }];
+    [webView setUIDelegate:delegate.get()];
+    [webView synchronouslyLoadTestPageNamed:@"simple" preferences:preferences.get()];
+
+    static constexpr auto* scriptSource = "setTimeout(() => {"
+        "  let popup = document.createElement('div');"
+        "  popup.classList.add('popup');"
+        "  popup.style = 'width: 600px; height: 480px; position: fixed; background: tomato; top: 0; left: 0;';"
+        "  document.body.appendChild(popup);"
+        "}, 100);";
+    [webView objectByEvaluatingJavaScript:@(scriptSource)];
+
+    Util::run(&didAdjustVisibility);
+}
+
 TEST(ElementTargeting, SnapshotElementWithVisibilityAdjustment)
 {
     auto webViewFrame = CGRectMake(0, 0, 800, 600);
@@ -673,6 +702,24 @@ TEST(ElementTargeting, CountVisibilityAdjustmentsAfterNavigatingBack)
 
     [webView synchronouslyGoForward];
     EXPECT_EQ(0U, [webView numberOfVisibilityAdjustmentRects]);
+}
+
+TEST(ElementTargeting, DoNotBeginRepeatedVisibilityAdjustmentIfTargetIsAlreadyHidden)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600)]);
+    [webView synchronouslyLoadTestPageNamed:@"element-targeting-12"];
+
+    RetainPtr frontTarget = [[webView targetedElementInfoAt:CGPointMake(150, 150)] firstObject];
+    [webView adjustVisibilityForTargets:@[ frontTarget.get() ]];
+    [webView adjustVisibilityForTargets:@[ frontTarget.get() ]];
+    [webView waitForNextPresentationUpdate];
+
+    [webView stringByEvaluatingJavaScript:@"document.querySelector('DIV.back').style.display = 'block'"];
+    [webView waitForNextPresentationUpdate];
+
+    RetainPtr backTarget = [[webView targetedElementInfoWithSelectors:@[ [NSSet setWithObject:@"DIV.back"] ]] firstObject];
+    EXPECT_NOT_NULL(backTarget);
+    EXPECT_FALSE([backTarget isInVisibilityAdjustmentSubtree]);
 }
 
 #if PLATFORM(VISION)

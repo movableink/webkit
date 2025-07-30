@@ -50,8 +50,9 @@ static int getGcryptAlgorithm(CryptoDigest::Algorithm algorithm)
     switch (algorithm) {
     case CryptoDigest::Algorithm::SHA_1:
         return GCRY_MD_SHA1;
-    case CryptoDigest::Algorithm::SHA_224:
-        return GCRY_MD_SHA224;
+    case CryptoDigest::Algorithm::DEPRECATED_SHA_224:
+        RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("SHA224 is not supported.");
+        return GCRY_MD_SHA256;
     case CryptoDigest::Algorithm::SHA_256:
         return GCRY_MD_SHA256;
     case CryptoDigest::Algorithm::SHA_384:
@@ -88,7 +89,7 @@ Vector<uint8_t> CryptoDigest::computeHash()
     size_t digestLen = gcry_md_get_algo_dlen(m_context->algorithm);
 
     gcry_md_final(m_context->md);
-    Vector<uint8_t> result(std::span<uint8_t> { gcry_md_read(m_context->md, 0), digestLen });
+    Vector<uint8_t> result(unsafeMakeSpan<uint8_t>(gcry_md_read(m_context->md, 0), digestLen));
     gcry_md_close(m_context->md);
 
     return result;

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010, 2012 Google Inc. All rights reserved.
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -114,20 +114,20 @@ void ValidationMessage::updateValidationMessage(HTMLElement& element, const Stri
     }
 
     m_element = element;
-    setMessage(updatedMessage);
+    setMessage(WTFMove(updatedMessage));
 }
 
-void ValidationMessage::setMessage(const String& message)
+void ValidationMessage::setMessage(String&& message)
 {
     if (ValidationMessageClient* client = validationMessageClient()) {
-        client->showValidationMessage(*m_element, message);
+        client->showValidationMessage(*m_element, WTFMove(message));
         return;
     }
 
     // Don't modify the DOM tree in this context.
     // If so, an assertion in Element::isFocusable() fails.
     ASSERT(!message.isEmpty());
-    m_message = message;
+    m_message = WTFMove(message);
     if (!m_bubble)
         m_timer = makeUnique<Timer>(*this, &ValidationMessage::buildBubbleTree);
     else

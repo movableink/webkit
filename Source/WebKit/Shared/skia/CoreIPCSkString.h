@@ -31,6 +31,8 @@ WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/core/SkString.h>
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
+#include <wtf/StdLibExtras.h>
+
 namespace WebKit {
 
 class CoreIPCSkString {
@@ -47,7 +49,7 @@ public:
 
     std::span<const char> data() const
     {
-        return { m_string.data(), m_string.size() };
+        return unsafeMakeSpan(m_string.data(), m_string.size());
     }
 
 private:

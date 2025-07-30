@@ -30,6 +30,7 @@
 #include "CryptoAlgorithmHMAC.h"
 
 #include "CryptoKeyHMAC.h"
+#include "ExceptionOr.h"
 #include <pal/crypto/gcrypt/Handle.h>
 #include <wtf/CryptographicUtilities.h>
 
@@ -40,8 +41,9 @@ static int getGCryptDigestAlgorithm(CryptoAlgorithmIdentifier hashFunction)
     switch (hashFunction) {
     case CryptoAlgorithmIdentifier::SHA_1:
         return GCRY_MAC_HMAC_SHA1;
-    case CryptoAlgorithmIdentifier::SHA_224:
-        return GCRY_MAC_HMAC_SHA224;
+    case CryptoAlgorithmIdentifier::DEPRECATED_SHA_224:
+        RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE(sha224DeprecationMessage);
+        return GCRY_MAC_HMAC_SHA256;
     case CryptoAlgorithmIdentifier::SHA_256:
         return GCRY_MAC_HMAC_SHA256;
     case CryptoAlgorithmIdentifier::SHA_384:

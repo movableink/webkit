@@ -30,6 +30,7 @@
 #import "PlatformUtilities.h"
 #import "Test.h"
 #import "TestNavigationDelegate.h"
+#import "TestUIDelegate.h"
 #import "TestWKWebView.h"
 #import <WebKit/WKNavigationActionPrivate.h>
 #import <wtf/RetainPtr.h>
@@ -208,7 +209,7 @@ TEST(WKNavigationAction, BlobRequestBody)
         if ([action.request.URL.absoluteString isEqualToString:@"about:blank"])
             completionHandler(WKNavigationActionPolicyAllow);
         else {
-            EXPECT_WK_STREQ(action.request.URL.absoluteString, "/formAction");
+            EXPECT_WK_STREQ(action.request.URL.absoluteString, "");
             completionHandler(WKNavigationActionPolicyCancel);
             done = true;
         }

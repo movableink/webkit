@@ -9,7 +9,7 @@ query = parse_qs(os.environ.get('QUERY_STRING', ''), keep_blank_values=True)
 name = query.get('name', [''])[0]
 value = query.get('value', [''])[0]
 message = query.get('message', [''])[0]
-exp_time = datetime.utcnow() + timedelta(days=30)
+exp_time = datetime.now(timezone.utc) + timedelta(days=30)
 
 sys.stdout.write(
     'Set-Cookie: {}={}; expires={} GMT; Max-Age={}; SameSite=None; Secure; path=/\r\n'

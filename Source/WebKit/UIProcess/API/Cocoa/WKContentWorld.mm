@@ -47,12 +47,12 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 
 + (WKContentWorld *)pageWorld
 {
-    return wrapper(API::ContentWorld::pageContentWorld());
+    return wrapper(API::ContentWorld::pageContentWorldSingleton());
 }
 
 + (WKContentWorld *)defaultClientWorld
 {
-    return wrapper(API::ContentWorld::defaultClientWorld());
+    return wrapper(API::ContentWorld::defaultClientWorldSingleton());
 }
 
 + (WKContentWorld *)worldWithName:(NSString *)name
@@ -77,7 +77,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
     if (_contentWorld->name().isNull())
         return nil;
 
-    return _contentWorld->name();
+    return _contentWorld->name().createNSString().autorelease();
 }
 
 #pragma mark WKObject protocol implementation

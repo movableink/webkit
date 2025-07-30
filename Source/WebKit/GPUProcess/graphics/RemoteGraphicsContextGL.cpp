@@ -46,8 +46,6 @@
 #include "RemoteVideoFrameObjectHeap.h"
 #endif
 
-#define MESSAGE_CHECK(assertion, connection) MESSAGE_CHECK_OPTIONAL_CONNECTION_BASE(assertion, connection)
-
 namespace WebKit {
 
 using namespace WebCore;
@@ -203,9 +201,8 @@ void RemoteGraphicsContextGL::ensureExtensionEnabled(String&& extension)
 void RemoteGraphicsContextGL::drawSurfaceBufferToImageBuffer(WebCore::GraphicsContextGL::SurfaceBuffer buffer, WebCore::RenderingResourceIdentifier imageBufferIdentifier, CompletionHandler<void()>&& completionHandler)
 {
     assertIsCurrent(workQueue());
-    protectedContext()->withBufferAsNativeImage(buffer, [&](NativeImage& image) {
-        paintNativeImageToImageBuffer(image, imageBufferIdentifier);
-    });
+    if (RefPtr image = protectedContext()->bufferAsNativeImage(buffer))
+        paintNativeImageToImageBuffer(*image, imageBufferIdentifier);
     completionHandler();
 }
 
@@ -230,11 +227,11 @@ void RemoteGraphicsContextGL::paintNativeImageToImageBuffer(NativeImage& image, 
     bool isFinished = false;
 
     Ref renderingBackend = m_renderingBackend;
-    renderingBackend->dispatch([&]() mutable {
+    renderingBackend->dispatch([renderingBackend, image = RefPtr { &image }, imageBufferIdentifier, &lock, &conditionVariable, &isFinished]() mutable {
         if (auto imageBuffer = renderingBackend->imageBuffer(imageBufferIdentifier)) {
             // Here we do not try to play back pending commands for imageBuffer. Currently this call is only made for empty
             // image buffers and there's no good way to add display lists.
-            GraphicsContextGL::paintToCanvas(image, imageBuffer->backendSize(), imageBuffer->context());
+            GraphicsContextGL::paintToCanvas(*image, imageBuffer->backendSize(), imageBuffer->context());
 
 
             // We know that the image might be updated afterwards, so flush the drawing so that read back does not occur.
@@ -407,7 +404,7 @@ void RemoteGraphicsContextGL::multiDrawElementsANGLE(uint32_t mode, IPC::ArrayRe
     const Vector<GCGLsizei> counts = vectorCopyCast<GCGLsizei, 0>(countsAndOffsets);
     // Currently offsets are copied in the m_context.
     const GCGLsizei* offsets = reinterpret_cast<const GCGLsizei*>(countsAndOffsets.data<1>());
-    protectedContext()->multiDrawElementsANGLE(mode, GCGLSpanTuple { counts.data(), offsets, counts.size() }, type);
+    protectedContext()->multiDrawElementsANGLE(mode, GCGLSpanTuple { counts.span().data(), offsets, counts.size() }, type);
 }
 
 void RemoteGraphicsContextGL::multiDrawElementsInstancedANGLE(uint32_t mode, IPC::ArrayReferenceTuple<int32_t, int32_t, int32_t>&& countsOffsetsAndInstanceCounts, uint32_t type)
@@ -418,7 +415,7 @@ void RemoteGraphicsContextGL::multiDrawElementsInstancedANGLE(uint32_t mode, IPC
     // Currently offsets are copied in the m_context.
     const GCGLsizei* offsets = reinterpret_cast<const GCGLsizei*>(countsOffsetsAndInstanceCounts.data<1>());
     const Vector<GCGLsizei> instanceCounts = vectorCopyCast<GCGLsizei, 2>(countsOffsetsAndInstanceCounts);
-    protectedContext()->multiDrawElementsInstancedANGLE(mode, GCGLSpanTuple { counts.data(), offsets, instanceCounts.data(), counts.size() }, type);
+    protectedContext()->multiDrawElementsInstancedANGLE(mode, GCGLSpanTuple { counts.span().data(), offsets, instanceCounts.span().data(), counts.size() }, type);
 }
 
 void RemoteGraphicsContextGL::multiDrawArraysInstancedBaseInstanceANGLE(uint32_t mode, IPC::ArrayReferenceTuple<int32_t, int32_t, int32_t, uint32_t>&& firstsCountsInstanceCountsAndBaseInstances)
@@ -442,7 +439,7 @@ void RemoteGraphicsContextGL::multiDrawElementsInstancedBaseVertexBaseInstanceAN
     const Vector<GCGLsizei> instanceCounts = vectorCopyCast<GCGLsizei, 2>(countsOffsetsInstanceCountsBaseVerticesAndBaseInstances);
     const Vector<GCGLint> baseVertices = vectorCopyCast<GCGLint, 3>(countsOffsetsInstanceCountsBaseVerticesAndBaseInstances);
     const Vector<GCGLuint> baseInstances = vectorCopyCast<GCGLuint, 4>(countsOffsetsInstanceCountsBaseVerticesAndBaseInstances);
-    protectedContext()->multiDrawElementsInstancedBaseVertexBaseInstanceANGLE(mode, GCGLSpanTuple { counts.data(), offsets, instanceCounts.data(), baseVertices.data(), baseInstances.data(), counts.size() }, type);
+    protectedContext()->multiDrawElementsInstancedBaseVertexBaseInstanceANGLE(mode, GCGLSpanTuple { counts.span().data(), offsets, instanceCounts.span().data(), baseVertices.span().data(), baseInstances.span().data(), counts.size() }, type);
 }
 
 RefPtr<RemoteGraphicsContextGL::GCGLContext> RemoteGraphicsContextGL::protectedContext()
@@ -460,11 +457,12 @@ Ref<RemoteVideoFrameObjectHeap> RemoteGraphicsContextGL::protectedVideoFrameObje
 
 void RemoteGraphicsContextGL::messageCheck(bool assertion)
 {
-    MESSAGE_CHECK(assertion, RefPtr { m_streamConnection });
+    if (!assertion) {
+        if (RefPtr connection = m_streamConnection.get())
+            connection->markCurrentlyDispatchedMessageAsInvalid();
+    }
 }
 
 } // namespace WebKit
-
-#undef MESSAGE_CHECK
 
 #endif // ENABLE(GPU_PROCESS) && ENABLE(WEBGL)

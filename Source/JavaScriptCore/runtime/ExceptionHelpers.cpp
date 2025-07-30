@@ -80,7 +80,7 @@ String errorDescriptionForValue(JSGlobalObject* globalObject, JSValue v)
     return v.toString(globalObject)->value(globalObject);
 }
     
-static StringView clampErrorMessage(const String& originalMessage)
+static StringView clampErrorMessage(const String& originalMessage LIFETIME_BOUND)
 {
     // Hopefully this is sufficiently long. Note, this is the length of the string not the number of bytes used.
     constexpr unsigned maxLength = 2 * KB;
@@ -116,7 +116,7 @@ static StringView functionCallBase(StringView sourceText)
         // and their closing parenthesis, the text range passed into the message appender 
         // will not include the text in between these parentheses, it will just be the desired
         // text that precedes the parentheses.
-        return String();
+        return { };
     }
 
     unsigned parenStack = 1;
@@ -149,7 +149,7 @@ static StringView functionCallBase(StringView sourceText)
         // in the above string processing. This algorithm is mostly best effort
         // and it works for most JS text in practice. However, if we determine
         // that the algorithm failed, we should just return the empty value.
-        return String();
+        return { };
     }
 
     // Don't display the ?. of an optional call.
@@ -271,7 +271,7 @@ JSObject* createError(JSGlobalObject* globalObject, JSValue value, const String&
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
     auto errorMessage = constructErrorMessage(globalObject, value, message);
-    if (UNLIKELY(scope.exception() || !errorMessage)) {
+    if (scope.exception() || !errorMessage) [[unlikely]] {
         // When we see an exception, we're not returning immediately because
         // we're in a CatchScope, i.e. no exceptions are thrown past this scope.
         // We're using a CatchScope because the contract for createError() is

@@ -62,14 +62,16 @@ public:
     }
     bool isZapped() const { return !*std::bit_cast<const uint32_t*>(this); }
 
+    void notifyNeedsDestruction() const;
+
     // isPendingDestruction returns true iff the cell is no longer alive but has not yet
     // been swept and therefore its destructor (if it has one) has not yet run.
     bool isPendingDestruction();
 
-    bool isPreciseAllocation() const;
+    ALWAYS_INLINE bool isPreciseAllocation() const;
     CellContainer cellContainer() const;
-    MarkedBlock& markedBlock() const;
-    PreciseAllocation& preciseAllocation() const;
+    ALWAYS_INLINE MarkedBlock& markedBlock() const;
+    ALWAYS_INLINE PreciseAllocation& preciseAllocation() const;
 
     // If you want performance and you know that your cell is small, you can do this instead:
     // ASSERT(!cell->isPreciseAllocation());

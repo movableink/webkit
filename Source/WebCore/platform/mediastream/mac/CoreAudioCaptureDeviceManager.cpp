@@ -35,13 +35,13 @@
 #include <AudioUnit/AudioUnit.h>
 #include <CoreMedia/CMSync.h>
 #include <pal/spi/cf/CoreAudioSPI.h>
+#include <ranges>
 #include <wtf/Assertions.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/StdLibExtras.h>
 
 #import <pal/cf/CoreMediaSoftLink.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -77,7 +77,7 @@ static bool deviceHasStreams(AudioObjectID deviceID, const AudioObjectPropertyAd
         return false;
 
     auto bufferList = std::unique_ptr<AudioBufferList>((AudioBufferList*) ::operator new (dataSize));
-    memset(bufferList.get(), 0, dataSize);
+    zeroSpan(unsafeMakeSpan(reinterpret_cast<uint8_t*>(bufferList.get()), dataSize));
     err = AudioObjectGetPropertyData(deviceID, &address, 0, nullptr, &dataSize, bufferList.get());
 
     return !err && bufferList->mNumberBuffers;
@@ -103,7 +103,12 @@ static bool deviceHasOutputStreams(AudioObjectID deviceID)
     return deviceHasStreams(deviceID, address);
 }
 
-static bool isValidCaptureDevice(const CoreAudioCaptureDevice& device, bool filterTapEnabledDevices)
+static bool isVirtualDeviceFromLabel(const String& label)
+{
+    return label.contains("WebexMediaAudioDevice"_s) || label.contains("Microsoft Teams Audio"_s);
+}
+
+static bool isValidMicrophoneDevice(const CoreAudioCaptureDevice& device, bool filterTapEnabledDevices)
 {
     if (filterTapEnabledDevices) {
         // Ignore output devices that have input only for echo cancellation.
@@ -151,8 +156,19 @@ static bool isValidCaptureDevice(const CoreAudioCaptureDevice& device, bool filt
         return false;
     }
 
-    if (device.label().contains("WebexMediaAudioDevice"_s)) {
-        RELEASE_LOG(WebRTC, "Ignoring webex audio device");
+    // FIXME: We might want to use properties like whether a device can be selected as default once we move device enumeration to GPUProcess.
+    if (isVirtualDeviceFromLabel(device.label())) {
+        RELEASE_LOG(WebRTC, "Ignoring virtual microphone device '%s'", device.label().utf8().data());
+        return false;
+    }
+
+    return true;
+}
+
+static bool isValidSpeakerDevice(const CoreAudioCaptureDevice& device)
+{
+    if (isVirtualDeviceFromLabel(device.label())) {
+        RELEASE_LOG(WebRTC, "Ignoring virtual speaker device");
         return false;
     }
 
@@ -178,10 +194,11 @@ Vector<CoreAudioCaptureDevice>& CoreAudioCaptureDeviceManager::coreAudioCaptureD
         initialized = true;
         refreshAudioCaptureDevices(NotifyIfDevicesHaveChanged::DoNotNotify);
 
-        auto listener = ^(UInt32 count, const AudioObjectPropertyAddress properties[]) {
+        auto listener = ^(UInt32 count, const AudioObjectPropertyAddress rawProperties[]) {
+            auto properties = unsafeMakeSpan(rawProperties, count);
             bool notify = false;
-            for (UInt32 i = 0; i < count; ++i)
-                notify |= (properties[i].mSelector == kAudioHardwarePropertyDevices || properties[i].mSelector == kAudioHardwarePropertyDefaultInputDevice || properties[i].mSelector == kAudioHardwarePropertyDefaultOutputDevice);
+            for (auto& property : properties)
+                notify |= (property.mSelector == kAudioHardwarePropertyDevices || property.mSelector == kAudioHardwarePropertyDefaultInputDevice || property.mSelector == kAudioHardwarePropertyDefaultOutputDevice);
 
             if (notify)
                 CoreAudioCaptureDeviceManager::singleton().scheduleUpdateCaptureDevices();
@@ -229,7 +246,7 @@ std::optional<CoreAudioCaptureDevice> CoreAudioCaptureDeviceManager::coreAudioDe
 
 static inline bool hasDevice(const Vector<CoreAudioCaptureDevice>& devices, uint32_t deviceID, CaptureDevice::DeviceType deviceType)
 {
-    return std::any_of(devices.begin(), devices.end(), [&deviceID, deviceType](auto& device) {
+    return std::ranges::any_of(devices, [&deviceID, deviceType](auto& device) {
         return device.deviceID() == deviceID && device.type() == deviceType;
     });
 }
@@ -250,7 +267,7 @@ static inline Vector<CoreAudioCaptureDevice> computeAudioDeviceList(bool filterT
 
     size_t deviceCount = dataSize / sizeof(AudioObjectID);
     Vector<AudioObjectID> deviceIDs(deviceCount);
-    err = AudioObjectGetPropertyData(kAudioObjectSystemObject, &address, 0, nullptr, &dataSize, deviceIDs.data());
+    err = AudioObjectGetPropertyData(kAudioObjectSystemObject, &address, 0, nullptr, &dataSize, deviceIDs.mutableSpan().data());
     if (err) {
         RELEASE_LOG(WebRTC, "computeAudioDeviceList failed to get device list %d (%.4s)", (int)err, (char*)&err);
         return { };
@@ -266,7 +283,7 @@ static inline Vector<CoreAudioCaptureDevice> computeAudioDeviceList(bool filterT
             continue;
 
         auto microphoneDevice = CoreAudioCaptureDevice::create(deviceID, CaptureDevice::DeviceType::Microphone, { });
-        if (microphoneDevice && isValidCaptureDevice(microphoneDevice.value(), filterTapEnabledDevices))
+        if (microphoneDevice && isValidMicrophoneDevice(microphoneDevice.value(), filterTapEnabledDevices))
             audioDevices.append(WTFMove(microphoneDevice.value()));
     }
 
@@ -298,7 +315,8 @@ static inline Vector<CoreAudioCaptureDevice> computeAudioDeviceList(bool filterT
                     }
                 }
             }
-            audioDevices.append(WTFMove(device.value()));
+            if (isValidSpeakerDevice(*device))
+                audioDevices.append(WTFMove(*device));
         }
     }
     return audioDevices;
@@ -321,7 +339,7 @@ void CoreAudioCaptureDeviceManager::refreshAudioCaptureDevices(NotifyIfDevicesHa
     if (!haveDeviceChanges)
         return;
 
-    std::sort(audioDevices.begin(), audioDevices.end(), [] (auto& first, auto& second) -> bool {
+    std::ranges::sort(audioDevices, [] (auto& first, auto& second) -> bool {
         return first.isDefault() && !second.isDefault();
     });
     m_coreAudioCaptureDevices = WTFMove(audioDevices);
@@ -340,7 +358,5 @@ void CoreAudioCaptureDeviceManager::refreshAudioCaptureDevices(NotifyIfDevicesHa
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(MEDIA_STREAM) && PLATFORM(MAC)

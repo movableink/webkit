@@ -35,18 +35,11 @@
 
 namespace WebCore {
 
-String AccessibilityObject::speechHintAttributeValue() const
+OptionSet<SpeakAs> AccessibilityObject::speakAs() const
 {
-    auto speak = speakAsProperty();
-    NSMutableArray<NSString *> *hints = [NSMutableArray array];
-    [hints addObject:(speak & SpeakAs::SpellOut) ? @"spell-out" : @"normal"];
-    if (speak & SpeakAs::Digits)
-        [hints addObject:@"digits"];
-    if (speak & SpeakAs::LiteralPunctuation)
-        [hints addObject:@"literal-punctuation"];
-    if (speak & SpeakAs::NoPunctuation)
-        [hints addObject:@"no-punctuation"];
-    return [hints componentsJoinedByString:@" "];
+    if (auto* style = this->style())
+        return style->speakAs();
+    return { };
 }
 
 FloatPoint AccessibilityObject::screenRelativePosition() const
@@ -184,7 +177,7 @@ RetainPtr<NSAttributedString> AccessibilityObject::attributedStringForRange(cons
 
 RetainPtr<CTFontRef> fontFrom(const RenderStyle& style)
 {
-    return style.fontCascade().primaryFont().getCTFont();
+    return style.fontCascade().primaryFont()->getCTFont();
 }
 
 Color textColorFrom(const RenderStyle& style)
@@ -202,6 +195,15 @@ RetainPtr<CTFontRef> AccessibilityObject::font() const
     const auto* style = this->style();
     return style ? fontFrom(*style) : nil;
 }
+
+#if ENABLE(AX_THREAD_TEXT_APIS)
+FontOrientation AccessibilityObject::fontOrientation() const
+{
+    if (CheckedPtr style = this->style())
+        return const_cast<RenderStyle*>(style.get())->fontAndGlyphOrientation().first;
+    return FontOrientation::Horizontal;
+}
+#endif
 
 Color AccessibilityObject::textColor() const
 {
@@ -230,7 +232,7 @@ bool AccessibilityObject::isSuperscript() const
 bool AccessibilityObject::hasTextShadow() const
 {
     const auto* style = this->style();
-    return style && style->textShadow();
+    return style && style->hasTextShadow();
 }
 
 LineDecorationStyle AccessibilityObject::lineDecorationStyle() const
@@ -252,7 +254,7 @@ AttributedStringStyle AccessibilityObject::stylesForAttributedString() const
         backgroundColorFrom(*style),
         alignment == VerticalAlign::Sub,
         alignment == VerticalAlign::Super,
-        !!style->textShadow(),
+        style->hasTextShadow(),
         lineDecorationStyle()
     };
 }

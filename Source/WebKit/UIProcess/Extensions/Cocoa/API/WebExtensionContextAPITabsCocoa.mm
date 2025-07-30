@@ -45,6 +45,7 @@
 #import "WebExtensionTabIdentifier.h"
 #import "WebExtensionUtilities.h"
 #import "WebExtensionWindowIdentifier.h"
+#import "WebPageProxy.h"
 #import <WebCore/ImageBufferUtilitiesCG.h>
 #import <wtf/CallbackAggregator.h>
 
@@ -65,13 +66,13 @@ void WebExtensionContext::tabsCreate(std::optional<WebPageProxyIdentifier> webPa
 
     RefPtr extensionController = this->extensionController();
     if (!extensionController) {
-        completionHandler(toWebExtensionError(apiName, nil, @"No extensionController"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"the extension is not loaded"));
         return;
     }
 
     auto delegate = extensionController->delegate();
     if (![delegate respondsToSelector:@selector(webExtensionController:openNewTabUsingConfiguration:forExtensionContext:completionHandler:)]) {
-        completionHandler(toWebExtensionError(apiName, nil, @"it is not implemented"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"it is not implemented"));
         return;
     }
 
@@ -84,7 +85,7 @@ void WebExtensionContext::tabsCreate(std::optional<WebPageProxyIdentifier> webPa
 
     RefPtr window = getWindow(parameters.windowIdentifier.value_or(WebExtensionWindowConstants::CurrentIdentifier), webPageProxyIdentifier);
     if (parameters.windowIdentifier && !window) {
-        completionHandler(toWebExtensionError(apiName, nil, @"window not found"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"window not found"));
         return;
     }
 
@@ -94,7 +95,7 @@ void WebExtensionContext::tabsCreate(std::optional<WebPageProxyIdentifier> webPa
     if (parameters.parentTabIdentifier) {
         RefPtr tab = getTab(parameters.parentTabIdentifier.value());
         if (!tab) {
-            completionHandler(toWebExtensionError(apiName, nil, @"parent tab not found"));
+            completionHandler(toWebExtensionError(apiName, nullString(), @"parent tab not found"));
             return;
         }
 
@@ -102,12 +103,12 @@ void WebExtensionContext::tabsCreate(std::optional<WebPageProxyIdentifier> webPa
     }
 
     if (parameters.url)
-        configuration.url = parameters.url.value();
+        configuration.url = parameters.url.value().createNSURL().get();
 
     [delegate webExtensionController:extensionController->wrapper() openNewTabUsingConfiguration:configuration forExtensionContext:wrapper() completionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)](id<WKWebExtensionTab> newTab, NSError *error) mutable {
         if (error) {
             RELEASE_LOG_ERROR(Extensions, "Error for open new tab: %{public}@", privacyPreservingDescription(error));
-            completionHandler(toWebExtensionError(apiName, nil, error.localizedDescription));
+            completionHandler(toWebExtensionError(apiName, nullString(), error.localizedDescription));
             return;
         }
 
@@ -134,7 +135,7 @@ void WebExtensionContext::tabsUpdate(WebPageProxyIdentifier webPageProxyIdentifi
 
     RefPtr tab = getTab(webPageProxyIdentifier, tabIdentifier, IncludeExtensionViews::Yes);
     if (!tab) {
-        completionHandler(toWebExtensionError(@"tabs.update()", nil, @"tab not found"));
+        completionHandler(toWebExtensionError(@"tabs.update()", nullString(), @"tab not found"));
         return;
     }
 
@@ -254,7 +255,7 @@ void WebExtensionContext::tabsDuplicate(WebExtensionTabIdentifier tabIdentifier,
 {
     RefPtr tab = getTab(tabIdentifier);
     if (!tab) {
-        completionHandler(toWebExtensionError(@"tabs.duplicate()", nil, @"tab not found"));
+        completionHandler(toWebExtensionError(@"tabs.duplicate()", nullString(), @"tab not found"));
         return;
     }
 
@@ -278,7 +279,7 @@ void WebExtensionContext::tabsGet(WebExtensionTabIdentifier tabIdentifier, Compl
 {
     RefPtr tab = getTab(tabIdentifier);
     if (!tab) {
-        completionHandler(toWebExtensionError(@"tabs.get()", nil, @"tab not found"));
+        completionHandler(toWebExtensionError(@"tabs.get()", nullString(), @"tab not found"));
         return;
     }
 
@@ -332,7 +333,7 @@ void WebExtensionContext::tabsReload(WebPageProxyIdentifier webPageProxyIdentifi
 {
     RefPtr tab = getTab(webPageProxyIdentifier, tabIdentifier, IncludeExtensionViews::Yes);
     if (!tab) {
-        completionHandler(toWebExtensionError(@"tabs.reload()", nil, @"tab not found"));
+        completionHandler(toWebExtensionError(@"tabs.reload()", nullString(), @"tab not found"));
         return;
     }
 
@@ -343,7 +344,7 @@ void WebExtensionContext::tabsGoBack(WebPageProxyIdentifier webPageProxyIdentifi
 {
     RefPtr tab = getTab(webPageProxyIdentifier, tabIdentifier, IncludeExtensionViews::Yes);
     if (!tab) {
-        completionHandler(toWebExtensionError(@"tabs.goBack()", nil, @"tab not found"));
+        completionHandler(toWebExtensionError(@"tabs.goBack()", nullString(), @"tab not found"));
         return;
     }
 
@@ -354,7 +355,7 @@ void WebExtensionContext::tabsGoForward(WebPageProxyIdentifier webPageProxyIdent
 {
     RefPtr tab = getTab(webPageProxyIdentifier, tabIdentifier, IncludeExtensionViews::Yes);
     if (!tab) {
-        completionHandler(toWebExtensionError(@"tabs.goForward()", nil, @"tab not found"));
+        completionHandler(toWebExtensionError(@"tabs.goForward()", nullString(), @"tab not found"));
         return;
     }
 
@@ -367,13 +368,13 @@ void WebExtensionContext::tabsDetectLanguage(WebPageProxyIdentifier webPageProxy
 
     RefPtr tab = getTab(webPageProxyIdentifier, tabIdentifier, IncludeExtensionViews::Yes);
     if (!tab) {
-        completionHandler(toWebExtensionError(apiName, nil, @"tab not found"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"tab not found"));
         return;
     }
 
     requestPermissionToAccessURLs({ tab->url() }, tab, [tab, completionHandler = WTFMove(completionHandler)](auto&& requestedURLs, auto&& allowedURLs, auto expirationDate) mutable {
         if (!tab->extensionHasPermission()) {
-            completionHandler(toWebExtensionError(apiName, nil, @"this extension does not have access to this tab"));
+            completionHandler(toWebExtensionError(apiName, nullString(), @"this extension does not have access to this tab"));
             return;
         }
 
@@ -404,19 +405,19 @@ void WebExtensionContext::tabsCaptureVisibleTab(WebPageProxyIdentifier webPagePr
 
     RefPtr window = getWindow(windowIdentifier.value_or(WebExtensionWindowConstants::CurrentIdentifier), webPageProxyIdentifier);
     if (!window) {
-        completionHandler(toWebExtensionError(apiName, nil, @"window not found"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"window not found"));
         return;
     }
 
     RefPtr activeTab = window->activeTab();
     if (!activeTab) {
-        completionHandler(toWebExtensionError(apiName, nil, @"active tab not found"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"active tab not found"));
         return;
     }
 
     requestPermissionToAccessURLs({ activeTab->url() }, activeTab, [activeTab, imageFormat, imageQuality, completionHandler = WTFMove(completionHandler)](auto&& requestedURLs, auto&& allowedURLs, auto expirationDate) mutable {
         if (!activeTab->extensionHasPermission()) {
-            completionHandler(toWebExtensionError(apiName, nil, @"either the 'activeTab' permission or granted host permissions for the current website are required"));
+            completionHandler(toWebExtensionError(apiName, nullString(), @"either the 'activeTab' permission or granted host permissions for the current website are required"));
             return;
         }
 
@@ -433,16 +434,17 @@ void WebExtensionContext::tabsCaptureVisibleTab(WebPageProxyIdentifier webPagePr
             }
 
 #if USE(APPKIT)
-            auto cgImage = [image CGImageForProposedRect:nil context:nil hints:nil];
+            RetainPtr<CGImage> cgImage = [image CGImageForProposedRect:nil context:nil hints:nil];
 #else
-            auto cgImage = image.CGImage;
+            RetainPtr<CGImage> cgImage = image.CGImage;
 #endif
             if (!cgImage) {
                 completionHandler({ });
                 return;
             }
 
-            completionHandler(URL { WebCore::dataURL(cgImage, toMIMEType(imageFormat), imageQuality) });
+            // FIXME: This is a static analysis false positive.
+            SUPPRESS_UNRETAINED_ARG completionHandler(URL { WebCore::dataURL(cgImage.get(), toMIMEType(imageFormat), imageQuality) });
         });
     });
 }
@@ -451,7 +453,7 @@ void WebExtensionContext::tabsToggleReaderMode(WebPageProxyIdentifier webPagePro
 {
     RefPtr tab = getTab(webPageProxyIdentifier, tabIdentifier, IncludeExtensionViews::Yes);
     if (!tab) {
-        completionHandler(toWebExtensionError(@"tabs.toggleReaderMode()", nil, @"tab not found"));
+        completionHandler(toWebExtensionError(@"tabs.toggleReaderMode()", nullString(), @"tab not found"));
         return;
     }
 
@@ -464,7 +466,13 @@ void WebExtensionContext::tabsSendMessage(WebExtensionTabIdentifier tabIdentifie
 
     RefPtr tab = getTab(tabIdentifier);
     if (!tab) {
-        completionHandler(toWebExtensionError(apiName, nil, @"tab not found"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"tab not found"));
+        return;
+    }
+
+    auto *webView = tab->webView();
+    if (!webView) {
+        completionHandler({ });
         return;
     }
 
@@ -476,12 +484,19 @@ void WebExtensionContext::tabsSendMessage(WebExtensionTabIdentifier tabIdentifie
         return;
     }
 
-    ASSERT(processes.size() == 1);
-    auto process = processes.takeAny();
+    auto targetParametersCopy = targetParameters;
+    targetParametersCopy.pageProxyIdentifier = webView._protectedPage->identifier();
 
-    process->sendWithAsyncReply(Messages::WebExtensionContextProxy::DispatchRuntimeMessageEvent(targetContentWorldType, messageJSON, targetParameters, senderParameters), [protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)](String&& replyJSON) mutable {
-        completionHandler(WTFMove(replyJSON));
-    }, identifier());
+    Ref callbackAggregator = EagerCallbackAggregator<void(Expected<String, WebExtensionError>)>::create(WTFMove(completionHandler), { });
+
+    for (Ref process : processes) {
+        process->sendWithAsyncReply(Messages::WebExtensionContextProxy::DispatchRuntimeMessageEvent(targetContentWorldType, messageJSON, targetParametersCopy, senderParameters), [callbackAggregator](String&& replyJSON) {
+            if (replyJSON.isNull())
+                return;
+
+            callbackAggregator.get()(WTFMove(replyJSON));
+        }, identifier());
+    }
 }
 
 void WebExtensionContext::tabsConnect(WebExtensionTabIdentifier tabIdentifier, WebExtensionPortChannelIdentifier channelIdentifier, String name, const WebExtensionMessageTargetParameters& targetParameters, const WebExtensionMessageSenderParameters& senderParameters, CompletionHandler<void(Expected<void, WebExtensionError>&&)>&& completionHandler)
@@ -490,7 +505,7 @@ void WebExtensionContext::tabsConnect(WebExtensionTabIdentifier tabIdentifier, W
 
     RefPtr tab = getTab(tabIdentifier);
     if (!tab) {
-        completionHandler(toWebExtensionError(apiName, nil, @"tab not found"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"tab not found"));
         return;
     }
 
@@ -502,25 +517,30 @@ void WebExtensionContext::tabsConnect(WebExtensionTabIdentifier tabIdentifier, W
 
     auto processes = tab->processes(WebExtensionEventListenerType::RuntimeOnConnect, targetContentWorldType);
     if (processes.isEmpty()) {
-        completionHandler(toWebExtensionError(apiName, nil, @"no runtime.onConnect listeners found"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"no runtime.onConnect listeners found"));
         return;
     }
 
-    ASSERT(processes.size() == 1);
-    RefPtr process = processes.takeAny();
+    size_t handledCount = 0;
+    size_t totalExpected = processes.size();
 
-    process->sendWithAsyncReply(Messages::WebExtensionContextProxy::DispatchRuntimeConnectEvent(targetContentWorldType, channelIdentifier, name, targetParameters, senderParameters), [=, this, protectedThis = Ref { *this }](HashCountedSet<WebPageProxyIdentifier>&& addedPortCounts) mutable {
-        // Flip target and source worlds since we're adding the opposite side of the port connection, sending from target back to source.
-        addPorts(targetContentWorldType, sourceContentWorldType, channelIdentifier, WTFMove(addedPortCounts));
+    for (Ref process : processes) {
+        process->sendWithAsyncReply(Messages::WebExtensionContextProxy::DispatchRuntimeConnectEvent(targetContentWorldType, channelIdentifier, name, targetParameters, senderParameters), [=, this, protectedThis = Ref { *this }, &handledCount](HashCountedSet<WebPageProxyIdentifier>&& addedPortCounts) mutable {
+            // Flip target and source worlds since we're adding the opposite side of the port connection, sending from target back to source.
+            addPorts(targetContentWorldType, sourceContentWorldType, channelIdentifier, WTFMove(addedPortCounts));
 
-        fireQueuedPortMessageEventsIfNeeded(targetContentWorldType, channelIdentifier);
-        fireQueuedPortMessageEventsIfNeeded(sourceContentWorldType, channelIdentifier);
+            fireQueuedPortMessageEventsIfNeeded(targetContentWorldType, channelIdentifier);
+            fireQueuedPortMessageEventsIfNeeded(sourceContentWorldType, channelIdentifier);
 
-        firePortDisconnectEventIfNeeded(sourceContentWorldType, targetContentWorldType, channelIdentifier);
+            firePortDisconnectEventIfNeeded(sourceContentWorldType, targetContentWorldType, channelIdentifier);
 
-        clearQueuedPortMessages(targetContentWorldType, channelIdentifier);
-        clearQueuedPortMessages(sourceContentWorldType, channelIdentifier);
-    }, identifier());
+            if (++handledCount < totalExpected)
+                return;
+
+            clearQueuedPortMessages(targetContentWorldType, channelIdentifier);
+            clearQueuedPortMessages(sourceContentWorldType, channelIdentifier);
+        }, identifier());
+    }
 
     completionHandler({ });
 }
@@ -529,7 +549,7 @@ void WebExtensionContext::tabsGetZoom(WebPageProxyIdentifier webPageProxyIdentif
 {
     RefPtr tab = getTab(webPageProxyIdentifier, tabIdentifier, IncludeExtensionViews::Yes);
     if (!tab) {
-        completionHandler(toWebExtensionError(@"tabs.getZoom()", nil, @"tab not found"));
+        completionHandler(toWebExtensionError(@"tabs.getZoom()", nullString(), @"tab not found"));
         return;
     }
 
@@ -540,7 +560,7 @@ void WebExtensionContext::tabsSetZoom(WebPageProxyIdentifier webPageProxyIdentif
 {
     RefPtr tab = getTab(webPageProxyIdentifier, tabIdentifier, IncludeExtensionViews::Yes);
     if (!tab) {
-        completionHandler(toWebExtensionError(@"tabs.setZoom()", nil, @"tab not found"));
+        completionHandler(toWebExtensionError(@"tabs.setZoom()", nullString(), @"tab not found"));
         return;
     }
 
@@ -552,7 +572,7 @@ void WebExtensionContext::tabsRemove(Vector<WebExtensionTabIdentifier> tabIdenti
     auto tabs = tabIdentifiers.map([&](auto& tabIdentifier) -> RefPtr<WebExtensionTab> {
         RefPtr tab = getTab(tabIdentifier);
         if (!tab) {
-            completionHandler(toWebExtensionError(@"tabs.remove()", nil, @"tab '%llu' was not found", tabIdentifier.toUInt64()));
+            completionHandler(toWebExtensionError(@"tabs.remove()", nullString(), @"tab '%llu' was not found", tabIdentifier.toUInt64()));
             return nullptr;
         }
 
@@ -580,19 +600,19 @@ void WebExtensionContext::tabsExecuteScript(WebPageProxyIdentifier webPageProxyI
 
     RefPtr tab = getTab(webPageProxyIdentifier, tabIdentifier, IncludeExtensionViews::Yes);
     if (!tab) {
-        completionHandler(toWebExtensionError(apiName, nil, @"tab not found"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"tab not found"));
         return;
     }
 
     requestPermissionToAccessURLs({ tab->url() }, tab, [this, protectedThis = Ref { *this }, tab, parameters, completionHandler = WTFMove(completionHandler)](auto&& requestedURLs, auto&& allowedURLs, auto expirationDate) mutable {
         if (!tab->extensionHasPermission()) {
-            completionHandler(toWebExtensionError(apiName, nil, @"this extension does not have access to this tab"));
+            completionHandler(toWebExtensionError(apiName, nullString(), @"this extension does not have access to this tab"));
             return;
         }
 
         auto *webView = tab->webView();
         if (!webView) {
-            completionHandler(toWebExtensionError(apiName, nil, @"could not execute script in tab"));
+            completionHandler(toWebExtensionError(apiName, nullString(), @"could not execute script in tab"));
             return;
         }
 
@@ -600,10 +620,10 @@ void WebExtensionContext::tabsExecuteScript(WebPageProxyIdentifier webPageProxyI
         if (parameters.code)
             scriptData = SourcePair { parameters.code.value(), URL { } };
         else {
-            NSString *filePath = parameters.files.value().first();
-            scriptData = sourcePairForResource(filePath, *this);
+            RetainPtr filePath = parameters.files.value().first().createNSString();
+            scriptData = sourcePairForResource(filePath.get(), *this);
             if (!scriptData) {
-                completionHandler(toWebExtensionError(apiName, nil, @"Invalid resource: %@", filePath));
+                completionHandler(toWebExtensionError(apiName, nullString(), @"Invalid resource: %@", filePath.get()));
                 return;
             }
         }
@@ -621,24 +641,24 @@ void WebExtensionContext::tabsInsertCSS(WebPageProxyIdentifier webPageProxyIdent
 
     RefPtr tab = getTab(webPageProxyIdentifier, tabIdentifier, IncludeExtensionViews::Yes);
     if (!tab) {
-        completionHandler(toWebExtensionError(apiName, nil, @"tab not found"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"tab not found"));
         return;
     }
 
     requestPermissionToAccessURLs({ tab->url() }, tab, [this, protectedThis = Ref { *this }, tab, parameters, completionHandler = WTFMove(completionHandler)](auto&& requestedURLs, auto&& allowedURLs, auto expirationDate) mutable {
         if (!tab->extensionHasPermission()) {
-            completionHandler(toWebExtensionError(apiName, nil, @"this extension does not have access to this tab"));
+            completionHandler(toWebExtensionError(apiName, nullString(), @"this extension does not have access to this tab"));
             return;
         }
 
         auto *webView = tab->webView();
         if (!webView) {
-            completionHandler(toWebExtensionError(apiName, nil, @"could not inject stylesheet on this tab"));
+            completionHandler(toWebExtensionError(apiName, nullString(), @"could not inject stylesheet on this tab"));
             return;
         }
 
         // FIXME: <https://webkit.org/b/262491> There is currently no way to inject CSS in specific frames based on ID's. If 'frameIds' is passed, default to the main frame.
-        auto injectedFrames = parameters.frameIDs ? WebCore::UserContentInjectedFrames::InjectInTopFrameOnly : WebCore::UserContentInjectedFrames::InjectInAllFrames;
+        auto injectedFrames = parameters.frameIdentifiers ? WebCore::UserContentInjectedFrames::InjectInTopFrameOnly : WebCore::UserContentInjectedFrames::InjectInAllFrames;
 
         auto styleSheetPairs = getSourcePairsForParameters(parameters, *this);
         injectStyleSheets(styleSheetPairs, webView, Ref { *m_contentScriptWorld }, parameters.styleLevel, injectedFrames, *this);
@@ -653,13 +673,13 @@ void WebExtensionContext::tabsRemoveCSS(WebPageProxyIdentifier webPageProxyIdent
 
     RefPtr tab = getTab(webPageProxyIdentifier, tabIdentifier, IncludeExtensionViews::Yes);
     if (!tab) {
-        completionHandler(toWebExtensionError(apiName, nil, @"tab not found"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"tab not found"));
         return;
     }
 
     auto *webView = tab->webView();
     if (!webView) {
-        completionHandler(toWebExtensionError(apiName, nil, @"could not remove stylesheet on this tab"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"could not remove stylesheet on this tab"));
         return;
     }
 
@@ -667,7 +687,7 @@ void WebExtensionContext::tabsRemoveCSS(WebPageProxyIdentifier webPageProxyIdent
     // and permission has been revoked since it inserted CSS. This allows for the extension to clean up.
 
     // FIXME: <https://webkit.org/b/262491> There is currently no way to inject CSS in specific frames based on ID's. If 'frameIds' is passed, default to the main frame.
-    auto injectedFrames = parameters.frameIDs ? WebCore::UserContentInjectedFrames::InjectInTopFrameOnly : WebCore::UserContentInjectedFrames::InjectInAllFrames;
+    auto injectedFrames = parameters.frameIdentifiers ? WebCore::UserContentInjectedFrames::InjectInTopFrameOnly : WebCore::UserContentInjectedFrames::InjectInAllFrames;
 
     auto styleSheetPairs = getSourcePairsForParameters(parameters, *this);
     removeStyleSheets(styleSheetPairs, webView, injectedFrames, *this);

@@ -133,7 +133,7 @@ ExceptionOr<Ref<JSC::ArrayBuffer>> DecompressionStreamDecoder::decompressZlib(st
 
         output.grow(allocateSize);
 
-        m_zstream.getPlatformStream().next_out = output.data();
+        m_zstream.getPlatformStream().next_out = output.mutableSpan().data();
         m_zstream.getPlatformStream().avail_out = output.size();
 
         result = inflate(&m_zstream.getPlatformStream(), m_didFinish ? Z_FINISH : Z_NO_FLUSH);

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,32 +26,32 @@
 #pragma once
 
 #include "CSSCalcSymbolsAllowed.h"
+#include "CSSCalcValue.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveNumericTypes.h"
 #include "CSSPropertyParserOptions.h"
+#include "CSSPropertyParserState.h"
 
 namespace WebCore {
-
-struct CSSParserContext;
-
 namespace CSSPropertyParserHelpers {
 
 // MARK: - Generic Consumer Definition
 
 template<typename> struct ConsumerDefinition;
 
-inline bool shouldAcceptUnitlessValue(double value, CSSPropertyParserOptions options)
-{
-    // FIXME: Presentational HTML attributes shouldn't use the CSS parser for lengths.
+// Used to check that a specialization of ConsumerDefinition exists.
+struct HasConsumerDefinition {
+private:
+    template<typename T, typename U = decltype(ConsumerDefinition<T>{})>
+    static constexpr bool exists(int) { return true; }
 
-    if (!value && options.unitlessZero == UnitlessZeroQuirk::Allow)
-        return true;
+    template<typename T>
+    static constexpr bool exists(char) { return false; }
 
-    if (isUnitlessValueParsingEnabledForMode(options.parserMode))
-        return true;
-
-    return options.parserMode == HTMLQuirksMode && options.unitless == UnitlessQuirk::Allow;
-}
+public:
+    template<typename T>
+    static constexpr bool check() { return exists<T>(0); }
+};
 
 // FIXME: Bailing on infinity during validation does not seem to match the intent of the spec,
 // though due to the use of "implementation-defined" it may still be conforming. The spec states:
@@ -125,28 +126,28 @@ template<typename Raw> Raw performParseTimeClamp(Raw raw)
     static_assert(raw.range.options != CSS::RangeOptions::Default);
 
     if constexpr (raw.range.options == CSS::RangeOptions::ClampLower)
-        return { std::max<typename Raw::ValueType>(raw.value, raw.range.min) };
+        return { std::max<typename Raw::ResolvedValueType>(raw.value, raw.range.min) };
     else if constexpr (raw.range.options == CSS::RangeOptions::ClampUpper)
-        return { std::min<typename Raw::ValueType>(raw.value, raw.range.max) };
+        return { std::min<typename Raw::ResolvedValueType>(raw.value, raw.range.max) };
     else if constexpr (raw.range.options == CSS::RangeOptions::ClampBoth)
-        return { std::clamp<typename Raw::ValueType>(raw.value, raw.range.min, raw.range.max) };
+        return { std::clamp<typename Raw::ResolvedValueType>(raw.value, raw.range.min, raw.range.max) };
 }
 
 // Shared consumer for `Dimension` tokens.
 template<typename Primitive, typename Validator> struct DimensionConsumer {
     static constexpr CSSParserTokenType tokenType = DimensionToken;
 
-    static std::optional<typename Primitive::Raw> consume(CSSParserTokenRange& range, const CSSParserContext&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions options)
+    static std::optional<typename Primitive::Raw> consume(CSSParserTokenRange& range, CSS::PropertyParserState& state, CSSCalcSymbolsAllowed, CSSPropertyParserOptions options)
     {
         ASSERT(range.peek().type() == DimensionToken);
 
         auto& token = range.peek();
 
-        auto unitType = token.unitType();
-        if (!Validator::isValid(unitType, options))
+        auto validatedUnit = Validator::validate(token.unitType(), state, options);
+        if (!validatedUnit)
             return std::nullopt;
 
-        auto rawValue = typename Primitive::Raw { unitType, token.numericValue() };
+        auto rawValue = typename Primitive::Raw { *validatedUnit, token.numericValue() };
 
         if constexpr (rawValue.range.options != CSS::RangeOptions::Default)
             rawValue = performParseTimeClamp(rawValue);
@@ -163,11 +164,11 @@ template<typename Primitive, typename Validator> struct DimensionConsumer {
 template<typename Primitive, typename Validator> struct PercentageConsumer {
     static constexpr CSSParserTokenType tokenType = PercentageToken;
 
-    static std::optional<typename Primitive::Raw> consume(CSSParserTokenRange& range, const CSSParserContext&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions options)
+    static std::optional<typename Primitive::Raw> consume(CSSParserTokenRange& range, CSS::PropertyParserState&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions options)
     {
         ASSERT(range.peek().type() == PercentageToken);
 
-        auto rawValue = typename Primitive::Raw { CSSUnitType::CSS_PERCENTAGE, range.peek().numericValue() };
+        auto rawValue = typename Primitive::Raw { CSS::PercentageUnit::Percentage, range.peek().numericValue() };
 
         if constexpr (rawValue.range.options != CSS::RangeOptions::Default)
             rawValue = performParseTimeClamp(rawValue);
@@ -184,11 +185,11 @@ template<typename Primitive, typename Validator> struct PercentageConsumer {
 template<typename Primitive, typename Validator> struct NumberConsumer {
     static constexpr CSSParserTokenType tokenType = NumberToken;
 
-    static std::optional<typename Primitive::Raw> consume(CSSParserTokenRange& range, const CSSParserContext&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions options)
+    static std::optional<typename Primitive::Raw> consume(CSSParserTokenRange& range, CSS::PropertyParserState&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions options)
     {
         ASSERT(range.peek().type() == NumberToken);
 
-        auto rawValue = typename Primitive::Raw { CSSUnitType::CSS_NUMBER, range.peek().numericValue() };
+        auto rawValue = typename Primitive::Raw { CSS::NumberUnit::Number, range.peek().numericValue() };
 
         if constexpr (rawValue.range.options != CSS::RangeOptions::Default)
             rawValue = performParseTimeClamp(rawValue);
@@ -202,18 +203,18 @@ template<typename Primitive, typename Validator> struct NumberConsumer {
 };
 
 // Shared consumer for `Number` tokens for use by dimensional primitives that support "unitless" values.
-template<typename Primitive, typename Validator, CSSUnitType unitType> struct NumberConsumerForUnitlessValues {
+template<typename Primitive, typename Validator, auto unit> struct NumberConsumerForUnitlessValues {
     static constexpr CSSParserTokenType tokenType = NumberToken;
 
-    static std::optional<typename Primitive::Raw> consume(CSSParserTokenRange& range, const CSSParserContext&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions options)
+    static std::optional<typename Primitive::Raw> consume(CSSParserTokenRange& range, CSS::PropertyParserState& state, CSSCalcSymbolsAllowed, CSSPropertyParserOptions options)
     {
         ASSERT(range.peek().type() == NumberToken);
 
         auto numericValue = range.peek().numericValue();
-        if (!shouldAcceptUnitlessValue(numericValue, options))
+        if (!Validator::shouldAcceptUnitlessValue(numericValue, state, options))
             return std::nullopt;
 
-        auto rawValue = typename Primitive::Raw { unitType, numericValue };
+        auto rawValue = typename Primitive::Raw { unit, numericValue };
 
         if constexpr (rawValue.range.options != CSS::RangeOptions::Default)
             rawValue = performParseTimeClamp(rawValue);
@@ -230,14 +231,30 @@ template<typename Primitive, typename Validator, CSSUnitType unitType> struct Nu
 template<typename Primitive> struct FunctionConsumerForCalcValues {
     static constexpr CSSParserTokenType tokenType = FunctionToken;
 
-    static std::optional<typename Primitive::Calc> consume(CSSParserTokenRange& range, const CSSParserContext& context, CSSCalcSymbolsAllowed symbolsAllowed, CSSPropertyParserOptions options)
+    static std::optional<typename Primitive::Calc> consume(CSSParserTokenRange& range, CSS::PropertyParserState& state, CSSCalcSymbolsAllowed symbolsAllowed, CSSPropertyParserOptions options)
     {
         ASSERT(range.peek().type() == FunctionToken);
 
         auto rangeCopy = range;
-        if (RefPtr value = CSSCalcValue::parse(rangeCopy, context, Primitive::category, Primitive::range, WTFMove(symbolsAllowed), options)) {
+        if (RefPtr value = CSSCalcValue::parse(rangeCopy, state, Primitive::category, Primitive::range, WTFMove(symbolsAllowed), options)) {
             range = rangeCopy;
             return {{ value.releaseNonNull() }};
+        }
+
+        return std::nullopt;
+    }
+};
+
+template<typename T> struct KeywordConsumer {
+    static constexpr CSSParserTokenType tokenType = IdentToken;
+
+    static std::optional<T> consume(CSSParserTokenRange& range, CSS::PropertyParserState&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions)
+    {
+        ASSERT(range.peek().type() == IdentToken);
+
+        if (range.peek().id() == T::value) {
+            range.consumeIncludingWhitespace();
+            return T { };
         }
 
         return std::nullopt;

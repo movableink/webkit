@@ -46,6 +46,8 @@ SliderThumbMac::SliderThumbMac(SliderThumbPart& owningPart, ControlFactoryMac& c
     ASSERT(m_owningPart.type() == StyleAppearance::SliderThumbHorizontal || m_owningPart.type() == StyleAppearance::SliderThumbVertical);
 }
 
+SliderThumbMac::~SliderThumbMac() = default;
+
 void SliderThumbMac::updateCellStates(const FloatRect& rect, const ControlStyle& style)
 {
     ControlMac::updateCellStates(rect, style);

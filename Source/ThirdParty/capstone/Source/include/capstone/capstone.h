@@ -30,14 +30,14 @@ extern "C" {
 #endif
 #else
 #define CAPSTONE_API
-#if defined(__GNUC__) && !defined(CAPSTONE_STATIC)
+#if (defined(__GNUC__) || defined(__IBMC__)) && !defined(CAPSTONE_STATIC)
 #define CAPSTONE_EXPORT __attribute__((visibility("default")))
 #else    // defined(CAPSTONE_STATIC)
 #define CAPSTONE_EXPORT
 #endif
 #endif
 
-#ifdef __GNUC__
+#if (defined(__GNUC__) || defined(__IBMC__))
 #define CAPSTONE_DEPRECATED __attribute__((deprecated))
 #elif defined(_MSC_VER)
 #define CAPSTONE_DEPRECATED __declspec(deprecated)
@@ -58,7 +58,66 @@ extern "C" {
 // Capstone package version
 #define CS_VERSION_MAJOR CS_API_MAJOR
 #define CS_VERSION_MINOR CS_API_MINOR
-#define CS_VERSION_EXTRA 0
+#define CS_VERSION_EXTRA 6
+
+/// Macro for meta programming.
+/// Meant for projects using Capstone and need to support multiple
+/// versions of it.
+/// These macros replace several instances of the old "ARM64" with
+/// the new "AArch64" name depending on the CS version.
+#if CS_NEXT_VERSION < 6
+#define CS_AARCH64(x) ARM64##x
+#else
+#define CS_AARCH64(x) AArch64##x
+#endif
+
+#if CS_NEXT_VERSION < 6
+#define CS_AARCH64pre(x) x##ARM64
+#else
+#define CS_AARCH64pre(x) x##AARCH64
+#endif
+
+#if CS_NEXT_VERSION < 6
+#define CS_AARCH64CC(x) ARM64_CC##x
+#else
+#define CS_AARCH64CC(x) AArch64CC##x
+#endif
+
+#if CS_NEXT_VERSION < 6
+#define CS_AARCH64_VL_(x) ARM64_VAS_##x
+#else
+#define CS_AARCH64_VL_(x) AArch64Layout_VL_##x
+#endif
+
+#if CS_NEXT_VERSION < 6
+#define CS_aarch64_ arm64
+#else
+#define CS_aarch64_ aarch64
+#endif
+
+#if CS_NEXT_VERSION < 6
+#define CS_aarch64(x) arm64##x
+#else
+#define CS_aarch64(x) aarch64##x
+#endif
+
+#if CS_NEXT_VERSION < 6
+#define CS_aarch64_op() cs_arm64_op
+#define CS_aarch64_reg() arm64_reg
+#define CS_aarch64_cc() arm64_cc
+#define CS_cs_aarch64() cs_arm64
+#define CS_aarch64_extender() arm64_extender
+#define CS_aarch64_shifter() arm64_shifter
+#define CS_aarch64_vas() arm64_vas
+#else
+#define CS_aarch64_op() cs_aarch64_op
+#define CS_aarch64_reg() aarch64_reg
+#define CS_aarch64_cc() AArch64CC_CondCode
+#define CS_cs_aarch64() cs_aarch64
+#define CS_aarch64_extender() aarch64_extender
+#define CS_aarch64_shifter() aarch64_shifter
+#define CS_aarch64_vas() AArch64Layout_VectorLayout
+#endif
 
 /// Macro to create combined version which can be compared to
 /// result of cs_version() API.
@@ -72,21 +131,26 @@ typedef size_t csh;
 
 /// Architecture type
 typedef enum cs_arch {
-    CS_ARCH_ARM = 0,    ///< ARM architecture (including Thumb, Thumb-2)
-    CS_ARCH_ARM64,        ///< ARM-64, also called AArch64
-    CS_ARCH_MIPS,        ///< Mips architecture
-    CS_ARCH_X86,        ///< X86 architecture (including x86 & x86-64)
-    CS_ARCH_PPC,        ///< PowerPC architecture
-    CS_ARCH_SPARC,        ///< Sparc architecture
-    CS_ARCH_SYSZ,        ///< SystemZ architecture
-    CS_ARCH_XCORE,        ///< XCore architecture
-    CS_ARCH_M68K,        ///< 68K architecture
-    CS_ARCH_TMS320C64X,    ///< TMS320C64x architecture
-    CS_ARCH_M680X,        ///< 680X architecture
-    CS_ARCH_EVM,        ///< Ethereum architecture
-    CS_ARCH_MOS65XX,    ///< MOS65XX architecture (including MOS6502)
-    CS_ARCH_MAX,
-    CS_ARCH_ALL = 0xFFFF, // All architectures - for cs_support()
+	CS_ARCH_ARM = 0,	///< ARM architecture (including Thumb, Thumb-2)
+	CS_ARCH_ARM64,		///< ARM-64, also called AArch64
+	CS_ARCH_MIPS,		///< Mips architecture
+	CS_ARCH_X86,		///< X86 architecture (including x86 & x86-64)
+	CS_ARCH_PPC,		///< PowerPC architecture
+	CS_ARCH_SPARC,		///< Sparc architecture
+	CS_ARCH_SYSZ,		///< SystemZ architecture
+	CS_ARCH_XCORE,		///< XCore architecture
+	CS_ARCH_M68K,		///< 68K architecture
+	CS_ARCH_TMS320C64X,	///< TMS320C64x architecture
+	CS_ARCH_M680X,		///< 680X architecture
+	CS_ARCH_EVM,		///< Ethereum architecture
+	CS_ARCH_MOS65XX,	///< MOS65XX architecture (including MOS6502)
+	CS_ARCH_WASM,		///< WebAssembly architecture
+	CS_ARCH_BPF,		///< Berkeley Packet Filter architecture (including eBPF)
+	CS_ARCH_RISCV,          ///< RISCV architecture
+	CS_ARCH_SH,             ///< SH architecture
+	CS_ARCH_TRICORE,	///< TriCore architecture
+	CS_ARCH_MAX,
+	CS_ARCH_ALL = 0xFFFF, // All architectures - for cs_support()
 } cs_arch;
 
 // Support value to verify diet mode of the engine.
@@ -101,40 +165,69 @@ typedef enum cs_arch {
 
 /// Mode type
 typedef enum cs_mode {
-    CS_MODE_LITTLE_ENDIAN = 0,    ///< little-endian mode (default mode)
-    CS_MODE_ARM = 0,    ///< 32-bit ARM
-    CS_MODE_16 = 1 << 1,    ///< 16-bit mode (X86)
-    CS_MODE_32 = 1 << 2,    ///< 32-bit mode (X86)
-    CS_MODE_64 = 1 << 3,    ///< 64-bit mode (X86, PPC)
-    CS_MODE_THUMB = 1 << 4,    ///< ARM's Thumb mode, including Thumb-2
-    CS_MODE_MCLASS = 1 << 5,    ///< ARM's Cortex-M series
-    CS_MODE_V8 = 1 << 6,    ///< ARMv8 A32 encodings for ARM
-    CS_MODE_MICRO = 1 << 4, ///< MicroMips mode (MIPS)
-    CS_MODE_MIPS3 = 1 << 5, ///< Mips III ISA
-    CS_MODE_MIPS32R6 = 1 << 6, ///< Mips32r6 ISA
-    CS_MODE_MIPS2 = 1 << 7, ///< Mips II ISA
-    CS_MODE_V9 = 1 << 4, ///< SparcV9 mode (Sparc)
-    CS_MODE_QPX = 1 << 4, ///< Quad Processing eXtensions mode (PPC)
-    CS_MODE_M68K_000 = 1 << 1, ///< M68K 68000 mode
-    CS_MODE_M68K_010 = 1 << 2, ///< M68K 68010 mode
-    CS_MODE_M68K_020 = 1 << 3, ///< M68K 68020 mode
-    CS_MODE_M68K_030 = 1 << 4, ///< M68K 68030 mode
-    CS_MODE_M68K_040 = 1 << 5, ///< M68K 68040 mode
-    CS_MODE_M68K_060 = 1 << 6, ///< M68K 68060 mode
-    CS_MODE_BIG_ENDIAN = 1U << 31,    ///< big-endian mode
-    CS_MODE_MIPS32 = CS_MODE_32,    ///< Mips32 ISA (Mips)
-    CS_MODE_MIPS64 = CS_MODE_64,    ///< Mips64 ISA (Mips)
-    CS_MODE_M680X_6301 = 1 << 1, ///< M680X Hitachi 6301,6303 mode
-    CS_MODE_M680X_6309 = 1 << 2, ///< M680X Hitachi 6309 mode
-    CS_MODE_M680X_6800 = 1 << 3, ///< M680X Motorola 6800,6802 mode
-    CS_MODE_M680X_6801 = 1 << 4, ///< M680X Motorola 6801,6803 mode
-    CS_MODE_M680X_6805 = 1 << 5, ///< M680X Motorola/Freescale 6805 mode
-    CS_MODE_M680X_6808 = 1 << 6, ///< M680X Motorola/Freescale/NXP 68HC08 mode
-    CS_MODE_M680X_6809 = 1 << 7, ///< M680X Motorola 6809 mode
-    CS_MODE_M680X_6811 = 1 << 8, ///< M680X Motorola/Freescale/NXP 68HC11 mode
-    CS_MODE_M680X_CPU12 = 1 << 9, ///< M680X Motorola/Freescale/NXP CPU12
-                    ///< used on M68HC12/HCS12
-    CS_MODE_M680X_HCS08 = 1 << 10, ///< M680X Freescale/NXP HCS08 mode
+	CS_MODE_LITTLE_ENDIAN = 0,	///< little-endian mode (default mode)
+	CS_MODE_ARM = 0,	///< 32-bit ARM
+	CS_MODE_16 = 1 << 1,	///< 16-bit mode (X86)
+	CS_MODE_32 = 1 << 2,	///< 32-bit mode (X86)
+	CS_MODE_64 = 1 << 3,	///< 64-bit mode (X86, PPC)
+	CS_MODE_THUMB = 1 << 4,	///< ARM's Thumb mode, including Thumb-2
+	CS_MODE_MCLASS = 1 << 5,	///< ARM's Cortex-M series
+	CS_MODE_V8 = 1 << 6,	///< ARMv8 A32 encodings for ARM
+	CS_MODE_MICRO = 1 << 4, ///< MicroMips mode (MIPS)
+	CS_MODE_MIPS3 = 1 << 5, ///< Mips III ISA
+	CS_MODE_MIPS32R6 = 1 << 6, ///< Mips32r6 ISA
+	CS_MODE_MIPS2 = 1 << 7, ///< Mips II ISA
+	CS_MODE_V9 = 1 << 4, ///< SparcV9 mode (Sparc)
+	CS_MODE_QPX = 1 << 4, ///< Quad Processing eXtensions mode (PPC)
+	CS_MODE_SPE = 1 << 5, ///< Signal Processing Engine mode (PPC)
+	CS_MODE_BOOKE = 1 << 6, ///< Book-E mode (PPC)
+	CS_MODE_PS = 1 << 7, ///< Paired-singles mode (PPC)
+	CS_MODE_M68K_000 = 1 << 1, ///< M68K 68000 mode
+	CS_MODE_M68K_010 = 1 << 2, ///< M68K 68010 mode
+	CS_MODE_M68K_020 = 1 << 3, ///< M68K 68020 mode
+	CS_MODE_M68K_030 = 1 << 4, ///< M68K 68030 mode
+	CS_MODE_M68K_040 = 1 << 5, ///< M68K 68040 mode
+	CS_MODE_M68K_060 = 1 << 6, ///< M68K 68060 mode
+	CS_MODE_BIG_ENDIAN = 1U << 31,	///< big-endian mode
+	CS_MODE_MIPS32 = CS_MODE_32,	///< Mips32 ISA (Mips)
+	CS_MODE_MIPS64 = CS_MODE_64,	///< Mips64 ISA (Mips)
+	CS_MODE_M680X_6301 = 1 << 1, ///< M680X Hitachi 6301,6303 mode
+	CS_MODE_M680X_6309 = 1 << 2, ///< M680X Hitachi 6309 mode
+	CS_MODE_M680X_6800 = 1 << 3, ///< M680X Motorola 6800,6802 mode
+	CS_MODE_M680X_6801 = 1 << 4, ///< M680X Motorola 6801,6803 mode
+	CS_MODE_M680X_6805 = 1 << 5, ///< M680X Motorola/Freescale 6805 mode
+	CS_MODE_M680X_6808 = 1 << 6, ///< M680X Motorola/Freescale/NXP 68HC08 mode
+	CS_MODE_M680X_6809 = 1 << 7, ///< M680X Motorola 6809 mode
+	CS_MODE_M680X_6811 = 1 << 8, ///< M680X Motorola/Freescale/NXP 68HC11 mode
+	CS_MODE_M680X_CPU12 = 1 << 9, ///< M680X Motorola/Freescale/NXP CPU12
+					///< used on M68HC12/HCS12
+	CS_MODE_M680X_HCS08 = 1 << 10, ///< M680X Freescale/NXP HCS08 mode
+	CS_MODE_BPF_CLASSIC = 0,	///< Classic BPF mode (default)
+	CS_MODE_BPF_EXTENDED = 1 << 0,	///< Extended BPF mode
+	CS_MODE_RISCV32  = 1 << 0,        ///< RISCV RV32G
+	CS_MODE_RISCV64  = 1 << 1,        ///< RISCV RV64G
+	CS_MODE_RISCVC   = 1 << 2,        ///< RISCV compressed instructure mode
+	CS_MODE_MOS65XX_6502 = 1 << 1, ///< MOS65XXX MOS 6502
+	CS_MODE_MOS65XX_65C02 = 1 << 2, ///< MOS65XXX WDC 65c02
+	CS_MODE_MOS65XX_W65C02 = 1 << 3, ///< MOS65XXX WDC W65c02
+	CS_MODE_MOS65XX_65816 = 1 << 4, ///< MOS65XXX WDC 65816, 8-bit m/x
+	CS_MODE_MOS65XX_65816_LONG_M = (1 << 5), ///< MOS65XXX WDC 65816, 16-bit m, 8-bit x
+	CS_MODE_MOS65XX_65816_LONG_X = (1 << 6), ///< MOS65XXX WDC 65816, 8-bit m, 16-bit x
+	CS_MODE_MOS65XX_65816_LONG_MX = CS_MODE_MOS65XX_65816_LONG_M | CS_MODE_MOS65XX_65816_LONG_X,
+	CS_MODE_SH2 = 1 << 1,    ///< SH2
+	CS_MODE_SH2A = 1 << 2,   ///< SH2A
+	CS_MODE_SH3 = 1 << 3,    ///< SH3
+	CS_MODE_SH4 = 1 << 4,    ///< SH4
+	CS_MODE_SH4A = 1 << 5,   ///< SH4A
+	CS_MODE_SHFPU = 1 << 6,  ///< w/ FPU
+	CS_MODE_SHDSP = 1 << 7,  ///< w/ DSP
+	CS_MODE_TRICORE_110 = 1 << 1, ///< Tricore 1.1
+	CS_MODE_TRICORE_120 = 1 << 2, ///< Tricore 1.2
+	CS_MODE_TRICORE_130 = 1 << 3, ///< Tricore 1.3
+	CS_MODE_TRICORE_131 = 1 << 4, ///< Tricore 1.3.1
+	CS_MODE_TRICORE_160 = 1 << 5, ///< Tricore 1.6
+	CS_MODE_TRICORE_161 = 1 << 6, ///< Tricore 1.6.1
+	CS_MODE_TRICORE_162 = 1 << 7, ///< Tricore 1.6.2
 } cs_mode;
 
 typedef void* (CAPSTONE_API *cs_malloc_t)(size_t size);
@@ -147,11 +240,11 @@ typedef int (CAPSTONE_API *cs_vsnprintf_t)(char *str, size_t size, const char *f
 /// User-defined dynamic memory related functions: malloc/calloc/realloc/free/vsnprintf()
 /// By default, Capstone uses system's malloc(), calloc(), realloc(), free() & vsnprintf().
 typedef struct cs_opt_mem {
-    cs_malloc_t malloc;
-    cs_calloc_t calloc;
-    cs_realloc_t realloc;
-    cs_free_t free;
-    cs_vsnprintf_t vsnprintf;
+	cs_malloc_t malloc;
+	cs_calloc_t calloc;
+	cs_realloc_t realloc;
+	cs_free_t free;
+	cs_vsnprintf_t vsnprintf;
 } cs_opt_mem;
 
 /// Customize mnemonic for instructions with alternative name.
@@ -159,63 +252,65 @@ typedef struct cs_opt_mem {
 /// call cs_option(CS_OPT_MNEMONIC) again with the same @id and NULL value
 /// for @mnemonic.
 typedef struct cs_opt_mnem {
-    /// ID of instruction to be customized.
-    unsigned int id;
-    /// Customized instruction mnemonic.
-    const char *mnemonic;
+	/// ID of instruction to be customized.
+	unsigned int id;
+	/// Customized instruction mnemonic.
+	const char *mnemonic;
 } cs_opt_mnem;
 
 /// Runtime option for the disassembled engine
 typedef enum cs_opt_type {
-    CS_OPT_INVALID = 0,    ///< No option specified
-    CS_OPT_SYNTAX,    ///< Assembly output syntax
-    CS_OPT_DETAIL,    ///< Break down instruction structure into details
-    CS_OPT_MODE,    ///< Change engine's mode at run-time
-    CS_OPT_MEM,    ///< User-defined dynamic memory related functions
-    CS_OPT_SKIPDATA, ///< Skip data when disassembling. Then engine is in SKIPDATA mode.
-    CS_OPT_SKIPDATA_SETUP, ///< Setup user-defined function for SKIPDATA option
-    CS_OPT_MNEMONIC, ///< Customize instruction mnemonic
-    CS_OPT_UNSIGNED, ///< print immediate operands in unsigned form
+	CS_OPT_INVALID = 0, ///< No option specified
+	CS_OPT_SYNTAX,	    ///< Assembly output syntax
+	CS_OPT_DETAIL,	    ///< Break down instruction structure into details
+	CS_OPT_MODE,	    ///< Change engine's mode at run-time
+	CS_OPT_MEM,	    ///< User-defined dynamic memory related functions
+	CS_OPT_SKIPDATA, ///< Skip data when disassembling. Then engine is in SKIPDATA mode.
+	CS_OPT_SKIPDATA_SETUP, ///< Setup user-defined function for SKIPDATA option
+	CS_OPT_MNEMONIC,       ///< Customize instruction mnemonic
+	CS_OPT_UNSIGNED,       ///< print immediate operands in unsigned form
+	CS_OPT_NO_BRANCH_OFFSET, ///< ARM, prints branch immediates without offset.
 } cs_opt_type;
 
 /// Runtime option value (associated with option type above)
 typedef enum cs_opt_value {
-    CS_OPT_OFF = 0,  ///< Turn OFF an option - default for CS_OPT_DETAIL, CS_OPT_SKIPDATA, CS_OPT_UNSIGNED.
-    CS_OPT_ON = 3, ///< Turn ON an option (CS_OPT_DETAIL, CS_OPT_SKIPDATA).
-    CS_OPT_SYNTAX_DEFAULT = 0, ///< Default asm syntax (CS_OPT_SYNTAX).
-    CS_OPT_SYNTAX_INTEL, ///< X86 Intel asm syntax - default on X86 (CS_OPT_SYNTAX).
-    CS_OPT_SYNTAX_ATT,   ///< X86 ATT asm syntax (CS_OPT_SYNTAX).
-    CS_OPT_SYNTAX_NOREGNAME, ///< Prints register name with only number (CS_OPT_SYNTAX)
-    CS_OPT_SYNTAX_MASM, ///< X86 Intel Masm syntax (CS_OPT_SYNTAX).
+	CS_OPT_OFF = 0,  ///< Turn OFF an option - default for CS_OPT_DETAIL, CS_OPT_SKIPDATA, CS_OPT_UNSIGNED.
+	CS_OPT_ON = 3, ///< Turn ON an option (CS_OPT_DETAIL, CS_OPT_SKIPDATA).
+	CS_OPT_SYNTAX_DEFAULT = 0, ///< Default asm syntax (CS_OPT_SYNTAX).
+	CS_OPT_SYNTAX_INTEL, ///< X86 Intel asm syntax - default on X86 (CS_OPT_SYNTAX).
+	CS_OPT_SYNTAX_ATT,   ///< X86 ATT asm syntax (CS_OPT_SYNTAX).
+	CS_OPT_SYNTAX_NOREGNAME, ///< Prints register name with only number (CS_OPT_SYNTAX)
+	CS_OPT_SYNTAX_MASM, ///< X86 Intel Masm syntax (CS_OPT_SYNTAX).
+	CS_OPT_SYNTAX_MOTOROLA, ///< MOS65XX use $ as hex prefix
 } cs_opt_value;
 
 /// Common instruction operand types - to be consistent across all architectures.
 typedef enum cs_op_type {
-    CS_OP_INVALID = 0,  ///< uninitialized/invalid operand.
-    CS_OP_REG,          ///< Register operand.
-    CS_OP_IMM,          ///< Immediate operand.
-    CS_OP_MEM,          ///< Memory operand.
-    CS_OP_FP,           ///< Floating-Point operand.
+	CS_OP_INVALID = 0, ///< uninitialized/invalid operand.
+	CS_OP_REG,	   ///< Register operand.
+	CS_OP_IMM,	   ///< Immediate operand.
+	CS_OP_MEM,	   ///< Memory operand. Can be ORed with another operand type.
+	CS_OP_FP,	   ///< Floating-Point operand.
 } cs_op_type;
 
 /// Common instruction operand access types - to be consistent across all architectures.
 /// It is possible to combine access types, for example: CS_AC_READ | CS_AC_WRITE
 typedef enum cs_ac_type {
-    CS_AC_INVALID = 0,        ///< Uninitialized/invalid access type.
-    CS_AC_READ    = 1 << 0,   ///< Operand read from memory or register.
-    CS_AC_WRITE   = 1 << 1,   ///< Operand write to memory or register.
+	CS_AC_INVALID = 0,        ///< Uninitialized/invalid access type.
+	CS_AC_READ    = 1 << 0,   ///< Operand read from memory or register.
+	CS_AC_WRITE   = 1 << 1,   ///< Operand write to memory or register.
 } cs_ac_type;
 
 /// Common instruction groups - to be consistent across all architectures.
 typedef enum cs_group_type {
-    CS_GRP_INVALID = 0,  ///< uninitialized/invalid group.
-    CS_GRP_JUMP,    ///< all jump instructions (conditional+direct+indirect jumps)
-    CS_GRP_CALL,    ///< all call instructions
-    CS_GRP_RET,     ///< all return instructions
-    CS_GRP_INT,     ///< all interrupt instructions (int+syscall)
-    CS_GRP_IRET,    ///< all interrupt return instructions
-    CS_GRP_PRIVILEGE,    ///< all privileged instructions
-    CS_GRP_BRANCH_RELATIVE, ///< all relative branching instructions
+	CS_GRP_INVALID = 0,  ///< uninitialized/invalid group.
+	CS_GRP_JUMP,    ///< all jump instructions (conditional+direct+indirect jumps)
+	CS_GRP_CALL,    ///< all call instructions
+	CS_GRP_RET,     ///< all return instructions
+	CS_GRP_INT,     ///< all interrupt instructions (int+syscall)
+	CS_GRP_IRET,    ///< all interrupt return instructions
+	CS_GRP_PRIVILEGE,    ///< all privileged instructions
+	CS_GRP_BRANCH_RELATIVE, ///< all relative branching instructions
 } cs_group_type;
 
 /**
@@ -236,33 +331,37 @@ typedef size_t (CAPSTONE_API *cs_skipdata_cb_t)(const uint8_t *code, size_t code
 
 /// User-customized setup for SKIPDATA option
 typedef struct cs_opt_skipdata {
-    /// Capstone considers data to skip as special "instructions".
-    /// User can specify the string for this instruction's "mnemonic" here.
-    /// By default (if @mnemonic is NULL), Capstone use ".byte".
-    const char *mnemonic;
+	/// Capstone considers data to skip as special "instructions".
+	/// User can specify the string for this instruction's "mnemonic" here.
+	/// By default (if @mnemonic is NULL), Capstone use ".byte".
+	const char *mnemonic;
 
-    /// User-defined callback function to be called when Capstone hits data.
-    /// If the returned value from this callback is positive (>0), Capstone
-    /// will skip exactly that number of bytes & continue. Otherwise, if
-    /// the callback returns 0, Capstone stops disassembling and returns
-    /// immediately from cs_disasm()
-    /// NOTE: if this callback pointer is NULL, Capstone would skip a number
-    /// of bytes depending on architectures, as following:
-    /// Arm:     2 bytes (Thumb mode) or 4 bytes.
-    /// Arm64:   4 bytes.
-    /// Mips:    4 bytes.
-    /// M680x:   1 byte.
-    /// PowerPC: 4 bytes.
-    /// Sparc:   4 bytes.
-    /// SystemZ: 2 bytes.
-    /// X86:     1 bytes.
-    /// XCore:   2 bytes.
-    /// EVM:     1 bytes.
-    /// MOS65XX: 1 bytes.
-    cs_skipdata_cb_t callback;     // default value is NULL
+	/// User-defined callback function to be called when Capstone hits data.
+	/// If the returned value from this callback is positive (>0), Capstone
+	/// will skip exactly that number of bytes & continue. Otherwise, if
+	/// the callback returns 0, Capstone stops disassembling and returns
+	/// immediately from cs_disasm()
+	/// NOTE: if this callback pointer is NULL, Capstone would skip a number
+	/// of bytes depending on architectures, as following:
+	/// Arm:     2 bytes (Thumb mode) or 4 bytes.
+	/// Arm64:   4 bytes.
+	/// Mips:    4 bytes.
+	/// M680x:   1 byte.
+	/// PowerPC: 4 bytes.
+	/// Sparc:   4 bytes.
+	/// SystemZ: 2 bytes.
+	/// X86:     1 bytes.
+	/// XCore:   2 bytes.
+	/// EVM:     1 bytes.
+	/// RISCV:   4 bytes.
+	/// WASM:    1 bytes.
+	/// MOS65XX: 1 bytes.
+	/// BPF:     8 bytes.
+	/// TriCore: 2 bytes.
+	cs_skipdata_cb_t callback; 	// default value is NULL
 
-    /// User-defined data to be passed to @callback function pointer.
-    void *user_data;
+	/// User-defined data to be passed to @callback function pointer.
+	void *user_data;
 } cs_opt_skipdata;
 
 
@@ -278,7 +377,16 @@ typedef struct cs_opt_skipdata {
 #include "tms320c64x.h"
 #include "m680x.h"
 #include "evm.h"
+#include "riscv.h"
+#include "wasm.h"
 #include "mos65xx.h"
+#include "bpf.h"
+#include "sh.h"
+#include "tricore.h"
+
+#define MAX_IMPL_W_REGS 20
+#define MAX_IMPL_R_REGS 20
+#define MAX_NUM_GROUPS 8
 
 /// NOTE: All information in cs_detail is only available when CS_OPT_DETAIL = CS_OPT_ON
 /// Initialized as memset(., 0, offsetof(cs_detail, ARCH)+sizeof(cs_ARCH))
@@ -286,71 +394,80 @@ typedef struct cs_opt_skipdata {
 /// if cs_detail changes, in particular if a field is added after the union,
 /// then update arch/ARCH/ARCHDisassembler.c accordingly
 typedef struct cs_detail {
-    uint16_t regs_read[16]; ///< list of implicit registers read by this insn
-    uint8_t regs_read_count; ///< number of implicit registers read by this insn
+	uint16_t regs_read
+		[MAX_IMPL_R_REGS]; ///< list of implicit registers read by this insn
+	uint8_t regs_read_count; ///< number of implicit registers read by this insn
 
-    uint16_t regs_write[20]; ///< list of implicit registers modified by this insn
-    uint8_t regs_write_count; ///< number of implicit registers modified by this insn
+	uint16_t regs_write
+		[MAX_IMPL_W_REGS]; ///< list of implicit registers modified by this insn
+	uint8_t regs_write_count; ///< number of implicit registers modified by this insn
 
-    uint8_t groups[8]; ///< list of group this instruction belong to
-    uint8_t groups_count; ///< number of groups this insn belongs to
+	uint8_t groups[MAX_NUM_GROUPS]; ///< list of group this instruction belong to
+	uint8_t groups_count; ///< number of groups this insn belongs to
 
-    /// Architecture-specific instruction info
-    union {
-        cs_x86 x86;     ///< X86 architecture, including 16-bit, 32-bit & 64-bit mode
-        cs_arm64 arm64; ///< ARM64 architecture (aka AArch64)
-        cs_arm arm;     ///< ARM architecture (including Thumb/Thumb2)
-        cs_m68k m68k;   ///< M68K architecture
-        cs_mips mips;   ///< MIPS architecture
-        cs_ppc ppc;        ///< PowerPC architecture
-        cs_sparc sparc; ///< Sparc architecture
-        cs_sysz sysz;   ///< SystemZ architecture
-        cs_xcore xcore; ///< XCore architecture
-        cs_tms320c64x tms320c64x;  ///< TMS320C64x architecture
-        cs_m680x m680x; ///< M680X architecture
-        cs_evm evm;        ///< Ethereum architecture
-        cs_mos65xx mos65xx;    ///< MOS65XX architecture (including MOS6502)
-    };
+	bool writeback;	      ///< Instruction has writeback operands.
+
+	/// Architecture-specific instruction info
+	union {
+		cs_x86 x86;     ///< X86 architecture, including 16-bit, 32-bit & 64-bit mode
+		cs_arm64 arm64; ///< ARM64 architecture (aka AArch64)
+		cs_arm arm;     ///< ARM architecture (including Thumb/Thumb2)
+		cs_m68k m68k;   ///< M68K architecture
+		cs_mips mips;   ///< MIPS architecture
+		cs_ppc ppc;	    ///< PowerPC architecture
+		cs_sparc sparc; ///< Sparc architecture
+		cs_sysz sysz;   ///< SystemZ architecture
+		cs_xcore xcore; ///< XCore architecture
+		cs_tms320c64x tms320c64x;  ///< TMS320C64x architecture
+		cs_m680x m680x; ///< M680X architecture
+		cs_evm evm;	    ///< Ethereum architecture
+		cs_mos65xx mos65xx;	///< MOS65XX architecture (including MOS6502)
+		cs_wasm wasm;	///< Web Assembly architecture
+		cs_bpf bpf;	///< Berkeley Packet Filter architecture (including eBPF)
+		cs_riscv riscv; ///< RISCV architecture
+		cs_sh sh;        ///< SH architecture
+		cs_tricore tricore; ///< TriCore architecture
+	};
 } cs_detail;
 
 /// Detail information of disassembled instruction
 typedef struct cs_insn {
-    /// Instruction ID (basically a numeric ID for the instruction mnemonic)
-    /// Find the instruction id in the '[ARCH]_insn' enum in the header file
-    /// of corresponding architecture, such as 'arm_insn' in arm.h for ARM,
-    /// 'x86_insn' in x86.h for X86, etc...
-    /// This information is available even when CS_OPT_DETAIL = CS_OPT_OFF
-    /// NOTE: in Skipdata mode, "data" instruction has 0 for this id field.
-    unsigned int id;
+	/// Instruction ID (basically a numeric ID for the instruction mnemonic)
+	/// Find the instruction id in the '[ARCH]_insn' enum in the header file
+	/// of corresponding architecture, such as 'arm_insn' in arm.h for ARM,
+	/// 'x86_insn' in x86.h for X86, etc...
+	/// This information is available even when CS_OPT_DETAIL = CS_OPT_OFF
+	/// NOTE: in Skipdata mode, "data" instruction has 0 for this id field.
+	unsigned int id;
 
-    /// Address (EIP) of this instruction
-    /// This information is available even when CS_OPT_DETAIL = CS_OPT_OFF
-    uint64_t address;
+	/// Address (EIP) of this instruction
+	/// This information is available even when CS_OPT_DETAIL = CS_OPT_OFF
+	uint64_t address;
 
-    /// Size of this instruction
-    /// This information is available even when CS_OPT_DETAIL = CS_OPT_OFF
-    uint16_t size;
+	/// Size of this instruction
+	/// This information is available even when CS_OPT_DETAIL = CS_OPT_OFF
+	uint16_t size;
 
-    /// Machine bytes of this instruction, with number of bytes indicated by @size above
-    /// This information is available even when CS_OPT_DETAIL = CS_OPT_OFF
-    uint8_t bytes[24];
+	/// Machine bytes of this instruction, with number of bytes indicated by @size above
+	/// This information is available even when CS_OPT_DETAIL = CS_OPT_OFF
+	uint8_t bytes[24];
 
-    /// Ascii text of instruction mnemonic
-    /// This information is available even when CS_OPT_DETAIL = CS_OPT_OFF
-    char mnemonic[CS_MNEMONIC_SIZE];
+	/// Ascii text of instruction mnemonic
+	/// This information is available even when CS_OPT_DETAIL = CS_OPT_OFF
+	char mnemonic[CS_MNEMONIC_SIZE];
 
-    /// Ascii text of instruction operands
-    /// This information is available even when CS_OPT_DETAIL = CS_OPT_OFF
-    char op_str[160];
+	/// Ascii text of instruction operands
+	/// This information is available even when CS_OPT_DETAIL = CS_OPT_OFF
+	char op_str[160];
 
-    /// Pointer to cs_detail.
-    /// NOTE: detail pointer is only valid when both requirements below are met:
-    /// (1) CS_OP_DETAIL = CS_OPT_ON
-    /// (2) Engine is not in Skipdata mode (CS_OP_SKIPDATA option set to CS_OPT_ON)
-    ///
-    /// NOTE 2: when in Skipdata mode, or when detail mode is OFF, even if this pointer
-    ///     is not NULL, its content is still irrelevant.
-    cs_detail *detail;
+	/// Pointer to cs_detail.
+	/// NOTE: detail pointer is only valid when both requirements below are met:
+	/// (1) CS_OP_DETAIL = CS_OPT_ON
+	/// (2) Engine is not in Skipdata mode (CS_OP_SKIPDATA option set to CS_OPT_ON)
+	///
+	/// NOTE 2: when in Skipdata mode, or when detail mode is OFF, even if this pointer
+	///     is not NULL, its content is still irrelevant.
+	cs_detail *detail;
 } cs_insn;
 
 
@@ -363,21 +480,21 @@ typedef struct cs_insn {
 /// All type of errors encountered by Capstone API.
 /// These are values returned by cs_errno()
 typedef enum cs_err {
-    CS_ERR_OK = 0,   ///< No error: everything was fine
-    CS_ERR_MEM,      ///< Out-Of-Memory error: cs_open(), cs_disasm(), cs_disasm_iter()
-    CS_ERR_ARCH,     ///< Unsupported architecture: cs_open()
-    CS_ERR_HANDLE,   ///< Invalid handle: cs_op_count(), cs_op_index()
-    CS_ERR_CSH,      ///< Invalid csh argument: cs_close(), cs_errno(), cs_option()
-    CS_ERR_MODE,     ///< Invalid/unsupported mode: cs_open()
-    CS_ERR_OPTION,   ///< Invalid/unsupported option: cs_option()
-    CS_ERR_DETAIL,   ///< Information is unavailable because detail option is OFF
-    CS_ERR_MEMSETUP, ///< Dynamic memory management uninitialized (see CS_OPT_MEM)
-    CS_ERR_VERSION,  ///< Unsupported version (bindings)
-    CS_ERR_DIET,     ///< Access irrelevant data in "diet" engine
-    CS_ERR_SKIPDATA, ///< Access irrelevant data for "data" instruction in SKIPDATA mode
-    CS_ERR_X86_ATT,  ///< X86 AT&T syntax is unsupported (opt-out at compile time)
-    CS_ERR_X86_INTEL, ///< X86 Intel syntax is unsupported (opt-out at compile time)
-    CS_ERR_X86_MASM, ///< X86 Masm syntax is unsupported (opt-out at compile time)
+	CS_ERR_OK = 0,   ///< No error: everything was fine
+	CS_ERR_MEM,      ///< Out-Of-Memory error: cs_open(), cs_disasm(), cs_disasm_iter()
+	CS_ERR_ARCH,     ///< Unsupported architecture: cs_open()
+	CS_ERR_HANDLE,   ///< Invalid handle: cs_op_count(), cs_op_index()
+	CS_ERR_CSH,      ///< Invalid csh argument: cs_close(), cs_errno(), cs_option()
+	CS_ERR_MODE,     ///< Invalid/unsupported mode: cs_open()
+	CS_ERR_OPTION,   ///< Invalid/unsupported option: cs_option()
+	CS_ERR_DETAIL,   ///< Information is unavailable because detail option is OFF
+	CS_ERR_MEMSETUP, ///< Dynamic memory management uninitialized (see CS_OPT_MEM)
+	CS_ERR_VERSION,  ///< Unsupported version (bindings)
+	CS_ERR_DIET,     ///< Access irrelevant data in "diet" engine
+	CS_ERR_SKIPDATA, ///< Access irrelevant data for "data" instruction in SKIPDATA mode
+	CS_ERR_X86_ATT,  ///< X86 AT&T syntax is unsupported (opt-out at compile time)
+	CS_ERR_X86_INTEL, ///< X86 Intel syntax is unsupported (opt-out at compile time)
+	CS_ERR_X86_MASM, ///< X86 Masm syntax is unsupported (opt-out at compile time)
 } cs_err;
 
 /**
@@ -387,9 +504,9 @@ typedef enum cs_err {
  @minor: minor number of API version
 
  @return hexical number as (major << 8 | minor), which encodes both
-     major & minor versions.
-     NOTE: This returned value can be compared with version number made
-     with macro CS_MAKE_VERSION
+	 major & minor versions.
+	 NOTE: This returned value can be compared with version number made
+	 with macro CS_MAKE_VERSION
 
  For example, second API version would return 1 in @major, and 1 in @minor
  The return value would be 0x0101
@@ -482,7 +599,7 @@ cs_err CAPSTONE_API cs_errno(csh handle);
  @code: error code (see CS_ERR_* above)
 
  @return: returns a pointer to a string that describes the error code
-    passed in the argument @code
+	passed in the argument @code
 */
 CAPSTONE_EXPORT
 const char * CAPSTONE_API cs_strerror(cs_err code);
@@ -511,8 +628,8 @@ const char * CAPSTONE_API cs_strerror(cs_err code);
  @code_size: size of the above code buffer.
  @address: address of the first instruction in given raw code buffer.
  @insn: array of instructions filled in by this API.
-       NOTE: @insn will be allocated by this function, and should be freed
-       with cs_free() API.
+	   NOTE: @insn will be allocated by this function, and should be freed
+	   with cs_free() API.
  @count: number of instructions to be disassembled, or 0 to get all of them
 
  @return: the number of successfully disassembled instructions,
@@ -522,22 +639,10 @@ const char * CAPSTONE_API cs_strerror(cs_err code);
 */
 CAPSTONE_EXPORT
 size_t CAPSTONE_API cs_disasm(csh handle,
-        const uint8_t *code, size_t code_size,
-        uint64_t address,
-        size_t count,
-        cs_insn **insn);
-
-/**
-  Deprecated function - to be retired in the next version!
-  Use cs_disasm() instead of cs_disasm_ex()
-*/
-CAPSTONE_EXPORT
-CAPSTONE_DEPRECATED
-size_t CAPSTONE_API cs_disasm_ex(csh handle,
-        const uint8_t *code, size_t code_size,
-        uint64_t address,
-        size_t count,
-        cs_insn **insn);
+		const uint8_t *code, size_t code_size,
+		uint64_t address,
+		size_t count,
+		cs_insn **insn);
 
 /**
  Free memory allocated by cs_malloc() or cs_disasm() (argument @insn)
@@ -598,8 +703,8 @@ cs_insn * CAPSTONE_API cs_malloc(csh handle);
 */
 CAPSTONE_EXPORT
 bool CAPSTONE_API cs_disasm_iter(csh handle,
-    const uint8_t **code, size_t *size,
-    uint64_t *address, cs_insn *insn);
+	const uint8_t **code, size_t *size,
+	uint64_t *address, cs_insn *insn);
 
 /**
  Return friendly name of register in a string.
@@ -729,14 +834,14 @@ int CAPSTONE_API cs_op_count(csh handle, const cs_insn *insn, unsigned int op_ty
  @insn: disassembled instruction structure received from cs_disasm() or cs_disasm_iter()
  @op_type: Operand type to be found.
  @position: position of the operand to be found. This must be in the range
-            [1, cs_op_count(handle, insn, op_type)]
+			[1, cs_op_count(handle, insn, op_type)]
 
  @return: index of operand of given type @op_type in <arch>.operands[] array
  in instruction @insn, or -1 on failure.
 */
 CAPSTONE_EXPORT
 int CAPSTONE_API cs_op_index(csh handle, const cs_insn *insn, unsigned int op_type,
-        unsigned int position);
+		unsigned int position);
 
 /// Type of array to keep the list of registers
 typedef uint16_t cs_regs[64];
@@ -760,8 +865,8 @@ typedef uint16_t cs_regs[64];
 */
 CAPSTONE_EXPORT
 cs_err CAPSTONE_API cs_regs_access(csh handle, const cs_insn *insn,
-        cs_regs regs_read, uint8_t *regs_read_count,
-        cs_regs regs_write, uint8_t *regs_write_count);
+		cs_regs regs_read, uint8_t *regs_read_count,
+		cs_regs regs_write, uint8_t *regs_write_count);
 
 #ifdef __cplusplus
 }

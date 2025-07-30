@@ -35,7 +35,7 @@
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 
 #if !USE(RUNNINGBOARD)
-#import <wtf/spi/darwin/XPCSPI.h>
+#import <wtf/darwin/XPCExtras.h>
 #endif
 
 // FIXME: This should be moved to an SPI header.
@@ -54,11 +54,7 @@ namespace WebKit {
 
 class XPCServiceInitializerDelegate {
 public:
-    XPCServiceInitializerDelegate(OSObjectPtr<xpc_connection_t> connection, xpc_object_t initializerMessage)
-        : m_connection(WTFMove(connection))
-        , m_initializerMessage(initializerMessage)
-    {
-    }
+    XPCServiceInitializerDelegate(OSObjectPtr<xpc_connection_t>, xpc_object_t initializerMessage);
 
     virtual ~XPCServiceInitializerDelegate();
 

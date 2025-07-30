@@ -73,6 +73,12 @@ struct ActiveVariable
     } pod;
 };
 
+inline const UniformTypeInfo &GetUniformTypeInfoFromIndex(UniformTypeIndex index)
+{
+    ASSERT(index.value >= 0 && index.value < kUniformInfoTable.size());
+    return kUniformInfoTable[index.value];
+}
+
 // Important: This struct must have basic data types only, so that we can initialize with memcpy. Do
 // not put any std::vector or objects with virtual functions in it.
 // Helper struct representing a single shader uniform. Most of this structure's data member and
@@ -116,6 +122,7 @@ struct LinkedUniform
     GLenum getType() const { return getUniformTypeInfo().type; }
     uint16_t getOuterArrayOffset() const { return pod.outerArrayOffset; }
     uint16_t getOuterArraySizeProduct() const { return pod.outerArraySizeProduct; }
+    uint16_t getBlockOffset() const { return pod.blockOffset; }
     int16_t getBinding() const { return pod.binding; }
     int16_t getOffset() const { return pod.offset; }
     int getBufferIndex() const { return pod.bufferIndex; }

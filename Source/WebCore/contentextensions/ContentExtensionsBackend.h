@@ -27,8 +27,10 @@
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
+#include "CompiledContentExtension.h"
 #include "ContentExtension.h"
 #include "ContentExtensionRule.h"
+#include <wtf/CrossThreadCopier.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/text/StringHash.h>
@@ -43,7 +45,6 @@ struct ContentRuleListResults;
 
 namespace ContentExtensions {
 
-class CompiledContentExtension;
 struct ResourceLoadInfo;
 
 // The ContentExtensionsBackend is the internal model of all the content extensions.
@@ -75,18 +76,27 @@ public:
     WEBCORE_EXPORT StyleSheetContents* globalDisplayNoneStyleSheet(const String& identifier) const;
 
     ContentRuleListResults processContentRuleListsForLoad(Page&, const URL&, OptionSet<ResourceType>, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom, const RuleListFilter&);
-    WEBCORE_EXPORT ContentRuleListResults processContentRuleListsForPingLoad(const URL&, const URL& mainDocumentURL, const URL& frameURL);
+    WEBCORE_EXPORT ContentRuleListResults processContentRuleListsForPingLoad(const URL&, const URL& mainDocumentURL, const URL& frameURL, const String& httpMethod);
+    bool processContentRuleListsForResourceMonitoring(const URL&, const URL& mainDocumentURL, const URL& frameURL, OptionSet<ResourceType>);
 
     static const String& displayNoneCSSRule();
 
-    void forEach(const Function<void(const String&, ContentExtension&)>&);
+    void forEach(NOESCAPE const Function<void(const String&, ContentExtension&)>&);
 
     WEBCORE_EXPORT static bool shouldBeMadeSecure(const URL&);
 
+    ContentExtensionsBackend() = default;
+    ContentExtensionsBackend isolatedCopy() && { return ContentExtensionsBackend { crossThreadCopy(WTFMove(m_contentExtensions)) }; }
+
 private:
+    explicit ContentExtensionsBackend(HashMap<String, Ref<ContentExtension>>&& contentExtensions)
+        : m_contentExtensions(WTFMove(contentExtensions))
+    {
+    }
+
     ActionsFromContentRuleList actionsFromContentRuleList(const ContentExtension&, const String& urlString, const ResourceLoadInfo&, ResourceFlags) const;
 
-    UncheckedKeyHashMap<String, Ref<ContentExtension>> m_contentExtensions;
+    HashMap<String, Ref<ContentExtension>> m_contentExtensions;
 };
 
 WEBCORE_EXPORT void applyResultsToRequest(ContentRuleListResults&&, Page*, ResourceRequest&);

@@ -63,7 +63,7 @@ bool canonicalizePrePostIncrements(Procedure& proc)
     UncheckedKeyHashMap<MemoryValue*, Vector<Value*>> preIndexCandidates;
 
     UncheckedKeyHashMap<Value*, unsigned> memoryToIndex;
-    UncheckedKeyHashMap<BasicBlock*, HashSet<MemoryValue*>> blockToPrePostIndexCandidates;
+    UncheckedKeyHashMap<BasicBlock*, UncheckedKeyHashSet<MemoryValue*>> blockToPrePostIndexCandidates;
 
     auto tryFindCandidates = [&](Value* value, unsigned index) ALWAYS_INLINE_LAMBDA {
         switch (value->opcode()) {
@@ -89,14 +89,14 @@ bool canonicalizePrePostIncrements(Procedure& proc)
                     // Double check the base and offset.
                     Value* addressBase = address->child(0);
                     MemoryValue::OffsetType addressOffset = static_cast<Value::OffsetType>(address->child(1)->asIntPtr());
-                    if (UNLIKELY(base != addressBase || offset != addressOffset))
+                    if (base != addressBase || offset != addressOffset) [[unlikely]]
                         continue;
                     // Skip the address if it's used before the memory.
                     auto uses = addressUses.find(address);
                     if (uses != addressUses.end() && uses->value.size() > 0)
                         continue;
                     preIndexCandidates.add(memory, Vector<Value*>()).iterator->value.append(address);
-                    blockToPrePostIndexCandidates.add(memory->owner, HashSet<MemoryValue*>()).iterator->value.add(memory);
+                    blockToPrePostIndexCandidates.add(memory->owner, UncheckedKeyHashSet<MemoryValue*>()).iterator->value.add(memory);
                 }
             } else
                 baseToMemories.add(base, Vector<MemoryValue*>()).iterator->value.append(memory);
@@ -129,7 +129,7 @@ bool canonicalizePrePostIncrements(Procedure& proc)
                 break;
             for (MemoryValue* memory : memories->value) {
                 postIndexCandidates.add(memory, Vector<Value*>()).iterator->value.append(address);
-                blockToPrePostIndexCandidates.add(memory->owner, HashSet<MemoryValue*>()).iterator->value.add(memory);
+                blockToPrePostIndexCandidates.add(memory->owner, UncheckedKeyHashSet<MemoryValue*>()).iterator->value.add(memory);
             }
             break;
         }

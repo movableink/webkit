@@ -27,7 +27,7 @@ function testCrossOriginLoad()
     try {
         var worker = createWorker('http://localhost:8000/workers/resources/worker-redirect-target.js');
         worker.onerror = function(evt) {
-            log("FAIL: threw error when attempting to cross origin while loading the worker script.");
+            log("PASS: threw error when attempting to cross origin while loading the worker script.");
             runNextTest();
         }
         worker.onmessage = function(evt) {
@@ -35,7 +35,7 @@ function testCrossOriginLoad()
             runNextTest();
         }
     } catch (ex) {
-        log("SUCCESS: threw exception (" + ex + ") when attempting to cross origin while loading the worker script.");
+        log("FAIL: threw exception (" + ex + ") when attempting to cross origin while loading the worker script.");
         runNextTest();
     }
 }

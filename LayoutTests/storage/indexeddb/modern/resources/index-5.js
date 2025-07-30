@@ -2,17 +2,6 @@ description("This tests creating an index on an object store that already has re
 
 indexedDBTest(prepareDatabase);
 
-
-function done()
-{
-    finishJSTest();
-}
-
-function log(message)
-{
-    debug(message);
-}
-
 var index;
 var objectStore;
 
@@ -35,7 +24,7 @@ function checkIndexValues()
         if (cursor.key != undefined)
             cursor.continue();
         else
-            done();
+            endTestWithLog();
     }
     cursorRequest.onerror = function(e) {
         debug("Error opening or iterating cursor");
@@ -47,6 +36,7 @@ function prepareDatabase(event)
 {
     debug("Initial upgrade needed: Old version - " + event.oldVersion + " New version - " + event.newVersion);
 
+    openRequest = event.target;
     var versionTransaction = event.target.transaction;
     var database = event.target.result;
     objectStore = database.createObjectStore("TestObjectStore");
@@ -60,18 +50,17 @@ function prepareDatabase(event)
     checkIndexValues();
     
     versionTransaction.onabort = function(event) {
-        debug("Initial upgrade versionchange transaction aborted (expected because index creation failed, and that should've caused transaction abort)");
-        done();
+        // Set error event handler to null to avoid unexpected error message being printed.
+        openRequest.onerror = null;
+        endTestWithLog("Initial upgrade versionchange transaction aborted (expected because index creation failed, and that should've caused transaction abort)");
     }
 
     versionTransaction.oncomplete = function(event) {
-        debug("Initial upgrade versionchange transaction unexpected complete");
-        done();
+        endTestWithLog("Initial upgrade versionchange transaction unexpected complete");
     }
 
     versionTransaction.onerror = function(event) {
-        debug("Initial upgrade versionchange transaction unexpected error" + event);
-        done();
+        endTestWithLog("Initial upgrade versionchange transaction unexpected error" + event);
     }
 }
 

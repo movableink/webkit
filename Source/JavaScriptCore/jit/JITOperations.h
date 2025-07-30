@@ -169,6 +169,7 @@ JSC_DECLARE_JIT_OPERATION(operationMaterializeBoundFunctionTargetCode, UGPRPair,
 JSC_DECLARE_JIT_OPERATION(operationThrowRemoteFunctionException, EncodedJSValue, (JSRemoteFunction*));
 
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationThrowStackOverflowError, void, (CodeBlock*));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationThrowOutOfMemoryError, void, (VM*));
 
 // IC related functions and generic helpers.
 //
@@ -316,10 +317,10 @@ JSC_DECLARE_JIT_OPERATION(operationGetPrivateNameByIdGeneric, EncodedJSValue, (J
 // End of IC related functions and generic helpers.
 
 // These use void* instead of CallFrame* to prevent setupArguments from assuming we want the current call frame.
-JSC_DECLARE_JIT_OPERATION(operationCallDirectEvalSloppy, EncodedJSValue, (void*, JSScope*, EncodedJSValue));
-JSC_DECLARE_JIT_OPERATION(operationCallDirectEvalStrict, EncodedJSValue, (void*, JSScope*, EncodedJSValue));
-JSC_DECLARE_JIT_OPERATION(operationCallDirectEvalSloppyTaintedByWithScope, EncodedJSValue, (void*, JSScope*, EncodedJSValue));
-JSC_DECLARE_JIT_OPERATION(operationCallDirectEvalStrictTaintedByWithScope, EncodedJSValue, (void*, JSScope*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationCallDirectEvalSloppy, EncodedJSValue, (void*, JSScope*, EncodedJSValue, CodeBlock*, uint32_t));
+JSC_DECLARE_JIT_OPERATION(operationCallDirectEvalStrict, EncodedJSValue, (void*, JSScope*, EncodedJSValue, CodeBlock*, uint32_t));
+JSC_DECLARE_JIT_OPERATION(operationCallDirectEvalSloppyTaintedByWithScope, EncodedJSValue, (void*, JSScope*, EncodedJSValue, CodeBlock*, uint32_t));
+JSC_DECLARE_JIT_OPERATION(operationCallDirectEvalStrictTaintedByWithScope, EncodedJSValue, (void*, JSScope*, EncodedJSValue, CodeBlock*, uint32_t));
 
 JSC_DECLARE_JIT_OPERATION(operationPolymorphicCall, UCPURegister, (CallFrame*, CallLinkInfo*));
 JSC_DECLARE_JIT_OPERATION(operationVirtualCall, UCPURegister, (CallFrame*, CallLinkInfo*));
@@ -364,10 +365,10 @@ JSC_DECLARE_JIT_OPERATION(operationNewPromise, JSCell*, (VM*, Structure*));
 JSC_DECLARE_JIT_OPERATION(operationNewInternalPromise, JSCell*, (VM*, Structure*));
 JSC_DECLARE_JIT_OPERATION(operationNewGenerator, JSCell*, (VM*, Structure*));
 JSC_DECLARE_JIT_OPERATION(operationNewAsyncGenerator, JSCell*, (VM*, Structure*));
-JSC_DECLARE_JIT_OPERATION(operationNewRegexp, JSCell*, (JSGlobalObject*, JSCell*));
+JSC_DECLARE_JIT_OPERATION(operationNewRegExp, JSCell*, (JSGlobalObject*, JSCell*));
 JSC_DECLARE_JIT_OPERATION(operationHandleTraps, UnusedPtr, (JSGlobalObject*));
 JSC_DECLARE_JIT_OPERATION(operationThrow, void, (JSGlobalObject*, EncodedJSValue));
-JSC_DECLARE_JIT_OPERATION(operationDebug, void, (VM*, int32_t));
+JSC_DECLARE_JIT_OPERATION(operationDebug, void, (VM*, int32_t debugHookType, EncodedJSValue encodedData));
 #if ENABLE(DFG_JIT)
 JSC_DECLARE_JIT_OPERATION(operationOptimize, UGPRPair, (VM*, uint32_t));
 JSC_DECLARE_JIT_OPERATION(operationTryOSREnterAtCatchAndValueProfile, UGPRPair, (VM*, uint32_t));

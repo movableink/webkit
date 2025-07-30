@@ -27,8 +27,6 @@
 #include "config.h"
 #include "DateTimeFieldElement.h"
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
 #include "CSSPropertyNames.h"
 #include "DateComponents.h"
 #include "EventNames.h"
@@ -58,7 +56,7 @@ DateTimeFieldElement::DateTimeFieldElement(Document& document, DateTimeFieldElem
 {
 }
 
-std::optional<Style::ResolvedStyle> DateTimeFieldElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
+std::optional<Style::UnadjustedStyle> DateTimeFieldElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
 {
     auto elementStyle = resolveStyle(resolutionContext);
 
@@ -186,7 +184,9 @@ AtomString DateTimeFieldElement::localeIdentifier() const
 
 String DateTimeFieldElement::visibleValue() const
 {
-    return hasValue() ? value() : placeholderValue();
+    if (hasValue())
+        return value();
+    return placeholderValue();
 }
 
 void DateTimeFieldElement::updateVisibleValue(EventBehavior eventBehavior)
@@ -209,5 +209,3 @@ bool DateTimeFieldElement::supportsFocus() const
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(DATE_AND_TIME_INPUT_TYPES)

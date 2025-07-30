@@ -14,4 +14,6 @@ Property values requiring vendor prefixes:
 None
 ------------------------------------------------------------------------
 List of files:
+/LayoutTests/imported/w3c/web-platform-tests/html/semantics/document-metadata/the-meta-element/http-equiv-and-name-1.html
+/LayoutTests/imported/w3c/web-platform-tests/html/semantics/document-metadata/the-meta-element/http-equiv-and-name-2.html
 /LayoutTests/imported/w3c/web-platform-tests/html/semantics/document-metadata/the-meta-element/the-lang-attribute-012.html

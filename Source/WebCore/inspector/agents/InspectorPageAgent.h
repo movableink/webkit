@@ -105,7 +105,7 @@ public:
     Inspector::Protocol::ErrorStringOr<void> overrideSetting(Inspector::Protocol::Page::Setting, std::optional<bool>&& value);
     Inspector::Protocol::ErrorStringOr<void> overrideUserPreference(Inspector::Protocol::Page::UserPreferenceName, std::optional<Inspector::Protocol::Page::UserPreferenceValue>&&);
     Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Inspector::Protocol::Page::Cookie>>> getCookies();
-    Inspector::Protocol::ErrorStringOr<void> setCookie(Ref<JSON::Object>&&);
+    Inspector::Protocol::ErrorStringOr<void> setCookie(Ref<JSON::Object>&&, std::optional<bool>&& shouldPartition);
     Inspector::Protocol::ErrorStringOr<void> deleteCookie(const String& cookieName, const String& url);
     Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::Page::FrameResourceTree>> getResourceTree();
     Inspector::Protocol::ErrorStringOr<std::tuple<String, bool /* base64Encoded */>> getResourceContent(const Inspector::Protocol::Network::FrameId&, const String& url);
@@ -138,7 +138,7 @@ public:
     void frameClearedScheduledNavigation(Frame&);
     void accessibilitySettingsDidChange();
     void defaultUserPreferencesDidChange();
-#if ENABLE(DARK_MODE_CSS) || HAVE(OS_DARK_MODE_SUPPORT)
+#if ENABLE(DARK_MODE_CSS)
     void defaultAppearanceDidChange();
 #endif
     void applyUserAgentOverride(String&);
@@ -172,7 +172,7 @@ private:
     std::unique_ptr<Inspector::PageFrontendDispatcher> m_frontendDispatcher;
     RefPtr<Inspector::PageBackendDispatcher> m_backendDispatcher;
 
-    Page& m_inspectedPage;
+    WeakRef<Page> m_inspectedPage;
     InspectorClient* m_client { nullptr };
     WeakRef<InspectorOverlay> m_overlay;
 

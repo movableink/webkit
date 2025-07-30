@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2024 Igalia S.L. All rights reserved.
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,9 +37,12 @@
 #include <WebCore/LocalizedStrings.h>
 #include <WebCore/MIMETypeRegistry.h>
 #include <WebCore/TextResourceDecoder.h>
+#include <ranges>
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/Language.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/Scope.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringToIntegerConversion.h>
@@ -85,7 +88,8 @@ static constexpr auto contentScriptsMatchesManifestKey = "matches"_s;
 static constexpr auto contentScriptsExcludeMatchesManifestKey = "exclude_matches"_s;
 static constexpr auto contentScriptsIncludeGlobsManifestKey = "include_globs"_s;
 static constexpr auto contentScriptsExcludeGlobsManifestKey = "exclude_globs"_s;
-static constexpr auto contentScriptsMatchesAboutBlankManifestKey = "match_about_blank"_s;
+static constexpr auto contentScriptsMatchAboutBlankManifestKey = "match_about_blank"_s;
+static constexpr auto contentScriptsMatchOriginAsFallbackManifestKey = "match_origin_as_fallback"_s;
 static constexpr auto contentScriptsRunAtManifestKey = "run_at"_s;
 static constexpr auto contentScriptsDocumentIdleManifestKey = "document_idle"_s;
 static constexpr auto contentScriptsDocumentStartManifestKey = "document_start"_s;
@@ -161,6 +165,95 @@ WebExtension::WebExtension(Resources&& resources)
 {
 }
 
+WebExtension::~WebExtension()
+{
+    if (m_resourcesAreTemporary && !m_resourceBaseURL.isEmpty())
+        FileSystem::deleteNonEmptyDirectory(m_resourceBaseURL.fileSystemPath());
+}
+
+static String convertChromeExtensionToTemporaryZipFile(const String& inputFilePath)
+{
+    // Converts a Chrome extension file to a temporary ZIP file by checking for a valid Chrome extension signature ('Cr24')
+    // and copying the contents starting from the ZIP signature ('PK\x03\x04'). Returns a null string if the signatures
+    // are not found or any file operations fail.
+
+    auto inputFileHandle = FileSystem::openFile(inputFilePath, FileSystem::FileOpenMode::Read);
+    if (!inputFileHandle)
+        return nullString();
+
+    // Read the magic signature.
+    std::array<uint8_t, 4> signature;
+    auto bytesRead = inputFileHandle.read(signature);
+    if (bytesRead != signature.size())
+        return nullString();
+
+    // Verify Chrome extension magic signature.
+    static std::array<uint8_t, 4> expectedSignature = { 'C', 'r', '2', '4' };
+    if (signature != expectedSignature)
+        return nullString();
+
+    // Create a temporary ZIP file.
+    auto [temporaryFilePath, temporaryFileHandle] = FileSystem::openTemporaryFile("WebKitExtension-"_s, ".zip"_s);
+    if (!temporaryFileHandle)
+        return nullString();
+
+    std::array<uint8_t, 4096> buffer;
+    bool signatureFound = false;
+
+    while (true) {
+        bytesRead = inputFileHandle.read(buffer);
+
+        // Error reading file.
+        if (!bytesRead)
+            return nullString();
+
+        // Done reading file.
+        if (!*bytesRead)
+            break;
+
+        size_t bufferOffset = 0;
+        if (!signatureFound) {
+            // Not enough bytes for the signature.
+            if (*bytesRead < 4)
+                return nullString();
+
+            // Search for the ZIP file magic signature in the buffer.
+            for (size_t i = 0; i < *bytesRead - 3; ++i) {
+                if (buffer[i] == 'P' && buffer[i + 1] == 'K' && buffer[i + 2] == 0x03 && buffer[i + 3] == 0x04) {
+                    signatureFound = true;
+                    bufferOffset = i;
+                    break;
+                }
+            }
+
+            // Continue until the start of the ZIP file is found.
+            if (!signatureFound)
+                continue;
+        }
+
+        auto bytesToWrite = std::span(buffer).subspan(bufferOffset, *bytesRead - bufferOffset);
+        auto bytesWritten = temporaryFileHandle.write(bytesToWrite);
+        if (bytesWritten != bytesToWrite.size())
+            return nullString();
+    }
+
+    return temporaryFilePath;
+}
+
+String WebExtension::processFileAndExtractZipArchive(const String& path)
+{
+    // Check if the file is a Chrome extension archive and extract it.
+    auto temporaryZipFilePath = convertChromeExtensionToTemporaryZipFile(path);
+    if (!temporaryZipFilePath.isNull()) {
+        auto temporaryDirectory = FileSystem::extractTemporaryZipArchive(temporaryZipFilePath);
+        FileSystem::deleteFile(temporaryZipFilePath);
+        return temporaryDirectory;
+    }
+
+    // Assume the file is already a ZIP archive and try to extract it.
+    return FileSystem::extractTemporaryZipArchive(path);
+}
+
 bool WebExtension::parseManifest(StringView manifestString)
 {
     RefPtr manifestValue = JSON::Value::parseJSON(manifestString);
@@ -190,9 +283,10 @@ bool WebExtension::parseManifest(StringView manifestString)
             recordError(createError(Error::InvalidDefaultLocale));
     }
 
-    m_localization = WebExtensionLocalization::create(*this);
+    Ref localization = WebExtensionLocalization::create(*this);
+    m_localization = localization.copyRef();
 
-    RefPtr localizedManifestObject = m_localization->localizedJSONforJSON(manifestObject);
+    RefPtr localizedManifestObject = localization->localizedJSONforJSON(manifestObject);
     if (!localizedManifestObject) {
         m_manifestJSON = JSON::Value::null();
         recordError(createError(Error::InvalidManifest));
@@ -244,10 +338,11 @@ double WebExtension::manifestVersion()
 
 RefPtr<API::Data> WebExtension::serializeManifest()
 {
-    if (!m_manifestJSON)
+    Ref manifestJSON = m_manifestJSON;
+    if (!manifestJSON)
         return nullptr;
 
-    return API::Data::create(m_manifestJSON->toJSONString().utf8().span());
+    return API::Data::create(manifestJSON->toJSONString().utf8().span());
 }
 
 RefPtr<API::Data> WebExtension::serializeLocalization()
@@ -296,6 +391,10 @@ bool WebExtension::isWebAccessibleResource(const URL& resourceURL, const URL& pa
             continue;
 
         for (auto& pathPattern : data.resourcePathPatterns) {
+            // Because we remove the prefix slash from the resource path, we also have to remove it from the pattern path.
+            if (pathPattern.startsWith('/'))
+                pathPattern = pathPattern.substring(1);
+
             if (WebCore::matchesWildcardPattern(pathPattern, resourcePath))
                 return true;
         }
@@ -441,11 +540,18 @@ String WebExtension::resourceStringForPath(const String& originalPath, RefPtr<AP
     if (path.startsWith('/'))
         path = path.substring(1);
 
-    if (RefPtr cachedData = m_resources.get(path))
-        return String::fromUTF8(cachedData->span());
-
     if (path == generatedBackgroundPageFilename || path == generatedBackgroundServiceWorkerFilename)
         return generatedBackgroundContent();
+
+    if (auto entry = m_resources.find(path); entry != m_resources.end()) {
+        return WTF::switchOn(entry->value,
+            [](const Ref<API::Data>& data) {
+                return String::fromUTF8(data->span());
+            },
+            [](const String& string) {
+                return string;
+            });
+    }
 
     RefPtr data = resourceDataForPath(path, outError, cacheResult, suppressErrors);
     if (!data)
@@ -455,8 +561,13 @@ String WebExtension::resourceStringForPath(const String& originalPath, RefPtr<AP
         return emptyString();
 
     auto mimeType = MIMETypeRegistry::mimeTypeForPath(path);
-    RefPtr decoder = TextResourceDecoder::create(mimeType, { }, true);
-    return decoder->decode(data->span());
+    RefPtr decoder = TextResourceDecoder::create(mimeType, PAL::UTF8Encoding());
+
+    auto result = decoder->decode(data->span());
+    if (cacheResult == CacheResult::Yes)
+        m_resources.set(path, result);
+
+    return result;
 }
 
 static int toAPI(WebExtension::Error error)
@@ -709,10 +820,26 @@ String WebExtension::bestMatchLocale()
     if (supportedLocales.size() == 1)
         return supportedLocales.first();
 
+    auto preferredLocale = defaultLanguage(ShouldMinimizeLanguages::No);
+
     bool exactMatch = false;
-    auto bestMatchIndex = indexOfBestMatchingLanguageInList(defaultLanguage(ShouldMinimizeLanguages::No), supportedLocales, exactMatch);
+    auto bestMatchIndex = indexOfBestMatchingLanguageInList(preferredLocale, supportedLocales, exactMatch);
     if (bestMatchIndex != notFound)
         return supportedLocales[bestMatchIndex];
+
+#if PLATFORM(COCOA)
+    auto preferredLocaleComponents = parseLocale(preferredLocale);
+
+    // On Apple platforms, the best match search uses Foundation, which skips "zh" when the preferred locale is "zh-Hant",
+    // likely assuming "zh" refers to simplified Chinese. However, web extensions expect the base language to be selected
+    // if it is supported, regardless of specific variants.
+    auto matchingLanguageIndex = supportedLocales.findIf([&](const auto& locale) {
+        return equalIgnoringASCIICase(locale, preferredLocaleComponents.languageCode);
+    });
+
+    if (matchingLanguageIndex != notFound)
+        return supportedLocales[matchingLanguageIndex];
+#endif
 
     return defaultLocale();
 }
@@ -1046,9 +1173,6 @@ void WebExtension::populateBackgroundPropertiesIfNeeded()
         m_backgroundContentIsPersistent = false;
     }
 
-    if (!m_backgroundContentIsPersistent && hasRequestedPermission("webRequest"_s))
-        recordError(createError(Error::InvalidBackgroundPersistence, WEB_UI_STRING("Non-persistent background content cannot listen to `webRequest` events.", "WKWebExtensionErrorInvalidBackgroundPersistence description for webRequest events")));
-
 #if PLATFORM(VISION)
     if (m_backgroundContentIsPersistent)
         recordError(createError(Error::InvalidBackgroundPersistence, WEB_UI_STRING("Invalid `persistent` manifest entry. A non-persistent background is required on visionOS.", "WKWebExtensionErrorInvalidBackgroundPersistence description for visionOS")));
@@ -1278,7 +1402,18 @@ void WebExtension::populateContentScriptPropertiesIfNeeded()
         }
 
         // Optional. Whether the script should inject into an about:blank frame where the parent or opener frame matches one of the patterns declared in matches. Defaults to false.
-        auto matchesAboutBlank = injectedContentObject->getBoolean(contentScriptsMatchesAboutBlankManifestKey).value_or(false);
+        bool matchAboutBlank = injectedContentObject->getBoolean(contentScriptsMatchAboutBlankManifestKey).value_or(false);
+
+        // Optional. Whether the script should inject in frames that were created by a matching origin, but whose URL or origin may not directly match the pattern.
+        // These include frames with different schemes, such as about:, data:, and blob:. Defaults to false.
+        bool matchOriginAsFallback = injectedContentObject->getBoolean(contentScriptsMatchOriginAsFallbackManifestKey).value_or(false);
+
+        // When both "match_origin_as_fallback" and "match_about_blank" are specified, "match_origin_as_fallback" takes priority.
+        auto matchParentFrame = WebCore::UserContentMatchParentFrame::Never;
+        if (matchOriginAsFallback)
+            matchParentFrame = UserContentMatchParentFrame::ForOpaqueOrigins;
+        else if (matchAboutBlank)
+            matchParentFrame = UserContentMatchParentFrame::ForAboutBlank;
 
         HashSet<Ref<WebExtensionMatchPattern>> excludeMatchPatterns;
 
@@ -1355,7 +1490,7 @@ void WebExtension::populateContentScriptPropertiesIfNeeded()
         injectedContentData.includeMatchPatterns = WTFMove(includeMatchPatterns);
         injectedContentData.excludeMatchPatterns = WTFMove(excludeMatchPatterns);
         injectedContentData.injectionTime = injectionTime;
-        injectedContentData.matchesAboutBlank = matchesAboutBlank;
+        injectedContentData.matchParentFrame = matchParentFrame;
         injectedContentData.injectsIntoAllFrames = injectsIntoAllFrames;
         injectedContentData.contentWorldType = contentWorldType;
         injectedContentData.styleLevel = styleLevel;
@@ -1453,7 +1588,7 @@ void WebExtension::populateSidePanelProperties(const JSON::Object& sidePanelObje
 
 const WebExtension::PermissionsSet& WebExtension::supportedPermissions()
 {
-    static MainThreadNeverDestroyed<PermissionsSet> permissions = std::initializer_list<String> { WebExtensionPermission::activeTab(), WebExtensionPermission::alarms(), WebExtensionPermission::clipboardWrite(),
+    static MainRunLoopNeverDestroyed<PermissionsSet> permissions = std::initializer_list<String> { WebExtensionPermission::activeTab(), WebExtensionPermission::alarms(), WebExtensionPermission::clipboardWrite(),
         WebExtensionPermission::contextMenus(), WebExtensionPermission::cookies(), WebExtensionPermission::declarativeNetRequest(), WebExtensionPermission::declarativeNetRequestFeedback(),
         WebExtensionPermission::declarativeNetRequestWithHostAccess(), WebExtensionPermission::menus(), WebExtensionPermission::nativeMessaging(), WebExtensionPermission::notifications(), WebExtensionPermission::scripting(),
         WebExtensionPermission::storage(), WebExtensionPermission::tabs(), WebExtensionPermission::unlimitedStorage(), WebExtensionPermission::webNavigation(), WebExtensionPermission::webRequest(),
@@ -1802,7 +1937,7 @@ RefPtr<WebCore::Icon> WebExtension::actionIcon(WebCore::FloatSize size)
 
         if (RefPtr result = bestIconForManifestKey(*actionObject, defaultIconManifestKey, size, m_actionIconsCache, Error::InvalidActionIcon, localizedErrorDescription))
             return result;
-        }
+    }
 
     return icon(size);
 }
@@ -1838,7 +1973,7 @@ size_t WebExtension::bestIconSize(const JSON::Object& iconsObject, size_t idealP
         return 0;
 
     // Sort the remaining keys and find the next largest size.
-    std::sort(sizeValues.begin(), sizeValues.end());
+    std::ranges::sort(sizeValues);
 
     size_t bestSize = 0;
     for (auto size : sizeValues) {
@@ -2232,8 +2367,12 @@ void WebExtension::populateCommandsIfNeeded()
         else if (hasPageAction())
             commandIdentifier = "_execute_page_action"_s;
 
-        if (!commandIdentifier.isEmpty())
-            m_commands.append({ commandIdentifier, displayActionLabel(), emptyString(), { } });
+        if (!commandIdentifier.isEmpty()) {
+            auto description = displayActionLabel();
+            if (description.isEmpty())
+                description = displayShortName();
+            m_commands.append({ commandIdentifier, description, emptyString(), { } });
+        }
     }
 }
 

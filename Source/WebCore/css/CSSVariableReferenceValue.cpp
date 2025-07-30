@@ -66,7 +66,7 @@ bool CSSVariableReferenceValue::equals(const CSSVariableReferenceValue& other) c
     return m_data.get() == other.m_data.get();
 }
 
-String CSSVariableReferenceValue::customCSSText() const
+String CSSVariableReferenceValue::customCSSText(const CSS::SerializationContext&) const
 {
     if (m_stringValue.isNull())
         m_stringValue = m_data->serialize();
@@ -229,7 +229,7 @@ RefPtr<CSSVariableData> CSSVariableReferenceValue::resolveVariableReferences(Sty
 RefPtr<CSSValue> CSSVariableReferenceValue::resolveSingleValue(Style::BuilderState& builderState, CSSPropertyID propertyID) const
 {
     auto cacheValue = [&](auto data) {
-        m_cachedValue = CSSPropertyParser::parseSingleValue(propertyID, data->tokens(), context());
+        m_cachedValue = CSSPropertyParser::parseStylePropertyLonghand(propertyID, data->tokens(), context());
 #if ASSERT_ENABLED
         m_cachePropertyID = propertyID;
 #endif

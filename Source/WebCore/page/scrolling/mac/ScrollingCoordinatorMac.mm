@@ -24,12 +24,11 @@
  */
 
 #import "config.h"
+#import "ScrollingCoordinatorMac.h"
 
 #if ENABLE(ASYNC_SCROLLING) && ENABLE(SCROLLING_THREAD)
 
-#import "ScrollingCoordinatorMac.h"
-
-#import "LocalFrame.h"
+#import "LocalFrameInlines.h"
 #import "LocalFrameView.h"
 #import "Logging.h"
 #import "Page.h"
@@ -82,7 +81,7 @@ void ScrollingCoordinatorMac::didCompletePlatformRenderingUpdate()
 
 void ScrollingCoordinatorMac::updateTiledScrollingIndicator()
 {
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page()->mainFrame());
+    RefPtr localMainFrame = page()->localMainFrame();
     if (!localMainFrame)
         return;
 

@@ -14,6 +14,10 @@
 
 #include <libANGLE/renderer/vulkan/CLDeviceVk.h>
 
+#include "clspv/Compiler.h"
+#include "clspv/Sampler.h"
+#include "spirv-tools/libspirv.h"
+
 namespace rx
 {
 struct ClspvPrintfBufferStorage
@@ -31,6 +35,29 @@ struct ClspvPrintfInfo
     std::vector<uint32_t> argSizes;
 };
 
+struct ClspvLiteralSampler
+{
+    uint32_t descriptorSet;
+    uint32_t binding;
+    cl_bool normalizedCoords;
+    cl::AddressingMode addressingMode;
+    cl::FilterMode filterMode;
+};
+
+namespace clspv_cl
+{
+
+cl::AddressingMode GetAddressingMode(uint32_t mask);
+
+cl::FilterMode GetFilterMode(uint32_t mask);
+
+inline bool IsNormalizedCoords(uint32_t mask)
+{
+    return (mask & clspv::kSamplerNormalizedCoordsMask) == clspv::CLK_NORMALIZED_COORDS_TRUE;
+}
+
+}  // namespace clspv_cl
+
 angle::Result ClspvProcessPrintfBuffer(unsigned char *buffer,
                                        const size_t bufferSize,
                                        const angle::HashMap<uint32_t, ClspvPrintfInfo> *infoMap);
@@ -38,6 +65,18 @@ angle::Result ClspvProcessPrintfBuffer(unsigned char *buffer,
 // Populate a list of options that can be supported by clspv based on the features supported by the
 // vulkan renderer.
 std::string ClspvGetCompilerOptions(const CLDeviceVk *device);
+
+ClspvError ClspvCompileSource(const size_t programCount,
+                              const size_t *programSizes,
+                              const char **programs,
+                              const char *options,
+                              char **outputBinary,
+                              size_t *outputBinarySize,
+                              char **outputLog);
+
+spv_target_env ClspvGetSpirvVersion(const vk::Renderer *renderer);
+
+bool ClspvValidate(vk::Renderer *rendererVk, const angle::spirv::Blob &blob);
 
 }  // namespace rx
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -89,7 +89,7 @@ public:
 
     template<Kind kind>
     class BlockDirectoryBitVectorWordView {
-        WTF_MAKE_TZONE_ALLOCATED(BlockDirectoryBitVectorWordView);
+        WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(BlockDirectoryBitVectorWordView);
     public:
         using ViewType = BlockDirectoryBitVectorWordView;
 
@@ -190,11 +190,11 @@ public:
     } \
     BlockDirectoryBitVectorView<Kind::capitalBitName> lowerBitName() const \
     { \
-        return BlockDirectoryBitVectorView<Kind::capitalBitName>(BlockDirectoryBitVectorWordView<Kind::capitalBitName>(m_segments.data(), m_numBits)); \
+        return BlockDirectoryBitVectorView<Kind::capitalBitName>(BlockDirectoryBitVectorWordView<Kind::capitalBitName>(m_segments.span().data(), m_numBits)); \
     } \
     BlockDirectoryBitVectorRef<Kind::capitalBitName> lowerBitName() \
     { \
-        return BlockDirectoryBitVectorRef<Kind::capitalBitName>(BlockDirectoryBitVectorWordView<Kind::capitalBitName>(m_segments.data(), m_numBits)); \
+        return BlockDirectoryBitVectorRef<Kind::capitalBitName>(BlockDirectoryBitVectorWordView<Kind::capitalBitName>(m_segments.span().data(), m_numBits)); \
     }
     FOR_EACH_BLOCK_DIRECTORY_BIT(BLOCK_DIRECTORY_BIT_ACCESSORS)
 #undef BLOCK_DIRECTORY_BIT_ACCESSORS
@@ -229,6 +229,8 @@ private:
     Vector<Segment, 0, CrashOnOverflow, 2> m_segments;
     unsigned m_numBits { 0 };
 };
+
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<BlockDirectoryBits::Kind kind>, BlockDirectoryBits::BlockDirectoryBitVectorWordView<kind>);
 
 } // namespace JSC
 

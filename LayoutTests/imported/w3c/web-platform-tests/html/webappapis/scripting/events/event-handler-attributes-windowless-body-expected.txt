@@ -53,6 +53,7 @@ PASS canplaythrough is unaffected on a windowless body
 PASS change is unaffected on a windowless body
 PASS click is unaffected on a windowless body
 PASS close is unaffected on a windowless body
+PASS command is unaffected on a windowless body
 FAIL contextlost is unaffected on a windowless body assert_equals: expected (object) null but got (undefined) undefined
 PASS contextmenu is unaffected on a windowless body
 FAIL contextrestored is unaffected on a windowless body assert_equals: expected (object) null but got (undefined) undefined
@@ -161,6 +162,7 @@ PASS canplaythrough is unaffected on a windowless frameset
 PASS change is unaffected on a windowless frameset
 PASS click is unaffected on a windowless frameset
 PASS close is unaffected on a windowless frameset
+PASS command is unaffected on a windowless frameset
 FAIL contextlost is unaffected on a windowless frameset assert_equals: expected (object) null but got (undefined) undefined
 PASS contextmenu is unaffected on a windowless frameset
 FAIL contextrestored is unaffected on a windowless frameset assert_equals: expected (object) null but got (undefined) undefined

@@ -9,12 +9,13 @@ Do NOT modify or remove this file.
 
 ------------------------------------------------------------------------
 Properties requiring vendor prefixes:
-ruby-position
+None
 Property values requiring vendor prefixes:
 None
 ------------------------------------------------------------------------
 List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/META.yml
+/LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/WEB_FEATURES.yml
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/abs-in-ruby-base-container-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/abs-in-ruby-base-container.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/abs-in-ruby-base-expected.html
@@ -40,6 +41,9 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/br-clear-all-000.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/br-clear-all-001.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/br-clear-all-002.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/collapse-trailing-whitespace-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/collapse-trailing-whitespace-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/collapse-trailing-whitespace.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/empty-ruby-base-container-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/empty-ruby-base-container-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/empty-ruby-base-container.html
@@ -128,6 +132,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-bidi-004-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-bidi-004-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-bidi-004.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-body-element-crash.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-box-generation-001-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-box-generation-001-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-box-generation-001.html
@@ -170,6 +175,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-dynamic-removal-003-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-dynamic-removal-003-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-dynamic-removal-003.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-dynamic-removal-004-crash.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-float-handling-001-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-float-handling-001-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-float-handling-001.html
@@ -188,6 +194,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-inlinize-blocks-005-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-inlinize-blocks-005-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-inlinize-blocks-005.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-inlinize-fieldset-crash.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-inlinize-recursive-simple-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-inlinize-recursive-simple-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-inlinize-recursive-simple.html
@@ -248,6 +255,10 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-no-transform-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-no-transform-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-no-transform.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-overhang-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-overhang-no-overlap.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-overhang-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-overhang.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-position-alternate.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-position.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-ruby/ruby-reflow-001-noruby.html

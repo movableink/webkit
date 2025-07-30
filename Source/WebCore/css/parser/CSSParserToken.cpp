@@ -33,9 +33,8 @@
 #include "CSSMarkup.h"
 #include "CSSPropertyParser.h"
 #include <wtf/HexNumber.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/StringBuilder.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSParserToken);
@@ -406,11 +405,11 @@ static StringView mergeIfAdjacent(StringView a, StringView b)
     if (a.is8Bit() && b.is8Bit()) {
         auto characters = a.span8();
         if (std::to_address(characters.end()) == std::to_address(b.span8().begin()))
-            return std::span { characters.data(), a.length() + b.length() };
+            return unsafeMakeSpan(characters.data(), a.length() + b.length());
     } else if (!a.is8Bit() && !b.is8Bit()) {
         auto characters = a.span16();
         if (std::to_address(characters.end()) == std::to_address(b.span16().begin()))
-            return std::span { characters.data(), a.length() + b.length() };
+            return unsafeMakeSpan(characters.data(), a.length() + b.length());
     }
     return { };
 }
@@ -580,7 +579,7 @@ bool CSSParserToken::operator==(const CSSParserToken& other) const
     case HashToken:
         if (m_hashTokenType != other.m_hashTokenType)
             return false;
-        FALLTHROUGH;
+        [[fallthrough]];
     case IdentToken:
     case FunctionToken:
     case StringToken:
@@ -593,7 +592,7 @@ bool CSSParserToken::operator==(const CSSParserToken& other) const
                 return false;
             return m_numericSign == other.m_numericSign && m_numericValue == other.m_numericValue && m_numericValueType == other.m_numericValueType;
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     case NumberToken:
     case PercentageToken:
         return originalText() == other.originalText();
@@ -797,5 +796,3 @@ void CSSParserToken::serialize(StringBuilder& builder, const CSSParserToken* nex
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

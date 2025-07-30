@@ -105,6 +105,7 @@ namespace JSC { namespace FTL {
     macro(JSBoundFunction_length, JSBoundFunction::offsetOfLength()) \
     macro(JSBoundFunction_boundArgsLength, JSBoundFunction::offsetOfBoundArgsLength()) \
     macro(JSBoundFunction_canConstruct, JSBoundFunction::offsetOfCanConstruct()) \
+    macro(JSCallee_scope, JSCallee::offsetOfScopeChain()) \
     macro(JSCell_cellState, JSCell::cellStateOffset()) \
     macro(JSCell_header, 0) \
     macro(JSCell_indexingTypeAndMisc, JSCell::indexingTypeAndMiscOffset()) \
@@ -113,12 +114,12 @@ namespace JSC { namespace FTL {
     macro(JSCell_typeInfoType, JSCell::typeInfoTypeOffset()) \
     macro(JSCell_usefulBytes, JSCell::indexingTypeAndMiscOffset()) \
     macro(JSFunction_executableOrRareData, JSFunction::offsetOfExecutableOrRareData()) \
-    macro(JSFunction_scope, JSFunction::offsetOfScopeChain()) \
     macro(JSGlobalObject_regExpGlobalData_cachedResult_lastRegExp, JSGlobalObject::regExpGlobalDataOffset() + RegExpGlobalData::offsetOfCachedResult() + RegExpCachedResult::offsetOfLastRegExp()) \
     macro(JSGlobalObject_regExpGlobalData_cachedResult_lastInput, JSGlobalObject::regExpGlobalDataOffset() + RegExpGlobalData::offsetOfCachedResult() + RegExpCachedResult::offsetOfLastInput()) \
     macro(JSGlobalObject_regExpGlobalData_cachedResult_result_start, JSGlobalObject::regExpGlobalDataOffset() + RegExpGlobalData::offsetOfCachedResult() + RegExpCachedResult::offsetOfResult() + OBJECT_OFFSETOF(MatchResult, start)) \
     macro(JSGlobalObject_regExpGlobalData_cachedResult_result_end, JSGlobalObject::regExpGlobalDataOffset() + RegExpGlobalData::offsetOfCachedResult() + RegExpCachedResult::offsetOfResult() + OBJECT_OFFSETOF(MatchResult, end)) \
     macro(JSGlobalObject_regExpGlobalData_cachedResult_reified, JSGlobalObject::regExpGlobalDataOffset() + RegExpGlobalData::offsetOfCachedResult() + RegExpCachedResult::offsetOfReified()) \
+    macro(JSGlobalObject_regExpGlobalData_cachedResult_oneCharacterMatch, JSGlobalObject::regExpGlobalDataOffset() + RegExpGlobalData::offsetOfCachedResult() + RegExpCachedResult::offsetOfOneCharacterMatch()) \
     macro(JSGlobalProxy_target, JSGlobalProxy::targetOffset()) \
     macro(JSObject_butterfly, JSObject::butterflyOffset()) \
     macro(JSPropertyNameEnumerator_cachedInlineCapacity, JSPropertyNameEnumerator::cachedInlineCapacityOffset()) \
@@ -178,6 +179,7 @@ namespace JSC { namespace FTL {
     macro(VM_heap_barrierThreshold, VM::offsetOfHeapBarrierThreshold()) \
     macro(VM_heap_mutatorShouldBeFenced, VM::offsetOfHeapMutatorShouldBeFenced()) \
     macro(VM_exception, VM::exceptionOffset()) \
+    macro(WatchpointSet_state, WatchpointSet::offsetOfState()) \
     macro(WeakMapImpl_capacity, WeakMapImpl<WeakMapBucket<WeakMapBucketDataKey>>::offsetOfCapacity()) \
     macro(WeakMapImpl_buffer,  WeakMapImpl<WeakMapBucket<WeakMapBucketDataKey>>::offsetOfBuffer()) \
     macro(WeakMapBucket_value, WeakMapBucket<WeakMapBucketDataKeyValue>::offsetOfValue()) \

@@ -26,10 +26,10 @@
 #pragma once
 
 #include <mutex>
-#include <wtf/Forward.h>
 #include <wtf/LockAlgorithm.h>
 #include <wtf/Locker.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/Seconds.h>
 #include <wtf/ThreadSafetyAnalysis.h>
 
 #if ENABLE(UNFAIR_LOCK)
@@ -66,7 +66,7 @@ public:
 
     void lock() WTF_ACQUIRES_LOCK()
     {
-        if (UNLIKELY(!DefaultLockAlgorithm::lockFastAssumingZero(m_byte)))
+        if (!DefaultLockAlgorithm::lockFastAssumingZero(m_byte)) [[unlikely]]
             lockSlow();
     }
 
@@ -93,7 +93,7 @@ public:
     // guarantees that long critical sections always get a fair lock.
     void unlock() WTF_RELEASES_LOCK()
     {
-        if (UNLIKELY(!DefaultLockAlgorithm::unlockFastAssumingZero(m_byte)))
+        if (!DefaultLockAlgorithm::unlockFastAssumingZero(m_byte)) [[unlikely]]
             unlockSlow();
     }
 
@@ -104,13 +104,13 @@ public:
     // want.
     void unlockFairly() WTF_RELEASES_LOCK()
     {
-        if (UNLIKELY(!DefaultLockAlgorithm::unlockFastAssumingZero(m_byte)))
+        if (!DefaultLockAlgorithm::unlockFastAssumingZero(m_byte)) [[unlikely]]
             unlockFairlySlow();
     }
     
     void safepoint()
     {
-        if (UNLIKELY(!DefaultLockAlgorithm::safepointFast(m_byte)))
+        if (!DefaultLockAlgorithm::safepointFast(m_byte)) [[unlikely]]
             safepointSlow();
     }
 

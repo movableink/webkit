@@ -50,6 +50,7 @@
 #include "ShadowBlur.h"
 #include <algorithm>
 #include <cairo.h>
+#include <numbers>
 
 namespace WebCore {
 namespace Cairo {
@@ -614,8 +615,10 @@ void setLineDash(GraphicsContextCairo& platformContext, const DashArray& dashes,
 {
     if (std::all_of(dashes.begin(), dashes.end(), [](auto& dash) { return !dash; }))
         cairo_set_dash(platformContext.cr(), 0, 0, 0);
-    else
-        cairo_set_dash(platformContext.cr(), dashes.data(), dashes.size(), dashOffset);
+    else {
+        auto dashesSpan = dashes.span();
+        cairo_set_dash(platformContext.cr(), dashesSpan.data(), dashesSpan.size(), dashOffset);
+    }
 }
 
 void setLineJoin(GraphicsContextCairo& platformContext, LineJoin lineJoin)
@@ -1102,21 +1105,20 @@ void drawLine(GraphicsContextCairo& platformContext, const FloatPoint& point1, c
         cairo_set_antialias(cairoContext, CAIRO_ANTIALIAS_DEFAULT);
 }
 
-void drawLinesForText(GraphicsContextCairo& platformContext, const FloatPoint& point, float strokeThickness, const DashArray& widths, bool printing, bool doubleUnderlines, const Color& color)
+void drawLinesForText(GraphicsContextCairo& platformContext, const FloatPoint& point, float strokeThickness, std::span<const FloatSegment> lineSegments, bool printing, bool doubleUnderlines, const Color& color)
 {
     Color modifiedColor = color;
-    FloatRect bounds = computeLineBoundsAndAntialiasingModeForText(platformContext, point, widths.last(), printing, modifiedColor, strokeThickness);
+    FloatRect bounds = computeLineBoundsAndAntialiasingModeForText(platformContext, point, lineSegments.back().end, printing, modifiedColor, strokeThickness);
 
     Vector<FloatRect, 4> dashBounds;
-    ASSERT(!(widths.size() % 2));
-    dashBounds.reserveInitialCapacity(dashBounds.size() / 2);
-    for (size_t i = 0; i < widths.size(); i += 2)
-        dashBounds.append(FloatRect(FloatPoint(bounds.x() + widths[i], bounds.y()), FloatSize(widths[i+1] - widths[i], bounds.height())));
+    dashBounds.reserveInitialCapacity(lineSegments.size());
+    for (const auto& lineSegment : lineSegments)
+        dashBounds.append(FloatRect(FloatPoint(bounds.x() + lineSegment.begin, bounds.y()), FloatSize(lineSegment.length(), bounds.height())));
 
     if (doubleUnderlines) {
         // The space between double underlines is equal to the height of the underline
-        for (size_t i = 0; i < widths.size(); i += 2)
-            dashBounds.append(FloatRect(FloatPoint(bounds.x() + widths[i], bounds.y() + 2 * bounds.height()), FloatSize(widths[i+1] - widths[i], bounds.height())));
+        for (auto& lineSegment : lineSegments)
+            dashBounds.append(FloatRect(FloatPoint(bounds.x() + lineSegment.begin, bounds.y() + 2 * bounds.height()), FloatSize(lineSegment.length(), bounds.height())));
     }
 
     cairo_t* cr = platformContext.cr();
@@ -1153,7 +1155,7 @@ void drawEllipse(GraphicsContextCairo& platformContext, const FloatRect& rect, c
     float xRadius = .5 * rect.width();
     cairo_translate(cr, rect.x() + xRadius, rect.y() + yRadius);
     cairo_scale(cr, xRadius, yRadius);
-    cairo_arc(cr, 0., 0., 1., 0., 2 * piFloat);
+    cairo_arc(cr, 0., 0., 1., 0., 2 * std::numbers::pi_v<float>);
     cairo_restore(cr);
 
     if (fillColor.isVisible()) {

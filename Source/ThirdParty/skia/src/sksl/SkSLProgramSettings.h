@@ -65,7 +65,7 @@ struct ProgramSettings {
     // correctness
     bool fValidateSPIRV = true;
     // If true, any synthetic uniforms must use push constant syntax
-    bool fUsePushConstants = false;
+    bool fUseVulkanPushConstantsForGaneshRTAdjust = false;
     // TODO(skia:11209) - Replace this with a "promised" capabilities?
     // Sets a maximum SkSL version. Compilation will fail if the program uses features that aren't
     // allowed at the requested version. For instance, a valid program must have fully-unrollable
@@ -123,14 +123,12 @@ struct ProgramConfig {
 
     static bool IsFragment(ProgramKind kind) {
         return kind == ProgramKind::kFragment ||
-               kind == ProgramKind::kGraphiteFragment ||
-               kind == ProgramKind::kGraphiteFragmentES2;
+               kind == ProgramKind::kGraphiteFragment;
     }
 
     static bool IsVertex(ProgramKind kind) {
         return kind == ProgramKind::kVertex ||
-               kind == ProgramKind::kGraphiteVertex ||
-               kind == ProgramKind::kGraphiteVertexES2;
+               kind == ProgramKind::kGraphiteVertex;
     }
 
     static bool IsCompute(ProgramKind kind) {

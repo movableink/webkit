@@ -73,28 +73,40 @@ static std::optional<ShaderModuleParameters> findShaderModuleParameters(const WG
     return { { *wgsl, hints } };
 }
 
-id<MTLLibrary> ShaderModule::createLibrary(id<MTLDevice> device, const String& msl, String&& label, NSError** error)
+id<MTLLibrary> ShaderModule::createLibrary(id<MTLDevice> device, const String& msl, String&& label, NSError** error, WGSL::DeviceState&& deviceState)
 {
+    static bool requireSafeMath = false;
     auto options = [MTLCompileOptions new];
+    options.preprocessorMacros = @{ @"__wgslMetalAppleGPUFamily" : [NSString stringWithFormat:@"%u", deviceState.appleGPUFamily] };
+#if ENABLE(WEBGPU_BY_DEFAULT)
+    static auto mathMode = MTLMathModeRelaxed;
+    static auto mathFunctions = MTLMathFloatingPointFunctionsFast;
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [&] {
+        requireSafeMath = [[NSUserDefaults standardUserDefaults] boolForKey:@"WebKitWebGPUEnableSafeMath"];
+        mathMode = requireSafeMath || [[NSUserDefaults standardUserDefaults] boolForKey:@"WebKitWebGPUEnableSafeMathMode"] ? MTLMathModeSafe : MTLMathModeRelaxed;
+        mathFunctions = requireSafeMath || [[NSUserDefaults standardUserDefaults] boolForKey:@"WebKitWebGPUEnablePrecisionMathFunctions"] ? MTLMathFloatingPointFunctionsPrecise : MTLMathFloatingPointFunctionsFast;
+    });
+    options.mathMode = mathMode;
+    options.mathFloatingPointFunctions = mathFunctions;
+#else
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    options.fastMathEnabled = YES;
+    options.fastMathEnabled = !requireSafeMath;
 ALLOW_DEPRECATED_DECLARATIONS_END
+#endif
     // FIXME(PERFORMANCE): Run the asynchronous version of this
-    id<MTLLibrary> library = [device newLibraryWithSource:msl options:options error:error];
+    id<MTLLibrary> library = [device newLibraryWithSource:msl.createNSString().get() options:options error:error];
     if (error && *error) {
         // FIXME: https://bugs.webkit.org/show_bug.cgi?id=250442
-#ifdef NDEBUG
-        *error = [NSError errorWithDomain:@"WebGPU" code:1 userInfo:@{ NSLocalizedDescriptionKey: [NSString stringWithFormat:@"Failed to compile the shader source, generated metal:\n%@", (NSString*)msl] }];
-#else
         WTFLogAlways("MSL compilation error: %@", [*error localizedDescription]);
-#endif
+        *error = [NSError errorWithDomain:@"WebGPU" code:1 userInfo:@{ NSLocalizedDescriptionKey: adoptNS([[NSString alloc] initWithFormat:@"Failed to compile the shader source, generated metal:\n%@ - error %@", msl.createNSString().get(), [*error localizedDescription]]).get() }];
         return nil;
     }
-    library.label = label;
+    library.label = label.createNSString().get();
     return library;
 }
 
-static RefPtr<ShaderModule> earlyCompileShaderModule(Device& device, std::variant<WGSL::SuccessfulCheck, WGSL::FailedCheck>&& checkResult, const WGPUShaderModuleDescriptor& suppliedHints, String&& label)
+static RefPtr<ShaderModule> earlyCompileShaderModule(Device& device, Variant<WGSL::SuccessfulCheck, WGSL::FailedCheck>&& checkResult, const WGPUShaderModuleDescriptor& suppliedHints, String&& label)
 {
     HashMap<String, Ref<PipelineLayout>> hints;
     HashMap<String, WGSL::PipelineLayout*> wgslHints;
@@ -120,12 +132,18 @@ static RefPtr<ShaderModule> earlyCompileShaderModule(Device& device, std::varian
         return nullptr;
     auto& result = std::get<WGSL::PrepareResult>(prepareResult);
     HashMap<String, WGSL::ConstantValue> wgslConstantValues;
-    auto generationResult = WGSL::generate(shaderModule, result, wgslConstantValues);
+    auto generationResult = WGSL::generate(shaderModule, result, wgslConstantValues, WGSL::DeviceState {
+        .appleGPUFamily = device.appleGPUFamily(),
+        .shaderValidationEnabled = device.isShaderValidationEnabled()
+    });
     if (std::holds_alternative<WGSL::Error>(generationResult))
         return nullptr;
     auto& msl = std::get<String>(generationResult);
     NSError *error = nil;
-    auto library = ShaderModule::createLibrary(device.device(), msl, WTFMove(label), &error);
+    auto library = ShaderModule::createLibrary(device.device(), msl, WTFMove(label), &error, WGSL::DeviceState {
+        .appleGPUFamily = device.appleGPUFamily(),
+        .shaderValidationEnabled = device.isShaderValidationEnabled()
+    });
     if (!library)
         return nullptr;
     return ShaderModule::create(WTFMove(checkResult), WTFMove(hints), WTFMove(result.entryPoints), library, device);
@@ -134,53 +152,13 @@ static RefPtr<ShaderModule> earlyCompileShaderModule(Device& device, std::varian
 static const HashSet<String> buildFeatureSet(const Vector<WGPUFeatureName>& features)
 {
     HashSet<String> result;
-    for (auto feature : features) {
-        switch (feature) {
-        case WGPUFeatureName_Undefined:
-            continue;
-        case WGPUFeatureName_DepthClipControl:
-            result.add("depth-clip-control"_s);
-            break;
-        case WGPUFeatureName_Depth32FloatStencil8:
-            result.add("depth32float-stencil8"_s);
-            break;
-        case WGPUFeatureName_TimestampQuery:
-            result.add("timestamp-query"_s);
-            break;
-        case WGPUFeatureName_TextureCompressionBC:
-            result.add("texture-compression-bc"_s);
-            break;
-        case WGPUFeatureName_TextureCompressionETC2:
-            result.add("texture-compression-etc2"_s);
-            break;
-        case WGPUFeatureName_TextureCompressionASTC:
-            result.add("texture-compression-astc"_s);
-            break;
-        case WGPUFeatureName_IndirectFirstInstance:
-            result.add("indirect-first-instance"_s);
-            break;
-        case WGPUFeatureName_ShaderF16:
-            result.add("shader-f16"_s);
-            break;
-        case WGPUFeatureName_RG11B10UfloatRenderable:
-            result.add("rg11b10ufloat-renderable"_s);
-            break;
-        case WGPUFeatureName_BGRA8UnormStorage:
-            result.add("bgra8unorm-storage"_s);
-            break;
-        case WGPUFeatureName_Float32Filterable:
-            result.add("float32-filterable"_s);
-            break;
-        case WGPUFeatureName_Force32:
-            ASSERT_NOT_REACHED();
-            continue;
-        }
-    }
+    for (auto feature : features)
+        result.add(wgpuAdapterFeatureName(feature));
 
     return result;
 }
 
-static Ref<ShaderModule> handleShaderSuccessOrFailure(WebGPU::Device &object, std::variant<WGSL::SuccessfulCheck, WGSL::FailedCheck> &checkResult, const WGPUShaderModuleDescriptor &descriptor, std::optional<ShaderModuleParameters> &shaderModuleParameters)
+static Ref<ShaderModule> handleShaderSuccessOrFailure(WebGPU::Device &object, Variant<WGSL::SuccessfulCheck, WGSL::FailedCheck> &checkResult, const WGPUShaderModuleDescriptor &descriptor, std::optional<ShaderModuleParameters> &shaderModuleParameters)
 {
     if (std::holds_alternative<WGSL::SuccessfulCheck>(checkResult)) {
         if (shaderModuleParameters->hints && descriptor.hintCount) {
@@ -225,7 +203,7 @@ Ref<ShaderModule> Device::createShaderModule(const WGPUShaderModuleDescriptor& d
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ShaderModule);
 
-auto ShaderModule::convertCheckResult(std::variant<WGSL::SuccessfulCheck, WGSL::FailedCheck>&& checkResult) -> CheckResult
+auto ShaderModule::convertCheckResult(Variant<WGSL::SuccessfulCheck, WGSL::FailedCheck>&& checkResult) -> CheckResult
 {
     return WTF::switchOn(WTFMove(checkResult), [](auto&& check) -> CheckResult {
         return std::forward<decltype(check)>(check);
@@ -623,7 +601,7 @@ ShaderModule::FragmentInputs ShaderModule::parseFragmentInputs(const WGSL::AST::
     return result;
 }
 
-ShaderModule::ShaderModule(std::variant<WGSL::SuccessfulCheck, WGSL::FailedCheck>&& checkResult, HashMap<String, Ref<PipelineLayout>>&& pipelineLayoutHints, HashMap<String, WGSL::Reflection::EntryPointInformation>&& entryPointInformation, id<MTLLibrary> library, Device& device)
+ShaderModule::ShaderModule(Variant<WGSL::SuccessfulCheck, WGSL::FailedCheck>&& checkResult, HashMap<String, Ref<PipelineLayout>>&& pipelineLayoutHints, HashMap<String, WGSL::Reflection::EntryPointInformation>&& entryPointInformation, id<MTLLibrary> library, Device& device)
     : m_checkResult(convertCheckResult(WTFMove(checkResult)))
     , m_pipelineLayoutHints(WTFMove(pipelineLayoutHints))
     , m_entryPointInformation(WTFMove(entryPointInformation))
@@ -785,7 +763,7 @@ void ShaderModule::getCompilationInfo(CompletionHandler<void(WGPUCompilationInfo
         WGPUCompilationInfo compilationInfo {
             nullptr,
             static_cast<uint32_t>(compilationMessageData.compilationMessages.size()),
-            compilationMessageData.compilationMessages.data(),
+            compilationMessageData.compilationMessages.span().data(),
         };
         callback(WGPUCompilationInfoRequestStatus_Success, compilationInfo);
     }, [&](const WGSL::FailedCheck& failedCheck) {
@@ -795,18 +773,23 @@ void ShaderModule::getCompilationInfo(CompletionHandler<void(WGPUCompilationInfo
         WGPUCompilationInfo compilationInfo {
             nullptr,
             static_cast<uint32_t>(compilationMessageData.compilationMessages.size()),
-            compilationMessageData.compilationMessages.data(),
+            compilationMessageData.compilationMessages.span().data(),
         };
         callback(WGPUCompilationInfoRequestStatus_Error, compilationInfo);
-    }, [](std::monostate) {
-        ASSERT_NOT_REACHED();
+    }, [&](std::monostate) {
+        WGPUCompilationInfo compilationInfo {
+            nullptr,
+            0u,
+            nullptr,
+        };
+        callback(WGPUCompilationInfoRequestStatus_Error, compilationInfo);
     });
 }
 
 void ShaderModule::setLabel(String&& label)
 {
     if (m_library)
-        m_library.label = label;
+        m_library.label = label.createNSString().get();
 }
 
 static auto wgslBindingType(WGPUBufferBindingType bindingType)
@@ -990,21 +973,21 @@ WGSL::PipelineLayout ShaderModule::convertPipelineLayout(const PipelineLayout& p
             if (entry.value.vertexDynamicOffset) {
                 RELEASE_ASSERT(!(entry.value.vertexDynamicOffset.value() % sizeof(uint32_t)));
                 wgslEntry.vertexBufferDynamicOffset = (vertexOffset + *entry.value.vertexDynamicOffset) / sizeof(uint32_t);
-                maxVertexOffset = std::max<size_t>(maxVertexOffset, *entry.value.vertexDynamicOffset + sizeof(uint32_t));
+                maxVertexOffset = std::max<size_t>(maxVertexOffset, *entry.value.vertexDynamicOffset + sizeof(uint32_t) + vertexOffset);
             }
             wgslEntry.fragmentArgumentBufferIndex = entry.value.argumentBufferIndices[WebGPU::ShaderStage::Fragment];
             wgslEntry.fragmentArgumentBufferSizeIndex = entry.value.bufferSizeArgumentBufferIndices[WebGPU::ShaderStage::Fragment];
             if (entry.value.fragmentDynamicOffset) {
                 RELEASE_ASSERT(!(entry.value.fragmentDynamicOffset.value() % sizeof(uint32_t)));
                 wgslEntry.fragmentBufferDynamicOffset = (fragmentOffset + *entry.value.fragmentDynamicOffset) / sizeof(uint32_t) + RenderBundleEncoder::startIndexForFragmentDynamicOffsets;
-                maxFragmentOffset = std::max<size_t>(maxFragmentOffset, *entry.value.fragmentDynamicOffset + sizeof(uint32_t));
+                maxFragmentOffset = std::max<size_t>(maxFragmentOffset, *entry.value.fragmentDynamicOffset + sizeof(uint32_t) + fragmentOffset);
             }
             wgslEntry.computeArgumentBufferIndex = entry.value.argumentBufferIndices[WebGPU::ShaderStage::Compute];
             wgslEntry.computeArgumentBufferSizeIndex = entry.value.bufferSizeArgumentBufferIndices[WebGPU::ShaderStage::Compute];
             if (entry.value.computeDynamicOffset) {
                 RELEASE_ASSERT(!(entry.value.computeDynamicOffset.value() % sizeof(uint32_t)));
                 wgslEntry.computeBufferDynamicOffset = (computeOffset + *entry.value.computeDynamicOffset) / sizeof(uint32_t);
-                maxComputeOffset = std::max<size_t>(maxComputeOffset, *entry.value.computeDynamicOffset + sizeof(uint32_t));
+                maxComputeOffset = std::max<size_t>(maxComputeOffset, *entry.value.computeDynamicOffset + sizeof(uint32_t) + computeOffset);
             }
             wgslBindGroupLayout.entries.append(wgslEntry);
         }
@@ -1090,4 +1073,52 @@ void wgpuShaderModuleGetCompilationInfoWithBlock(WGPUShaderModule shaderModule, 
 void wgpuShaderModuleSetLabel(WGPUShaderModule shaderModule, const char* label)
 {
     WebGPU::protectedFromAPI(shaderModule)->setLabel(WebGPU::fromAPI(label));
+}
+
+String wgpuAdapterFeatureName(WGPUFeatureName feature)
+{
+    switch (feature) {
+    case WGPUFeatureName_Undefined:
+        return emptyString();
+    case WGPUFeatureName_DepthClipControl:
+        return "depth-clip-control"_s;
+    case WGPUFeatureName_Depth32FloatStencil8:
+        return "depth32float-stencil8"_s;
+    case WGPUFeatureName_TimestampQuery:
+        return "timestamp-query"_s;
+    case WGPUFeatureName_TextureCompressionBC:
+        return "texture-compression-bc"_s;
+    case WGPUFeatureName_TextureCompressionBCSliced3D:
+        return "texture-compression-bc-sliced-3d"_s;
+    case WGPUFeatureName_TextureCompressionETC2:
+        return "texture-compression-etc2"_s;
+    case WGPUFeatureName_TextureCompressionASTC:
+        return "texture-compression-astc"_s;
+    case WGPUFeatureName_TextureCompressionASTCSliced3D:
+        return "texture-compression-astc-sliced-3d"_s;
+    case WGPUFeatureName_IndirectFirstInstance:
+        return "indirect-first-instance"_s;
+    case WGPUFeatureName_ShaderF16:
+        return "shader-f16"_s;
+    case WGPUFeatureName_RG11B10UfloatRenderable:
+        return "rg11b10ufloat-renderable"_s;
+    case WGPUFeatureName_BGRA8UnormStorage:
+        return "bgra8unorm-storage"_s;
+    case WGPUFeatureName_Float32Filterable:
+        return "float32-filterable"_s;
+    case WGPUFeatureName_Float32Blendable:
+        return "float32-blendable"_s;
+    case WGPUFeatureName_ClipDistances:
+        return "clip-distances"_s;
+    case WGPUFeatureName_DualSourceBlending:
+        return "dual-source-blending"_s;
+    case WGPUFeatureName_Float16Renderable:
+        return "float16-renderable"_s;
+    case WGPUFeatureName_Float32Renderable:
+        return "float32-renderable"_s;
+    case WGPUFeatureName_CoreFeaturesAndLimits:
+        return "core-features-and-limits"_s;
+    case WGPUFeatureName_Force32:
+        return emptyString();
+    }
 }

@@ -87,7 +87,6 @@
     String uiProcessBundleIdentifier;
     int latencyQOS;
     int throughputQOS;
-    String presentingApplicationBundleIdentifier;
 #endif
 
     ProcessID presentingApplicationPID;
@@ -138,10 +137,6 @@
 #endif
 
     std::optional<WebKit::WebProcessDataStoreParameters> websiteDataStoreParameters;
-    
-#if PLATFORM(IOS) || PLATFORM(VISION)
-    Vector<WebKit::SandboxExtensionHandle> compilerServiceExtensionHandles;
-#endif
 
     std::optional<WebKit::SandboxExtensionHandle> mobileGestaltExtensionHandle;
     std::optional<WebKit::SandboxExtensionHandle> launchServicesExtensionHandle;
@@ -151,10 +146,6 @@
 #if HAVE(VIDEO_RESTRICTED_DECODING)
     bool enableDecodingHEIC;
     bool enableDecodingAVIF;
-#endif
-
-#if PLATFORM(IOS_FAMILY)
-    Vector<WebKit::SandboxExtensionHandle> dynamicIOKitExtensionHandles;
 #endif
 
 #if PLATFORM(VISION)
@@ -180,8 +171,11 @@
 #endif
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
-    OptionSet<WebKit::DMABufRendererBufferMode> dmaBufRendererBufferMode;
+    OptionSet<WebKit::RendererBufferTransportMode> rendererBufferTransportMode;
     WebCore::SystemSettings::State systemSettings;
+    std::optional<WTF::MemoryPressureHandler::Configuration> memoryPressureHandlerConfiguration;
+    bool disableFontHintingForTesting;
+    OptionSet<WebKit::AvailableInputDevices> availableInputDevices;
 #endif
 
 #if PLATFORM(GTK)
@@ -200,11 +194,6 @@
     WebKit::AccessibilityPreferences accessibilityPreferences;
 #if PLATFORM(IOS_FAMILY)
     bool applicationAccessibilityEnabled;
-#endif
-
-#if PLATFORM(GTK) || PLATFORM(WPE)
-    std::optional<WTF::MemoryPressureHandler::Configuration> memoryPressureHandlerConfiguration;
-    bool disableFontHintingForTesting;
 #endif
 
 #if USE(GLIB)
@@ -228,4 +217,8 @@
 
     Seconds memoryFootprintPollIntervalForTesting;
     Vector<size_t> memoryFootprintNotificationThresholds;
+
+#if ENABLE(NOTIFY_BLOCKING)
+    Vector<std::pair<String, uint64_t>> notifyState;
+#endif
 };

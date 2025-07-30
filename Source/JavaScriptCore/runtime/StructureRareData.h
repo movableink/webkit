@@ -67,14 +67,11 @@ public:
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
     template<typename CellType, SubspaceAccess>
-    static GCClient::IsoSubspace* subspaceFor(VM& vm)
-    {
-        return &vm.structureRareDataSpace();
-    }
+    inline static GCClient::IsoSubspace* subspaceFor(VM&); // Defined in StructureRareDataInlines.h
 
     static StructureRareData* create(VM&, Structure*);
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
 
     DECLARE_VISIT_CHILDREN;

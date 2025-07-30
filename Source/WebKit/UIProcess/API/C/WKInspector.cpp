@@ -102,7 +102,7 @@ bool WKInspectorIsAttached(WKInspectorRef inspectorRef)
 
 void WKInspectorAttach(WKInspectorRef inspectorRef)
 {
-    auto inspector = toImpl(inspectorRef);
+    Ref inspector = *toImpl(inspectorRef);
     inspector->attach(inspector->attachmentSide());
 }
 

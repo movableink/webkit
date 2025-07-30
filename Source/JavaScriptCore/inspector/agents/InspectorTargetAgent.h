@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -70,7 +70,7 @@ private:
 
     Inspector::FrontendRouter& m_router;
     std::unique_ptr<TargetFrontendDispatcher> m_frontendDispatcher;
-    Ref<TargetBackendDispatcher> m_backendDispatcher;
+    const Ref<TargetBackendDispatcher> m_backendDispatcher;
     UncheckedKeyHashMap<String, InspectorTarget*> m_targets;
     bool m_isConnected { false };
     bool m_shouldPauseOnStart { false };

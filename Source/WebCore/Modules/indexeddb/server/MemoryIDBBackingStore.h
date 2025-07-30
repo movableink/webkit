@@ -51,6 +51,7 @@ public:
     uint64_t databaseVersion() final;
     void setDatabaseInfo(const IDBDatabaseInfo&);
     bool hasObjectStore(IDBObjectStoreIdentifier objectStoreIdentifier) { return !!infoForObjectStore(objectStoreIdentifier); }
+    MemoryObjectStore* objectStoreForName(const String& name) const;
 
     void renameObjectStoreForVersionChangeAbort(MemoryObjectStore&, const String& oldName);
     void removeObjectStoreForVersionChangeAbort(MemoryObjectStore&);
@@ -65,7 +66,6 @@ private:
     IDBError deleteObjectStore(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier) final;
     IDBError renameObjectStore(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier, const String& newName) final;
     IDBError clearObjectStore(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier) final;
-    IDBError createIndex(const IDBResourceIdentifier& transactionIdentifier, const IDBIndexInfo&) final;
     IDBError deleteIndex(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier, IDBIndexIdentifier) final;
     IDBError renameIndex(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier, IDBIndexIdentifier, const String& newName) final;
     IDBError keyExistsInObjectStore(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier, const IDBKeyData&, bool& keyExists) final;
@@ -90,6 +90,11 @@ private:
 
     bool hasTransaction(const IDBResourceIdentifier& identifier) const final { return m_transactions.contains(identifier); }
 
+    IDBError addIndex(const IDBResourceIdentifier& transactionIdentifier, const IDBIndexInfo&) final;
+    void revertAddIndex(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier, IDBIndexIdentifier) final;
+    IDBError updateIndexRecordsWithIndexKey(const IDBResourceIdentifier& transactionIdentifier, const IDBIndexInfo&, const IDBKeyData&, const IndexKey&, std::optional<int64_t> recordID) final;
+    void forEachObjectStoreRecord(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier, Function<void(RecordOrError&&)>&&) final;
+
     RefPtr<MemoryObjectStore> takeObjectStoreByIdentifier(IDBObjectStoreIdentifier);
 
     void close() final;
@@ -100,8 +105,7 @@ private:
     IDBDatabaseIdentifier m_identifier;
     std::unique_ptr<IDBDatabaseInfo> m_databaseInfo;
 
-    HashMap<IDBResourceIdentifier, std::unique_ptr<MemoryBackingStoreTransaction>> m_transactions;
-
+    HashMap<IDBResourceIdentifier, Ref<MemoryBackingStoreTransaction>> m_transactions;
     HashMap<IDBObjectStoreIdentifier, RefPtr<MemoryObjectStore>> m_objectStoresByIdentifier;
     HashMap<String, RefPtr<MemoryObjectStore>> m_objectStoresByName;
 };

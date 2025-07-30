@@ -26,6 +26,7 @@
 #if PLATFORM(IOS_FAMILY)
 
 #import <UIKit/UIViewController.h>
+#import <wtf/RetainPtr.h>
 
 @class WKContentView;
 @protocol WKFileUploadPanelDelegate;

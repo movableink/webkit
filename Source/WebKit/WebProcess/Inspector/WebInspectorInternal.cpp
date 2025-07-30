@@ -75,28 +75,27 @@ WebPage* WebInspector::page() const
     return m_page.get();
 }
 
-void WebInspector::openLocalInspectorFrontend(bool underTest)
+void WebInspector::openLocalInspectorFrontend()
 {
-    WebProcess::singleton().parentProcessConnection()->send(Messages::WebInspectorUIProxy::OpenLocalInspectorFrontend(canAttachWindow(), underTest), m_page->identifier());
+    WebProcess::singleton().parentProcessConnection()->send(Messages::WebInspectorUIProxy::RequestOpenLocalInspectorFrontend(), m_page->identifier());
 }
 
 void WebInspector::setFrontendConnection(IPC::Connection::Handle&& connectionHandle)
 {
     // We might receive multiple updates if this web process got swapped into a WebPageProxy
     // shortly after another process established the connection.
-    if (m_frontendConnection) {
-        m_frontendConnection->invalidate();
-        m_frontendConnection = nullptr;
-    }
+    if (RefPtr frontendConnection = std::exchange(m_frontendConnection, nullptr))
+        frontendConnection->invalidate();
 
     if (!connectionHandle)
         return;
 
-    m_frontendConnection = IPC::Connection::createClientConnection(IPC::Connection::Identifier { WTFMove(connectionHandle) });
-    m_frontendConnection->open(*this);
+    Ref frontendConnection = IPC::Connection::createClientConnection(IPC::Connection::Identifier { WTFMove(connectionHandle) });
+    m_frontendConnection = frontendConnection.copyRef();
+    frontendConnection->open(*this);
 
     for (auto& callback : m_frontendConnectionActions)
-        callback();
+        callback(frontendConnection.get());
     m_frontendConnectionActions.clear();
 }
 
@@ -121,10 +120,10 @@ void WebInspector::bringToFront()
     WebProcess::singleton().parentProcessConnection()->send(Messages::WebInspectorUIProxy::BringToFront(), m_page->identifier());
 }
 
-void WebInspector::whenFrontendConnectionEstablished(Function<void()>&& callback)
+void WebInspector::whenFrontendConnectionEstablished(Function<void(IPC::Connection&)>&& callback)
 {
-    if (m_frontendConnection) {
-        callback();
+    if (RefPtr connection = m_frontendConnection) {
+        callback(*connection);
         return;
     }
 
@@ -132,12 +131,13 @@ void WebInspector::whenFrontendConnectionEstablished(Function<void()>&& callback
 }
 
 // Called by WebInspector messages
-void WebInspector::show()
+void WebInspector::show(CompletionHandler<void()>&& completionHandler)
 {
     if (!m_page->corePage())
         return;
 
     m_page->corePage()->inspectorController().show();
+    completionHandler();
 }
 
 void WebInspector::close()
@@ -165,10 +165,8 @@ void WebInspector::showConsole()
     if (!m_page->corePage())
         return;
 
-    m_page->corePage()->inspectorController().show();
-
-    whenFrontendConnectionEstablished([=, this] {
-        m_frontendConnection->send(Messages::WebInspectorUI::ShowConsole(), 0);
+    whenFrontendConnectionEstablished([](auto& frontendConnection) {
+        frontendConnection.send(Messages::WebInspectorUI::ShowConsole(), 0);
     });
 }
 
@@ -177,10 +175,8 @@ void WebInspector::showResources()
     if (!m_page->corePage())
         return;
 
-    m_page->corePage()->inspectorController().show();
-
-    whenFrontendConnectionEstablished([=, this] {
-        m_frontendConnection->send(Messages::WebInspectorUI::ShowResources(), 0);
+    whenFrontendConnectionEstablished([](auto& frontendConnection) {
+        frontendConnection.send(Messages::WebInspectorUI::ShowResources(), 0);
     });
 }
 
@@ -193,12 +189,10 @@ void WebInspector::showMainResourceForFrame(WebCore::FrameIdentifier frameIdenti
     if (!m_page->corePage())
         return;
 
-    m_page->corePage()->inspectorController().show();
-
     String inspectorFrameIdentifier = m_page->corePage()->inspectorController().ensurePageAgent().frameId(frame->coreLocalFrame());
 
-    whenFrontendConnectionEstablished([=, this] {
-        m_frontendConnection->send(Messages::WebInspectorUI::ShowMainResourceForFrame(inspectorFrameIdentifier), 0);
+    whenFrontendConnectionEstablished([inspectorFrameIdentifier](auto& frontendConnection) {
+        frontendConnection.send(Messages::WebInspectorUI::ShowMainResourceForFrame(inspectorFrameIdentifier), 0);
     });
 }
 
@@ -207,10 +201,8 @@ void WebInspector::startPageProfiling()
     if (!m_page->corePage())
         return;
 
-    m_page->corePage()->inspectorController().show();
-
-    whenFrontendConnectionEstablished([=, this] {
-        m_frontendConnection->send(Messages::WebInspectorUI::StartPageProfiling(), 0);
+    whenFrontendConnectionEstablished([](auto& frontendConnection) {
+        frontendConnection.send(Messages::WebInspectorUI::StartPageProfiling(), 0);
     });
 }
 
@@ -219,10 +211,8 @@ void WebInspector::stopPageProfiling()
     if (!m_page->corePage())
         return;
 
-    m_page->corePage()->inspectorController().show();
-
-    whenFrontendConnectionEstablished([=, this] {
-        m_frontendConnection->send(Messages::WebInspectorUI::StopPageProfiling(), 0);
+    whenFrontendConnectionEstablished([](auto& frontendConnection) {
+        frontendConnection.send(Messages::WebInspectorUI::StopPageProfiling(), 0);
     });
 }
 
@@ -231,8 +221,8 @@ void WebInspector::startElementSelection()
     if (!m_page->corePage())
         return;
 
-    whenFrontendConnectionEstablished([=, this] {
-        m_frontendConnection->send(Messages::WebInspectorUI::StartElementSelection(), 0);
+    whenFrontendConnectionEstablished([](auto& frontendConnection) {
+        frontendConnection.send(Messages::WebInspectorUI::StartElementSelection(), 0);
     });
 }
 
@@ -241,8 +231,8 @@ void WebInspector::stopElementSelection()
     if (!m_page->corePage())
         return;
 
-    whenFrontendConnectionEstablished([=, this] {
-        m_frontendConnection->send(Messages::WebInspectorUI::StopElementSelection(), 0);
+    whenFrontendConnectionEstablished([](auto& frontendConnection) {
+        frontendConnection.send(Messages::WebInspectorUI::StopElementSelection(), 0);
     });
 }
 
@@ -270,6 +260,8 @@ void WebInspector::setEmulatedConditions(std::optional<int64_t>&& bytesPerSecond
 
 #endif // ENABLE(INSPECTOR_NETWORK_THROTTLING)
 
+// FIXME <https://webkit.org/b/283435>: Remove this unused canAttachWindow function. Its return value is no longer used
+// or respected by the UI process.
 bool WebInspector::canAttachWindow()
 {
     if (!m_page->corePage())
@@ -284,7 +276,7 @@ bool WebInspector::canAttachWindow()
         return true;
 
     // Don't allow the attach if the window would be too small to accommodate the minimum inspector size.
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->corePage()->mainFrame());
+    RefPtr localMainFrame = m_page->localMainFrame();
     if (!localMainFrame)
         return false;
     unsigned inspectedPageHeight = localMainFrame->view()->visibleHeight();

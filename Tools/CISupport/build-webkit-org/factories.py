@@ -94,9 +94,6 @@ class TestFactory(Factory):
         Factory.__init__(self, platform, configuration, architectures, False, additionalArguments, device_model, **kwargs)
         self.getProduct()
 
-        if platform == 'win':
-            self.addStep(InstallWindowsDependencies())
-
         if platform.startswith(('mac', 'ios-simulator', 'visionos-simulator')):
             self.addStep(WaitForCrashCollection())
 
@@ -112,11 +109,10 @@ class TestFactory(Factory):
             self.addStep(ExtractTestResults())
             self.addStep(SetPermissions())
 
-        if platform.startswith(('win', 'mac', 'ios-simulator')):
+        if platform.startswith(('win', 'mac', 'ios-simulator')) and self.LayoutTestClass != RunWorldLeaksTests:
             self.addStep(RunAPITests())
 
-        # FIXME: Re-enable these tests for Monterey once webkit.org/b/239463 is resolved.
-        if platform.startswith('mac') and (platform != 'mac-monterey'):
+        if platform.startswith('mac'):
             self.addStep(RunLLDBWebKitTests())
 
         self.addStep(RunWebKitPyTests())
@@ -215,8 +211,6 @@ class TestJSCFactory(Factory):
         Factory.__init__(self, platform, configuration, architectures, False, additionalArguments, device_model)
         self.addStep(DownloadBuiltProduct())
         self.addStep(ExtractBuiltProduct())
-        if platform == 'win':
-            self.addStep(InstallWindowsDependencies())
         self.addStep(RunJavaScriptCoreTests())
 
 
@@ -259,12 +253,45 @@ class TestWebDriverFactory(Factory):
         self.addStep(RunWebDriverTests())
 
 
+class TestMVTFactory(Factory):
+    def __init__(self, platform, configuration, architectures, additionalArguments=None, device_model=None):
+        Factory.__init__(self, platform, configuration, architectures, False, additionalArguments, device_model)
+        self.addStep(DownloadBuiltProduct())
+        self.addStep(ExtractBuiltProduct())
+        self.addStep(RunMVTTests())
+
+
+class TestLayoutAndAPIOnlyFactory(Factory):
+    def __init__(self, platform, configuration, architectures, additionalArguments=None, device_model=None):
+        Factory.__init__(self, platform, configuration, architectures, False, additionalArguments, device_model)
+        self.addStep(DownloadBuiltProduct())
+        self.addStep(ExtractBuiltProduct())
+        self.addStep(RunWebKitTests())
+        if not platform.startswith('win'):
+            self.addStep(RunDashboardTests())
+        self.addStep(ArchiveTestResults())
+        self.addStep(UploadTestResults())
+        self.addStep(ExtractTestResults())
+        self.addStep(SetPermissions())
+        if platform.startswith("gtk"):
+            self.addStep(RunGtkAPITests())
+        elif platform == "wpe":
+            self.addStep(RunWPEAPITests())
+        else:
+            self.addStep(RunAPITests())
+
+
 class TestWebKit1Factory(TestFactory):
     LayoutTestClass = RunWebKit1Tests
 
 
 class TestWebKit1AllButJSCFactory(TestWebKit1Factory):
     JSCTestClass = None
+
+
+class TestWorldLeaksFactory(TestFactory):
+    JSCTestClass = None
+    LayoutTestClass = RunWorldLeaksTests
 
 
 class BuildAndPerfTestFactory(Factory):

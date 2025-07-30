@@ -1,24 +1,3 @@
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare/bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare/bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare/bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare/bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare/bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare/bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare/bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare/bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare/bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare/bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare/bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare/bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare/bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare/bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare/bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare/bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare/bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare/bare
-CONSOLE MESSAGE: TypeError: Module name, 'bare/to-bare' does not resolve to a valid URL.
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare/bare
-CONSOLE MESSAGE: value in specifier map cannot be parsed as URL bare/bare
 
 
 PASS bare/bare: <script src type=module>

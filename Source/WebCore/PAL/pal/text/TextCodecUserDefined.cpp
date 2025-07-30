@@ -75,18 +75,16 @@ static Vector<uint8_t> encodeComplexUserDefined(StringView string, UnencodableHa
     return result;
 }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 Vector<uint8_t> TextCodecUserDefined::encode(StringView string, UnencodableHandling handling) const
 {
     {
         Vector<uint8_t> result(string.length());
-        auto* bytes = result.data();
+        size_t index = 0;
 
         // Convert and simultaneously do a check to see if it's all ASCII.
         UChar ored = 0;
         for (auto character : string.codeUnits()) {
-            *bytes++ = character;
+            result[index++] = character;
             ored |= character;
         }
 
@@ -97,7 +95,5 @@ Vector<uint8_t> TextCodecUserDefined::encode(StringView string, UnencodableHandl
     // If it wasn't all ASCII, call the function that handles more-complex cases.
     return encodeComplexUserDefined(string, handling);
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 } // namespace PAL

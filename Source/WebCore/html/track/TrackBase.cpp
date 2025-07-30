@@ -32,6 +32,7 @@
 #include "TrackListBase.h"
 #include "TrackPrivateBase.h"
 #include "TrackPrivateBaseClient.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/Language.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>

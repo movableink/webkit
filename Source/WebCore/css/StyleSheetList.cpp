@@ -48,28 +48,32 @@ StyleSheetList::~StyleSheetList() = default;
 inline const Vector<RefPtr<StyleSheet>>& StyleSheetList::styleSheets() const
 {
     if (m_document)
-        return m_document->styleScope().styleSheetsForStyleSheetList();
+        return protectedDocument()->checkedStyleScope()->styleSheetsForStyleSheetList();
     if (m_shadowRoot)
-        return m_shadowRoot->styleScope().styleSheetsForStyleSheetList();
+        return protectedShadowRoot()->checkedStyleScope()->styleSheetsForStyleSheetList();
     return m_detachedStyleSheets;
 }
+
+RefPtr<Document> StyleSheetList::protectedDocument() const { return m_document.get(); }
+
+RefPtr<ShadowRoot> StyleSheetList::protectedShadowRoot() const { return m_shadowRoot.get(); }
 
 Node* StyleSheetList::ownerNode() const
 {
     if (m_document)
         return m_document.get();
-    return m_shadowRoot;
+    return m_shadowRoot.get();
 }
 
 void StyleSheetList::detach()
 {
     if (m_document) {
         ASSERT(!m_shadowRoot);
-        m_detachedStyleSheets = m_document->styleScope().styleSheetsForStyleSheetList();
+        m_detachedStyleSheets = protectedDocument()->checkedStyleScope()->styleSheetsForStyleSheetList();
         m_document = nullptr;
     } else if (m_shadowRoot) {
         ASSERT(!m_document);
-        m_detachedStyleSheets = m_shadowRoot->styleScope().styleSheetsForStyleSheetList();
+        m_detachedStyleSheets = protectedShadowRoot()->checkedStyleScope()->styleSheetsForStyleSheetList();
         m_shadowRoot = nullptr;
     } else
         ASSERT_NOT_REACHED();
@@ -97,7 +101,7 @@ CSSStyleSheet* StyleSheetList::namedItem(const AtomString& name) const
     // ### Bad implementation because returns a single element (are IDs always unique?)
     // and doesn't look for name attribute.
     // But unicity of stylesheet ids is good practice anyway ;)
-    if (RefPtr element = dynamicDowncast<HTMLStyleElement>(m_document->getElementById(name)))
+    if (RefPtr element = dynamicDowncast<HTMLStyleElement>(protectedDocument()->getElementById(name)))
         return element->sheet();
     return nullptr;
 }

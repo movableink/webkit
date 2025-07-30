@@ -81,9 +81,5 @@ template <class R, class RR> bool operator==(const CachedResourceHandle<R>& h, c
 { 
     return h.get() == res; 
 }
-template <class R, class RR> bool operator==(const RR* res, const CachedResourceHandle<R>& h) 
-{ 
-    return h.get() == res; 
-}
 
 } // namespace WebCore

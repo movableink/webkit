@@ -6,11 +6,9 @@
 <script>
 function end() {
     document.documentElement.removeAttribute("class");
-    testRunner?.notifyDone();
 }
 
 window.onload = async () => {
-    testRunner?.waitUntilDone();
     if (UIHelper.isIOSFamily()) {
         const eventStreamData = new UIHelper.EventStreamBuilder()
             .begin(10, 10)

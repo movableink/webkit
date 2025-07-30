@@ -28,6 +28,8 @@
 
 #import <algorithm>
 #import <limits>
+#import <ranges>
+#import <sys/sysctl.h>
 #import <wtf/MathExtras.h>
 #import <wtf/PageBlock.h>
 #import <wtf/StdLibExtras.h>
@@ -96,12 +98,14 @@ static HardwareCapabilities::BaseCapabilities baseCapabilities(id<MTLDevice> dev
     }
 #endif
 
-    return {
+    return HardwareCapabilities::BaseCapabilities {
         .argumentBuffersTier = [device argumentBuffersSupport],
-        .supportsNonPrivateDepthStencilTextures = false, // To be filled in by the caller.
         .timestampCounterSet = timestampCounterSet,
         .statisticCounterSet = statisticCounterSet,
+        .memoryBarrierLimit = std::numeric_limits<decltype(HardwareCapabilities::BaseCapabilities::memoryBarrierLimit)>::max(),
+        .supportsNonPrivateDepthStencilTextures = false, // To be filled in by the caller.
         .canPresentRGB10A2PixelFormats = false, // To be filled in by the caller.
+        .supportsResidencySets = false,
     };
 }
 
@@ -109,14 +113,21 @@ static Vector<WGPUFeatureName> baseFeatures(id<MTLDevice> device, const Hardware
 {
     Vector<WGPUFeatureName> features;
 
+    features.append(WGPUFeatureName_CoreFeaturesAndLimits);
+    features.append(WGPUFeatureName_Float16Renderable);
+    features.append(WGPUFeatureName_Float32Renderable);
+    features.append(WGPUFeatureName_Float32Blendable);
+
     features.append(WGPUFeatureName_DepthClipControl);
     features.append(WGPUFeatureName_Depth32FloatStencil8);
 
     UNUSED_PARAM(baseCapabilities);
 
-#if PLATFORM(MAC)
-    if (device.supportsBCTextureCompression)
+#if !PLATFORM(WATCHOS)
+    if (device.supportsBCTextureCompression) {
         features.append(WGPUFeatureName_TextureCompressionBC);
+        features.append(WGPUFeatureName_TextureCompressionBCSliced3D);
+    }
 #else
     UNUSED_PARAM(device);
 #endif
@@ -139,19 +150,34 @@ static Vector<WGPUFeatureName> baseFeatures(id<MTLDevice> device, const Hardware
     return features;
 }
 
+bool isShaderValidationEnabled(id<MTLDevice> device)
+{
+    static bool result = false;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        // Workaround for rdar://141660277
+        NSString* deviceName = NSStringFromClass([device class]);
+        if ((result = [deviceName containsString:@"Debug"] || [deviceName containsString:@"LegacySV"] || [deviceName containsString:@"CaptureMTLDevice"]))
+            WTFLogAlways("WebGPU: Using DEBUG Metal device: retaining references"); // NOLINT
+    });
+    return result;
+}
+
 static HardwareCapabilities apple4(id<MTLDevice> device)
 {
     auto baseCapabilities = WebGPU::baseCapabilities(device);
 
     baseCapabilities.supportsNonPrivateDepthStencilTextures = true;
     baseCapabilities.canPresentRGB10A2PixelFormats = false;
+    baseCapabilities.memoryBarrierLimit = isShaderValidationEnabled(device) ? 0u : std::numeric_limits<decltype(baseCapabilities.memoryBarrierLimit)>::max();
 
     auto features = WebGPU::baseFeatures(device, baseCapabilities);
 
     features.append(WGPUFeatureName_TextureCompressionETC2);
     features.append(WGPUFeatureName_TextureCompressionASTC);
+    features.append(WGPUFeatureName_TextureCompressionASTCSliced3D);
 
-    std::sort(features.begin(), features.end());
+    std::ranges::sort(features);
 
     return {
         defaultLimits(),
@@ -171,8 +197,9 @@ static HardwareCapabilities apple5(id<MTLDevice> device)
 
     features.append(WGPUFeatureName_TextureCompressionETC2);
     features.append(WGPUFeatureName_TextureCompressionASTC);
+    features.append(WGPUFeatureName_TextureCompressionASTCSliced3D);
 
-    std::sort(features.begin(), features.end());
+    std::ranges::sort(features);
 
     return {
         defaultLimits(),
@@ -188,13 +215,15 @@ static HardwareCapabilities apple6(id<MTLDevice> device)
 
     baseCapabilities.supportsNonPrivateDepthStencilTextures = true;
     baseCapabilities.canPresentRGB10A2PixelFormats = false;
+    baseCapabilities.supportsResidencySets = false;
 
     auto features = WebGPU::baseFeatures(device, baseCapabilities);
 
     features.append(WGPUFeatureName_TextureCompressionETC2);
     features.append(WGPUFeatureName_TextureCompressionASTC);
+    features.append(WGPUFeatureName_TextureCompressionASTCSliced3D);
 
-    std::sort(features.begin(), features.end());
+    std::ranges::sort(features);
 
     return {
         {
@@ -230,6 +259,10 @@ static HardwareCapabilities apple6(id<MTLDevice> device)
             .maxComputeWorkgroupSizeY =    1024,
             .maxComputeWorkgroupSizeZ =    1024,
             .maxComputeWorkgroupsPerDimension =    largeReasonableLimit(),
+            .maxStorageBuffersInFragmentStage = UINT32_MAX,
+            .maxStorageTexturesInFragmentStage = UINT32_MAX,
+            .maxStorageBuffersInVertexStage = UINT32_MAX,
+            .maxStorageTexturesInVertexStage = UINT32_MAX,
         },
         WTFMove(features),
         baseCapabilities,
@@ -242,13 +275,15 @@ static HardwareCapabilities apple7(id<MTLDevice> device)
 
     baseCapabilities.supportsNonPrivateDepthStencilTextures = true;
     baseCapabilities.canPresentRGB10A2PixelFormats = false;
+    baseCapabilities.supportsResidencySets = false;
 
     auto features = WebGPU::baseFeatures(device, baseCapabilities);
 
     features.append(WGPUFeatureName_TextureCompressionETC2);
     features.append(WGPUFeatureName_TextureCompressionASTC);
+    features.append(WGPUFeatureName_TextureCompressionASTCSliced3D);
 
-    std::sort(features.begin(), features.end());
+    std::ranges::sort(features);
 
     return {
         {
@@ -284,6 +319,10 @@ static HardwareCapabilities apple7(id<MTLDevice> device)
             .maxComputeWorkgroupSizeY =    1024,
             .maxComputeWorkgroupSizeZ =    1024,
             .maxComputeWorkgroupsPerDimension =    largeReasonableLimit(),
+            .maxStorageBuffersInFragmentStage = UINT32_MAX,
+            .maxStorageTexturesInFragmentStage = UINT32_MAX,
+            .maxStorageBuffersInVertexStage = UINT32_MAX,
+            .maxStorageTexturesInVertexStage = UINT32_MAX,
         },
         WTFMove(features),
         baseCapabilities,
@@ -297,10 +336,14 @@ static HardwareCapabilities mac2(id<MTLDevice> device)
 
     baseCapabilities.supportsNonPrivateDepthStencilTextures = false;
     baseCapabilities.canPresentRGB10A2PixelFormats = true;
+    if (![device supportsFamily:MTLGPUFamilyApple4])
+        baseCapabilities.memoryBarrierLimit = 0;
+    else if (![device supportsFamily:MTLGPUFamilyApple8])
+        baseCapabilities.memoryBarrierLimit = 512;
 
     auto features = WebGPU::baseFeatures(device, baseCapabilities);
 
-    std::sort(features.begin(), features.end());
+    std::ranges::sort(features);
 
     return {
         {
@@ -336,6 +379,10 @@ static HardwareCapabilities mac2(id<MTLDevice> device)
             .maxComputeWorkgroupSizeY =    1024,
             .maxComputeWorkgroupSizeZ =    1024,
             .maxComputeWorkgroupsPerDimension =    largeReasonableLimit(),
+            .maxStorageBuffersInFragmentStage = UINT32_MAX,
+            .maxStorageTexturesInFragmentStage = UINT32_MAX,
+            .maxStorageBuffersInVertexStage = UINT32_MAX,
+            .maxStorageTexturesInVertexStage = UINT32_MAX,
         },
         WTFMove(features),
         baseCapabilities,
@@ -353,7 +400,7 @@ template <typename T>
 static T mergeAlignment(T previous, T next)
 {
     // https://gpuweb.github.io/gpuweb/#limit-class-alignment
-    return std::min(WTF::roundUpToPowerOfTwo(previous), WTF::roundUpToPowerOfTwo(next));
+    return std::min(roundUpToPowerOfTwo(previous), roundUpToPowerOfTwo(next));
 };
 
 static WGPULimits mergeLimits(const WGPULimits& previous, const WGPULimits& next)
@@ -391,13 +438,17 @@ static WGPULimits mergeLimits(const WGPULimits& previous, const WGPULimits& next
         .maxComputeWorkgroupSizeY = mergeMaximum(previous.maxComputeWorkgroupSizeY, next.maxComputeWorkgroupSizeY),
         .maxComputeWorkgroupSizeZ = mergeMaximum(previous.maxComputeWorkgroupSizeZ, next.maxComputeWorkgroupSizeZ),
         .maxComputeWorkgroupsPerDimension = mergeMaximum(previous.maxComputeWorkgroupsPerDimension, next.maxComputeWorkgroupsPerDimension),
+        .maxStorageBuffersInFragmentStage = mergeMaximum(previous.maxStorageBuffersInFragmentStage, next.maxStorageBuffersInFragmentStage),
+        .maxStorageTexturesInFragmentStage = mergeMaximum(previous.maxStorageTexturesInFragmentStage, next.maxStorageTexturesInFragmentStage),
+        .maxStorageBuffersInVertexStage = mergeMaximum(previous.maxStorageBuffersInVertexStage, next.maxStorageBuffersInVertexStage),
+        .maxStorageTexturesInVertexStage = mergeMaximum(previous.maxStorageTexturesInVertexStage, next.maxStorageTexturesInVertexStage),
     };
 };
 
 static Vector<WGPUFeatureName> mergeFeatures(const Vector<WGPUFeatureName>& previous, const Vector<WGPUFeatureName>& next)
 {
-    ASSERT(std::is_sorted(previous.begin(), previous.end()));
-    ASSERT(std::is_sorted(next.begin(), next.end()));
+    ASSERT(std::ranges::is_sorted(previous));
+    ASSERT(std::ranges::is_sorted(next));
 
     Vector<WGPUFeatureName> result(previous.size() + next.size());
     auto end = mergeDeduplicatedSorted(previous.begin(), previous.end(), next.begin(), next.end(), result.begin());
@@ -410,17 +461,39 @@ static HardwareCapabilities::BaseCapabilities mergeBaseCapabilities(const Hardwa
     ASSERT(previous.argumentBuffersTier == next.argumentBuffersTier);
     ASSERT((!previous.timestampCounterSet && !next.timestampCounterSet) || [previous.timestampCounterSet isEqual:next.timestampCounterSet]);
     ASSERT(!previous.statisticCounterSet || [previous.statisticCounterSet isEqual:next.statisticCounterSet]);
-    return {
-        previous.argumentBuffersTier,
-        previous.supportsNonPrivateDepthStencilTextures || next.supportsNonPrivateDepthStencilTextures,
-        previous.timestampCounterSet,
-        previous.statisticCounterSet,
-        previous.canPresentRGB10A2PixelFormats || next.canPresentRGB10A2PixelFormats,
+    return HardwareCapabilities::BaseCapabilities {
+        .argumentBuffersTier = previous.argumentBuffersTier,
+        .timestampCounterSet = previous.timestampCounterSet,
+        .statisticCounterSet = previous.statisticCounterSet,
+        .memoryBarrierLimit = std::min(previous.memoryBarrierLimit, next.memoryBarrierLimit),
+        .supportsNonPrivateDepthStencilTextures = previous.supportsNonPrivateDepthStencilTextures || next.supportsNonPrivateDepthStencilTextures,
+        .canPresentRGB10A2PixelFormats = previous.canPresentRGB10A2PixelFormats || next.canPresentRGB10A2PixelFormats,
+        .supportsResidencySets = previous.supportsResidencySets || next.supportsResidencySets,
     };
+}
+
+static bool isPhysicalHardware()
+{
+#if PLATFORM(IOS_FAMILY_SIMULATOR)
+    return false;
+#else
+    static bool result = true;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        uint32_t isVM = 0;
+        size_t size = sizeof(isVM);
+        if (!sysctlbyname("kern.hv_vmm_present", &isVM, &size, NULL, 0))
+            result = isVM ? [[NSUserDefaults standardUserDefaults] boolForKey:@"WebKitAllowWebGPUOnVMs"] : true;
+    });
+    return result;
+#endif
 }
 
 static std::optional<HardwareCapabilities> rawHardwareCapabilities(id<MTLDevice> device)
 {
+    if (!isPhysicalHardware())
+        return std::nullopt;
+
     std::optional<HardwareCapabilities> result;
 
     auto merge = [&](const HardwareCapabilities& capabilities) {
@@ -521,15 +594,23 @@ bool anyLimitIsBetterThan(const WGPULimits& target, const WGPULimits& reference)
         return true;
     if (target.maxComputeWorkgroupsPerDimension > reference.maxComputeWorkgroupsPerDimension)
         return true;
+    if (target.maxStorageBuffersInFragmentStage > reference.maxStorageBuffersInFragmentStage)
+        return true;
+    if (target.maxStorageTexturesInFragmentStage > reference.maxStorageTexturesInFragmentStage)
+        return true;
+    if (target.maxStorageBuffersInVertexStage > reference.maxStorageBuffersInVertexStage)
+        return true;
+    if (target.maxStorageTexturesInVertexStage > reference.maxStorageTexturesInVertexStage)
+        return true;
 
     return false;
 }
 
 bool includesUnsupportedFeatures(const Vector<WGPUFeatureName>& target, const Vector<WGPUFeatureName>& reference)
 {
-    ASSERT(std::is_sorted(reference.begin(), reference.end()));
+    ASSERT(std::ranges::is_sorted(reference));
     for (auto feature : target) {
-        if (!std::binary_search(reference.begin(), reference.end(), feature))
+        if (!std::ranges::binary_search(reference, feature))
             return true;
     }
     return false;
@@ -572,6 +653,10 @@ WGPULimits defaultLimits()
         .maxComputeWorkgroupSizeY =    256,
         .maxComputeWorkgroupSizeZ =    64,
         .maxComputeWorkgroupsPerDimension =    65535,
+        .maxStorageBuffersInFragmentStage = 8,
+        .maxStorageTexturesInFragmentStage = 4,
+        .maxStorageBuffersInVertexStage = 8,
+        .maxStorageTexturesInVertexStage = 4,
     };
 }
 

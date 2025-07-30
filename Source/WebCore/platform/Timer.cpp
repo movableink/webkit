@@ -45,8 +45,6 @@
 #include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(TimerBase);
@@ -151,8 +149,8 @@ inline void TimerHeapReference::swap(TimerHeapReference& other)
 inline void TimerHeapReference::updateHeapIndex()
 {
     auto& heap = m_reference->timerHeap();
-    if (&m_reference >= heap.data() && &m_reference < heap.data() + heap.size())
-        m_reference->setHeapIndex(&m_reference - heap.data());
+    if (&m_reference >= heap.begin() && &m_reference < heap.end())
+        m_reference->setHeapIndex(&m_reference - heap.begin());
 }
 
 inline void swap(TimerHeapReference a, TimerHeapReference b)
@@ -174,6 +172,7 @@ public:
 
     explicit TimerHeapIterator(RefPtr<ThreadTimerHeapItem>* pointer) : m_pointer(pointer) { checkConsistency(); }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     TimerHeapIterator& operator++() { checkConsistency(); ++m_pointer; checkConsistency(); return *this; }
     TimerHeapIterator operator++(int) { checkConsistency(1); return TimerHeapIterator(m_pointer++); }
 
@@ -183,24 +182,24 @@ public:
     TimerHeapIterator& operator+=(ptrdiff_t i) { checkConsistency(); m_pointer += i; checkConsistency(); return *this; }
     TimerHeapIterator& operator-=(ptrdiff_t i) { checkConsistency(); m_pointer -= i; checkConsistency(); return *this; }
 
-    TimerHeapReference operator*() const { return TimerHeapReference(*m_pointer); }
     TimerHeapReference operator[](ptrdiff_t i) const { return TimerHeapReference(m_pointer[i]); }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+    TimerHeapReference operator*() const { return TimerHeapReference(*m_pointer); }
     RefPtr<ThreadTimerHeapItem>& operator->() const { return *m_pointer; }
 
 private:
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     void checkConsistency(ptrdiff_t offset = 0) const
     {
-        ASSERT(m_pointer >= threadGlobalTimerHeap().data());
-        ASSERT(m_pointer <= threadGlobalTimerHeap().data() + threadGlobalTimerHeap().size());
-        ASSERT_UNUSED(offset, m_pointer + offset >= threadGlobalTimerHeap().data());
-        ASSERT_UNUSED(offset, m_pointer + offset <= threadGlobalTimerHeap().data() + threadGlobalTimerHeap().size());
+        ASSERT(m_pointer >= threadGlobalTimerHeap().begin());
+        ASSERT(m_pointer <= threadGlobalTimerHeap().begin() + threadGlobalTimerHeap().size());
+        ASSERT_UNUSED(offset, m_pointer + offset >= threadGlobalTimerHeap().begin());
+        ASSERT_UNUSED(offset, m_pointer + offset <= threadGlobalTimerHeap().begin() + threadGlobalTimerHeap().size());
     }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
-    friend bool operator==(TimerHeapIterator, TimerHeapIterator) = default;
-    friend bool operator<(TimerHeapIterator, TimerHeapIterator);
-    friend bool operator>(TimerHeapIterator, TimerHeapIterator);
-    friend bool operator<=(TimerHeapIterator, TimerHeapIterator);
-    friend bool operator>=(TimerHeapIterator, TimerHeapIterator);
+    friend auto operator<=>(TimerHeapIterator, TimerHeapIterator) = default;
     
     friend TimerHeapIterator operator+(TimerHeapIterator, size_t);
     friend TimerHeapIterator operator+(size_t, TimerHeapIterator);
@@ -211,16 +210,13 @@ private:
     RefPtr<ThreadTimerHeapItem>* m_pointer;
 };
 
-inline bool operator<(TimerHeapIterator a, TimerHeapIterator b) { return a.m_pointer < b.m_pointer; }
-inline bool operator>(TimerHeapIterator a, TimerHeapIterator b) { return a.m_pointer > b.m_pointer; }
-inline bool operator<=(TimerHeapIterator a, TimerHeapIterator b) { return a.m_pointer <= b.m_pointer; }
-inline bool operator>=(TimerHeapIterator a, TimerHeapIterator b) { return a.m_pointer >= b.m_pointer; }
-
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 inline TimerHeapIterator operator+(TimerHeapIterator a, size_t b) { return TimerHeapIterator(a.m_pointer + b); }
 inline TimerHeapIterator operator+(size_t a, TimerHeapIterator b) { return TimerHeapIterator(a + b.m_pointer); }
 
 inline TimerHeapIterator operator-(TimerHeapIterator a, size_t b) { return TimerHeapIterator(a.m_pointer - b); }
 inline ptrdiff_t operator-(TimerHeapIterator a, TimerHeapIterator b) { return a.m_pointer - b.m_pointer; }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 // ----------------
 
@@ -361,16 +357,18 @@ inline void TimerBase::checkConsistency() const
         checkHeapIndex();
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 void TimerBase::heapDecreaseKey()
 {
     ASSERT(static_cast<bool>(nextFireTime()));
     RefPtr item = m_heapItemWithBitfields.pointer();
     ASSERT(item);
     checkHeapIndex();
-    auto* heapData = item->timerHeap().data();
+    auto* heapData = item->timerHeap().mutableSpan().data();
     std::push_heap(TimerHeapIterator(heapData), TimerHeapIterator(heapData + item->heapIndex() + 1), TimerHeapLessThanFunction());
     checkHeapIndex();
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 inline void TimerBase::heapDelete()
 {
@@ -422,6 +420,7 @@ inline void TimerBase::heapPop()
     item->time = fireTime;
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 void TimerBase::heapPopMin()
 {
     RefPtr item = m_heapItemWithBitfields.pointer();
@@ -429,7 +428,7 @@ void TimerBase::heapPopMin()
     ASSERT(item == item->timerHeap().first());
     checkHeapIndex();
     auto& heap = item->timerHeap();
-    auto* heapData = heap.data();
+    auto* heapData = heap.mutableSpan().data();
     std::pop_heap(TimerHeapIterator(heapData), TimerHeapIterator(heapData + heap.size()), TimerHeapLessThanFunction());
     checkHeapIndex();
     ASSERT(item == item->timerHeap().last());
@@ -439,10 +438,11 @@ void TimerBase::heapDeleteNullMin(ThreadTimerHeap& heap)
 {
     RELEASE_ASSERT(!heap.first()->hasTimer());
     heap.first()->time = -MonotonicTime::infinity();
-    auto* heapData = heap.data();
+    auto* heapData = heap.mutableSpan().data();
     std::pop_heap(TimerHeapIterator(heapData), TimerHeapIterator(heapData + heap.size()), TimerHeapLessThanFunction());
     heap.removeLast();
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 static inline bool parentHeapPropertyHolds(const TimerBase* current, const ThreadTimerHeap& heap, unsigned currentIndex)
 {
@@ -577,5 +577,3 @@ Seconds TimerBase::nextUnalignedFireInterval() const
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -11,7 +11,7 @@ PASS transformAnim.initialize(t) threw exception NoModificationAllowedError: The
 PASS transformAnim.insertItemBefore(t, 0) threw exception NoModificationAllowedError: The object can not be modified..
 PASS transformAnim.replaceItem(t, 0) threw exception NoModificationAllowedError: The object can not be modified..
 PASS transformAnim.removeItem(0) threw exception NoModificationAllowedError: The object can not be modified..
-PASS transformAnim(0) = t threw exception ReferenceError: Left side of assignment is not a reference..
+PASS transformAnim(0) = t threw exception TypeError: transformAnim is not a function. (In 'transformAnim(0)', 'transformAnim' is an instance of SVGTransformList).
 
 Check items of SVGAnimatedTransformList.animVal are readonly SVGTransform
 PASS t.setScale(2, 2) threw exception NoModificationAllowedError: The object can not be modified..

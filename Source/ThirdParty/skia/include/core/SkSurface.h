@@ -25,13 +25,14 @@ class GrBackendSemaphore;
 class GrBackendTexture;
 class GrRecordingContext;
 class GrSurfaceCharacterization;
-enum GrSurfaceOrigin : int;
 class SkBitmap;
 class SkCanvas;
 class SkCapabilities;
 class SkColorSpace;
 class SkPaint;
+class SkRecorder;
 class SkSurface;
+enum GrSurfaceOrigin : int;
 struct SkIRect;
 struct SkISize;
 
@@ -226,6 +227,12 @@ public:
      */
     skgpu::graphite::Recorder* recorder() const;
 
+    /** Returns the base SkRecorder being used by the SkSurface.
+
+        @return the recorder; should be non-null for drawable surfaces
+    */
+    SkRecorder* baseRecorder() const;
+
     enum class BackendHandleAccess {
         kFlushRead,     //!< back-end object is readable
         kFlushWrite,    //!< back-end object is writable
@@ -329,6 +336,20 @@ public:
         example: https://fiddle.skia.org/c/@Surface_makeImageSnapshot_2
      */
     sk_sp<SkImage> makeImageSnapshot(const SkIRect& bounds);
+
+    /** Returns an SkImage capturing the current SkSurface contents. However, the contents of the
+        SkImage are only valid as long as no other writes to the SkSurface occur. If writes to the
+        original SkSurface happen then contents of the SkImage are undefined. However, continued use
+        of the SkImage should not cause crashes or similar fatal behavior.
+
+        This API is useful for cases where the client either immediately destroys the SkSurface
+        after the SkImage is created or knows they will destroy the SkImage before writing to the
+        SkSurface again.
+
+        This API can be more performant than makeImageSnapshot as it never does an internal copy
+        of the data assuming the user frees either the SkImage or SkSurface as described above.
+     */
+    sk_sp<SkImage> makeTemporaryImage();
 
     /** Draws SkSurface contents to canvas, with its top-left corner at (x, y).
 

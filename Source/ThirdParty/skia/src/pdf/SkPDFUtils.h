@@ -83,7 +83,7 @@ void ApplyPattern(int objectIndex, SkWStream* content);
 size_t ColorToDecimal(uint8_t value, char result[5]);
 
 static constexpr unsigned kFloatColorDecimalCount = 4;
-size_t ColorToDecimalF(float value, char result[kFloatColorDecimalCount + 2]);
+size_t ColorToDecimalF(float value, char (&result)[kFloatColorDecimalCount + 2]);
 inline void AppendColorComponent(uint8_t value, SkWStream* wStream) {
     char buffer[5];
     size_t len = SkPDFUtils::ColorToDecimal(value, buffer);
@@ -140,10 +140,6 @@ void PopulateTilingPatternDict(SkPDFDict* pattern,
                                const SkMatrix& matrix);
 
 bool ToBitmap(const SkImage* img, SkBitmap* dst);
-
-#ifdef SK_PDF_BASE85_BINARY
-void Base85Encode(std::unique_ptr<SkStreamAsset> src, SkDynamicMemoryWStream* dst);
-#endif //  SK_PDF_BASE85_BINARY
 
 void AppendTransform(const SkMatrix&, SkWStream*);
 

@@ -2,11 +2,12 @@
  * Copyright (C) 2007, 2008 Rob Buis <buis@kde.org>
  * Copyright (C) 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2007 Eric Seidel <eric@webkit.org>
- * Copyright (C) 2009 Google, Inc.  All rights reserved.
+ * Copyright (C) 2009-2016 Google, Inc.  All rights reserved.
  * Copyright (C) 2009 Dirk Schulze <krit@webkit.org>
  * Copyright (C) Research In Motion Limited 2009-2010. All rights reserved.
  * Copyright (C) 2018 Adobe Systems Incorporated. All rights reserved.
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -28,6 +29,8 @@
 #include "SVGRenderSupport.h"
 
 #include "ElementAncestorIteratorInlines.h"
+#include "LegacyRenderSVGForeignObject.h"
+#include "LegacyRenderSVGImage.h"
 #include "LegacyRenderSVGResourceClipper.h"
 #include "LegacyRenderSVGResourceFilter.h"
 #include "LegacyRenderSVGResourceMarker.h"
@@ -37,12 +40,15 @@
 #include "LegacyRenderSVGTransformableContainer.h"
 #include "LegacyRenderSVGViewportContainer.h"
 #include "NodeRenderStyle.h"
+#include "PathOperation.h"
 #include "ReferencedSVGResources.h"
 #include "RenderChildIterator.h"
 #include "RenderElement.h"
+#include "RenderElementInlines.h"
 #include "RenderGeometryMap.h"
 #include "RenderIterator.h"
 #include "RenderLayer.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGResourceClipper.h"
 #include "RenderSVGRoot.h"
 #include "RenderSVGShapeInlines.h"
@@ -55,6 +61,7 @@
 #include "SVGResourcesCache.h"
 #include "TransformOperationData.h"
 #include "TransformState.h"
+#include <numbers>
 
 namespace WebCore {
 
@@ -136,45 +143,57 @@ LayoutRepainter::CheckForRepaint SVGRenderSupport::checkForSVGRepaintDuringLayou
     return LayoutRepainter::CheckForRepaint::Yes;
 }
 
-// Update a bounding box taking into account the validity of the other bounding box.
-static inline void updateObjectBoundingBox(FloatRect& objectBoundingBox, bool& objectBoundingBoxValid, const RenderObject* other, FloatRect otherBoundingBox)
+// https://svgwg.org/svg2-draft/coords.html#BoundingBoxes
+static bool hasValidBoundingBoxForContainer(const RenderObject& object)
 {
-    CheckedPtr otherContainer = dynamicDowncast<LegacyRenderSVGContainer>(*other);
-    bool otherValid = !otherContainer || otherContainer->isObjectBoundingBoxValid();
-    if (!otherValid)
-        return;
+    if (auto* shape = dynamicDowncast<LegacyRenderSVGShape>(object))
+        return !shape->isRenderingDisabled();
 
-    if (!objectBoundingBoxValid) {
-        objectBoundingBox = otherBoundingBox;
-        objectBoundingBoxValid = true;
-        return;
-    }
+    if (auto* text = dynamicDowncast<RenderSVGText>(object))
+        return text->isObjectBoundingBoxValid();
 
-    objectBoundingBox.uniteEvenIfEmpty(otherBoundingBox);
+    if (auto* container = dynamicDowncast<LegacyRenderSVGContainer>(object))
+        return !container->isLegacyRenderSVGHiddenContainer();
+
+    if (auto* foreignObject = dynamicDowncast<LegacyRenderSVGForeignObject>(object))
+        return foreignObject->isObjectBoundingBoxValid();
+
+    if (auto* image = dynamicDowncast<LegacyRenderSVGImage>(object))
+        return image->isObjectBoundingBoxValid();
+
+    return false;
 }
 
-void SVGRenderSupport::computeContainerBoundingBoxes(const RenderElement& container, FloatRect& objectBoundingBox, bool& objectBoundingBoxValid, FloatRect& repaintBoundingBox, RepaintRectCalculation repaintRectCalculation)
+auto SVGRenderSupport::computeContainerBoundingBoxes(const RenderElement& container, RepaintRectCalculation repaintRectCalculation) -> ContainerBoundingBoxes
 {
-    objectBoundingBox = FloatRect();
-    objectBoundingBoxValid = false;
-    repaintBoundingBox = FloatRect();
+    ContainerBoundingBoxes result;
+
     for (CheckedRef current : childrenOfType<RenderObject>(container)) {
-        if (current->isLegacyRenderSVGHiddenContainer())
+        if (!hasValidBoundingBoxForContainer(current))
             continue;
 
-        // Don't include elements in the union that do not render.
-        if (auto* shape = dynamicDowncast<LegacyRenderSVGShape>(current.ptr()); shape && shape->isRenderingDisabled())
+        auto& transform = current->localToParentTransform();
+
+        auto repaintRect = current->repaintRectInLocalCoordinates(repaintRectCalculation);
+        if (!transform.isIdentity())
+            repaintRect = transform.mapRect(repaintRect);
+
+        result.repaintBoundingBox.unite(repaintRect);
+
+        if (auto* container = dynamicDowncast<LegacyRenderSVGContainer>(current.ptr()); (container && !container->isObjectBoundingBoxValid()))
             continue;
 
-        const AffineTransform& transform = current->localToParentTransform();
-        if (transform.isIdentity()) {
-            updateObjectBoundingBox(objectBoundingBox, objectBoundingBoxValid, current.ptr(), current->objectBoundingBox());
-            repaintBoundingBox.unite(current->repaintRectInLocalCoordinates(repaintRectCalculation));
-        } else {
-            updateObjectBoundingBox(objectBoundingBox, objectBoundingBoxValid, current.ptr(), transform.mapRect(current->objectBoundingBox()));
-            repaintBoundingBox.unite(transform.mapRect(current->repaintRectInLocalCoordinates(repaintRectCalculation)));
-        }
+        auto objectBounds = current->objectBoundingBox();
+        if (!transform.isIdentity())
+            objectBounds = transform.mapRect(objectBounds);
+
+        if (!result.objectBoundingBox)
+            result.objectBoundingBox = objectBounds;
+        else
+            result.objectBoundingBox->uniteEvenIfEmpty(objectBounds);
     }
+
+    return result;
 }
 
 FloatRect SVGRenderSupport::computeContainerStrokeBoundingBox(const RenderElement& container)
@@ -223,7 +242,7 @@ static inline void invalidateResourcesOfChildren(RenderElement& renderer)
 {
     ASSERT(!renderer.needsLayout());
     if (auto* resources = SVGResourcesCache::cachedResourcesForRenderer(renderer))
-        resources->removeClientFromCache(renderer, false);
+        resources->removeClientFromCacheAndMarkForInvalidation(renderer, false);
 
     for (auto& child : childrenOfType<RenderElement>(renderer))
         invalidateResourcesOfChildren(child);
@@ -379,7 +398,7 @@ inline FloatRect clipPathReferenceBox(const RenderElement& renderer, CSSBoxType 
                 referenceBox.setSize(*viewportSize);
             break;
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     case CSSBoxType::ContentBox:
     case CSSBoxType::FillBox:
     case CSSBoxType::PaddingBox:
@@ -467,7 +486,7 @@ void SVGRenderSupport::applyStrokeStyleToContext(GraphicsContext& context, const
     if (style.joinStyle() == LineJoin::Miter)
         context.setMiterLimit(style.strokeMiterLimit());
 
-    const Vector<SVGLengthValue>& dashes = svgStyle.strokeDashArray();
+    auto& dashes = svgStyle.strokeDashArray();
     if (dashes.isEmpty())
         context.setStrokeStyle(StrokeStyle::SolidStroke);
     else {
@@ -486,7 +505,7 @@ void SVGRenderSupport::applyStrokeStyleToContext(GraphicsContext& context, const
         
         bool canSetLineDash = false;
         auto dashArray = WTF::map(dashes, [&](auto& dash) -> DashArrayElement {
-            auto value = dash.value(lengthContext) * scaleFactor;
+            auto value = lengthContext.valueForLength(dash) * scaleFactor;
             if (value > 0)
                 canSetLineDash = true;
             return value;
@@ -562,12 +581,12 @@ FloatRect SVGRenderSupport::calculateApproximateStrokeBoundingBox(const RenderEl
             auto& style = renderer.style();
             if (renderer.shapeType() == Renderer::ShapeType::Path && style.joinStyle() == LineJoin::Miter) {
                 const float miter = style.strokeMiterLimit();
-                if (miter < sqrtOfTwoDouble && style.capStyle() == LineCap::Square)
-                    delta *= sqrtOfTwoDouble;
+                if (miter < std::numbers::sqrt2 && style.capStyle() == LineCap::Square)
+                    delta *= std::numbers::sqrt2;
                 else
                     delta *= std::max(miter, 1.0f);
             } else if (style.capStyle() == LineCap::Square)
-                delta *= sqrtOfTwoDouble;
+                delta *= std::numbers::sqrt2;
             break;
         }
         }

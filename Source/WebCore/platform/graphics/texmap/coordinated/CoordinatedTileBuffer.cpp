@@ -183,13 +183,7 @@ CoordinatedAcceleratedTileBuffer::CoordinatedAcceleratedTileBuffer(Ref<BitmapTex
 {
 }
 
-CoordinatedAcceleratedTileBuffer::~CoordinatedAcceleratedTileBuffer()
-{
-    ensureOnMainThread([fence = WTFMove(m_fence)]() mutable {
-        PlatformDisplay::sharedDisplay().skiaGLContext()->makeContextCurrent();
-        fence = nullptr;
-    });
-}
+CoordinatedAcceleratedTileBuffer::~CoordinatedAcceleratedTileBuffer() = default;
 
 IntSize CoordinatedAcceleratedTileBuffer::size() const
 {
@@ -238,10 +232,8 @@ void CoordinatedAcceleratedTileBuffer::completePainting()
     CoordinatedTileBuffer::completePainting();
 }
 
-void CoordinatedAcceleratedTileBuffer::waitUntilPaintingComplete()
+void CoordinatedAcceleratedTileBuffer::serverWait()
 {
-    CoordinatedTileBuffer::waitUntilPaintingComplete();
-
     if (!m_fence)
         return;
 

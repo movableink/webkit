@@ -66,7 +66,7 @@ public:
         ASSERT_UNDER_CONSTEXPR_CONTEXT(!!reg);
         m_bits.set(reg.index());
 
-        if (UNLIKELY(width > conservativeWidthWithoutVectors(reg) && conservativeWidth(reg) > conservativeWidthWithoutVectors(reg)))
+        if (width > conservativeWidthWithoutVectors(reg) && conservativeWidth(reg) > conservativeWidthWithoutVectors(reg)) [[unlikely]]
             m_upperBits.set(reg.index());
         return *this;
     }
@@ -238,7 +238,9 @@ public:
     inline constexpr bool contains(Reg reg, Width width) const
     {
         ASSERT_UNDER_CONSTEXPR_CONTEXT(m_bits.count() >= m_upperBits.count());
-        if (LIKELY(width < conservativeWidth(reg)) || conservativeWidth(reg) <= conservativeWidthWithoutVectors(reg))
+        if (width < conservativeWidth(reg)) [[likely]]
+            return m_bits.get(reg.index());
+        if (conservativeWidth(reg) <= conservativeWidthWithoutVectors(reg))
             return m_bits.get(reg.index());
         return m_bits.get(reg.index()) && m_upperBits.get(reg.index());
     }
@@ -362,7 +364,7 @@ public:
         ASSERT_UNDER_CONSTEXPR_CONTEXT(!!reg);
         m_bits.set(reg.index());
 
-        if (UNLIKELY(width > conservativeWidthWithoutVectors(reg) && conservativeWidth(reg) > conservativeWidthWithoutVectors(reg)))
+        if (width > conservativeWidthWithoutVectors(reg) && conservativeWidth(reg) > conservativeWidthWithoutVectors(reg)) [[unlikely]]
             m_upperBits.set(reg.index());
         return *this;
     }
@@ -472,7 +474,7 @@ public:
     constexpr ScalarRegisterSet() { }
 
     inline constexpr unsigned hash() const { return m_bits.hash(); }
-    inline uint64_t bitsForDebugging() const { return *m_bits.storage(); }
+    inline uint64_t bitsForDebugging() const { return m_bits.storage()[0]; }
     friend constexpr bool operator==(const ScalarRegisterSet&, const ScalarRegisterSet&) = default;
 
     inline constexpr RegisterSet toRegisterSet() const WARN_UNUSED_RETURN

@@ -26,7 +26,6 @@
 
 #include "CSSValueKeywords.h"
 #include "FontDescription.h"
-#include <variant>
 #include <wtf/RefCountedFixedVector.h>
 
 #if PLATFORM(COCOA)
@@ -47,7 +46,7 @@ typedef FontFamilySpecificationCoreText FontFamilyPlatformSpecification;
 typedef FontFamilySpecificationNull FontFamilyPlatformSpecification;
 #endif
 
-typedef std::variant<AtomString, FontFamilyPlatformSpecification> FontFamilySpecification;
+typedef Variant<AtomString, FontFamilyPlatformSpecification> FontFamilySpecification;
 
 class Font;
 
@@ -130,7 +129,7 @@ public:
     static std::optional<FontSelectionValue> initialItalic() { return std::nullopt; }
     static FontStyleAxis initialFontStyleAxis() { return FontStyleAxis::slnt; }
     static FontSelectionValue initialWeight() { return normalWeightValue(); }
-    static FontSelectionValue initialStretch() { return normalStretchValue(); }
+    static FontSelectionValue initialWidth() { return normalWidthValue(); }
     static FontSmallCaps initialSmallCaps() { return FontSmallCaps::Off; }
     static Kerning initialKerning() { return Kerning::Auto; }
     static FontSmoothingMode initialFontSmoothing() { return FontSmoothingMode::AutoSmoothing; }
@@ -148,6 +147,8 @@ public:
     static FontSizeAdjust initialFontSizeAdjust() { return { FontSizeAdjust::Metric::ExHeight }; }
     static TextSpacingTrim initialTextSpacingTrim() { return { }; }
     static TextAutospace initialTextAutospace() { return { }; }
+    static FontFeatureSettings initialFeatureSettings() { return { }; }
+    static FontVariationSettings initialVariationSettings() { return { }; }
 
 private:
     Ref<RefCountedFixedVector<AtomString>> m_families;

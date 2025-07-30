@@ -75,6 +75,18 @@ class TestRunner(object):
                 tests.append(test_path)
         return tests
 
+    def _get_all_valid_test_names(self):
+        test_paths = []
+        base_dir = self._test_programs_base_dir()
+        for test_file in os.listdir(base_dir):
+            test_path = os.path.join(base_dir, test_file)
+            if os.path.isdir(test_path):
+                test_paths.extend(self._get_tests_from_dir(test_path))
+            elif os.path.isfile(test_path) and os.access(test_path, os.X_OK):
+                test_paths.append(test_path)
+        test_dir_prefix_len = len(self._test_programs_base_dir()) + 1
+        return (path[test_dir_prefix_len:] for path in test_paths)
+
     def _get_tests(self, initial_tests):
         tests = []
         for test in initial_tests:
@@ -84,7 +96,7 @@ class TestRunner(object):
                 if not os.path.exists(test):
                     candidate = os.path.join(self._test_programs_base_dir(), test)
                     if not os.path.exists(candidate):
-                        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), test)
+                        return []
                     test = candidate
                 tests.append(test)
         if tests:
@@ -160,13 +172,17 @@ class TestRunner(object):
                     return 0
                 raise
 
+    def _use_wpe_legacy_api(self):
+        return hasattr(self._options, 'wpe_legacy_api') and self._options.wpe_legacy_api
+
     def _run_test_glib(self, test_program, subtests, skipped_test_cases):
         timeout = self._options.timeout
+        wpe_legacy_api = self._use_wpe_legacy_api()
 
         def is_slow_test(test, subtest):
             return self._expectations.is_slow(test, subtest)
 
-        runner = GLibTestRunner(test_program, timeout, is_slow_test, timeout * 10)
+        runner = GLibTestRunner(test_program, timeout, wpe_legacy_api, is_slow_test, timeout * 10)
         return runner.run(subtests=subtests, skipped=skipped_test_cases, env=self._test_env)
 
     def _run_test_qt(self, test_program):
@@ -218,6 +234,9 @@ class TestRunner(object):
 
     def _run_google_test(self, test_program, subtest):
         command = [test_program, '--gtest_filter=%s' % (subtest)]
+        if self._use_wpe_legacy_api() and os.path.basename(test_program) == 'TestWebKit':
+            command.append('--wpe-legacy-api')
+
         timeout = self._options.timeout
         if self._expectations.is_slow(os.path.basename(test_program), subtest):
             timeout *= 10
@@ -285,6 +304,7 @@ class TestRunner(object):
     def run_tests(self):
         if not self._tests:
             sys.stderr.write("ERROR: tests not found in %s.\n" % (self._test_programs_base_dir()))
+            sys.stderr.write("Valid options are: {}\n".format(", ".join(self._get_all_valid_test_names())))
             sys.stderr.flush()
             sys.exit(1)
 

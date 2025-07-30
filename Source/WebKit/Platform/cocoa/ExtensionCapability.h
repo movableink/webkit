@@ -38,7 +38,7 @@ OBJC_CLASS _SECapability;
 namespace WebKit {
 
 #if USE(LEGACY_EXTENSIONKIT_SPI)
-using PlatformCapability = std::variant<RetainPtr<BEProcessCapability>, RetainPtr<_SECapability>>;
+using PlatformCapability = Variant<RetainPtr<BEProcessCapability>, RetainPtr<_SECapability>>;
 #else
 using PlatformCapability = RetainPtr<BEProcessCapability>;
 #endif

@@ -1,3 +1,5 @@
+#include <TargetConditionals.h>
+
 framework module WebKit_Private [system] {
   umbrella header "WebKitPrivate.h"
   export *
@@ -984,11 +986,6 @@ framework module WebKit_Private [system] {
     export *
   }
 
-  explicit module WKBundlePageFullScreenClient {
-    header "WKBundlePageFullScreenClient.h"
-    export *
-  }
-
   explicit module WKBundlePageLoaderClient {
     header "WKBundlePageLoaderClient.h"
     export *
@@ -1529,6 +1526,11 @@ framework module WebKit_Private [system] {
     export *
   }
 
+  explicit module WKPageFullScreenClient {
+    header "WKPageFullScreenClient.h"
+    export *
+  }
+
   explicit module WKPageGroup {
     header "WKPageGroup.h"
     export *
@@ -1611,16 +1613,6 @@ framework module WebKit_Private [system] {
 
   explicit module WKPreferencesRefPrivate {
     header "WKPreferencesRefPrivate.h"
-    export *
-  }
-
-  explicit module WKProcessGroup {
-    header "WKProcessGroup.h"
-    export *
-  }
-
-  explicit module WKProcessGroupPrivate {
-    header "WKProcessGroupPrivate.h"
     export *
   }
 
@@ -2129,7 +2121,9 @@ framework module WebKit_Private [system] {
     export *
   }
 
-#ifdef ENABLE_IOS_TOUCH_EVENTS
+  // Inlined spelling of ENABLE(IOS_TOUCH_EVENTS), so that this file can be preprocessed without
+  // needing WTF headers installed.
+#if TARGET_OS_IPHONE && __has_include(<CoreFoundation/CFPriv.h>)
   explicit module WebEventRegion {
     header "WebEventRegion.h"
     export *

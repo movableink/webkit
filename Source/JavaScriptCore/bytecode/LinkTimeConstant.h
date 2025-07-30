@@ -59,8 +59,6 @@ class JSGlobalObject;
     v(makeTypeError, nullptr) \
     v(AggregateError, nullptr) \
     v(typedArrayLength, nullptr) \
-    v(typedArrayContentType, nullptr) \
-    v(typedArrayGetOriginalConstructor, nullptr) \
     v(toIntegerOrInfinity, nullptr) \
     v(toLength, nullptr) \
     v(isTypedArrayView, nullptr) \
@@ -69,6 +67,7 @@ class JSGlobalObject;
     v(typedArrayFromFast, nullptr) \
     v(isDetached, nullptr) \
     v(isBoundFunction, nullptr) \
+    v(isFinite, nullptr) \
     v(hasInstanceBoundFunction, nullptr) \
     v(instanceOf, nullptr) \
     v(BuiltinLog, nullptr) \
@@ -86,7 +85,6 @@ class JSGlobalObject;
     v(hostPromiseRejectionTracker, nullptr) \
     v(Set, nullptr) \
     v(Map, nullptr) \
-    v(importMapStatus, nullptr) \
     v(importInRealm, nullptr) \
     v(evalFunction, nullptr) \
     v(evalInRealm, nullptr) \
@@ -111,7 +109,6 @@ class JSGlobalObject;
     v(regExpSplitFast, nullptr) \
     v(regExpPrototypeSymbolMatch, nullptr) \
     v(regExpPrototypeSymbolReplace, nullptr) \
-    v(regExpTestFast, nullptr) \
     v(stringIncludesInternal, nullptr) \
     v(stringIndexOfInternal, nullptr) \
     v(stringSplitFast, nullptr) \
@@ -133,7 +130,6 @@ class JSGlobalObject;
     v(isRemoteFunction, nullptr) \
     v(arrayFromFastFillWithUndefined, nullptr) \
     v(arrayFromFastFillWithEmpty, nullptr) \
-    v(arraySort, nullptr) \
     v(jsonParse, nullptr) \
     v(jsonStringify, nullptr) \
     v(String, nullptr) \
@@ -153,6 +149,10 @@ class JSGlobalObject;
     v(asyncFromSyncIteratorCreate, nullptr) \
     v(regExpStringIteratorCreate, nullptr) \
     v(iteratorHelperCreate, nullptr) \
+    v(ReferenceError, nullptr) \
+    v(SuppressedError, nullptr) \
+    v(DisposableStack, nullptr) \
+    v(AsyncDisposableStack, nullptr) \
 
 
 #define DECLARE_LINK_TIME_CONSTANT(name, code) name,

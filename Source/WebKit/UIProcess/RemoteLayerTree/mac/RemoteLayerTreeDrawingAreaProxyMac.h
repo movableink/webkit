@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,6 +57,8 @@ public:
     void updateZoomTransactionID();
     std::optional<WebCore::PlatformLayerIdentifier> pageScalingLayerID() { return m_pageScalingLayerID.asOptional(); }
     std::optional<WebCore::PlatformLayerIdentifier> pageScrollingLayerID() { return m_pageScrollingLayerID.asOptional(); }
+    std::optional<WebCore::PlatformLayerIdentifier> scrolledContentsLayerID() const { return m_scrolledContentsLayerID.asOptional(); }
+    std::optional<WebCore::PlatformLayerIdentifier> mainFrameClipLayerID() const { return m_mainFrameClipLayerID.asOptional(); }
 
 private:
     RemoteLayerTreeDrawingAreaProxyMac(WebPageProxy&, WebProcessProxy&);
@@ -70,10 +72,10 @@ private:
 
     void didCommitLayerTree(IPC::Connection&, const RemoteLayerTreeTransaction&, const RemoteScrollingCoordinatorTransaction&) override;
 
-    void adjustTransientZoom(double, WebCore::FloatPoint) override;
+    void adjustTransientZoom(double, WebCore::FloatPoint originInLayerForPageScale, WebCore::FloatPoint originInVisibleRect) override;
     void commitTransientZoom(double, WebCore::FloatPoint) override;
 
-    void sendCommitTransientZoom(double, WebCore::FloatPoint, WebCore::ScrollingNodeID);
+    void sendCommitTransientZoom(double, WebCore::FloatPoint, std::optional<WebCore::ScrollingNodeID>);
 
     void applyTransientZoomToLayer();
     void removeTransientZoomFromLayer();
@@ -84,7 +86,7 @@ private:
     void windowScreenDidChange(WebCore::PlatformDisplayID) override;
     std::optional<WebCore::FramesPerSecond> displayNominalFramesPerSecond() override;
 
-    void dispatchSetTopContentInset() override;
+    void dispatchSetObscuredContentInsets() override;
 
     void colorSpaceDidChange() override;
 
@@ -109,8 +111,9 @@ private:
 
     Markable<WebCore::PlatformLayerIdentifier> m_pageScalingLayerID;
     Markable<WebCore::PlatformLayerIdentifier> m_pageScrollingLayerID;
+    Markable<WebCore::PlatformLayerIdentifier> m_scrolledContentsLayerID;
+    Markable<WebCore::PlatformLayerIdentifier> m_mainFrameClipLayerID;
 
-    bool m_usesOverlayScrollbars { false };
     bool m_shouldLogNextObserverChange { false };
     bool m_shouldLogNextDisplayRefresh { false };
 
@@ -118,10 +121,14 @@ private:
 
     std::optional<TransactionID> m_transactionIDAfterEndingTransientZoom;
     std::optional<double> m_transientZoomScale;
-    std::optional<WebCore::FloatPoint> m_transientZoomOrigin;
+    std::optional<WebCore::FloatPoint> m_transientZoomOriginInLayerForPageScale;
+    std::optional<WebCore::FloatPoint> m_transientZoomOriginInVisibleRect;
 };
 
 } // namespace WebKit
 
-#endif // #if PLATFORM(MAC)
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::RemoteLayerTreeDrawingAreaProxyMac)
+    static bool isType(const WebKit::DrawingAreaProxy& proxy) { return proxy.isRemoteLayerTreeDrawingAreaProxyMac(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
+#endif // #if PLATFORM(MAC)

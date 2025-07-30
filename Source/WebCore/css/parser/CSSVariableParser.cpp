@@ -37,6 +37,8 @@
 #include "CSSPropertyParser.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSTokenizer.h"
+#include "CSSValueKeywords.h"
+#include <stack>
 
 namespace WebCore {
 
@@ -56,25 +58,48 @@ static bool isValidConstantName(const CSSParserToken& token)
 static bool isValidVariableReference(CSSParserTokenRange, const CSSParserContext&);
 static bool isValidConstantReference(CSSParserTokenRange, const CSSParserContext&);
 
-static bool classifyBlock(CSSParserTokenRange range, bool& hasReferences, bool& hasTopLevelBraceBlockMixedWithOtherValues, const CSSParserContext& parserContext, bool isTopLevelBlock = true)
+static bool classifyBlock(CSSParserTokenRange range, bool& hasReferences, bool& hasTopLevelBraceBlockMixedWithOtherValues, const CSSParserContext& parserContext)
 {
-    unsigned topLevelBraceBlocks = 0;
-    bool hasOtherValuesThanTopLevelBraceBlock = false;
+    struct ClassifyBlockState {
+        CSSParserTokenRange range;
+        bool isTopLevelBlock = true;
+        bool hasOtherValues = false;
+        unsigned topLevelBraceBlocks = 0;
+        bool doneWithThisRange = false;
+    };
+    ClassifyBlockState initialState { .range = range };
 
-    while (!range.atEnd()) {
-        if (isTopLevelBlock) {
-            auto tokenType = range.peek().type();
+    std::stack<ClassifyBlockState> stack;
+    stack.push(initialState);
+
+    while (!stack.empty()) {
+        auto& current = stack.top();
+        if (current.doneWithThisRange) {
+            // If there is a top level brace block, the value should contains only that.
+            if (current.topLevelBraceBlocks > 1 || (current.topLevelBraceBlocks == 1 && current.hasOtherValues))
+                hasTopLevelBraceBlockMixedWithOtherValues = true;
+            stack.pop();
+            continue;
+        }
+
+        if (current.range.atEnd()) {
+            current.doneWithThisRange = true;
+            continue;
+        }
+
+        if (current.isTopLevelBlock) {
+            auto tokenType = current.range.peek().type();
             if (!CSSTokenizer::isWhitespace(tokenType)) {
                 if (tokenType == LeftBraceToken)
-                    topLevelBraceBlocks++;
+                    current.topLevelBraceBlocks++;
                 else
-                    hasOtherValuesThanTopLevelBraceBlock = true;
+                    current.hasOtherValues = true;
             }
         }
 
-        if (range.peek().getBlockType() == CSSParserToken::BlockStart) {
-            const CSSParserToken& token = range.peek();
-            CSSParserTokenRange block = range.consumeBlock();
+        if (current.range.peek().getBlockType() == CSSParserToken::BlockStart) {
+            const CSSParserToken& token = current.range.peek();
+            CSSParserTokenRange block = current.range.consumeBlock();
             if (token.functionId() == CSSValueVar) {
                 if (!isValidVariableReference(block, parserContext))
                     return false; // Bail if any references are invalid
@@ -87,19 +112,21 @@ static bool classifyBlock(CSSParserTokenRange range, bool& hasReferences, bool& 
                 hasReferences = true;
                 continue;
             }
-            if (!classifyBlock(block, hasReferences, hasTopLevelBraceBlockMixedWithOtherValues, parserContext, false))
-                return false;
+            stack.push(ClassifyBlockState {
+                .range = block,
+                .isTopLevelBlock = false, // Nested block, not top-level
+            });
             continue;
         }
 
-        ASSERT(range.peek().getBlockType() != CSSParserToken::BlockEnd);
+        ASSERT(current.range.peek().getBlockType() != CSSParserToken::BlockEnd);
 
-        const CSSParserToken& token = range.consume();
+        const CSSParserToken& token = current.range.consume();
         switch (token.type()) {
         case AtKeywordToken:
             break;
         case DelimiterToken: {
-            if (token.delimiter() == '!' && isTopLevelBlock)
+            if (token.delimiter() == '!' && current.isTopLevelBlock)
                 return false;
             break;
         }
@@ -110,17 +137,14 @@ static bool classifyBlock(CSSParserTokenRange range, bool& hasReferences, bool& 
         case BadUrlToken:
             return false;
         case SemicolonToken:
-            if (isTopLevelBlock)
+            if (current.isTopLevelBlock)
                 return false;
             break;
         default:
             break;
         }
-    }
 
-    // If there is a top level brace block, the value should contains only that.
-    if (topLevelBraceBlocks > 1 || (topLevelBraceBlocks == 1 && hasOtherValuesThanTopLevelBraceBlock))
-        hasTopLevelBraceBlockMixedWithOtherValues = true;
+    }
 
     return true;
 }

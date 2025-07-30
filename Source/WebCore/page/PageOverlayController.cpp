@@ -75,7 +75,7 @@ void PageOverlayController::installedPageOverlaysChanged()
     else
         detachViewOverlayLayers();
 
-    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame())) {
+    if (RefPtr localMainFrame = m_page->localMainFrame()) {
         if (RefPtr frameView = localMainFrame->view())
             frameView->setNeedsCompositingConfigurationUpdate();
     }
@@ -221,7 +221,7 @@ void PageOverlayController::installPageOverlay(PageOverlay& overlay, PageOverlay
 
     overlay.setPage(protectedPage().ptr());
 
-    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame())) {
+    if (RefPtr localMainFrame = m_page->localMainFrame()) {
         if (RefPtr frameView = localMainFrame->view())
             frameView->enterCompositingMode();
     }
@@ -292,7 +292,7 @@ void PageOverlayController::clearPageOverlay(PageOverlay& overlay)
     m_overlayGraphicsLayers.get(overlay)->setDrawsContent(false);
 }
 
-GraphicsLayer& PageOverlayController::layerForOverlay(PageOverlay& overlay) const
+GraphicsLayer& PageOverlayController::layerForOverlay(const PageOverlay& overlay) const
 {
     ASSERT(m_pageOverlays.contains(&overlay));
     return *m_overlayGraphicsLayers.get(overlay);
@@ -353,9 +353,6 @@ void PageOverlayController::updateSettingsForLayer(GraphicsLayer& layer)
     layer.setAcceleratesDrawing(settings->acceleratedDrawingEnabled());
     layer.setShowDebugBorder(settings->showDebugBorders());
     layer.setShowRepaintCounter(settings->showRepaintCounter());
-#if HAVE(HDR_SUPPORT)
-    layer.setHDRForImagesEnabled(settings->hdrForImagesEnabled());
-#endif
 }
 
 bool PageOverlayController::handleMouseEvent(const PlatformMouseEvent& mouseEvent)

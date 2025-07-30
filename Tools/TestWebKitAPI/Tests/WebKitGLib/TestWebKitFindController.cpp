@@ -29,7 +29,7 @@ public:
     MAKE_GLIB_TEST_FIXTURE(FindControllerTest);
 
     FindControllerTest()
-        : m_findController(webkit_web_view_get_find_controller(m_webView))
+        : m_findController(webkit_web_view_get_find_controller(m_webView.get()))
         , m_runFindUntilCompletion(false)
     {
         assertObjectIsDeletedWhenTestFinishes(G_OBJECT(m_findController.get()));
@@ -63,7 +63,7 @@ public:
 #if PLATFORM(GTK)
     cairo_surface_t* takeSnapshotAndWaitUntilReady()
     {
-        webkit_web_view_get_snapshot(m_webView, WEBKIT_SNAPSHOT_REGION_FULL_DOCUMENT, WEBKIT_SNAPSHOT_OPTIONS_NONE, nullptr, [](GObject* source, GAsyncResult* result, gpointer userData) {
+        webkit_web_view_get_snapshot(m_webView.get(), WEBKIT_SNAPSHOT_REGION_FULL_DOCUMENT, WEBKIT_SNAPSHOT_OPTIONS_NONE, nullptr, [](GObject* source, GAsyncResult* result, gpointer userData) {
             auto& test = *static_cast<FindControllerTest*>(userData);
 #if USE(GTK4)
             if (GRefPtr<GdkTexture> snapshot = adoptGRef(webkit_web_view_get_snapshot_finish(WEBKIT_WEB_VIEW(source), result, nullptr))) {
@@ -302,9 +302,9 @@ static void testFindControllerHide(FindControllerTest* test, gconstpointer)
     g_assert_nonnull(highlightSurface);
     g_assert_false(Test::cairoSurfacesEqual(originalSurface, highlightSurface));
 
-    WebKitFindController* findController = webkit_web_view_get_find_controller(test->m_webView);
+    WebKitFindController* findController = webkit_web_view_get_find_controller(test->webView());
     webkit_find_controller_search_finish(findController);
-    webkit_web_view_execute_editing_command(test->m_webView, "Unselect");
+    webkit_web_view_execute_editing_command(test->webView(), "Unselect");
 
     auto* unhighlightSurface = test->takeSnapshotAndWaitUntilReady();
     g_assert_nonnull(unhighlightSurface);
@@ -318,8 +318,8 @@ static void testFindControllerHide(FindControllerTest* test, gconstpointer)
 
 static void testFindControllerInstance(FindControllerTest* test, gconstpointer)
 {
-    WebKitFindController* findController1 = webkit_web_view_get_find_controller(test->m_webView);
-    WebKitFindController* findController2 = webkit_web_view_get_find_controller(test->m_webView);
+    WebKitFindController* findController1 = webkit_web_view_get_find_controller(test->webView());
+    WebKitFindController* findController2 = webkit_web_view_get_find_controller(test->webView());
 
     g_assert_true(findController1 == findController2);
 }
@@ -329,10 +329,10 @@ static void testFindControllerGetters(FindControllerTest* test, gconstpointer)
     const char* searchText = "testing";
     guint maxMatchCount = 1;
     guint32 findOptions = WEBKIT_FIND_OPTIONS_WRAP_AROUND | WEBKIT_FIND_OPTIONS_AT_WORD_STARTS;
-    WebKitFindController* findController = webkit_web_view_get_find_controller(test->m_webView);
+    WebKitFindController* findController = webkit_web_view_get_find_controller(test->webView());
 
     webkit_find_controller_search(findController, searchText, findOptions, maxMatchCount);
-    g_assert_true(webkit_find_controller_get_web_view(findController) == test->m_webView);
+    g_assert_true(webkit_find_controller_get_web_view(findController) == test->webView());
     g_assert_cmpstr(webkit_find_controller_get_search_text(findController), ==, searchText);
     g_assert_cmpuint(webkit_find_controller_get_max_match_count(findController), ==, maxMatchCount);
     g_assert_cmpuint(webkit_find_controller_get_options(findController), ==, findOptions);

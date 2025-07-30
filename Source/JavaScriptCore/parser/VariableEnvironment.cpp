@@ -34,7 +34,7 @@ namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(CompactTDZEnvironment);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(VariableEnvironment);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(VariableEnvironment, RareData);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(VariableEnvironment::RareData);
 
 void VariableEnvironmentEntry::dump(PrintStream& out) const
 {
@@ -48,14 +48,14 @@ VariableEnvironment& VariableEnvironment::operator=(const VariableEnvironment& o
     return *this;
 }
 
-void VariableEnvironment::markVariableAsCapturedIfDefined(const RefPtr<UniquedStringImpl>& identifier)
+void VariableEnvironment::markVariableAsCapturedIfDefined(const UniquedStringImpl* identifier)
 {
     auto findResult = m_map.find(identifier);
     if (findResult != m_map.end())
         findResult->value.setIsCaptured();
 }
 
-void VariableEnvironment::markVariableAsCaptured(const RefPtr<UniquedStringImpl>& identifier)
+void VariableEnvironment::markVariableAsCaptured(const UniquedStringImpl* identifier)
 {
     auto findResult = m_map.find(identifier);
     RELEASE_ASSERT(findResult != m_map.end());
@@ -102,14 +102,14 @@ void VariableEnvironment::swap(VariableEnvironment& other)
     m_rareData.swap(other.m_rareData);
 }
 
-void VariableEnvironment::markVariableAsImported(const RefPtr<UniquedStringImpl>& identifier)
+void VariableEnvironment::markVariableAsImported(const UniquedStringImpl* identifier)
 {
     auto findResult = m_map.find(identifier);
     RELEASE_ASSERT(findResult != m_map.end());
     findResult->value.setIsImported();
 }
 
-void VariableEnvironment::markVariableAsExported(const RefPtr<UniquedStringImpl>& identifier)
+void VariableEnvironment::markVariableAsExported(const UniquedStringImpl* identifier)
 {
     auto findResult = m_map.find(identifier);
     RELEASE_ASSERT(findResult != m_map.end());

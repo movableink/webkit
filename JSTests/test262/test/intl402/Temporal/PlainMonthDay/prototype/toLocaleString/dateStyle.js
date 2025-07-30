@@ -4,7 +4,7 @@
 /*---
 esid: sec-temporal.plainmonthday.prototype.tolocalestring
 description: Basic tests that dateStyle option affects output
-locale: [en-u-ca-gregory, en-u-ca-islamic]
+locale: [en-u-ca-gregory, en-u-ca-islamic-tbla]
 features: [Temporal, Intl.DateTimeFormat-datetimestyle]
 ---*/
 
@@ -19,13 +19,19 @@ assert(
   "dateStyle: short does not write month of March out in full"
 );
 
-const dateIslamic = Temporal.PlainMonthDay.from({ monthCode: "M09", day: 16, calendar: "islamic" });
+const dateIslamic = Temporal.PlainMonthDay.from({ monthCode: "M09", day: 16, calendar: "islamic-tbla" });
 
 assert(
-  dateIslamic.toLocaleString("en-u-ca-islamic", { dateStyle: "long" }).includes("Ramadan"),
+  dateIslamic.toLocaleString("en-u-ca-islamic-tbla", { dateStyle: "long" }).includes("Ramadan"),
   "dateStyle: long writes month of Ramadan out in full"
 );
 assert(
-  !dateIslamic.toLocaleString("en-u-ca-islamic", { dateStyle: "short" }).includes("Ramadan"),
+  !dateIslamic.toLocaleString("en-u-ca-islamic-tbla", { dateStyle: "short" }).includes("Ramadan"),
   "dateStyle: short does not write month of Ramadan out in full"
+);
+
+const dateWithReferenceYear = new Temporal.PlainMonthDay(5, 31, "gregory", 2222);
+assert(
+  !dateWithReferenceYear.toLocaleString("en", { dateStyle: "full" }).includes("2222"),
+  "dateStyle: full should not format reference year at all"
 );

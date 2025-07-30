@@ -21,13 +21,19 @@
 
 #if ENABLE(VIDEO) && USE(GSTREAMER)
 
+#include "GRefPtrGStreamer.h"
+#include "VideoFrame.h"
 #include "VideoFrameMetadata.h"
 #include "VideoFrameTimeMetadata.h"
 
-#include <gst/gst.h>
+// Modifies the buffer in-place.
+void webkitGstBufferAddVideoFrameMetadata(GstBuffer*, std::optional<WebCore::VideoFrameTimeMetadata>&&, WebCore::VideoFrame::Rotation, bool isMirrored);
 
-GstBuffer* webkitGstBufferSetVideoFrameTimeMetadata(GstBuffer*, std::optional<WebCore::VideoFrameTimeMetadata>&&);
+// Makes the buffer writable before modifying it.
+WARN_UNUSED_RETURN GRefPtr<GstBuffer> webkitGstBufferSetVideoFrameMetadata(GRefPtr<GstBuffer>&&, std::optional<WebCore::VideoFrameTimeMetadata>&&, WebCore::VideoFrame::Rotation = WebCore::VideoFrame::Rotation::None, bool isMirrored = false);
+
 void webkitGstTraceProcessingTimeForElement(GstElement*);
 WebCore::VideoFrameMetadata webkitGstBufferGetVideoFrameMetadata(GstBuffer*);
+std::pair<WebCore::VideoFrame::Rotation, bool> webkitGstBufferGetVideoRotation(GstBuffer*);
 
 #endif // ENABLE(VIDEO) && USE(GSTREAMER)

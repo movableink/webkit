@@ -38,9 +38,11 @@
 #include <WebCore/MemoryCache.h>
 #include <WebCore/MemoryRelease.h>
 #include <WebCore/NetworkStateNotifier.h>
+#include <WebCore/NativeImage.h>
 #include <WebCore/Page.h>
 #include <WebCore/Settings.h>
 #include <WebCore/WorkerThread.h>
+#include <wtf/Compiler.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/FileSystem.h>
 #include <wtf/URL.h>
@@ -57,6 +59,9 @@ QWEBKIT_EXPORT void qt_networkAccessAllowed(bool isAllowed)
 {
 #ifndef QT_NO_BEARERMANAGEMENT
     WebCore::NetworkStateNotifier::singleton().setNetworkAccessAllowed(isAllowed);
+#else
+    UNUSED_PARAM(isAllowed);
+    qWarning("qt_networkAccessAllowed: Bearer management is disabled in this build.");
 #endif
 }
 
@@ -142,7 +147,7 @@ void QWebSettingsPrivate::apply()
 
         value = attributes.value(QWebSettings::DnsPrefetchEnabled,
                                  global->attributes.value(QWebSettings::DnsPrefetchEnabled));
-        settings->setDNSPrefetchingEnabled(value);
+        // DNS prefetching is no longer supported in WebCore
 
         value = attributes.value(QWebSettings::JavascriptEnabled,
                                  global->attributes.value(QWebSettings::JavascriptEnabled));
@@ -184,7 +189,8 @@ void QWebSettingsPrivate::apply()
         value = attributes.value(QWebSettings::HyperlinkAuditingEnabled,
                                  global->attributes.value(QWebSettings::HyperlinkAuditingEnabled));
 
-        settings->setHyperlinkAuditingEnabled(value);
+        // NOTE: setHyperlinkAuditingEnabled has been removed from WebCore::Settings
+        // Hyperlink auditing feature is deprecated and no longer supported
  
         value = attributes.value(QWebSettings::JavascriptCanOpenWindows,
                                       global->attributes.value(QWebSettings::JavascriptCanOpenWindows));
@@ -703,6 +709,9 @@ void QWebSettings::setIconDatabasePath(const QString& path)
         db.setEnabled(false);
         db.close();
     }
+#else
+    UNUSED_PARAM(path);
+    qWarning("setIconDatabasePath: Icon database is disabled in this build.");
 #endif
 }
 
@@ -750,11 +759,13 @@ QIcon QWebSettings::iconForUrl(const QUrl& url)
 #if ENABLE(ICONDATABASE)
     WebCore::initializeWebCoreQt();
     QPixmap* icon = WebCore::iconDatabase().synchronousNativeIconForPageURL(WTF::URL(url).string(),
-                                WebCore::IntSize(16, 16));
+                                        WebCore::IntSize(16, 16));
     if (!icon)
         return QIcon();
 
     return* icon;
+#else
+    UNUSED_PARAM(url);
 #endif
     return QIcon();
 }
@@ -768,6 +779,7 @@ QIcon QWebSettings::iconForUrl(const QUrl& url)
 */
 void QWebSettings::setPluginSearchPaths(const QStringList& paths)
 {
+    UNUSED_PARAM(paths);
     qWarning("Plugins have been removed from WebKit.");
     WebCore::initializeWebCoreQt();
 }
@@ -1121,6 +1133,9 @@ void QWebSettings::setOfflineWebApplicationCachePath(const QString& path)
 #ifndef APPLICATION_CACHE_STORAGE_BROKEN
     WebCore::initializeWebCoreQt();
     WebCore::ApplicationCacheStorage::singleton().setCacheDirectory(path);
+#else
+    UNUSED_PARAM(path);
+    qWarning("setOfflineWebApplicationCachePath: Application cache storage is disabled in this build.");
 #endif
 }
 
@@ -1155,6 +1170,9 @@ void QWebSettings::setOfflineWebApplicationCacheQuota(qint64 maximumSize)
     applicationCacheStorage.empty();
     applicationCacheStorage.vacuumDatabaseFile();
     applicationCacheStorage.setMaximumSize(maximumSize);
+#else
+    UNUSED_PARAM(maximumSize);
+    qWarning("setOfflineWebApplicationCacheQuota: Application cache storage is disabled in this build.");
 #endif
 }
 

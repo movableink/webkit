@@ -22,6 +22,7 @@
 #include "PrintContext.h"
 
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "ElementTraversal.h"
 #include "GraphicsContext.h"
 #include "LengthBox.h"
@@ -96,11 +97,19 @@ FloatBoxExtent PrintContext::computedPageMargin(FloatBoxExtent printMargin)
     // FIXME Currently no pseudo class is supported.
     auto style = frame()->document()->styleScope().resolver().styleForPage(0);
 
-    float pixelToPointScaleFactor = 1 / CSSPrimitiveValue::conversionToCanonicalUnitsScaleFactor(CSSUnitType::CSS_PT).value();
-    return { style->marginTop().isAuto() ? printMargin.top() : style->marginTop().value() * pixelToPointScaleFactor,
-        style->marginRight().isAuto() ? printMargin.right() : style->marginRight().value() * pixelToPointScaleFactor,
-        style->marginBottom().isAuto() ? printMargin.bottom() : style->marginBottom().value() * pixelToPointScaleFactor,
-        style->marginLeft().isAuto() ? printMargin.left() : style->marginLeft().value() * pixelToPointScaleFactor };
+    float pixelToPointScaleFactor = 1.0f / CSS::pixelsPerPt;
+
+    auto marginTop = style->marginTop().tryFixed();
+    auto marginRight = style->marginRight().tryFixed();
+    auto marginBottom = style->marginBottom().tryFixed();
+    auto marginLeft = style->marginLeft().tryFixed();
+
+    return {
+        marginTop ? marginTop->value * pixelToPointScaleFactor : printMargin.top(),
+        marginRight ? marginRight->value * pixelToPointScaleFactor : printMargin.right(),
+        marginBottom ? marginBottom->value * pixelToPointScaleFactor : printMargin.bottom(),
+        marginLeft ? marginLeft->value * pixelToPointScaleFactor : printMargin.left(),
+    };
 }
 
 FloatSize PrintContext::computedPageSize(FloatSize pageSize, FloatBoxExtent printMargin)
@@ -209,7 +218,7 @@ void PrintContext::begin(float width, float height)
     FloatSize minLayoutSize = frame->resizePageRectsKeepingRatio(originalPageSize, FloatSize(width * minimumShrinkFactor(), height * minimumShrinkFactor()));
 
     // This changes layout, so callers need to make sure that they don't paint to screen while in printing mode.
-    frame->setPrinting(true, minLayoutSize, originalPageSize, maximumShrinkFactor() / minimumShrinkFactor(), AdjustViewSize);
+    frame->setPrinting(true, minLayoutSize, originalPageSize, maximumShrinkFactor() / minimumShrinkFactor(), AdjustViewSize::Yes);
 }
 
 float PrintContext::computeAutomaticScaleFactor(const FloatSize& availablePaperSize)
@@ -286,7 +295,7 @@ void PrintContext::end()
     auto& frame = *this->frame();
     ASSERT(m_isPrinting);
     m_isPrinting = false;
-    frame.setPrinting(false, FloatSize(), FloatSize(), 0, AdjustViewSize);
+    frame.setPrinting(false, FloatSize(), FloatSize(), 0, AdjustViewSize::Yes);
     m_linkedDestinations = nullptr;
 }
 
@@ -360,7 +369,7 @@ void PrintContext::outputLinkedDestinations(GraphicsContext& graphicsContext, Do
     }
 }
 
-String PrintContext::pageProperty(LocalFrame* frame, const char* propertyName, int pageNumber)
+String PrintContext::pageProperty(LocalFrame* frame, const String& propertyName, int pageNumber)
 {
     ASSERT(frame);
     ASSERT(frame->document());
@@ -374,21 +383,21 @@ String PrintContext::pageProperty(LocalFrame* frame, const char* propertyName, i
     auto style = document->styleScope().resolver().styleForPage(pageNumber);
 
     // Implement formatters for properties we care about.
-    if (!strcmp(propertyName, "margin-left")) {
-        if (style->marginLeft().isAuto())
-            return autoAtom();
-        return String::number(style->marginLeft().value());
+    if (propertyName == "margin-left"_s) {
+        if (auto marginLeft = style->marginLeft().tryFixed())
+            return String::number(marginLeft->value);
+        return autoAtom();
     }
-    if (!strcmp(propertyName, "line-height"))
+    if (propertyName == "line-height"_s)
         return String::number(style->lineHeight().value());
-    if (!strcmp(propertyName, "font-size"))
+    if (propertyName == "font-size"_s)
         return String::number(style->fontDescription().computedSize());
-    if (!strcmp(propertyName, "font-family"))
+    if (propertyName == "font-family"_s)
         return style->fontDescription().firstFamily();
-    if (!strcmp(propertyName, "size"))
+    if (propertyName == "size"_s)
         return makeString(style->pageSize().width.value(), ' ', style->pageSize().height.value());
 
-    return makeString("pageProperty() unimplemented for: "_s, span(propertyName));
+    return makeString("pageProperty() unimplemented for: "_s, propertyName);
 }
 
 bool PrintContext::isPageBoxVisible(LocalFrame* frame, int pageNumber)

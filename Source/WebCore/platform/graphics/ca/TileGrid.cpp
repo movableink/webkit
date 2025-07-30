@@ -52,8 +52,8 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(TileGrid);
 static TextStream& operator<<(TextStream& ts, TileGrid::ValidationPolicyFlag flag)
 {
     switch (flag) {
-    case TileGrid::ValidationPolicyFlag::PruneSecondaryTiles: ts << "prune secondary"; break;
-    case TileGrid::ValidationPolicyFlag::UnparentAllTiles: ts << "unparent all"; break;
+    case TileGrid::ValidationPolicyFlag::PruneSecondaryTiles: ts << "prune secondary"_s; break;
+    case TileGrid::ValidationPolicyFlag::UnparentAllTiles: ts << "unparent all"_s; break;
     }
     return ts;
 }
@@ -598,8 +598,8 @@ IntRect TileGrid::ensureTilesForRect(const FloatRect& rect, HashSet<TileIndex>& 
             IntRect tileRect = rectForTileIndex(tileIndex);
 
             UncheckedKeyHashMap<TileIndex, TileInfo>::iterator it;
-            constexpr size_t kMaxTileCountPerGrid = 8 * 1024;
-            if (UNLIKELY(m_tiles.size() >= kMaxTileCountPerGrid)) {
+            constexpr size_t kMaxTileCountPerGrid = 6 * 1024;
+            if (m_tiles.size() >= kMaxTileCountPerGrid) [[unlikely]] {
                 it = m_tiles.find(tileIndex);
                 if (it == m_tiles.end())
                     continue;
@@ -813,6 +813,17 @@ bool TileGrid::platformCALayerNeedsPlatformContext(const PlatformCALayer* layer)
         return layerOwner->platformCALayerNeedsPlatformContext(layer);
     return false;
 }
+
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+std::optional<DynamicContentScalingDisplayList> TileGrid::platformCALayerDynamicContentScalingDisplayList(const PlatformCALayer* layer) const
+{
+    for (auto& [tileIndex, tileInfo] : m_tiles) {
+        if (tileInfo.layer == layer)
+            return m_controller->dynamicContentScalingDisplayListForTile(*this, tileIndex);
+    }
+    return std::nullopt;
+}
+#endif
 
 bool TileGrid::platformCALayerContentsOpaque() const
 {

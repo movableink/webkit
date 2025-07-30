@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,7 @@
 #include <WebCore/Document.h>
 #include <WebCore/LibWebRTCUtils.h>
 #include <WebCore/Page.h>
+#include <algorithm>
 #include <wtf/EnumTraits.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -51,7 +52,7 @@ RefPtr<LibWebRTCNetworkManager> LibWebRTCNetworkManager::getOrCreate(WebCore::Sc
     if (!document)
         return nullptr;
 
-    auto* networkManager = static_cast<LibWebRTCNetworkManager*>(document->rtcNetworkManager());
+    auto* networkManager = downcast<LibWebRTCNetworkManager>(document->rtcNetworkManager());
     if (!networkManager) {
         auto newNetworkManager = adoptRef(*new LibWebRTCNetworkManager(identifier));
         networkManager = newNetworkManager.ptr();
@@ -105,17 +106,18 @@ void LibWebRTCNetworkManager::setEnumeratingVisibleNetworkInterfacesEnabled(bool
 
 void LibWebRTCNetworkManager::StartUpdating()
 {
-    callOnMainRunLoop([this, weakThis = WeakPtr { *this }] {
-        if (!weakThis)
+    callOnMainRunLoop([weakThis = WeakPtr { *this }] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
 
         auto& monitor = WebProcess::singleton().libWebRTCNetwork().monitor();
-        if (m_receivedNetworkList) {
-            WebCore::LibWebRTCProvider::callOnWebRTCNetworkThread([this, protectedThis = Ref { *this }] {
-                SignalNetworksChanged();
+        if (protectedThis->m_receivedNetworkList) {
+            WebCore::LibWebRTCProvider::callOnWebRTCNetworkThread([protectedThis] {
+                protectedThis->SignalNetworksChanged();
             });
         } else if (monitor.didReceiveNetworkList())
-            networksChanged(monitor.networkList() , monitor.ipv4(), monitor.ipv6());
+            protectedThis->networksChanged(monitor.networkList() , monitor.ipv4(), monitor.ipv6());
         monitor.startUpdating();
     });
 }
@@ -164,7 +166,7 @@ void LibWebRTCNetworkManager::networksChanged(const Vector<RTCNetwork>& networks
                 RegistrableDomain domain { document->url() };
                 bool isFirstParty = domain == RegistrableDomain(document->firstPartyForCookies());
                 bool isRelayDisabled = true;
-                WebProcess::singleton().ensureNetworkProcessConnection().protectedConnection()->sendWithAsyncReply(Messages::NetworkRTCProvider::GetInterfaceName { document->url(), webPage->webPageProxyIdentifier(), isFirstParty, isRelayDisabled, WTFMove(domain) }, [weakThis = WeakPtr { *this }] (auto&& interfaceName) {
+                WebProcess::singleton().ensureNetworkProcessConnection().connection().sendWithAsyncReply(Messages::NetworkRTCProvider::GetInterfaceName { document->url(), webPage->webPageProxyIdentifier(), isFirstParty, isRelayDisabled, WTFMove(domain) }, [weakThis = WeakPtr { *this }] (auto&& interfaceName) {
                     RefPtr protectedThis = weakThis.get();
                     if (protectedThis && !interfaceName.isNull())
                         protectedThis->signalUsedInterface(WTFMove(interfaceName));
@@ -173,7 +175,7 @@ void LibWebRTCNetworkManager::networksChanged(const Vector<RTCNetwork>& networks
         }
 #endif
         for (auto& network : networks) {
-            if (WTF::anyOf(network.ips, [&](const auto& ip) { return ipv4.rtcAddress() == ip.rtcAddress() || ipv6.rtcAddress() == ip.rtcAddress(); }) || (!m_useMDNSCandidates && m_enableEnumeratingVisibleNetworkInterfaces && m_allowedInterfaces.contains(String::fromUTF8(network.name))))
+            if (std::ranges::any_of(network.ips, [&](const auto& ip) { return ipv4.rtcAddress() == ip.rtcAddress() || ipv6.rtcAddress() == ip.rtcAddress(); }) || (!m_useMDNSCandidates && m_enableEnumeratingVisibleNetworkInterfaces && m_allowedInterfaces.contains(String::fromUTF8(network.name))))
                 filteredNetworks.append(network);
         }
     }

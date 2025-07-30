@@ -97,25 +97,22 @@ static bool usePersistentCredentialStorage = false;
 
 namespace TestWebKitAPI {
 
-
-// FIXME: Re-enable this test once webkit.org/b/208451 is resolved.
-#if !(PLATFORM(IOS) || PLATFORM(VISION))
 TEST(WKWebsiteDataStore, RemoveAndFetchData)
 {
+    RetainPtr defaultDataStore = [WKWebsiteDataStore defaultDataStore];
     readyToContinue = false;
-    [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:[WKWebsiteDataStore _allWebsiteDataTypesIncludingPrivate] modifiedSince:[NSDate distantPast] completionHandler:^() {
+    [defaultDataStore removeDataOfTypes:[WKWebsiteDataStore _allWebsiteDataTypesIncludingPrivate] modifiedSince:[NSDate distantPast] completionHandler:^() {
         readyToContinue = true;
     }];
     TestWebKitAPI::Util::run(&readyToContinue);
     
     readyToContinue = false;
-    [[WKWebsiteDataStore defaultDataStore] fetchDataRecordsOfTypes:[WKWebsiteDataStore _allWebsiteDataTypesIncludingPrivate] completionHandler:^(NSArray<WKWebsiteDataRecord *> *dataRecords) {
+    [defaultDataStore fetchDataRecordsOfTypes:[WKWebsiteDataStore _allWebsiteDataTypesIncludingPrivate] completionHandler:^(NSArray<WKWebsiteDataRecord *> *dataRecords) {
         EXPECT_EQ(0u, dataRecords.count);
         readyToContinue = true;
     }];
     TestWebKitAPI::Util::run(&readyToContinue);
 }
-#endif // !(PLATFORM(IOS) || PLATFORM(VISION))
 
 TEST(WKWebsiteDataStore, RemoveEphemeralData)
 {
@@ -128,6 +125,105 @@ TEST(WKWebsiteDataStore, RemoveEphemeralData)
         done = true;
     }];
     TestWebKitAPI::Util::run(&done);
+}
+
+static constexpr auto mainBytes = R"SWRESOURCE(
+<script>
+function log(message)
+{
+    window.webkit.messageHandlers.testHandler.postMessage(message);
+}
+
+function installServiceWorker()
+{
+    navigator.serviceWorker.register('/sw.js').then((registration) => {
+        const worker = registration.installing ? registration.installing : registration.active;
+        worker.postMessage('Hello');
+    }).catch((error) => {
+        log('register() failed with: ' + error);
+    });
+}
+
+navigator.serviceWorker.addEventListener('message', function(event) {
+    log('Message from ServiceWorker: ' + event.data);
+});
+
+installServiceWorker();
+</script>
+)SWRESOURCE"_s;
+
+static constexpr auto scriptBytes = R"SWRESOURCE(
+async function cacheResources(resources)
+{
+    const cache = await caches.open("v1");
+    await cache.addAll(resources);
+}
+
+self.addEventListener('message', (event) => {
+    event.source.postMessage(event.data);
+});
+
+self.addEventListener('install', (event) => {
+    event.waitUntil(cacheResources(["/cached_1.html", "/cached_2.html", "/cached_3.html", "/cached_4.html", "/cached_5.html"]));
+});
+)SWRESOURCE"_s;
+
+TEST(WKWebsiteDataStore, RemoveDataWaitUntilWebProcessesExit)
+{
+    readyToContinue = false;
+    [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:[WKWebsiteDataStore _allWebsiteDataTypesIncludingPrivate] modifiedSince:[NSDate distantPast] completionHandler:^() {
+        readyToContinue = true;
+    }];
+    TestWebKitAPI::Util::run(&readyToContinue);
+
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { mainBytes } },
+        { "/sw.js"_s, { { { "Content-Type"_s, "application/javascript"_s } }, scriptBytes } },
+        { "/cached_1.html"_s, { "hi"_s } },
+        { "/cached_2.html"_s, { "hi"_s } },
+        { "/cached_3.html"_s, { "hi"_s } },
+        { "/cached_4.html"_s, { "hi"_s } },
+        { "/cached_5.html"_s, { "hi"_s } }
+    });
+    [WKWebsiteDataStore _allowWebsiteDataRecordsForAllOrigins];
+
+    RetainPtr handler = adoptNS([[WKWebsiteDataStoreMessageHandler alloc] init]);
+    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [[configuration userContentController] addScriptMessageHandler:handler.get() name:@"testHandler"];
+    RetainPtr webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    receivedScriptMessage = false;
+    [webView loadRequest:server.request()];
+    TestWebKitAPI::Util::run(&receivedScriptMessage);
+    EXPECT_WK_STREQ(@"Message from ServiceWorker: Hello", [lastScriptMessage body]);
+
+    // Service worker process may keep requesting resources after page closes.
+    [webView _close];
+    webView = nullptr;
+
+    // Service worker process will be shut down.
+    readyToContinue = false;
+    [[configuration websiteDataStore] removeDataOfTypes:[WKWebsiteDataStore _allWebsiteDataTypesIncludingPrivate] modifiedSince:[NSDate distantPast] completionHandler: ^{
+        readyToContinue = true;
+    }];
+    TestWebKitAPI::Util::run(&readyToContinue);
+
+    readyToContinue = false;
+    [[configuration websiteDataStore] fetchDataRecordsOfTypes:[WKWebsiteDataStore _allWebsiteDataTypesIncludingPrivate] completionHandler:^(NSArray<WKWebsiteDataRecord *> *dataRecords) {
+        EXPECT_EQ(dataRecords.count, 0u);
+        for (WKWebsiteDataRecord* record in dataRecords) {
+            for (NSString *type in record.dataTypes)
+                NSLog(@"Unexpected record with type: [%@]", type);
+        }
+        readyToContinue = true;
+    }];
+    TestWebKitAPI::Util::run(&readyToContinue);
+
+    // Ensure service worker can be installed again.
+    webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    receivedScriptMessage = false;
+    [webView loadRequest:server.request()];
+    TestWebKitAPI::Util::run(&receivedScriptMessage);
+    EXPECT_WK_STREQ(@"Message from ServiceWorker: Hello", [lastScriptMessage body]);
 }
 
 TEST(WKWebsiteDataStore, FetchNonPersistentCredentials)
@@ -412,7 +508,7 @@ TEST(WKWebsiteDataStore, ClearCustomDataStoreNoWebViews)
                     "Hello"_s);
                 break;
             case 2:
-                EXPECT_FALSE(strnstr(request.data(), "Cookie: a=b\r\n", request.size()));
+                EXPECT_FALSE(contains(request.span(), "Cookie: a=b\r\n"_span));
                 connection.send(
                     "HTTP/1.1 200 OK\r\n"
                     "Content-Length: 5\r\n"
@@ -532,6 +628,43 @@ TEST(WKWebsiteDataStore, RemoveDataStoreWithIdentifier)
     EXPECT_TRUE([fileManager fileExistsAtPath:generalStorageDirectory.get().path]);
 
     __block bool done = false;
+    [WKWebsiteDataStore _removeDataStoreWithIdentifier:uuid.get() completionHandler:^(NSError *error) {
+        done = true;
+        EXPECT_NULL(error);
+    }];
+    TestWebKitAPI::Util::run(&done);
+    EXPECT_FALSE([fileManager fileExistsAtPath:generalStorageDirectory.get().path]);
+}
+
+TEST(WKWebsiteDataStore, RemoveSessionWithIdentifierFromNetworkProcess)
+{
+    // Launch network process with operation on default data store.
+    __block bool done = false;
+    RetainPtr defaultDataStore = [WKWebsiteDataStore defaultDataStore];
+    [defaultDataStore removeDataOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] modifiedSince:[NSDate distantPast] completionHandler:^() {
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    pid_t defaultNetworkProcessIdentifier = [defaultDataStore _networkProcessIdentifier];
+    EXPECT_NE(defaultNetworkProcessIdentifier, 0);
+
+    NSString *uuidString = @"68753a44-4d6f-1226-9c60-0050e4c00067";
+    RetainPtr uuid = adoptNS([[NSUUID alloc] initWithUUIDString:uuidString]);
+    RetainPtr<NSURL> generalStorageDirectory;
+    @autoreleasepool {
+        RetainPtr websiteDataStore = createWebsiteDataStoreAndPrepare(uuid.get(), @"");
+        generalStorageDirectory = websiteDataStore.get()._configuration.generalStorageDirectory;
+        EXPECT_EQ(defaultNetworkProcessIdentifier, [websiteDataStore _networkProcessIdentifier]);
+    }
+
+    EXPECT_NOT_NULL(generalStorageDirectory.get());
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    EXPECT_TRUE([fileManager fileExistsAtPath:generalStorageDirectory.get().path]);
+
+    // Make sure network process is still alive.
+    EXPECT_FALSE(kill(defaultNetworkProcessIdentifier, 0));
+
+    done = false;
     [WKWebsiteDataStore _removeDataStoreWithIdentifier:uuid.get() completionHandler:^(NSError *error) {
         done = true;
         EXPECT_NULL(error);

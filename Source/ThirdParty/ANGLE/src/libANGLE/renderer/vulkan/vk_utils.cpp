@@ -83,7 +83,7 @@ bool FindCompatibleMemory(const VkPhysicalDeviceMemoryProperties &memoryProperti
     return false;
 }
 
-VkResult FindAndAllocateCompatibleMemory(vk::Context *context,
+VkResult FindAndAllocateCompatibleMemory(vk::ErrorContext *context,
                                          vk::MemoryAllocationType memoryAllocationType,
                                          const vk::MemoryProperties &memoryProperties,
                                          VkMemoryPropertyFlags requestedMemoryPropertyFlags,
@@ -94,10 +94,11 @@ VkResult FindAndAllocateCompatibleMemory(vk::Context *context,
                                          vk::DeviceMemory *deviceMemoryOut)
 {
     VkDevice device = context->getDevice();
+    vk::Renderer *renderer = context->getRenderer();
 
     VK_RESULT_TRY(memoryProperties.findCompatibleMemoryIndex(
-        context, memoryRequirements, requestedMemoryPropertyFlags, (extraAllocationInfo != nullptr),
-        memoryPropertyFlagsOut, memoryTypeIndexOut));
+        renderer, memoryRequirements, requestedMemoryPropertyFlags,
+        (extraAllocationInfo != nullptr), memoryPropertyFlagsOut, memoryTypeIndexOut));
 
     VkMemoryAllocateInfo allocInfo = {};
     allocInfo.sType                = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -106,7 +107,6 @@ VkResult FindAndAllocateCompatibleMemory(vk::Context *context,
     allocInfo.allocationSize       = memoryRequirements.size;
 
     // Add the new allocation for tracking.
-    vk::Renderer *renderer = context->getRenderer();
     renderer->getMemoryAllocationTracker()->setPendingMemoryAlloc(
         memoryAllocationType, allocInfo.allocationSize, *memoryTypeIndexOut);
 
@@ -121,7 +121,7 @@ VkResult FindAndAllocateCompatibleMemory(vk::Context *context,
 }
 
 template <typename T>
-VkResult AllocateAndBindBufferOrImageMemory(vk::Context *context,
+VkResult AllocateAndBindBufferOrImageMemory(vk::ErrorContext *context,
                                             vk::MemoryAllocationType memoryAllocationType,
                                             VkMemoryPropertyFlags requestedMemoryPropertyFlags,
                                             VkMemoryPropertyFlags *memoryPropertyFlagsOut,
@@ -133,7 +133,7 @@ VkResult AllocateAndBindBufferOrImageMemory(vk::Context *context,
                                             vk::DeviceMemory *deviceMemoryOut);
 
 template <>
-VkResult AllocateAndBindBufferOrImageMemory(vk::Context *context,
+VkResult AllocateAndBindBufferOrImageMemory(vk::ErrorContext *context,
                                             vk::MemoryAllocationType memoryAllocationType,
                                             VkMemoryPropertyFlags requestedMemoryPropertyFlags,
                                             VkMemoryPropertyFlags *memoryPropertyFlagsOut,
@@ -171,7 +171,7 @@ VkResult AllocateAndBindBufferOrImageMemory(vk::Context *context,
 }
 
 template <>
-VkResult AllocateAndBindBufferOrImageMemory(vk::Context *context,
+VkResult AllocateAndBindBufferOrImageMemory(vk::ErrorContext *context,
                                             vk::MemoryAllocationType memoryAllocationType,
                                             VkMemoryPropertyFlags requestedMemoryPropertyFlags,
                                             VkMemoryPropertyFlags *memoryPropertyFlagsOut,
@@ -196,7 +196,7 @@ VkResult AllocateAndBindBufferOrImageMemory(vk::Context *context,
 }
 
 template <typename T>
-VkResult AllocateBufferOrImageMemory(vk::Context *context,
+VkResult AllocateBufferOrImageMemory(vk::ErrorContext *context,
                                      vk::MemoryAllocationType memoryAllocationType,
                                      VkMemoryPropertyFlags requestedMemoryPropertyFlags,
                                      VkMemoryPropertyFlags *memoryPropertyFlagsOut,
@@ -369,19 +369,17 @@ VkImageAspectFlags GetFormatAspectFlags(const angle::Format &format)
     return dsAspect != 0 ? dsAspect : VK_IMAGE_ASPECT_COLOR_BIT;
 }
 
-// Context implementation.
-Context::Context(Renderer *renderer)
-    : mRenderer(renderer), mShareGroupRefCountedEventsGarbageRecycler(nullptr), mPerfCounters{}
-{}
+// ErrorContext implementation.
+ErrorContext::ErrorContext(Renderer *renderer) : mRenderer(renderer), mPerfCounters{} {}
 
-Context::~Context() {}
+ErrorContext::~ErrorContext() = default;
 
-VkDevice Context::getDevice() const
+VkDevice ErrorContext::getDevice() const
 {
     return mRenderer->getDevice();
 }
 
-const angle::FeaturesVk &Context::getFeatures() const
+const angle::FeaturesVk &ErrorContext::getFeatures() const
 {
     return mRenderer->getFeatures();
 }
@@ -415,7 +413,7 @@ bool MemoryProperties::hasLazilyAllocatedMemory() const
 }
 
 VkResult MemoryProperties::findCompatibleMemoryIndex(
-    Context *context,
+    Renderer *renderer,
     const VkMemoryRequirements &memoryRequirements,
     VkMemoryPropertyFlags requestedMemoryPropertyFlags,
     bool isExternalMemory,
@@ -423,6 +421,14 @@ VkResult MemoryProperties::findCompatibleMemoryIndex(
     uint32_t *typeIndexOut) const
 {
     ASSERT(mMemoryProperties.memoryTypeCount > 0 && mMemoryProperties.memoryTypeCount <= 32);
+
+    // The required size must not be greater than the maximum allocation size allowed by the driver.
+    if (memoryRequirements.size > renderer->getMaxMemoryAllocationSize())
+    {
+        renderer->getMemoryAllocationTracker()->onExceedingMaxMemoryAllocationSize(
+            memoryRequirements.size);
+        return VK_ERROR_OUT_OF_DEVICE_MEMORY;
+    }
 
     // Find a compatible memory pool index. If the index doesn't change, we could cache it.
     // Not finding a valid memory pool means an out-of-spec driver, or internal error.
@@ -479,7 +485,7 @@ void StagingBuffer::destroy(Renderer *renderer)
     mSize = 0;
 }
 
-angle::Result StagingBuffer::init(Context *context, VkDeviceSize size, StagingUsage usage)
+angle::Result StagingBuffer::init(ErrorContext *context, VkDeviceSize size, StagingUsage usage)
 {
     VkBufferCreateInfo createInfo    = {};
     createInfo.sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -531,7 +537,7 @@ void StagingBuffer::collectGarbage(Renderer *renderer, const QueueSerial &queueS
     renderer->collectGarbage(use, std::move(garbageObjects));
 }
 
-angle::Result InitMappableAllocation(Context *context,
+angle::Result InitMappableAllocation(ErrorContext *context,
                                      const Allocator &allocator,
                                      Allocation *allocation,
                                      VkDeviceSize size,
@@ -552,7 +558,7 @@ angle::Result InitMappableAllocation(Context *context,
     return angle::Result::Continue;
 }
 
-VkResult AllocateBufferMemory(Context *context,
+VkResult AllocateBufferMemory(ErrorContext *context,
                               vk::MemoryAllocationType memoryAllocationType,
                               VkMemoryPropertyFlags requestedMemoryPropertyFlags,
                               VkMemoryPropertyFlags *memoryPropertyFlagsOut,
@@ -567,7 +573,7 @@ VkResult AllocateBufferMemory(Context *context,
                                        memoryTypeIndexOut, deviceMemoryOut, sizeOut);
 }
 
-VkResult AllocateImageMemory(Context *context,
+VkResult AllocateImageMemory(ErrorContext *context,
                              vk::MemoryAllocationType memoryAllocationType,
                              VkMemoryPropertyFlags memoryPropertyFlags,
                              VkMemoryPropertyFlags *memoryPropertyFlagsOut,
@@ -582,7 +588,7 @@ VkResult AllocateImageMemory(Context *context,
                                        memoryTypeIndexOut, deviceMemoryOut, sizeOut);
 }
 
-VkResult AllocateImageMemoryWithRequirements(Context *context,
+VkResult AllocateImageMemoryWithRequirements(ErrorContext *context,
                                              vk::MemoryAllocationType memoryAllocationType,
                                              VkMemoryPropertyFlags memoryPropertyFlags,
                                              const VkMemoryRequirements &memoryRequirements,
@@ -599,7 +605,7 @@ VkResult AllocateImageMemoryWithRequirements(Context *context,
                                               memoryTypeIndexOut, deviceMemoryOut);
 }
 
-VkResult AllocateBufferMemoryWithRequirements(Context *context,
+VkResult AllocateBufferMemoryWithRequirements(ErrorContext *context,
                                               MemoryAllocationType memoryAllocationType,
                                               VkMemoryPropertyFlags memoryPropertyFlags,
                                               const VkMemoryRequirements &memoryRequirements,
@@ -615,7 +621,7 @@ VkResult AllocateBufferMemoryWithRequirements(Context *context,
                                               memoryTypeIndexOut, deviceMemoryOut);
 }
 
-angle::Result InitShaderModule(Context *context,
+angle::Result InitShaderModule(ErrorContext *context,
                                ShaderModulePtr *shaderModulePtr,
                                const uint32_t *shaderCode,
                                size_t shaderCodeSize)
@@ -627,7 +633,7 @@ angle::Result InitShaderModule(Context *context,
     createInfo.codeSize                 = shaderCodeSize;
     createInfo.pCode                    = shaderCode;
 
-    ShaderModulePtr newShaderModule = ShaderModulePtr::MakeShared();
+    ShaderModulePtr newShaderModule = ShaderModulePtr::MakeShared(context->getDevice());
     ANGLE_VK_TRY(context, newShaderModule->init(context->getDevice(), createInfo));
 
     *shaderModulePtr = std::move(newShaderModule);
@@ -754,7 +760,7 @@ void GarbageObject::destroy(Renderer *renderer)
             break;
     }
 
-    renderer->onDeallocateHandle(mHandleType);
+    renderer->onDeallocateHandle(mHandleType, 1);
 }
 
 void MakeDebugUtilsLabel(GLenum source, const char *marker, VkDebugUtilsLabelEXT *label)
@@ -875,7 +881,8 @@ void ClampViewport(VkViewport *viewport)
     }
 }
 
-void ApplyPipelineCreationFeedback(Context *context, const VkPipelineCreationFeedback &feedback)
+void ApplyPipelineCreationFeedback(ErrorContext *context,
+                                   const VkPipelineCreationFeedback &feedback)
 {
     const bool cacheHit =
         (feedback.flags & VK_PIPELINE_CREATION_FEEDBACK_APPLICATION_PIPELINE_CACHE_HIT_BIT) != 0;
@@ -916,6 +923,9 @@ PFN_vkGetPhysicalDeviceMemoryProperties2KHR vkGetPhysicalDeviceMemoryProperties2
 
 // VK_KHR_external_semaphore_fd
 PFN_vkImportSemaphoreFdKHR vkImportSemaphoreFdKHR = nullptr;
+
+// VK_EXT_device_fault
+PFN_vkGetDeviceFaultInfoEXT vkGetDeviceFaultInfoEXT = nullptr;
 
 // VK_EXT_host_query_reset
 PFN_vkResetQueryPoolEXT vkResetQueryPoolEXT = nullptr;
@@ -964,10 +974,6 @@ PFN_vkCreateImagePipeSurfaceFUCHSIA vkCreateImagePipeSurfaceFUCHSIA = nullptr;
 PFN_vkGetAndroidHardwareBufferPropertiesANDROID vkGetAndroidHardwareBufferPropertiesANDROID =
     nullptr;
 PFN_vkGetMemoryAndroidHardwareBufferANDROID vkGetMemoryAndroidHardwareBufferANDROID = nullptr;
-#    endif
-
-#    if defined(ANGLE_PLATFORM_GGP)
-PFN_vkCreateStreamDescriptorSurfaceGGP vkCreateStreamDescriptorSurfaceGGP = nullptr;
 #    endif
 
 #    define GET_INSTANCE_FUNC(vkName)                                                          \
@@ -1078,16 +1084,14 @@ void InitExternalMemoryHardwareBufferANDROIDFunctions(VkDevice device)
 }
 #    endif
 
-#    if defined(ANGLE_PLATFORM_GGP)
-void InitGGPStreamDescriptorSurfaceFunctions(VkInstance instance)
-{
-    GET_INSTANCE_FUNC(vkCreateStreamDescriptorSurfaceGGP);
-}
-#    endif  // defined(ANGLE_PLATFORM_GGP)
-
 void InitExternalSemaphoreFdFunctions(VkDevice device)
 {
     GET_DEVICE_FUNC(vkImportSemaphoreFdKHR);
+}
+
+void InitDeviceFaultFunctions(VkDevice device)
+{
+    GET_DEVICE_FUNC(vkGetDeviceFaultInfoEXT);
 }
 
 void InitHostQueryResetFunctions(VkDevice device)
@@ -1304,12 +1308,6 @@ VkSamplerAddressMode GetSamplerAddressMode(const GLenum wrap)
             UNIMPLEMENTED();
             return VK_SAMPLER_ADDRESS_MODE_MAX_ENUM;
     }
-}
-
-VkRect2D GetRect(const gl::Rectangle &source)
-{
-    return {{source.x, source.y},
-            {static_cast<uint32_t>(source.width), static_cast<uint32_t>(source.height)}};
 }
 
 VkPrimitiveTopology GetPrimitiveTopology(gl::PrimitiveMode mode)
@@ -1708,6 +1706,62 @@ VkImageTiling GetTilingMode(gl::TilingMode tilingMode)
     }
 }
 
+VkFormat GetAstcDecodeMode(const GLenum astcDecodePrecision)
+{
+    switch (astcDecodePrecision)
+    {
+        case GL_RGBA16F:
+            return VK_FORMAT_R16G16B16A16_SFLOAT;
+        case GL_RGBA8:
+            return VK_FORMAT_R8G8B8A8_UNORM;
+        case GL_RGB9_E5:
+            return VK_FORMAT_E5B9G9R9_UFLOAT_PACK32;
+        default:
+            UNREACHABLE();
+            return VK_FORMAT_R16G16B16A16_SFLOAT;
+    }
+}
+
+VkImageCompressionFixedRateFlagsEXT ConvertEGLFixedRateToVkFixedRate(
+    const EGLenum eglCompressionRate,
+    const angle::FormatID actualFormatID)
+{
+    switch (eglCompressionRate)
+    {
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_NONE_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_NONE_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_DEFAULT_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_NONE_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_1BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_1BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_2BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_2BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_3BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_3BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_4BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_4BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_5BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_5BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_6BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_6BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_7BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_7BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_8BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_8BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_9BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_9BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_10BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_10BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_11BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_11BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_12BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_12BPC_BIT_EXT;
+        default:
+            UNREACHABLE();
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_NONE_EXT;
+    }
+}
+
 }  // namespace gl_vk
 
 namespace vk_gl
@@ -1788,7 +1842,7 @@ GLenum ConvertVkFixedRateToGLFixedRate(const VkImageCompressionFixedRateFlagsEXT
     }
 }
 
-GLint convertCompressionFlagsToGLFixedRates(
+GLint ConvertCompressionFlagsToGLFixedRates(
     VkImageCompressionFixedRateFlagsEXT imageCompressionFixedRateFlags,
     GLint bufSize,
     GLint *rates)
@@ -1803,7 +1857,7 @@ GLint convertCompressionFlagsToGLFixedRates(
     }
     VkImageCompressionFixedRateFlagsEXT tmpFlags = imageCompressionFixedRateFlags;
     uint8_t bitCount                             = 0;
-    std::vector<GLint> GLRates;
+    angle::FastVector<GLint, 4> GLRates;
 
     while (tmpFlags > 0)
     {
@@ -1822,6 +1876,62 @@ GLint convertCompressionFlagsToGLFixedRates(
         std::copy(GLRates.begin(), GLRates.end(), rates);
     }
     return size;
+}
+
+EGLenum ConvertVkFixedRateToEGLFixedRate(
+    const VkImageCompressionFixedRateFlagsEXT vkCompressionRate)
+{
+    switch (vkCompressionRate)
+    {
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_NONE_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_NONE_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_1BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_1BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_2BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_2BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_3BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_3BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_4BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_4BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_5BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_5BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_6BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_6BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_7BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_7BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_8BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_8BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_9BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_9BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_10BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_10BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_11BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_11BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_12BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_12BPC_EXT;
+        default:
+            UNREACHABLE();
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_NONE_EXT;
+    }
+}
+
+std::vector<EGLint> ConvertCompressionFlagsToEGLFixedRate(
+    VkImageCompressionFixedRateFlagsEXT imageCompressionFixedRateFlags,
+    size_t rateSize)
+{
+    std::vector<EGLint> EGLRates;
+
+    for (size_t bit : angle::BitSet<32>(imageCompressionFixedRateFlags))
+    {
+        if (EGLRates.size() >= rateSize)
+        {
+            break;
+        }
+
+        EGLRates.push_back(ConvertVkFixedRateToEGLFixedRate(angle::Bit<uint32_t>(bit)));
+    }
+
+    return EGLRates;
 }
 }  // namespace vk_gl
 }  // namespace rx

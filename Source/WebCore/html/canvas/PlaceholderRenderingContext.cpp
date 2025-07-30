@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,9 @@
 #include "GraphicsLayerContentsDisplayDelegate.h"
 #include "HTMLCanvasElement.h"
 #include "OffscreenCanvas.h"
+#include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <utility>
 
 namespace WebCore {
 
@@ -47,15 +49,18 @@ PlaceholderRenderingContextSource::PlaceholderRenderingContextSource(Placeholder
 {
 }
 
-void PlaceholderRenderingContextSource::setPlaceholderBuffer(ImageBuffer& imageBuffer)
+void PlaceholderRenderingContextSource::setPlaceholderBuffer(RefPtr<ImageBuffer>&& imageBuffer)
 {
+    RefPtr clone = imageBuffer->clone();
+
     {
         Locker locker { m_lock };
         if (m_delegate)
-            m_delegate->tryCopyToLayer(imageBuffer);
+            m_delegate->tryCopyToLayer(*imageBuffer);
+        else
+            m_imageBufferForDelegate = WTFMove(imageBuffer);
     }
 
-    RefPtr clone = imageBuffer.clone();
     if (!clone)
         return;
     std::unique_ptr serializedClone = ImageBuffer::sinkIntoSerializedImageBuffer(WTFMove(clone));
@@ -65,7 +70,7 @@ void PlaceholderRenderingContextSource::setPlaceholderBuffer(ImageBuffer& imageB
         RefPtr placeholder = weakPlaceholder.get();
         if (!placeholder)
             return;
-        RefPtr imageBuffer = SerializedImageBuffer::sinkIntoImageBuffer(WTFMove(buffer), placeholder->canvas().scriptExecutionContext()->graphicsClient());
+        RefPtr imageBuffer = SerializedImageBuffer::sinkIntoImageBuffer(WTFMove(buffer), placeholder->protectedCanvas()->scriptExecutionContext()->graphicsClient());
         if (!imageBuffer)
             return;
         placeholder->setPlaceholderBuffer(imageBuffer.releaseNonNull());
@@ -76,6 +81,10 @@ void PlaceholderRenderingContextSource::setContentsToLayer(GraphicsLayer& layer)
 {
     Locker locker { m_lock };
     m_delegate = layer.createAsyncContentsDisplayDelegate(m_delegate.get());
+    if (m_imageBufferForDelegate) {
+        m_delegate->tryCopyToLayer(*std::exchange(m_imageBufferForDelegate, nullptr));
+        m_imageBufferForDelegate = nullptr;
+    }
 }
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PlaceholderRenderingContext);

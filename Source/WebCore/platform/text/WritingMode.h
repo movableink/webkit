@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Google Inc. All rights reserved.
+ * Copyright (c) 2012 Google Inc. All rights reserved.
  * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -56,6 +56,8 @@ enum class StyleWritingMode : uint8_t;
 enum class TextDirection : bool;
 enum class TextOrientation : uint8_t;
 enum class FlowDirection : uint8_t;
+enum class BoxAxis : uint8_t;
+enum class LogicalBoxAxis : uint8_t;
 
 class WritingMode final {
 public:
@@ -108,6 +110,12 @@ public:
     constexpr FlowDirection blockDirection() const;
     constexpr TextDirection bidiDirection() const;
     constexpr FlowDirection inlineDirection() const;
+
+    // Axes as enums. Prefer booleans if doing boolean checks.
+    constexpr BoxAxis blockAxis() const;
+    constexpr BoxAxis inlineAxis() const;
+    constexpr LogicalBoxAxis horizontalAxis() const;
+    constexpr LogicalBoxAxis verticalAxis() const;
 
     // Computed values. May differ from used values above.
     constexpr StyleWritingMode computedWritingMode() const;
@@ -290,7 +298,10 @@ constexpr bool WritingMode::isSidewaysOrientation() const
 
 constexpr bool WritingMode::isLineInverted() const
 {
-    return isBlockFlipped() != isVertical();
+    auto bits = m_bits & kWritingModeMask;
+    bool isHorizontalBt = kIsFlippedBlock == bits;
+    bool isVerticalLr = (kIsVerticalText | kIsVerticalType) == bits;
+    return isHorizontalBt | isVerticalLr;
 }
 
 constexpr bool WritingMode::isLineOverRight() const
@@ -432,8 +443,8 @@ inline TextStream& operator<<(TextStream& stream, StyleWritingMode writingMode)
 inline TextStream& operator<<(TextStream& ts, TextDirection textDirection)
 {
     switch (textDirection) {
-    case TextDirection::LTR: ts << "ltr"; break;
-    case TextDirection::RTL: ts << "rtl"; break;
+    case TextDirection::LTR: ts << "ltr"_s; break;
+    case TextDirection::RTL: ts << "rtl"_s; break;
     }
     return ts;
 }

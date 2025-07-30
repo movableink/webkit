@@ -39,11 +39,18 @@
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/SecurityOriginData.h>
 #include <WebCore/SubstituteData.h>
+#include <wtf/ListHashSet.h>
+#include <wtf/MonotonicTime.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
 enum class FrameLoadType : uint8_t;
 class ResourceResponse;
+}
+
+namespace WebKit {
+class WebBackForwardListFrameItem;
+class BrowsingWarning;
 }
 
 namespace API {
@@ -78,9 +85,9 @@ public:
         return adoptRef(*new Navigation(processID, WTFMove(currentAndTargetItem)));
     }
 
-    static Ref<Navigation> create(WebCore::ProcessIdentifier processID, Ref<WebKit::WebBackForwardListItem>&& targetItem, RefPtr<WebKit::WebBackForwardListItem>&& fromItem, WebCore::FrameLoadType backForwardFrameLoadType)
+    static Ref<Navigation> create(WebCore::ProcessIdentifier processID, Ref<WebKit::WebBackForwardListFrameItem>&& targetFrameItem, RefPtr<WebKit::WebBackForwardListItem>&& fromItem, WebCore::FrameLoadType backForwardFrameLoadType)
     {
-        return adoptRef(*new Navigation(processID, WTFMove(targetItem), WTFMove(fromItem), backForwardFrameLoadType));
+        return adoptRef(*new Navigation(processID, WTFMove(targetFrameItem), WTFMove(fromItem), backForwardFrameLoadType));
     }
 
     static Ref<Navigation> create(WebCore::ProcessIdentifier processID, WebCore::ResourceRequest&& request, RefPtr<WebKit::WebBackForwardListItem>&& fromItem)
@@ -107,41 +114,49 @@ public:
     const WebCore::ResourceRequest& currentRequest() const { return m_currentRequest; }
     std::optional<WebCore::ProcessIdentifier> currentRequestProcessIdentifier() const { return m_currentRequestProcessIdentifier; }
 
-    bool currentRequestIsRedirect() const { return !m_lastNavigationAction.redirectResponse.isNull(); }
+    bool currentRequestIsRedirect() const { return m_lastNavigationAction && !m_lastNavigationAction->redirectResponse.isNull(); }
     bool currentRequestIsCrossSiteRedirect() const;
 
-    WebKit::WebBackForwardListItem* targetItem() const { return m_targetItem.get(); }
+    WebKit::WebBackForwardListItem* targetItem() const;
+    RefPtr<WebKit::WebBackForwardListItem> protectedTargetItem() const { return targetItem(); }
+    WebKit::WebBackForwardListFrameItem* targetFrameItem() const { return m_targetFrameItem.get(); }
     WebKit::WebBackForwardListItem* fromItem() const { return m_fromItem.get(); }
     std::optional<WebCore::FrameLoadType> backForwardFrameLoadType() const { return m_backForwardFrameLoadType; }
     WebKit::WebBackForwardListItem* reloadItem() const { return m_reloadItem.get(); }
 
     void appendRedirectionURL(const WTF::URL&);
     Vector<WTF::URL> takeRedirectChain() { return WTFMove(m_redirectChain); }
+    size_t redirectChainIndex(const WTF::URL&);
 
-    bool wasUserInitiated() const { return !!m_lastNavigationAction.userGestureTokenIdentifier; }
-    bool isRequestFromClientOrUserInput() const { return m_lastNavigationAction.isRequestFromClientOrUserInput; }
+    bool wasUserInitiated() const { return m_lastNavigationAction && !!m_lastNavigationAction->userGestureTokenIdentifier; }
+    bool isRequestFromClientOrUserInput() const;
+    void markRequestAsFromClientInput();
+    void markAsFromLoadData() { m_isFromLoadData = true; }
+    bool isFromLoadData() const { return m_isFromLoadData; }
 
-    bool shouldPerformDownload() const { return !m_lastNavigationAction.downloadAttribute.isNull(); }
+    bool shouldPerformDownload() const { return m_lastNavigationAction && !m_lastNavigationAction->downloadAttribute.isNull(); }
 
-    bool treatAsSameOriginNavigation() const { return m_lastNavigationAction.treatAsSameOriginNavigation; }
-    bool hasOpenedFrames() const { return m_lastNavigationAction.hasOpenedFrames; }
-    bool openedByDOMWithOpener() const { return m_lastNavigationAction.openedByDOMWithOpener; }
-    const WebCore::SecurityOriginData& requesterOrigin() const { return m_lastNavigationAction.requesterOrigin; }
+    bool treatAsSameOriginNavigation() const { return m_lastNavigationAction && m_lastNavigationAction->treatAsSameOriginNavigation; }
+    bool hasOpenedFrames() const { return m_lastNavigationAction && m_lastNavigationAction->hasOpenedFrames; }
+    bool openedByDOMWithOpener() const { return m_lastNavigationAction && m_lastNavigationAction->openedByDOMWithOpener; }
+    bool isInitialFrameSrcLoad() const { return m_lastNavigationAction && m_lastNavigationAction->isInitialFrameSrcLoad; }
+    WebCore::SecurityOriginData requesterOrigin() const { return m_lastNavigationAction ? m_lastNavigationAction->requesterOrigin : WebCore::SecurityOriginData { }; }
+    WebCore::ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy() const { return m_lastNavigationAction ? m_lastNavigationAction->shouldOpenExternalURLsPolicy : WebCore::ShouldOpenExternalURLsPolicy::ShouldNotAllow; }
 
     void setUserContentExtensionsEnabled(bool enabled) { m_userContentExtensionsEnabled = enabled; }
     bool userContentExtensionsEnabled() const { return m_userContentExtensionsEnabled; }
 
-    WebCore::LockHistory lockHistory() const { return m_lastNavigationAction.lockHistory; }
-    WebCore::LockBackForwardList lockBackForwardList() const { return m_lastNavigationAction.lockBackForwardList; }
+    WebCore::LockHistory lockHistory() const { return m_lastNavigationAction ? m_lastNavigationAction->lockHistory : WebCore::LockHistory::No; }
+    WebCore::LockBackForwardList lockBackForwardList() const { return m_lastNavigationAction ? m_lastNavigationAction->lockBackForwardList : WebCore::LockBackForwardList::No; }
 
-    WTF::String clientRedirectSourceForHistory() const { return m_lastNavigationAction.clientRedirectSourceForHistory; }
-    std::optional<WebCore::OwnerPermissionsPolicyData> ownerPermissionsPolicy() const { return m_lastNavigationAction.ownerPermissionsPolicy; }
+    WTF::String clientRedirectSourceForHistory() const { return m_lastNavigationAction ? m_lastNavigationAction->clientRedirectSourceForHistory : WTF::String(); }
+    std::optional<WebCore::OwnerPermissionsPolicyData> ownerPermissionsPolicy() const { return m_lastNavigationAction ? m_lastNavigationAction->ownerPermissionsPolicy : std::nullopt; }
 
     void setLastNavigationAction(const WebKit::NavigationActionData& navigationAction) { m_lastNavigationAction = navigationAction; }
-    const WebKit::NavigationActionData& lastNavigationAction() const { return m_lastNavigationAction; }
+    const std::optional<WebKit::NavigationActionData>& lastNavigationAction() const { return m_lastNavigationAction; }
 
     void setOriginatingFrameInfo(const WebKit::FrameInfoData& frameInfo) { m_originatingFrameInfo = frameInfo; }
-    const WebKit::FrameInfoData& originatingFrameInfo() const { return m_originatingFrameInfo; }
+    const std::optional<WebKit::FrameInfoData>& originatingFrameInfo() const { return m_originatingFrameInfo; }
 
     void setDestinationFrameSecurityOrigin(const WebCore::SecurityOriginData& origin) { m_destinationFrameSecurityOrigin = origin; }
     const WebCore::SecurityOriginData& destinationFrameSecurityOrigin() const { return m_destinationFrameSecurityOrigin; }
@@ -155,7 +170,7 @@ public:
 
     const std::unique_ptr<SubstituteData>& substituteData() const { return m_substituteData; }
 
-    const std::optional<WebCore::PrivateClickMeasurement>& privateClickMeasurement() const { return m_lastNavigationAction.privateClickMeasurement; }
+    const WebCore::PrivateClickMeasurement* privateClickMeasurement() const { return m_lastNavigationAction && m_lastNavigationAction->privateClickMeasurement ? &*m_lastNavigationAction->privateClickMeasurement : nullptr; }
 
     void setClientNavigationActivity(RefPtr<WebKit::ProcessThrottler::Activity>&& activity) { Ref { m_clientNavigationActivity }->setActivity(WTFMove(activity)); }
 
@@ -168,6 +183,13 @@ public:
 
     void setOriginatorAdvancedPrivacyProtections(OptionSet<WebCore::AdvancedPrivacyProtections> advancedPrivacyProtections) { m_originatorAdvancedPrivacyProtections = advancedPrivacyProtections; }
     std::optional<OptionSet<WebCore::AdvancedPrivacyProtections>> originatorAdvancedPrivacyProtections() const { return m_originatorAdvancedPrivacyProtections; }
+    void setSafeBrowsingCheckOngoing(size_t, bool);
+    bool safeBrowsingCheckOngoing(size_t);
+    bool safeBrowsingCheckOngoing();
+    void setSafeBrowsingWarning(RefPtr<WebKit::BrowsingWarning>&&);
+    RefPtr<WebKit::BrowsingWarning> safeBrowsingWarning();
+    MonotonicTime requestStart() const { return m_requestStart; }
+    void resetRequestStart();
 
     WebCore::ProcessIdentifier processID() const { return m_processID; }
     void setProcessID(WebCore::ProcessIdentifier processID) { m_processID = processID; }
@@ -176,7 +198,7 @@ private:
     Navigation(WebCore::ProcessIdentifier);
     Navigation(WebCore::ProcessIdentifier, RefPtr<WebKit::WebBackForwardListItem>&&);
     Navigation(WebCore::ProcessIdentifier, WebCore::ResourceRequest&&, RefPtr<WebKit::WebBackForwardListItem>&& fromItem);
-    Navigation(WebCore::ProcessIdentifier, Ref<WebKit::WebBackForwardListItem>&& targetItem, RefPtr<WebKit::WebBackForwardListItem>&& fromItem, WebCore::FrameLoadType);
+    Navigation(WebCore::ProcessIdentifier, Ref<WebKit::WebBackForwardListFrameItem>&& targetItem, RefPtr<WebKit::WebBackForwardListItem>&& fromItem, WebCore::FrameLoadType);
     Navigation(WebCore::ProcessIdentifier, std::unique_ptr<SubstituteData>&&);
     Navigation(WebCore::ProcessIdentifier, WebCore::ResourceRequest&&, std::unique_ptr<SubstituteData>&&, RefPtr<WebKit::WebBackForwardListItem>&& fromItem);
 
@@ -187,20 +209,27 @@ private:
     std::optional<WebCore::ProcessIdentifier> m_currentRequestProcessIdentifier;
     Vector<WTF::URL> m_redirectChain;
 
-    RefPtr<WebKit::WebBackForwardListItem> m_targetItem;
+    const RefPtr<WebKit::WebBackForwardListFrameItem> m_targetFrameItem;
     RefPtr<WebKit::WebBackForwardListItem> m_fromItem;
     RefPtr<WebKit::WebBackForwardListItem> m_reloadItem;
     std::optional<WebCore::FrameLoadType> m_backForwardFrameLoadType;
     std::unique_ptr<SubstituteData> m_substituteData;
-    WebKit::NavigationActionData m_lastNavigationAction;
-    WebKit::FrameInfoData m_originatingFrameInfo;
+    std::optional<WebKit::NavigationActionData> m_lastNavigationAction;
+    std::optional<WebKit::FrameInfoData> m_originatingFrameInfo;
     WebCore::SecurityOriginData m_destinationFrameSecurityOrigin;
-    bool m_userContentExtensionsEnabled { true };
     WebKit::WebContentMode m_effectiveContentMode { WebKit::WebContentMode::Recommended };
     Ref<WebKit::ProcessThrottler::TimedActivity> m_clientNavigationActivity;
-    bool m_isLoadedWithNavigationShared { false };
+    bool m_userContentExtensionsEnabled : 1 { true };
+    bool m_isLoadedWithNavigationShared : 1 { false };
+    bool m_requestIsFromClientInput : 1 { false };
+    bool m_isFromLoadData : 1 { false };
     RefPtr<API::WebsitePolicies> m_websitePolicies;
     std::optional<OptionSet<WebCore::AdvancedPrivacyProtections>> m_originatorAdvancedPrivacyProtections;
+    MonotonicTime m_requestStart { MonotonicTime::now() };
+    RefPtr<WebKit::BrowsingWarning> m_safeBrowsingWarning;
+    ListHashSet<size_t> m_ongoingSafeBrowsingChecks;
 };
 
 } // namespace API
+
+SPECIALIZE_TYPE_TRAITS_API_OBJECT(Navigation);

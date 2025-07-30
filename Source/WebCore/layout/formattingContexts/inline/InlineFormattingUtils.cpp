@@ -32,6 +32,7 @@
 #include "InlineDisplayContent.h"
 #include "InlineLevelBoxInlines.h"
 #include "InlineLineBoxVerticalAligner.h"
+#include "InlineLineTypes.h"
 #include "InlineQuirks.h"
 #include "LayoutElementBox.h"
 #include "LengthFunctions.h"
@@ -117,8 +118,10 @@ bool InlineFormattingUtils::inlineLevelBoxAffectsLineBox(const InlineLevelBox& i
 
     if (inlineLevelBox.isLineBreakBox())
         return false;
-    if (inlineLevelBox.isListMarker())
+    if (inlineLevelBox.isListMarker()) {
+        // This does not match other browser engines. see webkit.org/b/256390.
         return true;
+    }
     if (inlineLevelBox.isInlineBox())
         return formattingContext().layoutState().inStandardsMode() ? true : formattingContext().quirks().inlineBoxAffectsLineBox(inlineLevelBox);
     if (inlineLevelBox.isAtomicInlineBox())
@@ -143,7 +146,7 @@ InlineRect InlineFormattingUtils::flipVisualRectToLogicalForWritingMode(const In
     return visualRect;
 }
 
-InlineLayoutUnit InlineFormattingUtils::computedTextIndent(IsIntrinsicWidthMode isIntrinsicWidthMode, std::optional<bool> previousLineEndsWithLineBreak, InlineLayoutUnit availableWidth) const
+InlineLayoutUnit InlineFormattingUtils::computedTextIndent(IsIntrinsicWidthMode isIntrinsicWidthMode, PreviousLineState previousLineState, InlineLayoutUnit availableWidth) const
 {
     auto& root = formattingContext().root();
 
@@ -154,7 +157,8 @@ InlineLayoutUnit InlineFormattingUtils::computedTextIndent(IsIntrinsicWidthMode 
     // If 'each-line' is specified, indentation also applies to all lines where the previous line ends with a hard break.
     // [Integration] root()->parent() would normally produce a valid layout box.
     bool shouldIndent = false;
-    if (!previousLineEndsWithLineBreak) {
+    switch (previousLineState) {
+    case PreviousLineState::NoPreviousLine:
         shouldIndent = !root.isAnonymous();
         if (root.isAnonymous()) {
             if (!root.isInlineIntegrationRoot())
@@ -162,8 +166,14 @@ InlineLayoutUnit InlineFormattingUtils::computedTextIndent(IsIntrinsicWidthMode 
             else
                 shouldIndent = root.isFirstChildForIntegration();
         }
-    } else
-        shouldIndent = root.style().textIndentLine() == TextIndentLine::EachLine && *previousLineEndsWithLineBreak;
+        break;
+    case PreviousLineState::EndsWithLineBreak:
+        shouldIndent = root.style().textIndentLine() == TextIndentLine::EachLine;
+        break;
+    case PreviousLineState::DoesNotEndWithLineBreak:
+        shouldIndent = false;
+        break;
+    }
 
     // Specifying 'hanging' inverts whether the line should be indented or not.
     if (root.style().textIndentType() == TextIndentType::Hanging)
@@ -257,14 +267,14 @@ InlineLayoutUnit InlineFormattingUtils::horizontalAlignmentOffset(const RenderSt
     case TextAlignMode::WebKitLeft:
         if (!isLeftToRightDirection)
             return horizontalAvailableSpace;
-        FALLTHROUGH;
+        [[fallthrough]];
     case TextAlignMode::Start:
         return { };
     case TextAlignMode::Right:
     case TextAlignMode::WebKitRight:
         if (!isLeftToRightDirection)
             return { };
-        FALLTHROUGH;
+        [[fallthrough]];
     case TextAlignMode::End:
         return horizontalAvailableSpace;
     case TextAlignMode::Center:
@@ -324,13 +334,8 @@ InlineLayoutUnit InlineFormattingUtils::inlineItemWidth(const InlineItem& inline
     if (layoutBox.isReplacedBox())
         return boxGeometry.marginBoxWidth();
 
-    if (inlineItem.isInlineBoxStart()) {
-        auto logicalWidth = boxGeometry.marginStart() + boxGeometry.borderStart() + boxGeometry.paddingStart();
-        auto& style = useFirstLineStyle ? inlineItem.firstLineStyle() : inlineItem.style();
-        if (style.boxDecorationBreak() == BoxDecorationBreak::Clone)
-            logicalWidth += boxGeometry.borderEnd() + boxGeometry.paddingEnd();
-        return logicalWidth;
-    }
+    if (inlineItem.isInlineBoxStart())
+        return boxGeometry.marginStart() + boxGeometry.borderStart() + boxGeometry.paddingStart();
 
     if (inlineItem.isInlineBoxEnd())
         return boxGeometry.marginEnd() + boxGeometry.borderEnd() + boxGeometry.paddingEnd();
@@ -381,7 +386,7 @@ static inline const ElementBox& nearestCommonAncestor(const Box& first, const Bo
     if (&firstParent != &rootBox && &secondParent != &rootBox && &firstParent.parent() == &secondParent.parent())
         return firstParent.parent();
 
-    HashSet<const ElementBox*> descendantsSet;
+    UncheckedKeyHashSet<const ElementBox*> descendantsSet;
     for (auto* descendant = &firstParent; descendant != &rootBox; descendant = &descendant->parent())
         descendantsSet.add(descendant);
     for (auto* descendant = &secondParent; descendant != &rootBox; descendant = &descendant->parent()) {

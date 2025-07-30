@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011 Google Inc.  All rights reserved.
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
- * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -56,6 +56,7 @@
 #include <wtf/text/Base64.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
@@ -188,13 +189,13 @@ CString WebSocketHandshake::clientHandshakeMessage() const
         "\r\n"_s).utf8();
 }
 
-ResourceRequest WebSocketHandshake::clientHandshakeRequest(const Function<String(const URL&)>& cookieRequestHeaderFieldValue) const
+ResourceRequest WebSocketHandshake::clientHandshakeRequest(NOESCAPE const Function<String(const URL&)>& cookieRequestHeaderFieldValue) const
 {
     // Keep the following consistent with clientHandshakeMessage just above.
 
     auto cookie = m_allowCookies ? cookieRequestHeaderFieldValue(httpURLForAuthenticationAndCookies()) : emptyString();
     auto extensions = m_extensionDispatcher.createHeaderValue();
-    ResourceRequest request { m_url };
+    ResourceRequest request { URL { m_url } };
     request.setHTTPMethod("GET"_s);
     request.setHTTPHeaderField(HTTPHeaderName::Connection, "Upgrade"_s);
     request.setHTTPHeaderField(HTTPHeaderName::Host, hostName(m_url, m_secure));
@@ -245,7 +246,7 @@ int WebSocketHandshake::readServerHandshake(std::span<const uint8_t> header)
         return header.size();
     }
     m_mode = Normal;
-    if (!memmem(header.data(), header.size(), "\r\n\r\n", 4)) {
+    if (!WTF::contains(header, "\r\n\r\n"_span8)) {
         // Just hasn't been received fully yet.
         m_mode = Incomplete;
         return -1;
@@ -444,7 +445,7 @@ std::span<const uint8_t> WebSocketHandshake::readHTTPHeaders(std::span<const uin
         size_t consumedLength = parseHTTPHeader(data, m_failureReason, name, value);
         if (!consumedLength)
             return { };
-        data = data.subspan(consumedLength);
+        skip(data, consumedLength);
 
         // Stop once we consumed an empty line.
         if (name.isEmpty())

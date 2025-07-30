@@ -79,10 +79,10 @@ void RemoteMediaSessionHelperProxy::stopMonitoringWirelessRoutes()
     MediaSessionHelper::sharedHelper().stopMonitoringWirelessRoutes();
 }
 
-void RemoteMediaSessionHelperProxy::providePresentingApplicationPID(int pid)
+void RemoteMediaSessionHelperProxy::providePresentingApplicationPID(int pid, MediaSessionHelper::ShouldOverride shouldOverride)
 {
     m_presentingApplicationPID = pid;
-    MediaSessionHelper::sharedHelper().providePresentingApplicationPID(pid);
+    MediaSessionHelper::sharedHelper().providePresentingApplicationPID(pid, shouldOverride);
 }
 
 void RemoteMediaSessionHelperProxy::overridePresentingApplicationPIDIfNeeded()
@@ -91,25 +91,25 @@ void RemoteMediaSessionHelperProxy::overridePresentingApplicationPIDIfNeeded()
         MediaSessionHelper::sharedHelper().providePresentingApplicationPID(*m_presentingApplicationPID, MediaSessionHelper::ShouldOverride::Yes);
 }
 
-void RemoteMediaSessionHelperProxy::applicationWillEnterForeground(SuspendedUnderLock suspendedUnderLock)
+void RemoteMediaSessionHelperProxy::uiApplicationWillEnterForeground(SuspendedUnderLock suspendedUnderLock)
 {
     if (auto connection = m_gpuConnection.get())
         connection->connection().send(Messages::RemoteMediaSessionHelper::ApplicationWillEnterForeground(suspendedUnderLock), { });
 }
 
-void RemoteMediaSessionHelperProxy::applicationDidEnterBackground(SuspendedUnderLock suspendedUnderLock)
+void RemoteMediaSessionHelperProxy::uiApplicationDidEnterBackground(SuspendedUnderLock suspendedUnderLock)
 {
     if (auto connection = m_gpuConnection.get())
         connection->connection().send(Messages::RemoteMediaSessionHelper::ApplicationDidEnterBackground(suspendedUnderLock), { });
 }
 
-void RemoteMediaSessionHelperProxy::applicationWillBecomeInactive()
+void RemoteMediaSessionHelperProxy::uiApplicationWillBecomeInactive()
 {
     if (auto connection = m_gpuConnection.get())
         connection->connection().send(Messages::RemoteMediaSessionHelper::ApplicationWillBecomeInactive(), { });
 }
 
-void RemoteMediaSessionHelperProxy::applicationDidBecomeActive()
+void RemoteMediaSessionHelperProxy::uiApplicationDidBecomeActive()
 {
     if (auto connection = m_gpuConnection.get())
         connection->connection().send(Messages::RemoteMediaSessionHelper::ApplicationDidBecomeActive(), { });

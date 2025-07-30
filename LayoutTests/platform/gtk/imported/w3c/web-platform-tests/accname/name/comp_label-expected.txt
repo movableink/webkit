@@ -71,12 +71,8 @@ x
 x
 x
 x
-x
-x
-x
 HTML elements that support aria-label
 
-x
 x
 x
 x
@@ -132,9 +128,6 @@ PASS label valid on div with alert role
 PASS label valid on div with alertdialog role
 PASS label valid on div with application role
 PASS label valid on div with article role
-PASS label valid on div with associationlist role
-PASS label valid on div with associationlistitemkey role
-PASS label valid on div with associationlistitemvalue role
 PASS label valid on div with banner role
 PASS label valid on div with blockquote role
 PASS label valid on div with button role
@@ -203,9 +196,7 @@ PASS label valid on article element
 PASS label valid on aside element
 PASS label valid on blockquote element
 PASS label valid on button element
-PASS label valid on dd element
 PASS label valid on dl element
-PASS label valid on dt element
 PASS label valid on footer element
 PASS label valid on fieldset element
 PASS label valid on figure element
@@ -245,7 +236,6 @@ PASS label valid on list (unordered) element
 PASS button's hidden referenced name (display:none) supercedes aria-label
 PASS button's hidden referenced name (visibility:hidden) supercedes aria-label
 PASS button's hidden referenced name (visibility:hidden) with hidden aria-labelledby traversal falls back to aria-label
-PASS Hidden button's label should be the empty string
 PASS link's aria-labelledby name supercedes aria-label
 PASS img's aria-label supercedes alt attribute
 PASS svg's aria-label supercedes title tag

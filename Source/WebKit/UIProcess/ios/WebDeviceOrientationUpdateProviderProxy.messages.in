@@ -21,10 +21,16 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #if PLATFORM(IOS_FAMILY) && ENABLE(DEVICE_ORIENTATION)
+[
+    DispatchedFrom=WebContent,
+    DispatchedTo=UI,
+    SharedPreferencesNeedsConnection,
+    EnabledBy=DeviceOrientationEventEnabled
+]
 messages -> WebDeviceOrientationUpdateProviderProxy {
-    StartUpdatingDeviceOrientation();
+    StartUpdatingDeviceOrientation(WebCore::SecurityOriginData origin);
     StopUpdatingDeviceOrientation();
-    StartUpdatingDeviceMotion();
+    StartUpdatingDeviceMotion(WebCore::SecurityOriginData origin);
     StopUpdatingDeviceMotion();
 }
 #endif

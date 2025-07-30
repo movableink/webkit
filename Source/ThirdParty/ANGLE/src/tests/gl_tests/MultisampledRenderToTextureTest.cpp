@@ -338,6 +338,11 @@ TEST_P(MultisampledRenderToTextureTest, Texture2DParameterCheck)
     ASSERT_GL_NO_ERROR();
     EXPECT_GE(samples, 1);
 
+    // Samples negative
+    glFramebufferTexture2DMultisampleEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                                         texture, 0, -1);
+    ASSERT_GL_ERROR(GL_INVALID_VALUE);
+
     // Samples too large
     glFramebufferTexture2DMultisampleEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                                          texture, 0, samples + 1);
@@ -3528,7 +3533,7 @@ void MultisampledRenderToTextureES3Test::blitFramebufferMixedColorAndDepthCommon
     // Create multisampled framebuffer to use as source.
     GLRenderbuffer depthMS;
     glBindRenderbuffer(GL_RENDERBUFFER, depthMS);
-    glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH_COMPONENT24, kSize, kSize);
+    glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER, 4, GL_DEPTH_COMPONENT24, kSize, kSize);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthMS);
 
     GLTexture textureMS;
@@ -4393,10 +4398,7 @@ ANGLE_INSTANTIATE_TEST_COMBINE_1(
         .disable(Feature::SupportsExtendedDynamicState2),
     ES3_VULKAN().disable(Feature::SupportsExtendedDynamicState2),
     ES3_VULKAN().disable(Feature::SupportsSPIRV14),
-    ES3_VULKAN_SWIFTSHADER().enable(Feature::EnableMultisampledRenderToTexture),
-    ES3_VULKAN_SWIFTSHADER()
-        .enable(Feature::EnableMultisampledRenderToTexture)
-        .enable(Feature::AsyncCommandQueue));
+    ES3_VULKAN_SWIFTSHADER().enable(Feature::EnableMultisampledRenderToTexture));
 
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(MultisampledRenderToTextureES3Test);
 ANGLE_INSTANTIATE_TEST_COMBINE_1(
@@ -4413,10 +4415,7 @@ ANGLE_INSTANTIATE_TEST_COMBINE_1(
         .disable(Feature::SupportsExtendedDynamicState2),
     ES3_VULKAN().disable(Feature::SupportsExtendedDynamicState2),
     ES3_VULKAN().disable(Feature::SupportsSPIRV14),
-    ES3_VULKAN_SWIFTSHADER().enable(Feature::EnableMultisampledRenderToTexture),
-    ES3_VULKAN_SWIFTSHADER()
-        .enable(Feature::EnableMultisampledRenderToTexture)
-        .enable(Feature::AsyncCommandQueue));
+    ES3_VULKAN_SWIFTSHADER().enable(Feature::EnableMultisampledRenderToTexture));
 
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(MultisampledRenderToTextureES31Test);
 ANGLE_INSTANTIATE_TEST_COMBINE_1(
@@ -4429,10 +4428,7 @@ ANGLE_INSTANTIATE_TEST_COMBINE_1(
         .disable(Feature::SupportsExtendedDynamicState2),
     ES31_VULKAN().disable(Feature::SupportsExtendedDynamicState2),
     ES31_VULKAN().disable(Feature::SupportsSPIRV14),
-    ES31_VULKAN_SWIFTSHADER().enable(Feature::EnableMultisampledRenderToTexture),
-    ES31_VULKAN_SWIFTSHADER()
-        .enable(Feature::EnableMultisampledRenderToTexture)
-        .enable(Feature::AsyncCommandQueue));
+    ES31_VULKAN_SWIFTSHADER().enable(Feature::EnableMultisampledRenderToTexture));
 
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(MultisampledRenderToTextureWithAdvancedBlendTest);
 ANGLE_INSTANTIATE_TEST_COMBINE_1(
@@ -4442,8 +4438,5 @@ ANGLE_INSTANTIATE_TEST_COMBINE_1(
     ANGLE_ALL_TEST_PLATFORMS_ES3,
     ANGLE_ALL_TEST_PLATFORMS_ES31,
     ES3_VULKAN().disable(Feature::SupportsSPIRV14),
-    ES3_VULKAN_SWIFTSHADER().enable(Feature::EnableMultisampledRenderToTexture),
-    ES3_VULKAN_SWIFTSHADER()
-        .enable(Feature::EnableMultisampledRenderToTexture)
-        .enable(Feature::AsyncCommandQueue));
+    ES3_VULKAN_SWIFTSHADER().enable(Feature::EnableMultisampledRenderToTexture));
 }  // namespace

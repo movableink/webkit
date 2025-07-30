@@ -47,4 +47,11 @@ TEST(UTIUtilities, RequiredMIMETypesFromUTIForMailPsd)
     EXPECT_TRUE(mimeTypes.contains("application/x-photoshop"_s));
 }
 
+TEST(UTIUtilities, UTIFromMIMETypeForModelTypes)
+{
+    for (auto& mimeType : Vector<String> { "model/usd"_s, "model/vnd.pixar.usd"_s, "model/vnd.usdz+zip"_s })
+        EXPECT_EQ(UTIFromMIMEType(mimeType), "com.pixar.universal-scene-description-mobile"_s);
+    EXPECT_EQ(UTIFromMIMEType("model/vnd.reality"_s), "com.apple.reality"_s);
+}
+
 }; // namespace TestWebKitAPI

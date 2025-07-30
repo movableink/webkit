@@ -330,8 +330,8 @@ class Utils
         let parts = buffer.split('.');
         let extensionIndex = buffer.lastIndexOf(".");
         let filename = buffer.substr(0, extensionIndex);
-        // Test names that are acutally process names are treated like they don't have any extension
-        if (filename.match(/com\.apple\..+/) || filename.match(/org\.WebKit\..+/)) {
+        // Test names that are actually process names are treated like they don't have any extension
+        if (extensionIndex === -1 || filename.match(/com\.apple\..+/) || filename.match(/org\.WebKit\..+/)) {
             return [testName, '', ''];
         }
         let ext = buffer.substr(extensionIndex);

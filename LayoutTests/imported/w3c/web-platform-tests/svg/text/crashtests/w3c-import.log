@@ -14,4 +14,5 @@ Property values requiring vendor prefixes:
 None
 ------------------------------------------------------------------------
 List of files:
+/LayoutTests/imported/w3c/web-platform-tests/svg/text/crashtests/ruby-crash.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/text/crashtests/textlength-zwj-crash.svg

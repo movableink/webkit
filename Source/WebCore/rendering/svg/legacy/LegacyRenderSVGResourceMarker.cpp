@@ -54,16 +54,6 @@ void LegacyRenderSVGResourceMarker::layout()
     LegacyRenderSVGContainer::layout();
 }
 
-void LegacyRenderSVGResourceMarker::removeAllClientsFromCacheIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers)
-{
-    markAllClientsForInvalidationIfNeeded(markForInvalidation ? LayoutAndBoundariesInvalidation : ParentOnlyInvalidation, visitedRenderers);
-}
-
-void LegacyRenderSVGResourceMarker::removeClientFromCache(RenderElement& client, bool markForInvalidation)
-{
-    markClientForInvalidation(client, markForInvalidation ? BoundariesInvalidation : ParentOnlyInvalidation);
-}
-
 void LegacyRenderSVGResourceMarker::applyViewportClip(PaintInfo& paintInfo)
 {
     if (SVGRenderSupport::isOverflowHidden(*this))
@@ -104,7 +94,7 @@ std::optional<float> LegacyRenderSVGResourceMarker::angle() const
 
 AffineTransform LegacyRenderSVGResourceMarker::markerTransformation(const FloatPoint& origin, float autoAngle, float strokeWidth) const
 {
-    bool useStrokeWidth = markerElement().markerUnits() == SVGMarkerUnitsStrokeWidth;
+    bool useStrokeWidth = markerElement().markerUnits() == SVGMarkerUnitsType::StrokeWidth;
 
     AffineTransform transform;
     transform.translate(origin);

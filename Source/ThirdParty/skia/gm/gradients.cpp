@@ -1115,7 +1115,7 @@ DEF_SIMPLE_GM(gradients_interesting, canvas, 640, 1300) {
 }
 
 // TODO(skia:13774): Still need to test degenerate gradients in strange color spaces
-DEF_SIMPLE_GM_BG(gradients_color_space, canvas, 265, 255, SK_ColorGRAY) {
+DEF_SIMPLE_GM_BG(gradients_color_space, canvas, 265, 355, SK_ColorGRAY) {
     using CS = SkGradientShader::Interpolation::ColorSpace;
 
     struct Config {
@@ -1123,16 +1123,20 @@ DEF_SIMPLE_GM_BG(gradients_color_space, canvas, 265, 255, SK_ColorGRAY) {
         const char* fLabel;
     };
     static const Config kConfigs[] = {
-        { CS::kSRGB,          "sRGB" },
-        { CS::kSRGBLinear,    "Linear" },
-        { CS::kLab,           "Lab" },
-        { CS::kOKLab,         "OKLab" },
-        { CS::kOKLabGamutMap, "OKLabGamutMap" },
-        { CS::kLCH,           "LCH" },
-        { CS::kOKLCH,         "OKLCH" },
-        { CS::kOKLCHGamutMap, "OKLCHGamutMap" },
-        { CS::kHSL,           "HSL" },
-        { CS::kHWB,           "HWB" },
+            {CS::kSRGB, "sRGB"},
+            {CS::kSRGBLinear, "Linear"},
+            {CS::kLab, "Lab"},
+            {CS::kOKLab, "OKLab"},
+            {CS::kOKLabGamutMap, "OKLabGamutMap"},
+            {CS::kLCH, "LCH"},
+            {CS::kOKLCH, "OKLCH"},
+            {CS::kOKLCHGamutMap, "OKLCHGamutMap"},
+            {CS::kHSL, "HSL"},
+            {CS::kHWB, "HWB"},
+            {CS::kA98RGB, "a98RGB"},
+            {CS::kProphotoRGB, "ProPhotoRGB"},
+            {CS::kDisplayP3, "DisplayP3"},
+            {CS::kRec2020, "Rec2020"},
     };
 
     SkPoint pts[] = {{0, 0}, {200, 0}};
@@ -1265,6 +1269,38 @@ DEF_SIMPLE_GM_BG(gradients_color_space_many_stops, canvas, 500, 500, SK_ColorGRA
                                              nullptr));
 
     canvas->drawRect(SkRect::MakeXYWH(0, 0, 500, 500), p);
+}
+
+DEF_SIMPLE_GM(gradients_alpha_many_stops, canvas, 100, 100) {
+    static const SkPoint kPts[] = {{0.f, 0.f}, {0.f, 100.f}};
+
+    // From https://issues.chromium.org/issues/401546700, this encounters Graphite's
+    // storage buffer option for storing gradient buffers AND uses colors that emphasize
+    // premul vs. unpremul handling of the color data.
+    static const float kPos[] = {0.f, 0.19f, 0.34f, 0.47f, 0.565f, 0.65f,
+                                 0.73f, 0.802f, 0.861f, 0.91f, 0.952f, 0.982f, 1.f};
+
+    static constexpr float kG = 34 / 255.f;
+    static const SkColor4f kColors[] = {{kG, kG, kG, 1.f},
+                                        {kG, kG, kG, 0.738f},
+                                        {kG, kG, kG, 0.541f},
+                                        {kG, kG, kG, 0.382f},
+                                        {kG, kG, kG, 0.278f},
+                                        {kG, kG, kG, 0.194f},
+                                        {kG, kG, kG, 0.126f},
+                                        {kG, kG, kG, 0.075f},
+                                        {kG, kG, kG, 0.042f},
+                                        {kG, kG, kG, 0.021f},
+                                        {kG, kG, kG, 0.008f},
+                                        {kG, kG, kG, 0.002f},
+                                        {kG, kG, kG, 0.f}};
+
+    canvas->clear(SkColor4f{0.5f, 0.5f, 0.5f, 1.f});
+
+    SkPaint paint;
+    paint.setShader(SkGradientShader::MakeLinear(
+            kPts, kColors, /*colorSpace=*/nullptr, kPos, std::size(kPos), SkTileMode::kClamp));
+    canvas->drawPaint(paint);
 }
 
 static void draw_powerless_hue_gradients(SkCanvas* canvas,

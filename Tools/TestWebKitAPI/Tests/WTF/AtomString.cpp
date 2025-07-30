@@ -25,6 +25,7 @@
 
 #include "config.h"
 
+#include <numbers>
 #include <wtf/text/AtomString.h>
 
 namespace TestWebKitAPI {
@@ -78,8 +79,8 @@ TEST(WTF, AtomStringNumberDouble)
     EXPECT_STREQ("-1.7976931348623157e+308", testAtomStringNumber(Limits::lowest()));
     EXPECT_STREQ("1.7976931348623157e+308", testAtomStringNumber(Limits::max()));
 
-    EXPECT_STREQ("3.141592653589793", testAtomStringNumber(piDouble));
-    EXPECT_STREQ("3.1415927410125732", testAtomStringNumber(piFloat));
+    EXPECT_STREQ("3.141592653589793", testAtomStringNumber(std::numbers::pi));
+    EXPECT_STREQ("3.1415927410125732", testAtomStringNumber(std::numbers::pi_v<float>));
     EXPECT_STREQ("1.5707963267948966", testAtomStringNumber(piOverTwoDouble));
     EXPECT_STREQ("1.5707963705062866", testAtomStringNumber(piOverTwoFloat));
     EXPECT_STREQ("0.7853981633974483", testAtomStringNumber(piOverFourDouble));

@@ -1133,7 +1133,7 @@ op :throw_static_error,
 op :debug,
     args: {
         debugHookType: DebugHookType,
-        hasBreakpoint: bool,
+        data: VirtualRegister,
     }
 
 op :end,
@@ -1263,7 +1263,7 @@ op :spread,
         argument: VirtualRegister,
     }
 
-op :new_regexp,
+op :new_reg_exp,
     args: {
         dst: VirtualRegister,
         regexp: VirtualRegister,
@@ -1493,9 +1493,12 @@ op :wasm_function_prologue_simd_trampoline
 op :wasm_function_prologue_simd
 op :js_to_wasm_wrapper_entry
 op :wasm_to_wasm_wrapper_entry
+op :wasm_to_wasm_ipint_wrapper_entry
 op :wasm_to_js_wrapper_entry
 op :ipint_trampoline
 op :ipint_entry
+op :ipint_function_prologue_simd_trampoline
+op :ipint_function_prologue_simd
 
 op :js_trampoline_op_call
 op :js_trampoline_op_call_ignore_result

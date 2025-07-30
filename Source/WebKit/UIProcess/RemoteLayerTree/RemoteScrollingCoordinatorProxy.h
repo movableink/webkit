@@ -99,7 +99,7 @@ public:
     void currentSnapPointIndicesDidChange(WebCore::ScrollingNodeID, std::optional<unsigned> horizontal, std::optional<unsigned> vertical);
 
     virtual void cacheWheelEventScrollingAccelerationCurve(const NativeWebWheelEvent&) { }
-    virtual void handleWheelEvent(const WebWheelEvent&, WebCore::RectEdges<bool> rubberBandableEdges);
+    virtual void handleWheelEvent(const WebWheelEvent&, WebCore::RectEdges<WebCore::RubberBandingBehavior> rubberBandableEdges);
     void continueWheelEventHandling(const WebWheelEvent&, WebCore::WheelEventHandlingResult);
     virtual void wheelEventHandlingCompleted(const WebCore::PlatformWheelEvent&, std::optional<WebCore::ScrollingNodeID>, std::optional<WebCore::WheelScrollGestureState>, bool /* wasHandled */) { }
 
@@ -158,7 +158,7 @@ public:
     virtual void windowScreenWillChange() { }
     virtual void windowScreenDidChange(WebCore::PlatformDisplayID, std::optional<WebCore::FramesPerSecond>) { }
 
-    float topContentInset() const;
+    WebCore::FloatBoxExtent obscuredContentInsets() const;
     WebCore::FloatPoint currentMainFrameScrollPosition() const;
     WebCore::FloatRect computeVisibleContentRect();
     WebCore::IntPoint scrollOrigin() const;
@@ -183,7 +183,7 @@ public:
 protected:
     explicit RemoteScrollingCoordinatorProxy(WebPageProxy&);
 
-    RemoteScrollingTree* scrollingTree() const { return m_scrollingTree.get(); }
+    RemoteScrollingTree& scrollingTree() const { return m_scrollingTree.get(); }
 
     virtual void connectStateNodeLayers(WebCore::ScrollingStateTree&, const RemoteLayerTreeHost&) = 0;
     virtual void establishLayerTreeScrollingRelations(const RemoteLayerTreeHost&) = 0;
@@ -194,7 +194,7 @@ protected:
 
 private:
     WeakRef<WebPageProxy> m_webPageProxy;
-    RefPtr<RemoteScrollingTree> m_scrollingTree;
+    const Ref<RemoteScrollingTree> m_scrollingTree;
 
 protected:
     std::optional<WebCore::RequestedScrollData> m_requestedScroll;

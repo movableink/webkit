@@ -21,6 +21,7 @@
 #include "WebKitDOMElement.h"
 
 #include <WebCore/CSSImportRule.h>
+#include <WebCore/CSSStyleProperties.h>
 #include <WebCore/DOMException.h>
 #include <WebCore/DOMRect.h>
 #include <WebCore/Document.h>
@@ -1011,7 +1012,7 @@ WebKitDOMNamedNodeMap* webkit_dom_element_get_attributes(WebKitDOMElement* self)
     WebCore::JSMainThreadNullState state;
     g_return_val_if_fail(WEBKIT_DOM_IS_ELEMENT(self), 0);
     WebCore::Element* item = WebKit::core(self);
-    RefPtr<WebCore::NamedNodeMap> gobjectResult = WTF::getPtr(item->attributes());
+    RefPtr<WebCore::NamedNodeMap> gobjectResult = WTF::getPtr(item->attributesMap());
     return WebKit::kit(gobjectResult.get());
 }
 
@@ -1022,7 +1023,8 @@ WebKitDOMCSSStyleDeclaration* webkit_dom_element_get_style(WebKitDOMElement* sel
     auto& item = *WebKit::core(self);
     if (!is<WebCore::StyledElement>(item))
         return nullptr;
-    return WebKit::kit(&downcast<WebCore::StyledElement>(item).cssomStyle());
+    auto& style = downcast<WebCore::StyledElement>(item).cssomStyle();
+    return WebKit::kit(reinterpret_cast<WebCore::CSSStyleDeclaration*>(&style));
 }
 
 gchar* webkit_dom_element_get_id(WebKitDOMElement* self)

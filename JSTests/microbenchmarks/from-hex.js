@@ -1,5 +1,3 @@
-//@ requireOptions("--useUint8ArrayBase64Methods=1")
-
 function test(string)
 {
     return Uint8Array.fromHex(string);

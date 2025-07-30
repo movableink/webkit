@@ -30,6 +30,7 @@
 namespace WebCore {
 
 class GraphicsLayerCA;
+class NativeImage;
 
 class GraphicsLayerAsyncContentsDisplayDelegateCocoa : public GraphicsLayerAsyncContentsDisplayDelegate {
 public:

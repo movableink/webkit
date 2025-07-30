@@ -37,6 +37,7 @@
 #include "CSSPrimitiveValue.h"
 #include "CSSUnits.h"
 #include "CalculationCategory.h"
+#include "ExceptionOr.h"
 #include <cmath>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -137,8 +138,8 @@ RefPtr<CSSValue> CSSUnitValue::toCSSValue() const
 // FIXME: This function could be mostly generated from CSSProperties.json.
 static bool isValueOutOfRangeForProperty(CSSPropertyID propertyID, double value, CSSUnitType unit)
 {
-    CSS::Range valueRange = CSS::All;
-    if (CSSParserFastPaths::isSimpleLengthPropertyID(propertyID, valueRange) && (value < valueRange.min || value > valueRange.max))
+    auto valueRange = CSSParserFastPaths::lengthValueRangeForPropertiesSupportingSimpleLengths(propertyID);
+    if (valueRange && (value < valueRange->min || value > valueRange->max))
         return true;
 
     switch (propertyID) {
@@ -178,7 +179,7 @@ static bool isValueOutOfRangeForProperty(CSSPropertyID propertyID, double value,
     case CSSPropertyFlexShrink:
     case CSSPropertyFontSize:
     case CSSPropertyFontSizeAdjust:
-    case CSSPropertyFontStretch:
+    case CSSPropertyFontWidth:
     case CSSPropertyGridAutoColumns:
     case CSSPropertyGridAutoRows:
     case CSSPropertyGridTemplateColumns:
@@ -220,9 +221,9 @@ static bool isValueOutOfRangeForProperty(CSSPropertyID propertyID, double value,
 static CSS::Range rangeForProperty(CSSPropertyID propertyID, CSSUnitType)
 {
     // FIXME: Merge with isValueOutOfRangeForProperty.
-    auto valueRange = CSS::All;
-    if (CSSParserFastPaths::isSimpleLengthPropertyID(propertyID, valueRange))
-        return valueRange;
+
+    if (auto valueRange = CSSParserFastPaths::lengthValueRangeForPropertiesSupportingSimpleLengths(propertyID))
+        return *valueRange;
 
     switch (propertyID) {
     case CSSPropertyAnimationDuration:
@@ -252,7 +253,7 @@ static CSS::Range rangeForProperty(CSSPropertyID propertyID, CSSUnitType)
     case CSSPropertyFlexShrink:
     case CSSPropertyFontSize:
     case CSSPropertyFontSizeAdjust:
-    case CSSPropertyFontStretch:
+    case CSSPropertyFontWidth:
     case CSSPropertyGridAutoColumns:
     case CSSPropertyGridAutoRows:
     case CSSPropertyGridTemplateColumns:
@@ -400,16 +401,14 @@ RefPtr<CSSValue> CSSUnitValue::toCSSValueWithProperty(CSSPropertyID propertyID) 
             return nullptr;
         }
 
-        CSSCalc::Children sumChildren;
+        Vector<CSSCalc::Child> sumChildren;
         sumChildren.append(WTFMove(*node));
         auto sum = CSSCalc::makeChild(CSSCalc::Sum { .children = WTFMove(sumChildren) }, type);
 
-        return CSSPrimitiveValue::create(CSSCalcValue::create(CSSCalc::Tree {
+        return CSSPrimitiveValue::create(CSSCalcValue::create(category, range, CSSCalc::Tree {
             .root = WTFMove(sum),
             .type = type,
-            .category = category,
             .stage = CSSCalc::Stage::Specified,
-            .range = range
         }));
     }
     return toCSSValue();

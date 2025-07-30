@@ -17,9 +17,8 @@
 #include "include/core/SkOpenTypeSVGDecoder.h"
 #include "include/core/SkPath.h"
 #include "include/effects/SkGradientShader.h"
-#include "include/pathops/SkPathOps.h"
-#include "include/private/SkColorData.h"
 #include "include/private/base/SkTo.h"
+#include "src/core/SkColorData.h"
 #include "src/core/SkFDot6.h"
 #include "src/core/SkSwizzlePriv.h"
 #include "src/core/SkTHash.h"
@@ -1232,9 +1231,9 @@ void colrv1_transform(FT_Face face,
 
 bool colrv1_start_glyph(SkCanvas* canvas,
                         const SkSpan<SkColor>& palette,
-                        const SkColor foregroundColor,
+                        SkColor foregroundColor,
                         FT_Face face,
-                        uint16_t glyphId,
+                        SkGlyphID glyphId,
                         FT_Color_Root_Transform rootTransform,
                         VisitedSet* activePaints);
 
@@ -1343,7 +1342,7 @@ bool colrv1_traverse_paint(SkCanvas* canvas,
     SkUNREACHABLE;
 }
 
-SkPath GetClipBoxPath(FT_Face face, uint16_t glyphId, bool untransformed) {
+SkPath GetClipBoxPath(FT_Face face, SkGlyphID glyphId, bool untransformed) {
     SkPath resultPath;
     SkUniqueFTSize unscaledFtSize = nullptr;
     FT_Size oldSize = face->size;
@@ -1408,7 +1407,7 @@ SkPath GetClipBoxPath(FT_Face face, uint16_t glyphId, bool untransformed) {
 
 bool colrv1_start_glyph(SkCanvas* canvas,
                         const SkSpan<SkColor>& palette,
-                        const SkColor foregroundColor,
+                        SkColor foregroundColor,
                         FT_Face face,
                         uint16_t glyphId,
                         FT_Color_Root_Transform rootTransform,
@@ -1435,7 +1434,7 @@ bool colrv1_start_glyph(SkCanvas* canvas,
 bool colrv1_start_glyph_bounds(SkMatrix *ctm,
                                SkRect* bounds,
                                FT_Face face,
-                               uint16_t glyphId,
+                               SkGlyphID glyphId,
                                FT_Color_Root_Transform rootTransform,
                                VisitedSet* activePaints);
 
@@ -2074,17 +2073,11 @@ bool generateFacePathCOLRv1(FT_Face face, SkGlyphID glyphID, SkPath* path) {
 }  // namespace
 
 bool SkScalerContextFTUtils::generateGlyphPath(FT_Face face, SkPath* path) const {
-    if (!generateGlyphPathStatic(face, path)) {
-        return false;
-    }
-    if (face->glyph->outline.flags & FT_OUTLINE_OVERLAP) {
-        Simplify(*path, path);
-        // Simplify will return an even-odd path.
-        // A stroke+fill (for fake bold) may be incorrect for even-odd.
-        // https://github.com/flutter/flutter/issues/112546
-        AsWinding(*path, path);
-    }
-    return true;
+    // We used to try simplifying overlapping contours (flags & FT_OUTLINE_OVERLAP)
+    // at this stage, but that was not 100% reliable, and other font backends
+    // (e.g. CoreText) do not attempt this, so we removed it.
+
+    return generateGlyphPathStatic(face, path);
 }
 
 bool SkScalerContextFTUtils::generateFacePath(FT_Face face, SkGlyphID glyphID, LoadGlyphFlags flags,

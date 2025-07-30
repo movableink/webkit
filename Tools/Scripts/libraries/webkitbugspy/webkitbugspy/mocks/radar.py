@@ -24,12 +24,15 @@ import calendar
 import os
 import re
 import time
+from datetime import datetime, timezone
+from unittest.mock import patch
 
-from .base import Base
-
-from webkitbugspy import User, Issue, radar
 from webkitcorepy import string_utils
 from webkitcorepy.mocks import ContextStack
+
+from webkitbugspy import Issue, User, radar
+
+from .base import Base
 
 
 class AppleDirectoryUserEntry(object):
@@ -93,7 +96,7 @@ class RadarModel(object):
                 yield property
 
         def add(self, item):
-            from datetime import datetime, timedelta
+            from datetime import datetime, timedelta, timezone
 
             username = self.model.client.authentication_strategy.username()
             if username:
@@ -103,7 +106,7 @@ class RadarModel(object):
 
             self._properties.append(Radar.DiagnosisEntry(
                 text=item.text,
-                addedAt=datetime.utcfromtimestamp(int(time.time())),
+                addedAt=datetime.fromtimestamp(int(time.time()), timezone.utc),
                 addedBy=by,
             ))
 
@@ -142,7 +145,7 @@ class RadarModel(object):
             self.name = name
 
     def __init__(self, client, issue, additional_fields=None):
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         additional_fields = additional_fields or []
 
@@ -151,22 +154,28 @@ class RadarModel(object):
         self.title = issue['title']
         self.id = issue['id']
         self.classification = issue.get('classification', 'Other Bug')
-        self.createdAt = datetime.utcfromtimestamp(issue['timestamp'] - timedelta(hours=7).seconds)
-        self.lastModifiedAt = datetime.utcfromtimestamp(issue['modified' if issue.get('modified') else 'timestamp'] - timedelta(hours=7).seconds)
+        self.createdAt = datetime.fromtimestamp(issue['timestamp'] - timedelta(hours=7).seconds, timezone.utc)
+        self.lastModifiedAt = datetime.fromtimestamp(issue['modified' if issue.get('modified') else 'timestamp'] - timedelta(hours=7).seconds, timezone.utc)
         self.assignee = self.Person(Radar.transform_user(issue['assignee']))
         self.description = self.CollectionProperty(self, self.DescriptionEntry(issue['description']))
-        self.state = 'Analyze' if issue['opened'] else 'Verify'
+        if issue.get('state'):
+            self.state = issue['state']
+        else:
+            self.state = 'Analyze' if issue['opened'] else 'Verify'
         self.duplicateOfProblemID = issue['original']['id'] if issue.get('original', None) else None
         self.related = list()
-        self.substate = 'Investigate' if issue['opened'] else None
+        if issue.get('substate'):
+            self.substate = issue['substate']
+        else:
+            self.substate = 'Investigate' if issue['opened'] else None
         self.priority = 2
         self.resolution = 'Unresolved' if issue['opened'] else 'Software Changed'
         self.originator = self.Person(Radar.transform_user(issue['creator']))
         self.diagnosis = self.CollectionProperty(self, *[
             Radar.DiagnosisEntry(
                 text=comment.content,
-                addedAt=datetime.utcfromtimestamp(comment.timestamp - timedelta(hours=7).seconds),
-                addedBy=self.CommentAuthor(Radar.transform_user(comment.user)),
+                addedAt=datetime.fromtimestamp(comment.timestamp - timedelta(hours=7).seconds, timezone.utc),
+                addedBy=self.CommentAuthor(Radar.transform_user(comment.user))
             ) for comment in issue.get('comments', [])
         ])
         self.cc_memberships = self.CollectionProperty(self, *[
@@ -210,6 +219,11 @@ class RadarModel(object):
     def commit_changes(self):
         self.client.parent.request_count += 1
 
+        # Anything without someone who added it was made by the current user
+        for entry in self.diagnosis.items():
+            if not entry.addedBy:
+                entry.addedBy = self.CommentAuthor(self.client.parent.users[self.client.current_user().email])
+
         self.client.parent.issues[self.id]['comments'] = [
             Issue.Comment(
                 user=self.client.parent.users[entry.addedBy.email],
@@ -219,6 +233,8 @@ class RadarModel(object):
         ]
         self.client.parent.issues[self.id]['assignee'] = self.client.parent.users[self.assignee.dsid]
         self.client.parent.issues[self.id]['opened'] = self.state not in ('Verify', 'Closed')
+        self.client.parent.issues[self.id]['state'] = self.state
+        self.client.parent.issues[self.id]['substate'] = self.substate
         if self.duplicateOfProblemID:
             if self.duplicateOfProblemID not in self.client.parent.issues:
                 raise ValueError('{} is not a known radar'.format(self.duplicateOfProblemID))
@@ -294,12 +310,19 @@ class RadarClient(object):
         self.parent = parent
         self.authentication_strategy = authentication_strategy
 
+    def current_user(self):
+        username = self.authentication_strategy.username() or os.environ.get('RADAR_USERNAME')
+        user = self.parent.users.get(f'{username}@APPLECONNECT.APPLE.COM') or self.parent.users.get(username)
+        if not user:
+            return None
+        return RadarModel.Person(Radar.transform_user(user))
+
     def radar_for_id(self, problem_id, additional_fields=None):
         self.parent.request_count += 1
 
         found = self.parent.issues.get(problem_id)
         if not found:
-            return None
+            raise Radar.exceptions.RadarAccessDeniedResponseException('Unable to access radar')
         return RadarModel(self, found, additional_fields=additional_fields)
 
     def find_radars(self, query, return_find_results_directly=False):
@@ -382,7 +405,8 @@ class RadarClient(object):
         id = 1
         while id in self.parent.issues.keys():
             id += 1
-        user = self.parent.users['{}@APPLECONNECT.APPLE.COM'.format(self.authentication_strategy.username())]
+
+        user = self.parent.users[self.current_user().email]
         issue = dict(
             id=id,
             title=request_data['title'],
@@ -439,6 +463,13 @@ class Radar(Base, ContextStack):
     Person = RadarModel.Person
     Tentpole = RadarModel.Tentpole
 
+    class AuthenticationStrategyNarrative(object):
+        def __init__(self, __):
+            pass
+
+        def username(self):
+            return None
+
     class AuthenticationStrategySystemAccount(object):
         def __init__(self, username, __, ___, ____):
             self._username = username
@@ -446,9 +477,20 @@ class Radar(Base, ContextStack):
         def username(self):
             return self._username
 
+    class AuthenticationStrategySystemAccountOAuth(object):
+        def __init__(self, __, ___, ____, _____):
+            pass
+
+        def username(self):
+            return None
+
     class AuthenticationStrategySPNego(object):
         def username(self):
             return os.environ.get('RADAR_USERNAME')
+
+    class AuthenticationStrategyAppleConnect(object):
+        def username(self):
+            return None
 
     class ClientSystemIdentifier(object):
         def __init__(self, name, version):
@@ -469,7 +511,7 @@ class Radar(Base, ContextStack):
     class DiagnosisEntry(object):
         def __init__(self, text=None, addedAt=None, addedBy=None):
             self.text = text
-            self.addedAt = addedAt
+            self.addedAt = addedAt or datetime.fromtimestamp(int(time.time()), timezone.utc)
             self.addedBy = addedBy
 
     class Relationship(object):
@@ -575,7 +617,6 @@ class Radar(Base, ContextStack):
         self.AppleDirectoryQuery = AppleDirectoryQuery(self)
         self.RadarClient = lambda authentication_strategy, client_system_identifier, retry_policy=None: RadarClient(self, authentication_strategy)
 
-        from mock import patch
         self.patches.append(patch('webkitbugspy.radar.Tracker.radarclient', new=lambda s=None: self))
 
         self.request_count = 0
@@ -587,5 +628,4 @@ class NoRadar(ContextStack):
     def __init__(self):
         super(NoRadar, self).__init__(NoRadar)
 
-        from mock import patch
         self.patches.append(patch('webkitbugspy.radar.Tracker.radarclient', new=lambda s=None: None))

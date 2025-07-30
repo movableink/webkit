@@ -24,6 +24,7 @@
 #include <JavaScriptCore/JSValueRef.h>
 #include <JavaScriptCore/Completion.h>
 #include <wtf/NakedPtr.h>
+#include <WebCore/DOMWrapperWorld.h>
 #include <WebCore/ElementInlines.h>
 #include <WebCore/ScriptSourceCode.h>
 #include <WebCore/ScriptController.h>
@@ -45,7 +46,7 @@ static bool setupScriptContext(Element* element, JSC::JSGlobalObject*& lexicalGl
     if (!frame)
         return false;
 
-    lexicalGlobalObject = frame->script().globalObject(mainThreadNormalWorld())->globalObject();
+    lexicalGlobalObject = frame->script().globalObject(mainThreadNormalWorldSingleton())->globalObject();
     if (!lexicalGlobalObject)
         return false;
 
@@ -62,7 +63,7 @@ QVariant QWebElementPrivate::evaluateJavaScriptString(const QString& scriptSourc
 
     JSC::JSLockHolder lock(lexicalGlobalObject);
 
-    JSC::JSValue thisValue = toJS(lexicalGlobalObject, toJSDOMWindow(element->document().frame(), currentWorld(*lexicalGlobalObject)), element);
+    JSC::JSValue thisValue = toJS(lexicalGlobalObject, toJSDOMWindow(element->document().frame(), mainThreadNormalWorldSingleton()), element);
     if (!thisValue)
 	return QVariant();
 

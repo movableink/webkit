@@ -57,7 +57,7 @@ public:
     String extraDefaultStyleSheet() override;
 
     bool supportsHover() const override;
-    bool supportsFocusRing(const RenderStyle&) const override;
+    bool supportsFocusRing(const RenderObject&, const RenderStyle&) const override;
 
     int baselinePosition(const RenderBox&) const override;
 
@@ -91,13 +91,13 @@ public:
 
     std::optional<Seconds> caretBlinkInterval() const override;
 
-    bool isControlStyled(const RenderStyle&, const RenderStyle&) const override;
+    bool isControlStyled(const RenderStyle&) const override;
 
 #if 0 //ENABLE(VIDEO)
-    virtual String extraMediaControlsStyleSheet();
+    virtual String extraMediaControlsStyleSheet(const HTMLMediaElement&);
 #endif
 #if ENABLE(VIDEO)
-    String mediaControlsStyleSheet() override;
+    Vector<String> mediaControlsStyleSheets(const HTMLMediaElement&) override;
     Vector<String, 2> mediaControlsScripts() override;
 #endif
 
@@ -122,17 +122,17 @@ protected:
 
     void adjustSliderThumbStyle(RenderStyle&, const Element*) const override;
 
-    bool paintSearchField(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    bool paintSearchField(const RenderObject&, const PaintInfo&, const FloatRect&) override;
     void adjustSearchFieldStyle(RenderStyle&, const Element*) const override;
 
     void adjustSearchFieldCancelButtonStyle(RenderStyle&, const Element*) const override;
-    bool paintSearchFieldCancelButton(const RenderBox&, const PaintInfo&, const IntRect&) override;
+    bool paintSearchFieldCancelButton(const RenderBox&, const PaintInfo&, const FloatRect&) override;
 
     void adjustSearchFieldDecorationPartStyle(RenderStyle&, const Element*) const override;
-    bool paintSearchFieldDecorationPart(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    bool paintSearchFieldDecorationPart(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void adjustSearchFieldResultsDecorationPartStyle(RenderStyle&, const Element*) const override;
-    bool paintSearchFieldResultsDecorationPart(const RenderBox&, const PaintInfo&, const IntRect&) override;
+    bool paintSearchFieldResultsDecorationPart(const RenderBox&, const PaintInfo&, const FloatRect&) override;
 
     String m_mediaControlsStyleSheet;
 

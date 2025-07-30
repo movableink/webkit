@@ -34,7 +34,6 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(FloatingObjectTree);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(FloatingObject);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(FloatingObjects);
 
@@ -115,7 +114,9 @@ LayoutSize FloatingObject::translationOffsetToAncestor() const
 
 TextStream& operator<<(TextStream& stream, const FloatingObject& object)
 {
-    stream << "(" << &object << ") renderer (" << &object.renderer() << ")";
+    stream << "(" << &object << ") renderer (";
+    object.hasRenderer() ? stream  << &object.renderer() << ")" : stream << "destroyed)";
+
     if (object.isPlaced())
         stream << " " << object.frameRect();
     else

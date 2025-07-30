@@ -27,84 +27,12 @@
 #include "AutomationClientWin.h"
 
 #if ENABLE(REMOTE_INSPECTOR)
-#include "APIPageConfiguration.h"
-#include "WKAPICast.h"
+#include "AutomationSessionClientWin.h"
 #include "WebAutomationSession.h"
-#include "WebPageProxy.h"
 #include <wtf/RunLoop.h>
-#endif
 
 namespace WebKit {
 
-#if ENABLE(REMOTE_INSPECTOR)
-
-// AutomationSessionClient
-AutomationSessionClient::AutomationSessionClient(const String& sessionIdentifier)
-{
-    m_sessionIdentifier = sessionIdentifier;
-}
-
-void AutomationSessionClient::close(WKPageRef pageRef, const void* clientInfo)
-{
-    auto page = WebKit::toImpl(pageRef);
-    page->setControlledByAutomation(false);
-
-    auto sessionClient = static_cast<AutomationSessionClient*>(const_cast<void*>(clientInfo));
-    sessionClient->releaseWebView(page);
-}
-
-void AutomationSessionClient::requestNewPageWithOptions(WebKit::WebAutomationSession& session, API::AutomationSessionBrowsingContextOptions options, CompletionHandler<void(WebKit::WebPageProxy*)>&& completionHandler)
-{
-    auto pageConfiguration = API::PageConfiguration::create();
-    pageConfiguration->setProcessPool(session.protectedProcessPool());
-
-    RECT r { };
-    Ref newWindow = WebView::create(r, pageConfiguration, 0);
-
-    auto newPage = newWindow->page();
-    newPage->setControlledByAutomation(true);
-
-    WKPageUIClientV0 uiClient = { };
-    uiClient.base.version = 0;
-    uiClient.base.clientInfo = this;
-    uiClient.close = close;
-    WKPageSetPageUIClient(toAPI(newPage), &uiClient.base);
-
-    retainWebView(WTFMove(newWindow));
-
-    completionHandler(newPage);
-}
-
-void AutomationSessionClient::didDisconnectFromRemote(WebKit::WebAutomationSession& session)
-{
-    session.setClient(nullptr);
-
-    RunLoop::main().dispatch([&session] {
-        auto processPool = session.protectedProcessPool();
-        if (processPool) {
-            processPool->setAutomationSession(nullptr);
-            processPool->setPagesControlledByAutomation(false);
-        }
-    });
-}
-
-void AutomationSessionClient::retainWebView(Ref<WebView>&& webView)
-{
-    m_webViews.add(WTFMove(webView));
-}
-
-void AutomationSessionClient::releaseWebView(WebPageProxy* page)
-{
-    m_webViews.removeIf([&](auto& view) {
-        if (view->page() == page) {
-            view->close();
-            return true;
-        }
-        return false;
-    });
-}
-
-// AutomationClient
 AutomationClient::AutomationClient(WebProcessPool& processPool)
     : m_processPool(processPool)
 {
@@ -124,28 +52,29 @@ RefPtr<WebProcessPool> AutomationClient::protectedProcessPool() const
     return nullptr;
 }
 
-void AutomationClient::requestAutomationSession(const String& sessionIdentifier, const Inspector::RemoteInspector::Client::SessionCapabilities&)
+void AutomationClient::requestAutomationSession(const String& sessionIdentifier, const Inspector::RemoteInspector::Client::SessionCapabilities& capabilities)
 {
     ASSERT(isMainRunLoop());
 
     auto session = adoptRef(new WebAutomationSession());
     session->setSessionIdentifier(sessionIdentifier);
-    session->setClient(WTF::makeUnique<AutomationSessionClient>(sessionIdentifier));
+    session->setClient(WTF::makeUnique<AutomationSessionClient>(sessionIdentifier, capabilities));
     m_processPool->setAutomationSession(WTFMove(session));
 }
 
 void AutomationClient::closeAutomationSession()
 {
-    RunLoop::main().dispatch([this] {
+    RunLoop::protectedMain()->dispatch([this] {
         auto processPool = protectedProcessPool();
         if (!processPool || !processPool->automationSession())
             return;
 
         processPool->automationSession()->setClient(nullptr);
         processPool->setAutomationSession(nullptr);
+        processPool->setPagesControlledByAutomation(false);
     });
 }
 
-#endif
-
 } // namespace WebKit
+
+#endif // ENABLE(REMOTE_INSPECTOR)

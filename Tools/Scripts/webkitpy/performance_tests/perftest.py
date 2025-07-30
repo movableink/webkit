@@ -263,6 +263,7 @@ class PerfTest(object):
 
     _errors_to_ignore_in_sequoia = [
         re.compile(r'WebKitTestRunner\[\d+:\d+\] \+\[IMKClient subclass\]: chose IMKClient_'),
+        re.compile(r'com\.apple\.WebKit\.WebContent\.Development\[\d+:\d+\]\s+CoreText note:.+')
     ]
 
     def _filter_output(self, output):

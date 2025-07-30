@@ -17,13 +17,14 @@
 #include "include/gpu/ganesh/gl/GrGLFunctions.h"
 #include "include/gpu/ganesh/gl/GrGLInterface.h"
 #include "include/gpu/ganesh/gl/GrGLTypes.h"
-#include "include/private/SkColorData.h"
 #include "include/private/base/SkDebug.h"
+#include "include/private/base/SkSpan_impl.h"
 #include "include/private/base/SkTArray.h"
 #include "include/private/base/SkTemplates.h"
 #include "include/private/base/SkTo.h"
 #include "include/private/gpu/ganesh/GrTypesPriv.h"
 #include "src/core/SkChecksum.h"
+#include "src/core/SkColorData.h"
 #include "src/core/SkLRUCache.h"
 #include "src/gpu/Blend.h"
 #include "src/gpu/ganesh/GrCaps.h"
@@ -53,6 +54,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string_view>
 
 class GrAttachment;
@@ -79,7 +81,11 @@ struct SkISize;
 
 namespace SkSL { enum class GLSLGeneration; }
 
+namespace SkSurfaces { enum class BackendSurfaceAccess; }
+
 namespace skgpu {
+class AutoCallback;
+class MutableTextureState;
 class RefCntedCallback;
 class Swizzle;
 enum class Budgeted : bool;
@@ -252,7 +258,10 @@ public:
     void insertSemaphore(GrSemaphore* semaphore) override;
     void waitSemaphore(GrSemaphore* semaphore) override;
 
-    void checkFinishProcs() override;
+    std::optional<GrTimerQuery> startTimerQuery() override;
+    uint64_t getTimerQueryResult(GrGLuint);
+
+    void checkFinishedCallbacks() override;
     void finishOutstandingGpuWork() override;
 
     // Calls glGetError() until no errors are reported. Also looks for OOMs.
@@ -278,6 +287,8 @@ private:
     GrGLGpu(std::unique_ptr<GrGLContext>, GrDirectContext*);
 
     // GrGpu overrides
+    void endTimerQuery(const GrTimerQuery&) override;
+
     GrBackendTexture onCreateBackendTexture(SkISize dimensions,
                                             const GrBackendFormat&,
                                             GrRenderable,
@@ -435,8 +446,7 @@ private:
 
     void flushBlendAndColorWrite(const skgpu::BlendInfo&, const skgpu::Swizzle&);
 
-    void addFinishedProc(GrGpuFinishedProc finishedProc,
-                         GrGpuFinishedContext finishedContext) override;
+    void addFinishedCallback(skgpu::AutoCallback callback, std::optional<GrTimerQuery>) override;
 
     GrOpsRenderPass* onGetOpsRenderPass(
             GrRenderTarget*,
@@ -448,6 +458,11 @@ private:
             const GrOpsRenderPass::StencilLoadAndStoreInfo&,
             const skia_private::TArray<GrSurfaceProxy*, true>& sampledProxies,
             GrXferBarrierFlags renderPassXferBarriers) override;
+
+    void prepareSurfacesForBackendAccessAndStateUpdates(
+            SkSpan<GrSurfaceProxy*> proxies,
+            SkSurfaces::BackendSurfaceAccess access,
+            const skgpu::MutableTextureState* newState) override;
 
     bool onSubmitToGpu(const GrSubmitInfo& info) override;
 

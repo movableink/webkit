@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +34,7 @@
 #include "CSSCalcSymbolTable.h"
 #include "CSSCalcTree+Parser.h"
 #include "CSSCalcTree+Simplification.h"
+#include "CSSCalcTree.h"
 #include "CSSMathClamp.h"
 #include "CSSMathInvert.h"
 #include "CSSMathMax.h"
@@ -45,12 +47,15 @@
 #include "CSSNumericType.h"
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
+#include "CSSPropertyParserState.h"
 #include "CSSTokenizer.h"
 #include "CSSUnitValue.h"
 #include "CalculationCategory.h"
 #include "ExceptionOr.h"
-#include <wtf/Algorithms.h>
+#include <algorithm>
+#include <ranges>
 #include <wtf/FixedVector.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -94,6 +99,18 @@ template<CSSCalc::Numeric T> static ExceptionOr<Ref<CSSNumericValue>> reifyMathE
 static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalc::Symbol&)
 {
     // CSS Typed OM doesn't currently support unresolved symbols.
+    return Exception { ExceptionCode::UnknownError };
+}
+
+static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalc::SiblingCount&)
+{
+    // CSS Typed OM doesn't currently support unresolved sibling-count() functions.
+    return Exception { ExceptionCode::UnknownError };
+}
+
+static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalc::SiblingIndex&)
+{
+    // CSS Typed OM doesn't currently support unresolved sibling-index() functions.
     return Exception { ExceptionCode::UnknownError };
 }
 
@@ -161,7 +178,7 @@ ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::reifyMathExpression(const CSS
 {
     return WTF::switchOn(root,
         [](const CSSCalc::Child& child) -> ExceptionOr<Ref<CSSNumericValue>> { return CSSNumericValue::reifyMathExpression(child); },
-        [](const CSS::NoneRaw&) -> ExceptionOr<Ref<CSSNumericValue>> { return Exception { ExceptionCode::UnknownError }; }
+        [](const CSS::Keyword::None&) -> ExceptionOr<Ref<CSSNumericValue>> { return Exception { ExceptionCode::UnknownError }; }
     );
 }
 
@@ -195,7 +212,7 @@ static ExceptionOr<Ref<CSSNumericValue>> invert(Ref<CSSNumericValue>&& value)
 template<typename T>
 static RefPtr<CSSNumericValue> operationOnValuesOfSameUnit(T&& operation, const Vector<Ref<CSSNumericValue>>& values)
 {
-    bool allValuesHaveSameUnit = values.size() && WTF::allOf(values, [&] (const Ref<CSSNumericValue>& value) {
+    bool allValuesHaveSameUnit = values.size() && std::ranges::all_of(values, [&](auto& value) {
         auto* unitValue = dynamicDowncast<CSSUnitValue>(value.get());
         return unitValue ? unitValue->unitEnum() == downcast<CSSUnitValue>(values[0].get()).unitEnum() : false;
     });
@@ -249,7 +266,7 @@ ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::multiplyInternal(Vector<Ref<C
     // https://drafts.css-houdini.org/css-typed-om/#dom-cssnumericvalue-mul
     auto values = prependItemsOfTypeOrThis<CSSMathProduct>(WTFMove(numericValues));
 
-    bool allUnitValues = WTF::allOf(values, [&] (const Ref<CSSNumericValue>& value) {
+    bool allUnitValues = std::ranges::all_of(values, [](auto& value) {
         return is<CSSUnitValue>(value.get());
     });
     if (allUnitValues) {
@@ -330,7 +347,8 @@ bool CSSNumericValue::equals(FixedVector<CSSNumberish>&& values)
 {
     // https://drafts.css-houdini.org/css-typed-om/#dom-cssnumericvalue-equals
     auto numericValues = WTF::map(WTFMove(values), rectifyNumberish);
-    return WTF::allOf(numericValues, [&] (const Ref<CSSNumericValue>& value) {
+    // FIXME: Drop SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE once <rdar://150855062> is fixed.
+    SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE return std::ranges::all_of(numericValues, [&](auto& value) {
         return this->equals(value.get());
     });
 }
@@ -401,8 +419,8 @@ ExceptionOr<Ref<CSSMathSum>> CSSNumericValue::toSum(FixedVector<String>&& units)
     }
 
     if (parsedUnits.isEmpty()) {
-        std::sort(values.begin(), values.end(), [](auto& a, auto& b) {
-            return strcmp(downcast<CSSUnitValue>(a)->unitSerialization().characters(), downcast<CSSUnitValue>(b)->unitSerialization().characters()) < 0;
+        std::ranges::sort(values, [](auto& a, auto& b) {
+            return is_lt(compareSpans(downcast<CSSUnitValue>(a)->unitSerialization().span(), downcast<CSSUnitValue>(b)->unitSerialization().span()));
         });
         return CSSMathSum::create(WTFMove(values));
     }
@@ -414,7 +432,7 @@ ExceptionOr<Ref<CSSMathSum>> CSSNumericValue::toSum(FixedVector<String>&& units)
             auto value = downcast<CSSUnitValue>(values[i]);
             if (auto convertedValue = value->convertTo(parsedUnit)) {
                 temp->setValue(temp->value() + convertedValue->value());
-                values.remove(i);
+                values.removeAt(i);
             } else
                 ++i;
         }
@@ -435,14 +453,14 @@ ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::parse(Document& document, Str
     range.consumeWhitespace();
     if (range.atEnd())
         return Exception { ExceptionCode::SyntaxError, "Failed to parse CSS text"_s };
-    const CSSParserToken* componentValueStart = &range.peek();
+    auto componentValueStart = range;
     range.consumeComponentValue();
-    const CSSParserToken* componentValueEnd = &range.peek();
+    auto componentValueEnd = range;
     range.consumeWhitespace();
     if (!range.atEnd())
         return Exception { ExceptionCode::SyntaxError, "Failed to parse CSS text"_s };
 
-    auto componentValueRange = range.makeSubRange(componentValueStart, componentValueEnd);
+    auto componentValueRange = componentValueStart.rangeUntil(componentValueEnd);
     // https://drafts.css-houdini.org/css-typed-om/#reify-a-numeric-value
     switch (componentValueRange.peek().type()) {
     case CSSParserTokenType::DimensionToken:
@@ -460,6 +478,9 @@ ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::parse(Document& document, Str
             // See https://github.com/w3c/csswg-drafts/issues/10753
 
             auto parserContext = CSSParserContext { document };
+            auto parserState = CSS::PropertyParserState {
+                .context = parserContext,
+            };
             auto parserOptions = CSSCalc::ParserOptions {
                 .category = Calculation::Category::LengthPercentage,
                 .range = CSS::All,
@@ -468,13 +489,12 @@ ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::parse(Document& document, Str
             };
             auto simplificationOptions = CSSCalc::SimplificationOptions {
                 .category = Calculation::Category::LengthPercentage,
+                .range = CSS::All,
                 .conversionData = std::nullopt,
                 .symbolTable = { },
                 .allowZeroValueLengthRemovalFromSum = false,
-                .allowUnresolvedUnits = false,
-                .allowNonMatchingUnits = false
             };
-            auto tree = CSSCalc::parseAndSimplify(componentValueRange, parserContext, parserOptions, simplificationOptions);
+            auto tree = CSSCalc::parseAndSimplify(componentValueRange, parserState, parserOptions, simplificationOptions);
             if (!tree)
                 return Exception { ExceptionCode::SyntaxError, "Failed to parse CSS text"_s };
 

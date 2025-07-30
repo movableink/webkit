@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,8 +29,14 @@
 #if ENABLE(DOM_AUDIO_SESSION)
 
 #include "AudioSession.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
+#include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
+#include "EventTargetInterfaces.h"
+#include "ExceptionOr.h"
+#include "Page.h"
 #include "PermissionsPolicy.h"
 #include "PlatformMediaSessionManager.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -85,10 +91,14 @@ ExceptionOr<void> DOMAudioSession::setType(Type type)
     if (!document)
         return Exception { ExceptionCode::InvalidStateError };
 
+    RefPtr page = document->page();
+    if (!page)
+        return Exception { ExceptionCode::InvalidStateError };
+
     if (!PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, *document, PermissionsPolicy::ShouldReportViolation::No))
         return { };
 
-    document->topDocument().setAudioSessionType(type);
+    page->setAudioSessionType(type);
 
     auto categoryOverride = fromDOMAudioSessionType(type);
     AudioSession::protectedSharedSession()->setCategoryOverride(categoryOverride);
@@ -105,7 +115,13 @@ DOMAudioSession::Type DOMAudioSession::type() const
     if (document && !PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, *document, PermissionsPolicy::ShouldReportViolation::No))
         return DOMAudioSession::Type::Auto;
 
-    return document ? document->topDocument().audioSessionType() : DOMAudioSession::Type::Auto;
+    if (!document)
+        return DOMAudioSession::Type::Auto;
+
+    if (RefPtr page = document->page())
+        return page->audioSessionType();
+
+    return DOMAudioSession::Type::Auto;
 }
 
 static DOMAudioSession::State computeAudioSessionState()
@@ -128,6 +144,16 @@ DOMAudioSession::State DOMAudioSession::state() const
     if (!m_state)
         m_state = computeAudioSessionState();
     return *m_state;
+}
+
+enum EventTargetInterfaceType DOMAudioSession::eventTargetInterface() const
+{
+    return EventTargetInterfaceType::DOMAudioSession;
+}
+
+ScriptExecutionContext* DOMAudioSession::scriptExecutionContext() const
+{
+    return ContextDestructionObserver::scriptExecutionContext();
 }
 
 void DOMAudioSession::stop()
@@ -164,18 +190,18 @@ void DOMAudioSession::scheduleStateChangeEvent()
         return;
 
     m_hasScheduleStateChangeEvent = true;
-    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this] {
-        if (isContextStopped())
+    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [](auto& session) {
+        if (session.isContextStopped())
             return;
 
-        m_hasScheduleStateChangeEvent = false;
+        session.m_hasScheduleStateChangeEvent = false;
         auto newState = computeAudioSessionState();
 
-        if (m_state && *m_state == newState)
+        if (session.m_state && *session.m_state == newState)
             return;
 
-        m_state = newState;
-        dispatchEvent(Event::create(eventNames().statechangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        session.m_state = newState;
+        session.dispatchEvent(Event::create(eventNames().statechangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
     });
 }
 

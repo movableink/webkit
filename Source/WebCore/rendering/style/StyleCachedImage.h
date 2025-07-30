@@ -41,7 +41,8 @@ class TreeScope;
 class StyleCachedImage final : public StyleImage {
     WTF_MAKE_TZONE_ALLOCATED(StyleCachedImage);
 public:
-    static Ref<StyleCachedImage> create(Ref<CSSImageValue>, float scaleFactor = 1);
+    static Ref<StyleCachedImage> create(Style::URL&&, Ref<CSSImageValue>&&, float scaleFactor = 1);
+    static Ref<StyleCachedImage> create(const Style::URL&, const Ref<CSSImageValue>&, float scaleFactor = 1);
     static Ref<StyleCachedImage> copyOverridingScaleFactor(StyleCachedImage&, float scaleFactor);
     virtual ~StyleCachedImage();
 
@@ -74,12 +75,11 @@ public:
     bool knownToBeOpaque(const RenderElement&) const final;
     bool usesDataProtocol() const final;
 
-    URL reresolvedURL(const Document&) const;
-
-    URL imageURL() const;
+    Style::URL url() const final;
 
 private:
-    StyleCachedImage(Ref<CSSImageValue>&&, float);
+    StyleCachedImage(Style::URL&&, Ref<CSSImageValue>&&, float);
+    StyleCachedImage(const Style::URL&, const Ref<CSSImageValue>&, float);
 
     LegacyRenderSVGResourceContainer* uncheckedRenderSVGResource(TreeScope&, const AtomString& fragment) const;
     LegacyRenderSVGResourceContainer* uncheckedRenderSVGResource(const RenderElement*) const;
@@ -87,6 +87,7 @@ private:
     RenderSVGResourceContainer* renderSVGResource(const RenderElement*) const;
     bool isRenderSVGResource(const RenderElement*) const;
 
+    Style::URL m_url;
     Ref<CSSImageValue> m_cssValue;
     bool m_isPending { true };
     mutable float m_scaleFactor { 1 };

@@ -21,7 +21,7 @@
 #include "RealtimeOutgoingVideoSourceGStreamer.h"
 
 #if USE(GSTREAMER_WEBRTC)
-
+#include "ContextDestructionObserverInlines.h"
 #include "GStreamerCommon.h"
 #include "GStreamerMediaStreamSource.h"
 #include "GStreamerRegistryScanner.h"
@@ -37,13 +37,13 @@ namespace WebCore {
 RealtimeOutgoingVideoSourceGStreamer::RealtimeOutgoingVideoSourceGStreamer(const RefPtr<UniqueSSRCGenerator>& ssrcGenerator, const String& mediaStreamId, MediaStreamTrack& track)
     : RealtimeOutgoingMediaSourceGStreamer(RealtimeOutgoingMediaSourceGStreamer::Type::Video, ssrcGenerator, mediaStreamId, track)
 {
-    initializePreProcessor();
+    initialize();
 }
 
 RealtimeOutgoingVideoSourceGStreamer::RealtimeOutgoingVideoSourceGStreamer(const RefPtr<UniqueSSRCGenerator>& ssrcGenerator)
     : RealtimeOutgoingMediaSourceGStreamer(RealtimeOutgoingMediaSourceGStreamer::Type::Video, ssrcGenerator)
 {
-    initializePreProcessor();
+    initialize();
 
     m_outgoingSource = gst_element_factory_make("videotestsrc", nullptr);
     gst_util_set_object_arg(G_OBJECT(m_outgoingSource.get()), "pattern", "black");
@@ -53,7 +53,7 @@ RealtimeOutgoingVideoSourceGStreamer::RealtimeOutgoingVideoSourceGStreamer(const
 
 RealtimeOutgoingVideoSourceGStreamer::~RealtimeOutgoingVideoSourceGStreamer() = default;
 
-void RealtimeOutgoingVideoSourceGStreamer::initializePreProcessor()
+void RealtimeOutgoingVideoSourceGStreamer::initialize()
 {
     static std::once_flag debugRegisteredFlag;
     std::call_once(debugRegisteredFlag, [] {
@@ -63,33 +63,6 @@ void RealtimeOutgoingVideoSourceGStreamer::initializePreProcessor()
 
     static Atomic<uint64_t> sourceCounter = 0;
     gst_element_set_name(m_bin.get(), makeString("outgoing-video-source-"_s, sourceCounter.exchangeAdd(1)).ascii().data());
-
-    m_preProcessor = gst_bin_new(nullptr);
-
-    auto videoConvert = makeGStreamerElement("videoconvert", nullptr);
-
-    auto videoFlip = makeGStreamerElement("autovideoflip", nullptr);
-    if (!videoFlip) {
-        GST_DEBUG("autovideoflip element not available, falling back to videoflip");
-        videoFlip = makeGStreamerElement("videoflip", nullptr);
-    }
-    gst_util_set_object_arg(G_OBJECT(videoFlip), "video-direction", "auto");
-
-    gst_bin_add_many(GST_BIN_CAST(m_preProcessor.get()), videoFlip, videoConvert, nullptr);
-    gst_element_link(videoFlip, videoConvert);
-
-    if (auto pad = adoptGRef(gst_bin_find_unlinked_pad(GST_BIN_CAST(m_preProcessor.get()), GST_PAD_SRC)))
-        gst_element_add_pad(GST_ELEMENT_CAST(m_preProcessor.get()), gst_ghost_pad_new("src", pad.get()));
-    if (auto pad = adoptGRef(gst_bin_find_unlinked_pad(GST_BIN_CAST(m_preProcessor.get()), GST_PAD_SINK)))
-        gst_element_add_pad(GST_ELEMENT_CAST(m_preProcessor.get()), gst_ghost_pad_new("sink", pad.get()));
-
-    gst_bin_add(GST_BIN_CAST(m_bin.get()), m_preProcessor.get());
-}
-
-void RealtimeOutgoingVideoSourceGStreamer::teardown()
-{
-    RealtimeOutgoingMediaSourceGStreamer::teardown();
-    m_preProcessor.clear();
 }
 
 RTCRtpCapabilities RealtimeOutgoingVideoSourceGStreamer::rtpCapabilities() const
@@ -108,6 +81,11 @@ GRefPtr<GstPad> RealtimeOutgoingVideoSourceGStreamer::outgoingSourcePad() const
 RefPtr<GStreamerRTPPacketizer> RealtimeOutgoingVideoSourceGStreamer::createPacketizer(RefPtr<UniqueSSRCGenerator> ssrcGenerator, const GstStructure* codecParameters, GUniquePtr<GstStructure>&& encodingParameters)
 {
     return GStreamerVideoRTPPacketizer::create(ssrcGenerator, codecParameters, WTFMove(encodingParameters));
+}
+
+void RealtimeOutgoingVideoSourceGStreamer::dispatchBitrateRequest(uint32_t bitrate)
+{
+    gst_element_send_event(m_bin.get(), gst_event_new_custom(GST_EVENT_CUSTOM_DOWNSTREAM_OOB, gst_structure_new("encoder-bitrate-change-request", "bitrate", G_TYPE_UINT, static_cast<uint32_t>(bitrate / 1000), nullptr)));
 }
 
 #undef GST_CAT_DEFAULT

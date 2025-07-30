@@ -10,10 +10,9 @@
 
 #include "include/core/SkPathTypes.h"
 #include "include/core/SkVertices.h"
+#include "include/private/base/SkTArray.h"
 #include "src/gpu/AtlasTypes.h"
 #include "src/gpu/graphite/Renderer.h"
-
-#include <vector>
 
 namespace skgpu::graphite {
 
@@ -96,7 +95,9 @@ public:
         return {fRenderers.data(), fRenderers.size()};
     }
 
-    const RenderStep* lookup(uint32_t uniqueID) const;
+    const RenderStep* lookup(RenderStep::RenderStepID renderStepID) const {
+        return fRenderSteps[(int) renderStepID].get();
+    }
 
 #ifdef SK_ENABLE_VELLO_SHADERS
     // Compute shader-based path renderer and compositor.
@@ -116,11 +117,23 @@ private:
     RendererProvider(const RendererProvider&) = delete;
     RendererProvider(RendererProvider&&) = delete;
 
+    RenderStep* assumeOwnership(std::unique_ptr<RenderStep> renderStep) {
+        int index = (int) renderStep->renderStepID();
+        SkASSERT(!fRenderSteps[index]);
+        fRenderSteps[index] = std::move(renderStep);
+        return fRenderSteps[index].get();
+    }
+    template<typename... Args>
+    void initRenderer(Renderer* member, Args... args) {
+        *member = Renderer(args...);
+        fRenderers.push_back(member);
+    }
+
     // Renderers are composed of 1+ steps, and some steps can be shared by multiple Renderers.
     // Renderers don't keep their RenderSteps alive so RendererProvider holds them here.
-    std::vector<std::unique_ptr<RenderStep>> fRenderSteps;
+    std::unique_ptr<RenderStep> fRenderSteps[RenderStep::kNumRenderSteps];
 
-    // NOTE: Keep all Renderers dense to support automatically completing 'fRenderers'.
+    // Use initRenderer() to set each member and register with `fRenderers`.
     Renderer fStencilTessellatedCurves[kPathTypeCount];
     Renderer fStencilTessellatedWedges[kPathTypeCount];
     Renderer fConvexTessellatedWedges;
@@ -141,7 +154,7 @@ private:
     Renderer fVertices[kVerticesCount];
 
     // Aggregate of all enabled Renderers for convenient iteration when pre-compiling
-    std::vector<const Renderer*> fRenderers;
+    skia_private::TArray<const Renderer*> fRenderers;
 
 #ifdef SK_ENABLE_VELLO_SHADERS
     std::unique_ptr<VelloRenderer> fVelloRenderer;

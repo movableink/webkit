@@ -266,7 +266,7 @@ QList<ItemType> convertToList(JSContextRef context, JSRealType type, JSObjectRef
             else
                 break;
         }
-        if (list.count() != length)
+        if (static_cast<size_t>(list.count()) != length)
             list.clear();
         else if (distance)
             *distance = 5;
@@ -302,7 +302,7 @@ static void getGregorianDateTimeUTC(JSContextRef context, JSRealType type, JSVal
     } else {
         double ms = JSValueToNumber(context, value, exception);
         GregorianDateTime convertedGdt;
-        lexicalGlobalObject->vm().dateCache.msToGregorianDateTime(ms, WTF::UTCTime, convertedGdt);
+        lexicalGlobalObject->vm().dateCache.msToGregorianDateTime(ms, TimeType::UTCTime, convertedGdt);
         other = &convertedGdt;
     }
 
@@ -425,7 +425,7 @@ QVariant convertValueToQVariant(JSContextRef context, JSValueRef value, QMetaTyp
         case QMetaType::Float:
         case QMetaType::Double:
             ret = QVariant(JSValueToNumber(context, value, 0));
-            ret.convert((QVariant::Type)hint);
+            ret.convert(QMetaType(hint));
             if (type == Number) {
                 switch (hint) {
                 case QMetaType::Double:
@@ -721,7 +721,7 @@ JSValueRef convertQVariantToValue(JSContextRef context, RootObject* root, const 
 
     qConvDebug() << "convertQVariantToValue: metatype:" << type << ", isnull: " << variant.isNull();
     if (variant.isNull() &&
-        !QMetaType::typeFlags(type).testFlag(QMetaType::PointerToQObject) &&
+        !(QMetaType(type).flags() & QMetaType::PointerToQObject) &&
         type != QMetaType::VoidStar &&
         type != QMetaType::QString) {
         return JSValueMakeNull(context);
@@ -781,7 +781,7 @@ JSValueRef convertQVariantToValue(JSContextRef context, RootObject* root, const 
         return toRef(lexicalGlobalObject, toJS(lexicalGlobalObject, static_cast<JSDOMGlobalObject*>(lexicalGlobalObject), wtfByteArray.get()));
     }
 
-    if (QMetaType::typeFlags(type).testFlag(QMetaType::PointerToQObject)) {
+    if (QMetaType(type).flags() & QMetaType::PointerToQObject) {
         QObject* obj = variant.value<QObject*>();
         if (!obj)
             return JSValueMakeNull(context);
@@ -790,7 +790,7 @@ JSValueRef convertQVariantToValue(JSContextRef context, RootObject* root, const 
         return toRef(lexicalGlobalObject, QtInstance::getQtInstance(obj, WTFMove(root), QtInstance::QtOwnership)->createRuntimeObject(lexicalGlobalObject));
     }
 
-    if (QtPixmapRuntime::canHandle(static_cast<QMetaType::Type>(variant.type())))
+    if (QtPixmapRuntime::canHandle(static_cast<QMetaType::Type>(variant.typeId())))
         return QtPixmapRuntime::toJS(context, variant, exception);
 
     if (customRuntimeConversions()->contains(type)) {
@@ -1009,7 +1009,7 @@ static int indexOfMetaEnum(const QMetaObject *meta, const QByteArray &str)
 static int findMethodIndex(JSContextRef context,
                            const QMetaObject* meta,
                            const QByteArray& signature,
-                           int argumentCount,
+                           unsigned argumentCount,
                            const JSValueRef arguments[],
                            bool allowPrivate,
                            QVarLengthArray<QVariant, 10> &vars,
@@ -1094,7 +1094,7 @@ static int findMethodIndex(JSContextRef context,
         }
 
         // If the native method requires more arguments than what was passed from JavaScript
-        if (argumentCount + 1 < static_cast<unsigned>(types.count())) {
+        if (argumentCount + 1 < types.count()) {
             qMatchDebug() << "Match:too few args for" << method.methodSignature();
             tooFewArgs.append(index);
             continue;
@@ -1118,7 +1118,7 @@ static int findMethodIndex(JSContextRef context,
 
         bool converted = true;
         int matchDistance = 0;
-        for (unsigned i = 0; converted && i + 1 < static_cast<unsigned>(types.count()); ++i) {
+        for (unsigned i = 0; converted && i + 1 < types.count(); ++i) {
             JSValueRef arg = i < argumentCount ? arguments[i] : JSValueMakeUndefined(context);
 
             int argdistance = -1;
@@ -1127,7 +1127,7 @@ static int findMethodIndex(JSContextRef context,
                 matchDistance += argdistance;
                 args[i+1] = v;
             } else {
-                qMatchDebug() << "failed to convert argument " << i << "type" << types.at(i+1).typeId() << QMetaType::typeName(types.at(i+1).typeId());
+                qMatchDebug() << "failed to convert argument " << i << "type" << types.at(i+1).typeId() << QMetaType(types.at(i+1).typeId()).name();
                 converted = false;
             }
         }
@@ -1135,7 +1135,7 @@ static int findMethodIndex(JSContextRef context,
         qMatchDebug() << "Match: " << method.methodSignature() << (converted ? "converted":"failed to convert") << "distance " << matchDistance;
 
         if (converted) {
-            if ((argumentCount + 1 == static_cast<unsigned>(types.count()))
+            if ((argumentCount + 1 == types.count())
                 && (matchDistance == 0)) {
                 // perfect match, use this one
                 chosenIndex = index;
@@ -1382,11 +1382,11 @@ JSValueRef QtRuntimeMethod::connectOrDisconnect(JSContextRef context, JSObjectRe
     }
 
     if ((!(d->m_flags & QtRuntimeMethod::MethodIsSignal))) {
-        setException(context, exception, QStringLiteral("QtMetaMethod.%3: %1::%2() is not a signal").arg(QString::fromUtf8(d->m_object.data()->metaObject()->className())).arg(QString::fromLatin1(d->m_identifier)).arg(functionName));
+        setException(context, exception, QStringLiteral("QtMetaMethod.%3: %1::%2() is not a signal").arg(QString::fromUtf8(d->m_object->metaObject()->className())).arg(QString::fromLatin1(d->m_identifier)).arg(functionName));
         return JSValueMakeUndefined(context);
     }
 
-    QObject* sender = d->m_object.data();
+    QObject* sender = d->m_object;
 
     if (!sender) {
         setException(context, exception, QStringLiteral("cannot call function of deleted QObject"));
@@ -1409,7 +1409,7 @@ JSValueRef QtRuntimeMethod::connectOrDisconnect(JSContextRef context, JSObjectRe
         if (JSObjectIsFunction(context, targetFunction)) {
             // object.signal.connect(otherObject.slot);
             if (QtRuntimeMethod* targetMethod = toRuntimeMethod(context, targetFunction))
-                targetObject = toRef(QtInstance::getQtInstance(targetMethod->m_object.data(), d->m_instance->rootObject(), QtInstance::QtOwnership)->createRuntimeObject(toJS(context)));
+                targetObject = toRef(QtInstance::getQtInstance(targetMethod->m_object, d->m_instance->rootObject(), QtInstance::QtOwnership)->createRuntimeObject(toJS(context)));
         } else
             targetFunction = 0;
     } else {
@@ -1572,21 +1572,13 @@ void QtConnectionObject::qt_static_metacall(QObject *_o, QMetaObject::Call _c, i
     }
 }
 
-//const QMetaObject QtConnectionObject::staticMetaObject = {
-//    { &QObject::staticMetaObject, qt_meta_stringdata_QtConnectionObject.data,
-//      qt_meta_data_QtConnectionObject, qt_static_metacall, 0, 0 }
-//};
-
 const QMetaObject QtConnectionObject::staticMetaObject = { {
     QMetaObject::SuperData::link<QObject::staticMetaObject>(),
     qt_meta_stringdata_QtConnectionObject.offsetsAndSize,
     qt_meta_data_QtConnectionObject,
     qt_static_metacall,
     nullptr,
-qt_incomplete_metaTypeArray<qt_meta_stringdata_QtConnectionObject_t
-, QtPrivate::TypeAndForceComplete<QtConnectionObject, std::true_type>
-, QtPrivate::TypeAndForceComplete<void, std::false_type>
->,
+    nullptr,
     nullptr
 } };
 

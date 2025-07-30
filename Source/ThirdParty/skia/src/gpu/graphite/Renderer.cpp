@@ -9,43 +9,29 @@
 
 namespace skgpu::graphite {
 
-static uint32_t next_id() {
-    static std::atomic<uint32_t> nextID{0};
-    // Not worried about overflow since each Context won't have that many RenderSteps, so even if
-    // it wraps back to 0, that RenderStep will not be in the same Context as the original 0.
-    return nextID.fetch_add(1, std::memory_order_relaxed);
-}
-
-RenderStep::RenderStep(std::string_view className,
-               std::string_view variantName,
-               SkEnumBitMask<Flags> flags,
-               std::initializer_list<Uniform> uniforms,
-               PrimitiveType primitiveType,
-               DepthStencilSettings depthStencilSettings,
-               SkSpan<const Attribute> vertexAttrs,
-               SkSpan<const Attribute> instanceAttrs,
-               SkSpan<const Varying> varyings)
-        : fUniqueID(next_id())
+RenderStep::RenderStep(RenderStepID renderStepID,
+                       SkEnumBitMask<Flags> flags,
+                       std::initializer_list<Uniform> uniforms,
+                       PrimitiveType primitiveType,
+                       DepthStencilSettings depthStencilSettings,
+                       SkSpan<const Attribute> staticAttrs,
+                       SkSpan<const Attribute> appendAttrs,
+                       SkSpan<const Varying> varyings)
+        : fRenderStepID(renderStepID)
         , fFlags(flags)
         , fPrimitiveType(primitiveType)
         , fDepthStencilSettings(depthStencilSettings)
         , fUniforms(uniforms)
-        , fVertexAttrs(vertexAttrs.begin(), vertexAttrs.end())
-        , fInstanceAttrs(instanceAttrs.begin(), instanceAttrs.end())
+        , fStaticAttrs(staticAttrs.begin(), staticAttrs.end())
+        , fAppendAttrs(appendAttrs.begin(), appendAttrs.end())
         , fVaryings(varyings.begin(), varyings.end())
-        , fVertexStride(0)
-        , fInstanceStride(0)
-        , fName(className) {
-    for (auto v : this->vertexAttributes()) {
-        fVertexStride += v.sizeAlign4();
+        , fStaticDataStride(0)
+        , fAppendDataStride(0) {
+    for (auto v : this->staticAttributes()) {
+        fStaticDataStride += v.sizeAlign4();
     }
-    for (auto i : this->instanceAttributes()) {
-        fInstanceStride += i.sizeAlign4();
-    }
-    if (!variantName.empty()) {
-        fName += "[";
-        fName += variantName;
-        fName += "]";
+    for (auto i : this->appendAttributes()) {
+        fAppendDataStride += i.sizeAlign4();
     }
 }
 
@@ -53,6 +39,25 @@ Coverage RenderStep::GetCoverage(SkEnumBitMask<Flags> flags) {
     return !(flags & Flags::kEmitsCoverage) ? Coverage::kNone
            : (flags & Flags::kLCDCoverage)  ? Coverage::kLCD
                                             : Coverage::kSingleChannel;
+}
+
+const char* RenderStep::RenderStepName(RenderStepID id) {
+#define CASE1(BaseName) case RenderStepID::k##BaseName: return #BaseName "RenderStep";
+#define CASE2(BaseName, VariantName) \
+    case RenderStepID::k##BaseName##_##VariantName: return #BaseName "RenderStep[" #VariantName "]";
+
+    switch (id) {
+        SKGPU_RENDERSTEP_TYPES(CASE1, CASE2)
+    }
+#undef CASE1
+#undef CASE2
+
+    SkUNREACHABLE;
+}
+
+bool RenderStep::IsValidRenderStepID(uint32_t renderStepID) {
+    return renderStepID > (int) RenderStep::RenderStepID::kInvalid &&
+           renderStepID < RenderStep::kNumRenderSteps;
 }
 
 } // namespace skgpu::graphite

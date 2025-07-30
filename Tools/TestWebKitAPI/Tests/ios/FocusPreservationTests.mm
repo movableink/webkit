@@ -76,6 +76,10 @@ TEST(FocusPreservationTests, PreserveAndRestoreFocus)
 
 TEST(FocusPreservationTests, UserCanDismissInputViewRegardlessOfFocusPreservationCount)
 {
+    // The Done button above the keyboard is only present when using the phone idiom.
+    if ([[UIDevice currentDevice] userInterfaceIdiom] != UIUserInterfaceIdiomPhone)
+        return;
+
     bool inputFocused = false;
     auto [webView, delegate] = webViewForTestingFocusPreservation([&inputFocused] (id<_WKFocusedElementInfo>) {
         inputFocused = true;

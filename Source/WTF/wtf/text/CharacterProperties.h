@@ -164,6 +164,11 @@ inline bool isFullwidthMiddleDotPunctuation(char32_t character)
     return character == 0x00B7 || character == 0x2027 || character == 0x30FB;
 }
 
+inline bool isCombiningMark(char32_t character)
+{
+    return 0x0300 <= character && character <= 0x036F;
+}
+
 } // namespace WTF
 
 using WTF::isEmojiGroupCandidate;
@@ -183,3 +188,4 @@ using WTF::isOfScriptType;
 using WTF::isEastAsianFullWidth;
 using WTF::isCJKSymbolOrPunctuation;
 using WTF::isFullwidthMiddleDotPunctuation;
+using WTF::isCombiningMark;

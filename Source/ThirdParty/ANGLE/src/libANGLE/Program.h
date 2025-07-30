@@ -461,9 +461,9 @@ class Program final : public LabeledObject, public angle::Subject
     }
 
     // Try to resolve linking. Inlined to make sure its overhead is as low as possible.
-    void resolveLink(const Context *context)
+    ANGLE_INLINE void resolveLink(const Context *context)
     {
-        if (mLinkingState)
+        if (ANGLE_UNLIKELY(mLinkingState))
         {
             resolveLinkImpl(context);
         }

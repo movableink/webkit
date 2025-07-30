@@ -28,6 +28,7 @@
 #include "CSSPropertyNames.h"
 #include "CSSValue.h"
 #include "EventTarget.h"
+#include "Length.h"
 #include "TimelineRangeOffset.h"
 #include "WebAnimationTime.h"
 #include <wtf/BitSet.h>
@@ -77,7 +78,7 @@ using AnimationCollection = ListHashSet<Ref<WebAnimation>>;
 using AnimationEvents = Vector<Ref<AnimationEventBase>>;
 using CSSAnimationCollection = ListHashSet<Ref<CSSAnimation>>;
 
-using AnimatableCSSProperty = std::variant<CSSPropertyID, AtomString>;
+using AnimatableCSSProperty = Variant<CSSPropertyID, AtomString>;
 using AnimatableCSSPropertyToTransitionMap = UncheckedKeyHashMap<AnimatableCSSProperty, Ref<CSSTransition>>;
 
 enum class AcceleratedEffectProperty : uint16_t {
@@ -109,10 +110,18 @@ constexpr OptionSet<AcceleratedEffectProperty> transformRelatedAcceleratedProper
 };
 
 struct CSSPropertiesBitSet {
-    WTF::BitSet<numCSSProperties> m_properties { };
+    WTF::BitSet<cssPropertyIDEnumValueCount> m_properties { };
 };
 
-using TimelineRangeValue = std::variant<TimelineRangeOffset, RefPtr<CSSNumericValue>, RefPtr<CSSKeywordValue>, String>;
+using TimelineRangeValue = Variant<TimelineRangeOffset, RefPtr<CSSNumericValue>, RefPtr<CSSKeywordValue>, String>;
+
+enum class Scroller : uint8_t { Nearest, Root, Self };
+
+struct ViewTimelineInsets {
+    std::optional<Length> start;
+    std::optional<Length> end;
+    bool operator==(const ViewTimelineInsets&) const = default;
+};
 
 } // namespace WebCore
 

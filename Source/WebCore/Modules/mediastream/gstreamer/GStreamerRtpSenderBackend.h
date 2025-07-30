@@ -59,6 +59,13 @@ public:
         );
     }
 
+    ThreadSafeWeakPtr<RealtimeOutgoingAudioSourceGStreamer> audioSourceWeak()
+    {
+        return WTF::switchOn(m_source,
+            [](Ref<RealtimeOutgoingAudioSourceGStreamer>& source) -> ThreadSafeWeakPtr<RealtimeOutgoingAudioSourceGStreamer> { return source.get(); },
+            [](const auto&) -> ThreadSafeWeakPtr<RealtimeOutgoingAudioSourceGStreamer> { return nullptr; });
+    }
+
     RealtimeOutgoingVideoSourceGStreamer* videoSource()
     {
         return WTF::switchOn(m_source,
@@ -75,14 +82,16 @@ public:
         );
     }
 
-    void clearSource();
     void setSource(Source&&);
     void takeSource(GStreamerRtpSenderBackend&);
 
     void stopSource();
     void tearDown();
 
+    void dispatchBitrateRequest(uint32_t bitrate);
+
 private:
+    void clearSource();
     bool replaceTrack(RTCRtpSender&, MediaStreamTrack*) final;
     RTCRtpSendParameters getParameters() const final;
     void setParameters(const RTCRtpSendParameters&, DOMPromiseDeferred<void>&&) final;

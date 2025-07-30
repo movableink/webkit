@@ -45,7 +45,7 @@ from webkitpy.test.runner import Runner
 from webkitpy.results.upload import Upload
 from webkitpy.results.options import upload_options
 
-from webkitcorepy import StringIO
+from webkitcorepy import AutoInstall, Package, StringIO, Version
 
 _log = logging.getLogger(__name__)
 
@@ -60,6 +60,10 @@ def main():
     up = os.path.dirname
     _webkit_root = up(up(up(up(up(os.path.abspath(__file__))))))
 
+    # Register local packages that webkitpy only cares about here.
+    AutoInstall.register(Package('reporelaypy', Version(0, 4, 1)), local=True)
+    AutoInstall.register(Package('webkitflaskpy', Version(0, 3, 0)), local=True)
+
     tester = Tester()
     tester.add_tree(os.path.join(_webkit_root, 'Tools', 'Scripts'), 'webkitpy')
     tester.add_tree(os.path.join(_webkit_root, 'Tools', 'Scripts', 'libraries', 'webkitcorepy'), 'webkitcorepy')
@@ -67,17 +71,18 @@ def main():
     tester.add_tree(os.path.join(_webkit_root, 'Tools', 'Scripts', 'libraries', 'webkitscmpy'), 'webkitscmpy')
     tester.add_tree(os.path.join(_webkit_root, 'Tools', 'Scripts', 'libraries', 'webkitflaskpy'), 'webkitflaskpy')
     tester.add_tree(os.path.join(_webkit_root, 'Tools', 'Scripts', 'libraries', 'reporelaypy'), 'reporelaypy')
-
-    # AppleWin is the only platform that does not support Modern WebKit
-    # FIXME: Find a better way to detect this currently assuming cygwin means AppleWin
-    if sys.platform != 'cygwin':
-        tester.add_tree(os.path.join(_webkit_root, 'Source', 'WebKit', 'Scripts'), 'webkit')
+    tester.add_tree(os.path.join(_webkit_root, 'Source', 'WebKit', 'Scripts'), 'webkit')
 
     tester.skip(('webkitpy.common.checkout.scm.scm_unittest',), 'are really, really, slow', 31818)
     if sys.platform.startswith('win'):
         tester.skip(('webkitpy.common.checkout', 'webkitpy.tool'), 'fail horribly on win32', 54526)
         tester.skip(('reporelaypy',), 'fail to install lupa and don\'t have to test on win32', 243316)
         tester.skip(('webkitflaskpy',), 'fail to install lupa and don\'t have to test on win32', 253419)
+
+    if sys.version_info >= (3, 13):
+        tester.skip(('reporelaypy',), 'lupa wheel is not yet available for python 3.13', 285315)
+        tester.skip(('resultsdbpy',), 'lupa wheel is not yet available for python 3.13', 285315)
+        tester.skip(('webkitflaskpy',), 'lupa wheel is not yet available for python 3.13', 285315)
 
     # Tests that are platform specific
     mac_only_tests = (
@@ -195,14 +200,6 @@ class Tester(object):
     def _run_tests(self, names):
         # Make sure PYTHONPATH is set up properly.
         sys.path = self.finder.additional_paths(sys.path) + sys.path
-
-        from webkitcorepy import AutoInstall
-
-        # Force registration of all autoinstalled packages.
-        if any([n.startswith('reporelaypy') for n in names]):
-            import reporelaypy
-        if any([n.startswith('webkitflaskpy') for n in names]):
-            import webkitflaskpy
 
         AutoInstall.install_everything()
 
@@ -374,12 +371,6 @@ class _Loader(unittest.TestLoader):
     test_method_prefixes = []
 
     def getTestCaseNames(self, testCaseClass):
-        should_skip_class_method = getattr(testCaseClass, "shouldSkip", None)
-        if callable(should_skip_class_method):
-            if testCaseClass.shouldSkip():
-                _log.info('Skipping tests in %s' % (testCaseClass.__name__))
-                return []
-
         def isTestMethod(attrname, testCaseClass=testCaseClass):
             if not hasattr(getattr(testCaseClass, attrname), '__call__'):
                 return False

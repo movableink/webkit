@@ -93,7 +93,7 @@ public:
     ~AppleLanguagesTest()
     {
         // Restore previous system language.
-        system([NSString stringWithFormat:@"defaults write NSGlobalDomain AppleLanguages '%@'", (NSString *)m_savedAppleLanguages].UTF8String);
+        system(adoptNS([[NSString alloc] initWithFormat:@"defaults write NSGlobalDomain AppleLanguages '%@'", m_savedAppleLanguages.createNSString().get()]).get().UTF8String);
     }
 
 private:

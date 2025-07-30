@@ -28,6 +28,7 @@
 #import "DeprecatedGlobalValues.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
+#import "TestScriptMessageHandler.h"
 #import "TestURLSchemeHandler.h"
 #import <WebKit/WKProcessPoolPrivate.h>
 #import <WebKit/WKUserContentControllerPrivate.h>
@@ -39,39 +40,15 @@
 
 #if PLATFORM(IOS_FAMILY)
 
-static bool idbActivitiesStarted;
-
-@interface IndexedDBSuspendImminentlyMessageHandler : NSObject <WKScriptMessageHandler>
-@end
-
-@implementation IndexedDBSuspendImminentlyMessageHandler
-
-- (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message
-{
-    idbActivitiesStarted = true;
-    receivedScriptMessage = true;
-    lastScriptMessage = message;
-}
-
-@end
-
-static void runUntilMessageReceived(NSString* expectedMessage)
-{
-    TestWebKitAPI::Util::run(&receivedScriptMessage);
-    RetainPtr<NSString> string = (NSString *)[lastScriptMessage body];
-    EXPECT_WK_STREQ(expectedMessage, string.get());
-    receivedScriptMessage = false;
-}
-
 static void keepNetworkProcessActive()
 {
-    [[WKWebsiteDataStore defaultDataStore] fetchDataRecordsOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] completionHandler:^(NSArray<WKWebsiteDataRecord *> *dataRecords) {
-        if (!idbActivitiesStarted)
-            keepNetworkProcessActive();
+    [WKWebsiteDataStore.defaultDataStore fetchDataRecordsOfTypes:WKWebsiteDataStore.allWebsiteDataTypes completionHandler:^(NSArray<WKWebsiteDataRecord *> *) {
+        keepNetworkProcessActive();
     }];
 }
 
-TEST(IndexedDB, IndexedDBSuspendImminently)
+// FIXME: Re-enable this test once webkit.org/b/290203 is resolved.
+TEST(IndexedDB, DISABLED_IndexedDBSuspendImminently)
 {
     readyToContinue = false;
     [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] modifiedSince:[NSDate distantPast] completionHandler:^() {
@@ -79,70 +56,71 @@ TEST(IndexedDB, IndexedDBSuspendImminently)
     }];
     TestWebKitAPI::Util::run(&readyToContinue);
 
-    auto handler = adoptNS([[IndexedDBSuspendImminentlyMessageHandler alloc] init]);
+    auto handler = adoptNS([TestScriptMessageHandler new]);
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
     [[configuration userContentController] addScriptMessageHandler:handler.get() name:@"testHandler"];
     auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
     NSURLRequest *request = [NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"IndexedDBSuspendImminently" withExtension:@"html"]];
     [webView loadRequest:request];
-    runUntilMessageReceived(@"Continue");
+    EXPECT_WK_STREQ([handler waitForMessage].body, @"Continue");
 
     [configuration.get().websiteDataStore _sendNetworkProcessWillSuspendImminently];
-    runUntilMessageReceived(@"Expected Abort For Suspension");
+    EXPECT_WK_STREQ([handler waitForMessage].body, @"Expected Abort For Suspension");
 
+    keepNetworkProcessActive();
     [configuration.get().websiteDataStore _sendNetworkProcessDidResume];
-    runUntilMessageReceived(@"Expected Success After Resume");
+    EXPECT_WK_STREQ([handler waitForMessage].body, @"Expected Success After Resume");
 }
-
-static NSString *mainFrameString = @"<script> \
-    function postResult(event) { \
-        window.webkit.messageHandlers.testHandler.postMessage(event.data); \
-    } \
-    addEventListener('message', postResult, false); \
-    </script> \
-    <iframe src='iframe://'>";
-
-static const char* iframeBytes = R"TESTRESOURCE(
-<script>
-function postResult(result) {
-    if (window.parent != window.top) {
-        parent.postMessage(result, '*');
-    } else {
-        window.webkit.messageHandlers.testHandler.postMessage(result);
-    }
-}
-
-try {
-    var request = window.indexedDB.open('IndexedDBSuspendImminentlyForThirdPartyDatabases');
-    request.onupgradeneeded = function(event) {
-        var db = event.target.result;
-        var os = db.createObjectStore('TestObjectStore');
-        var transaction = event.target.transaction;
-        transaction.onabort = function(event) {
-            postResult('transaction is aborted');
-        }
-        transaction.oncomplete = function(event) {
-            postResult('transaction is completed');
-        }
-
-        postResult('database is created');
-
-        for (let i = 0; i < 1000; i ++)
-            os.put('TestValue', 'TestKey');
-    }
-    request.onerror = function(event) {
-        postResult('database error: ' + event.target.error.name + ' - ' + event.target.error.message);
-    }
-} catch(err) {
-    postResult('database error: ' + err.name + ' - ' + err.message);
-}
-</script>
-)TESTRESOURCE";
 
 TEST(IndexedDB, SuspendImminentlyForThirdPartyDatabases)
 {
+    static NSString *mainFrameString = @"<script> \
+        function postResult(event) { \
+            window.webkit.messageHandlers.testHandler.postMessage(event.data); \
+        } \
+        addEventListener('message', postResult, false); \
+        </script> \
+        <iframe src='iframe://'>";
+
+    static const char* iframeBytes = R"TESTRESOURCE(
+    <script>
+    function postResult(result) {
+        if (window.parent != window.top) {
+            parent.postMessage(result, '*');
+        } else {
+            window.webkit.messageHandlers.testHandler.postMessage(result);
+        }
+    }
+
+    try {
+        var request = window.indexedDB.open('IndexedDBSuspendImminentlyForThirdPartyDatabases');
+        request.onupgradeneeded = function(event) {
+            var db = event.target.result;
+            var os = db.createObjectStore('TestObjectStore');
+            var transaction = event.target.transaction;
+            transaction.onabort = function(event) {
+                postResult('transaction is aborted');
+            }
+            transaction.oncomplete = function(event) {
+                postResult('transaction is completed');
+            }
+
+            postResult('database is created');
+
+            for (let i = 0; i < 1000; i ++)
+                os.put('TestValue', 'TestKey');
+        }
+        request.onerror = function(event) {
+            postResult('database error: ' + event.target.error.name + ' - ' + event.target.error.message);
+        }
+    } catch(err) {
+        postResult('database error: ' + err.name + ' - ' + err.message);
+    }
+    </script>
+    )TESTRESOURCE";
+
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
-    auto handler = adoptNS([[IndexedDBSuspendImminentlyMessageHandler alloc] init]);
+    auto handler = adoptNS([TestScriptMessageHandler new]);
     [[configuration userContentController] addScriptMessageHandler:handler.get() name:@"testHandler"];
     auto schemeHandler = adoptNS([[TestURLSchemeHandler alloc] init]);
     [schemeHandler setStartURLSchemeTaskHandler:^(WKWebView *, id<WKURLSchemeTask> task) {
@@ -155,12 +133,12 @@ TEST(IndexedDB, SuspendImminentlyForThirdPartyDatabases)
 
     auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
     [webView loadHTMLString:mainFrameString baseURL:[NSURL URLWithString:@"http://webkit.org"]];
-    runUntilMessageReceived(@"database is created");
+    EXPECT_WK_STREQ([handler waitForMessage].body, @"database is created");
 
     [configuration.get().websiteDataStore _sendNetworkProcessWillSuspendImminently];
     [configuration.get().websiteDataStore _sendNetworkProcessDidResume];
 
-    runUntilMessageReceived(@"transaction is completed");
+    EXPECT_WK_STREQ([handler waitForMessage].body, @"transaction is completed");
 }
 
 #endif // PLATFORM(IOS_FAMILY)

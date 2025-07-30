@@ -48,7 +48,7 @@ public:
     {
     }
 
-    operator bool() const { return !!m_object; }
+    explicit operator bool() const { return !!m_object; }
 
     const WTF::UUID& object() const { return m_object; }
     ProcessIdentifier processIdentifier() const { return m_processIdentifier; }
@@ -94,7 +94,7 @@ template<typename Decoder> std::optional<ProcessQualified<WTF::UUID>> ProcessQua
 template <>
 inline TextStream& operator<<(TextStream& ts, const ProcessQualified<WTF::UUID>& processQualified)
 {
-    ts << "ProcessQualified(" << processQualified.processIdentifier().toUInt64() << '-' << processQualified.object().toString() << ')';
+    ts << "ProcessQualified("_s << processQualified.processIdentifier().toUInt64() << '-' << processQualified.object().toString() << ')';
     return ts;
 }
 

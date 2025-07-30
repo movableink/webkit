@@ -1,1 +1,4 @@
-This test passes if it does not crash.
+Pass
+WebGPU triangle
+
+

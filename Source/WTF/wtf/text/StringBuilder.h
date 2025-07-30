@@ -73,21 +73,24 @@ public:
     void appendSubstring(const String&, unsigned offset, unsigned length = String::MaxLength);
     WTF_EXPORT_PRIVATE void appendQuotedJSONString(const String&);
 
-    // FIXME: Unclear why toString returns String and toStringPreserveCapacity returns const String&. Make them consistent.
-    String toString();
-    const String& toStringPreserveCapacity() const;
+    const String& toString() LIFETIME_BOUND;
+    const String& toStringPreserveCapacity() const LIFETIME_BOUND;
     AtomString toAtomString() const;
+
+#if USE(FOUNDATION) && defined(__OBJC__)
+    RetainPtr<NSString> createNSString() const;
+#endif
 
     bool isEmpty() const { return !m_length; }
     unsigned length() const;
 
-    operator StringView() const;
+    operator StringView() const LIFETIME_BOUND;
     UChar operator[](unsigned i) const;
 
     bool is8Bit() const;
-    std::span<const LChar> span8() const { return span<LChar>(); }
-    std::span<const UChar> span16() const { return span<UChar>(); }
-    template<typename CharacterType> std::span<const CharacterType> span() const;
+    std::span<const LChar> span8() const LIFETIME_BOUND { return span<LChar>(); }
+    std::span<const UChar> span16() const LIFETIME_BOUND { return span<UChar>(); }
+    template<typename CharacterType> std::span<const CharacterType> span() const LIFETIME_BOUND;
     
     unsigned capacity() const;
     WTF_EXPORT_PRIVATE void reserveCapacity(unsigned newCapacity);
@@ -229,7 +232,7 @@ inline void StringBuilder::appendSubstring(const String& string, unsigned offset
     append(StringView { string }.substring(offset, length));
 }
 
-inline String StringBuilder::toString()
+inline const String& StringBuilder::toString()
 {
     if (m_string.isNull()) {
         shrinkToFit();
@@ -262,6 +265,24 @@ inline AtomString StringBuilder::toAtomString() const
     return { m_buffer.get(), 0, length() };
 }
 
+#if USE(FOUNDATION) && defined(__OBJC__)
+inline RetainPtr<NSString> StringBuilder::createNSString() const
+{
+    if (isEmpty())
+        return @"";
+
+    // If the buffer is sufficiently over-allocated, make a new NSString from a copy so its buffer is not so large.
+    if (shouldShrinkToFit())
+        return StringView { *this }.createNSString();
+
+    if (!m_string.isNull())
+        return m_string.createNSString();
+
+    // Use the length function here so we crash on overflow without explicit overflow checks.
+    return StringView { *m_buffer }.left(length()).createNSString();
+}
+#endif
+
 inline unsigned StringBuilder::length() const
 {
     RELEASE_ASSERT(!hasOverflowed());
@@ -285,7 +306,7 @@ inline bool StringBuilder::is8Bit() const
 
 template<typename CharacterType> inline std::span<const CharacterType> StringBuilder::span() const
 {
-    if (!m_length)
+    if (!m_length || hasOverflowed())
         return { };
     if (!m_string.isNull()) {
         ASSERT(m_string.length() == m_length);

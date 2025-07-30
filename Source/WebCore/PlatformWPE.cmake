@@ -52,6 +52,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     accessibility/atspi/AccessibilityRootAtspi.h
 
     platform/glib/ApplicationGLib.h
+    platform/glib/SelectionData.h
     platform/glib/SystemSettings.h
 
     platform/graphics/egl/PlatformDisplaySurfaceless.h
@@ -61,8 +62,6 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     platform/graphics/libwpe/PlatformDisplayLibWPE.h
 )
-
-set(CSS_VALUE_PLATFORM_DEFINES "HAVE_OS_DARK_MODE_SUPPORT=1")
 
 set(WebCore_USER_AGENT_SCRIPTS_DEPENDENCIES ${WEBCORE_DIR}/platform/wpe/RenderThemeWPE.cpp)
 
@@ -86,6 +85,12 @@ list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
 if (USE_OPENXR)
     list(APPEND WebCore_LIBRARIES ${OPENXR_LIBRARIES})
     list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES ${OPENXR_INCLUDE_DIRS})
+endif ()
+
+if (USE_SKIA AND ENABLE_DRAG_SUPPORT)
+    list(APPEND WebCore_SOURCES
+        platform/skia/DragImageSkia.cpp
+    )
 endif ()
 
 if (USE_ATSPI)

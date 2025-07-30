@@ -25,5 +25,13 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/svg/shapes/reftests/pathlength-003-expected.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/shapes/reftests/pathlength-003-ref.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/shapes/reftests/pathlength-003.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/shapes/reftests/pathlength-004-ref.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/shapes/reftests/pathlength-004a-expected.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/shapes/reftests/pathlength-004a.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/shapes/reftests/pathlength-004b-expected.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/shapes/reftests/pathlength-004b.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/shapes/reftests/pathlength-005-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/shapes/reftests/pathlength-005-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/shapes/reftests/pathlength-005.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/shapes/reftests/polygon-with-filtered-marker-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/shapes/reftests/polygon-with-filtered-marker.html

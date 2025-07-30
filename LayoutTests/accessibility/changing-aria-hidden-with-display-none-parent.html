@@ -15,28 +15,26 @@
 <script>
 var output = "This test ensures that we don't crash when removing an object from the AX tree whose child recently changed aria-hidden status.\n\n";
 
-function dumpAccessibilityChildren(element, level) {
-    let indent = "";
-    for (let k = 0; k < level; k++) { indent += "  "; }
-
-    output += `${indent}${element.role} ${element.title} ${element.description}\n`;
-    for (let k = 0; k < element.childrenCount; k++)
-        dumpAccessibilityChildren(element.childAtIndex(k), level + 1)
-    return true;
-}
-
 if (window.accessibilityController) {
     window.jsTestIsAsync = true;
-    dumpAccessibilityChildren(accessibilityController.accessibleElementById("body"), 0);
+
+    var webarea = accessibilityController.rootElement.childAtIndex(0);
+    output += dumpAXSearchTraversal(webarea);
 
     output += "\nMaking #li1 aria-hidden and #ul display:none.\n";
     document.getElementById("li1").setAttribute("aria-hidden", "true");
     document.getElementById("ul").style.display = "none"
+    var secondTraversalOutput;
     setTimeout(async function() {
         await waitFor(() => !accessibilityController.accessibleElementById("ul"));
 
         output += "\nRe-dumping AX tree.\n\n";
-        dumpAccessibilityChildren(accessibilityController.accessibleElementById("body"), 0);
+        await waitFor(() => {
+            secondTraversalOutput = dumpAXSearchTraversal(webarea);
+            // Wait for the hierarchy to be empty (no list or listitem elements are present in the accessibility tree).
+            return !secondTraversalOutput.toLowerCase().includes("list");
+        });
+        output += secondTraversalOutput;
         output += "\nPASS: There was no crash.\n";
 
         debug(output);

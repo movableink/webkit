@@ -283,7 +283,7 @@ void JIT::emit_op_is_big_int(const JSInstruction* currentInstruction)
     emitPutVirtualRegister(dst, jsRegT10);
 }
 #else // if !USE(BIGINT32)
-NO_RETURN void JIT::emit_op_is_big_int(const JSInstruction*)
+[[noreturn]] void JIT::emit_op_is_big_int(const JSInstruction*)
 {
     // If we only have HeapBigInts, then we emit isCellWithType instead of isBigInt.
     RELEASE_ASSERT_NOT_REACHED();
@@ -891,8 +891,7 @@ void JIT::compileOpStrictEq(const JSInstruction* currentInstruction)
     emitPutVirtualRegister(dst, regT5);
 #else // if !USE(BIGINT32)
     // Jump slow if both are cells (to cover strings).
-    move(regT0, regT2);
-    or64(regT1, regT2);
+    or64(regT1, regT0, regT2);
     addSlowCase(branchIfCell(regT2));
 
     // Jump slow if either is a double. First test if it's an integer, which is fine, and then test
@@ -1060,8 +1059,7 @@ void JIT::compileOpStrictEqJump(const JSInstruction* currentInstruction)
     }
 #else // if !USE(BIGINT32)
     // Jump slow if both are cells (to cover strings).
-    move(regT0, regT2);
-    or64(regT1, regT2);
+    or64(regT1, regT0, regT2);
     addSlowCase(branchIfCell(regT2));
 
     // Jump slow if either is a double. First test if it's an integer, which is fine, and then test
@@ -1397,7 +1395,7 @@ void JIT::emit_op_neq_null(const JSInstruction* currentInstruction)
 void JIT::emitGetScope(VirtualRegister destination)
 {
     emitGetFromCallFrameHeaderPtr(CallFrameSlot::callee, regT0);
-    loadPtr(Address(regT0, JSFunction::offsetOfScopeChain()), regT0);
+    loadPtr(Address(regT0, JSCallee::offsetOfScopeChain()), regT0);
     boxCell(regT0, jsRegT10);
     emitPutVirtualRegister(destination, jsRegT10);
 }
@@ -1668,13 +1666,14 @@ void JIT::emit_op_debug(const JSInstruction* currentInstruction)
     loadPtr(addressFor(CallFrameSlot::codeBlock), regT0);
     load32(Address(regT0, CodeBlock::offsetOfDebuggerRequests()), regT0);
     Jump noDebuggerRequests = branchTest32(Zero, regT0);
-    callOperation(operationDebug, TrustedImmPtr(&vm()), static_cast<int>(bytecode.m_debugHookType));
+    emitGetVirtualRegister(bytecode.m_data, jsRegT32);
+    callOperation(operationDebug, TrustedImmPtr(&vm()), static_cast<int>(bytecode.m_debugHookType), jsRegT32);
     noDebuggerRequests.link(this);
 }
 
 void JIT::emit_op_loop_hint(const JSInstruction* instruction)
 {
-    if (UNLIKELY(Options::returnEarlyFromInfiniteLoopsForFuzzing() && m_unlinkedCodeBlock->loopHintsAreEligibleForFuzzingEarlyReturn())) {
+    if (Options::returnEarlyFromInfiniteLoopsForFuzzing() && m_unlinkedCodeBlock->loopHintsAreEligibleForFuzzingEarlyReturn()) [[unlikely]] {
         uintptr_t* ptr = vm().getLoopHintExecutionCounter(instruction);
         loadPtr(ptr, regT0);
         auto skipEarlyReturn = branchPtr(Below, regT0, TrustedImmPtr(Options::earlyReturnFromInfiniteLoopsLimit()));
@@ -1788,14 +1787,14 @@ MacroAssemblerCodeRef<JITThunkPtrTag> JIT::op_check_traps_handlerGenerator(VM& v
     return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "op_check_traps_handler"_s, "Baseline: op_check_traps_handler");
 }
 
-void JIT::emit_op_new_regexp(const JSInstruction* currentInstruction)
+void JIT::emit_op_new_reg_exp(const JSInstruction* currentInstruction)
 {
-    auto bytecode = currentInstruction->as<OpNewRegexp>();
+    auto bytecode = currentInstruction->as<OpNewRegExp>();
     VirtualRegister dst = bytecode.m_dst;
     VirtualRegister regexp = bytecode.m_regexp;
     GPRReg globalGPR = argumentGPR0;
     loadGlobalObject(globalGPR);
-    callOperation(operationNewRegexp, globalGPR, TrustedImmPtr(jsCast<RegExp*>(m_unlinkedCodeBlock->getConstant(regexp))));
+    callOperation(operationNewRegExp, globalGPR, TrustedImmPtr(jsCast<RegExp*>(m_unlinkedCodeBlock->getConstant(regexp))));
     boxCell(returnValueGPR, returnValueJSR);
     emitPutVirtualRegister(dst, returnValueJSR);
 }

@@ -9,6 +9,7 @@
 
 #include "include/core/SkCapabilities.h"
 #include "include/core/SkColorSpace.h"
+#include "include/core/SkRecorder.h"
 #include "include/gpu/graphite/BackendTexture.h"
 #include "include/gpu/graphite/Recorder.h"
 #include "include/gpu/graphite/Surface.h"
@@ -22,6 +23,7 @@
 #include "src/gpu/graphite/RecorderPriv.h"
 #include "src/gpu/graphite/ResourceProvider.h"
 #include "src/gpu/graphite/Texture.h"
+#include "src/gpu/graphite/TextureFormat.h"
 
 namespace skgpu::graphite {
 
@@ -43,6 +45,8 @@ SkImageInfo Surface::imageInfo() const {
 
 Recorder* Surface::onGetRecorder() const { return fDevice->recorder(); }
 
+SkRecorder* Surface::onGetBaseRecorder() const { return fDevice->recorder(); }
+
 TextureProxyView Surface::readSurfaceView() const {
     return fDevice->readSurfaceView();
 }
@@ -63,6 +67,14 @@ sk_sp<Image> Surface::asImage() const {
                     "unexpected results. Please use either the old _or_ new API.");
     }
     return fImageView;
+}
+
+sk_sp<SkImage> Surface::onMakeTemporaryImage() {
+    if (this->hasCachedImage()) {
+        SKGPU_LOG_W("Intermingling makeImageSnapshot and makeTemporaryImage calls may produce "
+                    "unexpected results. Please use either the old _or_ new API.");
+    }
+    return this->asImage();
 }
 
 sk_sp<Image> Surface::makeImageCopy(const SkIRect* subset, Mipmapped mipmapped) const {

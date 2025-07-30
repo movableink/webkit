@@ -44,7 +44,7 @@ class IntlPluralRules final : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
 
     static void destroy(JSCell* cell)
     {
@@ -96,6 +96,7 @@ private:
     RoundingMode m_roundingMode { RoundingMode::HalfExpand };
     IntlRoundingType m_roundingType { IntlRoundingType::FractionDigits };
     Type m_type { Type::Cardinal };
+    IntlNotation m_notation { IntlNotation::Standard };
 };
 
 } // namespace JSC

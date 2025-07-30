@@ -7,54 +7,52 @@
 #ifndef skgpu_graphite_TextureInfoPriv_DEFINED
 #define skgpu_graphite_TextureInfoPriv_DEFINED
 
+#include "include/core/SkStream.h"
 #include "include/core/SkString.h"
 #include "include/gpu/graphite/TextureInfo.h"
+#include "src/gpu/graphite/TextureFormat.h"
 
 #include <cstdint>
 
 namespace skgpu::graphite {
 
-class TextureInfoData {
-public:
-    virtual ~TextureInfoData();
+class Caps;
 
-#if defined(SK_DEBUG)
-    virtual skgpu::BackendApi type() const = 0;
-#endif
-protected:
-    TextureInfoData() = default;
-    TextureInfoData(const TextureInfoData&) = default;
-
-    using AnyTextureInfoData = TextureInfo::AnyTextureInfoData;
-
-private:
-    friend class TextureInfo;
-
-    virtual size_t bytesPerPixel() const = 0;
-    virtual SkTextureCompressionType compressionType() const = 0;
-    virtual bool isMemoryless() const = 0;
-    virtual SkString toString() const = 0;
-    virtual SkString toRPAttachmentString(uint32_t sampleCount) const = 0;
-
-    virtual void copyTo(AnyTextureInfoData&) const = 0;
-    virtual bool equal(const TextureInfoData* that) const = 0;
-    virtual bool isCompatible(const TextureInfoData* that) const = 0;
-};
-
+// NOTE: This is a class so that it can be friended by TextureInfo and the backend info classes.
 class TextureInfoPriv {
 public:
-    template <typename SomeTextureInfoData>
-    static TextureInfo Make(BackendApi backend,
-                            uint32_t sampleCount,
-                            skgpu::Mipmapped mipped,
-                            skgpu::Protected p,
-                            const SomeTextureInfoData& data) {
-        return TextureInfo(backend, sampleCount, mipped, p, data);
+    static TextureFormat ViewFormat(const TextureInfo& info) {
+        return info.fViewFormat;
+    }
+    static uint32_t ChannelMask(const TextureInfo& info) {
+        return TextureFormatChannelMask(ViewFormat(info));
     }
 
-    static const TextureInfoData* GetData(const TextureInfo& info) {
-        return info.fTextureInfoData.get();
+    template <typename BackendTextureInfo>
+    static TextureInfo Make(const BackendTextureInfo& data) {
+        return TextureInfo(data);
     }
+
+    template <typename BackendTextureInfo>
+    static const BackendTextureInfo& Get(const TextureInfo& info) {
+        SkASSERT(info.isValid() && info.backend() == BackendTextureInfo::kBackend);
+        return *(static_cast<const BackendTextureInfo*>(info.fData.get()));
+    }
+
+    template <typename BackendTextureInfo>
+    static bool Copy(const TextureInfo& info, BackendTextureInfo* out) {
+        if (!info.isValid() || info.backend() != BackendTextureInfo::kBackend) {
+            return false;
+        }
+
+        SkASSERT(out);
+        *out = Get<BackendTextureInfo>(info);
+        return true;
+    }
+
+private:
+    TextureInfoPriv() = delete;
+    TextureInfoPriv(const TextureInfoPriv&) = delete;
 };
 
 }  // namespace skgpu::graphite

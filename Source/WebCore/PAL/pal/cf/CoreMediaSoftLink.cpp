@@ -159,6 +159,7 @@ SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMTimebaseRemoveTimerD
 SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMTimebaseSetTimerDispatchSourceNextFireTime, OSStatus, (CMTimebaseRef timebase, dispatch_source_t timerSource, CMTime fireTime, uint32_t flags), (timebase, timerSource, fireTime, flags), PAL_EXPORT)
 SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMTimebaseSetTimerDispatchSourceToFireImmediately, OSStatus, (CMTimebaseRef timebase, dispatch_source_t timerSource), (timebase, timerSource), PAL_EXPORT)
 SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMTimeCopyAsDictionary, CFDictionaryRef, (CMTime time, CFAllocatorRef allocator), (time, allocator), PAL_EXPORT)
+SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMTimeMakeFromDictionary, CMTime, (CFDictionaryRef dictionaryRepresentation), (dictionaryRepresentation), PAL_EXPORT)
 SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMVideoFormatDescriptionCreate, OSStatus, (CFAllocatorRef allocator, CMVideoCodecType codecType, int32_t width, int32_t height, CFDictionaryRef extensions, CMVideoFormatDescriptionRef* formatDescriptionOut), (allocator, codecType, width, height, extensions, formatDescriptionOut), PAL_EXPORT)
 SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMVideoFormatDescriptionCreateForImageBuffer, OSStatus, (CFAllocatorRef allocator, CVImageBufferRef imageBuffer, CMVideoFormatDescriptionRef* outDesc), (allocator, imageBuffer, outDesc), PAL_EXPORT)
 SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMVideoFormatDescriptionGetDimensions, CMVideoDimensions, (CMVideoFormatDescriptionRef videoDesc), (videoDesc), PAL_EXPORT)
@@ -173,6 +174,8 @@ SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMBufferQueueGetBuffer
 SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMBufferQueueGetCallbacksForUnsortedSampleBuffers, const CMBufferCallbacks*, (), (), PAL_EXPORT)
 SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMBufferQueueGetFirstPresentationTimeStamp, CMTime, (CMBufferQueueRef queue), (queue), PAL_EXPORT)
 SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMBufferQueueGetEndPresentationTimeStamp, CMTime, (CMBufferQueueRef queue), (queue), PAL_EXPORT)
+SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMBufferQueueGetMaxPresentationTimeStamp, CMTime, (CMBufferQueueRef queue), (queue), PAL_EXPORT)
+
 SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMBufferQueueInstallTrigger, OSStatus, (CMBufferQueueRef queue, CMBufferQueueTriggerCallback callback, void* refcon, CMBufferQueueTriggerCondition condition, CMTime time, CMBufferQueueTriggerToken* triggerTokenOut), (queue, callback, refcon, condition, time, triggerTokenOut), PAL_EXPORT)
 SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMBufferQueueRemoveTrigger, OSStatus, (CMBufferQueueRef queue, CMBufferQueueTriggerToken triggerToken), (queue, triggerToken), PAL_EXPORT)
 SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMBufferQueueInstallTriggerWithIntegerThreshold, OSStatus, (CMBufferQueueRef queue, CMBufferQueueTriggerCallback triggerCallback, void* triggerRefcon, CMBufferQueueTriggerCondition triggerCondition, CMItemCount triggerThreshold, CMBufferQueueTriggerToken* triggerTokenOut), (queue, triggerCallback, triggerRefcon, triggerCondition, triggerThreshold, triggerTokenOut), PAL_EXPORT)
@@ -181,6 +184,7 @@ SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMBufferQueueGetDurati
 SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMBufferQueueCallForEachBuffer, OSStatus, (CMBufferQueueRef queue, OSStatus (* CF_NOESCAPE callback)(CMBufferRef buffer, void* refcon ), void* refcon), (queue, callback, refcon), PAL_EXPORT)
 
 SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMSampleAttachmentKey_DoNotDisplay, CFStringRef, PAL_EXPORT)
+SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMSampleAttachmentKey_HDR10PlusPerFrameData, CFStringRef, PAL_EXPORT)
 SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMSampleAttachmentKey_NotSync, CFStringRef, PAL_EXPORT)
 SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMSampleBufferAttachmentKey_DisplayEmptyMediaImmediately, CFStringRef, PAL_EXPORT)
 SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMSampleBufferAttachmentKey_DrainAfterDecoding, CFStringRef, PAL_EXPORT)
@@ -229,14 +233,25 @@ SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMAudioClockCreate, OS
 SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, FigThreadRegisterAbortAction, OSStatus, (FigThreadAbortAction action, void* refcon, FigThreadAbortActionToken* token), (action, refcon, token), PAL_EXPORT)
 SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, FigThreadUnregisterAbortAction, void, (FigThreadAbortActionToken token), (token), PAL_EXPORT)
 
-SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionExtension_ProtectedContentOriginalFormat, CFStringRef, PAL_EXPORT)
 SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionTransferFunction_sRGB, CFStringRef, PAL_EXPORT)
 
-SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionExtension_HorizontalFieldOfView, CFStringRef, PAL_EXPORT)
-SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionExtension_StereoCameraBaseline, CFStringRef, PAL_EXPORT)
+SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionExtension_CameraCalibrationDataLensCollection, CFStringRef, PAL_EXPORT)
+SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionExtension_HasLeftStereoEyeView, CFStringRef, PAL_EXPORT)
+SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionExtension_HasRightStereoEyeView, CFStringRef, PAL_EXPORT)
+SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionExtension_HeroEye, CFStringRef, PAL_EXPORT)
 SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionExtension_HorizontalDisparityAdjustment, CFStringRef, PAL_EXPORT)
+SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionExtension_HorizontalFieldOfView, CFStringRef, PAL_EXPORT)
+SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionExtension_ViewPackingKind, CFStringRef, PAL_EXPORT)
+SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionExtension_ProtectedContentOriginalFormat, CFStringRef, PAL_EXPORT)
 SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionExtension_ProjectionKind, CFStringRef, PAL_EXPORT)
+SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionExtension_StereoCameraBaseline, CFStringRef, PAL_EXPORT)
+SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionProjectionKind_AppleImmersiveVideo, CFStringRef, PAL_EXPORT)
+SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionProjectionKind_Equirectangular, CFStringRef, PAL_EXPORT)
+SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionProjectionKind_HalfEquirectangular, CFStringRef, PAL_EXPORT)
+SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionProjectionKind_ParametricImmersive, CFStringRef, PAL_EXPORT)
 SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionProjectionKind_Rectilinear, CFStringRef, PAL_EXPORT)
+
+SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMVideoFormatDescriptionCreateFromH264ParameterSets, OSStatus, (CFAllocatorRef allocator, size_t parameterSetCount, const uint8_t* const* parameterSetPointers, const size_t* parameterSetSizes, int NALUnitHeaderLength, CMFormatDescriptionRef* formatDescriptionOut), (allocator, parameterSetCount, parameterSetPointers, parameterSetSizes, NALUnitHeaderLength, formatDescriptionOut), PAL_EXPORT)
 
 #if PLATFORM(MAC)
 SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMAudioDeviceClockCreate, OSStatus, (CFAllocatorRef allocator, CFStringRef deviceUID, CMClockRef* clockOut), (allocator, deviceUID, clockOut), PAL_EXPORT)

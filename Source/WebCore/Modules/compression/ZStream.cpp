@@ -25,6 +25,8 @@
 #include "config.h"
 #include "ZStream.h"
 
+#include <wtf/StdLibExtras.h>
+
 namespace WebCore {
 
 bool ZStream::initializeIfNecessary(Algorithm algorithm, Operation operation)
@@ -72,7 +74,7 @@ bool ZStream::initializeIfNecessary(Algorithm algorithm, Operation operation)
 
 ZStream::ZStream()
 {
-    std::memset(&m_stream, 0, sizeof(m_stream));
+    zeroBytes(m_stream);
 }
 
 ZStream::~ZStream()

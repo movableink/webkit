@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -128,13 +128,13 @@ private:
     UncheckedKeyHashMap<const ElementBox*, std::unique_ptr<TableFormattingState>> m_tableFormattingStates;
 
 #ifndef NDEBUG
-    HashSet<const FormattingContext*> m_formattingContextList;
+    UncheckedKeyHashSet<const FormattingContext*> m_formattingContextList;
 #endif
     UncheckedKeyHashMap<const Box*, std::unique_ptr<BoxGeometry>> m_layoutBoxToBoxGeometry;
     QuirksMode m_quirksMode { QuirksMode::No };
 
-    CheckedRef<const ElementBox> m_rootContainer;
-    Ref<SecurityOrigin> m_securityOrigin;
+    const CheckedRef<const ElementBox> m_rootContainer;
+    const Ref<SecurityOrigin> m_securityOrigin;
 
     FormattingContextLayoutFunction m_formattingContextLayoutFunction;
     FormattingContextLogicalWidthFunction m_formattingContextLogicalWidthFunction;
@@ -143,7 +143,7 @@ private:
 
 inline bool LayoutState::hasBoxGeometry(const Box& layoutBox) const
 {
-    if (LIKELY(m_type == Type::Primary))
+    if (m_type == Type::Primary) [[likely]]
         return !!layoutBox.m_cachedGeometryForPrimaryLayoutState;
 
     return m_layoutBoxToBoxGeometry.contains(&layoutBox);
@@ -151,7 +151,7 @@ inline bool LayoutState::hasBoxGeometry(const Box& layoutBox) const
 
 inline BoxGeometry& LayoutState::ensureGeometryForBox(const Box& layoutBox)
 {
-    if (LIKELY(m_type == Type::Primary)) {
+    if (m_type == Type::Primary) [[likely]] {
         if (auto* boxGeometry = layoutBox.m_cachedGeometryForPrimaryLayoutState.get()) {
             ASSERT(layoutBox.m_primaryLayoutState == this);
             return *boxGeometry;
@@ -162,7 +162,7 @@ inline BoxGeometry& LayoutState::ensureGeometryForBox(const Box& layoutBox)
 
 inline const BoxGeometry& LayoutState::geometryForBox(const Box& layoutBox) const
 {
-    if (LIKELY(m_type == Type::Primary)) {
+    if (m_type == Type::Primary) [[likely]] {
         ASSERT(layoutBox.m_primaryLayoutState == this);
         return *layoutBox.m_cachedGeometryForPrimaryLayoutState;
     }

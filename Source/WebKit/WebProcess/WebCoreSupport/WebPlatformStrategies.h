@@ -84,16 +84,15 @@ private:
     bool containsURLStringSuitableForLoading(const String& pasteboardName, const WebCore::PasteboardContext*) override;
     String urlStringSuitableForLoading(const String& pasteboardName, String& title, const WebCore::PasteboardContext*) override;
 #endif
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(WPE)
     Vector<String> types(const String& pasteboardName) override;
-    String readTextFromClipboard(const String& pasteboardName) override;
+    String readTextFromClipboard(const String& pasteboardName, const String& pasteboardType) override;
     Vector<String> readFilePathsFromClipboard(const String& pasteboardName) override;
     RefPtr<WebCore::SharedBuffer> readBufferFromClipboard(const String& pasteboardName, const String& pasteboardType) override;
     void writeToClipboard(const String& pasteboardName, WebCore::SelectionData&&) override;
     void clearClipboard(const String& pasteboardName) override;
     int64_t changeCount(const String& pasteboardName) override;
-#endif
-#if USE(LIBWPE)
+#elif USE(LIBWPE)
     void getTypes(Vector<String>& types) override;
     void writeToPasteboard(const WebCore::PasteboardWebContent&) override;
     void writeToPasteboard(const String& pasteboardType, const String&) override;
@@ -111,10 +110,10 @@ private:
 
     // WebCore::PushStrategy
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-    void navigatorSubscribeToPushService(const URL& scope, const Vector<uint8_t>& applicationServerKey, SubscribeToPushServiceCallback&&) override;
-    void navigatorUnsubscribeFromPushService(const URL& scope, std::optional<WebCore::PushSubscriptionIdentifier>, UnsubscribeFromPushServiceCallback&&) override;
-    void navigatorGetPushSubscription(const URL& scope, GetPushSubscriptionCallback&&) override;
-    void navigatorGetPushPermissionState(const URL& scope, GetPushPermissionStateCallback&&) override;
+    void windowSubscribeToPushService(const URL& scope, const Vector<uint8_t>& applicationServerKey, SubscribeToPushServiceCallback&&) override;
+    void windowUnsubscribeFromPushService(const URL& scope, std::optional<WebCore::PushSubscriptionIdentifier>, UnsubscribeFromPushServiceCallback&&) override;
+    void windowGetPushSubscription(const URL& scope, GetPushSubscriptionCallback&&) override;
+    void windowGetPushPermissionState(const URL& scope, GetPushPermissionStateCallback&&) override;
 #endif
 };
 

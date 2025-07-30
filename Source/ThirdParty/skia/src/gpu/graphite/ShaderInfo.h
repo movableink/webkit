@@ -34,7 +34,7 @@ public:
     // pointer to indicate that shader node data must be analyzed to determine whether
     // immutable samplers are used, and if so, ascertain SamplerDescs for them.
     // TODO(b/366220690): Actually perform this analysis.
-
+    //
     // If provided a valid container ptr, this function will delegate the addition of SamplerDescs
     // for each sampler the nodes utilize (dynamic and immutable). This way, a SamplerDesc's index
     // within the container can inform its binding order. Each SamplerDesc will be either:
@@ -50,14 +50,19 @@ public:
                                             UniquePaintParamsID,
                                             bool useStorageBuffers,
                                             skgpu::Swizzle writeSwizzle,
+                                            DstReadStrategy dstReadStrategy,
                                             skia_private::TArray<SamplerDesc>* outDescs = nullptr);
 
+    const ShaderCodeDictionary* shaderCodeDictionary() const {
+        return fShaderCodeDictionary;
+    }
     const RuntimeEffectDictionary* runtimeEffectDictionary() const {
         return fRuntimeEffectDictionary;
     }
-    const char* ssboIndex() const { return fSsboIndex; }
 
-    DstReadRequirement dstReadRequirement() const { return fDstReadRequirement; }
+    const char* shadingSsboIndex() const { return fShadingSsboIndex; }
+
+    DstReadStrategy dstReadStrategy() const { return fDstReadStrategy; }
     const skgpu::BlendInfo& blendInfo() const { return fBlendInfo; }
 
     const skia_private::TArray<uint32_t>& data() const { return fData; }
@@ -76,14 +81,18 @@ public:
     static constexpr char kGradientBufferName[] = "fsGradientBuffer";
 
 private:
-    ShaderInfo(const RuntimeEffectDictionary*, const char* ssboIndex);
+    ShaderInfo(const ShaderCodeDictionary*,
+               const RuntimeEffectDictionary*,
+               const char* ssboIndex,
+               DstReadStrategy);
 
     void generateVertexSkSL(const Caps*,
                             const RenderStep*,
                             bool useStorageBuffers);
 
-    // Determines fNumFragmentTexturesAndSamplers, fHasPaintUniforms, fHasGradientBuffer, and if a
-    // valid SamplerDesc ptr is passed in, any immutable sampler SamplerDescs.
+    // Determines fNumFragmentTexturesAndSamplers, fHasPaintUniforms, fHasGradientBuffer,
+    // fHasSsboIndicesVarying, and if a valid SamplerDesc ptr is passed in, any immutable
+    // sampler SamplerDescs.
     void generateFragmentSkSL(const Caps*,
                               const ShaderCodeDictionary*,
                               const RenderStep*,
@@ -103,8 +112,9 @@ private:
     // All shader nodes and arrays of children pointers are held in this arena
     SkArenaAlloc fShaderNodeAlloc{256};
 
+    const ShaderCodeDictionary* fShaderCodeDictionary;
     const RuntimeEffectDictionary* fRuntimeEffectDictionary;
-    const char* fSsboIndex;
+    const char* fShadingSsboIndex;
 
     // De-compressed shader tree from a PaintParamsKey. There can be 1 or 2 root nodes, the first
     // being the paint effects (rooted with a BlendCompose for the final paint blend) and the
@@ -113,7 +123,7 @@ private:
     // The blendInfo represents the actual GPU blend operations, which may or may not completely
     // implement the paint and coverage blending defined by the root nodes.
     skgpu::BlendInfo fBlendInfo;
-    DstReadRequirement fDstReadRequirement = DstReadRequirement::kNone;
+    DstReadStrategy fDstReadStrategy = DstReadStrategy::kNoneRequired;
 
     // Note that fData is currently only used to store SamplerDesc information for shaders that have
     // the option of using immutable samplers. However, other snippets could leverage this field to
@@ -128,7 +138,9 @@ private:
     int fNumFragmentTexturesAndSamplers = 0;
     bool fHasStepUniforms = false;
     bool fHasPaintUniforms = false;
+    bool fHasLiftedPaintUniforms = false;
     bool fHasGradientBuffer = false;
+    bool fHasSsboIndicesVarying = false;
 };
 
 }  // namespace skgpu::graphite

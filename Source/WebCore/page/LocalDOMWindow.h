@@ -26,18 +26,13 @@
 
 #pragma once
 
-#include "Base64Utilities.h"
 #include "ContextDestructionObserverInlines.h"
 #include "DOMWindow.h"
-#include "ExceptionOr.h"
-#include "LocalFrame.h"
-#include "ReducedResolutionSeconds.h"
-#include "ScrollToOptions.h"
+#include "EventTargetInterfaces.h"
+#include "PushSubscriptionOwner.h"
 #include "Supplementable.h"
 #include "WindowOrWorkerGlobalScope.h"
-#include "WindowPostMessageOptions.h"
-#include <JavaScriptCore/HandleTypes.h>
-#include <JavaScriptCore/Strong.h>
+#include <JavaScriptCore/HandleForward.h>
 #include <wtf/FixedVector.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
@@ -57,9 +52,19 @@ namespace JSC {
 class CallFrame;
 class JSObject;
 class JSValue;
+template <typename, ShouldStrongDestructorGrabLock> class Strong;
 }
 
 namespace WebCore {
+
+class CloseWatcherManager;
+class LocalFrame;
+struct ScrollToOptions;
+struct WindowPostMessageOptions;
+
+using ReducedResolutionSeconds = Seconds;
+
+template<typename> class ExceptionOr;
 
 enum class IncludeTargetOrigin : bool { No, Yes };
 
@@ -77,9 +82,12 @@ public:
 class LocalDOMWindow final
     : public DOMWindow
     , public ContextDestructionObserver
-    , public Base64Utilities
     , public WindowOrWorkerGlobalScope
-    , public Supplementable<LocalDOMWindow> {
+    , public Supplementable<LocalDOMWindow>
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    , public PushSubscriptionOwner
+#endif
+    {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LocalDOMWindow);
 public:
 
@@ -102,7 +110,8 @@ public:
     void suspendForBackForwardCache();
     void resumeFromBackForwardCache();
 
-    WEBCORE_EXPORT LocalFrame* frame() const final;
+    WEBCORE_EXPORT Frame* frame() const final;
+    WEBCORE_EXPORT LocalFrame* localFrame() const;
     RefPtr<LocalFrame> protectedFrame() const;
 
     RefPtr<WebCore::MediaQueryList> matchMedia(const String&);
@@ -129,7 +138,7 @@ public:
     BarProp& statusbar();
     BarProp& toolbar();
     WEBCORE_EXPORT Navigator& navigator();
-    Ref<Navigator> protectedNavigator();
+    WEBCORE_EXPORT Ref<Navigator> protectedNavigator();
     Navigator* optionalNavigator() const { return m_navigator.get(); }
 
     WEBCORE_EXPORT static void overrideTransientActivationDurationForTesting(std::optional<Seconds>&&);
@@ -157,7 +166,7 @@ public:
 
     WEBCORE_EXPORT ExceptionOr<RefPtr<WindowProxy>> open(LocalDOMWindow& activeWindow, LocalDOMWindow& firstWindow, const String& urlString, const AtomString& frameName, const String& windowFeaturesString);
 
-    void showModalDialog(const String& urlString, const String& dialogFeaturesString, LocalDOMWindow& activeWindow, LocalDOMWindow& firstWindow, const Function<void(LocalDOMWindow&)>& prepareDialogFunction);
+    void showModalDialog(const String& urlString, const String& dialogFeaturesString, LocalDOMWindow& activeWindow, LocalDOMWindow& firstWindow, NOESCAPE const Function<void(LocalDOMWindow&)>& prepareDialogFunction);
 
     void prewarmLocalStorageIfNecessary();
 
@@ -359,9 +368,18 @@ public:
     Page* page() const;
     RefPtr<Page> protectedPage() const;
 
-    WEBCORE_EXPORT static void forEachWindowInterestedInStorageEvents(const Function<void(LocalDOMWindow&)>&);
+    WEBCORE_EXPORT static void forEachWindowInterestedInStorageEvents(NOESCAPE const Function<void(LocalDOMWindow&)>&);
 
     CookieStore& cookieStore();
+
+    CloseWatcherManager& closeWatcherManager();
+
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    PushManager& pushManager();
+
+    void ref() const final { DOMWindow::ref(); }
+    void deref() const final { DOMWindow::deref(); }
+#endif
 
 private:
     explicit LocalDOMWindow(Document&);
@@ -370,11 +388,11 @@ private:
 
     void closePage() final;
     void eventListenersDidChange() final;
-    void setLocation(LocalDOMWindow& activeWindow, const URL& completedURL, NavigationHistoryBehavior, SetLocationLocking) final;
+    void setLocation(LocalDOMWindow& activeWindow, const URL& completedURL, NavigationHistoryBehavior, SetLocationLocking, CanNavigateState) final;
 
     bool allowedToChangeWindowGeometry() const;
 
-    static ExceptionOr<RefPtr<Frame>> createWindow(const String& urlString, const AtomString& frameName, const WindowFeatures&, LocalDOMWindow& activeWindow, LocalFrame& firstFrame, LocalFrame& openerFrame, const Function<void(LocalDOMWindow&)>& prepareDialogFunction = nullptr);
+    static ExceptionOr<RefPtr<Frame>> createWindow(const String& urlString, const AtomString& frameName, const WindowFeatures&, LocalDOMWindow& activeWindow, LocalFrame& firstFrame, LocalFrame& openerFrame, NOESCAPE const Function<void(LocalDOMWindow&)>& prepareDialogFunction = nullptr);
     bool isInsecureScriptAccess(LocalDOMWindow& activeWindow, const String& urlString);
 
 #if ENABLE(DEVICE_ORIENTATION)
@@ -391,6 +409,16 @@ private:
 #endif
 
     void processPostMessage(JSC::JSGlobalObject&, const String& origin, const MessageWithMessagePorts&, RefPtr<WindowProxy>&&, RefPtr<SecurityOrigin>&&);
+
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    bool isActive() const final { return true; }
+
+    void subscribeToPushService(const Vector<uint8_t>& applicationServerKey, DOMPromiseDeferred<IDLInterface<PushSubscription>>&&) final;
+    void unsubscribeFromPushService(std::optional<PushSubscriptionIdentifier>, DOMPromiseDeferred<IDLBoolean>&&) final;
+    void getPushSubscription(DOMPromiseDeferred<IDLNullable<IDLInterface<PushSubscription>>>&&) final;
+    void getPushPermissionState(DOMPromiseDeferred<IDLEnumeration<PushPermissionState>>&&) final;
+#endif // ENABLE(DECLARATIVE_WEB_PUSH)
+
     bool m_shouldPrintWhenFinishedLoading { false };
     bool m_suspendedForDocumentSuspension { false };
     bool m_isSuspendingObservers { false };
@@ -412,6 +440,7 @@ private:
     mutable RefPtr<BarProp> m_toolbar;
     mutable RefPtr<VisualViewport> m_visualViewport;
     mutable RefPtr<Navigation> m_navigation;
+    mutable RefPtr<CloseWatcherManager> m_closeWatcherManager;
 
     String m_status;
 
@@ -451,6 +480,10 @@ private:
 #endif
 
     RefPtr<CookieStore> m_cookieStore;
+
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    const std::unique_ptr<PushManager> m_pushManager;
+#endif
 };
 
 inline String LocalDOMWindow::status() const

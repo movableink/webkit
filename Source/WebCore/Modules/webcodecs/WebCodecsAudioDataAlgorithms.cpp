@@ -113,11 +113,8 @@ ExceptionOr<size_t> computeCopyElementCount(const WebCodecsAudioData& data, cons
     else if (options.planeIndex >= data.numberOfChannels())
         return Exception { ExceptionCode::RangeError, "Invalid planeIndex for planar format"_s };
 
-#if !USE(AVFOUNDATION)
     // 5. If [[format]] does not equal destFormat and the User Agent does not support the requested AudioSampleFormat conversion, throw a NotSupportedError DOMException. Conversion to f32-planar must always be supported.
-    if (options.format && *options.format != destFormat && destFormat != AudioSampleFormat::F32Planar)
-        return Exception { ExceptionCode::NotSupportedError, "AudioData currently only supports copy conversion to f32-planar"_s };
-#endif
+    // The backends based on AVFoundation and GStreamer support all format conversions.
 
     // 6. Let frameCount be the number of frames in the plane identified by options.planeIndex.
     // All planes have the same number of frames, always
@@ -174,19 +171,23 @@ AudioSampleFormat audioSampleElementFormat(AudioSampleFormat format)
 
 AudioSampleFormatSpan audioElementSpan(AudioSampleFormat format, std::span<uint8_t> buffer)
 {
+    auto bytesPerSample = computeBytesPerSample(format);
+    auto clampedBufferSize = buffer.size_bytes();
+    clampedBufferSize -= clampedBufferSize % bytesPerSample;
+
     switch (format) {
     case AudioSampleFormat::U8:
     case AudioSampleFormat::U8Planar:
         return buffer;
     case AudioSampleFormat::S16:
     case AudioSampleFormat::S16Planar:
-        return spanReinterpretCast<int16_t>(buffer);
+        return spanReinterpretCast<int16_t>(buffer.first(clampedBufferSize));
     case AudioSampleFormat::S32:
     case AudioSampleFormat::S32Planar:
-        return spanReinterpretCast<int32_t>(buffer);
+        return spanReinterpretCast<int32_t>(buffer.first(clampedBufferSize));
     case AudioSampleFormat::F32:
     case AudioSampleFormat::F32Planar:
-        return spanReinterpretCast<float>(buffer);
+        return spanReinterpretCast<float>(buffer.first(clampedBufferSize));
     }
     RELEASE_ASSERT_NOT_REACHED();
     return buffer;

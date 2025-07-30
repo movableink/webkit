@@ -29,6 +29,7 @@
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(COCOA)
+#include "DefaultWebBrowserChecks.h"
 #include <wtf/NumberOfCores.h>
 #include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #if PLATFORM(IOS_FAMILY)
@@ -49,6 +50,10 @@
 #include <WebKitAdditions/WebPreferencesDefaultValuesAdditions.h>
 #endif
 
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/DeprecatedGlobalSettingsAdditions.cpp>)
+#include <WebKitAdditions/DeprecatedGlobalSettingsAdditions.cpp>
+#endif
+
 namespace WebKit {
 
 #if PLATFORM(IOS_FAMILY)
@@ -59,21 +64,10 @@ bool defaultPassiveTouchListenersAsDefaultOnDocument()
     return result;
 }
 
-bool defaultCSSOMViewScrollingAPIEnabled()
-{
-    static bool result = WTF::IOSApplication::isIMDb() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::NoIMDbCSSOMViewScrollingQuirk);
-    return !result;
-}
-
 bool defaultShouldPrintBackgrounds()
 {
     static bool result = !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::DefaultsToExcludingBackgroundsWhenPrinting);
     return result;
-}
-
-bool defaultAlternateFormControlDesignEnabled()
-{
-    return PAL::currentUserInterfaceIdiomIsVision();
 }
 
 #endif
@@ -110,30 +104,6 @@ bool defaultWheelEventGesturesBecomeNonBlocking()
     static bool result = linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::AllowsWheelEventGesturesToBecomeNonBlocking);
     return result;
 }
-
-#endif
-
-#if PLATFORM(MAC) || PLATFORM(IOS_FAMILY)
-
-bool defaultDisallowSyncXHRDuringPageDismissalEnabled()
-{
-#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
-    if (CFPreferencesGetAppBooleanValue(CFSTR("allowDeprecatedSynchronousXMLHttpRequestDuringUnload"), CFSTR("com.apple.WebKit"), nullptr)) {
-        WTFLogAlways("Allowing synchronous XHR during page unload due to managed preference");
-        return false;
-    }
-#elif PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST) && !PLATFORM(WATCHOS)
-    if (allowsDeprecatedSynchronousXMLHttpRequestDuringUnload()) {
-        WTFLogAlways("Allowing synchronous XHR during page unload due to managed preference");
-        return false;
-    }
-#endif
-    return true;
-}
-
-#endif
-
-#if PLATFORM(MAC)
 
 bool defaultAppleMailPaginationQuirkEnabled()
 {
@@ -183,7 +153,7 @@ bool defaultManageCaptureStatusBarInGPUProcessEnabled()
 #if ENABLE(MEDIA_SOURCE)
 bool defaultManagedMediaSourceEnabled()
 {
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
     return true;
 #else
     return false;
@@ -256,16 +226,6 @@ bool defaultLinearMediaPlayerEnabled()
 #endif
 }
 
-bool defaultLiveRangeSelectionEnabled()
-{
-#if PLATFORM(IOS_FAMILY)
-    static bool enableForAllApps = linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::LiveRangeSelectionEnabledForAllApps);
-    if (!enableForAllApps && WTF::IOSApplication::isGmail())
-        return false;
-#endif
-    return true;
-}
-
 bool defaultShowModalDialogEnabled()
 {
 #if PLATFORM(COCOA)
@@ -280,6 +240,17 @@ bool defaultShowModalDialogEnabled()
 bool defaultGamepadVibrationActuatorEnabled()
 {
 #if HAVE(WIDE_GAMECONTROLLER_SUPPORT)
+    return true;
+#else
+    return false;
+#endif
+}
+#endif
+
+#if ENABLE(WEB_AUTHN)
+bool defaultDigitalCredentialsEnabled()
+{
+#if HAVE(DIGITAL_CREDENTIALS_UI)
     return true;
 #else
     return false;
@@ -334,5 +305,110 @@ bool defaultUseGPUProcessForDOMRenderingEnabled()
 
     return false;
 }
+
+#if ENABLE(WEB_PUSH_NOTIFICATIONS)
+bool defaultBuiltInNotificationsEnabled()
+{
+#if defined(DEPRECATED_GLOBAL_SETTINGS_BUILT_IN_NOTIFICATIONS_ENABLED_ADDITIONS)
+    DEPRECATED_GLOBAL_SETTINGS_BUILT_IN_NOTIFICATIONS_ENABLED_ADDITIONS;
+#endif
+
+#if defined(WEB_PREFERENCES_BUILT_IN_NOTIFICATIONS_ENABLED_ADDITIONS)
+    WEB_PREFERENCES_BUILT_IN_NOTIFICATIONS_ENABLED_ADDITIONS;
+#endif
+
+    return false;
+}
+#endif
+
+#if ENABLE(DEVICE_ORIENTATION)
+bool defaultDeviceOrientationPermissionAPIEnabled()
+{
+#if PLATFORM(IOS_FAMILY)
+    return linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::SupportsDeviceOrientationAndMotionPermissionAPI);
+#else
+    return false;
+#endif
+}
+#endif
+
+#if ENABLE(REQUIRES_PAGE_VISIBILITY_FOR_NOW_PLAYING)
+bool defaultRequiresPageVisibilityForVideoToBeNowPlaying()
+{
+#if USE(APPLE_INTERNAL_SDK)
+    if (requiresPageVisibilityForVideoToBeNowPlayingFromAdditions())
+        return true;
+#endif
+
+    return false;
+}
+#endif
+
+bool defaultCookieStoreAPIEnabled()
+{
+#if ENABLE(COOKIE_STORE_API_BY_DEFAULT)
+    return true;
+#else
+    return false;
+#endif
+}
+
+#if ENABLE(CONTENT_EXTENSIONS)
+bool defaultIFrameResourceMonitoringEnabled()
+{
+#if PLATFORM(COCOA)
+    return isFullWebBrowserOrRunningTest();
+#else
+    return false;
+#endif
+}
+#endif
+
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+bool defaultPreferSpatialAudioExperience()
+{
+#if defined(WEB_PREFERENCES_PREFER_SPATIAL_AUDIO_EXPERIENCE_ADDITIONS)
+    WEB_PREFERENCES_PREFER_SPATIAL_AUDIO_EXPERIENCE_ADDITIONS;
+#endif
+
+    return false;
+}
+#endif
+
+#if PLATFORM(COCOA)
+static bool isSafariOrWebApp()
+{
+#if PLATFORM(MAC)
+    return WTF::MacApplication::isSafari();
+#else
+    return WTF::IOSApplication::isMobileSafari() || WTF::IOSApplication::isSafariViewService() || WTF::IOSApplication::isAppleWebApp();
+#endif
+}
+#endif
+
+bool defaultMutationEventsEnabled()
+{
+#if PLATFORM(COCOA)
+    return (WTF::CocoaApplication::isAppleApplication() && !isSafariOrWebApp()) || !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::MutationEventsDisabledByDefault);
+#else
+    return false;
+#endif
+}
+
+bool defaultTrustedTypesEnabled()
+{
+#if PLATFORM(COCOA)
+    return linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::EnableTrustedTypesByDefault);
+#else
+    return true;
+#endif
+}
+
+#if !ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+bool defaultContentInsetBackgroundFillEnabled()
+{
+    return false;
+}
+#endif
 
 } // namespace WebKit

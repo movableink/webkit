@@ -28,12 +28,15 @@
 
 #if ENABLE(ATTACHMENT_ELEMENT)
 
+#include "ContainerNodeInlines.h"
 #include "FloatRect.h"
 #include "FloatRoundedRect.h"
 #include "FrameSelection.h"
 #include "HTMLAttachmentElement.h"
+#include "NodeInlines.h"
 #include "RenderBoxInlines.h"
 #include "RenderChildIterator.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleSetters.h"
 #include "RenderTheme.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -123,6 +126,8 @@ bool RenderAttachment::shouldDrawBorder() const
 
 void RenderAttachment::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& offset)
 {
+    ASSERT(!isSkippedContentRoot(*this));
+
     if (paintInfo.phase != PaintPhase::Selection || !hasVisibleBoxDecorations() || !style().hasUsedAppearance())
         return;
 

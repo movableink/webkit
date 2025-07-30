@@ -34,6 +34,7 @@
 #include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakPtr.h>
+#include <wtf/WeakRef.h>
 
 namespace WTF {
 class TextStream;
@@ -169,6 +170,7 @@ private:
 
     void clearPendingRequestToSuspend();
     void clearAssertion();
+    void dropLastAssertion();
 
     class ProcessAssertionCache;
 

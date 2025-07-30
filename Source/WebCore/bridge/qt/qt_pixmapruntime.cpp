@@ -21,6 +21,7 @@
 
 #include <JavaScriptCore/APICast.h>
 #include "CachedImage.h"
+#include "ContainerNodeInlines.h"
 #include "HTMLImageElement.h"
 #include "ImageData.h"
 #include "IntSize.h"
@@ -30,6 +31,7 @@
 #include "JSImageData.h"
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <JavaScriptCore/JavaScript.h>
+#include "NativeImage.h"
 #include "RenderElement.h"
 #include "StillImageQt.h"
 #include <QBuffer>
@@ -80,10 +82,10 @@ static void copyPixelsInto(const QImage& sourceImage, int width, int height, uns
 
 static QPixmap toPixmap(const QVariant& data)
 {
-    if (data.type() == static_cast<QVariant::Type>(qMetaTypeId<QPixmap>()))
+    if (data.typeId() == qMetaTypeId<QPixmap>())
         return data.value<QPixmap>();
 
-    if (data.type() == static_cast<QVariant::Type>(qMetaTypeId<QImage>()))
+    if (data.typeId() == qMetaTypeId<QImage>())
         return QPixmap::fromImage(data.value<QImage>());
 
     return QPixmap();
@@ -91,10 +93,10 @@ static QPixmap toPixmap(const QVariant& data)
 
 static QImage toImage(const QVariant& data)
 {
-    if (data.type() == static_cast<QVariant::Type>(qMetaTypeId<QImage>()))
+    if (data.typeId() == qMetaTypeId<QImage>())
         return data.value<QImage>();
 
-    if (data.type() == static_cast<QVariant::Type>(qMetaTypeId<QPixmap>()))
+    if (data.typeId() == qMetaTypeId<QPixmap>())
         return data.value<QPixmap>().toImage();
 
     return QImage();
@@ -102,9 +104,9 @@ static QImage toImage(const QVariant& data)
 
 static QSize imageSizeForVariant(const QVariant& data)
 {
-    if (data.type() == static_cast<QVariant::Type>(qMetaTypeId<QPixmap>()))
+    if (data.typeId() == qMetaTypeId<QPixmap>())
         return data.value<QPixmap>().size();
-    if (data.type() == static_cast<QVariant::Type>(qMetaTypeId<QImage>()))
+    if (data.typeId() == qMetaTypeId<QImage>())
         return data.value<QImage>().size();
     return QSize(0, 0);
 }
@@ -163,7 +165,7 @@ static JSValueRef pixmapToImageData(JSContextRef context, JSObjectRef /*function
     JSLockHolder locker(lexicalGlobalObject);
 
     RefPtr<ImageData> imageData = ImageData::create(IntSize(width, height), predefinedColorSpace);
-    copyPixelsInto(image, width, height, imageData->data().data());
+    copyPixelsInto(image, width, height, static_cast<unsigned char*>(imageData->data().arrayBufferView().data()));
 
     JSDOMGlobalObject* globalObject = static_cast<JSDOMGlobalObject*>(lexicalGlobalObject);
     return ::toRef(lexicalGlobalObject, toJS(lexicalGlobalObject, globalObject, imageData.get()));

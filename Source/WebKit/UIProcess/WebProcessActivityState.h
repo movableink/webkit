@@ -65,17 +65,24 @@ public:
 
 #if ENABLE(WEB_PROCESS_SUSPENSION_DELAY)
     void updateWebProcessSuspensionDelay();
+    void takeAccessibilityActivityWhenInWindow();
+    void takeAccessibilityActivity();
+    bool hasAccessibilityActivityForTesting() const;
+    void viewDidEnterWindow();
+    void viewDidLeaveWindow();
 #endif
 
 private:
     WebProcessProxy& process() const;
     Ref<WebProcessProxy> protectedProcess() const;
 
-    std::variant<WeakRef<WebPageProxy>, WeakRef<RemotePageProxy>> m_page;
+    Variant<WeakRef<WebPageProxy>, WeakRef<RemotePageProxy>> m_page;
 
     RefPtr<ProcessThrottlerActivity> m_isVisibleActivity;
 #if ENABLE(WEB_PROCESS_SUSPENSION_DELAY)
-    Ref<ProcessThrottlerTimedActivity> m_wasRecentlyVisibleActivity;
+    const Ref<ProcessThrottlerTimedActivity> m_wasRecentlyVisibleActivity;
+    RefPtr<ProcessThrottlerActivity> m_accessibilityActivity;
+    bool m_takeAccessibilityActivityWhenInWindow { false };
 #endif
     RefPtr<ProcessThrottlerActivity> m_isAudibleActivity;
     RefPtr<ProcessThrottlerActivity> m_isCapturingActivity;

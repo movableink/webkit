@@ -83,7 +83,7 @@ class PlatformMouseEvent;
 class RegionContext;
 class ScrollView;
 
-enum WidgetNotification { WillPaintFlattened, DidPaintFlattened };
+enum class WidgetNotification : uint8_t { WillPaintFlattened, DidPaintFlattened };
 
 // The Widget class serves as a base class for three kinds of objects:
 // (1) Scrollable areas (ScrollView)
@@ -218,6 +218,8 @@ public:
     WEBCORE_EXPORT virtual IntPoint convertFromContainingView(const IntPoint&) const;
     WEBCORE_EXPORT virtual FloatPoint convertToContainingView(const FloatPoint&) const;
     WEBCORE_EXPORT virtual FloatPoint convertFromContainingView(const FloatPoint&) const;
+
+    virtual bool isPluginView() const { return false; }
 
 private:
     void init(PlatformWidget); // Must be called by all Widget constructors to initialize cross-platform data.

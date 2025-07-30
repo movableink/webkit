@@ -117,7 +117,7 @@ bool ResourceHandle::start()
         URL urlWithCredentials(firstRequest().url());
         urlWithCredentials.setUser(d->m_user);
         urlWithCredentials.setPassword(d->m_password);
-        d->m_firstRequest.setURL(urlWithCredentials);
+        d->m_firstRequest.setURL(WTFMove(urlWithCredentials));
     }
 
     ResourceHandleInternal *d = getInternal();
@@ -146,7 +146,7 @@ void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext* contex
 //        URL urlWithCredentials(d->m_firstRequest.url());
 //        urlWithCredentials.setUser(d->m_user);
 //        urlWithCredentials.setPass(d->m_password);
-//        d->m_firstRequest.setURL(urlWithCredentials);
+//        d->m_firstRequest.setURL(WTFMove(urlWithCredentials));
 //    }
 
 //    // starting in deferred mode gives d->m_job the chance of being set before sending the request.

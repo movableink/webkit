@@ -59,10 +59,10 @@ namespace DFG {
 struct OSRExit;
 }
 
-#define JIT_COMMENT(jit, ...) do { if (UNLIKELY(Options::needDisassemblySupport())) { (jit).comment(__VA_ARGS__); } else { (void) jit; } } while (0)
+#define JIT_COMMENT(jit, ...) do { if (Options::needDisassemblySupport()) [[unlikely]] { (jit).comment(__VA_ARGS__); } else { (void) jit; } } while (0)
 
 class AbstractMacroAssemblerBase {
-    WTF_MAKE_TZONE_ALLOCATED(AbstractMacroAssemblerBase);
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(AbstractMacroAssemblerBase);
 public:
     enum StatusCondition {
         Success,
@@ -100,7 +100,7 @@ class AbstractMacroAssembler : public AbstractMacroAssemblerBase {
 public:
     typedef AbstractMacroAssembler<AssemblerType> AbstractMacroAssemblerType;
     typedef AssemblerType AssemblerType_T;
-    friend class SuppressRegisetrAllocationValidation;
+    friend class SuppressRegisterAllocationValidation;
 
     template<PtrTag tag> using CodeRef = MacroAssemblerCodeRef<tag>;
 
@@ -445,6 +445,10 @@ public:
     public:
         Label() = default;
 
+        Label(AbstractMacroAssemblerType& masm)
+            : Label(&masm)
+        { }
+
         Label(AbstractMacroAssemblerType* masm)
             : m_label(masm->m_assembler.label())
         {
@@ -687,6 +691,7 @@ public:
             return result;
         }
 
+        void link(AbstractMacroAssemblerType& masm) const { link(&masm); }
         void link(AbstractMacroAssemblerType* masm) const
         {
             masm->invalidateAllTempRegisters();
@@ -708,7 +713,8 @@ public:
             masm->m_assembler.linkJump(m_label, masm->m_assembler.label());
 #endif
         }
-        
+
+        void linkTo(Label label, AbstractMacroAssemblerType& masm) const { linkTo(label, &masm); }
         void linkTo(Label label, AbstractMacroAssemblerType* masm) const
         {
 #if ENABLE(DFG_REGISTER_ALLOCATION_VALIDATION)
@@ -800,6 +806,7 @@ public:
                 append(jump);
         }
 
+        void link(AbstractMacroAssemblerType& masm) const { link(&masm); }
         void link(AbstractMacroAssemblerType* masm) const
         {
             size_t size = m_jumps.size();
@@ -893,10 +900,10 @@ public:
     }
 
     // DFG register allocation validation is broken in various cases. We need suppression mechanism otherwise, it introduces a new bug rather to bypass the issue.
-    class SuppressRegisetrAllocationValidation {
+    class SuppressRegisterAllocationValidation {
     public:
 #if ENABLE(DFG_REGISTER_ALLOCATION_VALIDATION)
-        SuppressRegisetrAllocationValidation(AbstractMacroAssemblerType& assembler)
+        SuppressRegisterAllocationValidation(AbstractMacroAssemblerType& assembler)
             : m_suppressRegisterValidation(assembler.m_suppressRegisterValidation, true)
         {
         }
@@ -904,7 +911,7 @@ public:
     private:
         SetForScope<bool> m_suppressRegisterValidation;
 #else
-        SuppressRegisetrAllocationValidation(AbstractMacroAssemblerType&) { }
+        SuppressRegisterAllocationValidation(AbstractMacroAssemblerType&) { }
 #endif
     };
 
@@ -918,7 +925,10 @@ public:
 
         void checkOffsets(unsigned low, unsigned high)
         {
-            RELEASE_ASSERT_WITH_MESSAGE(!(low <= m_offset && m_offset <= high), "Unsafe branch over register allocation at instruction offset %u in jump offset range %u..%u", m_offset, low, high);
+            // The low side can be == since if we encounter this allocation, then we know that
+            // the register allocation must have been emitted before the branch. If the allocation
+            // was after the branch, we wouldn't see it now.
+            RELEASE_ASSERT_WITH_MESSAGE(!(low < m_offset && m_offset <= high), "Unsafe branch over register allocation at instruction offset %u in jump offset range %u..%u", m_offset, low, high);
         }
 
     private:
@@ -945,6 +955,15 @@ public:
 
         for (auto& offset : m_registerAllocationForOffsets)
             offset.checkOffsets(offset1, offset2);
+    }
+
+    void checkRegisterAllocationAgainstSlowPathCall(const JumpList &from)
+    {
+        if (m_suppressRegisterValidation)
+            return;
+
+        for (auto& jump : from.jumps())
+            checkRegisterAllocationAgainstBranchRange(jump.label().m_label.offset(), debugOffset());
     }
 #endif
 
@@ -1093,7 +1112,7 @@ public:
     template<typename... Types>
     void comment(const Types&... values)
     {
-        if (LIKELY(!Options::needDisassemblySupport()))
+        if (!Options::needDisassemblySupport()) [[likely]]
             return;
         StringPrintStream s;
         s.print(values...);

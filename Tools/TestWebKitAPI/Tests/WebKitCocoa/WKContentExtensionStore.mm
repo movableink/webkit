@@ -42,6 +42,7 @@
 #import <WebKit/_WKContentRuleListAction.h>
 #import <WebKit/_WKWebsiteDataStoreConfiguration.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/Vector.h>
 #import <wtf/text/WTFString.h>
 
@@ -199,7 +200,7 @@ TEST_F(WKContentRuleListStoreTest, CorruptHeaderEmpty)
 
     TestWebKitAPI::Util::run(&doneCompiling);
 
-    [[WKContentRuleListStore defaultStore] _corruptContentRuleListForIdentifier:@"TestRuleList" usingCurrentVersion:NO];
+    [[WKContentRuleListStore defaultStore] _corruptContentRuleListHeaderForIdentifier:@"TestRuleList" usingCurrentVersion:NO];
 
     __block bool doneLookingUp = false;
     [[WKContentRuleListStore defaultStore] lookUpContentRuleListForIdentifier:@"TestRuleList" completionHandler:^(WKContentRuleList *filter, NSError *error) {
@@ -237,7 +238,7 @@ TEST_F(WKContentRuleListStoreTest, CorruptHeaderRandom)
 
     TestWebKitAPI::Util::run(&doneCompiling);
 
-    [[WKContentRuleListStore defaultStore] _corruptContentRuleListForIdentifier:@"TestRuleList" usingCurrentVersion:YES];
+    [[WKContentRuleListStore defaultStore] _corruptContentRuleListHeaderForIdentifier:@"TestRuleList" usingCurrentVersion:YES];
 
     __block bool doneLookingUp = false;
     [[WKContentRuleListStore defaultStore] lookUpContentRuleListForIdentifier:@"TestRuleList" completionHandler:^(WKContentRuleList *filter, NSError *error)
@@ -247,6 +248,70 @@ TEST_F(WKContentRuleListStoreTest, CorruptHeaderRandom)
         checkDomain(error);
         EXPECT_EQ(error.code, WKErrorContentRuleListStoreLookUpFailed);
         EXPECT_NS_EQUAL(error.helpAnchor, @"Rule list lookup failed: Unspecified error during lookup.");
+
+        doneLookingUp = true;
+    }];
+
+    TestWebKitAPI::Util::run(&doneLookingUp);
+
+    __block bool doneGettingSource = false;
+    [[WKContentRuleListStore defaultStore] _getContentRuleListSourceForIdentifier:@"TestRuleList" completionHandler:^(NSString* source) {
+        EXPECT_NULL(source);
+
+        doneGettingSource = true;
+    }];
+
+    TestWebKitAPI::Util::run(&doneGettingSource);
+}
+
+TEST_F(WKContentRuleListStoreTest, CorruptURLFilter)
+{
+    NSString* contentBlocker = @"[{\"action\":{\"type\":\"css-display-none\",\"selector\":\".hidden\"},\"trigger\":{\"url-filter\":\".*\"}}]";
+    __block bool doneCompiling = false;
+    [[WKContentRuleListStore defaultStore] compileContentRuleListForIdentifier:@"CorruptURLFilter" encodedContentRuleList:contentBlocker completionHandler:^(WKContentRuleList *filter, NSError *error) {
+
+        EXPECT_NOT_NULL(filter);
+        EXPECT_NULL(error);
+
+        doneCompiling = true;
+    }];
+    TestWebKitAPI::Util::run(&doneCompiling);
+    [[WKContentRuleListStore defaultStore] _corruptContentRuleListActionsMatchingEverythingForIdentifier:@"CorruptURLFilter"];
+
+    __block bool doneLookingUp = false;
+    [[WKContentRuleListStore defaultStore] lookUpContentRuleListForIdentifier:@"CorruptURLFilter" completionHandler:^(WKContentRuleList *filter, NSError *error) {
+        EXPECT_NULL(filter);
+        EXPECT_NOT_NULL(error);
+        checkDomain(error);
+        EXPECT_EQ(error.code, WKErrorContentRuleListStoreLookUpFailed);
+        EXPECT_NS_EQUAL(error.helpAnchor, @"Rule list lookup failed: Unspecified error during lookup.");
+
+        doneLookingUp = true;
+    }];
+    TestWebKitAPI::Util::run(&doneLookingUp);
+}
+
+TEST_F(WKContentRuleListStoreTest, InvalidHeader)
+{
+    __block bool doneCompiling = false;
+    [[WKContentRuleListStore defaultStore] compileContentRuleListForIdentifier:@"TestRuleList" encodedContentRuleList:basicFilter completionHandler:^(WKContentRuleList *filter, NSError *error) {
+        EXPECT_NOT_NULL(filter);
+        EXPECT_NULL(error);
+
+        doneCompiling = true;
+    }];
+
+    TestWebKitAPI::Util::run(&doneCompiling);
+
+    [[WKContentRuleListStore defaultStore] _invalidateContentRuleListHeaderForIdentifier:@"TestRuleList"];
+
+    __block bool doneLookingUp = false;
+    [[WKContentRuleListStore defaultStore] lookUpContentRuleListForIdentifier:@"TestRuleList" completionHandler:^(WKContentRuleList *filter, NSError *error) {
+        EXPECT_NULL(filter);
+        EXPECT_NOT_NULL(error);
+        checkDomain(error);
+        EXPECT_EQ(error.code, WKErrorContentRuleListStoreVersionMismatch);
+        EXPECT_NS_EQUAL(error.helpAnchor, @"Rule list lookup failed: Version of file does not match version of interpreter.");
 
         doneLookingUp = true;
     }];
@@ -298,7 +363,7 @@ TEST_F(WKContentRuleListStoreTest, CrossOriginCookieBlocking)
 
         std::optional<bool> requestHadCookieResult;
 
-        HTTPServer server(HTTPServer::UseCoroutines::Yes, [&] (Connection connection) -> Task {
+        HTTPServer server(HTTPServer::UseCoroutines::Yes, [&] (Connection connection) -> ConnectionTask {
             while (true) {
                 auto request = co_await connection.awaitableReceiveHTTPRequest();
                 auto path = HTTPServer::parsePath(request);
@@ -308,8 +373,7 @@ TEST_F(WKContentRuleListStoreTest, CrossOriginCookieBlocking)
                     if (path == "/org"_s)
                         return HTTPResponse("<script>fetch('https://example.com/cookie-check', {credentials: 'include'})</script>"_s);
                     if (path == "/cookie-check"_s) {
-                        auto cookieHeader = "Cookie: testCookie=42";
-                        requestHadCookieResult = memmem(request.data(), request.size(), cookieHeader, strlen(cookieHeader));
+                        requestHadCookieResult = contains(request.span(), "Cookie: testCookie=42"_span);
                         return HTTPResponse("hi"_s);
                     }
                     RELEASE_ASSERT_NOT_REACHED();
@@ -1161,7 +1225,7 @@ TEST_F(WKContentRuleListStoreTest, Redirect)
     for (size_t i = 0; i < expectedRequestedURLs.size(); i++)
         EXPECT_WK_STREQ(expectedRequestedURLs[i], [[urls objectAtIndex:i] absoluteString]);
 
-    expectedRequestedURLs.remove(0);
+    expectedRequestedURLs.removeAt(0);
     expectedRequestedURLs[1] = "testscheme://testhost:123/2.txt"_s;
     checkURLs(urlsFromCallback, expectedRequestedURLs);
 }
@@ -1196,6 +1260,42 @@ TEST_F(WKContentRuleListStoreTest, MainResourceCrossOriginRedirect)
     webView.get().navigationDelegate = delegate.get();
     [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/1.txt"]]];
     EXPECT_WK_STREQ([webView _test_waitForAlert], "loaded replacement successfully: key=value");
+}
+
+TEST_F(WKContentRuleListStoreTest, MainResourceCrossOriginRedirectFromLoadedPageWithoutActivePatterns)
+{
+    using namespace TestWebKitAPI;
+    HTTPServer server({
+        { "/example"_s, { "<script>addEventListener('pageshow', () => { alert('original page loaded') });</script>"_s } },
+        { "/after_redirect"_s, { "<script>alert('loaded replacement successfully: ' + window.location.href)</script>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto list = compileContentRuleList(R"JSON(
+        [ {
+            "action": { "type": "redirect", "redirect": { "regex-substitution": "https://apple.com/after_redirect" } },
+            "trigger": { "url-filter": "before_redirect" }
+        } ]
+    )JSON");
+
+    auto configuration = server.httpsProxyConfiguration();
+    [[configuration userContentController] addContentRuleList:list.get()];
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    delegate.get().decidePolicyForNavigationActionWithPreferences = ^(WKNavigationAction *, WKWebpagePreferences *preferences, void (^decisionHandler)(WKNavigationActionPolicy, WKWebpagePreferences *)) {
+        preferences._activeContentRuleListActionPatterns = @{
+            @"testidentifier": [NSSet setWithObject:@"https://webkit.org/*"]
+        };
+        decisionHandler(WKNavigationActionPolicyAllow, preferences);
+    };
+    [delegate allowAnyTLSCertificate];
+    webView.get().navigationDelegate = delegate.get();
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "original page loaded");
+    [webView evaluateJavaScript:@"window.location = 'https://webkit.org/before_redirect'" completionHandler:nil];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "loaded replacement successfully: https://apple.com/after_redirect");
+    [webView goBack];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "original page loaded");
 }
 
 TEST_F(WKContentRuleListStoreTest, NullPatternSet)
@@ -1299,4 +1399,16 @@ TEST_F(WKContentRuleListStoreTest, ExtensionPath)
     while (!redirectedURL)
         TestWebKitAPI::Util::spinRunLoop();
     EXPECT_WK_STREQ([redirectedURL absoluteString], "extension-scheme://extension-host/redirected-to-extension%3Fno-query%23no-fragment");
+}
+
+TEST_F(WKContentRuleListStoreTest, NonASCIIEscaped)
+{
+    NSString *source = @"[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\"t,[{`\\\\\\\\\\\\20442=OvI6\",\"\":[\"\"]}}]";
+    __block bool done { false };
+    [[WKContentRuleListStore defaultStore] compileContentRuleListForIdentifier:@"test" encodedContentRuleList:source completionHandler:^(WKContentRuleList *filter, NSError *error) {
+        EXPECT_NULL(filter);
+        EXPECT_NOT_NULL(error);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
 }

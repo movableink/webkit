@@ -30,6 +30,7 @@
 #include "ChromeClientQt.h"
 
 #include "DataListSuggestionPickerQt.h"
+#include <WebCore/DataListSuggestionPicker.h>
 #include "PopupMenuQt.h"
 #include "QWebFrameAdapter.h"
 #include "QWebPageAdapter.h"
@@ -42,16 +43,19 @@
 
 #include <QEventLoop>
 #include <QWindow>
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <WebCore/ApplicationCacheStorage.h>
 #include <WebCore/ColorChooser.h>
 #include <WebCore/ColorChooserClient.h>
+#include <WebCore/DateTimeChooser.h>
+#include <WebCore/DateTimeChooserClient.h>
 #include <WebCore/CookieConsentDecisionResult.h>
 #include <WebCore/Cursor.h>
 #include <WebCore/DatabaseTracker.h>
 #include <WebCore/Document.h>
 #include <WebCore/FileChooser.h>
 #include <WebCore/FileIconLoader.h>
-#include <WebCore/FullscreenManager.h>
+
 #include <WebCore/HitTestResult.h>
 #include <WebCore/Icon.h>
 #include <WebCore/ModalContainerTypes.h>
@@ -62,6 +66,7 @@
 #include <WebCore/WindowFeatures.h>
 #include <wtf/WallTime.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <WebCore/DocumentFullscreen.h>
 
 #if USE(TILED_BACKING_STORE)
 #include "TiledBackingStore.h"
@@ -183,12 +188,12 @@ void ChromeClientQt::focusedFrameChanged(Frame*)
 RefPtr<Page> ChromeClientQt::createWindow(LocalFrame& frame,  const String& openedMainFrameName, const WindowFeatures& features, const NavigationAction&)
 {
 #if ENABLE(FULLSCREEN_API)
-    if (!frame.document())
-        return nullptr;
-
-    CheckedPtr fullscreenManager = frame.document()->fullscreenManagerIfExists();
-    if (fullscreenManager && fullscreenManager->currentFullscreenElement())
-        fullscreenManager->cancelFullscreen();
+    if (RefPtr document = frame.document()) {
+        if (RefPtr documentFullscreen = document->fullscreenIfExists()) {
+            if (documentFullscreen->fullscreenElement())
+                documentFullscreen->fullyExitFullscreen();
+        }
+    }
 #else
     UNUSED_PARAM(frame);
 #endif
@@ -329,7 +334,7 @@ bool ChromeClientQt::canRunBeforeUnloadConfirmPanel()
     return true;
 }
 
-bool ChromeClientQt::runBeforeUnloadConfirmPanel(const String& message, LocalFrame& frame)
+bool ChromeClientQt::runBeforeUnloadConfirmPanel(String&& message, LocalFrame& frame)
 {
     return runJavaScriptConfirm(frame, message);
 }
@@ -444,6 +449,19 @@ IntRect ChromeClientQt::rootViewToScreen(const IntRect& rect) const
     return screenRect;
 }
 
+IntPoint ChromeClientQt::rootViewToScreen(const IntPoint& point) const
+{
+    QWebPageClient* pageClient = platformPageClient();
+    if (!pageClient)
+        return point;
+
+    QWindow* ownerWindow = pageClient->ownerWindow();
+    if (!ownerWindow)
+        return point;
+
+    return ownerWindow->mapToGlobal(point) + m_webPage->viewRectRelativeToWindow().topLeft();
+}
+
 IntPoint ChromeClientQt::screenToRootView(const IntPoint& point) const
 {
     QWebPageClient* pageClient = platformPageClient();
@@ -522,23 +540,27 @@ void ChromeClientQt::reachedApplicationCacheOriginQuota(SecurityOrigin& origin, 
 #endif
 }
 
-#if ENABLE(INPUT_TYPE_COLOR)
 RefPtr<ColorChooser> ChromeClientQt::createColorChooser(ColorChooserClient& client, const Color& color)
 {
+#if ENABLE(INPUT_TYPE_COLOR)
     const QColor selectedColor = m_webPage->colorSelectionRequested(QColor(color));
     client.didChooseColor(selectedColor);
     client.didEndChooser();
+#endif
     return nullptr;
 }
-#endif
 
-#if ENABLE(DATALIST_ELEMENT)
 RefPtr<DataListSuggestionPicker> ChromeClientQt::createDataListSuggestionPicker(DataListSuggestionsClient&)
 {
     // QTFIXME: Implement DataListSuggestionPickerQt
     return nullptr;
 }
-#endif
+
+RefPtr<DateTimeChooser> ChromeClientQt::createDateTimeChooser(DateTimeChooserClient&)
+{
+    // QTFIXME: Implement DateTimeChooserQt
+    return nullptr;
+}
 
 void ChromeClientQt::runOpenPanel(LocalFrame& frame, FileChooser& fileChooser)
 {
@@ -686,14 +708,17 @@ bool ChromeClientQt::supportsFullScreenForElement(const Element&, bool withKeybo
     return !withKeyboard;
 }
 
-void ChromeClientQt::enterFullScreenForElement(Element& element, WebCore::HTMLMediaElementEnums::VideoFullscreenMode)
+void ChromeClientQt::enterFullScreenForElement(Element& element, WebCore::HTMLMediaElementEnums::VideoFullscreenMode, CompletionHandler<void(ExceptionOr<void>)>&& willEnterFullscreen, CompletionHandler<bool(bool)>&& didEnterFullscreen)
 {
     m_webPage->fullScreenRequested(QWebFullScreenRequest::createEnterRequest(m_webPage, QWebElement(&element)));
+    willEnterFullscreen({ });
+    didEnterFullscreen(true);
 }
 
-void ChromeClientQt::exitFullScreenForElement(Element* element)
+void ChromeClientQt::exitFullScreenForElement(Element* element, CompletionHandler<void()>&& completionHandler)
 {
     m_webPage->fullScreenRequested(QWebFullScreenRequest::createExitRequest(m_webPage, QWebElement(element)));
+    completionHandler();
 }
 #endif
 
@@ -779,6 +804,10 @@ void ChromeClientQt::requestCookieConsent(CompletionHandler<void(CookieConsentDe
 }
 
 void ChromeClientQt::setTextIndicator(const WebCore::TextIndicatorData&) const
+{
+}
+
+void ChromeClientQt::updateTextIndicator(const WebCore::TextIndicatorData&) const
 {
 }
 

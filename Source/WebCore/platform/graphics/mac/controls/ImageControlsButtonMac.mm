@@ -46,6 +46,8 @@ ImageControlsButtonMac::ImageControlsButtonMac(ImageControlsButtonPart& owningPa
 {
 }
 
+ImageControlsButtonMac::~ImageControlsButtonMac() = default;
+
 IntSize ImageControlsButtonMac::servicesRolloverButtonCellSize()
 {
     auto& controlFactory = ControlFactoryMac::shared();

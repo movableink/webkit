@@ -26,16 +26,14 @@
 #include "config.h"
 #include "RFC8941.h"
 
-#include "ParsingUtilities.h"
 #include "RFC7230.h"
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/StringParsingBuffer.h>
 #include <wtf/text/StringView.h>
 
 namespace RFC8941 {
-
-using namespace WebCore;
 
 template<typename CharacterType> constexpr bool isEndOfToken(CharacterType character)
 {
@@ -48,7 +46,7 @@ template<typename CharacterType> constexpr bool isEndOfKey(CharacterType charact
 }
 
 // Parsing a key (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.3.3).
-template<typename CharType> static StringView parseKey(StringParsingBuffer<CharType>& buffer)
+template<typename CharType> static StringView parseKey(StringParsingBuffer<CharType>& buffer LIFETIME_BOUND)
 {
     if (buffer.atEnd() || !isASCIILower(*buffer))
         return { };

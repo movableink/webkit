@@ -1,4 +1,3 @@
-CONSOLE MESSAGE: ImportMap has invalid JSON
 
-FAIL Second import map should be used for resolution even after an import map with errors assert_array_equals: lengths differ, expected array ["log:C"] length 1, got ["onerror 2", "log:A"] length 2
+PASS Second import map should be used for resolution even after an import map with errors
 

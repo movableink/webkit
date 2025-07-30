@@ -23,6 +23,7 @@
 #pragma once
 
 #include "FilterEffectApplier.h"
+#include <array>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -38,7 +39,7 @@ public:
     FEColorMatrixSoftwareApplier(const FEColorMatrix&);
 
 private:
-    bool apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const final;
+    bool apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const final;
 
     inline void matrix(float& red, float& green, float& blue, float& alpha) const;
     inline void saturateAndHueRotate(float& red, float& green, float& blue) const;
@@ -51,7 +52,7 @@ private:
 
     void applyPlatform(PixelBuffer&) const;
 
-    float m_components[9];
+    std::array<float, 9> m_components;
 };
 
 } // namespace WebCore

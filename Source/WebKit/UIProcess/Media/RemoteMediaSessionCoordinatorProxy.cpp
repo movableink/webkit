@@ -72,10 +72,9 @@ RemoteMediaSessionCoordinatorProxy::~RemoteMediaSessionCoordinatorProxy()
     protectedWebPageProxy()->protectedLegacyMainFrameProcess()->removeMessageReceiver(Messages::RemoteMediaSessionCoordinatorProxy::messageReceiverName(), m_webPageProxy->webPageIDInMainFrameProcess());
 }
 
-std::optional<SharedPreferencesForWebProcess> RemoteMediaSessionCoordinatorProxy::sharedPreferencesForWebProcess() const
+std::optional<SharedPreferencesForWebProcess> RemoteMediaSessionCoordinatorProxy::sharedPreferencesForWebProcess(IPC::Connection& connection) const
 {
-    // FIXME: Remove SUPPRESS_UNCOUNTED_ARG once https://github.com/llvm/llvm-project/pull/111198 lands.
-    SUPPRESS_UNCOUNTED_ARG return m_webPageProxy->legacyMainFrameProcess().sharedPreferencesForWebProcess();
+    return WebProcessProxy::fromConnection(connection)->sharedPreferencesForWebProcess();
 }
 
 void RemoteMediaSessionCoordinatorProxy::join(MediaSessionCommandCompletionHandler&& completionHandler)

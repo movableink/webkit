@@ -36,7 +36,7 @@ public:
     { }
 
 private:
-    Ref<DocumentLoader> createDocumentLoader(const ResourceRequest&, const SubstituteData&) override;
+    Ref<DocumentLoader> createDocumentLoader(ResourceRequest&&, SubstituteData&&) override;
 
     bool hasWebView() const final;
 
@@ -126,21 +126,6 @@ private:
     void committedLoad(DocumentLoader*, const SharedBuffer&) final;
     void finishedLoading(DocumentLoader*) final;
 
-    ResourceError cancelledError(const ResourceRequest&) const final;
-    ResourceError blockedError(const ResourceRequest&) const final;
-    ResourceError blockedByContentBlockerError(const ResourceRequest&) const final;
-    ResourceError cannotShowURLError(const ResourceRequest&) const final;
-    ResourceError interruptedForPolicyChangeError(const ResourceRequest&) const final;
-#if ENABLE(CONTENT_FILTERING)
-    ResourceError blockedByContentFilterError(const ResourceRequest&) const final;
-#endif
-
-    ResourceError cannotShowMIMETypeError(const ResourceResponse&) const final;
-    ResourceError fileDoesNotExistError(const ResourceResponse&) const final;
-    ResourceError httpsUpgradeRedirectLoopError(const ResourceRequest&) const final;
-    ResourceError httpNavigationWithHTTPSOnlyError(const ResourceRequest&) const final;
-    ResourceError pluginWillHandleLoadError(const ResourceResponse&) const final;
-
     void loadStorageAccessQuirksIfNeeded() final;
 
     bool shouldFallBack(const ResourceError&) const final;
@@ -173,7 +158,10 @@ private:
 
     void updateGlobalHistory() final;
     void updateGlobalHistoryRedirectLinks() final;
-    bool shouldGoToHistoryItem(HistoryItem&) const final;
+    ShouldGoToHistoryItem shouldGoToHistoryItem(HistoryItem&, IsSameDocumentNavigation, ProcessSwapDisposition) const final;
+    bool supportsAsyncShouldGoToHistoryItem() const final;
+    void shouldGoToHistoryItemAsync(HistoryItem&, CompletionHandler<void(ShouldGoToHistoryItem)>&&) const final;
+
     void saveViewStateToItem(HistoryItem&) final;
     bool canCachePage() const final;
     void didDisplayInsecureContent() final;
@@ -191,7 +179,7 @@ private:
     RemoteAXObjectRef accessibilityRemoteObject() final;
     IntPoint accessibilityRemoteFrameOffset() final;
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    void setAXIsolatedTreeRoot(WebCore::AXCoreObject*) final;
+    void setIsolatedTree(Ref<WebCore::AXIsolatedTree>&&) final;
 #endif
     void willCacheResponse(DocumentLoader*, ResourceLoaderIdentifier, NSCachedURLResponse *, CompletionHandler<void(NSCachedURLResponse *)>&&) const final;
 #endif
@@ -209,6 +197,8 @@ private:
     bool hasFrameSpecificStorageAccess() final;
 
     void dispatchLoadEventToOwnerElementInAnotherProcess() final;
+
+    RefPtr<HistoryItem> createHistoryItemTree(bool, BackForwardItemIdentifier) const final;
 };
 
 } // namespace WebCore

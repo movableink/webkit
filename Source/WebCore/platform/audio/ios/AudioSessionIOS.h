@@ -65,6 +65,7 @@ private:
     String routingContextUID() const final;
     size_t preferredBufferSize() const final;
     void setPreferredBufferSize(size_t) final;
+    size_t outputLatency() const final;
     bool isMuted() const final;
     void handleMutedStateChange() final;
 
@@ -76,10 +77,13 @@ private:
     void setSoundStageSize(SoundStageSize) final;
     SoundStageSize soundStageSize() const final { return m_soundStageSize; }
 
-    String m_lastSetPreferredAudioDeviceUID;
+    String m_lastSetPreferredMicrophoneID;
     RetainPtr<WebInterruptionObserverHelper> m_interruptionObserverHelper;
     String m_sceneIdentifier;
     SoundStageSize m_soundStageSize { SoundStageSize::Automatic };
+#if PLATFORM(IOS_FAMILY_SIMULATOR)
+    bool m_isFakingPlayAndRecordForTesting { false };
+#endif
 };
 
 }

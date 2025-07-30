@@ -46,6 +46,10 @@
 #include <sys/mman.h>
 #endif
 
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/WTFConfigAdditions.h>
+#endif
+
 #include <mutex>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -71,7 +75,17 @@ void setPermissionsOfConfigPage()
         auto flags = VM_FLAGS_FIXED | VM_FLAGS_OVERWRITE | VM_FLAGS_PERMANENT;
 
         auto attemptVMMapping = [&] {
-            return mach_vm_map(mach_task_self(), &addr, ConfigSizeToProtect, pageSize() - 1, flags, MEMORY_OBJECT_NULL, 0, false, VM_PROT_READ | VM_PROT_WRITE, VM_PROT_READ | VM_PROT_WRITE, VM_INHERIT_DEFAULT);
+            constexpr size_t preWTFConfigSize = Gigacage::startOffsetOfGigacageConfig + Gigacage::reservedBytesForGigacageConfig;
+
+            // We may have potentially initialized some of g_config, namely the
+            // gigacage config, prior to reaching this function. We need to
+            // preserve these config contents across the mach_vm_map.
+            uint8_t preWTFConfigContents[preWTFConfigSize];
+            memcpySpan(std::span<uint8_t> { preWTFConfigContents, preWTFConfigSize }, std::span<uint8_t> { std::bit_cast<uint8_t*>(&WebConfig::g_config), preWTFConfigSize });
+            auto result = mach_vm_map(mach_task_self(), &addr, ConfigSizeToProtect, pageSize() - 1, flags, MEMORY_OBJECT_NULL, 0, false, VM_PROT_READ | VM_PROT_WRITE, VM_PROT_READ | VM_PROT_WRITE, VM_INHERIT_DEFAULT);
+            if (result == KERN_SUCCESS)
+                memcpySpan(std::span<uint8_t> { std::bit_cast<uint8_t*>(&WebConfig::g_config), preWTFConfigSize }, std::span<uint8_t> { preWTFConfigContents, preWTFConfigSize });
+            return result;
         };
 
         auto result = attemptVMMapping();
@@ -116,15 +130,33 @@ void Config::initialize()
     SignalHandlers::initialize();
 
     uint8_t* reservedConfigBytes = reinterpret_cast_ptr<uint8_t*>(WebConfig::g_config + WebConfig::reservedSlotsForExecutableAllocator);
-    reservedConfigBytes[WebConfig::ReservedByteForAllocationProfiling] = 0;
+
+#if USE(APPLE_INTERNAL_SDK)
+    WTF_INITIALIZE_ADDITIONAL_CONFIG();
+#endif
+
     const char* useAllocationProfilingRaw = getenv("JSC_useAllocationProfiling");
     if (useAllocationProfilingRaw) {
-        auto useAllocationProfiling = span(useAllocationProfilingRaw);
+        auto useAllocationProfiling = unsafeSpan(useAllocationProfilingRaw);
         if (equalLettersIgnoringASCIICase(useAllocationProfiling, "true"_s)
             || equalLettersIgnoringASCIICase(useAllocationProfiling, "yes"_s)
             || equal(useAllocationProfiling, "1"_s))
             reservedConfigBytes[WebConfig::ReservedByteForAllocationProfiling] = 1;
+        else if (equalLettersIgnoringASCIICase(useAllocationProfiling, "false"_s)
+            || equalLettersIgnoringASCIICase(useAllocationProfiling, "no"_s)
+            || equal(useAllocationProfiling, "0"_s))
+            reservedConfigBytes[WebConfig::ReservedByteForAllocationProfiling] = 0;
+
+        const char* useAllocationProfilingModeRaw = getenv("JSC_allocationProfilingMode");
+        if (useAllocationProfilingModeRaw && reservedConfigBytes[WebConfig::ReservedByteForAllocationProfiling] == 1) {
+            unsigned value { 0 };
+            if (sscanf(useAllocationProfilingModeRaw, "%u", &value) == 1) {
+                RELEASE_ASSERT(value <= 0xFF);
+                reservedConfigBytes[WebConfig::ReservedByteForAllocationProfilingMode] = static_cast<uint8_t>(value & 0xFF);
+            }
+        }
     }
+
 }
 
 void Config::finalize()

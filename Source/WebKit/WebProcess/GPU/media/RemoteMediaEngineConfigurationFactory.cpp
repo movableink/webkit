@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -91,6 +91,9 @@ GPUProcessConnection& RemoteMediaEngineConfigurationFactory::gpuProcessConnectio
 
 void RemoteMediaEngineConfigurationFactory::createDecodingConfiguration(MediaDecodingConfiguration&& configuration, MediaEngineConfigurationFactory::DecodingConfigurationCallback&& callback)
 {
+    if (!m_webProcess->mediaPlaybackEnabled())
+        return callback({ });
+
     gpuProcessConnection().connection().sendWithAsyncReply(Messages::RemoteMediaEngineConfigurationFactoryProxy::CreateDecodingConfiguration(WTFMove(configuration)), [callback = WTFMove(callback)] (MediaCapabilitiesDecodingInfo&& info) mutable {
         callback(WTFMove(info));
     });
@@ -98,6 +101,9 @@ void RemoteMediaEngineConfigurationFactory::createDecodingConfiguration(MediaDec
 
 void RemoteMediaEngineConfigurationFactory::createEncodingConfiguration(MediaEncodingConfiguration&& configuration, MediaEngineConfigurationFactory::EncodingConfigurationCallback&& callback)
 {
+    if (!m_webProcess->mediaPlaybackEnabled())
+        return callback({ });
+
     gpuProcessConnection().connection().sendWithAsyncReply(Messages::RemoteMediaEngineConfigurationFactoryProxy::CreateEncodingConfiguration(WTFMove(configuration)), [callback = WTFMove(callback)] (MediaCapabilitiesEncodingInfo&& info) mutable {
         callback(WTFMove(info));
     });

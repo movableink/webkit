@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2013 Google Inc. All rights reserved.
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -39,16 +39,17 @@
 #include "AudioTrackPrivate.h"
 #include "ContentType.h"
 #include "ContentTypeUtilities.h"
-#include "DeprecatedGlobalSettings.h"
 #include "DocumentInlines.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInterfaces.h"
 #include "HTMLMediaElement.h"
 #include "InbandTextTrack.h"
 #include "InbandTextTrackPrivate.h"
 #include "Logging.h"
 #include "ManagedMediaSource.h"
 #include "ManagedSourceBuffer.h"
+#include "MediaSourceConfiguration.h"
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
 #include "MediaSourceHandle.h"
 #endif
@@ -57,7 +58,7 @@
 #include "MediaStrategy.h"
 #include "PlatformStrategies.h"
 #include "Quirks.h"
-#include "ScriptExecutionContext.h"
+#include "ScriptExecutionContextInlines.h"
 #include "Settings.h"
 #include "SourceBuffer.h"
 #include "SourceBufferList.h"
@@ -67,13 +68,12 @@
 #include "VideoTrack.h"
 #include "VideoTrackList.h"
 #include "VideoTrackPrivate.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/NativePromise.h>
 #include <wtf/RunLoop.h>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -81,7 +81,7 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaSource);
 
 String convertEnumerationToString(MediaSourcePrivate::AddStatus enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 3> values {
         MAKE_STATIC_STRING_IMPL("Ok"),
         MAKE_STATIC_STRING_IMPL("NotSupported"),
         MAKE_STATIC_STRING_IMPL("ReachedIdLimit"),
@@ -95,7 +95,7 @@ String convertEnumerationToString(MediaSourcePrivate::AddStatus enumerationValue
 
 String convertEnumerationToString(MediaSourcePrivate::EndOfStreamStatus enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 3> values {
         MAKE_STATIC_STRING_IMPL("NoError"),
         MAKE_STATIC_STRING_IMPL("NetworkError"),
         MAKE_STATIC_STRING_IMPL("DecodeError"),
@@ -200,7 +200,7 @@ private:
     WeakPtr<MediaSource> m_parent;
     const ScriptExecutionContextIdentifier m_identifier;
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
 #endif
     mutable Lock m_lock;
     RefPtr<MediaSourcePrivate> m_private WTF_GUARDED_BY_LOCK(m_lock);
@@ -363,7 +363,7 @@ MediaTime MediaSource::duration() const
     // 1. If the readyState attribute is "closed" then return NaN and abort these steps.
     // 2. Return the current value of the attribute.
 
-    if (RefPtr msp = protectedPrivate())
+    if (RefPtr msp = m_private)
         return msp->duration();
     return MediaTime::invalidTime();
 }
@@ -373,7 +373,7 @@ MediaTime MediaSource::currentTime() const
     if (m_pendingSeekTarget)
         return m_pendingSeekTarget->time;
 
-    if (RefPtr msp = protectedPrivate())
+    if (RefPtr msp = m_private)
         return msp->currentTime();
     return MediaTime::zeroTime();
 }
@@ -390,7 +390,7 @@ Ref<MediaTimePromise> MediaSource::waitForTarget(const SeekTarget& target)
     // 2.4.3 Seeking
     // https://rawgit.com/w3c/media-source/45627646344eea0170dd1cbc5a3d508ca751abb8/media-source-respec.html#mediasource-seeking
 
-    RefPtr msp = protectedPrivate();
+    RefPtr msp = m_private;
     if (!msp)
         return MediaTimePromise::createAndReject(PlatformMediaError::SourceRemoved);
 
@@ -478,11 +478,11 @@ Ref<MediaPromise> MediaSource::seekToTime(const MediaTime& time)
     return MediaPromise::createAndResolve();
 }
 
-Ref<TimeRanges> MediaSource::seekable()
+PlatformTimeRanges MediaSource::seekable()
 {
-    if (RefPtr msp = protectedPrivate())
-        return TimeRanges::create(msp->seekable());
-    return TimeRanges::create();
+    if (RefPtr mediaSourcePrivate = m_private)
+        return mediaSourcePrivate->seekable();
+    return { };
 }
 
 ExceptionOr<void> MediaSource::setLiveSeekableRange(double start, double end)
@@ -766,7 +766,7 @@ void MediaSource::setReadyState(ReadyState state)
     if (oldState == state)
         return;
 
-    if (RefPtr msp = protectedPrivate())
+    if (RefPtr msp = m_private)
         msp->setReadyState(state);
 
     onReadyStateChange(oldState, readyState());
@@ -1313,7 +1313,7 @@ void MediaSource::detachFromElement()
     m_mediaElement = nullptr;
     m_isAttached = false;
 
-    if (RefPtr msp = protectedPrivate()) {
+    if (RefPtr msp = m_private) {
         msp->shutdown();
         setPrivate(nullptr);
     }
@@ -1422,8 +1422,9 @@ void MediaSource::onReadyStateChange(ReadyState oldState, ReadyState newState)
         // https://w3c.github.io/media-source/#htmlmediaelement-extensions-buffered
         for (auto& sourceBuffer : m_sourceBuffers.get())
             sourceBuffer->setMediaSourceEnded(true);
-        updateBufferedIfNeeded(true /* force */);
     }
+    if (newState == ReadyState::Ended || (newState == ReadyState::Open && oldState == ReadyState::Ended))
+        updateBufferedIfNeeded(true /* force */);
 
     // MediaSource's readyState transitions from "open" to "closed" or "ended" to "closed".
     if (oldState > ReadyState::Closed && newState == ReadyState::Closed) {
@@ -1455,7 +1456,10 @@ ExceptionOr<Ref<SourceBufferPrivate>> MediaSource::createSourceBufferPrivate(con
     Ref msp = protectedPrivate().releaseNonNull();
 
     RefPtr<SourceBufferPrivate> sourceBufferPrivate;
-    switch (msp->addSourceBuffer(type, DeprecatedGlobalSettings::webMParserEnabled(), sourceBufferPrivate)) {
+    MediaSourceConfiguration configuration = {
+        scriptExecutionContext()->settingsValues().textTracksInMSEEnabled
+    };
+    switch (msp->addSourceBuffer(type, configuration, sourceBufferPrivate)) {
     case MediaSourcePrivate::AddStatus::Ok:
         return sourceBufferPrivate.releaseNonNull();
     case MediaSourcePrivate::AddStatus::NotSupported:
@@ -1613,7 +1617,7 @@ void MediaSource::failedToCreateRenderer(RendererType type)
 
 void MediaSource::sourceBufferReceivedFirstInitializationSegmentChanged()
 {
-    RefPtr msp = protectedPrivate();
+    RefPtr msp = m_private;
 
     if (msp && msp->mediaPlayerReadyState() == MediaPlayer::ReadyState::HaveNothing) {
         // 6.1 If one or more objects in sourceBuffers have first initialization segment flag set to false, then abort these steps.
@@ -1629,7 +1633,7 @@ void MediaSource::sourceBufferReceivedFirstInitializationSegmentChanged()
 
 void MediaSource::sourceBufferActiveTrackFlagChanged(bool activeTrackFlag)
 {
-    if (RefPtr msp = protectedPrivate()) {
+    if (RefPtr msp = m_private) {
         if (activeTrackFlag && msp->mediaPlayerReadyState() > MediaPlayer::ReadyState::HaveCurrentData)
             setMediaPlayerReadyState(MediaPlayer::ReadyState::HaveMetadata);
     }
@@ -1637,7 +1641,7 @@ void MediaSource::sourceBufferActiveTrackFlagChanged(bool activeTrackFlag)
 
 void MediaSource::setMediaPlayerReadyState(MediaPlayer::ReadyState readyState)
 {
-    if (RefPtr msp = protectedPrivate())
+    if (RefPtr msp = m_private)
         msp->setMediaPlayerReadyState(readyState);
 }
 
@@ -1757,7 +1761,5 @@ bool MediaSource::canConstructInDedicatedWorker(ScriptExecutionContext& context)
 #endif
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(MEDIA_SOURCE)

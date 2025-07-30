@@ -35,6 +35,7 @@
 @class UIScrollView;
 @class UIViewController;
 @class WKFrameInfo;
+@class WKScrollGeometry;
 @class _WKContextMenuElementInfo;
 @class _WKActivatedElementInfo;
 @class _WKElementAction;
@@ -160,11 +161,13 @@ struct UIEdgeInsets;
 
 - (void)_webView:(WKWebView *)webView imageOrMediaDocumentSizeChanged:(CGSize)size WK_API_AVAILABLE(macos(10.12), ios(10.0));
 - (NSDictionary *)_dataDetectionContextForWebView:(WKWebView *)webView WK_API_AVAILABLE(macos(10.12), ios(10.0));
-- (void)_webView:(WKWebView *)webView includeSensitiveMediaDeviceDetails:(void (^)(BOOL includeSensitiveDetails))decisionHandler WK_API_AVAILABLE(macos(10.15), ios(13.0));
 - (void)_webView:(WKWebView *)webView requestDisplayCapturePermissionForOrigin:(WKSecurityOrigin *)securityOrigin initiatedByFrame:(WKFrameInfo *)frame withSystemAudio:(BOOL)withSystemAudio decisionHandler:(void (^)(WKDisplayCapturePermissionDecision decision))decisionHandler WK_API_AVAILABLE(macos(13.0), ios(16.0));
 - (void)_webView:(WKWebView *)webView requestUserMediaAuthorizationForDevices:(_WKCaptureDevices)devices url:(NSURL *)url mainFrameURL:(NSURL *)mainFrameURL decisionHandler:(void (^)(BOOL authorized))decisionHandler WK_API_AVAILABLE(macos(10.13), ios(11.0));
 - (void)_webView:(WKWebView *)webView decidePolicyForScreenCaptureUnmutingForOrigin:(WKSecurityOrigin *)origin initiatedByFrame:(WKFrameInfo *)frame decisionHandler:(void (^)(BOOL authorized))decisionHandler WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
+// This delegate is no longer called.
 - (void)_webView:(WKWebView *)webView checkUserMediaPermissionForURL:(NSURL *)url mainFrameURL:(NSURL *)mainFrameURL frameIdentifier:(NSUInteger)frameIdentifier decisionHandler:(void (^)(NSString *salt, BOOL authorized))decisionHandler WK_API_AVAILABLE(macos(10.12.4), ios(10.3));
+// This delegate is no longer called.
+- (void)_webView:(WKWebView *)webView includeSensitiveMediaDeviceDetails:(void (^)(BOOL includeSensitiveDetails))decisionHandler WK_API_AVAILABLE(macos(10.15), ios(13.0));
 - (void)_webView:(WKWebView *)webView mediaCaptureStateDidChange:(_WKMediaCaptureStateDeprecated)state WK_API_AVAILABLE(macos(10.13), ios(11.0));
 - (WKDragDestinationAction)_webView:(WKWebView *)webView dragDestinationActionMaskForDraggingInfo:(id)draggingInfo WK_API_AVAILABLE(macos(10.13), ios(11.0));
 - (void)_webView:(WKWebView *)webView createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration forNavigationAction:(WKNavigationAction *)navigationAction windowFeatures:(WKWindowFeatures *)windowFeatures completionHandler:(void (^)(WKWebView *webView))completionHandler WK_API_AVAILABLE(macos(10.13), ios(11.0));
@@ -211,7 +214,6 @@ struct UIEdgeInsets;
 - (void)_webView:(WKWebView *)webView requestCookieConsentWithMoreInfoHandler:(void (^)(void))moreInfoHandler decisionHandler:(void (^)(BOOL))decisionHandler WK_API_AVAILABLE(macos(13.0), ios(16.0));
 
 - (void)_webView:(WKWebView *)webView updatedAppBadge:(NSNumber *)badge fromSecurityOrigin:(WKSecurityOrigin *)origin WK_API_AVAILABLE(macos(13.3), ios(16.4));
-- (void)_webView:(WKWebView *)webView updatedClientBadge:(NSNumber *)badge fromSecurityOrigin:(WKSecurityOrigin *)origin WK_API_AVAILABLE(macos(13.3), ios(16.4));
 
 - (void)_webView:(WKWebView *)webView didAdjustVisibilityWithSelectors:(NSArray<NSString *> *)selectors WK_API_AVAILABLE(macos(15.0), ios(18.0), visionos(2.0));
 

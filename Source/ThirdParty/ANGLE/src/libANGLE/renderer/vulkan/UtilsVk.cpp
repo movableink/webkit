@@ -520,35 +520,6 @@ void SetStencilDynamicStateForUnused(vk::Renderer *renderer,
     commandBuffer->setStencilReference(0x00, 0x00);
 }
 
-void HandlePrimitiveRestart(ContextVk *contextVk,
-                            gl::DrawElementsType glIndexType,
-                            GLsizei indexCount,
-                            const uint8_t *srcPtr,
-                            uint8_t *outPtr)
-{
-    switch (glIndexType)
-    {
-        case gl::DrawElementsType::UnsignedByte:
-            if (contextVk->getFeatures().supportsIndexTypeUint8.enabled)
-            {
-                CopyLineLoopIndicesWithRestart<uint8_t, uint8_t>(indexCount, srcPtr, outPtr);
-            }
-            else
-            {
-                CopyLineLoopIndicesWithRestart<uint8_t, uint16_t>(indexCount, srcPtr, outPtr);
-            }
-            break;
-        case gl::DrawElementsType::UnsignedShort:
-            CopyLineLoopIndicesWithRestart<uint16_t, uint16_t>(indexCount, srcPtr, outPtr);
-            break;
-        case gl::DrawElementsType::UnsignedInt:
-            CopyLineLoopIndicesWithRestart<uint32_t, uint32_t>(indexCount, srcPtr, outPtr);
-            break;
-        default:
-            UNREACHABLE();
-    }
-}
-
 namespace unresolve
 {
 // The unresolve shader looks like the following, based on the number and types of unresolve
@@ -1141,7 +1112,7 @@ angle::spirv::Blob MakeFragShader(
 }  // namespace unresolve
 
 angle::Result GetUnresolveFrag(
-    vk::Context *context,
+    vk::ErrorContext *context,
     uint32_t colorAttachmentCount,
     gl::DrawBuffersArray<UnresolveColorAttachmentType> &colorAttachmentTypes,
     bool unresolveDepth,
@@ -1325,7 +1296,7 @@ void UtilsVk::destroy(ContextVk *contextVk)
             descriptorSetLayout.reset();
         }
         mPipelineLayouts[f].reset();
-        mDescriptorPools[f].destroy(renderer);
+        mDescriptorPools[f].destroy(device);
     }
 
     for (auto &item : mImageCopyWithSamplerPipelineLayouts)
@@ -1337,40 +1308,28 @@ void UtilsVk::destroy(ContextVk *contextVk)
             descriptorSetLayout.reset();
         }
         mImageCopyWithSamplerPipelineLayouts[samplerDesc].reset();
-        mImageCopyWithSamplerDescriptorPools[samplerDesc].destroy(renderer);
+        mImageCopyWithSamplerDescriptorPools[samplerDesc].destroy(device);
     }
 
     for (ComputeShaderProgramAndPipelines &programAndPipelines : mConvertIndex)
     {
         programAndPipelines.program.destroy(renderer);
-        for (vk::PipelineHelper &pipeline : programAndPipelines.pipelines)
-        {
-            pipeline.destroy(device);
-        }
+        programAndPipelines.pipelines.destroy(contextVk);
     }
     for (ComputeShaderProgramAndPipelines &programAndPipelines : mConvertIndirectLineLoop)
     {
         programAndPipelines.program.destroy(renderer);
-        for (vk::PipelineHelper &pipeline : programAndPipelines.pipelines)
-        {
-            pipeline.destroy(device);
-        }
+        programAndPipelines.pipelines.destroy(contextVk);
     }
     for (ComputeShaderProgramAndPipelines &programAndPipelines : mConvertIndexIndirectLineLoop)
     {
         programAndPipelines.program.destroy(renderer);
-        for (vk::PipelineHelper &pipeline : programAndPipelines.pipelines)
-        {
-            pipeline.destroy(device);
-        }
+        programAndPipelines.pipelines.destroy(contextVk);
     }
     for (ComputeShaderProgramAndPipelines &programAndPipelines : mConvertVertex)
     {
         programAndPipelines.program.destroy(renderer);
-        for (vk::PipelineHelper &pipeline : programAndPipelines.pipelines)
-        {
-            pipeline.destroy(device);
-        }
+        programAndPipelines.pipelines.destroy(contextVk);
     }
     mImageClearVSOnly.program.destroy(renderer);
     mImageClearVSOnly.pipelines.destroy(contextVk);
@@ -1395,10 +1354,7 @@ void UtilsVk::destroy(ContextVk *contextVk)
     for (ComputeShaderProgramAndPipelines &programAndPipelines : mCopyImageToBuffer)
     {
         programAndPipelines.program.destroy(renderer);
-        for (vk::PipelineHelper &pipeline : programAndPipelines.pipelines)
-        {
-            pipeline.destroy(device);
-        }
+        programAndPipelines.pipelines.destroy(contextVk);
     }
     for (GraphicsShaderProgramAndPipelines &programAndPipelines : mBlitResolve)
     {
@@ -1413,10 +1369,7 @@ void UtilsVk::destroy(ContextVk *contextVk)
     for (ComputeShaderProgramAndPipelines &programAndPipelines : mBlitResolveStencilNoExport)
     {
         programAndPipelines.program.destroy(renderer);
-        for (vk::PipelineHelper &pipeline : programAndPipelines.pipelines)
-        {
-            pipeline.destroy(device);
-        }
+        programAndPipelines.pipelines.destroy(contextVk);
     }
     mExportStencil.program.destroy(renderer);
     mExportStencil.pipelines.destroy(contextVk);
@@ -1425,18 +1378,12 @@ void UtilsVk::destroy(ContextVk *contextVk)
     for (ComputeShaderProgramAndPipelines &programAndPipelines : mGenerateMipmap)
     {
         programAndPipelines.program.destroy(renderer);
-        for (vk::PipelineHelper &pipeline : programAndPipelines.pipelines)
-        {
-            pipeline.destroy(device);
-        }
+        programAndPipelines.pipelines.destroy(contextVk);
     }
     for (ComputeShaderProgramAndPipelines &programAndPipelines : mEtcToBc)
     {
         programAndPipelines.program.destroy(renderer);
-        for (vk::PipelineHelper &pipeline : programAndPipelines.pipelines)
-        {
-            pipeline.destroy(device);
-        }
+        programAndPipelines.pipelines.destroy(contextVk);
     }
     for (auto &programIter : mUnresolve)
     {
@@ -1446,21 +1393,13 @@ void UtilsVk::destroy(ContextVk *contextVk)
     }
     mUnresolve.clear();
 
-    for (auto &shaderIter : mUnresolveFragShaders)
-    {
-        vk::ShaderModulePtr &shader = shaderIter.second;
-        shader->destroy(device);
-    }
     mUnresolveFragShaders.clear();
 
     mPointSampler.destroy(device);
     mLinearSampler.destroy(device);
 
     mGenerateFragmentShadingRateAttachment.program.destroy(renderer);
-    for (vk::PipelineHelper &pipeline : mGenerateFragmentShadingRateAttachment.pipelines)
-    {
-        pipeline.destroy(device);
-    }
+    mGenerateFragmentShadingRateAttachment.pipelines.destroy(contextVk);
 }
 
 angle::Result UtilsVk::ensureResourcesInitialized(ContextVk *contextVk,
@@ -3072,17 +3011,17 @@ angle::Result UtilsVk::blitResolveImpl(ContextVk *contextVk,
     if (blitColor)
     {
         imageInfos[0].imageView   = srcColorView->getHandle();
-        imageInfos[0].imageLayout = src->getCurrentLayout(renderer);
+        imageInfos[0].imageLayout = src->getCurrentLayout();
     }
     if (blitDepth)
     {
         imageInfos[0].imageView   = srcDepthView->getHandle();
-        imageInfos[0].imageLayout = src->getCurrentLayout(renderer);
+        imageInfos[0].imageLayout = src->getCurrentLayout();
     }
     if (blitStencil)
     {
         imageInfos[1].imageView   = srcStencilView->getHandle();
-        imageInfos[1].imageLayout = src->getCurrentLayout(renderer);
+        imageInfos[1].imageLayout = src->getCurrentLayout();
     }
 
     VkDescriptorImageInfo samplerInfo = {};
@@ -3225,6 +3164,7 @@ angle::Result UtilsVk::stencilBlitResolveNoShaderExport(ContextVk *contextVk,
     shaderParams.invSrcExtent[1] = 1.0f / params.srcExtents[1];
     shaderParams.srcLayer        = params.srcLayer;
     shaderParams.srcWidth        = params.srcExtents[0];
+    shaderParams.srcHeight       = params.srcExtents[1];
     shaderParams.dstPitch        = bufferRowLengthInUints;
     shaderParams.blitArea[0]     = params.blitArea.x;
     shaderParams.blitArea[1]     = params.blitArea.y;
@@ -3292,7 +3232,7 @@ angle::Result UtilsVk::stencilBlitResolveNoShaderExport(ContextVk *contextVk,
     // Blit/resolve stencil into the buffer.
     VkDescriptorImageInfo imageInfo = {};
     imageInfo.imageView             = srcStencilView->getHandle();
-    imageInfo.imageLayout           = src->getCurrentLayout(renderer);
+    imageInfo.imageLayout           = src->getCurrentLayout();
 
     VkDescriptorBufferInfo bufferInfo = {};
     bufferInfo.buffer                 = blitBuffer.get().getBuffer().getHandle();
@@ -3364,7 +3304,7 @@ angle::Result UtilsVk::stencilBlitResolveNoShaderExport(ContextVk *contextVk,
 
     commandBuffer->copyBufferToImage(blitBuffer.get().getBuffer().getHandle(),
                                      depthStencilImage->getImage(),
-                                     depthStencilImage->getCurrentLayout(renderer), 1, &region);
+                                     depthStencilImage->getCurrentLayout(), 1, &region);
 
     return angle::Result::Continue;
 }
@@ -3524,7 +3464,7 @@ angle::Result UtilsVk::copyImage(ContextVk *contextVk,
 
     VkDescriptorImageInfo imageInfo = {};
     imageInfo.imageView             = srcView->getHandle();
-    imageInfo.imageLayout           = src->getCurrentLayout(renderer);
+    imageInfo.imageLayout           = src->getCurrentLayout();
 
     VkWriteDescriptorSet writeInfo = {};
     writeInfo.sType                = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -3703,7 +3643,7 @@ angle::Result UtilsVk::copyImageBits(ContextVk *contextVk,
     srcRegion.imageExtent.height              = params.copyExtents[1];
     srcRegion.imageExtent.depth               = isSrc3D ? params.copyExtents[2] : 1;
 
-    commandBuffer->copyImageToBuffer(src->getImage(), src->getCurrentLayout(renderer),
+    commandBuffer->copyImageToBuffer(src->getImage(), src->getCurrentLayout(),
                                      srcBuffer.get().getBuffer().getHandle(), 1, &srcRegion);
 
     // Add a barrier prior to dispatch call.
@@ -3828,7 +3768,7 @@ angle::Result UtilsVk::copyImageBits(ContextVk *contextVk,
     dstRegion.imageExtent.depth               = isDst3D ? params.copyExtents[2] : 1;
 
     commandBuffer->copyBufferToImage(dstBuffer.get().getBuffer().getHandle(), dst->getImage(),
-                                     dst->getCurrentLayout(renderer), 1, &dstRegion);
+                                     dst->getCurrentLayout(), 1, &dstRegion);
 
     return angle::Result::Continue;
 }
@@ -3838,7 +3778,6 @@ angle::Result UtilsVk::copyImageToBuffer(ContextVk *contextVk,
                                          vk::ImageHelper *src,
                                          const CopyImageToBufferParameters &params)
 {
-    vk::Renderer *renderer = contextVk->getRenderer();
     ANGLE_TRY(ensureCopyImageToBufferResourcesInitialized(contextVk));
 
     const angle::Format &srcFormat = src->getActualFormat();
@@ -3887,7 +3826,7 @@ angle::Result UtilsVk::copyImageToBuffer(ContextVk *contextVk,
     ANGLE_TRY(src->initReinterpretedLayerImageView(
         contextVk, textureType, src->getAspectFlags(), swizzle, &srcView.get(), params.srcMip, 1,
         textureType == gl::TextureType::_2D ? params.srcLayer : 0, 1, VK_IMAGE_USAGE_SAMPLED_BIT,
-        linearFormat));
+        linearFormat, GL_NONE));
 
     vk::CommandBufferAccess access;
     access.onImageComputeShaderRead(src->getAspectFlags(), src);
@@ -3905,7 +3844,7 @@ angle::Result UtilsVk::copyImageToBuffer(ContextVk *contextVk,
 
     VkDescriptorImageInfo imageInfo = {};
     imageInfo.imageView             = srcView.get().getHandle();
-    imageInfo.imageLayout           = src->getCurrentLayout(renderer);
+    imageInfo.imageLayout           = src->getCurrentLayout();
 
     VkDescriptorBufferInfo bufferInfo = {};
     bufferInfo.buffer                 = dst->getBuffer().getHandle();
@@ -4121,7 +4060,7 @@ angle::Result UtilsVk::transCodeEtcToBc(ContextVk *contextVk,
         ANGLE_TRY(dstImage->initReinterpretedLayerImageView(
             contextVk, gl::TextureType::_2D, VK_IMAGE_ASPECT_COLOR_BIT, gl::SwizzleState(),
             &scopedImageView.get(), dstLevel, 1, copyRegion->imageSubresource.baseArrayLayer + i, 1,
-            VK_IMAGE_USAGE_STORAGE_BIT, GetCompactibleUINTFormat(intendedFormat)));
+            VK_IMAGE_USAGE_STORAGE_BIT, GetCompactibleUINTFormat(intendedFormat), GL_NONE));
         imageInfo.imageView = scopedImageView.get().getHandle();
 
         VkDescriptorSet descriptorSet;
@@ -4156,8 +4095,6 @@ angle::Result UtilsVk::generateMipmap(ContextVk *contextVk,
                                       const vk::Sampler &sampler,
                                       const GenerateMipmapParameters &params)
 {
-    vk::Renderer *renderer = contextVk->getRenderer();
-
     ANGLE_TRY(ensureGenerateMipmapResourcesInitialized(contextVk));
 
     const gl::Extents &srcExtents = src->getLevelExtents(vk::LevelIndex(params.srcLevel));
@@ -4186,12 +4123,12 @@ angle::Result UtilsVk::generateMipmap(ContextVk *contextVk,
     for (uint32_t level = 0; level < kGenerateMipmapMaxLevels; ++level)
     {
         destImageInfos[level].imageView   = destLevelViews[level]->getHandle();
-        destImageInfos[level].imageLayout = dst->getCurrentLayout(renderer);
+        destImageInfos[level].imageLayout = dst->getCurrentLayout();
     }
 
     VkDescriptorImageInfo srcImageInfo = {};
     srcImageInfo.imageView             = srcLevelZeroView->getHandle();
-    srcImageInfo.imageLayout           = src->getCurrentLayout(renderer);
+    srcImageInfo.imageLayout           = src->getCurrentLayout();
     srcImageInfo.sampler               = sampler.getHandle();
 
     VkWriteDescriptorSet writeInfos[2] = {};
@@ -4374,12 +4311,12 @@ angle::Result UtilsVk::generateMipmapWithDraw(ContextVk *contextVk,
             vk::ImageView srcImageView;
             ANGLE_TRY(image->initReinterpretedLayerImageView(
                 contextVk, textureType, image->getAspectFlags(), swizzle, &srcImageView, srcLevelVk,
-                1, currentLayer, 1, imageUsageFlags, actualFormatID));
+                1, currentLayer, 1, imageUsageFlags, actualFormatID, GL_NONE));
 
             vk::ImageView dstImageView;
             ANGLE_TRY(image->initReinterpretedLayerImageView(
                 contextVk, textureType, image->getAspectFlags(), swizzle, &dstImageView, dstLevelVk,
-                1, currentLayer, 1, imageUsageFlags, actualFormatID));
+                1, currentLayer, 1, imageUsageFlags, actualFormatID, GL_NONE));
 
             vk::RenderPassCommandBuffer *commandBuffer = nullptr;
             ANGLE_TRY(startRenderPass(contextVk, image, &dstImageView, renderPassDesc, renderArea,
@@ -4769,7 +4706,7 @@ angle::Result UtilsVk::drawOverlay(ContextVk *contextVk,
 
     VkDescriptorImageInfo imageInfo = {};
     imageInfo.imageView             = fontView->getHandle();
-    imageInfo.imageLayout           = font->getCurrentLayout(renderer);
+    imageInfo.imageLayout           = font->getCurrentLayout();
 
     VkDescriptorBufferInfo bufferInfos[2] = {};
     bufferInfos[0].buffer                 = textWidgetsBuffer->getBuffer().getHandle();
@@ -4888,8 +4825,7 @@ angle::Result UtilsVk::generateFragmentShadingRate(
     VkDescriptorImageInfo destShadingRateImage = {};
     destShadingRateImage.imageView =
         shadingRateAttachmentImageViewHelper->getFragmentShadingRateImageView().getHandle();
-    destShadingRateImage.imageLayout =
-        shadingRateAttachmentImageHelper->getCurrentLayout(contextVk->getRenderer());
+    destShadingRateImage.imageLayout   = shadingRateAttachmentImageHelper->getCurrentLayout();
     destShadingRateImage.sampler       = mPointSampler.getHandle();
     VkWriteDescriptorSet writeInfos[1] = {};
     writeInfos[0].sType                = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -5017,11 +4953,11 @@ angle::Result LineLoopHelper::getIndexBufferForElementArrayBuffer(ContextVk *con
         ANGLE_TRACE_EVENT0("gpu.angle", "LineLoopHelper::getIndexBufferForElementArrayBuffer");
 
         void *srcDataMapping = nullptr;
-        ANGLE_TRY(elementArrayBufferVk->mapImpl(contextVk, GL_MAP_READ_BIT, &srcDataMapping));
+        ANGLE_TRY(elementArrayBufferVk->mapForReadAccessOnly(contextVk, &srcDataMapping));
         ANGLE_TRY(streamIndices(contextVk, glIndexType, indexCount,
                                 static_cast<const uint8_t *>(srcDataMapping) + elementArrayOffset,
                                 bufferOut, indexCountOut));
-        ANGLE_TRY(elementArrayBufferVk->unmapImpl(contextVk));
+        ANGLE_TRY(elementArrayBufferVk->unmapReadAccessOnly(contextVk));
         return angle::Result::Continue;
     }
 
@@ -5083,7 +5019,8 @@ angle::Result LineLoopHelper::streamIndices(ContextVk *contextVk,
 
     if (contextVk->getState().isPrimitiveRestartEnabled())
     {
-        HandlePrimitiveRestart(contextVk, glIndexType, indexCount, srcPtr, indices);
+        rx::StreamEmulatedLineLoopIndices(glIndexType, indexCount, srcPtr, indices,
+                                          !contextVk->getFeatures().supportsIndexTypeUint8.enabled);
     }
     else
     {
@@ -5210,8 +5147,8 @@ angle::Result LineLoopHelper::streamArrayIndirect(ContextVk *contextVk,
 
 void LineLoopHelper::release(ContextVk *contextVk)
 {
-    mDynamicIndexBuffer.release(contextVk->getRenderer());
-    mDynamicIndirectBuffer.release(contextVk->getRenderer());
+    mDynamicIndexBuffer.release(contextVk);
+    mDynamicIndirectBuffer.release(contextVk);
 }
 
 void LineLoopHelper::destroy(vk::Renderer *renderer)

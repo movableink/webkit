@@ -27,24 +27,23 @@
 
 #if ENABLE(MULTI_REPRESENTATION_HEIC)
 
+#import "AppKitSPI.h"
 #import "DragAndDropSimulator.h"
 #import "PlatformUtilities.h"
 #import "TestInputDelegate.h"
 #import "TestWKWebView.h"
+#import "UIKitSPIForTesting.h"
 #import <CoreText/CTAdaptiveImageGlyphPriv.h>
 #import <UIFoundation/NSAdaptiveImageGlyph.h>
 #import <UIFoundation/NSAttributedString_Private.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <WebCore/FontCocoa.h>
+#import <WebKit/WKPreferencesPrivate.h>
+#import <WebKit/WKPreferencesRefPrivate.h>
 #import <WebKit/WebKitPrivate.h>
 #import <pal/spi/cocoa/NSAttributedStringSPI.h>
 #import <pal/spi/cocoa/UIFoundationSPI.h>
-
-#if PLATFORM(IOS_FAMILY)
-#import <UIKit/UITextInput_Private.h>
-#else
-#import <AppKit/NSTextInputClient_Private.h>
-#endif
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 #if USE(APPKIT)
 
@@ -64,10 +63,17 @@ static NSData *readRTFDataFromPasteboard()
 
 #endif
 
+RetainPtr<NSAdaptiveImageGlyph> createAdaptiveImageGlyphForTesting()
+{
+    RetainPtr data = [NSData dataWithContentsOfURL:[NSBundle.test_resourcesBundle URLForResource:@"adaptive-image-glyph" withExtension:@"heic"]];
+    return adoptNS([[NSAdaptiveImageGlyph alloc] initWithImageContent:data.get()]);
+}
+
 @interface AdaptiveImageGlyphWKWebView : TestWKWebView<WKUIDelegatePrivate>
 - (void)focusElementAndEnsureEditorStateUpdate:(NSString *)element;
 - (BOOL)canInsertAdaptiveImageGlyphs;
 - (NSAttributedString *)contentsAsAttributedString;
+- (void)waitForAdaptiveImageGlyphToLoad;
 
 @property (nonatomic, readonly) NSArray<_WKAttachment *> *insertedAttachments;
 @property (nonatomic, readonly) NSArray<_WKAttachment *> *removedAttachments;
@@ -162,6 +168,16 @@ static NSData *readRTFDataFromPasteboard()
     }];
     TestWebKitAPI::Util::run(&finished);
     return result.autorelease();
+}
+
+- (void)waitForAdaptiveImageGlyphToLoad
+{
+    do {
+        if ([self stringByEvaluatingJavaScript:@"document.querySelector('img').complete"].boolValue)
+            break;
+
+        TestWebKitAPI::Util::runFor(0.1_s);
+    } while (true);
 }
 
 @end
@@ -280,9 +296,7 @@ TEST(AdaptiveImageGlyph, InsertAdaptiveImageGlyphAsPictureElement)
     [webView synchronouslyLoadHTMLString:@"<body></body>"];
     [webView focusElementAndEnsureEditorStateUpdate:@"document.body"];
 
-    RetainPtr adaptiveImageGlyphData = [NSData dataWithContentsOfURL:[NSBundle.test_resourcesBundle URLForResource:@"adaptive-image-glyph" withExtension:@"heic"]];
-
-    RetainPtr adaptiveImageGlyph = adoptNS([[NSAdaptiveImageGlyph alloc] initWithImageContent:adaptiveImageGlyphData.get()]);
+    RetainPtr adaptiveImageGlyph = createAdaptiveImageGlyphForTesting();
 
     [webView insertAdaptiveImageGlyph:adaptiveImageGlyph.get()];
 
@@ -323,9 +337,7 @@ TEST(AdaptiveImageGlyph, InsertAdaptiveImageGlyphAtLargerFontSize)
     [webView synchronouslyLoadHTMLString:@"<body style='font-size: 64px;'></body>"];
     [webView focusElementAndEnsureEditorStateUpdate:@"document.body"];
 
-    RetainPtr adaptiveImageGlyphData = [NSData dataWithContentsOfURL:[NSBundle.test_resourcesBundle URLForResource:@"adaptive-image-glyph" withExtension:@"heic"]];
-
-    RetainPtr adaptiveImageGlyph = adoptNS([[NSAdaptiveImageGlyph alloc] initWithImageContent:adaptiveImageGlyphData.get()]);
+    RetainPtr adaptiveImageGlyph = createAdaptiveImageGlyphForTesting();
 
     [webView insertAdaptiveImageGlyph:adaptiveImageGlyph.get()];
     [webView waitForNextPresentationUpdate];
@@ -354,9 +366,7 @@ TEST(AdaptiveImageGlyph, InsertAdaptiveImageGlyphMatchStyle)
         "})();";
     [webView stringByEvaluatingJavaScript:setSelectionJavaScript];
 
-    RetainPtr adaptiveImageGlyphData = [NSData dataWithContentsOfURL:[NSBundle.test_resourcesBundle URLForResource:@"adaptive-image-glyph" withExtension:@"heic"]];
-
-    RetainPtr adaptiveImageGlyph = adoptNS([[NSAdaptiveImageGlyph alloc] initWithImageContent:adaptiveImageGlyphData.get()]);
+    RetainPtr adaptiveImageGlyph = createAdaptiveImageGlyphForTesting();
 
     [webView insertAdaptiveImageGlyph:adaptiveImageGlyph.get()];
     [webView waitForNextPresentationUpdate];
@@ -375,9 +385,7 @@ TEST(AdaptiveImageGlyph, InsertAndRemoveWKAttachments)
     [webView synchronouslyLoadHTMLString:@"<body></body>"];
     [webView focusElementAndEnsureEditorStateUpdate:@"document.body"];
 
-    RetainPtr adaptiveImageGlyphData = [NSData dataWithContentsOfURL:[NSBundle.test_resourcesBundle URLForResource:@"adaptive-image-glyph" withExtension:@"heic"]];
-
-    RetainPtr adaptiveImageGlyph = adoptNS([[NSAdaptiveImageGlyph alloc] initWithImageContent:adaptiveImageGlyphData.get()]);
+    RetainPtr adaptiveImageGlyph = createAdaptiveImageGlyphForTesting();
 
     [webView insertAdaptiveImageGlyph:adaptiveImageGlyph.get()];
     [webView waitForNextPresentationUpdate];
@@ -429,9 +437,7 @@ TEST(AdaptiveImageGlyph, InsertAndRemoveWKAttachments)
 
 TEST(AdaptiveImageGlyph, InsertWKAttachmentsOnPaste)
 {
-    RetainPtr adaptiveImageGlyphData = [NSData dataWithContentsOfURL:[NSBundle.test_resourcesBundle URLForResource:@"adaptive-image-glyph" withExtension:@"heic"]];
-
-    RetainPtr adaptiveImageGlyph = adoptNS([[NSAdaptiveImageGlyph alloc] initWithImageContent:adaptiveImageGlyphData.get()]);
+    RetainPtr adaptiveImageGlyph = createAdaptiveImageGlyphForTesting();
 
     RetainPtr font = [WebCore::CocoaFont systemFontOfSize:16];
 
@@ -499,12 +505,10 @@ TEST(AdaptiveImageGlyph, InsertWKAttachmentsCopyFromWebViewPasteToWebView)
     [copyWebView synchronouslyLoadHTMLString:@"<body></body>"];
     [copyWebView focusElementAndEnsureEditorStateUpdate:@"document.body"];
 
-    RetainPtr adaptiveImageGlyphData = [NSData dataWithContentsOfURL:[NSBundle.test_resourcesBundle URLForResource:@"adaptive-image-glyph" withExtension:@"heic"]];
-
-    RetainPtr adaptiveImageGlyph = adoptNS([[NSAdaptiveImageGlyph alloc] initWithImageContent:adaptiveImageGlyphData.get()]);
+    RetainPtr adaptiveImageGlyph = createAdaptiveImageGlyphForTesting();
 
     [copyWebView insertAdaptiveImageGlyph:adaptiveImageGlyph.get()];
-    [copyWebView waitForNextPresentationUpdate];
+    [copyWebView waitForAdaptiveImageGlyphToLoad];
 
     [copyWebView selectAll:nil];
     [copyWebView _synchronouslyExecuteEditCommand:@"Copy" argument:nil];
@@ -566,9 +570,7 @@ TEST(AdaptiveImageGlyph, InsertWKAttachmentsMovingParagraphs)
     "})();";
     [webView stringByEvaluatingJavaScript:setSelectionJavaScript];
 
-    RetainPtr adaptiveImageGlyphData = [NSData dataWithContentsOfURL:[NSBundle.test_resourcesBundle URLForResource:@"adaptive-image-glyph" withExtension:@"heic"]];
-
-    RetainPtr adaptiveImageGlyph = adoptNS([[NSAdaptiveImageGlyph alloc] initWithImageContent:adaptiveImageGlyphData.get()]);
+    RetainPtr adaptiveImageGlyph = createAdaptiveImageGlyphForTesting();
 
     [webView insertAdaptiveImageGlyph:adaptiveImageGlyph.get()];
     [webView waitForNextPresentationUpdate];
@@ -620,9 +622,7 @@ TEST(AdaptiveImageGlyph, InsertMultiple)
     "})();";
     [webView stringByEvaluatingJavaScript:setSelectionJavaScript];
 
-    RetainPtr adaptiveImageGlyphData = [NSData dataWithContentsOfURL:[NSBundle.test_resourcesBundle URLForResource:@"adaptive-image-glyph" withExtension:@"heic"]];
-
-    RetainPtr adaptiveImageGlyph = adoptNS([[NSAdaptiveImageGlyph alloc] initWithImageContent:adaptiveImageGlyphData.get()]);
+    RetainPtr adaptiveImageGlyph = createAdaptiveImageGlyphForTesting();
 
     [webView insertAdaptiveImageGlyph:adaptiveImageGlyph.get()];
     [webView insertAdaptiveImageGlyph:adaptiveImageGlyph.get()];
@@ -682,9 +682,7 @@ TEST(AdaptiveImageGlyph, InsertTextAfterAdaptiveImageGlyph)
     [webView synchronouslyLoadHTMLString:@"<body></body>"];
     [webView focusElementAndEnsureEditorStateUpdate:@"document.body"];
 
-    RetainPtr adaptiveImageGlyphData = [NSData dataWithContentsOfURL:[NSBundle.test_resourcesBundle URLForResource:@"adaptive-image-glyph" withExtension:@"heic"]];
-
-    RetainPtr adaptiveImageGlyph = adoptNS([[NSAdaptiveImageGlyph alloc] initWithImageContent:adaptiveImageGlyphData.get()]);
+    RetainPtr adaptiveImageGlyph = createAdaptiveImageGlyphForTesting();
 
     [webView insertAdaptiveImageGlyph:adaptiveImageGlyph.get()];
 
@@ -704,6 +702,12 @@ TEST(AdaptiveImageGlyph, InsertTextAfterAdaptiveImageGlyph)
 TEST(AdaptiveImageGlyph, CopyRTF)
 {
     auto webView = adoptNS([[AdaptiveImageGlyphWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
+
+#if PLATFORM(IOS_FAMILY)
+    auto preferences = (__bridge WKPreferencesRef)[[webView configuration] preferences];
+    WKPreferencesSetWriteRichTextDataWhenCopyingOrDragging(preferences, true);
+#endif
+
     [webView _setEditable:YES];
 
     [webView synchronouslyLoadHTMLString:@"<body></body>"];
@@ -746,9 +750,7 @@ TEST(AdaptiveImageGlyph, ContentsAsAttributedString)
     [webView synchronouslyLoadHTMLString:@"<body></body>"];
     [webView focusElementAndEnsureEditorStateUpdate:@"document.body"];
 
-    RetainPtr adaptiveImageGlyphData = [NSData dataWithContentsOfURL:[NSBundle.test_resourcesBundle URLForResource:@"adaptive-image-glyph" withExtension:@"heic"]];
-
-    RetainPtr adaptiveImageGlyph = adoptNS([[NSAdaptiveImageGlyph alloc] initWithImageContent:adaptiveImageGlyphData.get()]);
+    RetainPtr adaptiveImageGlyph = createAdaptiveImageGlyphForTesting();
 
     [webView insertAdaptiveImageGlyph:adaptiveImageGlyph.get()];
     [webView waitForNextPresentationUpdate];
@@ -769,13 +771,9 @@ TEST(AdaptiveImageGlyph, ContentsAsAttributedString)
 
 #if HAVE(NS_EMOJI_IMAGE_STRIKE_PROVENANCE)
             RetainPtr<NSDictionary> provenance = [adaptiveImageGlyph strikes].firstObject.provenance;
-
-            // FIXME: Remove the conditional once rdar://137757841 is in a build.
-            if ([provenance count]) {
-                EXPECT_WK_STREQ([provenance objectForKey:(__bridge NSString *)kCGImagePropertyIPTCCredit], "Apple Image Playground");
-                EXPECT_WK_STREQ([provenance objectForKey:(__bridge NSString *)kCGImagePropertyIPTCExtDigitalSourceType], "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia");
-                EXPECT_TRUE([provenance isEqualToDictionary:[value strikes].firstObject.provenance]);
-            }
+            EXPECT_WK_STREQ([provenance objectForKey:(__bridge NSString *)kCGImagePropertyIPTCCredit], "Apple Image Playground");
+            EXPECT_WK_STREQ([provenance objectForKey:(__bridge NSString *)kCGImagePropertyIPTCExtDigitalSourceType], "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia");
+            EXPECT_TRUE([provenance isEqualToDictionary:[value strikes].firstObject.provenance]);
 #endif
 
             // Reconstruction is lossy, so data cannot be compared directly against the original.
@@ -818,9 +816,7 @@ TEST(AdaptiveImageGlyph, DragAdaptiveImageGlyphFromContentEditable)
 
     [webView focusElementAndEnsureEditorStateUpdate:@"source"];
 
-    RetainPtr adaptiveImageGlyphData = [NSData dataWithContentsOfURL:[NSBundle.test_resourcesBundle URLForResource:@"adaptive-image-glyph" withExtension:@"heic"]];
-
-    RetainPtr adaptiveImageGlyph = adoptNS([[NSAdaptiveImageGlyph alloc] initWithImageContent:adaptiveImageGlyphData.get()]);
+    RetainPtr adaptiveImageGlyph = createAdaptiveImageGlyphForTesting();
 
     [webView insertAdaptiveImageGlyph:adaptiveImageGlyph.get()];
     [webView waitForNextPresentationUpdate];
@@ -839,8 +835,7 @@ TEST(AdaptiveImageGlyph, DropAdaptiveImageGlyphAsText)
     RetainPtr webView = [simulator webView];
     [webView synchronouslyLoadHTMLString:@"<meta name='viewport' content='width=device-width'><body style='width: 100%; height: 100%;' contenteditable>"];
 
-    RetainPtr adaptiveImageGlyphData = [NSData dataWithContentsOfURL:[NSBundle.test_resourcesBundle URLForResource:@"adaptive-image-glyph" withExtension:@"heic"]];
-    RetainPtr adaptiveImageGlyph = adoptNS([[NSAdaptiveImageGlyph alloc] initWithImageContent:adaptiveImageGlyphData.get()]);
+    RetainPtr adaptiveImageGlyph = createAdaptiveImageGlyphForTesting();
 
     RetainPtr font = [WebCore::CocoaFont systemFontOfSize:36];
 
@@ -871,8 +866,7 @@ TEST(AdaptiveImageGlyph, DropAdaptiveImageGlyphAsSticker)
     RetainPtr webView = [simulator webView];
     [webView synchronouslyLoadHTMLString:@"<meta name='viewport' content='width=device-width'><body style='width: 100%; height: 100%;' contenteditable>"];
 
-    RetainPtr adaptiveImageGlyphData = [NSData dataWithContentsOfURL:[NSBundle.test_resourcesBundle URLForResource:@"adaptive-image-glyph" withExtension:@"heic"]];
-    RetainPtr adaptiveImageGlyph = adoptNS([[NSAdaptiveImageGlyph alloc] initWithImageContent:adaptiveImageGlyphData.get()]);
+    RetainPtr adaptiveImageGlyph = createAdaptiveImageGlyphForTesting();
 
     RetainPtr font = [WebCore::CocoaFont systemFontOfSize:36];
 
@@ -903,6 +897,54 @@ TEST(AdaptiveImageGlyph, DropAdaptiveImageGlyphAsSticker)
 }
 
 #endif // ENABLE(DRAG_SUPPORT) && !PLATFORM(MACCATALYST)
+
+#if HAVE(UI_WK_DOCUMENT_CONTEXT)
+
+TEST(AdaptiveImageGlyph, AttributedStringDocumentEditingContext)
+{
+    auto webView = adoptNS([[AdaptiveImageGlyphWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
+    [webView _setEditable:YES];
+
+    [webView synchronouslyLoadHTMLString:@"<body style='font-family: Arial; font-size: 20px;'></body>"];
+    [webView focusElementAndEnsureEditorStateUpdate:@"document.body"];
+    [[webView textInputContentView] insertText:@"Hello "];
+
+    RetainPtr adaptiveImageGlyph = createAdaptiveImageGlyphForTesting();
+    [webView insertAdaptiveImageGlyph:adaptiveImageGlyph.get()];
+    [[webView textInputContentView] insertText:@" world"];
+    [webView stringByEvaluatingJavaScript:@"getSelection().removeAllRanges();"
+        "getSelection().addRange((() => {"
+        "    const picture = document.querySelector('picture');"
+        "    const range = document.createRange();"
+        "    range.setStartBefore(picture);"
+        "    range.setEndAfter(picture);"
+        "    return range;"
+        "})());"];
+    [webView waitForNextPresentationUpdate];
+
+    RetainPtr request = adoptNS([[UIWKDocumentRequest alloc] init]);
+    [request setFlags:UIWKDocumentRequestAttributed];
+    [request setSurroundingGranularity:UITextGranularityLine];
+    [request setGranularityCount:1];
+
+    RetainPtr context = [webView synchronouslyRequestDocumentContext:request.get()];
+    RetainPtr contextBefore = dynamic_objc_cast<NSAttributedString>([context contextBefore]);
+    RetainPtr selectedText = dynamic_objc_cast<NSAttributedString>([context selectedText]);
+    RetainPtr contextAfter = dynamic_objc_cast<NSAttributedString>([context contextAfter]);
+
+    EXPECT_WK_STREQ(@"Hello ", [contextBefore string]);
+    EXPECT_WK_STREQ(@"\uFFFC", [selectedText string]);
+    __block BOOL foundAdaptiveImageGlyph = NO;
+    [selectedText enumerateAttribute:NSAdaptiveImageGlyphAttributeName inRange:NSMakeRange(0, 1) options:0 usingBlock:^(NSAdaptiveImageGlyph *glyph, NSRange, BOOL *) {
+        foundAdaptiveImageGlyph = YES;
+        EXPECT_WK_STREQ(glyph.contentIdentifier, [adaptiveImageGlyph contentIdentifier]);
+        EXPECT_WK_STREQ(glyph.contentDescription, [adaptiveImageGlyph contentDescription]);
+    }];
+    EXPECT_TRUE(foundAdaptiveImageGlyph);
+    EXPECT_WK_STREQ(@" world", [contextAfter string]);
+}
+
+#endif // HAVE(UI_WK_DOCUMENT_CONTEXT)
 
 } // namespace TestWebKitAPI
 

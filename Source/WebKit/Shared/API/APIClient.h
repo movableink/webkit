@@ -28,7 +28,9 @@
 
 #include <algorithm>
 #include <array>
+#include <ranges>
 #include <tuple>
+#include <wtf/StdLibExtras.h>
 
 namespace API {
 
@@ -53,7 +55,7 @@ public:
     {
 #if ASSERT_ENABLED
         auto interfaceSizes = InterfaceSizes<ClientVersions>::sizes();
-        ASSERT(std::is_sorted(interfaceSizes.begin(), interfaceSizes.end()));
+        ASSERT(std::ranges::is_sorted(interfaceSizes));
 #endif
 
         initialize(nullptr);
@@ -66,12 +68,12 @@ public:
             return;
         }
 
-        memset(&m_client, 0, sizeof(m_client));
+        zeroBytes(m_client);
 
         if (client && client->version < latestClientVersion) {
             auto interfaceSizes = InterfaceSizes<ClientVersions>::sizes();
 
-            memcpy(&m_client, client, interfaceSizes[client->version]);
+            memcpySpan(asMutableByteSpan(m_client), unsafeMakeSpan(reinterpret_cast<const uint8_t*>(client), interfaceSizes[client->version]));
         }
     }
 

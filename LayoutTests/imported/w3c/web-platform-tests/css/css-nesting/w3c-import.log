@@ -23,8 +23,12 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/conditional-rules-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/conditional-rules-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/conditional-rules.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/contextually-invalid-selectors-expected.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/contextually-invalid-selectors.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/contextually-invalid-selectors-001-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/contextually-invalid-selectors-001.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/contextually-invalid-selectors-002-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/contextually-invalid-selectors-002.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/contextually-invalid-selectors-003-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/contextually-invalid-selectors-003.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/cssom.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/delete-other-rule-crash.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/has-nesting-expected.html
@@ -51,11 +55,14 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/invalidation-002.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/invalidation-003.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/invalidation-004.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/mixed-declarations-rules.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/nest-containing-forgiving-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/nest-containing-forgiving-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/nest-containing-forgiving.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/nested-declarations-cssom-whitespace.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/nested-declarations-cssom.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/nested-declarations-matching.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/nested-error-recovery.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/nested-rule-cssom-invalidation.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/nesting-basic-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/nesting-basic-ref.html
@@ -63,10 +70,12 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/nesting-layer.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/nesting-type-selector-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/nesting-type-selector.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/parent-pseudo-in-placeholder-crash.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/parsing.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/pseudo-part-crash.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/pseudo-where-crash.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/serialize-group-rules-with-decls.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/set-selector-text.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/supports-is-consistent-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/supports-is-consistent-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/supports-is-consistent.html
@@ -74,3 +83,4 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/supports-rule-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/supports-rule.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/top-level-is-scope.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-nesting/top-level-parent-pseudo-specificity.html

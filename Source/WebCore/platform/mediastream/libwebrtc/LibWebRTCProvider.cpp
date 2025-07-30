@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,9 +41,7 @@
 #include <dlfcn.h>
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_COMMA_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 #include <webrtc/api/audio_codecs/builtin_audio_decoder_factory.h>
 #include <webrtc/api/audio_codecs/builtin_audio_encoder_factory.h>
@@ -59,9 +57,7 @@ IGNORE_CLANG_WARNINGS_END
 #include <webrtc/rtc_base/physical_socket_server.h>
 #include <webrtc/rtc_base/task_queue_gcd.h>
 
-ALLOW_COMMA_END
-ALLOW_UNUSED_PARAMETERS_END
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 #include <wtf/Function.h>
 #include <wtf/NeverDestroyed.h>
@@ -83,7 +79,7 @@ LibWebRTCProvider::~LibWebRTCProvider()
 }
 
 #if !PLATFORM(COCOA)
-void WebRTCProvider::setH264HardwareEncoderAllowed(bool)
+void LibWebRTCProvider::registerWebKitVP9Decoder()
 {
 }
 #endif
@@ -125,7 +121,7 @@ public:
 
 private:
     bool m_disableNonLocalhostConnections { false };
-    UniqueRef<rtc::BasicPacketSocketFactory> m_socketFactory;
+    const UniqueRef<rtc::BasicPacketSocketFactory> m_socketFactory;
 };
 
 struct PeerConnectionFactoryAndThreads {
@@ -422,13 +418,6 @@ static inline std::optional<cricket::MediaType> typeFromKind(const String& kind)
     return { };
 }
 
-static inline std::optional<uint16_t> toChannels(absl::optional<int> numChannels)
-{
-    if (!numChannels)
-        return { };
-    return static_cast<uint32_t>(*numChannels);
-}
-
 static inline RTCRtpCapabilities toRTCRtpCapabilities(const webrtc::RtpCapabilities& rtpCapabilities)
 {
     RTCRtpCapabilities capabilities;
@@ -443,7 +432,7 @@ static inline RTCRtpCapabilities toRTCRtpCapabilities(const webrtc::RtpCapabilit
         String sdpFmtpLine;
         if (sdpFmtpLineBuilder.length())
             sdpFmtpLine = sdpFmtpLineBuilder.toString();
-        return RTCRtpCodecCapability { fromStdString(codec.mime_type()), static_cast<uint32_t>(codec.clock_rate ? *codec.clock_rate : 0), toChannels(codec.num_channels), WTFMove(sdpFmtpLine) };
+        return RTCRtpCodecCapability { fromStdString(codec.mime_type()), static_cast<uint32_t>(codec.clock_rate ? *codec.clock_rate : 0), codec.num_channels, WTFMove(sdpFmtpLine) };
 
     });
 
@@ -539,13 +528,14 @@ std::optional<MediaCapabilitiesDecodingInfo> LibWebRTCProvider::videoDecodingCap
         }
         info.powerEfficient = decodingInfo ? decodingInfo->powerEfficient : isSupportingVP9HardwareDecoder();
         info.smooth = decodingInfo ? decodingInfo->smooth : isVPSoftwareDecoderSmooth(configuration);
-    } else if (equalLettersIgnoringASCIICase(containerType, "video/h264"_s)) {
-        // FIXME: Provide more granular H.264 decoder information.
-        info.powerEfficient = info.smooth = isH264EncoderSmooth(configuration);
-    } else if (equalLettersIgnoringASCIICase(containerType, "video/h265"_s))
+    } else if (equalLettersIgnoringASCIICase(containerType, "video/h264"_s))
         info.powerEfficient = info.smooth = true;
-    else if (equalLettersIgnoringASCIICase(containerType, "video/av1"_s))
+    else if (equalLettersIgnoringASCIICase(containerType, "video/h265"_s))
+        info.powerEfficient = info.smooth = true;
+    else if (equalLettersIgnoringASCIICase(containerType, "video/av1"_s)) {
+        // FIXME: Set value to true if AV1 is only enabled when HW decoder support is enabled.
         info.powerEfficient = false;
+    }
 
     info.supported = true;
     return { info };

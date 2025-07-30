@@ -66,12 +66,11 @@ public:
 private:
     explicit LocalAuthenticator(Ref<LocalConnection>&&);
 
-    std::optional<WebCore::ExceptionData> processClientExtensions(std::variant<Ref<WebCore::AuthenticatorAttestationResponse>, Ref<WebCore::AuthenticatorAssertionResponse>>);
+    std::optional<WebCore::ExceptionData> processClientExtensions(Variant<Ref<WebCore::AuthenticatorAttestationResponse>, Ref<WebCore::AuthenticatorAssertionResponse>>);
 
     void makeCredential() final;
     void continueMakeCredentialAfterReceivingLAContext(LAContext *);
     void continueMakeCredentialAfterUserVerification(SecAccessControlRef, LocalConnection::UserVerification, LAContext *);
-    void continueMakeCredentialAfterAttested(Vector<uint8_t>&& credentialId, Vector<uint8_t>&& authData, NSArray *certificates, NSError *);
     void finishMakeCredential(Vector<uint8_t>&& credentialId, Vector<uint8_t>&& attestationObject, std::optional<WebCore::ExceptionData>);
 
     void getAssertion() final;

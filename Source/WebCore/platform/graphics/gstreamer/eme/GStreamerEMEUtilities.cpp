@@ -22,6 +22,7 @@
 #include "GStreamerEMEUtilities.h"
 
 #include <wtf/StdLibExtras.h>
+#include <wtf/glib/GSpanExtras.h>
 #include <wtf/text/Base64.h>
 
 #if ENABLE(ENCRYPTED_MEDIA) && USE(GSTREAMER)
@@ -31,6 +32,24 @@ GST_DEBUG_CATEGORY_EXTERN(webkit_media_common_encryption_decrypt_debug_category)
 
 namespace WebCore {
 
+ProtectionSystemEvents::ProtectionSystemEvents(GstMessage* message)
+{
+    const GstStructure* structure = gst_message_get_structure(message);
+
+    const GValue* streamEncryptionEventsList = gst_structure_get_value(structure, "stream-encryption-events");
+    ASSERT(streamEncryptionEventsList && GST_VALUE_HOLDS_LIST(streamEncryptionEventsList));
+    unsigned numEvents = gst_value_list_get_size(streamEncryptionEventsList);
+    m_events.reserveInitialCapacity(numEvents);
+    for (unsigned i = 0; i < numEvents; ++i)
+        m_events.append(GRefPtr<GstEvent>(GST_EVENT_CAST(g_value_get_boxed(gst_value_list_get_value(streamEncryptionEventsList, i)))));
+    const GValue* streamEncryptionAllowedSystemsValue = gst_structure_get_value(structure, "available-stream-encryption-systems");
+    auto systemsArray = g_value_get_boxed(streamEncryptionAllowedSystemsValue);
+    if (!systemsArray)
+        return;
+    for (const auto system : span(static_cast<char**>(systemsArray)))
+        m_availableSystems.append(String::fromLatin1(system));
+}
+
 struct GMarkupParseContextUserData {
     bool isParsingPssh { false };
     RefPtr<SharedBuffer> pssh;
@@ -39,28 +58,27 @@ struct GMarkupParseContextUserData {
 static void markupStartElement(GMarkupParseContext*, const gchar* elementName, const gchar**, const gchar**, gpointer userDataPtr, GError**)
 {
     GMarkupParseContextUserData* userData = static_cast<GMarkupParseContextUserData*>(userDataPtr);
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
-    if (g_str_has_suffix(elementName, "pssh"))
+    auto nameView = StringView::fromLatin1(elementName);
+    if (nameView.endsWith("pssh"_s))
         userData->isParsingPssh = true;
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 static void markupEndElement(GMarkupParseContext*, const gchar* elementName, gpointer userDataPtr, GError**)
 {
     GMarkupParseContextUserData* userData = static_cast<GMarkupParseContextUserData*>(userDataPtr);
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
-    if (g_str_has_suffix(elementName, "pssh")) {
+    auto nameView = StringView::fromLatin1(elementName);
+    if (nameView.endsWith("pssh"_s)) {
         ASSERT(userData->isParsingPssh);
         userData->isParsingPssh = false;
     }
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 static void markupText(GMarkupParseContext*, const gchar* text, gsize textLength, gpointer userDataPtr, GError**)
 {
     GMarkupParseContextUserData* userData = static_cast<GMarkupParseContextUserData*>(userDataPtr);
     if (userData->isParsingPssh) {
-        auto pssh = base64Decode({ reinterpret_cast<const uint8_t*>(text), textLength });
+        auto data = unsafeMakeSpan(reinterpret_cast<const uint8_t*>(text), textLength);
+        auto pssh = base64Decode(data);
         if (pssh.has_value())
             userData->pssh = SharedBuffer::create(WTFMove(*pssh));
     }

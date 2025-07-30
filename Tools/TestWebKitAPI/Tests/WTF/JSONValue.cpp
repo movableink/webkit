@@ -357,7 +357,7 @@ TEST(JSONObject, Basic)
         auto position = keys.find(it->key);
         EXPECT_NE(position, notFound);
         EXPECT_TRUE(it == object->find(keys[position]));
-        keys.remove(position);
+        keys.removeAt(position);
     }
     EXPECT_TRUE(keys.isEmpty());
 
@@ -738,7 +738,7 @@ TEST(JSONValue, MemoryCost)
 
     {
         Ref<JSON::Value> valueA = JSON::Value::create(makeString("t"_s));
-        Ref<JSON::Value> valueB = JSON::Value::create(makeString(span("😀")));
+        Ref<JSON::Value> valueB = JSON::Value::create(makeString(unsafeSpan("😀")));
         EXPECT_LT(valueA->memoryCost(), valueB->memoryCost());
     }
 

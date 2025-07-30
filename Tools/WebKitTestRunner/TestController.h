@@ -34,6 +34,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <wtf/CompletionHandler.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Seconds.h>
@@ -54,7 +55,6 @@ OBJC_CLASS WKWebViewConfiguration;
 namespace WTR {
 
 class EventSenderProxy;
-class OriginSettings;
 class PlatformWebView;
 class TestInvocation;
 class TestOptions;
@@ -145,12 +145,11 @@ public:
     void setCameraPermission(bool);
     void setMicrophonePermission(bool);
     void resetUserMediaPermission();
-    void setUserMediaPersistentPermissionForOrigin(bool, WKStringRef userMediaDocumentOriginString, WKStringRef topLevelDocumentOriginString);
+    void delayUserMediaRequestDecision();
+    unsigned userMediaPermissionRequestCount();
+    void resetUserMediaPermissionRequestCount();
+
     void handleUserMediaPermissionRequest(WKFrameRef, WKSecurityOriginRef, WKSecurityOriginRef, WKUserMediaPermissionRequestRef);
-    void handleCheckOfUserMediaPermissionForOrigin(WKFrameRef, WKSecurityOriginRef, WKSecurityOriginRef, const WKUserMediaPermissionCheckRef&);
-    OriginSettings& settingsForOrigin(const String&);
-    unsigned userMediaPermissionRequestCountForOrigin(WKStringRef userMediaDocumentOriginString, WKStringRef topLevelDocumentOriginString);
-    void resetUserMediaPermissionRequestCountForOrigin(WKStringRef userMediaDocumentOriginString, WKStringRef topLevelDocumentOriginString);
 
     // Device Orientation / Motion.
     bool handleDeviceOrientationAndMotionAccessRequest(WKSecurityOriginRef, WKFrameInfoRef);
@@ -196,6 +195,20 @@ public:
     void setPluginSupportedMode(const String&);
 
     void dumpPolicyDelegateCallbacks() { m_dumpPolicyDelegateCallbacks = true; }
+    void dumpFullScreenCallbacks() { m_dumpFullScreenCallbacks = true; }
+    void waitBeforeFinishingFullscreenExit() { m_waitBeforeFinishingFullscreenExit = true; }
+    void scrollDuringEnterFullscreen() { m_scrollDuringEnterFullscreen = true; }
+    void finishFullscreenExit();
+    void requestExitFullscreenFromUIProcess(WKPageRef);
+
+    static void willEnterFullScreen(WKPageRef, WKCompletionListenerRef, const void*);
+    void willEnterFullScreen(WKPageRef, WKCompletionListenerRef);
+    static void beganEnterFullScreen(WKPageRef, WKRect initialFrame, WKRect finalFrame, const void*);
+    void beganEnterFullScreen(WKPageRef, WKRect initialFrame, WKRect finalFrame);
+    static void exitFullScreen(WKPageRef, const void*);
+    void exitFullScreen(WKPageRef);
+    static void beganExitFullScreen(WKPageRef, WKRect initialFrame, WKRect finalFrame, WKCompletionListenerRef, const void*);
+    void beganExitFullScreen(WKPageRef, WKRect initialFrame, WKRect finalFrame, WKCompletionListenerRef);
 
     void setShouldLogHistoryClientCallbacks(bool shouldLog) { m_shouldLogHistoryClientCallbacks = shouldLog; }
     void setShouldLogCanAuthenticateAgainstProtectionSpace(bool shouldLog) { m_shouldLogCanAuthenticateAgainstProtectionSpace = shouldLog; }
@@ -269,7 +282,8 @@ public:
     void setStatisticsCacheMaxAgeCap(double seconds);
     bool hasStatisticsIsolatedSession(WKStringRef hostName);
     void setStatisticsShouldDowngradeReferrer(bool value, CompletionHandler<void(WKTypeRef)>&&);
-    void setStatisticsShouldBlockThirdPartyCookies(bool value, bool onlyOnSitesWithoutUserInteraction, CompletionHandler<void(WKTypeRef)>&&);
+    enum class ThirdPartyCookieBlockingPolicy { All, AllOnlyOnSitesWithoutUserInteraction, AllExceptPartitioned };
+    void setStatisticsShouldBlockThirdPartyCookies(bool value, ThirdPartyCookieBlockingPolicy, CompletionHandler<void(WKTypeRef)>&&);
     void setStatisticsFirstPartyWebsiteDataRemovalMode(bool value, CompletionHandler<void(WKTypeRef)>&&);
     void setStatisticsToSameSiteStrictCookies(WKStringRef hostName, CompletionHandler<void(WKTypeRef)>&&);
     void setStatisticsFirstPartyHostCNAMEDomain(WKStringRef firstPartyURLString, WKStringRef cnameURLString, CompletionHandler<void(WKTypeRef)>&&);
@@ -291,6 +305,7 @@ public:
     bool didLoadNonAppInitiatedRequest();
 
     void setPageScaleFactor(float scaleFactor, int x, int y, CompletionHandler<void(WKTypeRef)>&&);
+    void updatePresentation(CompletionHandler<void(WKTypeRef)>&&);
 
     void reloadFromOrigin();
 
@@ -344,7 +359,7 @@ public:
     void setMockCameraOrientation(uint64_t, WKStringRef);
     bool isMockRealtimeMediaSourceCenterEnabled() const;
     void setMockCaptureDevicesInterrupted(bool isCameraInterrupted, bool isMicrophoneInterrupted);
-    void triggerMockCaptureConfigurationChange(bool forMicrophone, bool forDisplay);
+    void triggerMockCaptureConfigurationChange(bool forCamera, bool forMicrophone, bool forDisplay);
     void setCaptureState(bool cameraState, bool microphoneState, bool displayState);
     bool hasAppBoundSession();
 
@@ -355,6 +370,8 @@ public:
     void addTestKeyToKeychain(const String& privateKeyBase64, const String& attrLabel, const String& applicationTagBase64);
     void cleanUpKeychain(const String& attrLabel, const String& applicationLabelBase64);
     bool keyExistsInKeychain(const String& attrLabel, const String& applicationLabelBase64);
+
+    void setResourceMonitorList(WKStringRef rulesText, CompletionHandler<void(WKTypeRef)>&&);
 
 #if PLATFORM(COCOA)
     NSString *overriddenCalendarIdentifier() const;
@@ -367,6 +384,7 @@ public:
     UIKeyboardInputMode *overriddenKeyboardInputMode() const { return m_overriddenKeyboardInputMode.get(); }
     void setIsInHardwareKeyboardMode(bool value) { m_isInHardwareKeyboardMode = value; }
     bool isInHardwareKeyboardMode() const { return m_isInHardwareKeyboardMode; }
+    unsigned keyboardUpdateForChangedSelectionCount() const;
 #endif
 
     void setAllowedMenuActions(const Vector<String>&);
@@ -374,7 +392,9 @@ public:
     uint64_t serverTrustEvaluationCallbackCallsCount() const { return m_serverTrustEvaluationCallbackCallsCount; }
 
     void setShouldDismissJavaScriptAlertsAsynchronously(bool);
-    void handleJavaScriptAlert(WKPageRunJavaScriptAlertResultListenerRef);
+    void handleJavaScriptAlert(WKStringRef, WKPageRunJavaScriptAlertResultListenerRef);
+    void handleJavaScriptConfirm(WKStringRef, WKPageRunJavaScriptConfirmResultListenerRef);
+    void handleJavaScriptPrompt(WKStringRef, WKStringRef, WKPageRunJavaScriptPromptResultListenerRef);
     void abortModal();
 
     bool isDoingMediaCapture() const;
@@ -437,9 +457,12 @@ public:
     bool shouldUseFakeMachineReadableCodeResultsForImageAnalysis() const;
 #endif
 
-#if PLATFORM(WPE)
-    bool useWPEPlatformAPI() const { return m_useWPEPlatformAPI; }
+#if ENABLE(WPE_PLATFORM)
+    bool useWPELegacyAPI() const { return m_useWPELegacyAPI; }
 #endif
+
+    void setUseWorkQueue(bool useWorkQueue) { m_useWorkQueue = useWorkQueue; }
+    bool useWorkQueue() const { return m_useWorkQueue; }
 
 private:
     WKRetainPtr<WKPageConfigurationRef> generatePageConfiguration(const TestOptions&);
@@ -451,12 +474,12 @@ private:
     void runTestingServerLoop();
     bool runTest(const char* pathOrURL);
 
-    WKURLRef createTestURL(const char* pathOrURL);
+    WKURLRef createTestURL(std::span<const char> pathOrURL);
 
     // Returns false if timed out.
     bool waitForCompletion(const WTF::Function<void ()>&, WTF::Seconds timeout);
 
-    bool handleControlCommand(const char* command);
+    bool handleControlCommand(std::span<const char> command);
 
     void platformInitialize(const Options&);
     void platformInitializeDataStore(WKPageConfigurationRef, const TestOptions&);
@@ -707,14 +730,13 @@ private:
     bool m_isGeolocationPermissionAllowed { false };
     std::optional<bool> m_screenWakeLockPermission;
 
-    HashMap<String, RefPtr<OriginSettings>> m_cachedUserMediaPermissions;
-
-    typedef Vector<std::pair<String, WKRetainPtr<WKUserMediaPermissionRequestRef>>> PermissionRequestList;
+    typedef Vector<WKRetainPtr<WKUserMediaPermissionRequestRef>> PermissionRequestList;
     PermissionRequestList m_userMediaPermissionRequests;
 
-    bool m_isUserMediaPermissionSet { false };
-    bool m_isCameraPermissionAllowed { false };
-    bool m_isMicrophonePermissionAllowed { false };
+    bool m_canDecideUserMediaRequest { true };
+    unsigned m_requestCount { 0 };
+    std::optional<bool> m_isCameraPermissionAllowed;
+    std::optional<bool> m_isMicrophonePermissionAllowed;
 
     bool m_policyDelegateEnabled { false };
     bool m_policyDelegatePermissive { false };
@@ -774,6 +796,7 @@ private:
         { }
     };
     HashMap<String, AbandonedDocumentInfo> m_abandonedDocumentInfo;
+    CompletionHandler<void()> m_finishExitFullscreenHandler;
 
     uint64_t m_serverTrustEvaluationCallbackCallsCount { 0 };
     bool m_shouldDismissJavaScriptAlertsAsynchronously { false };
@@ -796,9 +819,13 @@ private:
     size_t m_downloadIndex { 0 };
     bool m_shouldDownloadContentDispositionAttachments { true };
     bool m_dumpPolicyDelegateCallbacks { false };
+    bool m_dumpFullScreenCallbacks { false };
+    bool m_waitBeforeFinishingFullscreenExit { false };
+    bool m_scrollDuringEnterFullscreen { false };
+    bool m_useWorkQueue { false };
 
-#if PLATFORM(WPE)
-    bool m_useWPEPlatformAPI { false };
+#if ENABLE(WPE_PLATFORM)
+    bool m_useWPELegacyAPI { false };
 #endif
 };
 

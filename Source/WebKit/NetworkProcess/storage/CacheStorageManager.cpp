@@ -59,14 +59,7 @@ static std::optional<Vector<std::pair<String, String>>> readCachesList(const Str
     if (!FileSystem::fileExists(cachesListFilePath))
         return result;
 
-    auto cachesListHandle = FileSystem::openFile(cachesListFilePath, FileSystem::FileOpenMode::ReadWrite);
-    if (!FileSystem::isHandleValid(cachesListHandle))
-        return std::nullopt;
-    auto closeFileOnExit = makeScopeExit([&cachesListHandle]() mutable {
-        FileSystem::closeFile(cachesListHandle);
-    });
-
-    auto cachesList = FileSystem::readEntireFile(cachesListHandle);
+    auto cachesList = FileSystem::readEntireFile(cachesListFilePath);
     if (!cachesList)
         return std::nullopt;
 
@@ -145,7 +138,7 @@ static bool writeSizeFile(const String& sizeDirectoryPath, uint64_t size)
 
     auto sizeFilePath = FileSystem::pathByAppendingComponent(sizeDirectoryPath, sizeFileName);
     auto value = String::number(size).utf8();
-    return FileSystem::overwriteEntireFile(sizeFilePath, value.span()) != -1;
+    return !!FileSystem::overwriteEntireFile(sizeFilePath, byteCast<uint8_t>(value.span()));
 }
 
 static String saltFilePath(const String& saltDirectory)
@@ -193,7 +186,7 @@ HashSet<WebCore::ClientOrigin> CacheStorageManager::originsOfCacheStorageData(co
 {
     HashSet<WebCore::ClientOrigin> result;
     for (auto& originName : FileSystem::listDirectory(rootDirectory)) {
-        auto originFile = FileSystem::pathByAppendingComponents(rootDirectory, { originName, originFileName });
+        auto originFile = FileSystem::pathByAppendingComponents(rootDirectory, std::initializer_list<StringView>({ originName, originFileName }));
         if (auto origin = WebCore::StorageUtilities::readOriginFromFile(originFile))
             result.add(*origin);
     }
@@ -346,7 +339,7 @@ void CacheStorageManager::removeCache(WebCore::DOMCacheIdentifier cacheIdentifie
 
     makeDirty();
     m_removedCaches.set(cacheIdentifier, WTFMove(m_caches[index]));
-    m_caches.remove(index);
+    m_caches.removeAt(index);
     return callback(true);
 }
 
@@ -367,16 +360,17 @@ void CacheStorageManager::allCaches(uint64_t updateCounter, WebCore::DOMCacheEng
 
 void CacheStorageManager::initializeCacheSize(CacheStorageCache& cache)
 {
-    cache.getSize([this, weakThis = WeakPtr { *this }, cacheIdentifier = cache.identifier()](auto size) mutable {
-        if (!weakThis)
+    cache.getSize([weakThis = WeakPtr { *this }, cacheIdentifier = cache.identifier()](auto size) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
 
-        if (!m_pendingSize.second.remove(cacheIdentifier))
+        if (!protectedThis->m_pendingSize.second.remove(cacheIdentifier))
             return;
 
-        m_pendingSize.first += size;
-        if (m_pendingSize.second.isEmpty())
-            finishInitializingSize();
+        protectedThis->m_pendingSize.first += size;
+        if (protectedThis->m_pendingSize.second.isEmpty())
+            protectedThis->finishInitializingSize();
     });
 }
 
@@ -458,7 +452,7 @@ void CacheStorageManager::dereference(IPC::Connection::UniqueID connection, WebC
     if (index == notFound)
         return;
 
-    refConnections.remove(index);
+    refConnections.removeAt(index);
     if (!refConnections.isEmpty())
         return;
 

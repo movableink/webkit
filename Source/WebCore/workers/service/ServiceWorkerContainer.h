@@ -28,6 +28,7 @@
 #include "ActiveDOMObject.h"
 #include "AddEventListenerOptions.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "IDLTypes.h"
 #include "JSDOMPromiseDeferredForward.h"
 #include "MessageEvent.h"
@@ -72,7 +73,7 @@ public:
     ReadyPromise& ready();
 
     using RegistrationOptions = ServiceWorkerRegistrationOptions;
-    void addRegistration(std::variant<RefPtr<TrustedScriptURL>, String>&&, const RegistrationOptions&, Ref<DeferredPromise>&&);
+    void addRegistration(Variant<RefPtr<TrustedScriptURL>, String>&&, const RegistrationOptions&, Ref<DeferredPromise>&&);
     void unregisterRegistration(ServiceWorkerRegistrationIdentifier, DOMPromiseDeferred<IDLBoolean>&&);
     void updateRegistration(const URL& scopeURL, const URL& scriptURL, WorkerType, RefPtr<DeferredPromise>&&);
 
@@ -168,7 +169,7 @@ private:
     HashMap<ServiceWorkerRegistrationIdentifier, WeakRef<ServiceWorkerRegistration, WeakPtrImplWithEventTargetData>> m_registrations;
 
 #if ASSERT_ENABLED
-    Ref<Thread> m_creationThread { Thread::current() };
+    Ref<Thread> m_creationThread { Thread::currentSingleton() };
 #endif
 
     uint64_t m_lastOngoingSettledRegistrationIdentifier { 0 };

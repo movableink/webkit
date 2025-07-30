@@ -80,27 +80,18 @@ def test_add_cookie(cookie, driver):
     assert cookie["name"] in returned
 
 
-@pytest.mark.xfail_firefox(reason="sameSite cookie attribute not implemented")
-@pytest.mark.xfail_remote(reason="sameSite cookie attribute not implemented")
-@pytest.mark.xfail_safari
 def test_add_cookie_same_site_strict(same_site_cookie_strict, driver):
     driver.add_cookie(same_site_cookie_strict)
     returned = driver.get_cookie("foo")
     assert "sameSite" in returned and returned["sameSite"] == "Strict"
 
 
-@pytest.mark.xfail_firefox(reason="sameSite cookie attribute not implemented")
-@pytest.mark.xfail_remote(reason="sameSite cookie attribute not implemented")
-@pytest.mark.xfail_safari
 def test_add_cookie_same_site_lax(same_site_cookie_lax, driver):
     driver.add_cookie(same_site_cookie_lax)
     returned = driver.get_cookie("foo")
     assert "sameSite" in returned and returned["sameSite"] == "Lax"
 
 
-@pytest.mark.xfail_firefox(reason="sameSite cookie attribute not implemented")
-@pytest.mark.xfail_remote(reason="sameSite cookie attribute not implemented")
-@pytest.mark.xfail_safari
 def test_add_cookie_same_site_none(same_site_cookie_none, driver):
     driver.add_cookie(same_site_cookie_none)
     # Note that insecure sites (http:) can't set cookies with the Secure directive.
@@ -108,7 +99,6 @@ def test_add_cookie_same_site_none(same_site_cookie_none, driver):
 
 
 @pytest.mark.xfail_ie
-@pytest.mark.xfail_safari
 def test_adding_acookie_that_expired_in_the_past(cookie, driver):
     expired = cookie.copy()
     expired["expiry"] = calendar.timegm(time.gmtime()) - 1
@@ -162,3 +152,31 @@ def test_should_not_delete_cookies_with_asimilar_name(cookie, driver, webserver)
     cookies = driver.get_cookies()
     assert cookie["name"] != cookies[0]["name"]
     assert cookie2["name"] == cookies[0]["name"]
+
+
+def test_get_cookie_raises_value_error_for_empty_name(cookie, driver):
+    driver.add_cookie(cookie)
+    with pytest.raises(ValueError, match="Cookie name cannot be empty"):
+        driver.get_cookie("")
+    with pytest.raises(ValueError, match="Cookie name cannot be empty"):
+        driver.get_cookie("   ")
+    with pytest.raises(ValueError, match="Cookie name cannot be empty"):
+        driver.get_cookie(None)
+
+
+def test_delete_cookie_raises_value_error_for_empty_name(cookie, driver):
+    cookie2 = cookie.copy()
+    cookie2["name"] = "{}x".format(cookie["name"])
+    driver.add_cookie(cookie)
+    driver.add_cookie(cookie2)
+
+    with pytest.raises(ValueError, match="Cookie name cannot be empty"):
+        driver.delete_cookie("")
+    with pytest.raises(ValueError, match="Cookie name cannot be empty"):
+        driver.get_cookie("   ")
+    with pytest.raises(ValueError, match="Cookie name cannot be empty"):
+        driver.get_cookie(None)
+
+    cookies = driver.get_cookies()
+
+    assert len(cookies) == 2

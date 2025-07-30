@@ -42,8 +42,6 @@
 #include "AudioSessionIOS.h"
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioSession);
@@ -316,7 +314,7 @@ WTFLogChannel& AudioSession::logChannel() const
 
 String convertEnumerationToString(RouteSharingPolicy enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 4> values {
         MAKE_STATIC_STRING_IMPL("Default"),
         MAKE_STATIC_STRING_IMPL("LongFormAudio"),
         MAKE_STATIC_STRING_IMPL("Independent"),
@@ -332,7 +330,7 @@ String convertEnumerationToString(RouteSharingPolicy enumerationValue)
 
 String convertEnumerationToString(AudioSession::CategoryType enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 7> values {
         MAKE_STATIC_STRING_IMPL("None"),
         MAKE_STATIC_STRING_IMPL("AmbientSound"),
         MAKE_STATIC_STRING_IMPL("SoloAmbientSound"),
@@ -354,7 +352,7 @@ String convertEnumerationToString(AudioSession::CategoryType enumerationValue)
 
 String convertEnumerationToString(AudioSession::Mode enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 3> values {
         MAKE_STATIC_STRING_IMPL("Default"),
         MAKE_STATIC_STRING_IMPL("VideoChat"),
         MAKE_STATIC_STRING_IMPL("MoviePlayback"),
@@ -368,7 +366,7 @@ String convertEnumerationToString(AudioSession::Mode enumerationValue)
 
 String convertEnumerationToString(AudioSessionRoutingArbitrationClient::RoutingArbitrationError enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 3> values {
         MAKE_STATIC_STRING_IMPL("None"),
         MAKE_STATIC_STRING_IMPL("Failed"),
         MAKE_STATIC_STRING_IMPL("Cancelled"),
@@ -382,7 +380,7 @@ String convertEnumerationToString(AudioSessionRoutingArbitrationClient::RoutingA
 
 String convertEnumerationToString(AudioSessionRoutingArbitrationClient::DefaultRouteChanged enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 2> values {
         MAKE_STATIC_STRING_IMPL("No"),
         MAKE_STATIC_STRING_IMPL("Yes"),
     };
@@ -394,7 +392,7 @@ String convertEnumerationToString(AudioSessionRoutingArbitrationClient::DefaultR
 
 String convertEnumerationToString(AudioSession::SoundStageSize size)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 4> values {
         MAKE_STATIC_STRING_IMPL("Automatic"),
         MAKE_STATIC_STRING_IMPL("Small"),
         MAKE_STATIC_STRING_IMPL("Medium"),
@@ -409,7 +407,5 @@ String convertEnumerationToString(AudioSession::SoundStageSize size)
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // USE(AUDIO_SESSION)

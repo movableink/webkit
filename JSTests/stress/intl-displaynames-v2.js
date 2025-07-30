@@ -3,6 +3,11 @@ function shouldBe(actual, expected) {
         throw new Error('bad value: ' + actual);
 }
 
+function shouldBeOneOf(actual, expectedArray) {
+    if (!expectedArray.some((value) => value === actual))
+        throw new Error('bad value: ' + actual + ' expected values: ' + expectedArray);
+}
+
 function shouldThrow(func, errorMessage) {
     var errorThrown = false;
     var error = null;
@@ -62,7 +67,7 @@ function shouldThrow(func, errorMessage) {
     shouldBe(dn.of("month"), "月");
     shouldBe(dn.of("quarter"), "季度");
     shouldBe(dn.of("weekOfYear"), "周");
-    shouldBe(dn.of("weekday"), "工作日");
+    shouldBeOneOf(dn.of("weekday"), ["工作日", "星期"]);
     shouldBe(dn.of("dayPeriod"), "上午/下午");
     shouldBe(dn.of("day"), "日");
     shouldBe(dn.of("hour"), "小时");

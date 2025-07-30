@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,10 +33,7 @@
 #include "Timer.h"
 #include <wtf/WeakRef.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-ALLOW_COMMA_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 #include <webrtc/api/jsep.h>
 #include <webrtc/api/peer_connection_interface.h>
@@ -46,10 +43,7 @@ IGNORE_CLANG_WARNINGS_BEGIN("thread-safety-reference-return")
 #include <webrtc/pc/rtc_stats_collector.h>
 IGNORE_CLANG_WARNINGS_END
 
-ALLOW_COMMA_END
-ALLOW_DEPRECATED_DECLARATIONS_END
-ALLOW_UNUSED_PARAMETERS_END
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 #include <wtf/LoggerHelper.h>
 #include <wtf/RobinHoodHashMap.h>
@@ -198,7 +192,6 @@ private:
     SetRemoteSessionDescriptionObserver<LibWebRTCMediaEndpoint> m_setRemoteSessionDescriptionObserver;
 
     MemoryCompactRobinHoodHashMap<String, RefPtr<MediaStream>> m_remoteStreamsById;
-    HashMap<MediaStreamTrack*, Vector<String>> m_remoteStreamsFromRemoteTrack;
 
     bool m_isInitiator { false };
     Timer m_statsLogTimer;
@@ -208,7 +201,7 @@ private:
     std::unique_ptr<LibWebRTCProvider::SuspendableSocketFactory> m_rtcSocketFactory;
 #if !RELEASE_LOG_DISABLED
     int64_t m_statsFirstDeliveredTimestamp { 0 };
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
 #endif
     bool m_isGatheringRTCLogs { false };

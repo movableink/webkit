@@ -28,6 +28,7 @@
 #include "WebContentMode.h"
 #include "WebsiteAutoplayPolicy.h"
 #include "WebsiteAutoplayQuirk.h"
+#include "WebsiteInlineMediaPlaybackPolicy.h"
 #include "WebsiteLegacyOverflowScrollingTouchPolicy.h"
 #include "WebsiteMediaSourcePolicy.h"
 #include "WebsiteMetaViewportPolicy.h"
@@ -42,11 +43,6 @@
 #include <wtf/HashSet.h>
 #include <wtf/OptionSet.h>
 #include <wtf/TZoneMalloc.h>
-
-namespace IPC {
-class Decoder;
-class Encoder;
-}
 
 namespace WebCore {
 class DocumentLoader;
@@ -84,13 +80,14 @@ public:
     WebCore::ColorSchemePreference colorSchemePreference { WebCore::ColorSchemePreference::NoPreference };
     WebContentMode preferredContentMode { WebContentMode::Recommended };
 #if ENABLE(DEVICE_ORIENTATION)
-    WebCore::DeviceOrientationOrMotionPermissionState deviceOrientationAndMotionAccessState { WebCore::DeviceOrientationOrMotionPermissionState::Prompt };
+    std::optional<WebCore::DeviceOrientationOrMotionPermissionState> deviceOrientationAndMotionAccessState;
 #endif
     WebCore::HTTPSByDefaultMode httpsByDefaultMode { WebCore::HTTPSByDefaultMode::Disabled };
     bool idempotentModeAutosizingOnlyHonorsPercentages { false };
     bool allowPrivacyProxy { true };
     bool allowSiteSpecificQuirksToOverrideContentMode { false };
     WebsitePushAndNotificationsEnabledPolicy pushAndNotificationsEnabledPolicy { WebsitePushAndNotificationsEnabledPolicy::UseGlobalPolicy };
+    WebsiteInlineMediaPlaybackPolicy inlineMediaPlaybackPolicy { WebsiteInlineMediaPlaybackPolicy::Default };
 };
 
 } // namespace WebKit

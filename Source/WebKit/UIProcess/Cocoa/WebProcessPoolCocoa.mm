@@ -29,6 +29,7 @@
 #import "APINavigation.h"
 #import "AccessibilityPreferences.h"
 #import "AccessibilitySupportSPI.h"
+#import "AdditionalFonts.h"
 #import "ArgumentCodersCocoa.h"
 #import "CookieStorageUtilsCF.h"
 #import "DefaultWebBrowserChecks.h"
@@ -45,8 +46,10 @@
 #import "SandboxExtension.h"
 #import "SandboxUtilities.h"
 #import "TextChecker.h"
-#import "WKBrowsingContextControllerInternal.h"
+#import "WKContentRuleListInternal.h"
+#import "WKContentRuleListStore.h"
 #import "WebBackForwardCache.h"
+#import "WebCompiledContentRuleList.h"
 #import "WebMemoryPressureHandler.h"
 #import "WebPageGroup.h"
 #import "WebPageMessages.h"
@@ -58,7 +61,8 @@
 #import "WebProcessMessages.h"
 #import "WindowServerConnection.h"
 #import "_WKSystemPreferencesInternal.h"
-#import <WebCore/AGXCompilerService.h>
+#import <UniformTypeIdentifiers/UTCoreTypes.h>
+#import <UniformTypeIdentifiers/UTType.h>
 #import <WebCore/Color.h>
 #import <WebCore/FontCacheCoreText.h>
 #import <WebCore/LocalizedDeviceModel.h>
@@ -78,6 +82,7 @@
 #import <pal/system/ios/UserInterfaceIdiom.h>
 #import <sys/param.h>
 #import <wtf/BlockPtr.h>
+#import <wtf/CallbackAggregator.h>
 #import <wtf/FileSystem.h>
 #import <wtf/ProcessPrivilege.h>
 #import <wtf/SoftLinking.h>
@@ -143,6 +148,9 @@
 #import <pal/cocoa/MediaToolboxSoftLink.h>
 #import <pal/spi/cocoa/AccessibilitySupportSoftLink.h>
 
+#if __has_include(<WebKitAdditions/WebProcessPoolAdditions.h>)
+#import <WebKitAdditions/WebProcessPoolAdditions.h>
+#endif
 
 NSString *WebServiceWorkerRegistrationDirectoryDefaultsKey = @"WebServiceWorkerRegistrationDirectory";
 NSString *WebKitLocalCacheDefaultsKey = @"WebKitLocalCache";
@@ -164,6 +172,10 @@ static NSString * const WebKitLogCookieInformationDefaultsKey = @"WebKitLogCooki
 
 #if HAVE(POWERLOG_TASK_MODE_QUERY) && ENABLE(GPU_PROCESS)
 static NSString * const kPLTaskingStartNotificationGlobal = @"kPLTaskingStartNotificationGlobal";
+#endif
+
+#if ENABLE(CONTENT_EXTENSIONS)
+static NSString * const WebKitResourceMonitorURLsForTestingIdentifier = @"com.apple.WebPrivacy.ResourceMonitorURLsForTesting";
 #endif
 
 #if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
@@ -207,12 +219,12 @@ using namespace WebCore;
 
 static void registerUserDefaults()
 {
-    NSMutableDictionary *registrationDictionary = [NSMutableDictionary dictionary];
+    RetainPtr registrationDictionary = adoptNS([[NSMutableDictionary alloc] init]);
     
     [registrationDictionary setObject:@YES forKey:WebKitJSCJITEnabledDefaultsKey];
     [registrationDictionary setObject:@YES forKey:WebKitJSCFTLJITEnabledDefaultsKey];
 
-    [[NSUserDefaults standardUserDefaults] registerDefaults:registrationDictionary];
+    [[NSUserDefaults standardUserDefaults] registerDefaults:registrationDictionary.get()];
 }
 
 static std::optional<bool>& cachedLockdownModeEnabledGlobally()
@@ -262,13 +274,13 @@ static AccessibilityPreferences accessibilityPreferences()
 #if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
 void WebProcessPool::setMediaAccessibilityPreferences(WebProcessProxy& process)
 {
-    static dispatch_queue_t mediaAccessibilityQueue;
+    static LazyNeverDestroyed<RetainPtr<dispatch_queue_t>> mediaAccessibilityQueue;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        mediaAccessibilityQueue = dispatch_queue_create("MediaAccessibility queue", DISPATCH_QUEUE_SERIAL);
+        mediaAccessibilityQueue.construct(dispatch_queue_create("MediaAccessibility queue", DISPATCH_QUEUE_SERIAL));
     });
 
-    dispatch_async(mediaAccessibilityQueue, [weakProcess = WeakPtr { process }] {
+    dispatch_async(mediaAccessibilityQueue.get().get(), [weakProcess = WeakPtr { process }] {
         auto captionDisplayMode = WebCore::CaptionUserPreferencesMediaAF::platformCaptionDisplayMode();
         auto preferredLanguages = WebCore::CaptionUserPreferencesMediaAF::platformPreferredLanguages();
         callOnMainRunLoop([weakProcess, captionDisplayMode, preferredLanguages = crossThreadCopy(WTFMove(preferredLanguages))] {
@@ -340,9 +352,11 @@ void WebProcessPool::platformInitialize(NeedsGlobalStaticInitialization needsGlo
             logProcessPoolState(pool.get());
     });
 
+#if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
     PAL::registerNotifyCallback("com.apple.WebKit.restrictedDomains"_s, ^{
         RestrictedOpenerDomainsController::shared();
     });
+#endif
 
 }
 
@@ -364,7 +378,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     parameters.accessibilityEnhancedUserInterfaceEnabled = false;
 #endif
 
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    RetainPtr defaults = [NSUserDefaults standardUserDefaults];
 
     parameters.shouldEnableJIT = [defaults boolForKey:WebKitJSCJITEnabledDefaultsKey];
     parameters.shouldEnableFTLJIT = [defaults boolForKey:WebKitJSCFTLJITEnabledDefaultsKey];
@@ -380,19 +394,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     parameters.latencyQOS = webProcessLatencyQOS();
     parameters.throughputQOS = webProcessThroughputQOS();
-
-    if (m_configuration->presentingApplicationProcessToken()) {
-        NSError *error = nil;
-        auto bundleProxy = [LSBundleProxy bundleProxyWithAuditToken:*m_configuration->presentingApplicationProcessToken() error:&error];
-        if (error)
-            RELEASE_LOG_ERROR(WebRTC, "Failed to get attribution bundleID from audit token with error: %@.", error.localizedDescription);
-        else
-            parameters.presentingApplicationBundleIdentifier = bundleProxy.bundleIdentifier;
-    }
-#if PLATFORM(MAC)
-    else
-        parameters.presentingApplicationBundleIdentifier = [NSRunningApplication currentApplication].bundleIdentifier;
-#endif
 
 #if PLATFORM(COCOA) && ENABLE(REMOTE_INSPECTOR)
     if (WebProcessProxy::shouldEnableRemoteInspector()) {
@@ -422,9 +423,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
             LOG_ERROR("Failed to encode bundle parameters: %@", exception);
         }
 
-        auto data = keyedArchiver.get().encodedData;
+        RetainPtr<NSData> data = keyedArchiver.get().encodedData;
 
-        parameters.bundleParameterData = API::Data::createWithoutCopying(WTFMove(data));
+        parameters.bundleParameterData = API::Data::createWithoutCopying(data.get());
     }
     parameters.networkATSContext = adoptCF(_CFNetworkCopyATSContext());
 
@@ -436,16 +437,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     parameters.screenProperties = WTFMove(screenProperties);
 #if PLATFORM(MAC)
     parameters.useOverlayScrollbars = ([NSScroller preferredScrollerStyle] == NSScrollerStyleOverlay);
-#endif
-    
-#if (PLATFORM(IOS) || PLATFORM(VISION)) && HAVE(AGX_COMPILER_SERVICE)
-    if (WebCore::deviceHasAGXCompilerService())
-        parameters.compilerServiceExtensionHandles = SandboxExtension::createHandlesForMachLookup(WebCore::agxCompilerServices(), std::nullopt);
-#endif
-
-#if PLATFORM(IOS_FAMILY) && HAVE(AGX_COMPILER_SERVICE)
-    if (WebCore::deviceHasAGXCompilerService())
-        parameters.dynamicIOKitExtensionHandles = SandboxExtension::createHandlesForIOKitClassExtensions(WebCore::agxCompilerClasses(), std::nullopt);
 #endif
 
 #if PLATFORM(VISION)
@@ -535,13 +526,19 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     parameters.scriptTelemetryRules = ScriptTelemetryController::sharedSingleton().cachedListData();
 #endif // ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
+
+#if ENABLE(NOTIFY_BLOCKING)
+    parameters.notifyState = WTF::map(m_notifyState, [] (auto&& item) {
+        return std::make_pair(item.key, item.value);
+    });
+#endif
 }
 
 void WebProcessPool::platformInitializeNetworkProcess(NetworkProcessCreationParameters& parameters)
 {
     parameters.uiProcessBundleIdentifier = applicationBundleIdentifier();
 
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    RetainPtr defaults = [NSUserDefaults standardUserDefaults];
 
     parameters.networkATSContext = adoptCF(_CFNetworkCopyATSContext());
 
@@ -553,8 +550,8 @@ void WebProcessPool::platformInitializeNetworkProcess(NetworkProcessCreationPara
     parameters.uiProcessCookieStorageIdentifier = identifyingDataFromCookieStorage([[NSHTTPCookieStorage sharedHTTPCookieStorage] _cookieStorage]);
 #endif
 
-    parameters.enablePrivateClickMeasurement = ![defaults objectForKey:WebPreferencesKey::privateClickMeasurementEnabledKey()] || [defaults boolForKey:WebPreferencesKey::privateClickMeasurementEnabledKey()];
-    parameters.ftpEnabled = [defaults objectForKey:WebPreferencesKey::ftpEnabledKey()] && [defaults boolForKey:WebPreferencesKey::ftpEnabledKey()];
+    parameters.enablePrivateClickMeasurement = ![defaults objectForKey:WebPreferencesKey::privateClickMeasurementEnabledKey().createNSString().get()] || [defaults boolForKey:WebPreferencesKey::privateClickMeasurementEnabledKey().createNSString().get()];
+    parameters.ftpEnabled = [defaults objectForKey:WebPreferencesKey::ftpEnabledKey().createNSString().get()] && [defaults boolForKey:WebPreferencesKey::ftpEnabledKey().createNSString().get()];
 
 #if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
     parameters.storageAccessPromptQuirksData = StorageAccessPromptQuirkController::sharedSingleton().cachedListData();
@@ -569,7 +566,7 @@ void WebProcessPool::platformInvalidateContext()
 #if PLATFORM(IOS_FAMILY)
 void WebProcessPool::setJavaScriptConfigurationFileEnabledFromDefaults()
 {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    RetainPtr defaults = [NSUserDefaults standardUserDefaults];
 
     setJavaScriptConfigurationFileEnabled([defaults boolForKey:@"WebKitJavaScriptCoreUseConfigFile"]);
 }
@@ -763,6 +760,7 @@ void WebProcessPool::registerNotificationObservers()
                 RefPtr protectedThis = weakThis.get();
                 if (!protectedThis)
                     return;
+                protectedThis->setNotifyState(message, status, state);
                 String messageString(message);
                 for (auto& process : protectedThis->m_processes) {
                     if (process->auditToken() && !WTF::hasEntitlement(process->auditToken().value(), "com.apple.developer.web-browser-engine.restrict.notifyd"_s))
@@ -773,6 +771,13 @@ void WebProcessPool::registerNotificationObservers()
         });
         if (registerStatus)
             return std::nullopt;
+
+        if (RefPtr protectedThis = weakThis.get()) {
+            uint64_t state;
+            int stateStatus = notify_get_state(notifyToken, &state);
+            protectedThis->setNotifyState(message, stateStatus, state);
+        }
+
         return notifyToken;
     });
 
@@ -844,7 +849,7 @@ void WebProcessPool::registerNotificationObservers()
     m_deactivationObserver = [[NSNotificationCenter defaultCenter] addObserverForName:NSApplicationDidResignActiveNotification object:NSApp queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification *notification) {
         setApplicationIsActive(false);
     }];
-    
+
     addCFNotificationObserver(colorPreferencesDidChangeCallback, AppleColorPreferencesChangedNotification, CFNotificationCenterGetDistributedCenter());
 
     const char* messages[] = { kNotifyDSCacheInvalidation, kNotifyDSCacheInvalidationGroup, kNotifyDSCacheInvalidationHost, kNotifyDSCacheInvalidationService, kNotifyDSCacheInvalidationUser };
@@ -907,8 +912,25 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     }
 #endif
 
-    m_powerSourceNotifier = WTF::makeUnique<WebCore::PowerSourceNotifier>([this] (bool hasAC) {
-        sendToAllProcesses(Messages::WebProcess::PowerSourceDidChange(hasAC));
+    m_finishedMobileAssetFontDownloadObserver = [[NSNotificationCenter defaultCenter] addObserverForName:@"FontActivateNotification" object:nil queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification *notification) {
+        RetainPtr fontFamily = dynamic_objc_cast<NSString>(notification.userInfo[@"FontActivateNotificationFontFamilyKey"]);
+        if (fontFamily) {
+            RetainPtr ctFont = adoptCF(CTFontCreateWithName(bridge_cast(fontFamily.get()), 0.0, nullptr));
+            RetainPtr downloaded = adoptCF(static_cast<CFBooleanRef>(CTFontCopyAttribute(ctFont.get(), kCTFontDownloadedAttribute)));
+            if (downloaded == kCFBooleanFalse)
+                return;
+            RetainPtr url = adoptCF(static_cast<CFURLRef>(CTFontCopyAttribute(ctFont.get(), kCTFontURLAttribute)));
+            for (Ref process : m_processes) {
+                if (!process->canSendMessage())
+                    continue;
+                process->send(Messages::WebProcess::RegisterAdditionalFonts(AdditionalFonts::additionalFonts({ URL(url.get()) }, process->auditToken())), 0);
+            }
+        }
+    }];
+
+    m_powerSourceNotifier = WTF::makeUnique<WebCore::PowerSourceNotifier>([weakThis = WeakPtr { this }] (bool hasAC) {
+        if (RefPtr webProcessPool = weakThis.get())
+            webProcessPool->sendToAllProcesses(Messages::WebProcess::PowerSourceDidChange(hasAC));
     });
 
 #if PLATFORM(COCOA)
@@ -944,6 +966,7 @@ void WebProcessPool::unregisterNotificationObservers()
         notify_cancel(token);
     for (auto observer : m_notificationObservers)
         [[NSNotificationCenter defaultCenter] removeObserver:observer.get()];
+    m_notifyState.clear();
 #endif
 #if !PLATFORM(IOS_FAMILY)
     m_powerObserver = nullptr;
@@ -981,7 +1004,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [[NSNotificationCenter defaultCenter] removeObserver:m_activationObserver.get()];
 
     m_powerSourceNotifier = nullptr;
-    
+
+    [[NSNotificationCenter defaultCenter] removeObserver:m_finishedMobileAssetFontDownloadObserver.get()];
+
 #if PLATFORM(COCOA)
     removeCFNotificationObserver((__bridge CFStringRef)WKLockdownModeContainerConfigurationChangedNotification);
 #endif
@@ -1002,6 +1027,18 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     m_weakObserver = nil;
 }
 
+#if ENABLE(NOTIFY_BLOCKING)
+
+void WebProcessPool::setNotifyState(const String& name, int status, uint64_t state)
+{
+    if (status == NOTIFY_STATUS_OK && state)
+        m_notifyState.set(name, state);
+    else
+        m_notifyState.remove(name);
+}
+
+#endif
+
 bool WebProcessPool::isURLKnownHSTSHost(const String& urlString) const
 {
     RetainPtr<CFURLRef> url = URL { urlString }.createCFURL();
@@ -1017,12 +1054,12 @@ void WebProcessPool::setCookieStoragePartitioningEnabled(bool enabled)
 
 void WebProcessPool::clearPermanentCredentialsForProtectionSpace(WebCore::ProtectionSpace&& protectionSpace)
 {
-    auto sharedStorage = [NSURLCredentialStorage sharedCredentialStorage];
-    auto credentials = [sharedStorage credentialsForProtectionSpace:protectionSpace.nsSpace()];
-    for (NSString* user in credentials) {
-        auto credential = credentials[user];
-        if (credential.persistence == NSURLCredentialPersistencePermanent)
-            [sharedStorage removeCredential:credentials[user] forProtectionSpace:protectionSpace.nsSpace()];
+    RetainPtr sharedStorage = [NSURLCredentialStorage sharedCredentialStorage];
+    RetainPtr credentials = [sharedStorage credentialsForProtectionSpace:protectionSpace.nsSpace()];
+    for (NSString* user in credentials.get()) {
+        RetainPtr<NSURLCredential> credential = credentials.get()[user];
+        if (credential.get().persistence == NSURLCredentialPersistencePermanent)
+            [sharedStorage removeCredential:credentials.get()[user] forProtectionSpace:protectionSpace.nsSpace()];
     }
 }
 
@@ -1072,7 +1109,7 @@ static bool isLockdownModeEnabledBySystemIgnoringCaching()
         return false;
 
 #if PLATFORM(IOS_FAMILY)
-    if (processHasContainer() && [_WKSystemPreferences isCaptivePortalModeIgnored:pathForProcessContainer()])
+    if (processHasContainer() && [_WKSystemPreferences isCaptivePortalModeIgnored:pathForProcessContainer().createNSString().get()])
         return false;
 #endif
     
@@ -1171,7 +1208,7 @@ void WebProcessPool::setProcessesShouldSuspend(bool shouldSuspend)
 
     m_processesShouldSuspend = shouldSuspend;
     for (auto& process : m_processes) {
-        process->throttler().setAllowsActivities(!m_processesShouldSuspend);
+        process->protectedThrottler()->setAllowsActivities(!m_processesShouldSuspend);
 
 #if ENABLE(WEBXR) && !USE(OPENXR)
         if (!m_processesShouldSuspend) {
@@ -1332,5 +1369,186 @@ void WebProcessPool::setCachedHardwareKeyboardState(HardwareKeyboardState hardwa
     m_hardwareKeyboardState = hardwareKeyboardState;
 }
 #endif
+
+#if ENABLE(CONTENT_EXTENSIONS)
+static RefPtr<WebCompiledContentRuleList> createCompiledContentRuleList(WKContentRuleList* list)
+{
+    if (!list)
+        return nullptr;
+
+    auto data = list->_contentRuleList->compiledRuleList().data();
+    return WebCompiledContentRuleList::create(WTFMove(data));
+}
+
+void WebProcessPool::platformLoadResourceMonitorRuleList(CompletionHandler<void(RefPtr<WebCompiledContentRuleList>)>&& completionHandler)
+{
+#if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
+    RELEASE_LOG(ResourceMonitoring, "WebProcessPool::platformLoadResourceMonitorRuleList request to load rule list.");
+
+    ResourceMonitorURLsController::singleton().prepare([weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)](WKContentRuleList *list, bool updated) mutable {
+        RefPtr<WebCompiledContentRuleList> ruleList;
+
+        if (RefPtr protectedThis = weakThis.get()) {
+            if (list && (updated || !protectedThis->m_resourceMonitorRuleListCache)) {
+                RELEASE_LOG(ResourceMonitoring, "WebProcessPool::platformLoadResourceMonitorRuleList rule list is loaded.");
+                ruleList = createCompiledContentRuleList(list);
+            } else
+                RELEASE_LOG_ERROR(ResourceMonitoring, "WebProcessPool::platformLoadResourceMonitorRuleList failed to load rule list.");
+        }
+        completionHandler(WTFMove(ruleList));
+    });
+#else
+    completionHandler(nullptr);
+#endif
+}
+
+void WebProcessPool::platformCompileResourceMonitorRuleList(const String& rulesText, CompletionHandler<void(RefPtr<WebCompiledContentRuleList>)>&& completionHandler)
+{
+    StringView view { rulesText };
+    RetainPtr source = view.createNSStringWithoutCopying();
+    RetainPtr store = [WKContentRuleListStore defaultStore];
+
+    [store compileContentRuleListForIdentifier:WebKitResourceMonitorURLsForTestingIdentifier encodedContentRuleList:source.get() completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)](WKContentRuleList *list, NSError *error) mutable {
+        if (error || !list)
+            RELEASE_LOG_ERROR(ResourceLoadStatistics, "Failed to compile test urls");
+
+        completionHandler(createCompiledContentRuleList(list));
+    }).get()];
+}
+
+String WebProcessPool::platformResourceMonitorRuleListSourceForTesting()
+{
+#if HAVE(RESOURCE_MONITOR_RULE_LIST_SOURCE_FOR_TESTING)
+    return resourceMonitorRuleListSourceForTestingCocoa();
+#else
+    return emptyString();
+#endif
+}
+#endif
+
+static void addUserInstalledFontURLs(NSString *path, Vector<URL>& fontURLs)
+{
+    RetainPtr enumerator = [NSFileManager.defaultManager enumeratorAtPath:path];
+
+    for (NSString *font in enumerator.get()) {
+        RetainPtr nsFontURL = [NSURL fileURLWithPath:[path stringByAppendingPathComponent:font]];
+        RetainPtr utType = [UTType typeWithFilenameExtension:nsFontURL.get().pathExtension];
+        if ([utType isSubtypeOfType:UTTypeFont]) {
+            URL fontURL(nsFontURL.get());
+            fontURLs.append(fontURL);
+            RELEASE_LOG(Process, "Registering font url %s", fontURL.string().utf8().data());
+        }
+    }
+}
+
+void WebProcessPool::registerUserInstalledFonts(WebProcessProxy& process)
+{
+    if (m_userInstalledFontURLs) {
+        process.send(Messages::WebProcess::RegisterAdditionalFonts(AdditionalFonts::additionalFonts(*m_userInstalledFontURLs, process.auditToken())), 0);
+        return;
+    }
+
+    auto blockPtr = makeBlockPtr([weakThis = WeakPtr { *this }, weakProcess = WeakPtr { process }] {
+        RetainPtr userInstalledFontsPath = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Fonts"];
+
+        Vector<URL> fontURLs;
+        addUserInstalledFontURLs(userInstalledFontsPath.get(), fontURLs);
+        addUserInstalledFontURLs(@"/Library/Fonts", fontURLs);
+        addUserInstalledFontURLs(@"/System/Library/AssetsV2/com_apple_MobileAsset_Font7", fontURLs);
+
+        RunLoop::protectedMain()->dispatch([weakThis = WTFMove(weakThis), weakProcess = WTFMove(weakProcess), fontURLs = crossThreadCopy(WTFMove(fontURLs))] {
+            if (weakProcess)
+                weakProcess->send(Messages::WebProcess::RegisterAdditionalFonts(AdditionalFonts::additionalFonts(fontURLs, weakProcess->auditToken())), 0);
+            if (RefPtr protectedThis = weakThis.get())
+                protectedThis->m_userInstalledFontURLs = WTFMove(fontURLs);
+        });
+    });
+
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0), blockPtr.get());
+}
+
+#if PLATFORM(MAC)
+void WebProcessPool::registerAdditionalFonts(NSArray *fontNames)
+{
+    if (!fontNames)
+        return;
+
+    Vector<URL> fontURLs;
+
+    for (NSString *fontName : fontNames) {
+        RetainPtr ctFont = adoptCF(CTFontCreateWithName(bridge_cast(fontName), 0.0, nullptr));
+        RetainPtr downloaded = adoptCF(static_cast<CFBooleanRef>(CTFontCopyAttribute(ctFont.get(), kCTFontDownloadedAttribute)));
+        if (downloaded == kCFBooleanFalse)
+            return;
+        RetainPtr url = adoptCF(static_cast<CFURLRef>(CTFontCopyAttribute(ctFont.get(), kCTFontURLAttribute)));
+        fontURLs.append(URL(url.get()));
+    }
+
+    for (Ref process : m_processes) {
+        if (!process->canSendMessage())
+            continue;
+        process->send(Messages::WebProcess::RegisterAdditionalFonts(AdditionalFonts::additionalFonts(fontURLs, process->auditToken())), 0);
+    }
+
+    if (m_userInstalledFontURLs)
+        m_userInstalledFontURLs->appendVector(WTFMove(fontURLs));
+    else
+        m_userInstalledFontURLs = WTFMove(fontURLs);
+}
+#endif
+
+static URL fontURLFromName(ASCIILiteral fontName)
+{
+    RetainPtr cfFontName = fontName.createCFString();
+    RetainPtr font = adoptCF(CTFontCreateWithName(cfFontName.get(), 0.0, nullptr));
+    return URL(adoptCF(static_cast<CFURLRef>(CTFontCopyAttribute(font.get(), kCTFontURLAttribute))).get());
+}
+
+static RetainPtr<CTFontDescriptorRef> fontDescription(ASCIILiteral fontName)
+{
+    RetainPtr nsFontName = fontName.createNSString();
+    RetainPtr attributes = @{ bridge_cast(kCTFontFamilyNameAttribute): nsFontName.get(), bridge_cast(kCTFontRegistrationScopeAttribute): @(kCTFontPriorityComputer) };
+    return adoptCF(CTFontDescriptorCreateWithAttributes((__bridge CFDictionaryRef)attributes.get()));
+}
+
+void WebProcessPool::registerAssetFonts(WebProcessProxy& process)
+{
+    if (m_assetFontURLs) {
+        process.send(Messages::WebProcess::RegisterAdditionalFonts(AdditionalFonts::additionalFonts({ *m_assetFontURLs }, process.auditToken())), 0);
+        return;
+    }
+
+    Vector<ASCIILiteral> assetFonts = { "Canela Text"_s, "Proxima Nova"_s, "Publico Text"_s };
+
+    RetainPtr<NSMutableArray> descriptions = [NSMutableArray array];
+    for (auto& fontName : assetFonts)
+        [descriptions addObject:(__bridge id)fontDescription(fontName).get()];
+
+    auto blockPtr = makeBlockPtr([assetFonts = WTFMove(assetFonts), weakProcess = WeakPtr { process }, weakThis = WeakPtr { *this }](CTFontDescriptorMatchingState state, CFDictionaryRef progressParameter) {
+        if (state != kCTFontDescriptorMatchingDidFinish)
+            return true;
+        RELEASE_LOG(Process, "Font matching finished, progress parameter = %@", (__bridge id)progressParameter);
+        RunLoop::protectedMain()->dispatch([assetFonts = WTFMove(assetFonts), weakProcess = WTFMove(weakProcess), weakThis = WTFMove(weakThis)] {
+            RefPtr protectedThis = weakThis.get();
+            if (!protectedThis)
+                return;
+            if (!protectedThis->m_assetFontURLs) {
+                protectedThis->m_assetFontURLs = Vector<URL> { };
+                for (auto& fontName : assetFonts) {
+                    URL fontURL = fontURLFromName(fontName);
+                    RELEASE_LOG(Process, "Registering font name %s with url %s", fontName.characters(), fontURL.string().utf8().data());
+                    protectedThis->m_assetFontURLs->append(WTFMove(fontURL));
+                }
+            }
+            if (weakProcess)
+                weakProcess->send(Messages::WebProcess::RegisterAdditionalFonts(AdditionalFonts::additionalFonts({ *protectedThis->m_assetFontURLs }, weakProcess->auditToken())), 0);
+        });
+        return true;
+    });
+
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), [descriptions = RetainPtr<NSArray>(descriptions), blockPtr] {
+        CTFontDescriptorMatchFontDescriptorsWithProgressHandler((__bridge CFArrayRef)descriptions.get(), nullptr, blockPtr.get());
+    });
+}
 
 } // namespace WebKit

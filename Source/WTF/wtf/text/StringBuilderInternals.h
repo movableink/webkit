@@ -31,17 +31,17 @@
 namespace WTF {
 
 // Allocate a new buffer, copying in currentCharacters (these may come from either m_string or m_buffer.
-template<typename AllocationCharacterType, typename CurrentCharacterType> void StringBuilder::allocateBuffer(std::span<const CurrentCharacterType> currentCharacters, unsigned requiredCapacity)
+template<typename AllocationCharacterType, typename CurrentCharacterType> void StringBuilder::allocateBuffer(std::span<const CurrentCharacterType> currentCharactersToCopy, unsigned requiredCapacity)
 {
-    std::span<AllocationCharacterType> bufferCharacters;
-    auto buffer = StringImpl::tryCreateUninitialized(requiredCapacity, bufferCharacters);
-    if (UNLIKELY(!buffer)) {
+    std::span<AllocationCharacterType> newBufferCharacters;
+    auto buffer = StringImpl::tryCreateUninitialized(requiredCapacity, newBufferCharacters);
+    if (!buffer) [[unlikely]] {
         didOverflow();
         return;
     }
 
     ASSERT(!hasOverflowed());
-    StringImpl::copyCharacters(bufferCharacters.data(), currentCharacters);
+    StringImpl::copyCharacters(newBufferCharacters, currentCharactersToCopy);
 
     m_buffer = WTFMove(buffer);
     m_string = { };
@@ -55,7 +55,7 @@ template<typename CharacterType> void StringBuilder::reallocateBuffer(unsigned r
         if (m_buffer->hasOneRef()) {
             CharacterType* bufferCharacters;
             auto buffer = StringImpl::tryReallocate(m_buffer.releaseNonNull(), requiredCapacity, bufferCharacters);
-            if (UNLIKELY(!buffer)) {
+            if (!buffer) [[unlikely]] {
                 didOverflow();
                 return;
             }
@@ -86,7 +86,7 @@ template<typename CharacterType> std::span<CharacterType> StringBuilder::extendB
     if (!requiredLength || hasOverflowed())
         return { };
     reallocateBuffer(expandedCapacity(capacity(), requiredLength));
-    if (UNLIKELY(hasOverflowed()))
+    if (hasOverflowed()) [[unlikely]]
         return { };
     return spanConstCast<CharacterType>(m_buffer->span<CharacterType>().subspan(std::exchange(m_length, requiredLength)));
 }

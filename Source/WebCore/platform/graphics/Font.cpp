@@ -50,8 +50,6 @@
 #include "OpenTypeVerticalData.h"
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 unsigned GlyphPage::s_count = 0;
@@ -94,12 +92,13 @@ Font::Font(const FontPlatformData& platformData, Origin origin, IsInterstitial i
     , m_shouldNotBeUsedForArabic(false)
 #endif
 {
+    relaxAdoptionRequirement();
     platformInit();
     platformGlyphInit();
     platformCharWidthInit();
 #if ENABLE(OPENTYPE_VERTICAL)
     if (platformData.orientation() == FontOrientation::Vertical && orientationFallback == IsOrientationFallback::No) {
-        m_verticalData = FontCache::forCurrentThread().verticalData(platformData);
+        m_verticalData = FontCache::forCurrentThread()->verticalData(platformData);
         m_hasVerticalGlyphs = m_verticalData.get() && m_verticalData->hasVerticalMetrics();
     }
 #endif
@@ -289,7 +288,7 @@ static std::optional<size_t> codePointSupportIndex(char32_t codePoint)
     }
 
 #ifndef NDEBUG
-    char32_t codePointOrder[] = {
+    auto codePointOrder = std::to_array<char32_t>({
         0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
         0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
         0x7F,
@@ -315,7 +314,7 @@ static std::optional<size_t> codePointSupportIndex(char32_t codePoint)
         firstStrongIsolate,
         objectReplacementCharacter,
         zeroWidthNoBreakSpace
-    };
+    });
     bool found = false;
     for (size_t i = 0; i < std::size(codePointOrder); ++i) {
         if (codePointOrder[i] == codePoint) {
@@ -685,8 +684,28 @@ TextStream& operator<<(TextStream& ts, const Font& font)
     ts << font.description();
     return ts;
 }
+
+WTF::TextStream& operator<<(WTF::TextStream& ts, const GlyphBuffer& glyphBuffer)
+{
+    ts << "glyphBuffer: " << &glyphBuffer;
+    auto initialAdvance = glyphBuffer.initialAdvance();
+    ts << ", initial advance: width:" <<  width(initialAdvance) << " height:" << height(initialAdvance);
+    for (size_t index = 0; index < glyphBuffer.size(); ++index) {
+        auto advance = glyphBuffer.advanceAt(index);
+        auto& font = glyphBuffer.fontAt(index);
+        auto glyph =  glyphBuffer.glyphAt(index);
+        auto bounds = font.boundsForGlyph(glyph);
+        ts << "\n"_s;
+        ts << "glyph index: " << index;
+        ts << ", glyph: " << glyph;
+        ts << ", font: " <<  &font;
+        ts << ", advance: width:" <<  width(advance) << " height:" << height(advance);
+        ts << ", string index: "  << glyphBuffer.uncheckedStringOffsetAt(index);
+        ts << ", origin: " << glyphBuffer.originAt(index);
+        ts << ", glyph bounds: " << bounds;
+    }
+    return ts;
+}
 #endif
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

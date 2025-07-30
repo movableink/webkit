@@ -2,7 +2,7 @@
 
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs
 
 step = int(parse_qs(os.environ.get('QUERY_STRING', ''), keep_blank_values=True).get('step', [0])[0])
@@ -15,7 +15,7 @@ if step == 1:
         'Location: http://localhost:8000/cookies/resources/set-cookie-on-redirect.py?step=2\r\n\r\n'
     )
 elif step == 2:
-    expires = datetime.utcnow() + timedelta(seconds=86400)
+    expires = datetime.now(timezone.utc) + timedelta(seconds=86400)
     sys.stdout.write(
         'status: 302\r\n'
         'Set-Cookie: test_cookie=1; expires={} GMT; Max-Age=86400\r\n'
@@ -33,7 +33,7 @@ elif step == 3:
 
     sys.stdout.write('status: 200\r\n')
     if cookies.get('test_cookie', None) is not None:
-        expires = datetime.utcnow() - timedelta(seconds=86400)
+        expires = datetime.now(timezone.utc) - timedelta(seconds=86400)
         sys.stdout.write(
             'Set-Cookie: text_cookie=deleted; expires={} GMT; Max-Age=0\r\n\r\n'
             'PASSED: Cookie successfully set\n'.format(expires.strftime('%a, %d-%b-%Y %H:%M:%S'))

@@ -100,7 +100,7 @@ std::unique_ptr<CursorTheme> CursorTheme::create(const char* name, uint32_t size
             if (!path) {
                 // If there's no cursors path, use the first inherited theme.
                 path = WTFMove(inheritedThemes[0]);
-                inheritedThemes.remove(0);
+                inheritedThemes.removeAt(0);
             }
 
             return makeUnique<CursorTheme>(WTFMove(path), size, WTFMove(inheritedThemes));

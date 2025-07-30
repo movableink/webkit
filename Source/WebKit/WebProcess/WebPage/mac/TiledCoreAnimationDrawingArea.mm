@@ -48,6 +48,7 @@
 #import <QuartzCore/QuartzCore.h>
 #import <WebCore/DebugPageOverlays.h>
 #import <WebCore/DestinationColorSpace.h>
+#import <WebCore/FrameInlines.h>
 #import <WebCore/GraphicsContext.h>
 #import <WebCore/GraphicsLayerCA.h>
 #import <WebCore/LocalFrame.h>
@@ -122,12 +123,13 @@ void TiledCoreAnimationDrawingArea::sendDidFirstLayerFlushIfNeeded()
     m_needsSendDidFirstLayerFlush = false;
 
     // Let the first commit complete before sending.
-    [CATransaction addCommitHandler:[this, weakThis = WeakPtr { *this }] {
-        if (!weakThis || !m_layerHostingContext)
+    [CATransaction addCommitHandler:[weakThis = WeakPtr { *this }] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis || !protectedThis->m_layerHostingContext)
             return;
         LayerTreeContext layerTreeContext;
-        layerTreeContext.contextID = m_layerHostingContext->cachedContextID();
-        send(Messages::DrawingAreaProxy::DidFirstLayerFlush(0, layerTreeContext));
+        layerTreeContext.contextID = protectedThis->m_layerHostingContext->cachedContextID();
+        protectedThis->send(Messages::DrawingAreaProxy::DidFirstLayerFlush(0, layerTreeContext));
     } forPhase:kCATransactionPhasePostCommit];
 }
 
@@ -162,15 +164,15 @@ void TiledCoreAnimationDrawingArea::setNeedsDisplayInRect(const IntRect& rect)
 
 void TiledCoreAnimationDrawingArea::setRootCompositingLayer(WebCore::Frame&, GraphicsLayer* graphicsLayer)
 {
-    CALayer *rootLayer = graphicsLayer ? graphicsLayer->platformLayer() : nil;
+    RetainPtr rootLayer = graphicsLayer ? graphicsLayer->platformLayer() : nil;
 
     if (m_layerTreeStateIsFrozen) {
-        m_pendingRootLayer = rootLayer;
+        m_pendingRootLayer = rootLayer.get();
         return;
     }
 
     m_pendingRootLayer = nullptr;
-    setRootCompositingLayer(rootLayer);
+    setRootCompositingLayer(rootLayer.get());
 }
 
 void TiledCoreAnimationDrawingArea::updateRenderingWithForcedRepaint()
@@ -191,10 +193,11 @@ void TiledCoreAnimationDrawingArea::updateRenderingWithForcedRepaintAsync(WebPag
         return completionHandler();
     }
 
-    dispatchAfterEnsuringUpdatedScrollPosition([this, weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)] () mutable {
-        if (!weakThis)
+    dispatchAfterEnsuringUpdatedScrollPosition([weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)] () mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return completionHandler();
-        m_webPage->drawingArea()->updateRenderingWithForcedRepaint();
+        protectedThis->m_webPage->drawingArea()->updateRenderingWithForcedRepaint();
         completionHandler();
     });
 }
@@ -288,15 +291,19 @@ void TiledCoreAnimationDrawingArea::dispatchAfterEnsuringUpdatedScrollPosition(W
         invalidatePostRenderingUpdateRunLoopObserver();
     }
 
-    ScrollingThread::dispatchBarrier([this, retainedPage = Ref { m_webPage.get() }, function = WTFMove(function)] {
+    ScrollingThread::dispatchBarrier([weakThis = WeakPtr { *this }, retainedPage = Ref { m_webPage.get() }, function = WTFMove(function)] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
+
         // It is possible for the drawing area to be destroyed before the bound block is invoked.
         if (!retainedPage->drawingArea())
             return;
 
         function();
 
-        if (!m_layerTreeStateIsFrozen)
-            scheduleRenderingUpdateRunLoopObserver();
+        if (!protectedThis->m_layerTreeStateIsFrozen)
+            protectedThis->scheduleRenderingUpdateRunLoopObserver();
     });
 #else
     function();
@@ -351,7 +358,7 @@ void TiledCoreAnimationDrawingArea::updateRendering(UpdateRenderingType flushTyp
         return;
 
     Ref webPage = m_webPage.get();
-    if (UNLIKELY(!webPage->hasRootFrames()))
+    if (!webPage->hasRootFrames()) [[unlikely]]
         return;
 
     @autoreleasepool {
@@ -436,8 +443,8 @@ void TiledCoreAnimationDrawingArea::handleActivityStateChangeCallbacksIfNeeded()
             return;
 
         Ref protectedPage = weakThis->m_webPage.get();
-        auto* drawingArea = static_cast<TiledCoreAnimationDrawingArea*>(protectedPage->drawingArea());
-        ASSERT(weakThis.get() == drawingArea);
+        RefPtr drawingArea = downcast<TiledCoreAnimationDrawingArea>(protectedPage->drawingArea());
+        ASSERT(weakThis.get() == drawingArea.get());
         if (drawingArea != weakThis.get())
             return;
 
@@ -553,16 +560,6 @@ void TiledCoreAnimationDrawingArea::setDeviceScaleFactor(float deviceScaleFactor
     completionHandler();
 }
 
-void TiledCoreAnimationDrawingArea::setLayerHostingMode(LayerHostingMode)
-{
-    updateLayerHostingContext();
-
-    // Finally, inform the UIProcess that the context has changed.
-    LayerTreeContext layerTreeContext;
-    layerTreeContext.contextID = m_layerHostingContext->cachedContextID();
-    send(Messages::DrawingAreaProxy::UpdateAcceleratedCompositingMode(0, layerTreeContext));
-}
-
 void TiledCoreAnimationDrawingArea::setColorSpace(std::optional<WebCore::DestinationColorSpace> colorSpace)
 {
     m_layerHostingContext->setColorSpace(colorSpace ? colorSpace->platformColorSpace() : nullptr);
@@ -589,21 +586,7 @@ void TiledCoreAnimationDrawingArea::updateLayerHostingContext()
         m_layerHostingContext = nullptr;
     }
 
-    // Create a new context and set it up.
-    switch (Ref { m_webPage.get() }->layerHostingMode()) {
-    case LayerHostingMode::InProcess:
-#if HAVE(HOSTED_CORE_ANIMATION)
-        m_layerHostingContext = LayerHostingContext::createForPort(WebProcess::singleton().compositingRenderServerPort());
-#else
-        RELEASE_ASSERT_NOT_REACHED();
-#endif
-        break;
-#if HAVE(OUT_OF_PROCESS_LAYER_HOSTING)
-    case LayerHostingMode::OutOfProcess:
-        m_layerHostingContext = LayerHostingContext::createForExternalHostingProcess();
-        break;
-#endif
-    }
+    m_layerHostingContext = LayerHostingContext::create();
 
     if (m_rootLayer)
         m_layerHostingContext->setRootLayer(m_hostingLayer.get());
@@ -791,7 +774,7 @@ void TiledCoreAnimationDrawingArea::commitTransientZoom(double scale, FloatPoint
         if (shadowCALayer)
             [shadowCALayer removeAllAnimations];
 
-        if (TiledCoreAnimationDrawingArea* drawingArea = static_cast<TiledCoreAnimationDrawingArea*>(webPage->drawingArea()))
+        if (auto* drawingArea = downcast<TiledCoreAnimationDrawingArea>(webPage->drawingArea()))
             drawingArea->applyTransientZoomToPage(scale, origin);
     }];
 

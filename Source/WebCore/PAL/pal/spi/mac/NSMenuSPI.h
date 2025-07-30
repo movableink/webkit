@@ -23,6 +23,10 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
+DECLARE_SYSTEM_HEADER
+
 #import <wtf/Platform.h>
 
 #if PLATFORM(MAC)
@@ -30,18 +34,6 @@
 #if USE(APPLE_INTERNAL_SDK)
 
 #import <AppKit/NSMenu_Private.h>
-
-@interface NSMenuItem (Staging_129192954)
-
-+ (NSMenuItem *)standardWritingToolsMenuItem;
-
-@end
-
-#elif USE(APPLE_INTERNAL_SDK)
-
-WTF_EXTERN_C_BEGIN
-#import <AppKit/NSMenu_Private.h>
-WTF_EXTERN_C_END
 
 #else
 
@@ -78,6 +70,16 @@ enum {
 @interface NSMenu (Staging_81123724)
 - (BOOL)_containsItemMatchingEvent:(NSEvent *)event includingDisabledItems:(BOOL)includingDisabledItems;
 @end
+
+#if ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)
+@interface NSMenuItem (Staging_138651669)
+
++ (NSString *)_systemImageNameForAction:(SEL)action;
+@property (strong, setter=_setActionImage:) NSImage *_actionImage;
+@property (setter=_setHasActionImage:) BOOL _hasActionImage;
+
+@end
+#endif
 
 typedef NSUInteger NSPopUpMenuFlags;
 

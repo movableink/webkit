@@ -54,7 +54,7 @@ void QueueImpl::submit(Vector<Ref<WebGPU::CommandBuffer>>&& commandBuffers)
         return Ref { m_convertToBackingContext }->convertToBacking(commandBuffer);
     });
 
-    wgpuQueueSubmit(m_backing.get(), backingCommandBuffers.size(), backingCommandBuffers.data());
+    wgpuQueueSubmit(m_backing.get(), backingCommandBuffers.size(), backingCommandBuffers.span().data());
 }
 
 static void onSubmittedWorkDoneCallback(WGPUQueueWorkDoneStatus status, void* userdata)
@@ -142,6 +142,11 @@ void QueueImpl::copyExternalImageToTexture(
 void QueueImpl::setLabelInternal(const String& label)
 {
     wgpuQueueSetLabel(m_backing.get(), label.utf8().data());
+}
+
+RefPtr<WebCore::NativeImage> QueueImpl::getNativeImage(WebCore::VideoFrame&)
+{
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 } // namespace WebCore::WebGPU

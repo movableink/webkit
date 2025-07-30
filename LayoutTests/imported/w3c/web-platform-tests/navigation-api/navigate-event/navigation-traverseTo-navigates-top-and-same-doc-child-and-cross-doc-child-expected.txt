@@ -1,6 +1,4 @@
 
 
-Harness Error (TIMEOUT), message = null
-
-TIMEOUT navigation.traverseTo() can navigate 3 frames of different types with correct navigate event cancelable values Test timed out
+PASS navigation.traverseTo() can navigate 3 frames of different types with correct navigate event cancelable values
 

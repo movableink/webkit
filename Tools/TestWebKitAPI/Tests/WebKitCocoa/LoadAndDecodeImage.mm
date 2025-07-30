@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,15 +25,20 @@
 
 #import "config.h"
 
-#import "CocoaImage.h"
 #import "HTTPServer.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
+#import "TestCocoaImageAndCocoaColor.h"
 #import "TestNavigationDelegate.h"
+#import "TestWKWebView.h"
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
+#import <WebCore/Image.h>
+#import <WebCore/ImageAdapter.h>
+#import <WebCore/NativeImage.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <wtf/Expected.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/Base64.h>
 
@@ -61,7 +66,7 @@ TEST(WebKit, LoadAndDecodeImage)
     };
 
     HTTPServer server {
-        { "/terminate"_s, { HTTPResponse::Behavior::TerminateConnectionAfterReceivingResponse } },
+        { "/terminate"_s, { HTTPResponse::Behavior::TerminateConnectionAfterReceivingRequest } },
         { "/test_png"_s, { pngData() } },
         { "/test_untagged_png"_s, { untaggedPNGData() } },
         { "/test_gif"_s, { gifData() } },
@@ -162,6 +167,18 @@ TEST(WebKit, LoadAndDecodeImage)
         done = true;
     }];
     Util::run(&done);
+
+    done = false;
+    RetainPtr syncedWebView = adoptNS([TestWKWebView new]);
+    [syncedWebView synchronouslyLoadHTMLString:@""];
+    [syncedWebView _close];
+    [syncedWebView _loadAndDecodeImage:tlsServer.request() constrainedToSize:CGSizeZero maximumBytesFromNetwork:36541 completionHandler:^(Util::PlatformImage *image, NSError *error) {
+        EXPECT_NULL(image);
+        EXPECT_EQ(error.code, NSURLErrorCannotDecodeContentData);
+        EXPECT_WK_STREQ(error.domain, "NSURLErrorDomain");
+        done = true;
+    }];
+    Util::run(&done);
 }
 
 TEST(WebKit, GetInformationFromImageData)
@@ -219,7 +236,6 @@ TEST(WebKit, CreateIconDataFromImageData)
 {
     RetainPtr webView = adoptNS([WKWebView new]);
     RetainPtr imageData = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"icon" ofType:@"png"]];
-    RetainPtr sizes = adoptNS([[NSMutableArray alloc] init]);
     RetainPtr length1 = [NSNumber numberWithUnsignedInt:16];
     RetainPtr length2 = [NSNumber numberWithUnsignedInt:256];
     NSArray *lengths = @[length1.get(), length2.get()];
@@ -227,6 +243,7 @@ TEST(WebKit, CreateIconDataFromImageData)
     done = false;
     [webView _createIconDataFromImageData:imageData.get() withLengths:lengths completionHandler:^(NSData *result, NSError *error) {
         EXPECT_NULL(error);
+        EXPECT_NOT_NULL(result);
         iconData = result;
         done = true;
     }];
@@ -248,6 +265,108 @@ TEST(WebKit, CreateIconDataFromImageData)
         EXPECT_NOT_NULL(result);
         EXPECT_EQ(result.size.width, 256);
         EXPECT_EQ(result.size.height, 256);
+        done = true;
+    }];
+    Util::run(&done);
+}
+
+RetainPtr<NSData> tiffRepresentation(CocoaImage *image)
+{
+#if USE(APPKIT)
+    return [image TIFFRepresentation];
+#else
+    RetainPtr cgImage = [image CGImage];
+    if (!cgImage)
+        return nullptr;
+
+    RefPtr nativeImage = WebCore::NativeImage::create(WTFMove(cgImage));
+    if (!nativeImage)
+        return nullptr;
+
+    Ref nativeImageRef { nativeImage.releaseNonNull() };
+    return bridge_cast(WebCore::ImageAdapter::tiffRepresentation({ nativeImageRef }));
+#endif
+}
+
+TEST(WebKit, CreateIconDataFromImageDataSVG)
+{
+    RetainPtr webView = adoptNS([WKWebView new]);
+    RetainPtr imageData = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"icon" ofType:@"svg"]];
+    RetainPtr expectedIconData16 = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"icon-svg-16" ofType:@"tiff"]];
+    RetainPtr expectedIconData256 = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"icon-svg-256" ofType:@"tiff"]];
+    RetainPtr length1 = [NSNumber numberWithUnsignedInt:16];
+    RetainPtr length2 = [NSNumber numberWithUnsignedInt:256];
+    NSArray *lengths = @[length1.get(), length2.get()];
+    __block RetainPtr<NSData> iconData;
+    done = false;
+    [webView _createIconDataFromImageData:imageData.get() withLengths:lengths completionHandler:^(NSData *result, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_NOT_NULL(result);
+        iconData = result;
+        done = true;
+    }];
+    Util::run(&done);
+
+    done = false;
+    [webView _decodeImageData:iconData.get() preferredSize:nil completionHandler:^(CocoaImage *result, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_NOT_NULL(result);
+        EXPECT_EQ(result.size.width, 256);
+        EXPECT_EQ(result.size.height, 256);
+        EXPECT_TRUE([tiffRepresentation(result) isEqualToData:expectedIconData256.get()]);
+        done = true;
+    }];
+    Util::run(&done);
+
+    done = false;
+    [webView _decodeImageData:iconData.get() preferredSize:[NSValue valueWithSize:NSMakeSize(16, 16)] completionHandler:^(CocoaImage *result, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_NOT_NULL(result);
+        EXPECT_EQ(result.size.width, 16);
+        EXPECT_EQ(result.size.height, 16);
+        EXPECT_TRUE([tiffRepresentation(result) isEqualToData:expectedIconData16.get()]);
+        done = true;
+    }];
+    Util::run(&done);
+
+    done = false;
+    [webView _decodeImageData:iconData.get() preferredSize:[NSValue valueWithSize:NSMakeSize(32, 32)] completionHandler:^(CocoaImage *result, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_NOT_NULL(result);
+        EXPECT_EQ(result.size.width, 256);
+        EXPECT_EQ(result.size.height, 256);
+        EXPECT_TRUE([tiffRepresentation(result) isEqualToData:expectedIconData256.get()]);
+        done = true;
+    }];
+    Util::run(&done);
+}
+
+TEST(WebKit, CreateIconDataFromImageDataSVGWithSubresource)
+{
+    RetainPtr webView = adoptNS([WKWebView new]);
+    RetainPtr imageData = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"icon-with-subresource" ofType:@"svg"]];
+
+    done = false;
+    [webView _decodeImageData:imageData.get() preferredSize:nil completionHandler:^(CocoaImage *result, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_NOT_NULL(result);
+        EXPECT_EQ(result.size.width, 10);
+        EXPECT_EQ(result.size.height, 10);
+
+        // FIXME: Util::pixelColor gives us NSCalibratedRGBColorSpace instead of sRGB IEC61966-2.1.
+        // This is tracked by <https://bugs.webkit.org/show_bug.cgi?id=290768>.
+        auto lime = [CocoaColor greenColor];
+        EXPECT_TRUE(Util::compareColors(Util::pixelColor(result, { 3, 3 }), lime, 0.025));
+        EXPECT_TRUE(Util::compareColors(Util::pixelColor(result, { 8, 8 }), lime, 0.025));
+
+        done = true;
+    }];
+    Util::run(&done);
+
+    done = false;
+    [webView _createIconDataFromImageData:imageData.get() withLengths:nil completionHandler:^(NSData *result, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_NOT_NULL(result);
         done = true;
     }];
     Util::run(&done);

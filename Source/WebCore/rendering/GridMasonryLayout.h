@@ -29,6 +29,8 @@
 #include "GridTrackSizingAlgorithm.h"
 #include "LayoutUnit.h"
 #include "RenderBox.h"
+#include <wtf/CheckedRef.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -54,21 +56,15 @@ public:
     LayoutUnit gridGap() const { return m_masonryAxisGridGap; };
 
 private:
-    GridSpan gridAxisPositionUsingPackAutoFlow(const RenderBox& item) const;
-    GridSpan gridAxisPositionUsingNextAutoFlow(const RenderBox& item);
     GridArea gridAreaForIndefiniteGridAxisItem(const RenderBox& item);
     GridArea gridAreaForDefiniteGridAxisItem(const RenderBox&) const;
 
-    void collectMasonryItems();
-    void placeItemsUsingOrderModifiedDocumentOrder(const GridTrackSizingAlgorithm&, GridMasonryLayout::MasonryLayoutPhase);
-    void placeItemsWithDefiniteGridAxisPosition(const GridTrackSizingAlgorithm&, GridMasonryLayout::MasonryLayoutPhase);
-    void placeItemsWithIndefiniteGridAxisPosition(const GridTrackSizingAlgorithm&, GridMasonryLayout::MasonryLayoutPhase);
+    void placeMasonryItems(const GridTrackSizingAlgorithm&, GridMasonryLayout::MasonryLayoutPhase);
     void setItemGridAxisContainingBlockToGridArea(const GridTrackSizingAlgorithm&, RenderBox&);
     void insertIntoGridAndLayoutItem(const GridTrackSizingAlgorithm&, RenderBox&, const GridArea&, GridMasonryLayout::MasonryLayoutPhase);
     LayoutUnit calculateMasonryIntrinsicLogicalWidth(RenderBox&, GridMasonryLayout::MasonryLayoutPhase);
 
     void resizeAndResetRunningPositions();
-    void allocateCapacityForMasonryVectors();
     LayoutUnit masonryAxisMarginBoxForItem(const RenderBox& gridItem);
     void updateRunningPositions(const RenderBox& gridItem, const GridArea&);
     void updateItemOffset(const RenderBox& gridItem, LayoutUnit offset);
@@ -81,22 +77,14 @@ private:
 
     unsigned m_gridAxisTracksCount;
 
-    Vector<RenderBox*> m_itemsWithDefiniteGridAxisPosition;
-    Vector<RenderBox*> m_itemsWithIndefiniteGridAxisPosition;
-
     Vector<LayoutUnit> m_runningPositions;
     UncheckedKeyHashMap<SingleThreadWeakRef<const RenderBox>, LayoutUnit> m_itemOffsets;
-    RenderGrid& m_renderGrid;
+    const CheckedRef<RenderGrid> m_renderGrid;
     LayoutUnit m_masonryAxisGridGap;
     LayoutUnit m_gridContentSize;
 
     GridTrackSizingDirection m_masonryAxisDirection;
     const GridSpan m_masonryAxisSpan = GridSpan::masonryAxisTranslatedDefiniteGridSpan();
-
-    // These values are based on best estimate. They may need to be updated based
-    // on common behavior seen on websites.
-    const unsigned m_masonryDefiniteItemsQuarterCapacity = 4;
-    const unsigned m_masonryIndefiniteItemsHalfCapacity = 2;
 
     unsigned m_autoFlowNextCursor;
 };

@@ -38,7 +38,7 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorHistory);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(InspectorHistory, Action);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorHistory::Action);
 
 class UndoableStateMark : public InspectorHistory::Action {
 private:

@@ -14,7 +14,9 @@ Property values requiring vendor prefixes:
 None
 ------------------------------------------------------------------------
 List of files:
+/LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/WEB_FEATURES.yml
 /LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/beforematch-element-fragment-navigation.html
+/LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/beforematch-scroll-to-text-fragment.html
 /LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-1-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-1a-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-1a.html
@@ -30,7 +32,21 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-1f.html
 /LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-1g-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-1g.html
+/LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-2-expected.svg
 /LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-2-ref.svg
 /LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-2.svg
 /LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-idl.html
 /LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-ua-stylesheet.html
+/LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-001-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-001.html
+/LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-002.html
+/LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-004-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-004.html
+/LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-005-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-005-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-005.html
+/LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-006-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-007-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-007.html
+/LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-idl.html
+/LayoutTests/imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-text-fragment.html

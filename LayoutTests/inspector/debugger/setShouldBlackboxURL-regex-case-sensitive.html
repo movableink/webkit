@@ -27,8 +27,8 @@ function test()
                 ProtocolTest.Blackbox.evaluate(`createScripts("CaseSensitiveRegex_StepOver")`),
             ]);
 
-            await ProtocolTest.Blackbox.setBlackbox("casesensitiveregex_stepover_inner\\.js$", {caseSensitive: true, isRegex: true});
-            await ProtocolTest.Blackbox.setBlackbox("CaseSensitiveRegex_StepOver_Middle\\.js$", {caseSensitive: true, isRegex: true});
+            await ProtocolTest.Blackbox.setBlackbox("casesensitiveregex_stepover_inner\\.js$", {isRegex: true});
+            await ProtocolTest.Blackbox.setBlackbox("CaseSensitiveRegex_StepOver_Middle\\.js$", {isRegex: true});
             await ProtocolTest.Blackbox.setBreakpoint(innerSourceURL, 3); // last line of function, so it only pauses once
             await ProtocolTest.Blackbox.evaluate(`CaseSensitiveRegex_StepOver_Outer(10)`);
 
@@ -57,8 +57,8 @@ function test()
                 ProtocolTest.Blackbox.evaluate(`createScripts("CaseSensitiveRegex_PauseInCaller")`),
             ]);
 
-            await ProtocolTest.Blackbox.setBlackbox("CaseSensitiveRegex_PauseInCaller_Inner\\.js$", {caseSensitive: true, isRegex: true});
-            await ProtocolTest.Blackbox.setBlackbox("casesensitiveregex_pauseincaller_middle\\.js$", {caseSensitive: true, isRegex: true});
+            await ProtocolTest.Blackbox.setBlackbox("CaseSensitiveRegex_PauseInCaller_Inner\\.js$", {isRegex: true});
+            await ProtocolTest.Blackbox.setBlackbox("casesensitiveregex_pauseincaller_middle\\.js$", {isRegex: true});
             await ProtocolTest.Blackbox.setBreakpoint(innerSourceURL, 2);
             await ProtocolTest.Blackbox.evaluate(`CaseSensitiveRegex_PauseInCaller_Outer(10)`);
 
@@ -87,8 +87,8 @@ function test()
                 ProtocolTest.Blackbox.evaluate(`createScripts("CaseSensitiveRegex_PauseInCallee")`),
             ]);
 
-            await ProtocolTest.Blackbox.setBlackbox("casesensitiveregex_pauseincallee_middle\\.js$", {caseSensitive: true, isRegex: true});
-            await ProtocolTest.Blackbox.setBlackbox("CaseSensitiveRegex_PauseInCallee_Outer\\.js$", {caseSensitive: true, isRegex: true});
+            await ProtocolTest.Blackbox.setBlackbox("casesensitiveregex_pauseincallee_middle\\.js$", {isRegex: true});
+            await ProtocolTest.Blackbox.setBlackbox("CaseSensitiveRegex_PauseInCallee_Outer\\.js$", {isRegex: true});
             await ProtocolTest.Blackbox.setBreakpoint(outerSourceURL, 2);
             await ProtocolTest.Blackbox.evaluate(`CaseSensitiveRegex_PauseInCallee_Outer(10)`);
 
@@ -114,9 +114,7 @@ function test()
                 ProtocolTest.Blackbox.evaluate(`createScripts("CaseSensitiveRegex_Range")`),
             ]);
 
-            await ProtocolTest.Blackbox.setBlackbox("casesensitiveregex_range_multiple\\.js$", {caseSensitive: true, isRegex: true});
             await ProtocolTest.Blackbox.setBlackbox("CaseSensitiveRegex_Range_Multiple\\.js$", {
-                caseSensitive: true,
                 isRegex: true,
                 sourceRanges: [
                     3, 0, 4,  0, // whole line

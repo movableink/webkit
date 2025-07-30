@@ -107,7 +107,7 @@ void MediaSampleAVFObjC::commonInit()
         }
 
 #if HAVE(FAIRPLAYSTREAMING_MTPS_INITDATA)
-        if (auto transportStreamData = static_cast<CFDataRef>(PAL::CMFormatDescriptionGetExtension(description, CFSTR("TransportStreamEncryptionInitData")))) {
+        if (static_cast<CFDataRef>(PAL::CMFormatDescriptionGetExtension(description, CFSTR("TransportStreamEncryptionInitData")))) {
             // AVStreamDataParser will attach a JSON transport stream encryption
             // description object to each sample. Use a static keyID in this case
             // as MPEG2-TS encryption dose not specify a particular keyID in the
@@ -170,12 +170,12 @@ static bool isCMSampleBufferRandomAccess(CMSampleBufferRef sample)
     CFArrayRef attachments = PAL::CMSampleBufferGetSampleAttachmentsArray(sample, false);
     if (!attachments)
         return true;
-    
-    for (CFIndex i = 0, count = CFArrayGetCount(attachments); i < count; ++i) {
-        if (!isCMSampleBufferAttachmentRandomAccess(checked_cf_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(attachments, i))))
-            return false;
-    }
-    return true;
+
+    if (CFArrayGetCount(attachments) < 1)
+        return true;
+
+    CFDictionaryRef firstAttachment = checked_cf_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(attachments, 0));
+    return isCMSampleBufferAttachmentRandomAccess(firstAttachment);
 }
 
 static bool isCMSampleBufferAttachmentNonDisplaying(CFDictionaryRef attachmentDict)
@@ -235,7 +235,7 @@ void MediaSampleAVFObjC::offsetTimestampsBy(const MediaTime& offset)
     
     Vector<CMSampleTimingInfo> timingInfoArray;
     timingInfoArray.grow(itemCount);
-    if (noErr != PAL::CMSampleBufferGetSampleTimingInfoArray(m_sample.get(), itemCount, timingInfoArray.data(), nullptr))
+    if (noErr != PAL::CMSampleBufferGetSampleTimingInfoArray(m_sample.get(), itemCount, timingInfoArray.mutableSpan().data(), nullptr))
         return;
     
     for (auto& timing : timingInfoArray) {
@@ -244,7 +244,7 @@ void MediaSampleAVFObjC::offsetTimestampsBy(const MediaTime& offset)
     }
     
     CMSampleBufferRef newSample;
-    if (noErr != PAL::CMSampleBufferCreateCopyWithNewTiming(kCFAllocatorDefault, m_sample.get(), itemCount, timingInfoArray.data(), &newSample))
+    if (noErr != PAL::CMSampleBufferCreateCopyWithNewTiming(kCFAllocatorDefault, m_sample.get(), itemCount, timingInfoArray.span().data(), &newSample))
         return;
     
     m_presentationTime += offset;
@@ -260,7 +260,7 @@ void MediaSampleAVFObjC::setTimestamps(const WTF::MediaTime &presentationTimesta
     
     Vector<CMSampleTimingInfo> timingInfoArray;
     timingInfoArray.grow(itemCount);
-    if (noErr != PAL::CMSampleBufferGetSampleTimingInfoArray(m_sample.get(), itemCount, timingInfoArray.data(), nullptr))
+    if (noErr != PAL::CMSampleBufferGetSampleTimingInfoArray(m_sample.get(), itemCount, timingInfoArray.mutableSpan().data(), nullptr))
         return;
     
     for (auto& timing : timingInfoArray) {
@@ -269,7 +269,7 @@ void MediaSampleAVFObjC::setTimestamps(const WTF::MediaTime &presentationTimesta
     }
     
     CMSampleBufferRef newSample;
-    if (noErr != PAL::CMSampleBufferCreateCopyWithNewTiming(kCFAllocatorDefault, m_sample.get(), itemCount, timingInfoArray.data(), &newSample))
+    if (noErr != PAL::CMSampleBufferCreateCopyWithNewTiming(kCFAllocatorDefault, m_sample.get(), itemCount, timingInfoArray.span().data(), &newSample))
         return;
     
     m_presentationTime = presentationTimestamp;
@@ -297,8 +297,8 @@ Vector<Ref<MediaSampleAVFObjC>> MediaSampleAVFObjC::divide()
 
     Vector<Ref<MediaSampleAVFObjC>> samples;
     samples.reserveInitialCapacity(numSamples);
-    PAL::CMSampleBufferCallBlockForEachSample(m_sample.get(), [&] (CMSampleBufferRef sampleBuffer, CMItemCount) -> OSStatus {
-        samples.append(MediaSampleAVFObjC::create(sampleBuffer, m_id));
+    PAL::CMSampleBufferCallBlockForEachSample(m_sample.get(), [&samples, id = m_id] (CMSampleBufferRef sampleBuffer, CMItemCount) -> OSStatus {
+        samples.append(MediaSampleAVFObjC::create(sampleBuffer, id));
         return noErr;
     });
     return samples;

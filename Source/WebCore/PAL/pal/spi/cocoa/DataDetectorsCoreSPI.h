@@ -23,9 +23,15 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
+DECLARE_SYSTEM_HEADER
+
 #if ENABLE(DATA_DETECTION)
 
-typedef struct __DDResult *DDResultRef;
+#include <CoreFoundation/CoreFoundation.h>
+
+typedef struct CF_BRIDGED_TYPE(id) __DDResult *DDResultRef;
 
 #if USE(APPLE_INTERNAL_SDK)
 
@@ -44,7 +50,7 @@ typedef struct __DDResult *DDResultRef;
 
 #import <wtf/Compiler.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 #import <Foundation/Foundation.h>
 
@@ -94,7 +100,7 @@ typedef enum __DDTextFragmentType {
 
 #if HAVE(DDSCANNER_QOS_CONFIGURATION)
 typedef enum __DDQOS {
-    DDQOSRegular = 0
+    DDQOSRegular = 0,
     DDQOSEnhanced = 2,
     DDQOSHighest = 4,
 } DDQOS;
@@ -153,7 +159,7 @@ struct __DDScanQuery {
 static_assert(sizeof(DDQueryOffset) == 8, "DDQueryOffset is no longer 8 bytes. Update the definition of DDQueryOffset in this file to match the new size.");
 
 typedef struct __DDScanQuery *DDScanQueryRef;
-typedef struct __DDScanner *DDScannerRef;
+typedef struct CF_BRIDGED_TYPE(id) __DDScanner *DDScannerRef;
 
 #if !USE(APPLE_INTERNAL_SDK)
 static inline DDQueryFragment *DDScanQueryGetFragmentAtIndex(DDScanQueryRef query, CFIndex anIndex)
@@ -165,6 +171,9 @@ static inline CFIndex _DDScanQueryGetNumberOfFragments(DDScanQueryRef query)
 {
     return query->numberOfFragments;
 }
+
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
+
 #endif
 
 typedef CFIndex DDScannerCopyResultsOptions;
@@ -201,7 +210,5 @@ void DDScannerSetQOS(DDScannerRef, DDQOS);
 #endif
 
 WTF_EXTERN_C_END
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif

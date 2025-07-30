@@ -92,8 +92,8 @@ public:
 
     bool mayDependOnBaseURL() const;
 
-    bool traverseRules(const Function<bool(const StyleRuleBase&)>& handler) const;
-    bool traverseSubresources(const Function<bool(const CachedResource&)>& handler) const;
+    bool traverseRules(NOESCAPE const Function<bool(const StyleRuleBase&)>& handler) const;
+    bool traverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>& handler) const;
 
     void setIsUserStyleSheet(bool b) { m_isUserStyleSheet = b; }
     bool isUserStyleSheet() const { return m_isUserStyleSheet; }
@@ -155,12 +155,15 @@ public:
 
     void shrinkToFit();
 
-    void setAsOpaque() { m_parserContext.isContentOpaque = true; }
-    bool isContentOpaque() const { return m_parserContext.isContentOpaque; }
+    void setAsLoadedFromOpaqueSource() { m_parserContext.loadedFromOpaqueSource = LoadedFromOpaqueSource::Yes; }
+    LoadedFromOpaqueSource loadedFromOpaqueSource() const { return m_parserContext.loadedFromOpaqueSource; }
 
     void setLoadErrorOccured() { m_didLoadErrorOccur = true; }
 
     friend class CSSStyleSheet;
+
+    bool hasResolvedNesting() const { return m_hasResolvedNesting; }
+    void setHasResolvedNesting(bool value) const { m_hasResolvedNesting = value; }
 
 private:
     WEBCORE_EXPORT StyleSheetContents(StyleRuleImport* ownerRule, const String& originalURL, const CSSParserContext&);
@@ -187,6 +190,7 @@ private:
     bool m_didLoadErrorOccur { false };
     bool m_usesStyleBasedEditability { false };
     bool m_isMutable { false };
+    mutable bool m_hasResolvedNesting { false };
     mutable std::optional<bool> m_hasNestingRulesCache;
     unsigned m_inMemoryCacheCount { 0 };
 

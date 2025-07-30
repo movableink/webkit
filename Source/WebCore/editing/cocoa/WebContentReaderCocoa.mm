@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -122,16 +122,16 @@ static NSDictionary *attributesForAttributedStringConversion(bool useInterchange
         [excludedElements addObject:@"object"];
 #endif
 
-    NSURL *baseURL = URL::fakeURLWithRelativePart(emptyString());
+    RetainPtr baseURL = URL::fakeURLWithRelativePart(emptyString()).createNSURL();
 
     // The output base URL needs +1 refcount to work around the fact that NSHTMLReader over-releases it.
-    CFRetain((__bridge CFTypeRef)baseURL);
+    CFRetain((__bridge CFTypeRef)baseURL.get());
 
     return @{
         NSExcludedElementsDocumentAttribute: excludedElements.get(),
         @"InterchangeNewline": @(useInterchangeNewlines),
         @"CoalesceTabSpans": @YES,
-        @"OutputBaseURL": baseURL,
+        @"OutputBaseURL": baseURL.get(),
         @"WebResourceHandler": adoptNS([WebArchiveResourceWebResourceHandler new]).get(),
     };
 }
@@ -194,13 +194,15 @@ public:
     {
         if (m_didDisableImage)
             m_cachedResourceLoader->setImagesEnabled(true);
-        if (m_didEnabledDeferredLoading)
-            m_frame->page()->setDefersLoading(false);
+        if (m_didEnabledDeferredLoading) {
+            if (RefPtr frame = m_frame.get())
+                frame->page()->setDefersLoading(false);
+        }
     }
 
 private:
-    Ref<LocalFrame> m_frame;
-    Ref<CachedResourceLoader> m_cachedResourceLoader;
+    WeakPtr<LocalFrame> m_frame;
+    const Ref<CachedResourceLoader> m_cachedResourceLoader;
     bool m_didEnabledDeferredLoading { false };
     bool m_didDisableImage { false };
 };
@@ -394,11 +396,13 @@ static void replaceRichContentWithAttachments(LocalFrame& frame, DocumentFragmen
         if (supportsClientSideAttachmentData(frame)) {
             if (RefPtr image = dynamicDowncast<HTMLImageElement>(originalElement); image && contentTypeIsSuitableForInlineImageRepresentation(info.contentType)) {
                 RefPtr document = frame.document();
-                image->setAttributeWithoutSynchronization(HTMLNames::srcAttr, AtomString { DOMURL::createObjectURL(*document, Blob::create(document.get(), info.data->copyData(), info.contentType)) });
+                Ref data = info.data;
+                image->setAttributeWithoutSynchronization(HTMLNames::srcAttr, AtomString { DOMURL::createObjectURL(*document, Blob::create(document.get(), data->copyData(), info.contentType)) });
                 image->setAttachmentElement(attachment.copyRef());
             } else if (RefPtr source = dynamicDowncast<HTMLSourceElement>(originalElement); source && contentTypeIsSuitableForInlineImageRepresentation(info.contentType)) {
                 RefPtr document = frame.document();
-                source->setAttributeWithoutSynchronization(HTMLNames::srcsetAttr, AtomString { DOMURL::createObjectURL(*document, Blob::create(document.get(), info.data->copyData(), info.contentType)) });
+                Ref data = info.data;
+                source->setAttributeWithoutSynchronization(HTMLNames::srcsetAttr, AtomString { DOMURL::createObjectURL(*document, Blob::create(document.get(), data->copyData(), info.contentType)) });
                 source->setAttachmentElement(attachment.copyRef());
             } else {
                 attachment->updateAttributes(info.data->size(), AtomString { info.contentType }, AtomString { info.fileName });
@@ -407,7 +411,8 @@ static void replaceRichContentWithAttachments(LocalFrame& frame, DocumentFragmen
             frame.editor().registerAttachmentIdentifier(attachment->ensureUniqueIdentifier(), WTFMove(info.contentType), WTFMove(info.fileName), WTFMove(info.data));
         } else {
             RefPtr document = frame.document();
-            attachment->setFile(File::create(document.get(), Blob::create(document.get(), info.data->copyData(), WTFMove(info.contentType)), WTFMove(info.fileName)), HTMLAttachmentElement::UpdateDisplayAttributes::Yes);
+            Ref data = info.data;
+            attachment->setFile(File::create(document.get(), Blob::create(document.get(), data->copyData(), WTFMove(info.contentType)), WTFMove(info.fileName)), HTMLAttachmentElement::UpdateDisplayAttributes::Yes);
             parent->replaceChild(WTFMove(attachment), WTFMove(originalElement));
         }
     }
@@ -489,7 +494,8 @@ RefPtr<DocumentFragment> createFragment(LocalFrame& frame, NSAttributedString *s
 
     UncheckedKeyHashMap<AtomString, AtomString> blobURLMap;
     for (auto& subresource : fragmentAndResources.resources) {
-        auto blob = Blob::create(&document, subresource->data().copyData(), subresource->mimeType());
+        Ref data = subresource->data();
+        auto blob = Blob::create(&document, data->copyData(), subresource->mimeType());
         String blobURL = DOMURL::createObjectURL(document, blob);
         blobURLMap.set(AtomString { subresource->url().string() }, AtomString { blobURL });
     }
@@ -525,12 +531,10 @@ static std::optional<MarkupAndArchive> extractMarkupAndArchive(SharedBuffer& buf
 static String sanitizeMarkupWithArchive(LocalFrame& frame, Document& destinationDocument, MarkupAndArchive& markupAndArchive, MSOListQuirks msoListQuirks, const std::function<bool(const String)>& canShowMIMETypeAsHTML)
 {
     Ref page = createPageForSanitizingWebContent();
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
-    if (!localMainFrame)
+    RefPtr stagingDocument = page->localTopDocument();
+    if (!stagingDocument)
         return String();
 
-    Document* stagingDocument = localMainFrame->document();
-    ASSERT(stagingDocument);
     auto fragment = createFragmentFromMarkup(*stagingDocument, markupAndArchive.markup, markupAndArchive.mainResource->url().string(), { });
 
     if (shouldReplaceRichContentWithAttachments()) {
@@ -543,7 +547,8 @@ static String sanitizeMarkupWithArchive(LocalFrame& frame, Document& destination
         auto& subresourceURL = subresource->url();
         if (!shouldReplaceSubresourceURLWithBlobDuringSanitization(subresourceURL))
             continue;
-        auto blob = Blob::create(&destinationDocument, subresource->data().copyData(), subresource->mimeType());
+        Ref data = subresource->data();
+        auto blob = Blob::create(&destinationDocument, data->copyData(), subresource->mimeType());
         String blobURL = DOMURL::createObjectURL(destinationDocument, blob);
         blobURLMap.set(AtomString { subresourceURL.string() }, AtomString { blobURL });
     }
@@ -566,7 +571,7 @@ static String sanitizeMarkupWithArchive(LocalFrame& frame, Document& destination
             subframeMainResource.releaseNonNull(), subframeArchive.copyRef() };
         auto subframeMarkup = sanitizeMarkupWithArchive(frame, destinationDocument, subframeContent, MSOListQuirks::Disabled, canShowMIMETypeAsHTML);
 
-        auto blob = Blob::create(&destinationDocument, Vector(subframeMarkup.utf8().span()), type);
+        auto blob = Blob::create(&destinationDocument, Vector(byteCast<uint8_t>(subframeMarkup.utf8().span())), type);
 
         String subframeBlobURL = DOMURL::createObjectURL(destinationDocument, blob);
         blobURLMap.set(AtomString { subframeURL.string() }, AtomString { subframeBlobURL });
@@ -754,7 +759,7 @@ bool WebContentReader::readPlainText(const String& text)
     if (!m_allowPlainText)
         return false;
 
-    String precomposedString = [text precomposedStringWithCanonicalMapping];
+    String precomposedString = [text.createNSString() precomposedStringWithCanonicalMapping];
     if (RefPtr page = frame().page())
         precomposedString = page->applyLinkDecorationFiltering(precomposedString, LinkDecorationFilteringTrigger::Paste);
 
@@ -902,11 +907,11 @@ bool WebContentReader::readURL(const URL& url, const String& title)
 #if PLATFORM(IOS_FAMILY)
     // FIXME: This code shouldn't be accessing selection and changing the behavior.
     if (!frame->editor().client()->hasRichlyEditableSelection()) {
-        if (readPlainText([(NSURL *)url absoluteString]))
+        if (readPlainText([url.createNSURL() absoluteString]))
             return true;
     }
 
-    if ([(NSURL *)url isFileURL])
+    if ([url.createNSURL() isFileURL])
         return false;
 #endif // PLATFORM(IOS_FAMILY)
 
@@ -920,7 +925,7 @@ bool WebContentReader::readURL(const URL& url, const String& title)
     auto anchor = HTMLAnchorElement::create(document.get());
     anchor->setAttributeWithoutSynchronization(HTMLNames::hrefAttr, AtomString { sanitizedURLString });
 
-    NSString *linkText = title.isEmpty() ? sanitizedURLString : title;
+    RetainPtr linkText = title.isEmpty() ? sanitizedURLString.createNSString() : title.createNSString();
     anchor->appendChild(document->createTextNode([linkText precomposedStringWithCanonicalMapping]));
 
     auto newFragment = document->createDocumentFragment();

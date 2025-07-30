@@ -29,12 +29,15 @@
 #include "CSSProperty.h"
 #include "CSSPropertyNames.h"
 #include "CSSPropertyParser.h"
+#include "CSSQuadValue.h"
 #include "CSSStyleValueFactory.h"
 #include "CSSUnparsedValue.h"
 #include "CSSValueList.h"
 #include "CSSValuePair.h"
 #include "CSSVariableReferenceValue.h"
 #include "Document.h"
+#include "ExceptionOr.h"
+#include "Settings.h"
 #include "StylePropertyShorthand.h"
 #include <wtf/FixedVector.h>
 #include <wtf/text/MakeString.h>
@@ -62,10 +65,10 @@ static RefPtr<CSSValue> cssValueFromStyleValues(CSSPropertyID propertyID, Vector
 }
 
 // https://drafts.css-houdini.org/css-typed-om/#dom-stylepropertymap-set
-ExceptionOr<void> StylePropertyMap::set(Document& document, const AtomString& property, FixedVector<std::variant<RefPtr<CSSStyleValue>, String>>&& values)
+ExceptionOr<void> StylePropertyMap::set(Document& document, const AtomString& property, FixedVector<Variant<RefPtr<CSSStyleValue>, String>>&& values)
 {
     if (isCustomPropertyName(property)) {
-        auto styleValuesOrException = CSSStyleValueFactory::vectorFromStyleValuesOrStrings(property, WTFMove(values), { document });
+        auto styleValuesOrException = CSSStyleValueFactory::vectorFromStyleValuesOrStrings(document, property, WTFMove(values));
         if (styleValuesOrException.hasException())
             return styleValuesOrException.releaseException();
         auto styleValues = styleValuesOrException.releaseReturnValue();
@@ -99,7 +102,7 @@ ExceptionOr<void> StylePropertyMap::set(Document& document, const AtomString& pr
         return { };
     }
 
-    auto styleValuesOrException = CSSStyleValueFactory::vectorFromStyleValuesOrStrings(property, WTFMove(values), { document });
+    auto styleValuesOrException = CSSStyleValueFactory::vectorFromStyleValuesOrStrings(document, property, WTFMove(values));
     if (styleValuesOrException.hasException())
         return styleValuesOrException.releaseException();
     auto styleValues = styleValuesOrException.releaseReturnValue();
@@ -129,6 +132,11 @@ ExceptionOr<void> StylePropertyMap::set(Document& document, const AtomString& pr
             return Exception { ExceptionCode::NotSupportedError, "Invalid values"_s };
     }
 
+    if (auto quad = dynamicDowncast<CSSQuadValue>(value)) {
+        if (quad->canBeCoalesced())
+            return Exception { ExceptionCode::TypeError, "Invalid values"_s };
+    }
+
     if (!setProperty(propertyID, value.releaseNonNull()))
         return Exception { ExceptionCode::TypeError, "Invalid values"_s };
 
@@ -136,7 +144,7 @@ ExceptionOr<void> StylePropertyMap::set(Document& document, const AtomString& pr
 }
 
 // https://drafts.css-houdini.org/css-typed-om/#dom-stylepropertymap-append
-ExceptionOr<void> StylePropertyMap::append(Document& document, const AtomString& property, FixedVector<std::variant<RefPtr<CSSStyleValue>, String>>&& values)
+ExceptionOr<void> StylePropertyMap::append(Document& document, const AtomString& property, FixedVector<Variant<RefPtr<CSSStyleValue>, String>>&& values)
 {
     if (values.isEmpty())
         return { };
@@ -158,16 +166,23 @@ ExceptionOr<void> StylePropertyMap::append(Document& document, const AtomString&
     else if (currentValue)
         list.append(currentValue.releaseNonNull());
 
-    auto styleValuesOrException = CSSStyleValueFactory::vectorFromStyleValuesOrStrings(property, WTFMove(values), { document });
+    auto styleValuesOrException = CSSStyleValueFactory::vectorFromStyleValuesOrStrings(document, property, WTFMove(values));
     if (styleValuesOrException.hasException())
         return styleValuesOrException.releaseException();
 
     auto styleValues = styleValuesOrException.releaseReturnValue();
     for (auto& styleValue : styleValues) {
         if (is<CSSUnparsedValue>(styleValue.get()))
-            return Exception { ExceptionCode::TypeError, "Values cannot contain a CSSVariableReferenceValue or a CSSUnparsedValue"_s };
-        if (auto cssValue = styleValue->toCSSValueWithProperty(propertyID))
-            list.append(cssValue.releaseNonNull());
+            return Exception { ExceptionCode::TypeError, "Values cannot contain a CSSUnparsedValue"_s };
+
+        auto cssValue = styleValue->toCSSValueWithProperty(propertyID);
+
+        if (!cssValue)
+            continue;
+        if (is<CSSVariableReferenceValue>(*cssValue))
+            return Exception { ExceptionCode::TypeError, "Values cannot contain a CSSVariableReferenceValue"_s };
+
+        list.append(cssValue.releaseNonNull());
     }
 
     if (!setProperty(propertyID, CSSValueList::create(CSSProperty::listValuedPropertySeparator(propertyID), WTFMove(list))))

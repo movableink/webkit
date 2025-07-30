@@ -37,6 +37,7 @@ class MeterMac final : public ControlMac {
     WTF_MAKE_TZONE_ALLOCATED(MeterMac);
 public:
     MeterMac(MeterPart& owningMeterPart, ControlFactoryMac&, NSLevelIndicatorCell*);
+    ~MeterMac();
 
 private:
     const MeterPart& owningMeterPart() const { return downcast<MeterPart>(m_owningPart); }

@@ -83,7 +83,10 @@
                 "ElementNotSelectable",
                 "ScreenshotError",
                 "UnexpectedAlertOpen",
-                "TargetOutOfBounds"
+                "TargetOutOfBounds",
+                "UnableToLoadExtension",
+                "UnableToUnloadExtension",
+                "NoSuchExtension"
             ]
         },
         {
@@ -387,6 +390,16 @@
                 { "name": "extensions", "type": "array", "items": {"type": "string"}, "optional": true, "description": "An array containing extension identifiers" },
                 { "name": "uvm", "type": "array", "items": {"type": "integer"}, "optional": true, "description": "Up to 3 User Verification Method entries"}
             ]
+        },
+        {
+            "id": "WebExtensionResourceOptions",
+            "type": "string",
+            "description": "The format of the resource used to load the web extension.",
+            "enum": [
+                "Path",
+                "ArchivePath",
+                "Base64"
+            ]
         }
     ],
     "commands": [
@@ -426,7 +439,8 @@
             "description": "Try to close the specified browsing context. This can trigger an unload prompt and thereafter succeed or fail.",
             "parameters": [
                 { "name": "handle", "$ref": "BrowsingContextHandle", "description": "The handle for the browsing context that should be closed." }
-            ]
+            ],
+            "async": true
         },
         {
             "name": "deleteSession",
@@ -870,6 +884,38 @@
                 { "name": "message", "type": "string", "description": "The body message for the generated test report." },
                 { "name": "group", "type": "string", "description": "The group value to use when sending a test report."}
             ]
+        },
+        {
+            "name": "loadWebExtension",
+            "description": "Loads a web extension in the automation session.",
+            "platform": "macos",
+            "condition": "defined(WTF_PLATFORM_MAC) && WTF_PLATFORM_MAC",
+            "parameters": [
+                { "name": "type", "$ref": "WebExtensionResourceOptions", "optional": false, "description": "A hint for the resource format used to load the extension." },
+                { "name": "value", "type": "string", "description": "One of the following: the path to the extension, the path to the extension's archive, or the base 64 encoded data of the extension's archive." }
+            ],
+            "returns": [
+                { "name": "extension", "type": "string", "description": "The unique identifier of the extension." }
+            ],
+            "async": true
+        },
+        {
+            "name": "unloadWebExtension",
+            "description": "Unloads a web extension in the automation session.",
+            "platform": "macos",
+            "condition": "defined(WTF_PLATFORM_MAC) && WTF_PLATFORM_MAC",
+            "parameters": [
+                { "name": "identifier", "type": "string", "description": "The identifier of the extension to unload." }
+            ],
+            "async": true
+        },
+        {
+            "name": "processBidiMessage",
+            "description": "Relay a WebDriver Bidi message from the client to be processed by the automation session.",
+            "condition": "ENABLE(WEBDRIVER_BIDI)",
+            "parameters": [
+                { "name": "message", "type": "string", "description": "A Bidi message sent by the client to WebKit, encoded as a UTF-8 JSON literal." }
+            ]
         }
     ],
     "events": [
@@ -887,6 +933,14 @@
             "description": "Fired when the specified browsing context has navigated or closed. Existing element references from the browsing context are no longer valid.",
             "parameters": [
                 { "name": "browsingContextHandle", "$ref": "BrowsingContextHandle" }
+            ]
+        },
+        {
+            "name": "bidiMessageSent",
+            "description": "Relay a WebDriver Bidi message from the automation session to be processed by the client.",
+            "condition": "ENABLE(WEBDRIVER_BIDI)",
+            "parameters": [
+                { "name": "message", "type": "string", "description": "A Bidi message sent by WebKit to the client, encoded as a UTF-8 JSON literal." }
             ]
         }
     ]

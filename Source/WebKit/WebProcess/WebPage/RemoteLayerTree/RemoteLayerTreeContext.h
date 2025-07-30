@@ -70,8 +70,6 @@ public:
     WebCore::LayerPool& layerPool() { return m_layerPool; }
 
     float deviceScaleFactor() const;
-
-    LayerHostingMode layerHostingMode() const;
     
     std::optional<WebCore::DestinationColorSpace> displayColorSpace() const;
 
@@ -88,6 +86,7 @@ public:
     void willStartAnimationOnLayer(PlatformCALayerRemote&);
 
     RemoteLayerBackingStoreCollection& backingStoreCollection() { return *m_backingStoreCollection; }
+    Ref<RemoteLayerBackingStoreCollection> protectedBackingStoreCollection() { return *m_backingStoreCollection; }
     
     void setNextRenderingUpdateRequiresSynchronousImageDecoding() { m_nextRenderingUpdateRequiresSynchronousImageDecoding = true; }
     bool nextRenderingUpdateRequiresSynchronousImageDecoding() const { return m_nextRenderingUpdateRequiresSynchronousImageDecoding; }
@@ -95,6 +94,7 @@ public:
     void adoptLayersFromContext(RemoteLayerTreeContext&);
 
     RemoteRenderingBackendProxy& ensureRemoteRenderingBackendProxy();
+    Ref<RemoteRenderingBackendProxy> ensureProtectedRemoteRenderingBackendProxy();
 
     bool useDynamicContentScalingDisplayListsForDOMRendering() const { return m_useDynamicContentScalingDisplayListsForDOMRendering; }
     void setUseDynamicContentScalingDisplayListsForDOMRendering(bool useDynamicContentScalingDisplayLists) { m_useDynamicContentScalingDisplayListsForDOMRendering = useDynamicContentScalingDisplayLists; }

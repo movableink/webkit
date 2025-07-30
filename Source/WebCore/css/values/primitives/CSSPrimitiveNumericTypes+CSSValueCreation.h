@@ -26,67 +26,25 @@
 
 #include "CSSPrimitiveNumericTypes.h"
 #include "CSSPrimitiveValue.h"
-#include "CSSPrimitiveValueMappings.h"
-#include "CSSValuePair.h"
 #include "CSSValuePool.h"
+#include "CSSValueTypes.h"
 
 namespace WebCore {
 namespace CSS {
 
 // MARK: - Conversion from strongly typed `CSS::` value types to `WebCore::CSSValue` types.
 
-template<typename CSSType> struct CSSValueCreation;
-
-template<typename CSSType> Ref<CSSValue> createCSSValue(const CSSType& value)
-{
-    return CSSValueCreation<CSSType>{}(value);
-}
-
-template<RawNumeric RawType> struct CSSValueCreation<RawType> {
-    Ref<CSSValue> operator()(const RawType& raw)
+template<NumericRaw CSSType> struct CSSValueCreation<CSSType> {
+    Ref<CSSValue> operator()(CSSValuePool&, const CSSType& raw)
     {
-        return CSSPrimitiveValue::create(raw.value, raw.type);
+        return CSSPrimitiveValue::create(raw.value, toCSSUnitType(raw.unit));
     }
 };
 
-template<RawNumeric RawType> struct CSSValueCreation<UnevaluatedCalc<RawType>> {
-    Ref<CSSValue> operator()(const UnevaluatedCalc<RawType>& calc)
+template<Calc CSSType> struct CSSValueCreation<CSSType> {
+    Ref<CSSValue> operator()(CSSValuePool&, const CSSType& calc)
     {
         return CSSPrimitiveValue::create(calc.protectedCalc());
-    }
-};
-
-template<RawNumeric RawType> struct CSSValueCreation<PrimitiveNumeric<RawType>> {
-    Ref<CSSValue> operator()(const PrimitiveNumeric<RawType>& value)
-    {
-        return WTF::switchOn(value,
-            [](const typename PrimitiveNumeric<RawType>::Raw& raw) {
-                return CSSPrimitiveValue::create(raw.value, raw.type);
-            },
-            [](const typename PrimitiveNumeric<RawType>::Calc& calc) {
-                return CSSPrimitiveValue::create(calc.protectedCalc());
-            }
-        );
-    }
-};
-
-template<typename T> struct CSSValueCreation<SpaceSeparatedPoint<T>> {
-    Ref<CSSValue> operator()(const SpaceSeparatedPoint<T>& value)
-    {
-        return CSSValuePair::create(
-            WebCore::CSS::createCSSValue(value.x()),
-            WebCore::CSS::createCSSValue(value.y())
-        );
-    }
-};
-
-template<typename T> struct CSSValueCreation<SpaceSeparatedSize<T>> {
-    Ref<CSSValue> operator()(const SpaceSeparatedSize<T>& value)
-    {
-        return CSSValuePair::create(
-            WebCore::CSS::createCSSValue(value.width()),
-            WebCore::CSS::createCSSValue(value.height())
-        );
     }
 };
 

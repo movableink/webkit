@@ -38,8 +38,6 @@
 #include "FloatConversion.h"
 #include <wtf/MathExtras.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 // Takes the input AudioChannel as an input impulse response and calculates the average group delay.
@@ -50,7 +48,7 @@ static float extractAverageGroupDelay(AudioChannel* channel, size_t analysisFFTS
 {
     ASSERT(channel);
         
-    float* impulseP = channel->mutableData();
+    auto impulseP = channel->mutableSpan();
     
     bool isSizeGood = channel->length() >= analysisFFTSize;
     ASSERT(isSizeGood);
@@ -77,7 +75,7 @@ HRTFKernel::HRTFKernel(AudioChannel* channel, size_t fftSize, float sampleRate)
     // Determine the leading delay (average group delay) for the response.
     m_frameDelay = extractAverageGroupDelay(channel, fftSize / 2);
 
-    float* impulseResponse = channel->mutableData();
+    auto impulseResponse = channel->mutableSpan();
     size_t responseLength = channel->length();
 
     // We need to truncate to fit into 1/2 the FFT size (with zero padding) in order to do proper convolution.
@@ -94,7 +92,7 @@ HRTFKernel::HRTFKernel(AudioChannel* channel, size_t fftSize, float sampleRate)
     }
 
     m_fftFrame = makeUnique<FFTFrame>(fftSize);
-    m_fftFrame->doPaddedFFT(impulseResponse, truncatedResponseLength);
+    m_fftFrame->doPaddedFFT(impulseResponse.first(truncatedResponseLength));
 }
 
 size_t HRTFKernel::fftSize() const
@@ -109,7 +107,7 @@ std::unique_ptr<AudioChannel> HRTFKernel::createImpulseResponse()
 
     // Add leading delay back in.
     fftFrame.addConstantGroupDelay(m_frameDelay);
-    fftFrame.doInverseFFT(channel->mutableData());
+    fftFrame.doInverseFFT(channel->mutableSpan());
 
     return channel;
 }
@@ -137,7 +135,5 @@ RefPtr<HRTFKernel> HRTFKernel::createInterpolatedKernel(HRTFKernel* kernel1, HRT
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

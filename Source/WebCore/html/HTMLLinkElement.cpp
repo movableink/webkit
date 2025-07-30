@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Rob Buis (rwlbuis@gmail.com)
  * Copyright (C) 2011 Google Inc. All rights reserved.
  *
@@ -43,6 +43,7 @@
 #include "FrameLoader.h"
 #include "FrameTree.h"
 #include "HTMLAnchorElement.h"
+#include "HTMLDocumentParser.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "IdTargetObserver.h"
@@ -55,6 +56,7 @@
 #include "MediaQueryParser.h"
 #include "MediaQueryParserContext.h"
 #include "MouseEvent.h"
+#include "NodeInlines.h"
 #include "NodeName.h"
 #include "Page.h"
 #include "ParsedContentType.h"
@@ -71,7 +73,6 @@
 #include <wtf/Ref.h>
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
 
@@ -88,16 +89,18 @@ static LinkEventSender& linkLoadEventSender()
 }
 
 class ExpectIdTargetObserver final : public IdTargetObserver {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(ExpectIdTargetObserver);
+    WTF_MAKE_TZONE_ALLOCATED(ExpectIdTargetObserver);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ExpectIdTargetObserver);
 public:
     ExpectIdTargetObserver(const AtomString& id, HTMLLinkElement&);
 
-    void idTargetChanged() override;
+    void idTargetChanged(Element&) override;
 
 private:
     WeakPtr<HTMLLinkElement, WeakPtrImplWithEventTargetData> m_element;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ExpectIdTargetObserver);
 
 ExpectIdTargetObserver::ExpectIdTargetObserver(const AtomString& id, HTMLLinkElement& element)
     : IdTargetObserver(element.treeScope().idTargetObserverRegistry(), id)
@@ -105,10 +108,10 @@ ExpectIdTargetObserver::ExpectIdTargetObserver(const AtomString& id, HTMLLinkEle
 {
 }
 
-void ExpectIdTargetObserver::idTargetChanged()
+void ExpectIdTargetObserver::idTargetChanged(Element& element)
 {
     if (m_element)
-        m_element->processInternalResourceLink();
+        m_element->processInternalResourceLink(&element);
 }
 
 inline HTMLLinkElement::HTMLLinkElement(const QualifiedName& tagName, Document& document, bool createdByParser)
@@ -195,11 +198,18 @@ void HTMLLinkElement::attributeChanged(const QualifiedName& name, const AtomStri
     case AttributeNames::relAttr: {
         auto parsedRel = LinkRelAttribute(document(), newValue);
         auto didMutateRel = parsedRel != m_relAttribute;
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+        auto wasSpatialBackdrop = m_relAttribute.isSpatialBackdrop;
+#endif
         m_relAttribute = WTFMove(parsedRel);
         if (m_relList)
             m_relList->associatedAttributeValueChanged();
         if (didMutateRel)
             process();
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+        if (wasSpatialBackdrop && !m_relAttribute.isSpatialBackdrop)
+            document().spatialBackdropLinkElementChanged();
+#endif
         break;
     }
     case AttributeNames::hrefAttr: {
@@ -210,6 +220,16 @@ void HTMLLinkElement::attributeChanged(const QualifiedName& name, const AtomStri
         process();
         break;
     }
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    case AttributeNames::environmentmapAttr: {
+        URL environmentMapURL = getNonEmptyURLAttribute(environmentmapAttr);
+        if (environmentMapURL == m_environmentMapURL)
+            return;
+        m_environmentMapURL = WTFMove(environmentMapURL);
+        process();
+        break;
+    }
+#endif
     case AttributeNames::typeAttr:
         if (newValue == m_type)
             return;
@@ -298,6 +318,11 @@ void HTMLLinkElement::process()
     if (m_isHandlingBeforeLoad)
         return;
 
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    if (m_relAttribute.isSpatialBackdrop)
+        document().spatialBackdropLinkElementChanged();
+#endif
+
     processInternalResourceLink();
     if (m_relAttribute.isInternalResourceLink)
         return;
@@ -314,7 +339,7 @@ void HTMLLinkElement::process()
         attributeWithoutSynchronization(imagesizesAttr),
         nonce(),
         referrerPolicy(),
-        fetchPriorityHint(),
+        fetchPriority(),
     };
 
     m_linkLoader.loadLink(params, document);
@@ -375,9 +400,9 @@ void HTMLLinkElement::process()
             options.contentSecurityPolicyImposition = ContentSecurityPolicyImposition::SkipPolicyCheck;
         options.integrity = m_integrityMetadataForPendingSheetRequest;
         options.referrerPolicy = params.referrerPolicy;
-        options.fetchPriorityHint = fetchPriorityHint();
+        options.fetchPriority = fetchPriority();
 
-        auto request = createPotentialAccessControlRequest(m_url, WTFMove(options), document, crossOrigin());
+        auto request = createPotentialAccessControlRequest(URL { m_url }, WTFMove(options), document, crossOrigin());
         request.setPriority(WTFMove(priority));
         request.setCharset(WTFMove(charset));
         request.setInitiator(*this);
@@ -425,7 +450,7 @@ void HTMLLinkElement::clearSheet()
 }
 
 // https://html.spec.whatwg.org/multipage/links.html#process-internal-resource-link
-void HTMLLinkElement::processInternalResourceLink(HTMLAnchorElement* anchor)
+void HTMLLinkElement::processInternalResourceLink(Element* element)
 {
     if (document().wasRemovedLastRefCalled())
         return;
@@ -440,15 +465,32 @@ void HTMLLinkElement::processInternalResourceLink(HTMLAnchorElement* anchor)
     }
 
     RefPtr<Element> indicatedElement;
-    // If the change originated from an anchor, then we can just check if that's
+    // If the change originated from a specific element, then we can just check if that's
     // the right one instead doing a tree search using the name
-    if (anchor) {
-        if (anchor->name() == m_url.fragmentIdentifier())
-            indicatedElement = anchor;
-    } else
-        indicatedElement = document().findAnchor(m_url.fragmentIdentifier());
+    if (element) {
+        auto elementMatchesLinkId = [&](StringView id) {
+            if (element->getIdAttribute() == id)
+                return true;
+            RefPtr anchorElement = dynamicDowncast<HTMLAnchorElement>(element);
+            if (anchorElement && document().isMatchingAnchor(*anchorElement, m_url.fragmentIdentifier()))
+                return true;
+            return false;
+        };
 
-    // FIXME: Bug 279167 - Don't match if indicatedElement "is on a stack of open elements of an HTML parser whose associated Document is doc"
+        if (element->isConnected() && (elementMatchesLinkId(m_url.fragmentIdentifier()) || elementMatchesLinkId(PAL::decodeURLEscapeSequences(m_url.fragmentIdentifier()))))
+            indicatedElement = element;
+    } else {
+        indicatedElement = document().findAnchor(m_url.fragmentIdentifier());
+        if (!indicatedElement)
+            indicatedElement = document().findAnchor(PAL::decodeURLEscapeSequences(m_url.fragmentIdentifier()));
+    }
+
+    // Don't match if indicatedElement "is on a stack of open elements of an HTML parser whose associated Document is doc"
+    if (RefPtr parser = document().htmlDocumentParser(); parser && indicatedElement) {
+        if (parser->isOnStackOfOpenElements(*indicatedElement))
+            indicatedElement = nullptr;
+    }
+
     if (document().readyState() == Document::ReadyState::Loading && isConnected() && mediaAttributeMatches() && !indicatedElement) {
         potentiallyBlockRendering();
         if (!m_expectIdTargetObserver)
@@ -509,6 +551,11 @@ void HTMLLinkElement::removedFromAncestor(RemovalType removalType, ContainerNode
 
     bool wasLoading = styleSheetIsLoading();
 
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    if (m_relAttribute.isSpatialBackdrop)
+        oldParentOfRemovedTree.document().spatialBackdropLinkElementChanged();
+#endif
+
     if (m_sheet)
         clearSheet();
 
@@ -532,23 +579,18 @@ void HTMLLinkElement::finishParsingChildren()
 
 void HTMLLinkElement::initializeStyleSheet(Ref<StyleSheetContents>&& styleSheet, const CachedCSSStyleSheet& cachedStyleSheet, MediaQueryParserContext context)
 {
-    // FIXME: originClean should be turned to false except if fetch mode is CORS.
-    std::optional<bool> originClean;
-    if (cachedStyleSheet.options().mode == FetchOptions::Mode::Cors)
-        originClean = cachedStyleSheet.isCORSSameOrigin();
-
     if (m_sheet) {
         ASSERT(m_sheet->ownerNode() == this);
         m_sheet->clearOwnerNode();
     }
 
-    m_sheet = CSSStyleSheet::create(WTFMove(styleSheet), *this, originClean);
-    m_sheet->setMediaQueries(MQ::MediaQueryParser::parse(m_media, context));
+    m_sheet = CSSStyleSheet::create(WTFMove(styleSheet), *this, cachedStyleSheet.isCORSSameOrigin());
+    m_sheet->setMediaQueries(MQ::MediaQueryParser::parse(m_media, context.context));
     if (!isInShadowTree())
         m_sheet->setTitle(title());
 
     if (!m_sheet->canAccessRules())
-        m_sheet->contents().setAsOpaque();
+        m_sheet->contents().setAsLoadedFromOpaqueSource();
 }
 
 void HTMLLinkElement::setCSSStyleSheet(const String& href, const URL& baseURL, ASCIILiteral charset, const CachedCSSStyleSheet* cachedStyleSheet)
@@ -620,7 +662,7 @@ bool HTMLLinkElement::styleSheetIsLoading() const
 DOMTokenList& HTMLLinkElement::sizes()
 {
     if (!m_sizes)
-        m_sizes = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, sizesAttr);
+        lazyInitialize(m_sizes, makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, sizesAttr));
     return *m_sizes;
 }
 
@@ -632,7 +674,7 @@ bool HTMLLinkElement::mediaAttributeMatches() const
     std::optional<RenderStyle> documentStyle;
     if (document().hasLivingRenderTree())
         documentStyle = Style::resolveForDocument(document());
-    auto mediaQueryList = MQ::MediaQueryParser::parse(m_media, { document() });
+    auto mediaQueryList = MQ::MediaQueryParser::parse(m_media, document().cssParserContext());
     LOG(MediaQueries, "HTMLLinkElement::mediaAttributeMatches");
 
     MQ::MediaQueryEvaluator evaluator(document().frame()->view()->mediaType(), document(), documentStyle ? &*documentStyle : nullptr);
@@ -675,9 +717,9 @@ void HTMLLinkElement::dispatchPendingEvent(LinkEventSender* eventSender, const A
 DOMTokenList& HTMLLinkElement::relList()
 {
     if (!m_relList) 
-        m_relList = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::relAttr, [](Document& document, StringView token) {
+        lazyInitialize(m_relList, makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::relAttr, [](Document& document, StringView token) {
             return LinkRelAttribute::isSupported(document, token);
-        });
+        }));
     return *m_relList;
 }
 
@@ -685,11 +727,11 @@ DOMTokenList& HTMLLinkElement::relList()
 DOMTokenList& HTMLLinkElement::blocking()
 {
     if (!m_blockingList) {
-        m_blockingList = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::blockingAttr, [](Document&, StringView token) {
+        lazyInitialize(m_blockingList, makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::blockingAttr, [](Document&, StringView token) {
             if (equalLettersIgnoringASCIICase(token, "render"_s))
                 return true;
             return false;
-        });
+        }));
     }
     return *m_blockingList;
 }
@@ -709,7 +751,11 @@ void HTMLLinkElement::startLoadingDynamicSheet()
 
 bool HTMLLinkElement::isURLAttribute(const Attribute& attribute) const
 {
-    return attribute.name().localName() == hrefAttr || HTMLElement::isURLAttribute(attribute);
+    return attribute.name().localName() == hrefAttr
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    || attribute.name().localName() == environmentmapAttr
+#endif
+    || HTMLElement::isURLAttribute(attribute);
 }
 
 URL HTMLLinkElement::href() const
@@ -721,6 +767,13 @@ const AtomString& HTMLLinkElement::rel() const
 {
     return attributeWithoutSynchronization(relAttr);
 }
+
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+URL HTMLLinkElement::environmentMap() const
+{
+    return document().completeURL(attributeWithoutSynchronization(environmentmapAttr));
+}
+#endif
 
 AtomString HTMLLinkElement::target() const
 {
@@ -824,14 +877,12 @@ void HTMLLinkElement::setFetchPriorityForBindings(const AtomString& value)
 
 String HTMLLinkElement::fetchPriorityForBindings() const
 {
-    return convertEnumerationToString(fetchPriorityHint());
+    return convertEnumerationToString(fetchPriority());
 }
 
-RequestPriority HTMLLinkElement::fetchPriorityHint() const
+RequestPriority HTMLLinkElement::fetchPriority() const
 {
-    if (document().settings().fetchPriorityEnabled())
-        return parseEnumerationFromString<RequestPriority>(attributeWithoutSynchronization(fetchpriorityAttr)).value_or(RequestPriority::Auto);
-    return RequestPriority::Auto;
+    return parseEnumerationFromString<RequestPriority>(attributeWithoutSynchronization(fetchpriorityAttr)).value_or(RequestPriority::Auto);
 }
 
 } // namespace WebCore

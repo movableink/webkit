@@ -32,6 +32,7 @@
 #include "LocalAllocator.h"
 #include "MarkedBlock.h"
 #include <wtf/DataLog.h>
+#include <wtf/DebugHeap.h>
 #include <wtf/FastBitVector.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/SharedTask.h>
@@ -75,7 +76,6 @@ public:
     void assertNoUnswept();
     size_t cellSize() const { return m_cellSize; }
     CellAttributes attributes() const { return m_attributes; }
-    bool needsDestruction() const { return m_attributes.destruction == NeedsDestruction; }
     DestructionMode destruction() const { return m_attributes.destruction; }
     HeapCell::Kind cellKind() const { return m_attributes.cellKind; }
 

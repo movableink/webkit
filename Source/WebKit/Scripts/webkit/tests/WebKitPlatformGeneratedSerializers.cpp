@@ -103,7 +103,7 @@ void ArgumentCoder<WebKit::PlatformClass>::encode(Encoder& encoder, const WebKit
 std::optional<WebKit::PlatformClass> ArgumentCoder<WebKit::PlatformClass>::decode(Decoder& decoder)
 {
     auto value = decoder.decode<int>();
-    if (UNLIKELY(!decoder.isValid()))
+    if (!decoder.isValid()) [[unlikely]]
         return std::nullopt;
     return {
         WebKit::PlatformClass {
@@ -141,7 +141,7 @@ std::optional<WebKit::CoreIPCAVOutputContext> ArgumentCoder<WebKit::CoreIPCAVOut
     if (!AVOutputContextSerializationKeyContextType)
         return std::nullopt;
 
-    if (UNLIKELY(!decoder.isValid()))
+    if (!decoder.isValid()) [[unlikely]]
         return std::nullopt;
     return {
         WebKit::CoreIPCAVOutputContext {
@@ -221,7 +221,7 @@ std::optional<WebKit::CoreIPCNSSomeFoundationType> ArgumentCoder<WebKit::CoreIPC
     if (!OptionalDictionaryKey)
         return std::nullopt;
 
-    if (UNLIKELY(!decoder.isValid()))
+    if (!decoder.isValid()) [[unlikely]]
         return std::nullopt;
     return {
         WebKit::CoreIPCNSSomeFoundationType {
@@ -256,7 +256,7 @@ std::optional<WebKit::CoreIPCclass NSSomeOtherFoundationType> ArgumentCoder<WebK
     if (!DictionaryKey)
         return std::nullopt;
 
-    if (UNLIKELY(!decoder.isValid()))
+    if (!decoder.isValid()) [[unlikely]]
         return std::nullopt;
     return {
         WebKit::CoreIPCclass NSSomeOtherFoundationType {
@@ -350,7 +350,7 @@ std::optional<WebKit::CoreIPCDDScannerResult> ArgumentCoder<WebKit::CoreIPCDDSca
     if (!SecTrustArrayKey)
         return std::nullopt;
 
-    if (UNLIKELY(!decoder.isValid()))
+    if (!decoder.isValid()) [[unlikely]]
         return std::nullopt;
     return {
         WebKit::CoreIPCDDScannerResult {
@@ -383,7 +383,7 @@ void ArgumentCoder<CFStringRef>::encode(StreamConnectionEncoder& encoder, CFStri
 std::optional<RetainPtr<CFStringRef>> ArgumentCoder<RetainPtr<CFStringRef>>::decode(Decoder& decoder)
 {
     auto result = decoder.decode<WTF::String>();
-    if (UNLIKELY(!decoder.isValid()))
+    if (!decoder.isValid()) [[unlikely]]
         return std::nullopt;
     return result->createCFString();
 }

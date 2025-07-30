@@ -25,9 +25,9 @@
 #include "include/core/SkTypeface.h"
 #include "include/core/SkTypes.h"
 #include "include/effects/SkGradientShader.h"
-#include "include/private/SkColorData.h"
 #include "include/private/gpu/ganesh/GrTypesPriv.h"
 #include "src/core/SkCanvasPriv.h"
+#include "src/core/SkColorData.h"
 #include "src/gpu/ganesh/GrCanvas.h"
 #include "src/gpu/ganesh/GrColor.h"
 #include "src/gpu/ganesh/GrFPArgs.h"
@@ -114,7 +114,7 @@ protected:
                 if (paintType >= std::size(kPaintColors)) {
                     GrColorInfo colorInfo;
                     SkSurfaceProps props;
-                    GrFPArgs args(rContext, &colorInfo, props, GrFPArgs::Scope::kDefault);
+                    GrFPArgs args(sdc, &colorInfo, props, GrFPArgs::Scope::kDefault);
                     baseFP = GrFragmentProcessors::Make(fShader.get(), args, SkMatrix::I());
                 } else {
                     baseFP = GrFragmentProcessor::MakeColor(

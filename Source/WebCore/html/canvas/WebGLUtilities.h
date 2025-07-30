@@ -28,8 +28,6 @@
 #if ENABLE(WEBGL)
 #include "WebGL2RenderingContext.h"
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 class ScopedInspectorShaderProgramHighlight {
@@ -38,14 +36,14 @@ public:
     ScopedInspectorShaderProgramHighlight(WebGLRenderingContextBase& context)
        : m_context(shouldApply(context) ? &context : nullptr) // NOLINT
     {
-        if (LIKELY(!m_context))
+        if (!m_context) [[likely]]
             return;
         showHighlight();
     }
 
     ~ScopedInspectorShaderProgramHighlight()
     {
-        if (LIKELY(!m_context))
+        if (!m_context) [[likely]]
             return;
         hideHighlight();
     }
@@ -55,7 +53,7 @@ private:
     void hideHighlight();
 
     struct {
-        GCGLfloat color[4] { 0, 0, 0, 0 };
+        std::array<GCGLfloat, 4> color = { };
         GCGLenum equationRGB { GraphicsContextGL::NONE };
         GCGLenum equationAlpha { GraphicsContextGL::NONE };
         GCGLenum srcRGB { GraphicsContextGL::ONE };
@@ -193,7 +191,7 @@ public:
     ~ScopedWebGLRestoreFramebuffer()
     {
         RefPtr gl = m_context->graphicsContextGL();
-        if (auto* gl2Ccontext = dynamicDowncast<WebGL2RenderingContext>(m_context.get())) {
+        if (RefPtr gl2Ccontext = dynamicDowncast<WebGL2RenderingContext>(m_context.get())) {
             gl->bindFramebuffer(GraphicsContextGL::READ_FRAMEBUFFER, objectOrZero(gl2Ccontext->m_readFramebufferBinding));
             gl->bindFramebuffer(GraphicsContextGL::DRAW_FRAMEBUFFER, objectOrZero(gl2Ccontext->m_framebufferBinding));
         } else
@@ -231,6 +229,9 @@ public:
 
     ~ScopedWebGLRestoreTexture()
     {
+        if (!m_context->graphicsContextGL() || m_context->m_textureUnits.size() <= m_context->m_activeTextureUnit)
+            return;
+
         auto& textureUnit = m_context->m_textureUnits[m_context->m_activeTextureUnit];
         PlatformGLObject texture = 0;
         switch (m_target) {
@@ -265,7 +266,7 @@ public:
     explicit ScopedClearColorAndMask(WebGLRenderingContextBase& context, GCGLclampf clearRed, GCGLclampf clearGreen, GCGLclampf clearBlue, GCGLclampf clearAlpha, GCGLboolean maskRed, GCGLboolean maskGreen, GCGLboolean maskBlue, GCGLboolean maskAlpha)
         : m_context(context)
     {
-        RefPtr gl = context.protectedGraphicsContextGL();
+        RefPtr gl = context.graphicsContextGL();
         gl->clearColor(clearRed, clearGreen, clearBlue, clearAlpha);
         if (context.m_oesDrawBuffersIndexed)
             gl->colorMaskiOES(0, maskRed, maskGreen, maskBlue, maskAlpha);
@@ -285,7 +286,7 @@ public:
         auto maskBlue  = m_context->m_colorMask[2];
         auto maskAlpha = m_context->m_colorMask[3];
 
-        RefPtr gl = m_context->protectedGraphicsContextGL();
+        RefPtr gl = m_context->graphicsContextGL();
         gl->clearColor(clearRed, clearGreen, clearBlue, clearAlpha);
         if (m_context->m_oesDrawBuffersIndexed)
             gl->colorMaskiOES(0, maskRed, maskGreen, maskBlue, maskAlpha);
@@ -306,7 +307,7 @@ public:
         if (!m_context)
             return;
 
-        RefPtr gl = context.protectedGraphicsContextGL();
+        RefPtr gl = context.graphicsContextGL();
         gl->clearDepth(clear);
         gl->depthMask(mask);
     }
@@ -316,7 +317,7 @@ public:
         if (!m_context)
             return;
 
-        RefPtr gl = m_context->protectedGraphicsContextGL();
+        RefPtr gl = m_context->graphicsContextGL();
         gl->clearDepth(m_context->m_clearDepth);
         gl->depthMask(m_context->m_depthMask);
     }
@@ -334,7 +335,7 @@ public:
         if (!m_context)
             return;
 
-        RefPtr gl = context.protectedGraphicsContextGL();
+        RefPtr gl = context.graphicsContextGL();
         gl->clearStencil(clear);
         gl->stencilMaskSeparate(GraphicsContextGL::FRONT, mask);
     }
@@ -344,7 +345,7 @@ public:
         if (!m_context)
             return;
 
-        RefPtr gl = m_context->protectedGraphicsContextGL();
+        RefPtr gl = m_context->graphicsContextGL();
         gl->clearStencil(m_context->m_clearStencil);
         gl->stencilMaskSeparate(GraphicsContextGL::FRONT, m_context->m_stencilMask);
     }
@@ -354,7 +355,5 @@ private:
 };
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif

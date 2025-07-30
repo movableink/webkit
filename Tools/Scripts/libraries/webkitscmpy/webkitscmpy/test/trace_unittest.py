@@ -24,13 +24,15 @@ import logging
 import os
 import sys
 import time
-
-from mock import patch
 from unittest import TestCase
-from webkitbugspy import radar, mocks as bmocks
+from unittest.mock import patch
+
+from webkitbugspy import mocks as bmocks
+from webkitbugspy import radar
 from webkitcorepy import OutputCapture, Terminal, testing
-from webkitscmpy import local, mocks, Commit, program
-from webkitscmpy.program.trace import Relationship, CommitsStory
+
+from webkitscmpy import Commit, local, mocks, program
+from webkitscmpy.program.trace import CommitsStory, Relationship
 
 
 class TestRelationship(TestCase):
@@ -72,9 +74,21 @@ class TestRelationship(TestCase):
             ))
         )
         self.assertEqual(
-            ('original', ['123@main']), Relationship.parse(Commit(
+            (None, []), Relationship.parse(Commit(
                 hash='deadbeef1234', revision=1234, identifier='1234@main',
                 message='Commit title\n\nOriginally landed as: 123@main. <rdar://54321>',
+            ))
+        )
+        self.assertEqual(
+            ('original', ['123@main']), Relationship.parse(Commit(
+                hash='deadbeef1234', revision=1234, identifier='1234@main',
+                message='Originally landed as: 123@main. <rdar://54321>',
+            ))
+        )
+        self.assertEqual(
+            ('original', ['123@main']), Relationship.parse(Commit(
+                hash='deadbeef1234', revision=1234, identifier='1234@main',
+                message='Commit title\n\nOriginally-landed-as: 123@main. <rdar://54321>',
             ))
         )
 

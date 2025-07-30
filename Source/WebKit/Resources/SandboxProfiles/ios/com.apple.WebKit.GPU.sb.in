@@ -28,6 +28,7 @@
     (fcntl-command
         F_ADDFILESIGS_RETURN
         F_CHECK_LV
+        F_GETFL
         F_GETPATH
         F_GETPROTECTIONCLASS
         F_SETFD
@@ -35,7 +36,7 @@
         F_SETNOSIGPIPE))
 
 (with-filter (mac-policy-name "Sandbox")
-    (allow system-mac-syscall (mac-syscall-number 5)))
+    (allow system-mac-syscall (mac-syscall-number 5 65)))
 
 (allow iokit-open-service
     (iokit-registry-entry-class
@@ -97,15 +98,10 @@
                 (apply require-any filters)
                 (extension-class "com.apple.mediaserverd.read"))))
     ;; CoreMedia framework.
-    (allow mach-lookup (with telemetry)
-           (global-name "com.apple.coremedia.assetimagegenerator.xpc")
-           (global-name "com.apple.coremedia.audiodeviceclock.xpc") ; Needed for CMTimeBase
+    (allow mach-lookup
            (global-name "com.apple.coremedia.capturesession")      ; Actually for video capture
            (global-name "com.apple.coremedia.capturesource")       ; Also for video capture (<rdar://problem/15794291>).
-           (global-name "com.apple.coremedia.cpe.xpc") ; Needed for HDR playback.
-#if ENABLE(LINEAR_MEDIA_PLAYER)
            (global-name "com.apple.coremedia.mediaplaybackd.videotarget.xpc") ; Needed for FigVideoTarget
-#endif
            (global-name "com.apple.coremedia.remotequeue"))
     (allow mach-lookup
 #if HAVE(REFACTORED_MEDIASERVERD)
@@ -113,26 +109,14 @@
            (global-name "com.apple.mediaexperience.endpoint.xpc")
 #endif
            (global-name "com.apple.coremedia.admin")
-           (global-name "com.apple.coremedia.asset.xpc")
-           (global-name "com.apple.coremedia.audioprocessingtap.xpc")
-           (global-name "com.apple.coremedia.customurlloader.xpc") ; Needed for custom media loading
-           (global-name "com.apple.coremedia.figcpecryptor")
-           (global-name "com.apple.coremedia.formatreader.xpc")
            (global-name "com.apple.coremedia.mediaparserd.fairplaypsshatomparser.xpc")
            (global-name "com.apple.coremedia.mediaparserd.formatreader.xpc")
            (global-name "com.apple.coremedia.mediaparserd.manifold.xpc")
-           (global-name "com.apple.coremedia.player.xpc")
-           (global-name "com.apple.coremedia.remaker")
            (global-name "com.apple.coremedia.routediscoverer.xpc")
            (global-name "com.apple.coremedia.routingcontext.xpc")
-           (global-name "com.apple.coremedia.samplebufferaudiorenderer.xpc")
-           (global-name "com.apple.coremedia.samplebufferrendersynchronizer.xpc")
-           (global-name "com.apple.coremedia.sandboxserver.xpc")
            (global-name "com.apple.coremedia.systemcontroller.xpc")
-           (global-name "com.apple.coremedia.visualcontext.xpc")
            (global-name "com.apple.coremedia.volumecontroller.xpc"))
 
-#if HAVE(MEDIAPLAYBACKD)
     (allow mach-lookup
         (global-name
             "com.apple.coremedia.mediaplaybackd.asset.xpc"
@@ -160,15 +144,11 @@
             "com.apple.coremedia.videocodecd.compressionsession.xpc"
             "com.apple.coremedia.videocodecd.decompressionsession"
             "com.apple.coremedia.videocodecd.decompressionsession.xpc"))
-#endif
 
     (allow mach-lookup (with report) (with telemetry)
-        (global-name "com.apple.coremedia.cpeprotector.xpc")
 #if !HAVE(REFACTORED_MEDIASERVERD)
         (global-name "com.apple.coremedia.endpoint.xpc")
 #endif
-        (global-name "com.apple.coremedia.figcontentkeysession.xpc")
-        (global-name "com.apple.coremedia.figcontentkeyboss.xpc")
         (global-name "com.apple.coremedia.routingsessionmanager.xpc")
         (global-name "com.apple.coremedia.sts"))
 
@@ -226,13 +206,6 @@
             (preference-domain "com.apple.coremedia"))
         (allow file-read* (with telemetry) (subpath "/Library/CoreMediaIO/Plug-Ins/DAL"))
         (allow device-camera))
-
-    ;; Support incoming video connections
-    (allow mach-lookup (with telemetry)
-        (global-name "com.apple.coremedia.compressionsession"))
-    (allow mach-lookup
-        (global-name "com.apple.coremedia.decompressionsession")
-        (global-name "com.apple.coremedia.videoqueue"))
 )
 
 (define-once (accessibility-support)
@@ -309,11 +282,31 @@
     (allow mach-lookup
         (global-name "com.apple.CARenderServer"))
 
-    ; UIKit-required IOKit nodes.
+    (with-filter (require-not (sandbox-version-2))
+        (allow iokit-open-user-client (iokit-user-client-class "IOSurfaceAcceleratorClient")))
+    (with-filter (sandbox-version-2)
+        (allow iokit-open-user-client (iokit-user-client-class "IOSurfaceAcceleratorClient")
+            (apply-message-filter
+                (GPU_PROCESS_IOKIT_DEFAULT_FILTER_OPERATION (with telemetry) (with message "IOSurfaceAcceleratorClient")
+                    iokit-async-external-method
+                    iokit-external-trap
+                    iokit-external-method)
+                (allow iokit-external-method
+                    (iokit-method-number 1 10)))))
+
     (allow iokit-open-user-client
-        (iokit-user-client-class "IOSurfaceAcceleratorClient")
-        ;; Requires by UIView -> UITextMagnifierRenderer -> UIWindow
-        (iokit-user-client-class "IOSurfaceRootUserClient"))
+        (iokit-user-client-class "IOSurfaceRootUserClient")
+        (apply-message-filter
+            (allow (with telemetry) (with report) (with message "IOSurfaceRootUserClient")
+                iokit-async-external-method
+                iokit-external-trap
+                iokit-external-method)
+            (allow iokit-async-external-method
+                (iokit-method-number 40))
+            (allow iokit-external-trap
+                (iokit-trap-number 0 1 2 3 4 5 8 9))
+            (allow iokit-external-method
+                (iokit-method-number 0 4 5 9 10 11 12 13 20 27 32 34 35 36 38 39 41 44 54 58 59))))
 
     ;; Silence sandbox violations from apps trying to create the empty plist if it doesn't exist.
     ;; <rdar://problem/13796537>
@@ -677,17 +670,6 @@
     "com.apple.avfoundation.videoperformancehud") ;; <rdar://problem/31594568>
 
 ;; Sandbox extensions
-(define (apply-read-and-issue-extension op path-filter)
-    (op file-read* path-filter)
-    (op file-issue-extension (require-all (extension-class "com.apple.app-sandbox.read") path-filter)))
-(define (apply-write-and-issue-extension op path-filter)
-    (op file-write* path-filter)
-    (op file-issue-extension (require-all (extension-class "com.apple.app-sandbox.read-write") path-filter)))
-(define (read-only-and-issue-extensions path-filter)
-    (apply-read-and-issue-extension allow path-filter))
-(define (read-write-and-issue-extensions path-filter)
-    (apply-read-and-issue-extension allow path-filter)
-    (apply-write-and-issue-extension allow path-filter))
 (read-only-and-issue-extensions (extension "com.apple.app-sandbox.read"))
 (read-write-and-issue-extensions (extension "com.apple.app-sandbox.read-write"))
 
@@ -700,9 +682,10 @@
 
 (media-accessibility-support)
 
+(log-streaming)
+
 (with-filter (system-attribute apple-internal)
     (allow mach-lookup
-        (global-name "com.apple.diagnosticd")
         (global-name "com.apple.analyticsd")))
 
 ;; Silence reports about things we do not want access to:
@@ -714,23 +697,6 @@
 
 (deny file-write-create (vnode-type SYMLINK))
 (deny file-read-xattr file-write-xattr (xattr-prefix "com.apple.security.private."))
-
-#if HAVE(AGX_COMPILER_SERVICE)
-(allow iokit-open-user-client
-    (require-all
-        (extension "com.apple.webkit.extension.iokit")
-        (iokit-user-client-class
-            "AGXCommandQueue"
-            "AGXDevice"
-            "AGXSharedUserClient"
-            "IOAccelContext"
-            "IOAccelDevice"
-            "IOAccelSharedUserClient"
-            "IOAccelSubmitter2"
-            "IOAccelContext2"
-            "IOAccelDevice2"
-            "IOAccelSharedUserClient2")))
-#endif // HAVE(AGX_COMPILER_SERVICE)
 
 (deny mach-lookup (with no-report)
     (xpc-service-name "com.apple.audio.toolbox.reporting.service"))
@@ -798,6 +764,9 @@
         SYS_fcntl
         SYS_fcntl_nocancel
         SYS_fileport_makefd
+#if PLATFORM(VISION) && ENABLE(MODEL_PROCESS)
+        SYS_fileport_makeport
+#endif
         SYS_flock
         SYS_fsetattrlist
         SYS_fsetxattr
@@ -827,6 +796,7 @@
         SYS_kdebug_typefilter
         SYS_kevent_id
         SYS_kevent_qos
+        SYS_kqueue
         SYS_kqueue_workloop_ctl
         SYS_lseek
         SYS_lstat64
@@ -968,6 +938,7 @@
     io_service_get_matching_services_bin
     io_service_open_extended
     mach_eventlink_associate
+    mach_eventlink_create
     mach_exception_raise
     mach_memory_entry_ownership
     mach_port_extract_right
@@ -1015,6 +986,11 @@
     (require-all
         (extension-class "com.apple.mediaserverd.read")
         (apply subpath issue-extension-secondary-paths)))
+#endif
+
+#if PLATFORM(VISION) && ENABLE(MODEL_PROCESS)
+(allow mach-lookup
+    (global-name "com.apple.surfboard.applicationservice"))
 #endif
 
 #if __has_include(<WebKitAdditions/com.apple.WebKit.GPU.sb.in>)

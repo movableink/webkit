@@ -24,15 +24,23 @@
 #include "RenderThemeQtMobile.h"
 
 #include "CSSValueKeywords.h"
+#include "ChromeClient.h"
 #include "Color.h"
 #include "Document.h"
 #include "Font.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "HTMLSelectElement.h"
+#include "Page.h"
 #include "PaintInfo.h"
+#include "QStyleFacade.h"
 #include "RenderBox.h"
 #include "RenderProgress.h"
+#include "RenderSlider.h"
+#include "RenderTheme.h"
+#include "Settings.h"
+#include "StylePadding.h"
+#include "UserAgentStyleSheets.h"
 #include "RenderStyleInlines.h"
 #include "RenderStyleSetters.h"
 #include "StyleResolver.h"
@@ -647,20 +655,20 @@ RenderThemeQtMobile::~RenderThemeQtMobile()
 {
 }
 
-bool RenderThemeQtMobile::isControlStyled(const RenderStyle& style, const RenderStyle& userAgentStyle) const
+bool RenderThemeQtMobile::isControlStyled(const RenderStyle& style) const
 {
     switch (style.usedAppearance()) {
     case StyleAppearance::Checkbox:
     case StyleAppearance::Radio:
         return false;
     default:
-        return RenderThemeQt::isControlStyled(style, userAgentStyle);
+        return RenderThemeQt::isControlStyled(style);
     }
 }
 
-LengthBox RenderThemeQtMobile::popupInternalPaddingBox(const RenderStyle&) const
+Style::PaddingBox RenderThemeQtMobile::popupInternalPaddingBox(const RenderStyle&) const
 {
-    return { 0, 0, 1, 0 };
+    return { Style::PaddingEdge(Length(0, LengthType::Fixed)), Style::PaddingEdge(Length(0, LengthType::Fixed)), Style::PaddingEdge(Length(1, LengthType::Fixed)), Style::PaddingEdge(Length(0, LengthType::Fixed)) };
 }
 
 void RenderThemeQtMobile::computeSizeBasedOnStyle(RenderStyle& renderStyle) const
@@ -672,10 +680,10 @@ void RenderThemeQtMobile::computeSizeBasedOnStyle(RenderStyle& renderStyle) cons
     case StyleAppearance::SearchField:
     case StyleAppearance::TextField: {
         int padding = frameWidth;
-        renderStyle.setPaddingLeft(Length(padding, LengthType::Fixed));
-        renderStyle.setPaddingRight(Length(padding, LengthType::Fixed));
-        renderStyle.setPaddingTop(Length(padding, LengthType::Fixed));
-        renderStyle.setPaddingBottom(Length(padding, LengthType::Fixed));
+        renderStyle.setPaddingLeft(Style::PaddingEdge(Length(padding, LengthType::Fixed)));
+        renderStyle.setPaddingRight(Style::PaddingEdge(Length(padding, LengthType::Fixed)));
+        renderStyle.setPaddingTop(Style::PaddingEdge(Length(padding, LengthType::Fixed)));
+        renderStyle.setPaddingBottom(Style::PaddingEdge(Length(padding, LengthType::Fixed)));
         break;
     }
     default:
@@ -736,13 +744,13 @@ void RenderThemeQtMobile::adjustButtonStyle(RenderStyle& style, const Element*) 
 
 void RenderThemeQtMobile::setButtonPadding(RenderStyle& style) const
 {
-    style.setPaddingLeft(Length(buttonPaddingLeft, LengthType::Fixed));
-    style.setPaddingRight(Length(buttonPaddingRight, LengthType::Fixed));
-    style.setPaddingTop(Length(buttonPaddingTop, LengthType::Fixed));
-    style.setPaddingBottom(Length(buttonPaddingBottom, LengthType::Fixed));
+    style.setPaddingLeft(Style::PaddingEdge(Length(buttonPaddingLeft, LengthType::Fixed)));
+    style.setPaddingRight(Style::PaddingEdge(Length(buttonPaddingRight, LengthType::Fixed)));
+    style.setPaddingTop(Style::PaddingEdge(Length(buttonPaddingTop, LengthType::Fixed)));
+    style.setPaddingBottom(Style::PaddingEdge(Length(buttonPaddingBottom, LengthType::Fixed)));
 }
 
-bool RenderThemeQtMobile::paintButton(const RenderObject& o, const PaintInfo& i, const IntRect& r)
+bool RenderThemeQtMobile::paintButton(const RenderObject& o, const PaintInfo& i, const FloatRect& r)
 {
     StylePainterMobile p(this, i);
     if (!p.isValid())
@@ -750,11 +758,11 @@ bool RenderThemeQtMobile::paintButton(const RenderObject& o, const PaintInfo& i,
 
     StyleAppearance appearance = o.style().usedAppearance();
     if (appearance == StyleAppearance::PushButton || appearance == StyleAppearance::Button) {
-        p.drawPushButton(r, isPressed(o), isEnabled(o));
+        p.drawPushButton(enclosingIntRect(r), isPressed(o), isEnabled(o));
     } else if (appearance == StyleAppearance::Radio)
-       p.drawRadioButton(r, isChecked(o), isEnabled(o));
+       p.drawRadioButton(enclosingIntRect(r), isChecked(o), isEnabled(o));
     else if (appearance == StyleAppearance::Checkbox)
-       p.drawCheckBox(r, isChecked(o), isEnabled(o));
+       p.drawCheckBox(enclosingIntRect(r), isChecked(o), isEnabled(o));
 
     return false;
 }
@@ -774,8 +782,8 @@ void RenderThemeQtMobile::adjustTextFieldStyle(RenderStyle& style, const Element
     style.setBorderLeftWidth(frameWidth);
     style.resetPadding();
     computeSizeBasedOnStyle(style);
-    style.setPaddingLeft(Length(textFieldPadding, LengthType::Fixed));
-    style.setPaddingRight(Length(textFieldPadding, LengthType::Fixed));
+    style.setPaddingLeft(Style::PaddingEdge(Length(textFieldPadding, LengthType::Fixed)));
+    style.setPaddingRight(Style::PaddingEdge(Length(textFieldPadding, LengthType::Fixed)));
 }
 
 bool RenderThemeQtMobile::paintTextField(const RenderObject& o, const PaintInfo& i, const FloatRect& r)
@@ -814,7 +822,7 @@ bool RenderThemeQtMobile::paintTextField(const RenderObject& o, const PaintInfo&
 void RenderThemeQtMobile::adjustMenuListStyle(RenderStyle& style, const Element* e) const
 {
     RenderThemeQt::adjustMenuListStyle(style, e);
-    style.setPaddingLeft(Length(menuListPadding, LengthType::Fixed));
+    style.setPaddingLeft(Style::PaddingEdge(Length(menuListPadding, LengthType::Fixed)));
 }
 
 void RenderThemeQtMobile::setPopupPadding(RenderStyle& style) const
@@ -822,11 +830,11 @@ void RenderThemeQtMobile::setPopupPadding(RenderStyle& style) const
     const int paddingLeft = 4;
     const int paddingRight = style.width().isFixed() || style.width().isPercent() ? 5 : 8;
 
-    style.setPaddingLeft(Length(paddingLeft, LengthType::Fixed));
-    style.setPaddingRight(Length(paddingRight + arrowBoxWidth, LengthType::Fixed));
+    style.setPaddingLeft(Style::PaddingEdge(Length(paddingLeft, LengthType::Fixed)));
+    style.setPaddingRight(Style::PaddingEdge(Length(paddingRight + arrowBoxWidth, LengthType::Fixed)));
 
-    style.setPaddingTop(Length(2, LengthType::Fixed));
-    style.setPaddingBottom(Length(2, LengthType::Fixed));
+    style.setPaddingTop(Style::PaddingEdge(Length(2, LengthType::Fixed)));
+    style.setPaddingBottom(Style::PaddingEdge(Length(2, LengthType::Fixed)));
 }
 
 bool RenderThemeQtMobile::paintMenuList(const RenderObject& o, const PaintInfo& i, const FloatRect& r)
@@ -835,18 +843,18 @@ bool RenderThemeQtMobile::paintMenuList(const RenderObject& o, const PaintInfo& 
     if (!p.isValid())
         return true;
 
-    p.drawComboBox(r, checkMultiple(o), isEnabled(o));
+    p.drawComboBox(enclosingIntRect(r), checkMultiple(o), isEnabled(o));
     return false;
 }
 
-bool RenderThemeQtMobile::paintMenuListButton(RenderObject& o, const PaintInfo& i,
-                                        const IntRect& r)
+bool RenderThemeQtMobile::paintMenuListButton(const RenderObject& o, const PaintInfo& i,
+                                        const FloatRect& r)
 {
     StylePainterMobile p(this, i);
     if (!p.isValid())
         return true;
 
-    p.drawComboBox(r, checkMultiple(o), isEnabled(o));
+    p.drawComboBox(enclosingIntRect(r), checkMultiple(o), isEnabled(o));
 
     return false;
 }
@@ -856,7 +864,7 @@ Seconds RenderThemeQtMobile::animationDurationForProgressBar() const
     return Seconds(2.475);
 }
 
-bool RenderThemeQtMobile::paintProgressBar(const RenderObject& o, const PaintInfo& pi, const IntRect& r)
+bool RenderThemeQtMobile::paintProgressBar(const RenderObject& o, const PaintInfo& pi, const FloatRect& r)
 {
     if (!o.isRenderProgress())
         return true;
@@ -869,15 +877,15 @@ bool RenderThemeQtMobile::paintProgressBar(const RenderObject& o, const PaintInf
     const bool isRTL = renderProgress.writingMode().isBidiRTL();
 
     if (renderProgress.isDeterminate())
-        p.drawProgress(r, renderProgress.position(), !isRTL);
+        p.drawProgress(enclosingIntRect(r), renderProgress.position(), !isRTL);
     else
-        p.drawProgress(r, renderProgress.animationProgress(), !isRTL, true);
+        p.drawProgress(enclosingIntRect(r), renderProgress.animationProgress(), !isRTL, true);
 
     return false;
 }
 
 bool RenderThemeQtMobile::paintSliderTrack(const RenderObject& o, const PaintInfo& pi,
-                                     const IntRect& r)
+                                     const FloatRect& r)
 {
     StylePainterMobile p(this, pi);
     if (!p.isValid())
@@ -889,7 +897,7 @@ bool RenderThemeQtMobile::paintSliderTrack(const RenderObject& o, const PaintInf
     const double max = slider->maximum();
     const double progress = (max - min > 0) ? (slider->valueAsNumber() - min) / (max - min) : 0;
 
-    QRect rect(r);
+    QRect rect(enclosingIntRect(r));
     const bool vertical = (o.style().usedAppearance() == StyleAppearance::SliderVertical);
     const int groovePadding = vertical ? r.width() * sliderGrooveBorderRatio : r.height() * sliderGrooveBorderRatio;
     if (vertical) {
@@ -905,13 +913,13 @@ bool RenderThemeQtMobile::paintSliderTrack(const RenderObject& o, const PaintInf
 }
 
 bool RenderThemeQtMobile::paintSliderThumb(const RenderObject& o, const PaintInfo& pi,
-                                     const IntRect& r)
+                                     const FloatRect& r)
 {
     StylePainterMobile p(this, pi);
     if (!p.isValid())
         return true;
 
-    p.drawSliderThumb(r, isPressed(o));
+    p.drawSliderThumb(enclosingIntRect(r), isPressed(o));
 
     return false;
 }

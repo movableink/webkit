@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2024 Apple Inc. All rights reserved.
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,9 @@
 #include "CSSColorLayers.h"
 #include "CSSColorMix.h"
 #include "CSSContrastColor.h"
+#include "CSSDynamicRangeLimit.h"
+#include "CSSDynamicRangeLimitMix.h"
+#include "CSSDynamicRangeLimitValue.h"
 #include "CSSHexColor.h"
 #include "CSSKeywordColor.h"
 #include "CSSLightDarkColor.h"
@@ -48,9 +51,8 @@
 #include "CSSPropertyParserConsumer+AngleDefinitions.h"
 #include "CSSPropertyParserConsumer+ColorInterpolationMethod.h"
 #include "CSSPropertyParserConsumer+Ident.h"
+#include "CSSPropertyParserConsumer+KeywordDefinitions.h"
 #include "CSSPropertyParserConsumer+MetaConsumer.h"
-#include "CSSPropertyParserConsumer+NoneDefinitions.h"
-#include "CSSPropertyParserConsumer+Number.h"
 #include "CSSPropertyParserConsumer+NumberDefinitions.h"
 #include "CSSPropertyParserConsumer+PercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
@@ -81,16 +83,16 @@ template<typename T> static std::optional<CSS::Color> makeCSSColor(std::optional
 // State passed to internal color consumer functions. Used to pass information
 // down the stack and levels of color parsing nesting.
 struct ColorParserState {
-    ColorParserState(const CSSParserContext& context, const CSSColorParsingOptions& options)
-        : context { context }
+    ColorParserState(CSS::PropertyParserState& propertyParserState, const CSSColorParsingOptions& options)
+        : propertyParserState { propertyParserState }
         , allowedColorTypes { options.allowedColorTypes }
-        , acceptQuirkyColors { options.acceptQuirkyColors }
+        , acceptsQuirkyColor { propertyParserState.context.mode == HTMLQuirksMode && CSSProperty::acceptsQuirkyColor(propertyParserState.currentProperty) }
     {
     }
 
-    const CSSParserContext& context;
+    CSS::PropertyParserState& propertyParserState;
     OptionSet<CSS::ColorType> allowedColorTypes;
-    bool acceptQuirkyColors { false };
+    bool acceptsQuirkyColor { false };
     unsigned nestingLevel { 0 };
 };
 
@@ -125,7 +127,7 @@ static std::optional<CSS::AbsoluteColorComponent<Descriptor, Index>> consumeAbso
     using TypeList = GetCSSColorParseTypeWithCalcComponentTypeList<Descriptor, Index>;
     using Consumer = brigand::wrap<TypeList, MetaConsumerWrapper>;
 
-    return Consumer::consume(range, state.context, { }, { .parserMode = state.context.mode });
+    return Consumer::consume(range, state.propertyParserState);
 }
 
 template<typename Descriptor, unsigned Index>
@@ -136,7 +138,7 @@ static std::optional<CSS::RelativeColorComponent<Descriptor, Index>> consumeRela
     using TypeList = GetCSSColorParseTypeWithCalcAndSymbolsComponentTypeList<Descriptor, Index>;
     using Consumer = brigand::wrap<TypeList, MetaConsumerWrapper>;
 
-    return Consumer::consume(range, state.context, WTFMove(symbolsAllowed), { .parserMode = state.context.mode });
+    return Consumer::consume(range, state.propertyParserState, WTFMove(symbolsAllowed));
 }
 
 template<typename Descriptor>
@@ -150,7 +152,7 @@ static bool consumeAlphaDelimiter(CSSParserTokenRange& args)
 
 template<typename Descriptor> static CSS::AbsoluteColor<typename Descriptor::Canonical> normalizeNonCalcComponents(const CSS::AbsoluteColor<Descriptor>& unresolved, ColorParserState& state)
 {
-    ASSERT(containsUnevaluatedCalc<Descriptor>(unresolved.components));
+    ASSERT(componentsContainsUnevaluatedCalc<Descriptor>(unresolved.components));
 
     // The canonical descriptor is normally the descriptor itself, except for legacy rgb and hsl, which use the modern counterparts.
     using CanonicalDescriptor = typename Descriptor::Canonical;
@@ -182,7 +184,7 @@ template<typename Descriptor> static CSS::AbsoluteColor<typename Descriptor::Can
 
 template<typename Descriptor> static CSS::AbsoluteColor<typename Descriptor::Canonical> normalizeNonCalcRequiringConversionDataComponents(const CSS::AbsoluteColor<Descriptor>& unresolved, ColorParserState& state)
 {
-    ASSERT(containsUnevaluatedCalc<Descriptor>(unresolved.components));
+    ASSERT(componentsContainsUnevaluatedCalc<Descriptor>(unresolved.components));
 
     // Evaluated any calc values that don't require conversion data.
     auto partiallyResolved = CSS::AbsoluteColor<Descriptor> {
@@ -237,15 +239,15 @@ static std::optional<CSS::Color> consumeAbsoluteFunctionParameters(CSSParserToke
         // calc() will "resolve to a single value" when no conversion data is required.
 
         // For this legacy / eager evaluating case, we want to preserve any calc() components that require conversion data.
-        if (requiresConversionData<Descriptor>(unresolved.components))
+        if (componentsRequireConversionData<Descriptor>(unresolved.components))
             return makeCSSColor(normalizeNonCalcRequiringConversionDataComponents(unresolved, state));
     } else {
         // For the non-legacy / non-eager evaluating cases, we want preserve any calc(), not just calc() requiring conversion data, so the check is a bit more permissive.
-        if (containsUnevaluatedCalc<Descriptor>(unresolved.components))
+        if (componentsContainsUnevaluatedCalc<Descriptor>(unresolved.components))
             return makeCSSColor(normalizeNonCalcComponents(unresolved, state));
     }
 
-    ASSERT(!requiresConversionData<Descriptor>(unresolved.components));
+    ASSERT(!componentsRequireConversionData<Descriptor>(unresolved.components));
 
     // In all other cases, we can fully resolve the color all the way to an absolute Color value.
 
@@ -380,7 +382,7 @@ static std::optional<CSS::Color> consumeRGBFunction(CSSParserTokenRange& range, 
 
                 return consumeAbsoluteFunctionParameters<Descriptor>(args, state, WTFMove(red));
             },
-            [](CSS::None) -> std::optional<CSS::Color> {
+            [](CSS::Keyword::None) -> std::optional<CSS::Color> {
                 // `none` is invalid for the legacy syntax, but the initial parameter consumer didn't
                 // know we were using the legacy syntax yet, so we need to check for it now.
                 return { };
@@ -429,7 +431,7 @@ static std::optional<CSS::Color> consumeHSLFunction(CSSParserTokenRange& range, 
 
                 return consumeAbsoluteFunctionParameters<Descriptor>(args, state, WTFMove(hue));
             },
-            [](CSS::None) -> std::optional<CSS::Color> {
+            [](CSS::Keyword::None) -> std::optional<CSS::Color> {
                 // `none` is invalid for the legacy syntax, but the initial parameter consumer didn't
                 // know we were using the legacy syntax yet, so we need to check for it now.
                 return { };
@@ -512,7 +514,7 @@ static std::optional<CSS::Color> consumeColorLayersFunction(CSSParserTokenRange&
 
     ASSERT(range.peek().functionId() == CSSValueColorLayers);
 
-    if (!state.context.colorLayersEnabled)
+    if (!state.propertyParserState.context.colorLayersEnabled)
         return std::nullopt;
 
     auto args = consumeFunction(range);
@@ -545,14 +547,14 @@ static std::optional<CSS::ColorMix::Component> consumeColorMixComponent(CSSParse
 {
     // [ <color> && <percentage [0,100]>? ]
 
-    auto percentage = MetaConsumer<CSS::ColorMix::Component::Percentage>::consume(args, state.context, { }, { });
+    auto percentage = MetaConsumer<CSS::ColorMix::Component::Percentage>::consume(args, state.propertyParserState);
 
     auto originColor = consumeColor(args, state);
     if (!originColor)
         return std::nullopt;
 
     if (!percentage) {
-        if (auto percent = MetaConsumer<CSS::ColorMix::Component::Percentage>::consume(args, state.context, { }, { }))
+        if (auto percent = MetaConsumer<CSS::ColorMix::Component::Percentage>::consume(args, state.propertyParserState))
             percentage = percent;
     }
 
@@ -581,7 +583,7 @@ static std::optional<CSS::Color> consumeColorMixFunction(CSSParserTokenRange& ra
     if (args.peek().id() != CSSValueIn)
         return std::nullopt;
 
-    auto colorInterpolationMethod = consumeColorInterpolationMethod(args, state.context);
+    auto colorInterpolationMethod = consumeColorInterpolationMethod(args, state.propertyParserState);
     if (!colorInterpolationMethod)
         return std::nullopt;
 
@@ -629,12 +631,12 @@ static std::optional<CSS::Color> consumeColorMixFunction(CSSParserTokenRange& ra
 
 static std::optional<CSS::Color> consumeContrastColorFunction(CSSParserTokenRange& range, ColorParserState& state)
 {
-    // contrast-color() = contrast-color( <color> max? )
+    // contrast-color() = contrast-color( <color> )
     // https://drafts.csswg.org/css-color-5/#funcdef-contrast-color
 
     ASSERT(range.peek().functionId() == CSSValueContrastColor);
 
-    if (!state.context.contrastColorEnabled)
+    if (!state.propertyParserState.context.contrastColorEnabled)
         return std::nullopt;
 
     auto args = consumeFunction(range);
@@ -643,15 +645,12 @@ static std::optional<CSS::Color> consumeContrastColorFunction(CSSParserTokenRang
     if (!color)
         return std::nullopt;
 
-    bool max = consumeIdentRaw<CSSValueMax>(args).has_value();
-
     if (!args.atEnd())
         return std::nullopt;
 
     return CSS::Color {
         CSS::ContrastColor {
-            .color = WTFMove(*color),
-            .max = max
+            .color = WTFMove(*color)
         }
     };
 }
@@ -664,9 +663,6 @@ static std::optional<CSS::Color> consumeLightDarkFunction(CSSParserTokenRange& r
     // https://drafts.csswg.org/css-color-5/#light-dark
 
     ASSERT(range.peek().functionId() == CSSValueLightDark);
-
-    if (!state.context.lightDarkColorEnabled)
-        return std::nullopt;
 
     auto args = consumeFunction(range);
 
@@ -758,7 +754,9 @@ static std::optional<SRGBA<uint8_t>> consumeHexColor(CSSParserTokenRange& range,
     if (token.type() == HashToken)
         view = token.value();
     else {
-        if (!state.acceptQuirkyColors)
+        // <quirky-color> should only match for properties that explicitly opt-in and when not nested.
+        // https://drafts.csswg.org/css-color-4/#quirky-color
+        if (!state.acceptsQuirkyColor || state.nestingLevel > 1)
             return std::nullopt;
         if (token.type() == IdentToken) {
             view = token.value(); // e.g. FF0000
@@ -784,11 +782,46 @@ static std::optional<SRGBA<uint8_t>> consumeHexColor(CSSParserTokenRange& range,
         } else
             return std::nullopt;
     }
-    auto result = CSSParser::parseHexColor(view);
+    auto result = CSSParserFastPaths::parseHexColor(view);
     if (!result)
         return std::nullopt;
     range.consumeIncludingWhitespace();
     return *result;
+}
+
+bool isColorKeywordAllowed(CSSValueID id, const CSSParserContext& context)
+{
+    switch (id) {
+    case CSSValueWebkitFocusRingColor:
+        switch (context.mode) {
+        case UASheetMode:
+        case HTMLQuirksMode:
+            return true;
+        default:
+            return false;
+        }
+
+#if PLATFORM(COCOA)
+    case CSSValueAppleSystemTertiaryFill:
+#endif
+#if PLATFORM(IOS_FAMILY)
+    case CSSValueAppleSystemQuaternaryFill:
+#endif
+#if PLATFORM(MAC)
+    case CSSValueAppleSystemOpaqueFill:
+    case CSSValueAppleSystemOpaqueSecondaryFill:
+#endif
+    case CSSValueInternalDocumentTextColor:
+        switch (context.mode) {
+        case UASheetMode:
+            return true;
+        default:
+            return false;
+        }
+
+    default:
+        return true;
+    }
 }
 
 // MARK: Color consumer bottleneck
@@ -799,7 +832,7 @@ std::optional<CSS::Color> consumeColor(CSSParserTokenRange& range, ColorParserSt
 
     auto keyword = range.peek().id();
     if (CSS::isColorKeyword(keyword, state.allowedColorTypes)) {
-        if (!isColorKeywordAllowedInMode(keyword, state.context.mode))
+        if (!isColorKeywordAllowed(keyword, state.propertyParserState.context))
             return { };
 
         consumeIdentRaw(range);
@@ -814,17 +847,18 @@ std::optional<CSS::Color> consumeColor(CSSParserTokenRange& range, ColorParserSt
 
 // MARK: - CSS::Color consuming entry points
 
-std::optional<CSS::Color> consumeUnresolvedColor(CSSParserTokenRange& range, const CSSParserContext& context, const CSSColorParsingOptions& options)
+std::optional<CSS::Color> consumeUnresolvedColor(CSSParserTokenRange& range, CSS::PropertyParserState& propertyParserState, const CSSColorParsingOptions& options)
 {
-    ColorParserState state { context, options };
+    ColorParserState state { propertyParserState, options };
+
     return consumeColor(range, state);
 }
 
 // MARK: - CSSValue consuming entry points
 
-RefPtr<CSSValue> consumeColor(CSSParserTokenRange& range, const CSSParserContext& context, const CSSColorParsingOptions& options)
+RefPtr<CSSValue> consumeColor(CSSParserTokenRange& range, CSS::PropertyParserState& propertyParserState, const CSSColorParsingOptions& options)
 {
-    ColorParserState state { context, options };
+    ColorParserState state { propertyParserState, options };
 
     if (auto color = consumeColor(range, state)) {
         // Special case top level color keywords, hex (SRGBA<uint8_t>) and absolute color values to maintain
@@ -832,9 +866,9 @@ RefPtr<CSSValue> consumeColor(CSSParserTokenRange& range, const CSSParserContext
         if (auto keyword = color->keyword())
             return CSSPrimitiveValue::create(keyword->valueID);
         if (auto hex = color->hex())
-            return CSSValuePool::singleton().createColorValue(Color { hex->value });
+            return propertyParserState.pool.createColorValue(Color { hex->value });
         if (auto resolved = color->resolved())
-            return CSSValuePool::singleton().createColorValue(WTFMove(resolved->value));
+            return propertyParserState.pool.createColorValue(WTFMove(resolved->value));
 
         return CSSColorValue::create(WTFMove(*color));
     }
@@ -844,9 +878,9 @@ RefPtr<CSSValue> consumeColor(CSSParserTokenRange& range, const CSSParserContext
 
 // MARK: - Raw consuming entry points
 
-Color consumeColorRaw(CSSParserTokenRange& range, const CSSParserContext& context, const CSSColorParsingOptions& options, CSS::PlatformColorResolutionState& eagerResolutionState)
+Color consumeColorRaw(CSSParserTokenRange& range, CSS::PropertyParserState& propertyParserState, const CSSColorParsingOptions& options, CSS::PlatformColorResolutionState& eagerResolutionState)
 {
-    ColorParserState state { context, options };
+    ColorParserState state { propertyParserState, options };
 
     if (auto color = consumeColor(range, state))
         return createColor(*color, eagerResolutionState);
@@ -855,7 +889,7 @@ Color consumeColorRaw(CSSParserTokenRange& range, const CSSParserContext& contex
 
 // MARK: - Raw parsing entry points
 
-Color parseColorRawSlow(const String& string, const CSSParserContext& context, const CSSColorParsingOptions& options, CSS::PlatformColorResolutionState& eagerResolutionState)
+Color parseColorRawGeneral(const String& string, const CSSParserContext& context, ScriptExecutionContext& scriptExecutionContext, const CSSColorParsingOptions& options, CSS::PlatformColorResolutionState& eagerResolutionState)
 {
     CSSTokenizer tokenizer(string);
     CSSParserTokenRange range(tokenizer.tokenRange());
@@ -863,15 +897,143 @@ Color parseColorRawSlow(const String& string, const CSSParserContext& context, c
     // Handle leading whitespace.
     range.consumeWhitespace();
 
-    auto result = consumeColorRaw(range, context, options, eagerResolutionState);
+    auto state = CSS::PropertyParserState { .context = context, .pool = scriptExecutionContext.cssValuePool() };
+    auto result = consumeUnresolvedColor(range, state, options);
 
     // Handle trailing whitespace.
     range.consumeWhitespace();
 
-    if (!range.atEnd())
+    if (!range.atEnd() || !result)
         return { };
 
-    return result;
+    return createColor(*result, eagerResolutionState);
+}
+
+Color deprecatedParseColorRawWithoutContext(const String& string, const CSSColorParsingOptions& options)
+{
+    auto& context = strictCSSParserContext();
+    if (auto color = CSSParserFastPaths::parseSimpleColor(string, context))
+        return *color;
+
+    CSSTokenizer tokenizer(string);
+    CSSParserTokenRange range(tokenizer.tokenRange());
+
+    // Handle leading whitespace.
+    range.consumeWhitespace();
+
+    auto state = CSS::PropertyParserState { .context = context };
+    auto result = consumeUnresolvedColor(range, state, options);
+
+    // Handle trailing whitespace.
+    range.consumeWhitespace();
+
+    if (!range.atEnd() || !result)
+        return { };
+
+    return result->absoluteColor();
+}
+
+// MARK: - <dynamic-range-limit-mix()> (unresolved)
+
+static std::optional<CSS::DynamicRangeLimitMixComponent> consumeUnresolvedDynamicRangeLimitMixComponent(CSSParserTokenRange& range, CSS::PropertyParserState& propertyParserState)
+{
+    // <dynamic-range-limit-mix-component> = <'dynamic-range-limit'> && <percentage [0,100]>
+
+    auto rangeCopy = range;
+
+    auto percentage = MetaConsumer<CSS::DynamicRangeLimitMixPercentage>::consume(rangeCopy, propertyParserState);
+    auto limit = consumeUnresolvedDynamicRangeLimit(rangeCopy, propertyParserState);
+    if (!limit)
+        return std::nullopt;
+
+    if (!percentage) {
+        percentage = MetaConsumer<CSS::DynamicRangeLimitMixPercentage>::consume(rangeCopy, propertyParserState);
+        if (!percentage)
+            return { };
+    }
+
+    range = rangeCopy;
+
+    return CSS::DynamicRangeLimitMixComponent {
+        WTFMove(*limit),
+        WTFMove(*percentage)
+    };
+}
+
+static std::optional<CSS::DynamicRangeLimit> consumeUnresolvedDynamicRangeLimitMix(CSSParserTokenRange& range, CSS::PropertyParserState& propertyParserState)
+{
+    // dynamic-range-limit-mix() = dynamic-range-limit-mix( [ <'dynamic-range-limit'> && <percentage [0,100]> ]#{2,} )
+
+    ASSERT(range.peek().functionId() == CSSValueDynamicRangeLimitMix);
+
+    auto rangeCopy = range;
+    auto args = consumeFunction(rangeCopy);
+
+    CSS::DynamicRangeLimitMixParameters::Vector resultBuilder;
+
+    do {
+        auto component = consumeUnresolvedDynamicRangeLimitMixComponent(args, propertyParserState);
+        if (!component)
+            return { };
+        resultBuilder.append(WTFMove(*component));
+    } while (consumeCommaIncludingWhitespace(args));
+
+    if (!args.atEnd())
+        return { };
+
+    if (resultBuilder.size() < 2)
+        return { };
+
+    range = rangeCopy;
+    return CSS::DynamicRangeLimit {
+        CSS::DynamicRangeLimitMixFunction {
+            CSS::DynamicRangeLimitMixFunctionValue { CSS::DynamicRangeLimitMixParameters { WTFMove(resultBuilder) } }
+        }
+    };
+}
+
+// MARK: - <'dynamic-range-limit'> (unresolved)
+
+std::optional<CSS::DynamicRangeLimit> consumeUnresolvedDynamicRangeLimit(CSSParserTokenRange& range, CSS::PropertyParserState& propertyParserState)
+{
+    // <'dynamic-range-limit'> = standard | high | constrained | <dynamic-range-limit-mix()>
+    // https://drafts.csswg.org/css-color-hdr/#propdef-dynamic-range-limit
+
+    switch (range.peek().id()) {
+    case CSSValueStandard:
+        range.consumeIncludingWhitespace();
+        return CSS::DynamicRangeLimit { CSS::Keyword::Standard { } };
+    case CSSValueConstrained:
+        if (!propertyParserState.context.cssConstrainedDynamicRangeLimitEnabled)
+            return { };
+        range.consumeIncludingWhitespace();
+        return CSS::DynamicRangeLimit { CSS::Keyword::Constrained { } };
+    case CSSValueNoLimit:
+        range.consumeIncludingWhitespace();
+        return CSS::DynamicRangeLimit { CSS::Keyword::NoLimit { } };
+    default:
+        break;
+    }
+
+    if (!propertyParserState.context.cssDynamicRangeLimitMixEnabled)
+        return { };
+
+    if (range.peek().functionId() == CSSValueDynamicRangeLimitMix) {
+        if (auto mix = consumeUnresolvedDynamicRangeLimitMix(range, propertyParserState))
+            return CSS::DynamicRangeLimit { WTFMove(*mix) };
+    }
+
+    return { };
+}
+
+// MARK: -  <'dynamic-range-limit'> (CSSValue)
+
+RefPtr<CSSValue> consumeDynamicRangeLimit(CSSParserTokenRange& range, CSS::PropertyParserState& propertyParserState)
+{
+    auto dynamicRangeLimit = consumeUnresolvedDynamicRangeLimit(range, propertyParserState);
+    if (!dynamicRangeLimit)
+        return { };
+    return CSSDynamicRangeLimitValue::create(WTFMove(*dynamicRangeLimit));
 }
 
 } // namespace CSSPropertyParserHelpers

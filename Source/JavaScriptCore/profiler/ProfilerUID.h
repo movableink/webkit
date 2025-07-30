@@ -25,12 +25,13 @@
 
 #pragma once
 
-#include <wtf/Forward.h>
+#include "JSCJSValue.h"
+#include <wtf/JSONValues.h>
+#include <wtf/PrintStream.h>
 
-namespace JSC { namespace Profiler {
+namespace JSC::Profiler {
 
 struct UIDType;
-
 using UID = AtomicObjectIdentifier<UIDType>;
 
-} } // namespace JSC::Profiler
+} // namespace JSC::Profiler

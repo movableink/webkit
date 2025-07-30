@@ -39,8 +39,6 @@
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 // ScalableImageDecoder is a base for all format-specific decoders
@@ -156,23 +154,9 @@ public:
 
     enum { ICCColorProfileHeaderLength = 128 };
 
-    static bool rgbColorProfile(const char* profileData, unsigned profileLength)
-    {
-        ASSERT_UNUSED(profileLength, profileLength >= ICCColorProfileHeaderLength);
-
-        return !memcmp(&profileData[16], "RGB ", 4);
-    }
-
     size_t bytesDecodedToDetermineProperties() const final { return 0; }
 
     static SubsamplingLevel subsamplingLevelForScale(float, SubsamplingLevel) { return SubsamplingLevel::Default; }
-
-    static bool inputDeviceColorProfile(const char* profileData, unsigned profileLength)
-    {
-        ASSERT_UNUSED(profileLength, profileLength >= ICCColorProfileHeaderLength);
-
-        return !memcmp(&profileData[12], "mntr", 4) || !memcmp(&profileData[12], "scnr", 4);
-    }
 
     // Sets the "decode failure" flag. For caller convenience (since so
     // many callers want to return false after calling this), returns false
@@ -211,7 +195,5 @@ private:
     EncodedDataStatus m_encodedDataStatus { EncodedDataStatus::TypeAvailable };
     bool m_decodingSizeFromSetData { false };
 };
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 } // namespace WebCore

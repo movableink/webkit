@@ -84,7 +84,7 @@ void LibWebRTCSocket::signalReadPacket(std::span<const uint8_t> data, rtc::Socke
         return;
 
     m_remoteAddress = WTFMove(address);
-    absl::optional<webrtc::Timestamp> packetTimestamp;
+    std::optional<webrtc::Timestamp> packetTimestamp;
     if (timestamp)
         packetTimestamp = webrtc::Timestamp::Micros(timestamp);
     NotifyPacketReceived({ { data.data(), data.size() }, m_remoteAddress, packetTimestamp, ecn });
@@ -142,18 +142,16 @@ int LibWebRTCSocket::Close()
 
 int LibWebRTCSocket::GetOption(rtc::Socket::Option option, int* value)
 {
-    ASSERT(option < MAX_SOCKET_OPTION);
-    if (auto storedValue = m_options[option]) {
-        *value = *storedValue;
-        return 0;
-    }
-    return -1;
+    auto iterator = m_options.find(option);
+    if (iterator == m_options.end())
+        return -1;
+
+    *value = iterator->second;
+    return 0;
 }
 
 int LibWebRTCSocket::SetOption(rtc::Socket::Option option, int value)
 {
-    ASSERT(option < MAX_SOCKET_OPTION);
-
     m_options[option] = value;
 
     if (RefPtr connection = m_factory->connection())

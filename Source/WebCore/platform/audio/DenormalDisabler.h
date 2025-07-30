@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #include <cinttypes>
 #include <wtf/MathExtras.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -103,7 +104,7 @@ private:
         } __attribute__ ((aligned (16)));
 
         fxsaveResult registerData;
-        memset(&registerData, 0, sizeof(fxsaveResult));
+        zeroBytes(registerData);
         asm volatile("fxsave %0" : "=m" (registerData));
         s_isSupported = registerData.CSRMask & 0x0040;
         s_isInited = true;

@@ -103,8 +103,7 @@ public:
 
         void operator++() { ++m_logicalIndex; }
         T& operator*() { return m_range.m_data[index()]; }
-        bool operator==(const Iterator& other) { return m_logicalIndex == other.m_logicalIndex; }
-        bool operator!=(const Iterator& other) { return m_logicalIndex != other.m_logicalIndex; }
+        bool operator==(const Iterator& other) const { return m_logicalIndex == other.m_logicalIndex; }
         unsigned index()
         {
             ASSERT(m_logicalIndex < m_range.m_length);
@@ -173,7 +172,7 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
 {
     if (!font) {
         // Create a run of missing glyphs from the primary font.
-        m_complexTextRuns.append(ComplexTextRun::create(m_font.primaryFont(), cp.data(), stringLocation, cp.size(), 0, cp.size(), m_run.ltr()));
+        m_complexTextRuns.append(ComplexTextRun::create(m_fontCascade->primaryFont(), cp, stringLocation, 0, cp.size(), m_run->ltr()));
         return;
     }
 
@@ -184,9 +183,9 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
         SCRIPT_STATE state { };
         control.fMergeNeutralItems = true;
         // Set up the correct direction for the run.
-        state.uBidiLevel = m_run.rtl();
+        state.uBidiLevel = m_run->rtl();
         // Lock the correct directional override.
-        state.fOverrideDirection = m_run.directionalOverride();
+        state.fOverrideDirection = m_run->directionalOverride();
 
         // ScriptItemize may write (cMaxItems + 1) SCRIPT_ITEM.
         HRESULT hr = ScriptItemize(wcharFrom(cp.data()), cp.size(), items.size() - 1, &control, &state, items.data(), &numItems);
@@ -248,7 +247,7 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
         baseAdvances.reserveCapacity(glyphs.size());
         origins.reserveCapacity(glyphs.size());
 
-        for (unsigned k = 0; k < glyphs.size(); k++) {
+        for (size_t k = 0; k < glyphs.size(); k++) {
             const float cLogicalScale = cWindowsFontScaleFactor;
             float advance = advances[k] / cLogicalScale;
             float offsetX = offsets[k].du / cLogicalScale;
@@ -260,7 +259,7 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
         bool ltr = !item.a.fRTL;
         auto stringIndices = stringIndicesFromClusters(clusters, std::span(str, length), item.iCharPos, glyphs.size(), ltr);
         FloatSize initialAdvance = toFloatSize(origins[0]);
-        m_complexTextRuns.append(ComplexTextRun::create(baseAdvances, origins, glyphs, stringIndices, initialAdvance, *font, cp.data(), stringLocation, cp.size(), item.iCharPos, items[i+1].iCharPos, ltr));
+        m_complexTextRuns.append(ComplexTextRun::create(baseAdvances, origins, glyphs, stringIndices, initialAdvance, *font, cp, stringLocation, item.iCharPos, items[i+1].iCharPos, ltr));
     }
 }
 

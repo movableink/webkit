@@ -26,8 +26,7 @@ public:
 
     std::unique_ptr<ResourceProvider> makeResourceProvider(SingleOwner*,
                                                            uint32_t recorderID,
-                                                           size_t resourceBudget,
-                                                           bool avoidBufferAlloc) override;
+                                                           size_t resourceBudget) override;
 
     const DawnCaps* dawnCaps() const { return static_cast<const DawnCaps*>(this->caps()); }
     const wgpu::Device& device() const { return fDevice; }
@@ -46,7 +45,8 @@ public:
 private:
     DawnSharedContext(const DawnBackendContext&,
                       std::unique_ptr<const DawnCaps> caps,
-                      wgpu::ShaderModule noopFragment);
+                      wgpu::ShaderModule noopFragment,
+                      SkSpan<sk_sp<SkRuntimeEffect>> userDefinedKnownRuntimeEffects);
 
     wgpu::Instance     fInstance;
     wgpu::Device       fDevice;

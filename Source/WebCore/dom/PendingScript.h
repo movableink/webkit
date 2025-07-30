@@ -54,8 +54,6 @@ public:
 
     ScriptElement& element() { return m_element.get(); }
     const ScriptElement& element() const { return m_element.get(); }
-    Ref<ScriptElement> protectedElement() { return m_element; }
-    Ref<const ScriptElement> protectedElement() const { return m_element; }
 
     LoadableScript* loadableScript() const;
     bool needsLoading() const { return loadableScript(); }
@@ -74,7 +72,7 @@ private:
 
     void notifyClientFinished();
 
-    Ref<ScriptElement> m_element;
+    const Ref<ScriptElement> m_element;
     TextPosition m_startingPosition; // Only used for inline script tags.
     RefPtr<LoadableScript> m_loadableScript;
     CheckedPtr<PendingScriptClient> m_client;

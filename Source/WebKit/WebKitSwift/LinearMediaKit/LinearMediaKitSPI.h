@@ -26,14 +26,21 @@
 #pragma once
 
 #import <TargetConditionals.h>
+#import <wtf/Compiler.h>
+
+DECLARE_SYSTEM_HEADER
 
 #if TARGET_OS_VISION
 
 #import <UIKit/UIKit.h>
 
-#if __has_include(<LinearMediaKit/LinearMediaKit.h>)
+#if __has_include(<AVKit/LMPlayableViewController.h>)
 
-#import <LinearMediaKit/LinearMediaKit.h>
+#import <AVKit/LMPlayableViewController.h>
+
+#elif __has_include(<LinearMediaKit/LMPlayableViewController.h>)
+
+#import <LinearMediaKit/LMPlayableViewController.h>
 
 #else
 

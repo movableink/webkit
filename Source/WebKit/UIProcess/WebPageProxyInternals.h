@@ -35,6 +35,7 @@
 #include "ScrollingAccelerationCurve.h"
 #include "VisibleWebPageCounter.h"
 #include "WebColorPicker.h"
+#include "WebDataListSuggestionsDropdown.h"
 #include "WebFrameProxy.h"
 #include "WebNotificationManagerMessageHandler.h"
 #include "WebPageProxy.h"
@@ -46,15 +47,12 @@
 #include <WebCore/PrivateClickMeasurement.h>
 #include <WebCore/RegistrableDomain.h>
 #include <WebCore/ResourceRequest.h>
+#include <WebCore/SpatialBackdropSource.h>
 #include <pal/HysteresisActivity.h>
 #include <wtf/UUID.h>
 
 #if ENABLE(APPLE_PAY)
 #include "WebPaymentCoordinatorProxy.h"
-#endif
-
-#if ENABLE(DATALIST_ELEMENT)
-#include "WebDataListSuggestionsDropdown.h"
 #endif
 
 #if ENABLE(DRAG_SUPPORT)
@@ -95,20 +93,24 @@
 #include "CocoaWindow.h"
 #endif
 
+#if PLATFORM(IOS_FAMILY) && ENABLE(MODEL_PROCESS)
+#include "ModelPresentationManagerProxy.h"
+#endif
+
 namespace WebKit {
 
 #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
-class WebPageProxyFrameLoadStateObserver final : public FrameLoadStateObserver {
+class WebPageProxyFrameLoadStateObserver final : public RefCounted<WebPageProxyFrameLoadStateObserver>, public FrameLoadStateObserver {
     WTF_MAKE_NONCOPYABLE(WebPageProxyFrameLoadStateObserver);
     WTF_MAKE_TZONE_ALLOCATED(WebPageProxyFrameLoadStateObserver);
 public:
     static constexpr size_t maxVisitedDomainsSize = 6;
 
-    explicit WebPageProxyFrameLoadStateObserver(const WebPageProxy&);
+    static Ref<WebPageProxyFrameLoadStateObserver> create();
     virtual ~WebPageProxyFrameLoadStateObserver();
 
-    void ref() const final;
-    void deref() const final;
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     void didReceiveProvisionalURL(const URL& url) override
     {
@@ -132,6 +134,8 @@ public:
     }
 
 private:
+    WebPageProxyFrameLoadStateObserver();
+
     void didVisitDomain(WebCore::RegistrableDomain&& domain)
     {
         if (domain.isEmpty())
@@ -143,7 +147,6 @@ private:
             m_visitedDomains.removeLast();
     }
 
-    WeakRef<WebPageProxy> m_page;
     Vector<URL> m_provisionalURLs;
     ListHashSet<WebCore::RegistrableDomain> m_visitedDomains;
 };
@@ -204,6 +207,7 @@ struct PrivateClickMeasurementAndMetadata {
     String purchaser;
 };
 
+#if ENABLE(SPEECH_SYNTHESIS)
 struct SpeechSynthesisData {
     Ref<WebCore::PlatformSpeechSynthesizer> synthesizer;
     RefPtr<WebCore::PlatformSpeechSynthesisUtterance> utterance;
@@ -211,7 +215,10 @@ struct SpeechSynthesisData {
     CompletionHandler<void()> speakingFinishedCompletionHandler;
     CompletionHandler<void()> speakingPausedCompletionHandler;
     CompletionHandler<void()> speakingResumedCompletionHandler;
+
+    Ref<WebCore::PlatformSpeechSynthesizer> protectedSynthesizer() { return synthesizer; }
 };
+#endif
 
 #if ENABLE(TOUCH_EVENTS)
 
@@ -253,9 +260,7 @@ struct WebPageProxy::Internals final : WebPopupMenuProxy::Client
 #if ENABLE(APPLE_PAY)
     , WebPaymentCoordinatorProxy::Client
 #endif
-#if ENABLE(INPUT_TYPE_COLOR)
     , WebColorPickerClient
-#endif
 #if PLATFORM(MACCATALYST)
     , EndowmentStateTrackerClient
 #endif
@@ -300,11 +305,12 @@ public:
     GeolocationPermissionRequestManagerProxy geolocationPermissionRequestManager;
     HiddenPageThrottlingAutoIncreasesCounter::Token hiddenPageDOMTimerThrottlingAutoIncreasesCount;
     Deque<NativeWebKeyboardEvent> keyEventQueue;
-    LayerHostingMode layerHostingMode { LayerHostingMode::InProcess };
     WebCore::RectEdges<bool> mainFramePinnedState { true, true, true, true };
     WebCore::LayoutPoint maxStableLayoutViewportOrigin;
     WebCore::FloatSize maximumUnobscuredSize;
+    RunLoop::Timer updatePlayingMediaDidChangeTimer;
     WebCore::MediaProducerMediaStateFlags mediaState;
+    WebCore::MediaProducerMediaStateFlags mainFrameMediaState;
     WebCore::LayoutPoint minStableLayoutViewportOrigin;
     WebCore::IntSize minimumSizeForAutoLayout;
     WebCore::FloatSize minimumUnobscuredSize;
@@ -323,10 +329,19 @@ public:
     WebCore::MediaProducerMediaStateFlags reportedMediaCaptureState;
     RunLoop::Timer resetRecentCrashCountTimer;
     WebCore::RectEdges<bool> rubberBandableEdges { true, true, true, true };
+    bool alwaysBounceVertical { true };
+    bool alwaysBounceHorizontal { true };
     WebCore::Color sampledPageTopColor;
     WebCore::ScrollPinningBehavior scrollPinningBehavior { WebCore::ScrollPinningBehavior::DoNotPin };
     WebCore::IntSize sizeToContentAutoSizeMaximumSize;
     WebCore::Color themeColor;
+    WebCore::FloatBoxExtent obscuredContentInsets;
+#if PLATFORM(MAC)
+    std::optional<WebCore::FloatBoxExtent> pendingObscuredContentInsets;
+#endif
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    std::optional<WebCore::SpatialBackdropSource> spatialBackdropSource;
+#endif
     RunLoop::Timer tryCloseTimeoutTimer;
     WebCore::Color underPageBackgroundColorOverride;
     WebCore::Color underlayColor;
@@ -351,20 +366,22 @@ public:
 
 #if PLATFORM(COCOA)
     WeakObjCPtr<WKWebView> cocoaView;
-    TransactionID firstLayerTreeTransactionIdAfterDidCommitLoad;
+    std::optional<TransactionID> firstLayerTreeTransactionIdAfterDidCommitLoad;
 #endif
 
 #if ENABLE(CONTEXT_MENUS)
     ContextMenuContextData activeContextMenuContextData;
 #endif
 
+#if ENABLE(GAMEPAD)
+    PAL::HysteresisActivity recentGamepadAccessHysteresis;
+#endif
+
 #if HAVE(DISPLAY_LINK)
     PAL::HysteresisActivity wheelEventActivityHysteresis;
 #endif
 
-#if ENABLE(DATALIST_ELEMENT)
     RefPtr<WebDataListSuggestionsDropdown> dataListSuggestionsDropdown;
-#endif
 
 #if ENABLE(DRAG_SUPPORT)
     WebCore::IntRect currentDragCaretEditableElementRect;
@@ -372,9 +389,7 @@ public:
     WebCore::DragHandlingMethod currentDragHandlingMethod { WebCore::DragHandlingMethod::None };
 #endif
 
-#if ENABLE(INPUT_TYPE_COLOR)
     RefPtr<WebColorPicker> colorPicker;
-#endif
 
 #if ENABLE(MAC_GESTURE_EVENTS)
     Deque<NativeWebGestureEvent> gestureEventQueue;
@@ -409,7 +424,7 @@ public:
 #endif
 
 #if ENABLE(WRITING_TOOLS)
-    HashMap<WTF::UUID, WebCore::TextIndicatorData> textIndicatorDataForAnimationID;
+    HashMap<WTF::UUID, RefPtr<WebCore::TextIndicator>> textIndicatorDataForAnimationID;
     HashMap<WTF::UUID, CompletionHandler<void(WebCore::TextAnimationRunMode)>> completionHandlerForAnimationID;
     HashMap<WTF::UUID, CompletionHandler<void(std::optional<WebCore::TextIndicatorData>)>> completionHandlerForDestinationTextIndicatorForSourceID;
     HashMap<WTF::UUID, WTF::UUID> sourceAnimationIDtoDestinationAnimationID;
@@ -420,7 +435,7 @@ public:
     MonotonicTime didCommitLoadForMainFrameTimestamp;
 
 #if ENABLE(UI_SIDE_COMPOSITING)
-    VisibleContentRectUpdateInfo lastVisibleContentRectUpdate;
+    std::optional<VisibleContentRectUpdateInfo> lastVisibleContentRectUpdate;
 #endif
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
@@ -437,7 +452,7 @@ public:
 #endif
 
 #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
-    std::unique_ptr<WebPageProxyFrameLoadStateObserver> frameLoadStateObserver;
+    RefPtr<WebPageProxyFrameLoadStateObserver> frameLoadStateObserver;
     HashMap<WebCore::RegistrableDomain, OptionSet<WebCore::WindowProxyProperty>> windowOpenerAccessedProperties;
 #endif
     PageLoadTimingFrameLoadStateObserver pageLoadTimingFrameLoadStateObserver;
@@ -450,13 +465,19 @@ public:
     WebCore::FloatPoint scrollPositionDuringLastEditorStateUpdate;
 #endif
 
+#if PLATFORM(IOS_FAMILY) && ENABLE(MODEL_PROCESS)
+    RefPtr<ModelPresentationManagerProxy> modelPresentationManagerProxy;
+#endif
+
     bool allowsLayoutViewportHeightExpansion { true };
 
     explicit Internals(WebPageProxy&);
 
     Ref<WebPageProxy> protectedPage() const;
 
+#if ENABLE(SPEECH_SYNTHESIS)
     SpeechSynthesisData& speechSynthesisData();
+#endif
 
     // WebPopupMenuProxy::Client
     void valueChangedForPopupMenu(WebPopupMenuProxy*, int32_t newSelectedIndex) final;
@@ -489,11 +510,9 @@ public:
     CocoaWindow *paymentCoordinatorPresentingWindow(const WebPaymentCoordinatorProxy&) const final;
 #endif
 
-#if ENABLE(INPUT_TYPE_COLOR)
     // WebColorPickerClient
     void didChooseColor(const WebCore::Color&) final;
     void didEndColorPicker() final;
-#endif
 
 #if PLATFORM(MACCATALYST)
     // EndowmentStateTrackerClient
@@ -520,8 +539,16 @@ public:
     void setShouldPlayToPlaybackTarget(WebCore::PlaybackTargetClientContextIdentifier, bool) final;
     void playbackTargetPickerWasDismissed(WebCore::PlaybackTargetClientContextIdentifier) final;
     bool alwaysOnLoggingAllowed() const final { return protectedPage()->isAlwaysOnLoggingAllowed(); }
-    RetainPtr<PlatformView> platformView() const final;
+    RetainPtr<CocoaView> platformView() const final;
 #endif
+
+    Ref<PageLoadState> protectedPageLoadState() { return pageLoadState; }
+    Ref<WebNotificationManagerMessageHandler> protectedNotificationManagerMessageHandler() { return notificationManagerMessageHandler; }
+    Ref<PageLoadTimingFrameLoadStateObserver> protectedPageLoadTimingFrameLoadStateObserver() { return pageLoadTimingFrameLoadStateObserver; }
+#if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
+    RefPtr<WebPageProxyFrameLoadStateObserver> protectedFrameLoadStateObserver() { return frameLoadStateObserver; }
+#endif
+    Ref<GeolocationPermissionRequestManagerProxy> protectedGeolocationPermissionRequestManager() { return geolocationPermissionRequestManager; }
 };
 
 } // namespace WebKit

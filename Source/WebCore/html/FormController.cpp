@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2010, 2011, 2012 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -165,7 +165,7 @@ void FormController::SavedFormState::appendReferencedFilePaths(Vector<String>& v
 class FormController::FormKeyGenerator {
     typedef FormController::FormKeyGenerator FormControllerFormKeyGenerator;
 
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(FormControllerFormKeyGenerator);
+    WTF_MAKE_TZONE_ALLOCATED(FormKeyGenerator);
     WTF_MAKE_NONCOPYABLE(FormKeyGenerator);
 
 public:
@@ -177,6 +177,8 @@ private:
     WeakHashMap<HTMLFormElement, String, WeakPtrImplWithEventTargetData> m_formToKeyMap;
     UncheckedKeyHashMap<String, unsigned> m_formSignatureToNextIndexMap;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FormController::FormKeyGenerator);
 
 static bool shouldBeUsedForFormSignature(const Element& element)
 {

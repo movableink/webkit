@@ -78,16 +78,17 @@ protected:
     WEBCORE_EXPORT static CheckedSize computeCapacityBytes(size_t bytesPerFrame, size_t frameCount);
     WEBCORE_EXPORT static CheckedSize computeSizeForBuffers(size_t bytesPerFrame, size_t frameCount, uint32_t numChannelStreams);
 
-    virtual void* data() = 0;
+    virtual void* data() LIFETIME_BOUND = 0;
+    std::span<uint8_t> span() LIFETIME_BOUND { return unsafeMakeSpan(static_cast<uint8_t*>(data()), m_channelCount * m_capacityBytes); }
     using TimeBoundsBuffer = SequenceLocked<TimeBounds>;
-    virtual TimeBoundsBuffer& timeBoundsBuffer() = 0;
+    virtual TimeBoundsBuffer& timeBoundsBuffer() LIFETIME_BOUND = 0;
 
 private:
     size_t frameOffset(uint64_t frameNumber) const { return (frameNumber % m_frameCount) * m_bytesPerFrame; }
     void setTimeBounds(TimeBounds bufferBounds);
     void fetchInternal(AudioBufferList*, size_t frameCount, uint64_t startFrame, FetchMode, TimeBounds bufferBounds);
 
-    Vector<Byte*> m_pointers;
+    Vector<std::span<Byte>> m_channels;
     const uint32_t m_channelCount;
     const size_t m_bytesPerFrame;
     const uint32_t m_frameCount;
@@ -126,7 +127,7 @@ public:
 
 protected:
     WEBCORE_EXPORT InProcessCARingBuffer(size_t bytesPerFrame, size_t frameCount, uint32_t numChannelStreams, Vector<uint8_t>&& buffer);
-    void* data() final { return m_buffer.data(); }
+    void* data() final { return m_buffer.mutableSpan().data(); }
     TimeBoundsBuffer& timeBoundsBuffer() final { return m_timeBoundsBuffer; }
 
 private:

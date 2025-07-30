@@ -24,6 +24,7 @@
 
 #pragma once
 
+#include "FloatRect.h"
 #include "PlatformLayer.h"
 #include "ScrollTypes.h"
 #include "Widget.h"

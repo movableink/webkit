@@ -22,6 +22,11 @@
 
 #if ENABLE(GPU_PROCESS)
 
+[
+    DispatchedFrom=UI,
+    DispatchedTo=GPU,
+    ExceptionForEnabledBy
+]
 messages -> GPUProcess : AuxiliaryProcess {
     InitializeGPUProcess(struct WebKit::GPUProcessCreationParameters processCreationParameters) -> ()
 
@@ -50,12 +55,9 @@ messages -> GPUProcess : AuxiliaryProcess {
     SetMockMediaDeviceIsEphemeral(String persistentId, bool isEphemeral)
     ResetMockMediaDevices()
     SetMockCaptureDevicesInterrupted(bool isCameraInterrupted, bool isMicrophoneInterrupted)
-    TriggerMockCaptureConfigurationChange(bool forMicrophone, bool forDisplay)
+    TriggerMockCaptureConfigurationChange(bool forCamera, bool forMicrophone, bool forDisplay)
     SetShouldListenToVoiceActivity(bool shouldListen)
     EnableMicrophoneMuteStatusAPI()
-#endif
-#if HAVE(SC_CONTENT_SHARING_PICKER)
-    SetUseSCContentSharingPicker(bool use)
 #endif
 #if PLATFORM(MAC)
     SetScreenProperties(struct WebCore::ScreenProperties screenProperties)
@@ -93,6 +95,20 @@ messages -> GPUProcess : AuxiliaryProcess {
 #endif
 #if ENABLE(WEBXR)
     WebXRPromptAccepted(std::optional<WebCore::ProcessIdentity> processIdentity) -> (bool accepted)
+#endif
+#if HAVE(AUDIT_TOKEN)
+    SetPresentingApplicationAuditToken(WebCore::ProcessIdentifier processIdentifier, WebCore::PageIdentifier pageIdentifier, struct std::optional<WebKit::CoreIPCAuditToken> auditToken);
+#endif
+#if PLATFORM(VISION) && ENABLE(MODEL_PROCESS)
+    RequestSharedSimulationConnection(struct WebKit::CoreIPCAuditToken modelProcessAuditToken) -> (std::optional<IPC::SharedFileHandle> sharedSimulationConnection)
+#if HAVE(TASK_IDENTITY_TOKEN)
+    CreateMemoryAttributionIDForTask(WebCore::ProcessIdentity processIdentity) -> (std::optional<String> completionHandler)
+    UnregisterMemoryAttributionID(String attributionID) -> ()
+#endif
+#endif
+
+#if PLATFORM(COCOA)
+    PostWillTakeSnapshotNotification() -> ()
 #endif
 }
 

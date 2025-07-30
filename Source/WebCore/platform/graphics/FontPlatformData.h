@@ -42,9 +42,9 @@
 #include "RefPtrCairo.h"
 #elif USE(SKIA)
 #include <hb.h>
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/core/SkFont.h>
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #endif
 
 #if ENABLE(MATHML) && USE(HARFBUZZ)
@@ -186,7 +186,7 @@ struct FontPlatformSerializedTraits {
 struct FontPlatformOpticalSize {
     static std::optional<FontPlatformOpticalSize> fromCF(CFTypeRef);
     RetainPtr<CFTypeRef> toCF() const;
-    std::variant<RetainPtr<CFNumberRef>, String> opticalSize;
+    Variant<RetainPtr<CFNumberRef>, String> opticalSize;
 };
 
 struct FontPlatformSerializedAttributes {
@@ -361,7 +361,7 @@ public:
     HFONT hfont() const { return m_hfont ? m_hfont->get() : 0; }
 #endif
 
-    using IPCData = std::variant<FontPlatformSerializedData, FontPlatformSerializedCreationData>;
+    using IPCData = Variant<FontPlatformSerializedData, FontPlatformSerializedCreationData>;
 #if USE(CORE_TEXT)
     WEBCORE_EXPORT FontPlatformData(float size, FontOrientation&&, FontWidthVariant&&, TextRenderingMode&&, bool syntheticBold, bool syntheticOblique, RetainPtr<CTFontRef>&&, RefPtr<FontCustomPlatformData>&&);
 #elif USE(SKIA)
@@ -456,7 +456,7 @@ public:
     String description() const;
 
     struct CreationData {
-        Ref<SharedBuffer> fontFaceData;
+        const Ref<SharedBuffer> fontFaceData;
         String itemInCollection;
 #if PLATFORM(WIN) && USE(CAIRO)
         Ref<FontMemoryResource> m_fontResource;
@@ -563,12 +563,12 @@ public:
         : m_context(context)
         , m_textMatrix(CGContextGetTextMatrix(context))
     {
-        CGContextSetTextMatrix(m_context, newMatrix);
+        CGContextSetTextMatrix(m_context.get(), newMatrix);
     }
 
     ~ScopedTextMatrix()
     {
-        CGContextSetTextMatrix(m_context, m_textMatrix);
+        CGContextSetTextMatrix(m_context.get(), m_textMatrix);
     }
 
     CGAffineTransform savedMatrix() const
@@ -577,7 +577,7 @@ public:
     }
 
 private:
-    CGContextRef m_context;
+    RetainPtr<CGContextRef> m_context;
     CGAffineTransform m_textMatrix;
 };
 

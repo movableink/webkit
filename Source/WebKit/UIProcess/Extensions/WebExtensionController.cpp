@@ -39,17 +39,19 @@
 
 namespace WebKit {
 
+#if PLATFORM(COCOA)
 constexpr auto freshlyCreatedTimeout = 5_s;
+#endif
 
-static HashMap<WebExtensionControllerIdentifier, WeakRef<WebExtensionController>>& webExtensionControllers()
+static HashMap<WebExtensionControllerIdentifier, WeakPtr<WebExtensionController>>& webExtensionControllers()
 {
-    static MainThreadNeverDestroyed<HashMap<WebExtensionControllerIdentifier, WeakRef<WebExtensionController>>> controllers;
+    static MainRunLoopNeverDestroyed<HashMap<WebExtensionControllerIdentifier, WeakPtr<WebExtensionController>>> controllers;
     return controllers;
 }
 
-WebExtensionController* WebExtensionController::get(WebExtensionControllerIdentifier identifier)
+RefPtr<WebExtensionController> WebExtensionController::get(WebExtensionControllerIdentifier identifier)
 {
-    return webExtensionControllers().get(identifier);
+    return webExtensionControllers().get(identifier).get();
 }
 
 WebExtensionController::WebExtensionController(Ref<WebExtensionControllerConfiguration> configuration)
@@ -76,16 +78,19 @@ WebExtensionController::WebExtensionController(Ref<WebExtensionControllerConfigu
 
 WebExtensionController::~WebExtensionController()
 {
+    webExtensionControllers().remove(identifier());
     unloadAll();
 }
 
-WebExtensionControllerParameters WebExtensionController::parameters() const
+WebExtensionControllerParameters WebExtensionController::parameters(const API::PageConfiguration& pageConfiguration) const
 {
     return {
         .identifier = identifier(),
         .testingMode = inTestingMode(),
-        .contextParameters = WTF::map(extensionContexts(), [](auto& context) {
-            return context->parameters();
+        .contextParameters = WTF::map(extensionContexts(), [&](auto& context) {
+            bool isForThisExtension = context->isURLForThisExtension(pageConfiguration.requiredWebExtensionBaseURL());
+            auto includePrivilegedIdentifier = isForThisExtension ? WebExtensionContext::IncludePrivilegedIdentifier::Yes : WebExtensionContext::IncludePrivilegedIdentifier::No;
+            return context->parameters(includePrivilegedIdentifier);
         })
     };
 }

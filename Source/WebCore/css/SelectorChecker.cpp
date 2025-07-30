@@ -54,8 +54,6 @@
 #include "ViewTransition.h"
 #include "ViewTransitionTypeSet.h"
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -206,6 +204,8 @@ SelectorChecker::SelectorChecker(Document& document)
 
 bool SelectorChecker::match(const CSSSelector& selector, const Element& element, CheckingContext& checkingContext) const
 {
+    ASSERT_WITH_SECURITY_IMPLICATION(!selector.destructorHasBeenCalled());
+
     auto pseudoElementIdentifier = checkingContext.pseudoId == PseudoId::None ? std::nullopt : std::optional(Style::PseudoElementIdentifier { checkingContext.pseudoId, checkingContext.pseudoElementNameArgument });
     LocalContext context(selector, element, checkingContext.resolvingMode == SelectorChecker::Mode::QueryingRules ? VisitedMatchType::Disabled : VisitedMatchType::Enabled, pseudoElementIdentifier);
 
@@ -624,7 +624,7 @@ static bool anyAttributeMatches(const Element& element, const CSSSelector& selec
 {
     ASSERT(element.hasAttributesWithoutUpdate());
     bool isHTML = element.isHTMLElement() && element.document().isHTMLDocument();
-    for (const Attribute& attribute : element.attributesIterator()) {
+    for (auto& attribute : element.attributes()) {
         if (!attribute.matches(selectorAttr.prefix(), isHTML ? selectorAttr.localNameLowercase() : selectorAttr.localName(), selectorAttr.namespaceURI()))
             continue;
 
@@ -945,10 +945,8 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, LocalContext& c
             return false;
         }
         case CSSSelector::PseudoClass::PlaceholderShown:
-            if (auto* formControl = dynamicDowncast<HTMLTextFormControlElement>(element)) {
-                addStyleRelation(checkingContext, element, Style::Relation::Unique);
+            if (auto* formControl = dynamicDowncast<HTMLTextFormControlElement>(element))
                 return formControl->isPlaceholderVisible();
-            }
             return false;
         case CSSSelector::PseudoClass::NthChild: {
             if (auto* parentElement = dynamicDowncast<Element>(element.parentNode())) {
@@ -1304,7 +1302,7 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, LocalContext& c
             if (list.size() == 1)
                 return true;
 
-            return std::ranges::all_of(list.begin() + 1, list.end(),
+            return std::ranges::all_of(list.span().subspan(1),
                 [&](const AtomString& classSelector) {
                     return checkingContext.classList.contains(classSelector);
                 }
@@ -1533,7 +1531,6 @@ bool SelectorChecker::matchHasPseudoClass(CheckingContext& checkingContext, cons
         case Style::Relation::FirstChild:
         case Style::Relation::LastChild:
         case Style::Relation::NthChildIndex:
-        case Style::Relation::Unique:
             return;
         case Style::Relation::AffectedByHasWithPositionalPseudoClass:
             ASSERT_NOT_REACHED();
@@ -1656,5 +1653,3 @@ unsigned SelectorChecker::determineLinkMatchType(const CSSSelector* selector)
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

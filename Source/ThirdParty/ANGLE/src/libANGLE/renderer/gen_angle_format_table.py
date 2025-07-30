@@ -33,7 +33,7 @@ template_autogen_h = """// GENERATED FILE - DO NOT EDIT.
 namespace angle
 {{
 
-enum class FormatID
+enum class FormatID : uint8_t
 {{
 {angle_format_enum}
 }};
@@ -325,6 +325,7 @@ def get_vertex_attrib_type(format_id):
     has_r16 = "R16" in format_id
     has_r32 = "R32" in format_id
     has_r10 = "R10" in format_id
+    has_r10x6 = "R10X6" in format_id
     has_vertex = "VERTEX" in format_id
 
     if has_fixed:
@@ -335,6 +336,9 @@ def get_vertex_attrib_type(format_id):
 
     if has_r8:
         return "Byte" if has_s else "UnsignedByte"
+
+    if has_r10x6:
+        return "InvalidEnum"
 
     if has_r10:
         if has_vertex:

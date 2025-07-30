@@ -119,6 +119,7 @@ class ErrorSet : angle::NonCopyable
     GLenum getGraphicsResetStatus(rx::ContextImpl *contextImpl);
     GLenum getResetStrategy() const { return mResetStrategy; }
     GLenum getErrorForCapture() const;
+    uint32_t getPushedErrorCount() const { return mPushedErrors; }
 
   private:
     void setContextLost();
@@ -148,6 +149,9 @@ class ErrorSet : angle::NonCopyable
     std::atomic_int mSkipValidation;
     std::atomic_int mContextLost;
     std::atomic_int mHasAnyErrors;
+
+    // Error counter for asserting validation layer consistency
+    uint32_t mPushedErrors;
 };
 
 enum class VertexAttribTypeCase
@@ -388,9 +392,13 @@ class StateCache final : angle::NonCopyable
     void updateValidDrawModes(Context *context);
     void updateValidBindTextureTypes(Context *context);
     void updateValidDrawElementsTypes(Context *context);
-    void updateBasicDrawStatesError();
-    void updateProgramPipelineError();
-    void updateBasicDrawElementsError();
+    void updateBasicDrawStatesError()
+    {
+        mCachedBasicDrawStatesErrorString = kInvalidPointer;
+        mCachedBasicDrawStatesErrorCode   = GL_NO_ERROR;
+    }
+    void updateProgramPipelineError() { mCachedProgramPipelineError = kInvalidPointer; }
+    void updateBasicDrawElementsError() { mCachedBasicDrawElementsError = kInvalidPointer; }
     void updateTransformFeedbackActiveUnpaused(Context *context);
     void updateVertexAttribTypesValidation(Context *context);
     void updateActiveShaderStorageBufferIndices(Context *context);
@@ -666,8 +674,6 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
 
     const State &getState() const { return mState; }
     const PrivateState &getPrivateState() const { return mState.privateState(); }
-    GLint getClientMajorVersion() const { return mState.getClientMajorVersion(); }
-    GLint getClientMinorVersion() const { return mState.getClientMinorVersion(); }
     const Version &getClientVersion() const { return mState.getClientVersion(); }
     const Caps &getCaps() const { return mState.getCaps(); }
     const TextureCapsMap &getTextureCaps() const { return mState.getTextureCaps(); }
@@ -683,6 +689,10 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
     void markContextLost(GraphicsResetStatus status) { mErrors.markContextLost(status); }
     bool isContextLost() const { return mErrors.isContextLost(); }
 
+    // Some commands may need to generate a context lost error but still return a value.
+    // The validation layer does not generate the context lost error in such cases.
+    void contextLostErrorOnBlockingCall(angle::EntryPoint entryPoint) const;
+
     ErrorSet *getMutableErrorSetForValidation() const { return &mErrors; }
 
     // Specific methods needed for validation.
@@ -692,7 +702,7 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
     ANGLE_INLINE Program *getProgramResolveLink(ShaderProgramID handle) const
     {
         Program *program = mState.mShaderProgramManager->getProgram(handle);
-        if (program)
+        if (ANGLE_LIKELY(program))
         {
             program->resolveLink(this);
         }
@@ -702,6 +712,12 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
     Program *getProgramNoResolveLink(ShaderProgramID handle) const;
     Shader *getShaderResolveCompile(ShaderProgramID handle) const;
     Shader *getShaderNoResolveCompile(ShaderProgramID handle) const;
+
+    bool nameStartsWithReservedPrefix(const GLchar *name) const
+    {
+        return (strncmp(name, "gl_", 3) == 0) ||
+               (isWebGL() && (strncmp(name, "webgl_", 6) == 0 || strncmp(name, "_webgl_", 7) == 0));
+    }
 
     ANGLE_INLINE bool isTextureGenerated(TextureID texture) const
     {
@@ -771,10 +787,21 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
         return mTransformFeedbackMap;
     }
     GLenum getErrorForCapture() const { return mErrors.getErrorForCapture(); }
+    uint32_t getPushedErrorCount() const { return mErrors.getPushedErrorCount(); }
 
     void onPreSwap();
 
-    Program *getActiveLinkedProgram() const;
+    ANGLE_INLINE Program *getActiveLinkedProgram() const
+    {
+        Program *program = mState.getLinkedProgram(this);
+        if (ANGLE_LIKELY(program))
+        {
+            return program;
+        }
+        return getActiveLinkedProgramPPO();
+    }
+
+    ANGLE_NOINLINE Program *getActiveLinkedProgramPPO() const;
 
     // EGL_ANGLE_power_preference implementation.
     egl::Error releaseHighPowerGPU();
@@ -785,6 +812,7 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
     egl::Error acquireExternalContext(egl::Surface *drawAndReadSurface);
     egl::Error releaseExternalContext();
 
+    bool noopDrawProgram() const;
     bool noopDraw(PrimitiveMode mode, GLsizei count) const;
     bool noopDrawInstanced(PrimitiveMode mode, GLsizei count, GLsizei instanceCount) const;
     bool noopMultiDraw(GLsizei drawcount) const;
@@ -823,9 +851,26 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
     const angle::PerfMonitorCounterGroups &getPerfMonitorCounterGroups() const;
 
     // Ends the currently active pixel local storage session with GL_STORE_OP_STORE on all planes.
-    void endPixelLocalStorageWithStoreOpsStore();
+    void endPixelLocalStorageImplicit();
 
     bool areBlobCacheFuncsSet() const;
+
+    size_t getMemoryUsage() const;
+
+    // Only used by vulkan backend.
+    void onSwapChainImageChanged() const { mDefaultFramebuffer->onSwapChainImageChanged(); }
+    void onBufferChanged(const angle::SubjectMessage message,
+                         VertexArrayBufferBindingMask vertexArrayBufferBindingMask) const
+    {
+        // Notify current vertex array of the buffer changed. Note that other vertex arrays of this
+        // context or other context requires rebind which will check buffer changes
+        // at that time.
+        if (vertexArrayBufferBindingMask.any())
+        {
+            ASSERT(mState.mVertexArray != nullptr);
+            mState.mVertexArray->onBufferChanged(this, message, vertexArrayBufferBindingMask);
+        }
+    }
 
   private:
     void initializeDefaultResources();
@@ -838,7 +883,6 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
                             const state::ExtendedDirtyBits extendedBitMask,
                             const state::DirtyObjects &objectMask,
                             Command command);
-    angle::Result syncAllDirtyBits(Command command);
     angle::Result syncDirtyBits(const state::DirtyBits bitMask,
                                 const state::ExtendedDirtyBits extendedBitMask,
                                 Command command);

@@ -106,6 +106,7 @@ RefPtr<ImageBuffer> GPUProcessWebWorkerClient::createImageBuffer(const FloatSize
     return nullptr;
 }
 
+#if ENABLE(WEBGL)
 RefPtr<GraphicsContextGL> GPUProcessWebWorkerClient::createGraphicsContextGL(const GraphicsContextGLAttributes& attributes) const
 {
     RefPtr dispatcher = this->dispatcher();
@@ -116,6 +117,7 @@ RefPtr<GraphicsContextGL> GPUProcessWebWorkerClient::createGraphicsContextGL(con
         return RemoteGraphicsContextGLProxy::create(attributes, ensureProtectedRenderingBackend(), *dispatcher);
     return WebWorkerClient::createGraphicsContextGL(attributes);
 }
+#endif
 
 #if HAVE(WEBGPU_IMPLEMENTATION)
 RefPtr<WebCore::WebGPU::GPU> GPUProcessWebWorkerClient::createGPUForWebGPU() const

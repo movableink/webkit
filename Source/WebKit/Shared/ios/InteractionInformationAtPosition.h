@@ -28,8 +28,8 @@
 #if PLATFORM(IOS_FAMILY)
 
 #include "ArgumentCoders.h"
+#include "CursorContext.h"
 #include "InteractionInformationRequest.h"
-#include <WebCore/Cursor.h>
 #include <WebCore/ElementAnimationContext.h>
 #include <WebCore/ElementContext.h>
 #include <WebCore/IntPoint.h>
@@ -59,7 +59,7 @@ struct InteractionInformationAtPosition {
         Selectable,
         UnselectableDueToFocusableElement,
         UnselectableDueToLargeElementBounds,
-        UnselectableDueToUserSelectNone,
+        UnselectableDueToUserSelectNoneOrQuirk,
         UnselectableDueToMediaControls,
     };
 
@@ -71,6 +71,9 @@ struct InteractionInformationAtPosition {
     bool touchCalloutEnabled { true };
     bool isLink { false };
     bool isImage { false };
+#if ENABLE(MODEL_PROCESS)
+    bool isInteractiveModel { false };
+#endif
     bool isAttachment { false };
     bool isAnimatedImage { false };
     bool isAnimating { false };
@@ -82,16 +85,13 @@ struct InteractionInformationAtPosition {
 #if ENABLE(DATA_DETECTION)
     bool isDataDetectorLink { false };
 #endif
-#if ENABLE(DATALIST_ELEMENT)
     bool preventTextInteraction { false };
-#endif
     bool elementContainsImageOverlay { false };
-    bool shouldNotUseIBeamInEditableContent { false };
     bool isImageOverlayText { false };
-    bool isVerticalWritingMode { false };
 #if ENABLE(SPATIAL_IMAGE_DETECTION)
     bool isSpatialImage { false };
 #endif
+    bool isInPlugin { false };
     bool needsPointerTouchCompatibilityQuirk { false };
     WebCore::FloatPoint adjustedPointForNodeRespondingToClickEvents;
     URL url;
@@ -107,12 +107,9 @@ struct InteractionInformationAtPosition {
     String textBefore;
     String textAfter;
 
-    float caretLength { 0 };
-    WebCore::FloatRect lineCaretExtent;
+    CursorContext cursorContext;
 
-    std::optional<WebCore::Cursor> cursor;
-
-    WebCore::TextIndicatorData linkIndicator;
+    RefPtr<WebCore::TextIndicator> textIndicator;
 #if ENABLE(DATA_DETECTION)
     String dataDetectorIdentifier;
     RetainPtr<NSArray> dataDetectorResults;

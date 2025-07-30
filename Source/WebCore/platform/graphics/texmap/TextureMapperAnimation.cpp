@@ -22,6 +22,7 @@
 
 #if USE(TEXTURE_MAPPER)
 
+#include "AnimationUtilities.h"
 #include "LayoutSize.h"
 #include "TranslateTransformOperation.h"
 #include <wtf/Scope.h>
@@ -240,7 +241,6 @@ void TextureMapperAnimation::apply(ApplicationResult& applicationResults, Monoto
     });
 
     // Even when m_state == State::Stopped && !m_fillsForwards, we should calculate the last value to avoid a flash.
-    // CoordinatedGraphicsScene will soon remove the stopped animation and update the value instead of this function.
 
     Seconds totalRunningTime = computeTotalRunningTime(time);
     double normalizedValue = normalizedAnimationValue(totalRunningTime.seconds(), m_duration, m_direction, m_iterationCount);

@@ -20,12 +20,17 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+[
+    ExceptionForEnabledBy,
+    DispatchedFrom=WebContent,
+    DispatchedTo=Networking
+]
 messages -> ServiceWorkerFetchTask {
     DidNotHandle()
     DidFail(WebCore::ResourceError error)
     DidReceiveRedirectResponse(WebCore::ResourceResponse response)
     DidReceiveResponse(WebCore::ResourceResponse response, bool needsContinueDidReceiveResponseMessage)
-    DidReceiveData(IPC::SharedBufferReference data, uint64_t encodedDataLength)
+    DidReceiveData(IPC::SharedBufferReference data)
     DidReceiveFormData(IPC::FormDataReference data)
     DidFinish(WebCore::NetworkLoadMetrics metrics)
     UsePreload()

@@ -187,6 +187,12 @@ std::array<char, kMaxConfigNameLen> gSelectedConfig;
 
 bool gEnableANGLEPerTestCaptureLabel = false;
 
+#if defined(ANGLE_TEST_ENABLE_RENDERDOC_CAPTURE)
+bool gEnableRenderDocCapture = true;
+#else
+bool gEnableRenderDocCapture = false;
+#endif
+
 bool IsConfigSelected()
 {
     return gSelectedConfig[0] != 0;
@@ -351,7 +357,12 @@ bool IsSwiftshaderDevice()
     return HasSystemDeviceID(kVendorID_GOOGLE, kDeviceID_Swiftshader);
 }
 
-bool IsSwiftShaderSupported()
+bool IsLavapipeDevice()
+{
+    return HasSystemDeviceID(kVendorID_Mesa, kDeviceID_Lavapipe);
+}
+
+bool SwiftshaderTestsEnabled()
 {
 #if defined(ANGLE_ENABLE_SWIFTSHADER)
     return true;
@@ -374,8 +385,9 @@ bool IsNVIDIA()
 
 bool IsQualcomm()
 {
-    return HasSystemVendorID(kVendorID_Qualcomm) || IsNexus5X() || IsNexus9() || IsPixelXL() ||
-           IsPixel2() || IsPixel2XL() || IsPixel4() || IsPixel4XL();
+    return HasSystemVendorID(kVendorID_Qualcomm) || HasSystemVendorID(kVendorID_Qualcomm_DXGI) ||
+           IsNexus5X() || IsNexus9() || IsPixelXL() || IsPixel2() || IsPixel2XL() || IsPixel4() ||
+           IsPixel4XL();
 }
 
 bool HasMesa()
@@ -401,13 +413,13 @@ bool IsConfigAllowlisted(const SystemInfo &systemInfo, const PlatformParameters 
             return true;
     }
 
+    if (param.isSwiftshader() && !SwiftshaderTestsEnabled())
+    {
+        return false;
+    }
+
     if (param.isSwiftshader() || IsSwiftshaderDevice())
     {
-        if (!IsSwiftShaderSupported())
-        {
-            return false;
-        }
-
         // TODO: http://crbug.com/swiftshader/145
         // Swiftshader does not currently have all the robustness features
         // we need for ANGLE. In particular, it is unable to detect and recover
@@ -575,17 +587,13 @@ bool IsConfigAllowlisted(const SystemInfo &systemInfo, const PlatformParameters 
     {
         ASSERT(param.driver == GLESDriverType::AngleEGL);
 
-        // Currently we support the OpenGL and Vulkan back-ends on Linux.
+        // Currently we support the OpenGL, Vulkan and WebGPU back-ends on Linux.
         switch (param.getRenderer())
         {
             case EGL_PLATFORM_ANGLE_TYPE_OPENGL_ANGLE:
-                return true;
             case EGL_PLATFORM_ANGLE_TYPE_WEBGPU_ANGLE:
-                return true;
             case EGL_PLATFORM_ANGLE_TYPE_VULKAN_ANGLE:
-                // http://issuetracker.google.com/173004081
-                return !IsIntel() || !param.isEnableRequested(Feature::AsyncCommandQueue) ||
-                       param.isDisableRequested(Feature::AsyncCommandQueue);
+                return true;
             default:
                 return false;
         }

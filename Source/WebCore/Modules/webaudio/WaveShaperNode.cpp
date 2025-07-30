@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@ ExceptionOr<Ref<WaveShaperNode>> WaveShaperNode::create(BaseAudioContext& contex
 {
     RefPtr<Float32Array> curve;
     if (options.curve) {
-        curve = Float32Array::tryCreate(options.curve->data(), options.curve->size());
+        curve = Float32Array::tryCreate(options.curve->span());
         if (!curve)
             return Exception { ExceptionCode::InvalidStateError, "Invalid curve parameter"_s };
     }

@@ -31,7 +31,7 @@ namespace WebCore {
 
 static bool appendBlobResolved(Vector<char>& out, const URL& url, const BlobRegistryImpl& blobRegistry, QString& contentType)
 {
-    RefPtr<BlobData> blobData = blobRegistry.getBlobDataFromURL(url);
+    RefPtr<BlobData> blobData = blobRegistry.blobDataFromURL(url);
     if (!blobData)
         return false;
 
@@ -56,7 +56,7 @@ static bool appendBlobResolved(Vector<char>& out, const URL& url, const BlobRegi
 
 static QUrl resolveBlobUrl(const URL& url, const BlobRegistryImpl& blobRegistry)
 {
-    RefPtr<BlobData> blobData = blobRegistry.getBlobDataFromURL(url);
+    RefPtr<BlobData> blobData = blobRegistry.blobDataFromURL(url);
     if (!blobData)
         return QUrl();
 

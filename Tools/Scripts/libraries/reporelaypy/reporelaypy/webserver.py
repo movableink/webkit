@@ -22,7 +22,7 @@
 
 import json
 import os
-import re
+import time
 
 from flask_cors import CORS
 
@@ -31,9 +31,11 @@ if autoinstall_path:
     from webkitcorepy import AutoInstall
     AutoInstall.set_directory(autoinstall_path)
 
-from flask import Flask, current_app, json as fjson
+from flask import Flask, current_app, json as fjson, render_template
 from reporelaypy import Checkout, CheckoutRoute, Redirector, HookReceiver
 from webkitflaskpy import Database
+
+HEARTBEAT_LIMIT = 300
 
 app = Flask(__name__)
 CORS(app)
@@ -66,15 +68,49 @@ def health():
 
     if not checkout_routes.commit(ref='main'):
         return current_app.response_class(
-            fjson.dumps(dict(status='broken'), indent=4),
+            fjson.dumps(dict(
+                status='broken',
+                why="Cannot construct commit from 'main'",
+            ), indent=4),
             mimetype='application/json',
             status=500,
         )
+
+    heartbeat = '/tmp/heartbeat.txt'
+    if os.path.isfile(heartbeat):
+        with open(heartbeat, 'r') as heartbeat:
+            heartbeat_time = heartbeat.read().strip()
+        if not heartbeat_time.isnumeric():
+            return current_app.response_class(
+                fjson.dumps(dict(
+                    status='broken',
+                    why='Invalid heartbeat file',
+                ), indent=4),
+                mimetype='application/json',
+                status=500,
+            )
+
+        time_since_heartbeat = time.time() - int(heartbeat_time)
+        if HEARTBEAT_LIMIT < time_since_heartbeat:
+            return current_app.response_class(
+                fjson.dumps(dict(
+                    status='broken',
+                    why=f'Heartbeat file is {time_since_heartbeat} seconds old',
+                ), indent=4),
+                mimetype='application/json',
+                status=500,
+            )
 
     return current_app.response_class(
         fjson.dumps(dict(status='ready'), indent=4),
         mimetype='application/json',
     )
+
+
+@app.route('/')
+def compare():
+    return render_template('compare.html')
+
 
 # Crawling a reporelay service is always a bad idea
 @app.route('/robots.txt')

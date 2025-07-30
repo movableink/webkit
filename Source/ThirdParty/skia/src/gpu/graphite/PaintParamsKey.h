@@ -71,6 +71,8 @@ public:
     // data from a Builder-owned key, but they can be passed around by value after that.
     constexpr PaintParamsKey(const PaintParamsKey&) = default;
 
+    constexpr PaintParamsKey(SkSpan<const uint32_t> span) : fData(span) {}
+
     ~PaintParamsKey() = default;
     PaintParamsKey& operator=(const PaintParamsKey&) = default;
 
@@ -90,11 +92,17 @@ public:
     // source color is computed. The second node defines the final blender between the calculated
     // source color and the current pixel's dst color. If provided, the third node calculates an
     // additional analytic coverage value to combine with the geometry's coverage.
-    SkSpan<const ShaderNode*> getRootNodes(const ShaderCodeDictionary*, SkArenaAlloc*) const;
+    //
+    // Before returning the ShaderNode trees, this method decides which ShaderNode expressions to
+    // lift to the vertex shader, depending on how many varyings are available.
+    SkSpan<const ShaderNode*> getRootNodes(const Caps*,
+                                           const ShaderCodeDictionary*,
+                                           SkArenaAlloc*,
+                                           int availableVaryings) const;
 
     // Converts the key to a structured list of snippet information for debugging or labeling
     // purposes.
-    SkString toString(const ShaderCodeDictionary* dict, bool includeData) const;
+    SkString toString(const ShaderCodeDictionary* dict) const;
 
 #ifdef SK_DEBUG
     void dump(const ShaderCodeDictionary*, UniquePaintParamsID) const;
@@ -112,17 +120,22 @@ public:
         }
     };
 
+    SkSpan<const uint32_t> data() const { return fData; }
+
+    // Checks that a given key is viable for serialization and, also, that a deserialized
+    // key is, at least, correctly formed. Other than that all the sizes make sense, this method
+    // also checks that only Skia-internal shader code snippets appear in the key.
+    [[nodiscard]] bool isSerializable(const ShaderCodeDictionary*) const;
+
 private:
     friend class PaintParamsKeyBuilder;   // for the parented-data ctor
-
-    constexpr PaintParamsKey(SkSpan<const uint32_t> span) : fData(span) {}
 
     // Returns null if the node or any of its children have an invalid snippet ID. Recursively
     // creates a node and all of its children, incrementing 'currentIndex' by the total number of
     // nodes created.
-    const ShaderNode* createNode(const ShaderCodeDictionary*,
-                                 int* currentIndex,
-                                 SkArenaAlloc* arena) const;
+    ShaderNode* createNode(const ShaderCodeDictionary*,
+                           int* currentIndex,
+                           SkArenaAlloc* arena) const;
 
     // The memory referenced in 'fData' is always owned by someone else. It either shares the span
     // from the Builder, or clone() puts the span in an arena.

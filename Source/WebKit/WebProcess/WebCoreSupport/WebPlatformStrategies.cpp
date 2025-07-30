@@ -47,6 +47,7 @@
 #include <WebCore/Color.h>
 #include <WebCore/Document.h>
 #include <WebCore/DocumentLoader.h>
+#include <WebCore/ExceptionOr.h>
 #include <WebCore/LoaderStrategy.h>
 #include <WebCore/LocalFrame.h>
 #include <WebCore/MediaStrategy.h>
@@ -110,12 +111,21 @@ PushStrategy* WebPlatformStrategies::createPushStrategy()
 }
 #endif
 
-static std::optional<PageIdentifier> pageIdentifier(const PasteboardContext* context)
+static std::optional<WebPageProxyIdentifier> pageIdentifier(const PasteboardContext* context)
 {
-    if (!is<PagePasteboardContext>(context))
+    auto* pageContext = dynamicDowncast<PagePasteboardContext>(context);
+    if (!pageContext)
         return std::nullopt;
 
-    return downcast<PagePasteboardContext>(*context).pageID();
+    auto pageID = pageContext->pageID();
+    if (!pageID)
+        return std::nullopt;
+
+    RefPtr webPage = WebProcess::singleton().webPage(*pageID);
+    if (!webPage)
+        return std::nullopt;
+
+    return webPage->webPageProxyIdentifier();
 }
 
 #if PLATFORM(COCOA)
@@ -296,7 +306,7 @@ void WebPlatformStrategies::updateSupportedTypeIdentifiers(const Vector<String>&
 
 #endif // PLATFORM(COCOA)
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(WPE)
 // PasteboardStrategy
 
 Vector<String> WebPlatformStrategies::types(const String& pasteboardName)
@@ -306,9 +316,9 @@ Vector<String> WebPlatformStrategies::types(const String& pasteboardName)
     return result;
 }
 
-String WebPlatformStrategies::readTextFromClipboard(const String& pasteboardName)
+String WebPlatformStrategies::readTextFromClipboard(const String& pasteboardName, const String& pasteboardType)
 {
-    auto sendResult = WebProcess::singleton().parentProcessConnection()->sendSync(Messages::WebPasteboardProxy::ReadText(pasteboardName), 0);
+    auto sendResult = WebProcess::singleton().parentProcessConnection()->sendSync(Messages::WebPasteboardProxy::ReadText(pasteboardName, pasteboardType), 0);
     auto [result] = sendResult.takeReplyOr(String { });
     return result;
 }
@@ -344,9 +354,7 @@ int64_t WebPlatformStrategies::changeCount(const String& pasteboardName)
     return changeCount;
 }
 
-#endif // PLATFORM(GTK)
-
-#if USE(LIBWPE)
+#elif USE(LIBWPE)
 // PasteboardStrategy
 
 void WebPlatformStrategies::getTypes(Vector<String>& types)
@@ -450,7 +458,7 @@ String WebPlatformStrategies::readStringFromPasteboard(size_t index, const Strin
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
 
-void WebPlatformStrategies::navigatorSubscribeToPushService(const URL& scope, const Vector<uint8_t>& applicationServerKey, SubscribeToPushServiceCallback&& callback)
+void WebPlatformStrategies::windowSubscribeToPushService(const URL& scope, const Vector<uint8_t>& applicationServerKey, SubscribeToPushServiceCallback&& callback)
 {
     auto completionHandler = [callback = WTFMove(callback)](auto&& valueOrException) mutable {
         if (!valueOrException.has_value()) {
@@ -463,7 +471,7 @@ void WebPlatformStrategies::navigatorSubscribeToPushService(const URL& scope, co
     WebProcess::singleton().ensureNetworkProcessConnection().connection().sendWithAsyncReply(Messages::NetworkConnectionToWebProcess::NavigatorSubscribeToPushService(scope, applicationServerKey), WTFMove(completionHandler));
 }
 
-void WebPlatformStrategies::navigatorUnsubscribeFromPushService(const URL& scope, std::optional<PushSubscriptionIdentifier> subscriptionIdentifier, UnsubscribeFromPushServiceCallback&& callback)
+void WebPlatformStrategies::windowUnsubscribeFromPushService(const URL& scope, std::optional<PushSubscriptionIdentifier> subscriptionIdentifier, UnsubscribeFromPushServiceCallback&& callback)
 {
     auto completionHandler = [callback = WTFMove(callback)](auto&& valueOrException) mutable {
         if (!valueOrException.has_value()) {
@@ -476,7 +484,7 @@ void WebPlatformStrategies::navigatorUnsubscribeFromPushService(const URL& scope
     WebProcess::singleton().ensureNetworkProcessConnection().connection().sendWithAsyncReply(Messages::NetworkConnectionToWebProcess::NavigatorUnsubscribeFromPushService(scope, *subscriptionIdentifier), WTFMove(completionHandler));
 }
 
-void WebPlatformStrategies::navigatorGetPushSubscription(const URL& scope, GetPushSubscriptionCallback&& callback)
+void WebPlatformStrategies::windowGetPushSubscription(const URL& scope, GetPushSubscriptionCallback&& callback)
 {
     auto completionHandler = [callback = WTFMove(callback)](auto&& valueOrException) mutable {
         if (!valueOrException.has_value()) {
@@ -489,7 +497,7 @@ void WebPlatformStrategies::navigatorGetPushSubscription(const URL& scope, GetPu
     WebProcess::singleton().ensureNetworkProcessConnection().connection().sendWithAsyncReply(Messages::NetworkConnectionToWebProcess::NavigatorGetPushSubscription(scope), WTFMove(completionHandler));
 }
 
-void WebPlatformStrategies::navigatorGetPushPermissionState(const URL& scope, GetPushPermissionStateCallback&& callback)
+void WebPlatformStrategies::windowGetPushPermissionState(const URL& scope, GetPushPermissionStateCallback&& callback)
 {
     auto completionHandler = [callback = WTFMove(callback)](auto&& valueOrException) mutable {
         if (!valueOrException.has_value())

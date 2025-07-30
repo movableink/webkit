@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009, 2012 Google Inc.  All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -99,8 +100,9 @@ std::optional<ResourceRequest> ThreadableWebSocketChannel::webSocketConnectReque
     if (!validatedURL)
         return { };
 
-    ResourceRequest request { validatedURL->url };
-    request.setHTTPUserAgent(document.userAgent(validatedURL->url));
+    auto userAgent = document.userAgent(validatedURL->url);
+    ResourceRequest request { WTFMove(validatedURL->url) };
+    request.setHTTPUserAgent(userAgent);
     request.setDomainForCachePartition(document.domainForCachePartition());
     request.setAllowCookies(validatedURL->areCookiesAllowed);
     request.setFirstPartyForCookies(document.firstPartyForCookies());
@@ -125,9 +127,9 @@ std::optional<ResourceRequest> ThreadableWebSocketChannel::webSocketConnectReque
         request.addHTTPHeaderField(HTTPHeaderName::SecFetchDest, "websocket"_s);
         request.addHTTPHeaderField(HTTPHeaderName::SecFetchMode, "websocket"_s);
 
-        if (document.securityOrigin().isSameOriginAs(requestOrigin.get()))
+        if (document.protectedSecurityOrigin()->isSameOriginAs(requestOrigin.get()))
             request.addHTTPHeaderField(HTTPHeaderName::SecFetchSite, "same-origin"_s);
-        else if (document.securityOrigin().isSameSiteAs(requestOrigin))
+        else if (document.protectedSecurityOrigin()->isSameSiteAs(requestOrigin))
             request.addHTTPHeaderField(HTTPHeaderName::SecFetchSite, "same-site"_s);
         else
             request.addHTTPHeaderField(HTTPHeaderName::SecFetchSite, "cross-site"_s);

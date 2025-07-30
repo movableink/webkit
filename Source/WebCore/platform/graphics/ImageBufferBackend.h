@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2020-2024 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,7 +51,7 @@
 #endif
 
 #if USE(SKIA)
-class GrDirectContext;
+class SkSurface;
 #endif
 
 namespace WTF {
@@ -69,7 +69,9 @@ class IOSurfacePool;
 class Image;
 class NativeImage;
 class PixelBuffer;
+class PixelBufferSourceView;
 class ProcessIdentity;
+class SharedBuffer;
 
 enum class PreserveResolution : bool {
     No,
@@ -113,6 +115,7 @@ public:
 
     WEBCORE_EXPORT virtual ~ImageBufferBackend();
 
+    WEBCORE_EXPORT static IntSize calculateSafeBackendSize(const Parameters&);
     WEBCORE_EXPORT static size_t calculateMemoryCost(const IntSize& backendSize, unsigned bytesPerRow);
     WEBCORE_EXPORT static AffineTransform calculateBaseTransform(const Parameters&);
 
@@ -127,7 +130,9 @@ public:
     virtual void transformToColorSpace(const DestinationColorSpace&) { }
 
     virtual void getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination) = 0;
-    virtual void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) = 0;
+    virtual void putPixelBuffer(const PixelBufferSourceView&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) = 0;
+
+    WEBCORE_EXPORT virtual RefPtr<SharedBuffer> sinkIntoPDFDocument();
 
 #if HAVE(IOSURFACE)
     virtual IOSurface* surface() { return nullptr; }
@@ -138,11 +143,7 @@ public:
 #endif
 
 #if USE(SKIA)
-    virtual void finishAcceleratedRenderingAndCreateFence() { }
-    virtual void waitForAcceleratedRenderingFenceCompletion() { }
-
-    virtual const GrDirectContext* skiaGrContext() const { return nullptr; }
-    WEBCORE_EXPORT virtual RefPtr<ImageBuffer> copyAcceleratedImageBufferBorrowingBackendRenderTarget(const ImageBuffer&) const;
+    virtual SkSurface* surface() const { return nullptr; }
 #endif
 
     virtual bool isInUse() const { return false; }
@@ -167,6 +168,8 @@ public:
 
     virtual RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate() const { return nullptr; }
 
+    virtual void prepareForDisplay() { }
+
     const Parameters& parameters() const { return m_parameters; }
 
     WEBCORE_EXPORT virtual String debugDescription() const = 0;
@@ -181,8 +184,8 @@ protected:
     const DestinationColorSpace& colorSpace() const { return m_parameters.colorSpace; }
     ImageBufferPixelFormat pixelFormat() const { return m_parameters.pixelFormat; }
 
-    WEBCORE_EXPORT void getPixelBuffer(const IntRect& srcRect, const uint8_t* data, PixelBuffer& destination);
-    WEBCORE_EXPORT void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, uint8_t* destination);
+    WEBCORE_EXPORT void getPixelBuffer(const IntRect& srcRect, std::span<const uint8_t> data, PixelBuffer& destination);
+    WEBCORE_EXPORT void putPixelBuffer(const PixelBufferSourceView&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, std::span<uint8_t> destination);
 
     Parameters m_parameters;
 };

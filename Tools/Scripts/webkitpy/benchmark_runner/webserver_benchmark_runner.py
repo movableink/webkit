@@ -1,9 +1,6 @@
-import collections
 import json
 import logging
 import os
-import subprocess
-import signal
 import time
 
 from webkitcorepy import NullContext, Timeout
@@ -30,15 +27,6 @@ class WebServerBenchmarkRunner(BenchmarkRunner):
         assert(not self._http_server_driver.get_return_code())
         return result
 
-    def _construct_subtest_url(self, subtests):
-        if not subtests or not isinstance(subtests, collections.abc.Mapping) or 'subtest_url_format' not in self._plan:
-            return ''
-        subtest_url = ''
-        for suite, tests in subtests.items():
-            for test in tests:
-                subtest_url = subtest_url + '&' + self._plan['subtest_url_format'].replace('${SUITE}', suite).replace('${TEST}', test)
-        return subtest_url
-
     def _run_one_test(self, web_root, test_file, iteration):
         enable_profiling = self._profile_output_dir and self._trace_type
         profile_filename = '{}-{}'.format(self._plan_name, iteration)
@@ -60,6 +48,8 @@ class WebServerBenchmarkRunner(BenchmarkRunner):
             self._browser_driver.diagnose_test_failure(self._diagnose_dir, error)
             raise error
         else:
+            if not any(file.startswith('test-successful-screenshot-') for file in os.listdir(self._diagnose_dir)):
+                self._browser_driver._save_screenshot_to_path(self._diagnose_dir, f'test-successful-screenshot-{int(time.time())}.jpg')
             self._browser_driver.close_browsers()
         finally:
             self._http_server_driver.kill_server()

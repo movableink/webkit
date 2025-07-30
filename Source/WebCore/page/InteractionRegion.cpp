@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementInlines.h"
 #include "ElementRuleCollector.h"
+#include "FloatSizeHash.h"
 #include "FrameSnapshotting.h"
 #include "GeometryUtilities.h"
 #include "HTMLAnchorElement.h"
@@ -47,7 +48,9 @@
 #include "LegacyRenderSVGShapeInlines.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
+#include "NativeImage.h"
 #include "Page.h"
+#include "PathOperation.h"
 #include "PlatformMouseEvent.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "RenderAncestorIterator.h"
@@ -67,6 +70,53 @@
 namespace WebCore {
 
 InteractionRegion::~InteractionRegion() = default;
+
+class InteractionRegionPathCache {
+public:
+    static InteractionRegionPathCache& singleton();
+
+    std::optional<Path> get(const Image&, const FloatSize&);
+    void add(const Image&, const FloatSize&, Path);
+
+    void clear();
+
+private:
+    friend class NeverDestroyed<InteractionRegionPathCache>;
+
+    InteractionRegionPathCache() = default;
+
+    WeakHashMap<const Image, UncheckedKeyHashMap<FloatSize, Path>> m_imageCache;
+};
+
+InteractionRegionPathCache& InteractionRegionPathCache::singleton()
+{
+    static NeverDestroyed<InteractionRegionPathCache> cache;
+    return cache;
+}
+
+std::optional<Path> InteractionRegionPathCache::get(const Image& image, const FloatSize& size)
+{
+    if (auto cacheBySize = m_imageCache.getOptional(image))
+        return cacheBySize->getOptional(size);
+    return std::nullopt;
+}
+
+void InteractionRegionPathCache::add(const Image& image, const FloatSize& size, Path path)
+{
+    m_imageCache.ensure(image, [] {
+        return UncheckedKeyHashMap<FloatSize, Path>();
+    }).iterator->value.add(size, path);
+}
+
+void InteractionRegionPathCache::clear()
+{
+    m_imageCache.clear();
+}
+
+void InteractionRegion::clearCache()
+{
+    InteractionRegionPathCache::singleton().clear();
+}
 
 static bool hasInteractiveCursorType(Element& element)
 {
@@ -109,9 +159,7 @@ static bool shouldAllowAccessibilityRoleAsPointerCursorReplacement(const Element
     switch (AccessibilityObject::ariaRoleToWebCoreRole(element.attributeWithoutSynchronization(HTMLNames::roleAttr))) {
     case AccessibilityRole::Button:
     case AccessibilityRole::Checkbox:
-    case AccessibilityRole::ImageMapLink:
     case AccessibilityRole::Link:
-    case AccessibilityRole::WebCoreLink:
     case AccessibilityRole::ListBoxOption:
     case AccessibilityRole::MenuItem:
     case AccessibilityRole::MenuItemCheckbox:
@@ -164,7 +212,7 @@ static bool shouldAllowNonInteractiveCursorForElement(const Element& element)
 #endif
 
     if (RefPtr textElement = dynamicDowncast<HTMLTextFormControlElement>(element))
-        return !textElement->focused() || !textElement->lastChangeWasUserEdit() || textElement->value().isEmpty();
+        return !textElement->focused() || !textElement->lastChangeWasUserEdit() || textElement->value()->isEmpty();
 
     if (is<HTMLFormControlElement>(element))
         return true;
@@ -201,12 +249,26 @@ static bool hasTransparentContainerStyle(const RenderStyle& style)
 {
     return !style.hasBackground()
         && !style.hasOutline()
-        && !style.boxShadow()
+        && !style.hasBoxShadow()
         && !style.clipPath()
         && !style.hasExplicitlySetBorderRadius()
         // No visible borders or borders that do not create a complete box.
         && (!style.hasVisibleBorder()
             || !(style.borderTopWidth() && style.borderRightWidth() && style.borderBottomWidth() && style.borderLeftWidth()));
+}
+
+static bool canTweakShapeForStyle(const RenderStyle& style)
+{
+    if (!hasTransparentContainerStyle(style))
+        return false;
+
+    switch (style.usedAppearance()) {
+    case StyleAppearance::TextField:
+    case StyleAppearance::TextArea:
+        return false;
+    default:
+        return true;
+    }
 }
 
 static bool colorIsChallengingToHighlight(const Color& color)
@@ -304,7 +366,7 @@ static RefPtr<Image> findIconImage(const RenderObject& renderer)
 static std::optional<std::pair<Ref<SVGSVGElement>, Ref<SVGGraphicsElement>>> findSVGClipElements(const RenderObject& renderer)
 {
     if (const auto& renderShape = dynamicDowncast<LegacyRenderSVGShape>(renderer)) {
-        Ref shapeElement = renderShape->protectedGraphicsElement();
+        Ref shapeElement = renderShape->graphicsElement();
         if (auto* owner = shapeElement->ownerSVGElement()) {
             Ref svgSVGElement = *owner;
             return std::make_pair(svgSVGElement, shapeElement);
@@ -428,7 +490,7 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
         return std::nullopt;
     }
 
-    bool isInlineNonBlock = renderer.isInline() && !renderer.isReplacedOrInlineBlock();
+    bool isInlineNonBlock = renderer.isInline() && !renderer.isReplacedOrAtomicInline();
     bool isPhoto = false;
 
     float minimumContentHintArea = 200 * 200;
@@ -500,11 +562,17 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
         clipPath = path;
     } else if (iconImage && originalElement) {
         auto size = boundingSize(regionRenderer, transform);
-        LayoutRect imageRect(FloatPoint(), size);
-        Ref shape = LayoutShape::createRasterShape(iconImage.get(), 0, imageRect, imageRect, WritingMode(), 0);
-        LayoutShape::DisplayPaths paths;
-        shape->buildDisplayPaths(paths);
-        auto path = paths.shape;
+        auto generateAndCachePath = [&] {
+            LayoutRect imageRect(FloatPoint(), size);
+            Ref shape = LayoutShape::createRasterShape(iconImage.get(), 0, imageRect, imageRect, WritingMode(), 0);
+            LayoutShape::DisplayPaths paths;
+            shape->buildDisplayPaths(paths);
+            auto path = paths.shape;
+            InteractionRegionPathCache::singleton().add(*iconImage.get(), size, path);
+            return path;
+        };
+        auto cachedPath = InteractionRegionPathCache::singleton().get(*iconImage.get(), size);
+        auto path = cachedPath ? *cachedPath : generateAndCachePath();
 
         if (!clipOffset.isZero())
             path.translate(clipOffset);
@@ -570,7 +638,7 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
 
     bool canTweakShape = !isPhoto
         && !clipPath
-        && hasTransparentContainerStyle(style);
+        && canTweakShapeForStyle(style);
 
     if (canTweakShape) {
         // We can safely tweak the bounds and radius without causing visual mismatch.
@@ -596,18 +664,18 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
 TextStream& operator<<(TextStream& ts, const InteractionRegion& interactionRegion)
 {
     auto regionName = interactionRegion.type == InteractionRegion::Type::Interaction
-        ? "interaction"
-        : (interactionRegion.type == InteractionRegion::Type::Occlusion ? "occlusion" : "guard");
+        ? "interaction"_s
+        : (interactionRegion.type == InteractionRegion::Type::Occlusion ? "occlusion"_s : "guard"_s);
     ts.dumpProperty(regionName, interactionRegion.rectInLayerCoordinates);
     if (interactionRegion.contentHint != InteractionRegion::ContentHint::Default)
-        ts.dumpProperty("content hint", "photo");
+        ts.dumpProperty("content hint"_s, "photo"_s);
     auto radius = interactionRegion.cornerRadius;
     if (radius > 0) {
         if (interactionRegion.maskedCorners.isEmpty())
-            ts.dumpProperty("cornerRadius", radius);
+            ts.dumpProperty("cornerRadius"_s, radius);
         else  {
             auto mask = interactionRegion.maskedCorners;
-            ts.dumpProperty("cornerRadius", makeString(
+            ts.dumpProperty("cornerRadius"_s, makeString(
                 mask.contains(InteractionRegion::CornerMask::MinXMinYCorner) ? radius : 0, ' ',
                 mask.contains(InteractionRegion::CornerMask::MaxXMinYCorner) ? radius : 0, ' ',
                 mask.contains(InteractionRegion::CornerMask::MaxXMaxYCorner) ? radius : 0, ' ',
@@ -616,10 +684,10 @@ TextStream& operator<<(TextStream& ts, const InteractionRegion& interactionRegio
         }
     }
     if (interactionRegion.clipPath)
-        ts.dumpProperty("clipPath", interactionRegion.clipPath.value());
+        ts.dumpProperty("clipPath"_s, interactionRegion.clipPath.value());
 #if ENABLE(INTERACTION_REGION_TEXT_CONTENT)
     if (!interactionRegion.text.isEmpty())
-        ts.dumpProperty("text", interactionRegion.text);
+        ts.dumpProperty("text"_s, interactionRegion.text);
 #endif
     return ts;
 }

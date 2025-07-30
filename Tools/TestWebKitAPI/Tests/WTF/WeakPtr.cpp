@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "config.h"
 
 #include "Test.h"
+#include <algorithm>
 #include <thread>
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashMap.h>
@@ -1314,7 +1315,7 @@ TEST(WTF_WeakPtr, WeakHashMapRemoveIterator)
     }
     while (!objects.isEmpty()) {
         auto it = weakHashMap.find(*objects.last());
-        objects.remove(0);
+        objects.removeAt(0);
         weakHashMap.remove(it);
         weakHashMap.checkConsistency();
     }
@@ -1697,7 +1698,7 @@ TEST(WTF_WeakPtr, WeakHashMapIterators)
             ASSERT(pairs.size(), 40U);
             for (unsigned i = 0; i < 50; ++i) {
                 if (!(i % 5))
-                    EXPECT_TRUE(WTF::allOf(pairs, [&](auto& item) { return item.first != objects[i].get(); }));
+                    EXPECT_TRUE(std::ranges::all_of(pairs, [&](auto& item) { return item.first != objects[i].get(); }));
                 else if (!(i % 6))
                     EXPECT_TRUE(pairs.contains(std::pair { objects[i].get(), i * 51 }));
                 else
@@ -1715,7 +1716,7 @@ TEST(WTF_WeakPtr, WeakHashMapIterators)
             ASSERT(pairs.size(), 36U);
             for (unsigned i = 0; i < 50; ++i) {
                 if (!(i % 5) || !(i % 9))
-                    EXPECT_TRUE(WTF::allOf(pairs, [&](auto& item) { return item.first != objects[i].get(); }));
+                    EXPECT_TRUE(std::ranges::all_of(pairs, [&](auto& item) { return item.first != objects[i].get(); }));
                 else if (!(i % 6))
                     EXPECT_TRUE(pairs.contains(std::pair { objects[i].get(), i * 51 }));
                 else
@@ -2174,7 +2175,7 @@ TEST(WTF_WeakPtr, WeakListHashSetRemoveIterator)
     }
     for (unsigned i = 0; i < 13; ++i) {
         auto it = weakListHashSet.find(*objects[0]);
-        objects.remove(0);
+        objects.removeAt(0);
         weakListHashSet.remove(it);
         weakListHashSet.checkConsistency();
         unsigned j = 0;
@@ -2714,6 +2715,9 @@ TEST(WTF_WeakPtr, WeakListHashSetInsertBefore)
 
 class MultipleInheritanceBase1 : public CanMakeWeakPtr<MultipleInheritanceBase1> {
 public:
+    MultipleInheritanceBase1() = default;
+    virtual ~MultipleInheritanceBase1() = default;
+
     virtual void meow() = 0;
 
     int dummy; // Prevent empty base class optimization, to make testing more interesting.
@@ -2721,6 +2725,9 @@ public:
 
 class MultipleInheritanceBase2 : public CanMakeWeakPtr<MultipleInheritanceBase2> {
 public:
+    MultipleInheritanceBase2() = default;
+    virtual ~MultipleInheritanceBase2() = default;
+
     virtual void woof() = 0;
 
     int dummy; // Prevent empty base class optimization, to make testing more interesting.
@@ -2728,6 +2735,9 @@ public:
 
 class MultipleInheritanceDerived : public MultipleInheritanceBase1, public MultipleInheritanceBase2 {
 public:
+    MultipleInheritanceDerived() = default;
+    virtual ~MultipleInheritanceDerived() = default;
+
     bool meowCalled() const
     {
         return m_meowCalled;
@@ -3059,7 +3069,7 @@ TEST(WTF_ThreadSafeWeakPtr, MultipleInheritance)
     };
 
     struct Dog {
-        ~Dog() { destructors.append(Destructor::Dog); }
+        virtual ~Dog() { destructors.append(Destructor::Dog); }
         virtual void woof() = 0;
 
         virtual void ref() const = 0;

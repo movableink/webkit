@@ -57,7 +57,7 @@ class LibWebRTCPeerConnectionBackend;
 class LibWebRTCRtpSenderBackend final : public RTCRtpSenderBackend, public CanMakeWeakPtr<LibWebRTCRtpSenderBackend> {
     WTF_MAKE_TZONE_ALLOCATED(LibWebRTCRtpSenderBackend);
 public:
-    using Source = std::variant<std::nullptr_t, Ref<RealtimeOutgoingAudioSource>, Ref<RealtimeOutgoingVideoSource>>;
+    using Source = Variant<std::nullptr_t, Ref<RealtimeOutgoingAudioSource>, Ref<RealtimeOutgoingVideoSource>>;
     LibWebRTCRtpSenderBackend(LibWebRTCPeerConnectionBackend&, rtc::scoped_refptr<webrtc::RtpSenderInterface>&&, Source&&);
     LibWebRTCRtpSenderBackend(LibWebRTCPeerConnectionBackend&, rtc::scoped_refptr<webrtc::RtpSenderInterface>&&);
     ~LibWebRTCRtpSenderBackend();

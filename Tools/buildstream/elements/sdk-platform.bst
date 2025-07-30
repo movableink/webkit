@@ -5,6 +5,7 @@ depends:
 - qt5.bst
 - test-infra.bst
 - filtered.bst
+- filtered-openh264.bst
 
 # replaced (patched) elements:
 - sdk/adwaita-icon-theme.bst
@@ -20,6 +21,7 @@ depends:
 - sdk/gst-plugin-audiofx.bst
 - sdk/gst-plugin-closedcaption.bst
 - sdk/gst-plugin-dav1d.bst
+- sdk/gst-plugin-fmp4.bst
 - sdk/gst-plugin-livesync.bst
 - sdk/gst-plugin-rtp.bst
 - sdk/gtk.bst

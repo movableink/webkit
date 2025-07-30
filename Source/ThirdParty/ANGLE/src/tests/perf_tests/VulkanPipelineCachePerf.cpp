@@ -95,8 +95,8 @@ void VulkanPipelineCachePerfTest::step()
     vk::PipelineLayout pl;
     vk::PipelineCache pc;
     vk::PipelineCacheAccess spc;
-    vk::ShaderModulePtr vs = vk::ShaderModulePtr::MakeShared();
-    vk::ShaderModulePtr fs = vk::ShaderModulePtr::MakeShared();
+    vk::ShaderModulePtr vs = vk::ShaderModulePtr::MakeShared(VK_NULL_HANDLE);
+    vk::ShaderModulePtr fs = vk::ShaderModulePtr::MakeShared(VK_NULL_HANDLE);
     vk::ShaderModuleMap ssm;
     const vk::GraphicsPipelineDesc *desc = nullptr;
     vk::PipelineHelper *result           = nullptr;
@@ -118,8 +118,9 @@ void VulkanPipelineCachePerfTest::step()
         {
             if (!mCache.getPipeline(hit, &desc, &result))
             {
-                (void)mCache.createPipeline(VK_NULL_HANDLE, &spc, rp, pl, ssm, defaultSpecConsts,
-                                            PipelineSource::Draw, hit, &desc, &result);
+                (void)mCache.createPipeline(VK_NULL_HANDLE, &spc, rp, pl,
+                                            {&ssm, &defaultSpecConsts}, PipelineSource::Draw, hit,
+                                            &desc, &result);
             }
         }
     }
@@ -130,7 +131,7 @@ void VulkanPipelineCachePerfTest::step()
         const auto &miss = mCacheMisses[mMissIndex];
         if (!mCache.getPipeline(miss, &desc, &result))
         {
-            (void)mCache.createPipeline(VK_NULL_HANDLE, &spc, rp, pl, ssm, defaultSpecConsts,
+            (void)mCache.createPipeline(VK_NULL_HANDLE, &spc, rp, pl, {&ssm, &defaultSpecConsts},
                                         PipelineSource::Draw, miss, &desc, &result);
         }
     }

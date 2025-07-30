@@ -27,7 +27,6 @@
     u.onerror = function(event) {
        debug("Speech error received because we cancelled and speech should no longer be pending.");
        shouldBeFalse("speechSynthesis.pending");
-       finishJSTest();
     }
 
     // Queue the first job which will start speaking immediately.
@@ -35,10 +34,17 @@
 
     // Make a few more jobs, so that when we cancel, it will clear the entire queue.
     var u2 = new SpeechSynthesisUtterance("this is a second test");
+    u2.onerror = function(event) {
+       debug("Speech error received because we cancelled and speech should no longer be pending.");
+    }
     speechSynthesis.speak(u2);
 
     // Make a few more jobs, so that when we cancel, it will clear the entire queue.
     var u3 = new SpeechSynthesisUtterance("this is a third test");
+    u3.onerror = function(event) {
+       debug("Speech error received because we cancelled and speech should no longer be pending.");
+       finishJSTest();
+    }
     speechSynthesis.speak(u3);
 
     // While we have two jobs, speech synthesis should report that it's pending.

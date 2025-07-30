@@ -228,12 +228,18 @@ static CGPoint mapRootViewToViewport(CGPoint pointInRootView, WKContentView *con
 {
     RetainPtr webView = [contentView webView];
     CGPoint origin = [webView bounds].origin;
-    auto inset = [webView _computedObscuredInset];
-    auto offsetInRootView = [webView convertPoint:CGPointMake(origin.x + inset.left, origin.y + inset.top) toView:contentView];
+    auto obscuredInsets = [webView _computedObscuredInset];
+    auto contentZoomScale = static_cast<CGFloat>([webView _contentZoomScale]);
+    auto visibleContentInsets = [webView currentlyVisibleContentInsetsWithScale:contentZoomScale obscuredInsets:obscuredInsets];
+    CGPoint offsetInWebView {
+        origin.x + obscuredInsets.left + (visibleContentInsets.left * contentZoomScale),
+        origin.y + obscuredInsets.top + (visibleContentInsets.top * contentZoomScale)
+    };
+    auto offsetInRootView = [webView convertPoint:offsetInWebView toView:contentView];
     return CGPointMake(pointInRootView.x - offsetInRootView.x, pointInRootView.y - offsetInRootView.y);
 }
 
-- (WebKit::WKTouchEvent)_touchEventForTouch:(UITouch *)touch
+- (WebKit::WKTouchEvent)_touchEventForChildTouch:(UITouch *)touch withParent:(const WebKit::WKTouchPoint&)parentTouchPoint
 {
     auto locationInWindow = [touch locationInView:nil];
     auto locationInRootView = [[self view] convertPoint:locationInWindow fromView:nil];
@@ -242,7 +248,7 @@ static CGPoint mapRootViewToViewport(CGPoint pointInRootView, WKContentView *con
     WebKit::WKTouchPoint touchPoint;
     touchPoint.locationInRootViewCoordinates = locationInRootView;
     touchPoint.locationInViewport = mapRootViewToViewport(locationInRootView, contentView.get());
-    touchPoint.identifier = 0;
+    touchPoint.identifier = parentTouchPoint.identifier;
     touchPoint.phase = touch.phase;
     touchPoint.majorRadiusInWindowCoordinates = touch.majorRadius;
     touchPoint.force = touch.maximumPossibleForce > 0 ? touch.force / touch.maximumPossibleForce : 0;
@@ -266,7 +272,7 @@ static CGPoint mapRootViewToViewport(CGPoint pointInRootView, WKContentView *con
     return event;
 }
 
-- (void)_recordTouches:(NSSet<UITouch *> *)touches type:(WebKit::WKTouchEventType)type coalescedTouches:(NSArray<UITouch *> *)coalescedTouches predictedTouches:(NSArray<UITouch *> *)predictedTouches
+- (void)_recordTouches:(NSSet<UITouch *> *)touches ofType:(WebKit::WKTouchEventType)type forEvent:(UIEvent *)event
 {
     _lastTouchEvent.type = type;
     _lastTouchEvent.inJavaScriptGesture = false;
@@ -290,14 +296,6 @@ static CGPoint mapRootViewToViewport(CGPoint pointInRootView, WKContentView *con
 
     _lastTouchEvent.coalescedEvents = { };
     _lastTouchEvent.predictedEvents = { };
-
-    if (type == WebKit::WKTouchEventType::Change) {
-        for (UITouch *coalescedTouch in coalescedTouches)
-            _lastTouchEvent.coalescedEvents.append([self _touchEventForTouch:coalescedTouch]);
-
-        for (UITouch *predictedTouch in predictedTouches)
-            _lastTouchEvent.predictedEvents.append([self _touchEventForTouch:predictedTouch]);
-    }
 
     RetainPtr contentView = [self contentView];
     NSUInteger touchIndex = 0;
@@ -346,6 +344,15 @@ static CGPoint mapRootViewToViewport(CGPoint pointInRootView, WKContentView *con
             touchPoint.touchType = WebKit::WKTouchPointType::Direct;
             touchPoint.altitudeAngle = 0;
             touchPoint.azimuthAngle = 0;
+        }
+
+        // FIXME (284852): Instead of retrieving coalesced and predicted touches from the first touch, we should store them per-touch.
+        if (!touchIndex && type == WebKit::WKTouchEventType::Change) {
+            for (UITouch *coalescedTouch in [event coalescedTouchesForTouch:touch])
+                _lastTouchEvent.coalescedEvents.append([self _touchEventForChildTouch:coalescedTouch withParent:touchPoint]);
+
+            for (UITouch *predictedTouch in [event predictedTouchesForTouch:touch])
+                _lastTouchEvent.predictedEvents.append([self _touchEventForChildTouch:predictedTouch withParent:touchPoint]);
         }
 
         ++touchIndex;
@@ -468,7 +475,7 @@ static WebKit::WKTouchEventType lastExpectedWKEventTypeForTouches(NSSet *touches
     if (lastExpectedWKEventTypeForTouches(touches) != type)
         return;
 
-    [self _recordTouches:touches type:type coalescedTouches:[event coalescedTouchesForTouch:touches.anyObject] predictedTouches:[event predictedTouchesForTouch:touches.anyObject]];
+    [self _recordTouches:touches ofType:type forEvent:event];
 
     [self performAction];
 

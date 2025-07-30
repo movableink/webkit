@@ -22,6 +22,7 @@
 #include "JSTestGenerateIsReachable.h"
 
 #include "ActiveDOMObject.h"
+#include "ContextDestructionObserverInlines.h"
 #include "ExtendedDOMClientIsoSubspaces.h"
 #include "ExtendedDOMIsoSubspaces.h"
 #include "JSDOMAttribute.h"
@@ -167,7 +168,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestGenerateIsReachableConstructor, (JSGlobalObject* 
     SUPPRESS_UNCOUNTED_LOCAL auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestGenerateIsReachablePrototype*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestGenerateIsReachable::getConstructor(vm, prototype->globalObject()));
 }
@@ -208,7 +209,7 @@ bool JSTestGenerateIsReachableOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC:
 {
     auto* jsTestGenerateIsReachable = jsCast<JSTestGenerateIsReachable*>(handle.slot()->asCell());
     TestGenerateIsReachable* owner = &jsTestGenerateIsReachable->wrapped();
-    if (UNLIKELY(reason))
+    if (reason) [[unlikely]]
         *reason = "Reachable from TestGenerateIsReachable"_s;
     return containsWebCoreOpaqueRoot(visitor, owner);
 }

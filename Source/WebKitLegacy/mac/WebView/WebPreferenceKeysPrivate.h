@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -111,10 +111,8 @@
 #define WebKitAccelerated2dCanvasEnabledPreferenceKey @"WebKitAccelerated2dCanvasEnabled"
 #define WebKitAsyncFrameScrollingEnabledPreferenceKey @"WebKitAsyncFrameScrollingEnabled"
 #define WebKitSpatialNavigationEnabledPreferenceKey @"WebKitSpatialNavigationEnabled"
-#define WebKitDNSPrefetchingEnabledPreferenceKey @"WebKitDNSPrefetchingEnabled"
 #define WebKitFullScreenEnabledPreferenceKey @"WebKitFullScreenEnabled"
 #define WebKitAsynchronousSpellCheckingEnabledPreferenceKey @"WebKitAsynchronousSpellCheckingEnabled"
-#define WebKitHyperlinkAuditingEnabledPreferenceKey @"WebKitHyperlinkAuditingEnabled"
 #define WebKitAVFoundationEnabledKey @"WebKitAVFoundationEnabled"
 #define WebKitRequiresUserGestureForMediaPlaybackPreferenceKey @"WebKitMediaPlaybackRequiresUserGesture"
 #define WebKitRequiresUserGestureForVideoPlaybackPreferenceKey @"WebKitVideoPlaybackRequiresUserGesture"
@@ -159,7 +157,6 @@
 #define WebKitCacheAPIEnabledPreferenceKey @"WebKitCacheAPIEnabled"
 #define WebKitDownloadAttributeEnabledPreferenceKey @"WebKitDownloadAttributeEnabled"
 #define WebKitDirectoryUploadEnabledPreferenceKey @"WebKitDirectoryUploadEnabled"
-#define WebKitCSSOMViewScrollingAPIEnabledPreferenceKey @"WebKitCSSOMViewScrollingAPIEnabled"
 #define WebKitSubtleCryptoEnabledPreferenceKey @"WebKitSubtleCryptoEnabled"
 #define WebKitMediaDevicesEnabledPreferenceKey @"WebKitMediaDevicesEnabled"
 #define WebKitMediaStreamEnabledPreferenceKey @"WebKitMediaStreamEnabled"
@@ -194,6 +191,7 @@
 #define WebKitMinimumZoomFontSizePreferenceKey @"WebKitMinimumZoomFontSizePreferenceKey"
 #define WebKitTextAutosizingEnabledPreferenceKey @"WebKitTextAutosizingEnabled"
 #define WebKitHTTPEquivEnabledPreferenceKey @"WebKitHTTPEquivEnabled"
+#define WebKitUseSystemAppearancePreferenceKey @"WebKitUseSystemAppearance"
 
 #if TARGET_OS_IPHONE
 #define WebKitStandalonePreferenceKey @"WebKitStandalonePreferenceKey"
@@ -205,7 +203,6 @@
 #define WebKitInterpolationQualityPreferenceKey @"WebKitInterpolationQualityPreferenceKey"
 #define WebKitPasswordEchoEnabledPreferenceKey @"WebKitEnablePasswordEchoPreferenceKey"
 #define WebKitPasswordEchoDurationPreferenceKey @"WebKitPasswordEchoDurationPreferenceKey"
-#define WebKitNetworkDataUsageTrackingEnabledPreferenceKey @"WebKitNetworkDataUsageTrackingEnabledPreferenceKey"
 #define WebKitNetworkInterfaceNamePreferenceKey @"WebKitNetworkInterfaceNamePreferenceKey"
 #define WebKitQuickLookDocumentSavingPreferenceKey @"WebKitQuickLookDocumentSavingPreferenceKey"
 #endif
@@ -236,22 +233,26 @@
 #define WebKitRequestIdleCallbackEnabledPreferenceKey @"WebKitRequestIdleCallbackEnabled"
 #define WebKitAsyncClipboardAPIEnabledPreferenceKey @"WebKitAsyncClipboardAPIEnabled"
 #define WebKitVisualViewportAPIEnabledPreferenceKey @"WebKitVisualViewportAPIEnabled"
-#define WebKitCSSOMViewSmoothScrollingEnabledPreferenceKey @"WebKitCSSOMViewSmoothScrollingEnabled"
 #define WebKitWebAnimationsCompositeOperationsEnabledPreferenceKey @"WebKitWebAnimationsCompositeOperationsEnabled"
 #define WebKitWebAnimationsMutableTimelinesEnabledPreferenceKey @"WebKitWebAnimationsMutableTimelinesEnabled"
 #define WebKitPrivateClickMeasurementEnabledPreferenceKey @"WebKitPrivateClickMeasurementEnabled"
 #define WebKitGenericCueAPIEnabledKey @"WebKitGenericCueAPIEnabled"
 #define WebKitCoreMathMLEnabledPreferenceKey @"WebKitCoreMathMLEnabled"
-#define WebKitLinkPreloadResponsiveImagesEnabledPreferenceKey @"WebKitLinkPreloadResponsiveImagesEnabled"
 #define WebKitRemotePlaybackEnabledPreferenceKey @"WebKitRemotePlaybackEnabled"
 #define WebKitReadableByteStreamAPIEnabledPreferenceKey @"WebKitReadableByteStreamAPIEnabled"
 #define WebKitMediaRecorderEnabledPreferenceKey @"WebKitMediaRecorderEnabled"
 #define WebKitContactPickerAPIEnabledPreferenceKey @"WebKitContactPickerAPIEnabled"
+#define WebKitDigitalCredentialsEnabledPreferenceKey @"WebKitDigitalCredentialsPickerEnabled"
 #define WebKitSpeechRecognitionEnabledPreferenceKey @"WebKitSpeechRecognitionEnabled"
 #define WebKitPitchCorrectionAlgorithmPreferenceKey @"WebKitPitchCorrectionAlgorithm"
 
 // The preference keys below this point are deprecated and have no effect. They should
 // be removed when it is considered safe to do so.
+#define WebKitCSSOMViewScrollingAPIEnabledPreferenceKey @"WebKitCSSOMViewScrollingAPIEnabled"
+#define WebKitHyperlinkAuditingEnabledPreferenceKey @"WebKitHyperlinkAuditingEnabled"
+#define WebKitCSSOMViewSmoothScrollingEnabledPreferenceKey @"WebKitCSSOMViewSmoothScrollingEnabled"
+#define WebKitDNSPrefetchingEnabledPreferenceKey @"WebKitDNSPrefetchingEnabled"
+#define WebKitLinkPreloadResponsiveImagesEnabledPreferenceKey @"WebKitLinkPreloadResponsiveImagesEnabled"
 #define WebKitConstantPropertiesEnabledPreferenceKey @"WebKitConstantPropertiesEnabled"
 #define WebKitMaskWebGLStringsEnabledPreferenceKey @"WebKitMaskWebGLStringsEnabled"
 #define WebKitCSSCustomPropertiesAndValuesEnabledPreferenceKey @"WebKitCSSCustomPropertiesAndValuesEnabled"
@@ -274,3 +275,7 @@
 #define WebKitIntersectionObserverEnabledPreferenceKey @"WebKitIntersectionObserverEnabled"
 #define WebKitSyntheticEditingCommandsEnabledPreferenceKey @"WebKitSyntheticEditingCommandsEnabled"
 #define WebKitServerTimingEnabledPreferenceKey @"WebKitServerTimingEnabled"
+
+#if TARGET_OS_IPHONE
+#define WebKitNetworkDataUsageTrackingEnabledPreferenceKey @"WebKitNetworkDataUsageTrackingEnabledPreferenceKey"
+#endif

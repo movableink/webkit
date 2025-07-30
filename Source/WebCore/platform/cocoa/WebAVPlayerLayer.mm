@@ -158,18 +158,7 @@ private:
 
 - (void)setVideoSublayer:(CALayer *)videoSublayer
 {
-    if (videoSublayer == _videoSublayer)
-        return;
-
-    if (_videoSublayer)
-        [_videoSublayer removeFromSuperlayer];
-
     _videoSublayer = videoSublayer;
-
-    if (_videoSublayer) {
-        [self addSublayer:_videoSublayer.get()];
-        [self resolveBounds];
-    }
 }
 
 - (CALayer*)videoSublayer
@@ -311,7 +300,7 @@ static bool areFramesEssentiallyEqualWithTolerance(const FloatRect& a, const Flo
     OBJC_DEBUG_LOG(OBJC_LOGIDENTIFIER, "self.bounds: ", FloatRect(self.bounds), ", targetVideoFrame: ", _targetVideoFrame, ", transform: [", transform.a, ", ", transform.d, "]");
 
     NSTimeInterval animationDuration = [CATransaction animationDuration];
-    RunLoop::main().dispatch([self, strongSelf = retainPtr(self), animationDuration] {
+    RunLoop::protectedMain()->dispatch([self, strongSelf = retainPtr(self), animationDuration] {
         [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(resolveBounds) object:nil];
         [self performSelector:@selector(resolveBounds) withObject:nil afterDelay:animationDuration + 0.1];
     });

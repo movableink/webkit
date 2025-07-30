@@ -41,7 +41,9 @@
 #include <QString>
 #include <QTransform>
 #include <wtf/MathExtras.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/WTFString.h>
+#include <mutex>
 
 namespace WebCore {
 
@@ -69,9 +71,29 @@ Ref<PathQt> PathQt::create(const PathSegment& segment)
     return pathQt;
 }
 
+Ref<PathQt> PathQt::create(std::span<const PathSegment> segments)
+{
+    auto pathQt = PathQt::create();
+
+    for (auto& segment : segments)
+        pathQt->addSegment(segment);
+
+    return pathQt;
+}
+
 Ref<PathQt> PathQt::create(QPainterPath platformPath)
 {
     return adoptRef(*new PathQt(WTFMove(platformPath)));
+}
+
+PlatformPathPtr PathQt::emptyPlatformPath()
+{
+    static LazyNeverDestroyed<QPainterPath> emptyPath;
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        emptyPath.construct();
+    });
+    return emptyPath.get();
 }
 
 PathQt::PathQt()
@@ -119,7 +141,7 @@ Ref<PathImpl> PathQt::copy() const
     return create(m_path);
 }
 
-QPainterPath PathQt::platformPath() const
+const QPainterPath& PathQt::platformPath() const
 {
     return m_path;
 }
@@ -291,7 +313,7 @@ void PathQt::add(PathArcTo arcTo)
     orth_p1p0 = FloatPoint(-orth_p1p0.x(), -orth_p1p0.y());
     float sa = acos(orth_p1p0.x() / orth_p1p0_length);
     if (orth_p1p0.y() < 0.f)
-        sa = 2 * piDouble - sa;
+        sa = 2 * std::numbers::pi - sa;
 
     // anticlockwise logic
     RotationDirection rotationDirection = RotationDirection::Clockwise;
@@ -302,10 +324,10 @@ void PathQt::add(PathArcTo arcTo)
     float orth_p1p2_length = sqrtf(orth_p1p2.x() * orth_p1p2.x() + orth_p1p2.y() * orth_p1p2.y());
     float ea = acos(orth_p1p2.x() / orth_p1p2_length);
     if (orth_p1p2.y() < 0)
-        ea = 2 * piDouble - ea;
-    if ((sa > ea) && ((sa - ea) < piDouble))
+        ea = 2 * std::numbers::pi - ea;
+    if ((sa > ea) && ((sa - ea) < std::numbers::pi))
         rotationDirection = RotationDirection::Counterclockwise;
-    if ((sa < ea) && ((ea - sa) > piDouble))
+    if ((sa < ea) && ((ea - sa) > std::numbers::pi))
         rotationDirection = RotationDirection::Counterclockwise;
 
     m_path.lineTo(t_p1p0);
@@ -316,6 +338,11 @@ void PathQt::add(PathArcTo arcTo)
 void PathQt::add(PathCloseSubpath)
 {
     m_path.closeSubpath();
+}
+
+void PathQt::add(PathContinuousRoundedRect continuousRoundedRect)
+{
+    m_path.addRoundedRect(continuousRoundedRect.rect, continuousRoundedRect.cornerWidth, continuousRoundedRect.cornerHeight, Qt::AbsoluteSize);
 }
 
 static void addEllipticArc(QPainterPath &path, qreal xc, qreal yc, qreal radiusX, qreal radiusY,  float sar, float ear, RotationDirection rotationDirection)
@@ -392,7 +419,8 @@ void PathQt::add(PathRect r)
 
 void PathQt::add(PathRoundedRect rect)
 {
-    addBeziersForRoundedRect(rect.roundedRect);
+    for (auto& segment : PathImpl::beziersForRoundedRect(rect.roundedRect))
+        addSegment(segment);
 }
 
 void PathQt::add(PathEllipse ellipse)
@@ -436,12 +464,7 @@ void PathQt::addPath(const PathQt& path, const AffineTransform& transform)
     m_path.addPath(qTransform.map(path.platformPath()));
 }
 
-bool PathQt::isEmpty() const
-{
-    // Don't use QPainterPath::isEmpty(), as that also returns true if there's only
-    // one initial MoveTo element in the path.
-    return !m_path.elementCount();
-}
+
 
 FloatPoint PathQt::currentPoint() const
 {

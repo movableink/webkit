@@ -26,7 +26,6 @@
 #include "config.h"
 #include "WebCryptoClient.h"
 
-#include "WebPage.h"
 #include "WebPageProxyMessages.h"
 #include "WebProcess.h"
 #include "WebProcessProxyMessages.h"
@@ -38,14 +37,14 @@ namespace WebKit {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WebCryptoClient);
 
-std::optional<Vector<uint8_t>> WebCryptoClient::wrapCryptoKey(const Vector<uint8_t>& key) const
+std::optional<Vector<uint8_t>> WebCryptoClient::serializeAndWrapCryptoKey(WebCore::CryptoKeyData&& keyData) const
 {
     if (m_pageIdentifier) {
-        auto sendResult = WebProcess::singleton().parentProcessConnection()->sendSync(Messages::WebPageProxy::WrapCryptoKey(key), *m_pageIdentifier);
+        auto sendResult = WebProcess::singleton().parentProcessConnection()->sendSync(Messages::WebPageProxy::SerializeAndWrapCryptoKey(WTFMove(keyData)), *m_pageIdentifier);
         auto [wrappedKey] = sendResult.takeReplyOr(std::nullopt);
         return wrappedKey;
     }
-    auto sendResult = WebProcess::singleton().parentProcessConnection()->sendSync(Messages::WebProcessProxy::WrapCryptoKey(key), 0);
+    auto sendResult = WebProcess::singleton().parentProcessConnection()->sendSync(Messages::WebProcessProxy::SerializeAndWrapCryptoKey(WTFMove(keyData)), 0);
 
     auto [wrappedKey] = sendResult.takeReplyOr(std::nullopt);
     return wrappedKey;
@@ -72,4 +71,5 @@ WebCryptoClient::WebCryptoClient(WebCore::PageIdentifier pageIdentifier)
     : m_pageIdentifier(pageIdentifier)
 {
 }
+
 }

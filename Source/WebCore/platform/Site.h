@@ -40,9 +40,9 @@ public:
     Site(const Site&) = default;
     Site& operator=(const Site&) = default;
 
-    const String& protocol() const { return m_protocol; }
+    WEBCORE_EXPORT const String& protocol() const;
     const RegistrableDomain& domain() const { return m_domain; }
-    String string() const;
+    WEBCORE_EXPORT String toString() const;
     bool isEmpty() const { return m_domain.isEmpty(); }
     WEBCORE_EXPORT bool matches(const URL&) const;
 
@@ -53,7 +53,6 @@ public:
     WEBCORE_EXPORT unsigned hash() const;
 
     bool operator==(const Site&) const = default;
-    bool operator!=(const Site&) const = default;
 
     struct Hash {
         static unsigned hash(const Site& site) { return site.hash(); }
@@ -65,6 +64,8 @@ private:
     String m_protocol;
     RegistrableDomain m_domain;
 };
+
+WEBCORE_EXPORT TextStream& operator<<(TextStream&, const Site&);
 
 } // namespace WebCore
 

@@ -1,6 +1,6 @@
 
 /*
- * Copyright (C) 2010-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  * Portions Copyright (c) 2010 Motorola Mobility, Inc.  All rights reserved.
  * Copyright (C) 2011 Igalia S.L.
  *
@@ -91,23 +91,18 @@ private:
     WebCore::FloatRect convertToUserSpace(const WebCore::FloatRect&) override;
     WebCore::IntPoint screenToRootView(const WebCore::IntPoint&) override;
     WebCore::IntRect rootViewToScreen(const WebCore::IntRect&) override;
+    WebCore::IntPoint rootViewToScreen(const WebCore::IntPoint&) override;
     WebCore::IntPoint accessibilityScreenToRootView(const WebCore::IntPoint&) override;
     WebCore::IntRect rootViewToAccessibilityScreen(const WebCore::IntRect&) override;
     void doneWithKeyEvent(const NativeWebKeyboardEvent&, bool wasEventHandled) override;
     RefPtr<WebPopupMenuProxy> createPopupMenuProxy(WebPageProxy&) override;
 #if ENABLE(CONTEXT_MENUS)
-    Ref<WebContextMenuProxy> createContextMenuProxy(WebPageProxy&, ContextMenuContextData&&, const UserData&) override;
+    Ref<WebContextMenuProxy> createContextMenuProxy(WebPageProxy&, FrameInfoData&&, ContextMenuContextData&&, const UserData&) override;
 #endif // ENABLE(CONTEXT_MENUS)
-#if ENABLE(INPUT_TYPE_COLOR)
-    RefPtr<WebColorPicker> createColorPicker(WebPageProxy*, const WebCore::Color& initialColor, const WebCore::IntRect&, ColorControlSupportsAlpha, Vector<WebCore::Color>&&) override;
-#endif
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+    RefPtr<WebColorPicker> createColorPicker(WebPageProxy&, const WebCore::Color& initialColor, const WebCore::IntRect&, ColorControlSupportsAlpha, Vector<WebCore::Color>&&) override;
     RefPtr<WebDateTimePicker> createDateTimePicker(WebPageProxy&) override;
-#endif
-#if ENABLE(DATALIST_ELEMENT)
     RefPtr<WebDataListSuggestionsDropdown> createDataListSuggestionsDropdown(WebPageProxy&) override;
-#endif
-    Ref<WebCore::ValidationBubble> createValidationBubble(const String& message, const WebCore::ValidationBubble::Settings&) final;
+    Ref<WebCore::ValidationBubble> createValidationBubble(String&& message, const WebCore::ValidationBubble::Settings&) final;
     void selectionDidChange() override;
     RefPtr<ViewSnapshot> takeViewSnapshot(std::optional<WebCore::IntRect>&&) override;
 #if ENABLE(DRAG_SUPPORT)
@@ -130,16 +125,17 @@ private:
     // Auxiliary Client Creation
 #if ENABLE(FULLSCREEN_API)
     WebFullScreenManagerProxyClient& fullScreenManagerProxyClient() final;
+    void setFullScreenClientForTesting(std::unique_ptr<WebFullScreenManagerProxyClient>&&) final;
 #endif
 
 #if ENABLE(FULLSCREEN_API)
     // WebFullScreenManagerProxyClient
     void closeFullScreenManager() override;
     bool isFullScreen() override;
-    void enterFullScreen() override;
-    void exitFullScreen() override;
-    void beganEnterFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame) override;
-    void beganExitFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame) override;
+    void enterFullScreen(WebCore::FloatSize, CompletionHandler<void(bool)>&&) override;
+    void exitFullScreen(CompletionHandler<void()>&&) override;
+    void beganEnterFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame, CompletionHandler<void(bool)>&&) override;
+    void beganExitFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame, CompletionHandler<void()>&&) override;
 #endif
 
     void didFinishLoadingDataForCustomContentProvider(const String& suggestedFilename, std::span<const uint8_t>) override;
@@ -152,7 +148,7 @@ private:
     void didRemoveNavigationGestureSnapshot() override;
 
 #if ENABLE(TOUCH_EVENTS)
-    void doneWithTouchEvent(const NativeWebTouchEvent&, bool wasEventHandled) override;
+    void doneWithTouchEvent(const WebTouchEvent&, bool wasEventHandled) override;
 #endif
 
     void wheelEventWasNotHandledByWebCore(const NativeWebWheelEvent&) override;
@@ -183,6 +179,9 @@ private:
     // Members of PageClientImpl class
     GtkWidget* m_viewWidget;
     DefaultUndoController m_undoController;
+#if ENABLE(FULLSCREEN_API)
+    std::unique_ptr<WebFullScreenManagerProxyClient> m_fullscreenClientForTesting;
+#endif
 };
 
 } // namespace WebKit

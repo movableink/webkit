@@ -131,7 +131,7 @@ JSValue IntlSegmenter::segment(JSGlobalObject* globalObject, JSValue stringValue
         throwTypeError(globalObject, scope, "failed to initialize Segments"_s);
         return { };
     }
-    ubrk_setText(segmenter.get(), upconvertedCharacters->data(), upconvertedCharacters->size(), &status);
+    ubrk_setText(segmenter.get(), upconvertedCharacters->span().data(), upconvertedCharacters->size(), &status);
     if (U_FAILURE(status)) {
         throwTypeError(globalObject, scope, "failed to initialize Segments"_s);
         return { };

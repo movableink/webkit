@@ -29,12 +29,13 @@
 
 #include "ContentSecurityPolicyDirectiveNames.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "HTTPParsers.h"
 #include "LocalFrame.h"
-#include "ParsingUtilities.h"
 #include "SecurityContext.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringParsingBuffer.h>
 
 namespace WebCore {
@@ -54,6 +55,11 @@ template<typename CharacterType> static bool isDirectiveValueCharacter(Character
 static inline bool checkEval(ContentSecurityPolicySourceListDirective* directive)
 {
     return !directive || directive->allowEval();
+}
+
+static inline bool checkTrustedEval(ContentSecurityPolicySourceListDirective* directive)
+{
+    return !directive || directive->allowTrustedEval();
 }
 
 static inline bool checkWasmEval(ContentSecurityPolicySourceListDirective* directive)
@@ -108,11 +114,11 @@ static inline bool checkFrameAncestors(ContentSecurityPolicySourceListDirective*
     if (!directive)
         return true;
     bool didReceiveRedirectResponse = false;
-    for (auto* current = frame.tree().parent(); current; current = current->tree().parent()) {
-        auto* localFrame = dynamicDowncast<LocalFrame>(current);
+    for (RefPtr current = frame.tree().parent(); current; current = current->tree().parent()) {
+        RefPtr localFrame = dynamicDowncast<LocalFrame>(*current);
         if (!localFrame)
             continue;
-        URL origin = urlFromOrigin(localFrame->document()->securityOrigin());
+        URL origin = urlFromOrigin(localFrame->protectedDocument()->protectedSecurityOrigin());
         if (!origin.isValid() || !directive->allows(origin, didReceiveRedirectResponse, ContentSecurityPolicySourceListDirective::ShouldAllowEmptyURLIfSourceListIsNotNone::No))
             return false;
     }
@@ -154,7 +160,10 @@ std::unique_ptr<ContentSecurityPolicyDirectiveList> ContentSecurityPolicyDirecti
     directives->parse(header, from);
 
     if (!checkEval(directives->operativeDirective(directives->m_scriptSrc.get(), ContentSecurityPolicyDirectiveNames::scriptSrc)))
-        directives->setEvalDisabledErrorMessage(makeString("Refused to evaluate a string as JavaScript because 'unsafe-eval' is not an allowed source of script in the following Content Security Policy directive: \""_s, directives->operativeDirective(directives->m_scriptSrc.get(), ContentSecurityPolicyDirectiveNames::scriptSrc)->text(), "\".\n"_s));
+        directives->setEvalDisabledErrorMessage(makeString("Refused to evaluate a string as JavaScript because 'unsafe-eval' or 'trusted-types-eval' is not an allowed source of script in the following Content Security Policy directive: \""_s, directives->operativeDirective(directives->m_scriptSrc.get(), ContentSecurityPolicyDirectiveNames::scriptSrc)->text(), "\".\n"_s));
+
+    if (checkTrustedEval(directives->operativeDirective(directives->m_scriptSrc.get(), ContentSecurityPolicyDirectiveNames::scriptSrc)))
+        directives->setTrustedEvalEnabled(true);
 
     if (!checkWasmEval(directives->operativeDirective(directives->m_scriptSrc.get(), ContentSecurityPolicyDirectiveNames::scriptSrc)))
         directives->setWebAssemblyDisabledErrorMessage(makeString("Refused to create a WebAssembly object because 'unsafe-eval' or 'wasm-unsafe-eval' is not an allowed source of script in the following Content Security Policy directive: \""_s, directives->operativeDirective(directives->m_scriptSrc.get(), ContentSecurityPolicyDirectiveNames::scriptSrc)->text(), "\".\n"_s));
@@ -774,6 +783,20 @@ bool ContentSecurityPolicyDirectiveList::shouldReportSample(const String& violat
         return true;
 
     return directive && directive->shouldReportSample();
+}
+
+const ContentSecurityPolicySourceListDirective* ContentSecurityPolicyDirectiveList::hashReportDirectiveForScript() const
+{
+    auto* directive = this->operativeDirectiveScript(m_scriptSrcElem.get(), ContentSecurityPolicyDirectiveNames::scriptSrcElem);
+    if (!directive || !directive->reportHash())
+        return nullptr;
+    return directive;
+}
+
+HashAlgorithmSet ContentSecurityPolicyDirectiveList::reportHash() const
+{
+    auto* directive = hashReportDirectiveForScript();
+    return directive ? directive->reportHash() : 0;
 }
 
 } // namespace WebCore

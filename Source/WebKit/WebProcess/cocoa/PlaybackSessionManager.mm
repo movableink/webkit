@@ -33,6 +33,7 @@
 #import "MessageSenderInlines.h"
 #import "PlaybackSessionManagerMessages.h"
 #import "PlaybackSessionManagerProxyMessages.h"
+#import "VideoPresentationManager.h"
 #import "WebPage.h"
 #import "WebProcess.h"
 #import <WebCore/Color.h>
@@ -40,6 +41,10 @@
 #import <WebCore/Event.h>
 #import <WebCore/EventNames.h>
 #import <WebCore/HTMLMediaElement.h>
+#import <WebCore/MediaSelectionOption.h>
+#import <WebCore/Navigator.h>
+#import <WebCore/NavigatorMediaSession.h>
+#import <WebCore/Quirks.h>
 #import <WebCore/Settings.h>
 #import <WebCore/TimeRanges.h>
 #import <WebCore/UserGestureIndicator.h>
@@ -94,7 +99,7 @@ void PlaybackSessionInterfaceContext::playbackStartedTimeChanged(double playback
         manager->playbackStartedTimeChanged(m_contextId, playbackStartedTime);
 }
 
-void PlaybackSessionInterfaceContext::seekableRangesChanged(const WebCore::TimeRanges& ranges, double lastModifiedTime, double liveUpdateInterval)
+void PlaybackSessionInterfaceContext::seekableRangesChanged(const WebCore::PlatformTimeRanges& ranges, double lastModifiedTime, double liveUpdateInterval)
 {
     if (RefPtr manager = m_manager.get())
         manager->seekableRangesChanged(m_contextId, ranges, lastModifiedTime, liveUpdateInterval);
@@ -166,13 +171,17 @@ void PlaybackSessionInterfaceContext::isInWindowFullscreenActiveChanged(bool isI
         manager->isInWindowFullscreenActiveChanged(m_contextId, isInWindow);
 }
 
-#if ENABLE(LINEAR_MEDIA_PLAYER)
 void PlaybackSessionInterfaceContext::spatialVideoMetadataChanged(const std::optional<WebCore::SpatialVideoMetadata>& metadata)
 {
     if (m_manager)
         m_manager->spatialVideoMetadataChanged(m_contextId, metadata);
 }
-#endif
+
+void PlaybackSessionInterfaceContext::videoProjectionMetadataChanged(const std::optional<VideoProjectionMetadata>& value)
+{
+    if (m_manager)
+        m_manager->videoProjectionMetadataChanged(m_contextId, value);
+}
 
 #pragma mark - PlaybackSessionManager
 
@@ -291,15 +300,28 @@ void PlaybackSessionManager::setUpPlaybackControlsManager(WebCore::HTMLMediaElem
     if (m_controlsManagerContextId == contextId)
         return;
 
-    auto previousContextId = m_controlsManagerContextId;
-    m_controlsManagerContextId = contextId;
-    if (previousContextId)
+    if (auto previousContextId = std::exchange(m_controlsManagerContextId, contextId)) {
+        if (mediaElement.document().quirks().needsNowPlayingFullscreenSwapQuirk()) {
+            RefPtr previousElement = mediaElementWithContextId(*previousContextId);
+            if (mediaElement.isVideo() && previousElement && previousElement->isVideo() && previousElement->fullscreenMode() != HTMLMediaElement::VideoFullscreenModeNone) {
+                m_page->videoPresentationManager().swapFullscreenModes(downcast<HTMLVideoElement>(mediaElement), downcast<HTMLVideoElement>(*previousElement));
+
+                m_page->send(Messages::PlaybackSessionManagerProxy::SwapFullscreenModes(contextId, *previousContextId));
+
+                ensureModel(*previousContextId)->updateAll();
+                ensureModel(contextId)->updateAll();
+            }
+        }
         removeClientForContext(*previousContextId);
+    }
 
     addClientForContext(*m_controlsManagerContextId);
 
     m_page->videoControlsManagerDidChange();
     m_page->send(Messages::PlaybackSessionManagerProxy::SetUpPlaybackControlsManagerWithID(*m_controlsManagerContextId, mediaElement.isVideo()));
+#if HAVE(PIP_SKIP_PREROLL)
+    setMediaSessionAndRegisterAsObserver();
+#endif
 }
 
 void PlaybackSessionManager::clearPlaybackControlsManager()
@@ -317,7 +339,7 @@ void PlaybackSessionManager::clearPlaybackControlsManager()
 void PlaybackSessionManager::mediaEngineChanged(HTMLMediaElement& mediaElement)
 {
 #if ENABLE(LINEAR_MEDIA_PLAYER)
-    RefPtr player = mediaElement.protectedPlayer();
+    RefPtr player = mediaElement.player();
     bool supportsLinearMediaPlayer = player && player->supportsLinearMediaPlayer();
     Ref { *m_page }->send(Messages::PlaybackSessionManagerProxy::SupportsLinearMediaPlayerChanged(mediaElement.identifier(), supportsLinearMediaPlayer));
 #else
@@ -347,16 +369,20 @@ PlaybackSessionContextIdentifier PlaybackSessionManager::contextIdForMediaElemen
     return contextId;
 }
 
-WebCore::HTMLMediaElement* PlaybackSessionManager::currentPlaybackControlsElement() const
+WebCore::HTMLMediaElement* PlaybackSessionManager::mediaElementWithContextId(PlaybackSessionContextIdentifier contextId) const
 {
-    if (!m_controlsManagerContextId)
-        return nullptr;
-
-    auto iter = m_contextMap.find(*m_controlsManagerContextId);
+    auto iter = m_contextMap.find(contextId);
     if (iter == m_contextMap.end())
         return nullptr;
 
     return std::get<0>(iter->value)->mediaElement();
+}
+
+WebCore::HTMLMediaElement* PlaybackSessionManager::currentPlaybackControlsElement() const
+{
+    if (m_controlsManagerContextId)
+        return mediaElementWithContextId(*m_controlsManagerContextId);
+    return nullptr;
 }
 
 #pragma mark Interface to PlaybackSessionInterfaceContext:
@@ -386,15 +412,9 @@ void PlaybackSessionManager::rateChanged(PlaybackSessionContextIdentifier contex
     m_page->send(Messages::PlaybackSessionManagerProxy::RateChanged(contextId, playbackState, playbackRate, defaultPlaybackRate));
 }
 
-void PlaybackSessionManager::seekableRangesChanged(PlaybackSessionContextIdentifier contextId, const WebCore::TimeRanges& timeRanges, double lastModifiedTime, double liveUpdateInterval)
+void PlaybackSessionManager::seekableRangesChanged(PlaybackSessionContextIdentifier contextId, const WebCore::PlatformTimeRanges& timeRanges, double lastModifiedTime, double liveUpdateInterval)
 {
-    Vector<std::pair<double, double>> rangesVector;
-    for (unsigned i = 0; i < timeRanges.length(); i++) {
-        double start = timeRanges.ranges().start(i).toDouble();
-        double end = timeRanges.ranges().end(i).toDouble();
-        rangesVector.append({ start, end });
-    }
-    m_page->send(Messages::PlaybackSessionManagerProxy::SeekableRangesVectorChanged(contextId, WTFMove(rangesVector), lastModifiedTime, liveUpdateInterval));
+    m_page->send(Messages::PlaybackSessionManagerProxy::SeekableRangesVectorChanged(contextId, timeRanges, lastModifiedTime, liveUpdateInterval));
 }
 
 void PlaybackSessionManager::canPlayFastReverseChanged(PlaybackSessionContextIdentifier contextId, bool value)
@@ -452,12 +472,15 @@ void PlaybackSessionManager::isInWindowFullscreenActiveChanged(PlaybackSessionCo
     m_page->send(Messages::PlaybackSessionManagerProxy::IsInWindowFullscreenActiveChanged(contextId, inWindow));
 }
 
-#if ENABLE(LINEAR_MEDIA_PLAYER)
 void PlaybackSessionManager::spatialVideoMetadataChanged(PlaybackSessionContextIdentifier contextId, const std::optional<WebCore::SpatialVideoMetadata>& metadata)
 {
     m_page->send(Messages::PlaybackSessionManagerProxy::SpatialVideoMetadataChanged(contextId, metadata));
 }
-#endif
+
+void PlaybackSessionManager::videoProjectionMetadataChanged(PlaybackSessionContextIdentifier contextId, const std::optional<VideoProjectionMetadata>& value)
+{
+    m_page->send(Messages::PlaybackSessionManagerProxy::VideoProjectionMetadataChanged(contextId, value));
+}
 
 #pragma mark Messages from PlaybackSessionManagerProxy:
 
@@ -550,6 +573,61 @@ void PlaybackSessionManager::selectLegibleMediaOption(PlaybackSessionContextIden
     legibleMediaSelectionIndexChanged(contextId, model->legibleMediaSelectedIndex());
 }
 
+#if HAVE(PIP_SKIP_PREROLL)
+void PlaybackSessionManager::setMediaSessionAndRegisterAsObserver()
+{
+    if (!m_controlsManagerContextId) {
+        m_mediaSession = nullptr;
+        return;
+    }
+
+    RefPtr mediaElement = ensureModel(*m_controlsManagerContextId)->mediaElement();
+    if (!mediaElement) {
+        m_mediaSession = nullptr;
+        return;
+    }
+
+    RefPtr window = mediaElement->document().domWindow();
+    if (!window) {
+        m_mediaSession = nullptr;
+        return;
+    }
+
+    auto mediaSession = NavigatorMediaSession::mediaSessionIfExists(window->protectedNavigator().get());
+    if (!mediaSession) {
+        m_mediaSession = nullptr;
+        return;
+    }
+
+    if (mediaSession.get() != m_mediaSession.get()) {
+        m_mediaSession = mediaSession;
+        m_mediaSession->addObserver(*this);
+        actionHandlersChanged();
+    }
+}
+
+void PlaybackSessionManager::actionHandlersChanged()
+{
+    if (!m_mediaSession)
+        return;
+
+    if (!m_controlsManagerContextId)
+        return;
+
+    bool canSkipAd = m_mediaSession->hasActionHandler(MediaSessionAction::Skipad);
+    if (RefPtr page = m_page.get())
+        page->send(Messages::PlaybackSessionManagerProxy::CanSkipAdChanged(*m_controlsManagerContextId, canSkipAd));
+}
+
+void PlaybackSessionManager::skipAd(PlaybackSessionContextIdentifier contextId)
+{
+    if (!m_mediaSession)
+        return;
+
+    m_mediaSession->callActionHandler({ .action = MediaSessionAction::Skipad });
+}
+#endif
+
 void PlaybackSessionManager::handleControlledElementIDRequest(PlaybackSessionContextIdentifier contextId)
 {
     if (RefPtr element = ensureModel(contextId)->mediaElement())
@@ -565,6 +643,11 @@ void PlaybackSessionManager::togglePictureInPicture(PlaybackSessionContextIdenti
 void PlaybackSessionManager::enterFullscreen(PlaybackSessionContextIdentifier contextId)
 {
     ensureModel(contextId)->enterFullscreen();
+}
+
+void PlaybackSessionManager::setPlayerIdentifierForVideoElement(PlaybackSessionContextIdentifier contextId)
+{
+    ensureModel(contextId)->setPlayerIdentifierForVideoElement();
 }
 
 void PlaybackSessionManager::exitFullscreen(PlaybackSessionContextIdentifier contextId)

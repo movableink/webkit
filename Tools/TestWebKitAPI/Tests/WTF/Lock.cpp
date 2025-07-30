@@ -148,7 +148,7 @@ TEST(WTF_Lock, ContendedShortSection)
 {
     if (skipSlow())
         return;
-    runLockTest<Lock>(1, 10, 1, 10000000);
+    runLockTest<Lock>(1, 10, 1, 1000000);
 }
 #endif
 

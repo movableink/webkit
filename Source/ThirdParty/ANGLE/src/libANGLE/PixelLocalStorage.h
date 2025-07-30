@@ -12,14 +12,13 @@
 #define LIBANGLE_PIXEL_LOCAL_STORAGE_H_
 
 #include "GLSLANG/ShaderLang.h"
-#include "angle_gl.h"
+#include "libANGLE/Caps.h"
 #include "libANGLE/ImageIndex.h"
 #include "libANGLE/angletypes.h"
 
 namespace gl
 {
 
-struct Caps;
 class Context;
 class Texture;
 
@@ -120,6 +119,9 @@ class PixelLocalStoragePlane : angle::NonCopyable, public angle::ObserverInterfa
     angle::ObserverBinding mTextureObserver;
 };
 
+using PixelLocalStoragePlaneVector =
+    angle::FixedVector<PixelLocalStoragePlane, IMPLEMENTATION_MAX_PIXEL_LOCAL_STORAGE_PLANES>;
+
 // Manages a collection of PixelLocalStoragePlanes and applies them to ANGLE's GL state.
 //
 // The main magic of ANGLE_shader_pixel_local_storage happens inside shaders, so we just emulate the
@@ -144,7 +146,7 @@ class PixelLocalStorage
         return mPlanes[plane];
     }
 
-    const PixelLocalStoragePlane *getPlanes() { return mPlanes.data(); }
+    const PixelLocalStoragePlaneVector &getPlanes() { return mPlanes; }
 
     size_t interruptCount() const { return mInterruptCount; }
 
@@ -162,7 +164,7 @@ class PixelLocalStorage
     void setClearValuei(GLint plane, const GLint val[4]) { mPlanes[plane].setClearValuei(val); }
     void setClearValueui(GLint plane, const GLuint val[4]) { mPlanes[plane].setClearValueui(val); }
     void begin(Context *, GLsizei n, const GLenum loadops[]);
-    void end(Context *, const GLenum storeops[]);
+    void end(Context *, GLsizei n, const GLenum storeops[]);
     void barrier(Context *);
     void interrupt(Context *);
     void restore(Context *);
@@ -180,14 +182,13 @@ class PixelLocalStorage
 
     // ANGLE_shader_pixel_local_storage API.
     virtual void onBegin(Context *, GLsizei n, const GLenum loadops[], Extents plsSize) = 0;
-    virtual void onEnd(Context *, const GLenum storeops[])                              = 0;
+    virtual void onEnd(Context *, GLsizei n, const GLenum storeops[])                   = 0;
     virtual void onBarrier(Context *)                                                   = 0;
 
     const ShPixelLocalStorageOptions mPLSOptions;
 
   private:
-    angle::FixedVector<PixelLocalStoragePlane, IMPLEMENTATION_MAX_PIXEL_LOCAL_STORAGE_PLANES>
-        mPlanes;
+    PixelLocalStoragePlaneVector mPlanes;
     size_t mInterruptCount           = 0;
     GLsizei mActivePlanesAtInterrupt = 0;
 };

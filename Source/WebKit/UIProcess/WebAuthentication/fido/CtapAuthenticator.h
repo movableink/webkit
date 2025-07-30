@@ -29,15 +29,13 @@
 
 #include "FidoAuthenticator.h"
 #include <WebCore/AuthenticatorGetInfoResponse.h>
+#include <WebCore/CryptoKeyEC.h>
+#include <WebCore/PublicKeyCredentialDescriptor.h>
 
 namespace fido {
 namespace pin {
 class TokenRequest;
 }
-}
-
-namespace WebCore {
-class CryptoKeyEC;
 }
 
 namespace WebKit {
@@ -57,6 +55,9 @@ private:
     void makeCredential() final;
     void continueMakeCredentialAfterResponseReceived(Vector<uint8_t>&&);
     void getAssertion() final;
+    void continueSilentlyCheckCredentials(Vector<uint8_t>&&, CompletionHandler<void(bool)>&&);
+    void continueMakeCredentialAfterCheckExcludedCredentials(bool includeCurrentBatch = false);
+    void continueGetAssertionAfterCheckAllowCredentials();
     void continueGetAssertionAfterResponseReceived(Vector<uint8_t>&&);
     void continueGetNextAssertionAfterResponseReceived(Vector<uint8_t>&&);
 
@@ -73,11 +74,20 @@ private:
 
     String aaguidForDebugging() const;
 
+    bool isUVSetup() const;
+
+    void continueSetupPinAfterCommand(Vector<uint8_t>&&, const String& pin, Ref<WebCore::CryptoKeyEC> peerKey);
+    void continueSetupPinAfterGetKeyAgreement(Vector<uint8_t>&&, const String& pin);
+    void performAuthenticatorSelectionForSetupPin();
+    void setupPin();
+
     fido::AuthenticatorGetInfoResponse m_info;
     bool m_isDowngraded { false };
     bool m_isKeyStoreFull { false };
     size_t m_remainingAssertionResponses { 0 };
+    size_t m_currentBatch { 0 };
     Vector<Ref<WebCore::AuthenticatorAssertionResponse>> m_assertionResponses;
+    Vector<Vector<WebCore::PublicKeyCredentialDescriptor>> m_batches;
     Vector<uint8_t> m_pinAuth;
 };
 

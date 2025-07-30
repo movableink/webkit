@@ -27,6 +27,10 @@
 #include "util/shader_utils.h"
 #include "util/test_utils.h"
 
+#if defined(ANGLE_PLATFORM_ANDROID)
+#    include "util/android/AndroidWindow.h"
+#endif
+
 #include <cassert>
 #include <cmath>
 #include <fstream>
@@ -81,7 +85,7 @@ TraceEventHandle AddPerfTraceEvent(PlatformMethods *platform,
                                    const unsigned char *categoryEnabledFlag,
                                    const char *name,
                                    unsigned long long id,
-                                   double timestamp,
+                                   double /*timestamp*/,
                                    int numArgs,
                                    const char **argNames,
                                    const unsigned char *argTypes,
@@ -104,7 +108,8 @@ TraceEventHandle AddPerfTraceEvent(PlatformMethods *platform,
     uint32_t tid = renderTest->getCurrentThreadSerial();
 
     std::vector<TraceEvent> &buffer = renderTest->getTraceEventBuffer();
-    buffer.emplace_back(phase, category->name, name, timestamp, tid);
+    buffer.emplace_back(phase, category->name, name,
+                        platform->monotonicallyIncreasingTime(platform), tid);
     return buffer.size();
 }
 
@@ -235,6 +240,19 @@ void FinishAndCheckForContextLoss()
     {
         FAIL() << "Context lost";
     }
+}
+
+void DumpFpsValues(const char *test, double mean_time)
+{
+#if defined(ANGLE_PLATFORM_ANDROID)
+    std::ofstream fp(AndroidWindow::GetExternalStorageDirectory() + "/traces_fps.txt",
+                     std::ios::app);
+#else
+    std::ofstream fp("traces_fps.txt", std::ios::app);
+#endif
+    double fps_value = 1000 / mean_time;
+    fp << test << " " << fps_value << std::endl;
+    fp.close();
 }
 
 #if defined(ANGLE_PLATFORM_ANDROID)
@@ -383,6 +401,12 @@ void ANGLEPerfTest::run()
         {
             printf("Mean result time: %.4lf ms.\n", mean);
         }
+
+        if (kStandaloneBenchmark)
+        {
+            DumpFpsValues(mStory.c_str(), mean);
+        }
+
         printf("Coefficient of variation: %.2lf%%\n", coefficientOfVariation * 100.0);
     }
 }
@@ -448,6 +472,15 @@ void ANGLEPerfTest::runTrial(double maxRunTime, int maxStepsToRun, RunTrialPolic
             }
         }
 
+        if (gFpsLimit)
+        {
+            double wantTime    = mTrialNumStepsPerformed / double(gFpsLimit);
+            double currentTime = mTrialTimer.getElapsedWallClockTime();
+            if (currentTime < wantTime)
+            {
+                std::this_thread::sleep_for(std::chrono::duration<double>(wantTime - currentTime));
+            }
+        }
         step();
 
         if (runPolicy == RunTrialPolicy::FinishEveryStep)

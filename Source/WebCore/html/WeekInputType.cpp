@@ -29,7 +29,6 @@
  */
 
 #include "config.h"
-#if ENABLE(INPUT_TYPE_WEEK)
 #include "WeekInputType.h"
 
 #include "DateComponents.h"
@@ -64,10 +63,11 @@ DateComponentsType WeekInputType::dateType() const
 StepRange WeekInputType::createStepRange(AnyStepHandling anyStepHandling) const
 {
     ASSERT(element());
+    Ref element = *this->element();
     const Decimal stepBase = findStepBase(weekDefaultStepBase);
-    const Decimal minimum = parseToNumber(element()->attributeWithoutSynchronization(minAttr), Decimal::fromDouble(DateComponents::minimumWeek()));
-    const Decimal maximum = parseToNumber(element()->attributeWithoutSynchronization(maxAttr), Decimal::fromDouble(DateComponents::maximumWeek()));
-    const Decimal step = StepRange::parseStep(anyStepHandling, weekStepDescription, element()->attributeWithoutSynchronization(stepAttr));
+    const Decimal minimum = parseToNumber(element->attributeWithoutSynchronization(minAttr), Decimal::fromDouble(DateComponents::minimumWeek()));
+    const Decimal maximum = parseToNumber(element->attributeWithoutSynchronization(maxAttr), Decimal::fromDouble(DateComponents::maximumWeek()));
+    const Decimal step = StepRange::parseStep(anyStepHandling, weekStepDescription, element->attributeWithoutSynchronization(stepAttr));
     return StepRange(stepBase, RangeLimitations::Valid, minimum, maximum, step, weekStepDescription);
 }
 
@@ -104,5 +104,3 @@ void WeekInputType::setupLayoutParameters(DateTimeEditElement::LayoutParameters&
 }
 
 } // namespace WebCore
-
-#endif

@@ -33,6 +33,7 @@
 #include <Metal/Metal.h>
 #include <pal/spi/cocoa/MetalSPI.h>
 #include <wtf/SoftLinking.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/darwin/WeakLinking.h>
 
 #if USE(APPLE_INTERNAL_SDK) && PLATFORM(VISION)
@@ -148,12 +149,12 @@ RetainPtr<id<MTLRasterizationRateMap>> newRasterizationRateMap(GCGLDisplay displ
     if (horizontalSamplesLeft.size() > maxSampleCount.width || horizontalSamplesRight.size() > maxSampleCount.width || verticalSamples.size() > maxSampleCount.height || !layerDescriptorLeft.get() || !layerDescriptorRight.get())
         return nullptr;
 
-    memcpy([layerDescriptorLeft horizontalSampleStorage], horizontalSamplesLeft.data(), horizontalSamplesLeft.size_bytes());
-    memcpy([layerDescriptorLeft verticalSampleStorage], verticalSamples.data(), verticalSamples.size_bytes());
+    memcpySpan(unsafeMakeSpan([layerDescriptorLeft horizontalSampleStorage], [layerDescriptorLeft sampleCount].width), horizontalSamplesLeft);
+    memcpySpan(unsafeMakeSpan([layerDescriptorLeft verticalSampleStorage], [layerDescriptorLeft sampleCount].height), verticalSamples);
     [layerDescriptorLeft setSampleCount:MTLSizeMake(horizontalSamplesLeft.size(), verticalSamples.size(), 0)];
 
-    memcpy([layerDescriptorRight horizontalSampleStorage], horizontalSamplesRight.data(), horizontalSamplesRight.size_bytes());
-    memcpy([layerDescriptorRight verticalSampleStorage], verticalSamples.data(), verticalSamples.size_bytes());
+    memcpySpan(unsafeMakeSpan([layerDescriptorRight horizontalSampleStorage], [layerDescriptorRight sampleCount].width), horizontalSamplesRight);
+    memcpySpan(unsafeMakeSpan([layerDescriptorRight verticalSampleStorage], [layerDescriptorRight sampleCount].height), verticalSamples);
     [layerDescriptorRight setSampleCount:MTLSizeMake(horizontalSamplesRight.size(), verticalSamples.size(), 0)];
 
     [descriptor setScreenSize:MTLSizeMake(screenSize.width(), screenSize.height(), 0)];

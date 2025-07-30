@@ -257,6 +257,86 @@ void AdjustBlitResolveParametersForPreRotation(SurfaceRotation framebufferAngle,
     }
 }
 
+void AdjustBlitAreas(RenderTargetVk *readRenderTarget,
+                     gl::Rectangle *sourceArea,
+                     gl::Rectangle *destArea,
+                     gl::Rectangle *srcFramebufferDimensions,
+                     const gl::Rectangle &dstFramebufferDimensions,
+                     SurfaceRotation srcFramebufferRotation,
+                     SurfaceRotation *dstFramebufferRotation,
+                     SurfaceRotation rotation,
+                     bool srcFramebufferFlippedY,
+                     bool dstFramebufferFlippedY,
+                     const bool isResolve,
+                     bool *flipX,
+                     bool *flipY,
+                     const bool isDefault,
+                     UtilsVk::BlitResolveParameters *params)
+{
+    const gl::Extents readExtent = readRenderTarget->getExtents();
+    gl::Rectangle srcAttachmentDimensions =
+        gl::Rectangle(0, 0, readExtent.width, readExtent.height);
+    if (isDefault)
+    {
+        // The readExtent size of the default framebuffer is the same as the window size. Choose
+        // to use the framebuffer size instead.
+        srcAttachmentDimensions = *srcFramebufferDimensions;
+    }
+    // If framebuffers are flipped in Y, flip the source and destination area (which define the
+    // transformation regardless of clipping), as well as the blit area (which is the clipped
+    // destination area).
+    if (srcFramebufferFlippedY)
+    {
+        sourceArea->y      = srcAttachmentDimensions.height - sourceArea->y;
+        sourceArea->height = -sourceArea->height;
+    }
+
+    *flipX = sourceArea->isReversedX() != destArea->isReversedX();
+    *flipY = sourceArea->isReversedY() != destArea->isReversedY();
+
+    // GLES doesn't allow flipping the parameters of glBlitFramebuffer if performing a resolve.
+    ASSERT(!isResolve ||
+           (*flipX == false && *flipY == (srcFramebufferFlippedY != dstFramebufferFlippedY)));
+
+    // Again, transfer the destination flip to source, so destination is unflipped.  Note that
+    // destArea was not reversed until the final possible Y-flip.
+    ASSERT(!destArea->isReversedX());
+    *sourceArea = sourceArea->flip(false, destArea->isReversedY());
+    *destArea   = destArea->removeReversal();
+
+    // Now that clipping and flipping is done, rotate certain values that will be used for
+    // UtilsVk::BlitResolveParameters
+    gl::Rectangle sourceAreaOld = *sourceArea;
+    gl::Rectangle destAreaOld   = *destArea;
+    if (srcFramebufferRotation == rotation)
+    {
+        AdjustBlitAreaForPreRotation(srcFramebufferRotation, sourceAreaOld, srcAttachmentDimensions,
+                                     sourceArea);
+        AdjustDimensionsAndFlipForPreRotation(srcFramebufferRotation, &srcAttachmentDimensions,
+                                              flipX, flipY);
+    }
+    SurfaceRotation rememberDestFramebufferRotation = *dstFramebufferRotation;
+    if (srcFramebufferRotation == SurfaceRotation::Rotated90Degrees)
+    {
+        *dstFramebufferRotation = rotation;
+    }
+    AdjustBlitAreaForPreRotation(*dstFramebufferRotation, destAreaOld, dstFramebufferDimensions,
+                                 destArea);
+    *dstFramebufferRotation = rememberDestFramebufferRotation;
+
+    params->srcOffset[0]           = sourceArea->x;
+    params->srcOffset[1]           = sourceArea->y;
+    params->dstOffset[0]           = destArea->x;
+    params->dstOffset[1]           = destArea->y;
+    params->rotatedOffsetFactor[0] = std::abs(sourceArea->width);
+    params->rotatedOffsetFactor[1] = std::abs(sourceArea->height);
+    params->srcExtents[0]          = srcAttachmentDimensions.width;
+    params->srcExtents[1]          = srcAttachmentDimensions.height;
+    params->flipX                  = *flipX;
+    params->flipY                  = *flipY;
+    params->srcLayer               = readRenderTarget->getLayerIndex();
+}
+
 vk::FramebufferNonResolveAttachmentMask MakeUnresolveAttachmentMask(const vk::RenderPassDesc &desc)
 {
     vk::FramebufferNonResolveAttachmentMask unresolveMask(
@@ -992,11 +1072,6 @@ angle::Result FramebufferVk::readPixels(const gl::Context *context,
     return angle::Result::Continue;
 }
 
-RenderTargetVk *FramebufferVk::getDepthStencilRenderTarget() const
-{
-    return mRenderTargetCache.getDepthStencil();
-}
-
 RenderTargetVk *FramebufferVk::getColorDrawRenderTarget(size_t colorIndexGL) const
 {
     RenderTargetVk *renderTarget = mRenderTargetCache.getColorDraw(mState, colorIndexGL);
@@ -1266,14 +1341,6 @@ angle::Result FramebufferVk::blit(const gl::Context *context,
         }
     }
 
-    // If framebuffers are flipped in Y, flip the source and destination area (which define the
-    // transformation regardless of clipping), as well as the blit area (which is the clipped
-    // destination area).
-    if (srcFramebufferFlippedY)
-    {
-        sourceArea.y      = srcFramebufferDimensions.height - sourceArea.y;
-        sourceArea.height = -sourceArea.height;
-    }
     if (dstFramebufferFlippedY)
     {
         destArea.y      = dstFramebufferDimensions.height - destArea.y;
@@ -1283,75 +1350,47 @@ angle::Result FramebufferVk::blit(const gl::Context *context,
             dstFramebufferDimensions.height - srcClippedDestArea.y - srcClippedDestArea.height;
     }
 
-    bool flipX = sourceArea.isReversedX() != destArea.isReversedX();
-    bool flipY = sourceArea.isReversedY() != destArea.isReversedY();
-
-    // GLES doesn't allow flipping the parameters of glBlitFramebuffer if performing a resolve.
-    ASSERT(!isResolve ||
-           (flipX == false && flipY == (srcFramebufferFlippedY != dstFramebufferFlippedY)));
-
-    // Again, transfer the destination flip to source, so destination is unflipped.  Note that
-    // destArea was not reversed until the final possible Y-flip.
-    ASSERT(!destArea.isReversedX());
-    sourceArea = sourceArea.flip(false, destArea.isReversedY());
-    destArea   = destArea.removeReversal();
-
-    // Now that clipping and flipping is done, rotate certain values that will be used for
-    // UtilsVk::BlitResolveParameters
-    gl::Rectangle sourceAreaOld = sourceArea;
-    gl::Rectangle destAreaOld   = destArea;
-    if (srcFramebufferRotation == rotation)
-    {
-        AdjustBlitAreaForPreRotation(srcFramebufferRotation, sourceAreaOld,
-                                     srcFramebufferDimensions, &sourceArea);
-        AdjustDimensionsAndFlipForPreRotation(srcFramebufferRotation, &srcFramebufferDimensions,
-                                              &flipX, &flipY);
-    }
-    SurfaceRotation rememberDestFramebufferRotation = dstFramebufferRotation;
-    if (srcFramebufferRotation == SurfaceRotation::Rotated90Degrees)
-    {
-        dstFramebufferRotation = rotation;
-    }
-    AdjustBlitAreaForPreRotation(dstFramebufferRotation, destAreaOld, dstFramebufferDimensions,
-                                 &destArea);
-    dstFramebufferRotation = rememberDestFramebufferRotation;
-
     // Clip the destination area to the framebuffer size and scissor.  Note that we don't care
-    // about the source area anymore.  The offset translation is done based on the original source
-    // and destination rectangles.  The stretch factor is already calculated as well.
+    // about the source area anymore.  The offset translation is done based on the original
+    // source and destination rectangles.  The stretch factor is already calculated as well.
     gl::Rectangle blitArea;
     if (!gl::ClipRectangle(getRotatedScissoredRenderArea(contextVk), srcClippedDestArea, &blitArea))
     {
         return angle::Result::Continue;
     }
 
-    bool noClip = blitArea == destArea && stretch[0] == 1.0f && stretch[1] == 1.0f;
-    bool noFlip = !flipX && !flipY;
-    bool disableFlippingBlitWithCommand =
-        renderer->getFeatures().disableFlippingBlitWithCommand.enabled;
+    // In case that color attachment has different size from depth attachment, need to calculate
+    // blit parameters for each.
+    bool isDefault                      = srcFramebuffer->isDefault();
+    bool flipX                          = false;
+    bool flipY                          = false;
+    bool noClip                         = false;
+    bool noFlip                         = false;
+    bool disableFlippingBlitWithCommand = false;
 
-    UtilsVk::BlitResolveParameters commonParams;
-    commonParams.srcOffset[0]           = sourceArea.x;
-    commonParams.srcOffset[1]           = sourceArea.y;
-    commonParams.dstOffset[0]           = destArea.x;
-    commonParams.dstOffset[1]           = destArea.y;
-    commonParams.rotatedOffsetFactor[0] = std::abs(sourceArea.width);
-    commonParams.rotatedOffsetFactor[1] = std::abs(sourceArea.height);
-    commonParams.stretch[0]             = static_cast<float>(stretch[0]);
-    commonParams.stretch[1]             = static_cast<float>(stretch[1]);
-    commonParams.srcExtents[0]          = srcFramebufferDimensions.width;
-    commonParams.srcExtents[1]          = srcFramebufferDimensions.height;
-    commonParams.blitArea               = blitArea;
-    commonParams.linear                 = filter == GL_LINEAR && !isResolve;
-    commonParams.flipX                  = flipX;
-    commonParams.flipY                  = flipY;
-    commonParams.rotation               = rotation;
+    UtilsVk::BlitResolveParameters params;
+    params.stretch[0] = static_cast<float>(stretch[0]);
+    params.stretch[1] = static_cast<float>(stretch[1]);
+    params.blitArea   = blitArea;
+    params.linear     = filter == GL_LINEAR && !isResolve;
+    params.rotation   = rotation;
 
     if (blitColorBuffer)
     {
-        RenderTargetVk *readRenderTarget      = srcFramebufferVk->getColorReadRenderTarget();
-        UtilsVk::BlitResolveParameters params = commonParams;
-        params.srcLayer                       = readRenderTarget->getLayerIndex();
+        RenderTargetVk *readRenderTarget = srcFramebufferVk->getColorReadRenderTarget();
+
+        gl::Rectangle sourceColorArea               = sourceArea;
+        gl::Rectangle destColorArea                 = destArea;
+        SurfaceRotation dstColorFramebufferRotation = dstFramebufferRotation;
+        AdjustBlitAreas(readRenderTarget, &sourceColorArea, &destColorArea,
+                        &srcFramebufferDimensions, dstFramebufferDimensions, srcFramebufferRotation,
+                        &dstColorFramebufferRotation, rotation, srcFramebufferFlippedY,
+                        dstFramebufferFlippedY, isResolve, &flipX, &flipY, isDefault, &params);
+
+        noClip = blitArea == destColorArea && stretch[0] == 1.0f && stretch[1] == 1.0f;
+        noFlip = !flipX && !flipY;
+        disableFlippingBlitWithCommand =
+            renderer->getFeatures().disableFlippingBlitWithCommand.enabled;
 
         // Multisampled images are not allowed to have mips.
         ASSERT(!isColorResolve || readRenderTarget->getLevelIndex() == gl::LevelIndex(0));
@@ -1402,7 +1441,7 @@ angle::Result FramebufferVk::blit(const gl::Context *context,
         // Now that all flipping is done, adjust the offsets for resolve and prerotation
         if (isColorResolve)
         {
-            AdjustBlitResolveParametersForResolve(sourceArea, destArea, &params);
+            AdjustBlitResolveParametersForResolve(sourceColorArea, destColorArea, &params);
         }
         AdjustBlitResolveParametersForPreRotation(rotation, srcFramebufferRotation, &params);
 
@@ -1411,9 +1450,9 @@ angle::Result FramebufferVk::blit(const gl::Context *context,
             for (size_t colorIndexGL : mState.getEnabledDrawBuffers())
             {
                 RenderTargetVk *drawRenderTarget = mRenderTargetCache.getColors()[colorIndexGL];
-                ANGLE_TRY(blitWithCommand(contextVk, sourceArea, destArea, readRenderTarget,
-                                          drawRenderTarget, filter, true, false, false, flipX,
-                                          flipY));
+                ANGLE_TRY(blitWithCommand(contextVk, sourceColorArea, destColorArea,
+                                          readRenderTarget, drawRenderTarget, filter, true, false,
+                                          false, flipX, flipY));
             }
         }
         // If we're not flipping or rotating, use Vulkan's builtin resolve.
@@ -1495,8 +1534,16 @@ angle::Result FramebufferVk::blit(const gl::Context *context,
     {
         RenderTargetVk *readRenderTarget      = srcFramebufferVk->getDepthStencilRenderTarget();
         RenderTargetVk *drawRenderTarget      = mRenderTargetCache.getDepthStencil();
-        UtilsVk::BlitResolveParameters params = commonParams;
-        params.srcLayer                       = readRenderTarget->getLayerIndex();
+
+        AdjustBlitAreas(readRenderTarget, &sourceArea, &destArea, &srcFramebufferDimensions,
+                        dstFramebufferDimensions, srcFramebufferRotation, &dstFramebufferRotation,
+                        rotation, srcFramebufferFlippedY, dstFramebufferFlippedY, isResolve, &flipX,
+                        &flipY, isDefault, &params);
+
+        noClip = blitArea == destArea && stretch[0] == 1.0f && stretch[1] == 1.0f;
+        noFlip = !flipX && !flipY;
+        disableFlippingBlitWithCommand =
+            renderer->getFeatures().disableFlippingBlitWithCommand.enabled;
 
         // Multisampled images are not allowed to have mips.
         ASSERT(!isDepthStencilResolve || readRenderTarget->getLevelIndex() == gl::LevelIndex(0));
@@ -2193,6 +2240,8 @@ angle::Result FramebufferVk::invalidateImpl(ContextVk *contextVk,
     // to invalidate the D/S of FBO 2 since it would be the currently active renderpass.
     if (contextVk->hasStartedRenderPassWithQueueSerial(mLastRenderPassQueueSerial))
     {
+        bool closeRenderPass = false;
+
         // Mark the invalidated attachments in the render pass for loadOp and storeOp determination
         // at its end.
         vk::PackedAttachmentIndex colorIndexVk(0);
@@ -2203,6 +2252,29 @@ angle::Result FramebufferVk::invalidateImpl(ContextVk *contextVk,
             {
                 contextVk->getStartedRenderPassCommands().invalidateRenderPassColorAttachment(
                     contextVk->getState(), colorIndexGL, colorIndexVk, invalidateArea);
+
+                // If invalidating a color image with emulated channels, a clear is automatically
+                // staged so the emulated channels don't contain invalid data later.  This is
+                // problematic with deferred clears; the clear marks the framebuffer attachment as
+                // dirty, and the next command causes |FramebufferVk::syncState| to pick the clear
+                // up as a deferred clear.
+                //
+                // This is normally correct, except if the following command is another draw call;
+                // in that case, the render pass does not close, yet the clear is cached in
+                // |mDeferredClears|.  When the render pass later closes, it undoes the invalidate
+                // and attempts to remove the clear from the image... but it does not exist there
+                // anymore (it's in |mDeferredClears|).  Next usage of the image then clears it,
+                // undoing the draws after invalidate.
+                //
+                // In this case, the simplest approach is to close the render pass right away here.
+                // Note that it is not possible to make |FramebufferVk::syncState| avoid picking up
+                // the clear in |mDeferredClears|, not apply the clear, _and_ keep the render pass
+                // open; because future uses of the image (like with |glReadPixels|) will not
+                // trigger |FramebufferVk::syncState| and the clear won't be done.
+                if (mEmulatedAlphaAttachmentMask[colorIndexGL])
+                {
+                    closeRenderPass = true;
+                }
             }
             ++colorIndexVk;
         }
@@ -2221,6 +2293,12 @@ angle::Result FramebufferVk::invalidateImpl(ContextVk *contextVk,
                 contextVk->getStartedRenderPassCommands().invalidateRenderPassStencilAttachment(
                     dsState, mState.getStencilBitCount(), invalidateArea);
             }
+        }
+
+        if (closeRenderPass)
+        {
+            ANGLE_TRY(contextVk->flushCommandsAndEndRenderPass(
+                RenderPassClosureReason::ColorBufferWithEmulatedAlphaInvalidate));
         }
     }
 
@@ -2697,10 +2775,12 @@ void FramebufferVk::updateRenderPassDesc(ContextVk *contextVk)
 }
 
 angle::Result FramebufferVk::getAttachmentsAndRenderTargets(
-    vk::Context *context,
+    vk::ErrorContext *context,
     vk::FramebufferAttachmentsVector<VkImageView> *unpackedAttachments,
     vk::FramebufferAttachmentsVector<RenderTargetInfo> *packedRenderTargetsInfoOut)
 {
+    bool anyResolveAttachments = false;
+
     // Color attachments.
     mIsYUVResolve                  = false;
     const auto &colorRenderTargets = mRenderTargetCache.getColors();
@@ -2714,6 +2794,18 @@ angle::Result FramebufferVk::getAttachmentsAndRenderTargets(
             mIsYUVResolve = true;
             if (context->getRenderer()->nullColorAttachmentWithExternalFormatResolve())
             {
+                // Because the color attachment will be null if
+                // nullColorAttachmentWithExternalFormatResolve is VK_TRUE, push YUV resolve as
+                // color attachment to ensure the coherency of other attachment information, like
+                // ops and clearValues.
+                const vk::ImageView *resolveImageView = nullptr;
+                ANGLE_TRY(colorRenderTarget->getResolveImageView(context, &resolveImageView));
+                unpackedAttachments->push_back(resolveImageView->getHandle());
+
+                packedRenderTargetsInfoOut->emplace_back(
+                    RenderTargetInfo(colorRenderTarget, RenderTargetImage::Resolve));
+
+                anyResolveAttachments = true;
                 continue;
             }
         }
@@ -2755,8 +2847,6 @@ angle::Result FramebufferVk::getAttachmentsAndRenderTargets(
     static_assert(vk::RenderPassFramebuffer::kDepthStencilResolveAttachment <
                   vk::kMaxFramebufferAttachments);
 
-    bool anyResolveAttachments = false;
-
     for (size_t colorIndexGL : mState.getColorAttachmentsMask())
     {
         RenderTargetVk *colorRenderTarget = colorRenderTargets[colorIndexGL];
@@ -2764,6 +2854,12 @@ angle::Result FramebufferVk::getAttachmentsAndRenderTargets(
 
         if (colorRenderTarget->hasResolveAttachment())
         {
+            if (colorRenderTarget->isYuvResolve() &&
+                context->getRenderer()->nullColorAttachmentWithExternalFormatResolve())
+            {
+                continue;
+            }
+
             const vk::ImageView *resolveImageView = nullptr;
             ANGLE_TRY(colorRenderTarget->getResolveImageView(context, &resolveImageView));
 
@@ -3172,6 +3268,11 @@ void FramebufferVk::restageDeferredClears(ContextVk *contextVk)
 }
 
 void FramebufferVk::restageDeferredClearsForReadFramebuffer(ContextVk *contextVk)
+{
+    restageDeferredClearsImpl(contextVk);
+}
+
+void FramebufferVk::restageDeferredClearsAfterNoopDraw(ContextVk *contextVk)
 {
     restageDeferredClearsImpl(contextVk);
 }
@@ -3734,14 +3835,6 @@ gl::Extents FramebufferVk::getReadImageExtents() const
     return readRenderTarget->getExtents();
 }
 
-// Return the framebuffer's non-rotated render area.  This is a gl::Rectangle that is based on the
-// dimensions of the framebuffer, IS NOT rotated, and IS NOT y-flipped
-gl::Rectangle FramebufferVk::getNonRotatedCompleteRenderArea() const
-{
-    const gl::Box &dimensions = mState.getDimensions();
-    return gl::Rectangle(0, 0, dimensions.width, dimensions.height);
-}
-
 // Return the framebuffer's rotated render area.  This is a gl::Rectangle that is based on the
 // dimensions of the framebuffer, IS ROTATED for the draw FBO, and IS NOT y-flipped
 //
@@ -3850,8 +3943,8 @@ angle::Result FramebufferVk::flushDepthStencilDeferredClear(ContextVk *contextVk
         mDeferredClears.reset(vk::kUnpackedStencilIndex);
     }
 
-    commandBuffer->clearDepthStencilImage(
-        image.getImage(), image.getCurrentLayout(contextVk->getRenderer()), clearValue, 1, &range);
+    commandBuffer->clearDepthStencilImage(image.getImage(), image.getCurrentLayout(), clearValue, 1,
+                                          &range);
     return angle::Result::Continue;
 }
 

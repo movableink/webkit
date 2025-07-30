@@ -34,7 +34,6 @@
 #include <utility>
 
 struct SkArc;
-class SkBitmap;
 class SkColorSpace;
 class SkMesh;
 struct SkDrawShadowRec;
@@ -49,6 +48,7 @@ class SkPaint;
 class SkPath;
 class SkPixmap;
 class SkRRect;
+class SkRecorder;
 class SkSurface;
 class SkVertices;
 enum SkColorType : int;
@@ -206,7 +206,7 @@ public:
      * that device is drawn to the root device, the net effect will be that this device's contents
      * have been transformed by the global CTM.
      */
-    SkMatrix getRelativeTransform(const SkDevice&) const;
+    SkM44 getRelativeTransform(const SkDevice&) const;
 
     void setLocalToDevice(const SkM44& localToDevice) {
         fLocalToDevice = localToDevice;
@@ -283,6 +283,7 @@ public:
 
     virtual GrRecordingContext* recordingContext() const { return nullptr; }
     virtual skgpu::graphite::Recorder* recorder() const { return nullptr; }
+    virtual SkRecorder* baseRecorder() const { return nullptr; }
 
     virtual skgpu::ganesh::Device* asGaneshDevice() { return nullptr; }
     virtual skgpu::graphite::Device* asGraphiteDevice() { return nullptr; }
@@ -358,7 +359,7 @@ public:
      */
     virtual void drawPath(const SkPath& path,
                           const SkPaint& paint,
-                          bool pathIsMutable = false) = 0;
+                          bool pathIsMutable) = 0;
 
     virtual void drawImageRect(const SkImage*, const SkRect* src, const SkRect& dst,
                                const SkSamplingOptions&, const SkPaint&,
@@ -386,7 +387,7 @@ public:
                               const SkPaint&,
                               bool skipColorXform = false) = 0;
     virtual void drawMesh(const SkMesh& mesh, sk_sp<SkBlender>, const SkPaint&) = 0;
-    virtual void drawShadow(const SkPath&, const SkDrawShadowRec&);
+    virtual void drawShadow(SkCanvas*, const SkPath&, const SkDrawShadowRec&);
 
     // default implementation calls drawVertices
     virtual void drawPatch(const SkPoint cubics[12], const SkColor colors[4],
@@ -485,11 +486,6 @@ public:
                            const SkImageFilter*, const SkSamplingOptions&, const SkPaint&);
 
 protected:
-    // DEPRECATED: Can be deleted once SkCanvas::onDrawImage() uses skif::FilterResult so don't
-    // bother re-arranging.
-    virtual sk_sp<SkSpecialImage> makeSpecial(const SkBitmap&);
-    virtual sk_sp<SkSpecialImage> makeSpecial(const SkImage*);
-
     // Configure the device's coordinate spaces, specifying both how its device image maps back to
     // the global space (via 'deviceToGlobal') and the initial CTM of the device (via
     // 'localToDevice', i.e. what geometry drawn into this device will be transformed with).
@@ -643,11 +639,11 @@ private:
 
 class SkAutoDeviceTransformRestore : SkNoncopyable {
 public:
-    SkAutoDeviceTransformRestore(SkDevice* device, const SkMatrix& localToDevice)
+    SkAutoDeviceTransformRestore(SkDevice* device, const SkM44& localToDevice)
         : fDevice(device)
         , fPrevLocalToDevice(device->localToDevice())
     {
-        fDevice->setLocalToDevice(SkM44(localToDevice));
+        fDevice->setLocalToDevice(localToDevice);
     }
     ~SkAutoDeviceTransformRestore() {
         fDevice->setLocalToDevice(fPrevLocalToDevice);

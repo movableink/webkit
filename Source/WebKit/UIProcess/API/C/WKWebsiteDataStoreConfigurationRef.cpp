@@ -41,7 +41,7 @@ WKWebsiteDataStoreConfigurationRef WKWebsiteDataStoreConfigurationCreate()
 #else
     auto configuration = WebKit::WebsiteDataStoreConfiguration::createWithBaseDirectories(nullString(), nullString());
 #endif
-    return toAPI(&configuration.leakRef());
+    return toAPILeakingRef(WTFMove(configuration));
 }
 
 WKStringRef WKWebsiteDataStoreConfigurationCopyApplicationCacheDirectory(WKWebsiteDataStoreConfigurationRef configuration)
@@ -222,4 +222,20 @@ bool WKWebsiteDataStoreConfigurationHasTotalQuotaRatio(WKWebsiteDataStoreConfigu
 void WKWebsiteDataStoreConfigurationClearTotalQuotaRatio(WKWebsiteDataStoreConfigurationRef configuration)
 {
     WebKit::toImpl(configuration)->setTotalQuotaRatio(std::nullopt);
+}
+
+WKStringRef WKWebsiteDataStoreConfigurationCopyResourceMonitorThrottlerDirectory(WKWebsiteDataStoreConfigurationRef configuration)
+{
+#if ENABLE(CONTENT_EXTENSIONS)
+    return WebKit::toCopiedAPI(WebKit::toImpl(configuration)->resourceMonitorThrottlerDirectory());
+#else
+    return nullptr;
+#endif
+}
+
+void WKWebsiteDataStoreConfigurationSetResourceMonitorThrottlerDirectory(WKWebsiteDataStoreConfigurationRef configuration, WKStringRef directory)
+{
+#if ENABLE(CONTENT_EXTENSIONS)
+    WebKit::toImpl(configuration)->setResourceMonitorThrottlerDirectory(WebKit::toImpl(directory)->string());
+#endif
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,7 @@
 #import "DragController.h"
 #import "Editor.h"
 #import "FocusController.h"
+#import "FrameInlines.h"
 #import "FrameLoader.h"
 #import "HTMLBodyElement.h"
 #import "HTMLDocument.h"
@@ -48,6 +49,7 @@
 #import "LocalFrameView.h"
 #import "Logging.h"
 #import "MouseEventWithHitTestResults.h"
+#import "NodeInlines.h"
 #import "Page.h"
 #import "Pasteboard.h"
 #import "PlatformEventFactoryMac.h"
@@ -58,7 +60,7 @@
 #import "RenderLayerScrollableArea.h"
 #import "RenderListBox.h"
 #import "RenderView.h"
-#import "RenderWidget.h"
+#import "RenderWidgetInlines.h"
 #import "ScreenProperties.h"
 #import "ScrollAnimator.h"
 #import "ScrollLatchingController.h"
@@ -403,7 +405,7 @@ bool EventHandler::passSubframeEventToSubframe(MouseEventWithHitTestResults& eve
         if (subframe.page()->dragController().didInitiateDrag())
             return false;
 #endif
-        FALLTHROUGH;
+        [[fallthrough]];
     case NSEventTypeMouseMoved:
         // Since we're passing in currentNSEvent() here, we can call
         // handleMouseMoveEvent() directly, since the save/restore of
@@ -485,7 +487,7 @@ bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& wheelEvent, 
     NSView* nodeView = widget.platformWidget();
     if (!nodeView) {
         // WebKit2 code path.
-        auto* frameView = dynamicDowncast<LocalFrameView>(widget);
+        RefPtr frameView = dynamicDowncast<LocalFrameView>(widget);
         if (!frameView)
             return false;
         auto [result, _] = frameView->frame().eventHandler().handleWheelEvent(wheelEvent, processingSteps);
@@ -631,10 +633,7 @@ void EventHandler::sendFakeEventsAfterWidgetTracking(NSEvent *initiatingEvent)
         // them in Cocoa, and because the event stream was stolen by the Carbon menu code we have
         // no up-to-date cache of them anywhere.
         fakeEvent = [NSEvent mouseEventWithType:NSEventTypeMouseMoved
-                                       location:[[view->platformWidget() window]
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-                                  convertScreenToBase:[NSEvent mouseLocation]]
-ALLOW_DEPRECATED_DECLARATIONS_END
+                                       location:[[view->platformWidget() window] convertPointFromScreen:[NSEvent mouseLocation]]
                                   modifierFlags:[initiatingEvent modifierFlags]
                                       timestamp:[initiatingEvent timestamp]
                                    windowNumber:[initiatingEvent windowNumber]
@@ -756,7 +755,7 @@ bool EventHandler::needsKeyboardEventDisambiguationQuirks() const
 
 OptionSet<PlatformEvent::Modifier> EventHandler::accessKeyModifiers()
 {
-    // Control+Option key combinations are usually unused on Mac OS X, but not when VoiceOver is enabled.
+    // Control+Option key combinations are usually unused on macOS, but not when VoiceOver is enabled.
     // So, we use Control in this case, even though it conflicts with Emacs-style key bindings.
     // See <https://bugs.webkit.org/show_bug.cgi?id=21107> for more detail.
     if (AXObjectCache::accessibilityEnhancedUserInterfaceEnabled())
@@ -972,7 +971,7 @@ void EventHandler::processWheelEventForScrollSnap(const PlatformWheelEvent& whee
         scrollAnimator->processWheelEventForScrollSnap(wheelEvent);
 }
 
-static IntSize autoscrollAdjustmentFactorForScreenBoundaries(const IntPoint& screenPoint, const FloatRect& screenRect)
+IntSize EventHandler::autoscrollAdjustmentFactorForScreenBoundaries(const FloatPoint& screenPoint, const FloatRect& screenRect)
 {
     // If the window is at the edge of the screen, and the mouse position is also at that edge of the screen,
     // we need to adjust the autoscroll amount in order for the user to be able to autoscroll in that direction.

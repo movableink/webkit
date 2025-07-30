@@ -2,6 +2,131 @@ Skia Graphics Release Notes
 
 This file includes a list of high level updates for each milestone release.
 
+Milestone 138
+-------------
+  * The Precompile API has been extended to support Vulkan YCbCr Images.
+    To use the new API one should use the PrecompileShaders::VulkanYCbCrImage factory function.
+    An example usage can be found in PrecompileTestUtils.cpp.
+
+* * *
+
+Milestone 137
+-------------
+  * `RecorderOptions.fRequireOrderedRecordings` can now be used to specify a per-`Recorder` ordering
+    policy for how its `Recordings` must be inserted into a `Context`. If not provided, the `Recorder`
+    will default to the value in `ContextOptions`.
+
+* * *
+
+Milestone 136
+-------------
+  * The Fontations SkTypeface backend has a new factory method to create a typeface from `SkData`,
+    not only from `SkStreamAsset`. The new signature is
+    `sk_sp<SkTypeface> SkTypeface_Make_Fontations(sk_sp<SkData> fontData, const SkFontArguments& args)`.
+  * `SkColorPriv.h` has been removed from the public API
+
+* * *
+
+Milestone 135
+-------------
+  * The `SkCodec` class has a new `isAnimated` method which helps to disambiguate
+    the meaning of `codec->getRepetitionCount()` returning `0`.
+  * The `PrecompileContext` now has a `getPipelineLabel` method that will return a human-readable version of a serialized Pipeline key. Relatedly, `SkRuntimeEffect::Options` now has an `fName` member variable
+    which allows clients to provide names for their created runtime effects. The latter API addition is particularly appropriate for user-defined known runtime effects.
+  * Graphite's backend specific headers are being renamed to be more consistent between backends:
+       * DawnTypes.h -> DawnGraphiteTypes.h
+       * DawnUtils.h's content moved to DawnBackendContext.h
+       * MtlGraphiteTypesUtils.h -> DwnGraphiteTypes_cpp.h (the non-Obj-C portion of
+         MtlGraphiteTypes.h).
+       * MtlGraphiteUtils.h's content moved to MtlBackendContext.h
+       * VulkanGraphiteUtils.h -> VulkanGraphiteContext.h (there is a shared
+         VulkanBackendContext.h header for both Ganesh and Graphite already).
+
+    The deprecated headers now just forward to the new header names and will be removed in a future
+    release.
+  * `SkPDF::MakeDocument(SkWStream*)` [one argument] has been deprecated and will be removed. This is because SkPDFMetdata has added 2 required fields `jpegDecoder` and `jpegEncoder`. In order to make a reasonable PDF, those must be supplied (using the two argument factory). To make these easier to supply `include/docs/SkPDFJpegHelpers.h` has been added, which will use Skia's built-in jpeg encoder and decoder.
+  * The `PrecompileContext` now allows clients to precompile previously serialized Pipelines via the `PrecompileContext::precompile` entry point. Serialized keys can be obtained by implementing a `ContextOptions::PipelineCallback` handler.
+  * `ContextOptions` now contains an `fUserDefinedKnownRuntimeEffects` member variable.
+    Clients can add `SkRuntimeEffects` to this `SkSpan` and have them be registered as *known*
+    runtime effects. Such runtime effects can then be represented in the serialized Pipeline keys.
+
+* * *
+
+Milestone 134
+-------------
+  * `SkShaders::Color(SkColor4f, sk_sp<SkColorSpace>)` now always applies the color
+    space to the color, even if rendering to a legacy `SkSurface` that is not
+    color managed. In this case, the target color space is assumed to be sRGB.
+  * The A98 RGB, ProPhoto RGB, Display P3 and Rec2020 color spaces can now be used
+    for gradient interpolation.
+  * The `PrecompileContext` now allows client timed-based purging of Pipelines via
+    the new `PrecompileContext::purgePipelinesNotUsedInMs` call.
+
+* * *
+
+Milestone 133
+-------------
+  * Graphite's `Context` now provides an interface to report the GPU time spent processing a recording. The client provides
+    a different finished proc of type `skgpu::graphite::GpuFinishedWithStatsProc` using
+    `skgpu::graphite::InsertRecordingInfo::fFinishedWithStatsProc` and sets the flag
+    `skgpu::graphite::InsertRecordingInfo::fGpuStatsFlag` to `skgpu::GpuStatsFlags::kElapsedTime`. The new callback takes a
+    new struct, `skgpu::GpuStats`, which has an `elapsedTime` field that will indicate the amount of GPU time used by the
+    recording. This is implemented for the Dawn backend only. In WASM on WebGPU the reported time excludes any GPU transfers
+    that occur before the first render/compute pass or after the last pass because of limitations in the WebGPU timestamp
+    query API.
+
+    `GrDirectContext` provides a similar interface to report the GPU time spent in a flush. The client uses a new callback
+    type, `GrGpuFinishedWithStatsProc` and sets the same flag on `GrFlushInfo`. This is implemented for GL
+    (including GLES and WebGL).
+  * Graphite's logging priority can now be adjusted by defining
+    `SKGPU_GRAPHITE_LOWEST_ACTIVE_LOG_PRIORITY` in `SkUserConfig.h` to a value specified by the
+    `skgpu::graphite::LogPriority` enum.
+
+    For example:
+    ```
+    #define SKGPU_GRAPHITE_LOWEST_ACTIVE_LOG_PRIORITY skgpu::graphite::LogPriority::kWarning
+    ```
+
+    Would cause Graphite to log warnings, non-fatal errors, and fatal errors. However, debug logs would
+    be omitted.
+
+    `SKGPU_GRAPHITE_LOWEST_ACTIVE_LOG_PRIORITY` will default to `kWarning` in debug builds, and `kError`
+    in release builds.
+  * Split MtlGraphiteTypes.h into two files. MtlGraphiteTypes.h defines MtlTextureInfo, which is only available in Objective-C++. MtlGraphiteTypesUtils.h declares the utility functions that are callable from C++.
+  * `SK_CANVAS_SAVE_RESTORE_PREALLOC_COUNT` has been added to SkUserConfig.h and SkCanvas.h to let clients control
+    how much space is allocated for calls to `SkCanvas::save()`. Clients that don't make many calls can reduce the RAM used by `SkCanvas` by setting this (defaults to about 3kb).
+  * New public API: `SkColorSpace::MakeCICP` to create an `SkColorSpace` from code
+    points specified in Rec. ITU-T H.273.
+  * The ability to dump a SkSL::DebugTrace to JSON has been removed from the public API.
+  * `approximateFilteredBounds` has been removed from SkMaskFilter.
+  * A new PrecompileContext object has been added to assist Precompilation. The old API of the form:\
+        bool Precompile(Context*, ...);\
+    has been deprecated and replaced with the API:\
+        bool Precompile(PrecompileContext*, ...)\
+    The new PrecompileContext object can be obtained via the Context::makePrecompileContext call.
+
+    As an example of a possible Compilation/Precompilation threading model, one could employ 4 threads:
+
+    2 for creating Recordings (\<r1\> and \<r2\>) \
+    1 for precompiling (\<p1\>) \
+    and the main thread - which owns the Context and submits Recordings.
+
+    Start up for this scenario would look like:
+
+      the main thread moves a PrecompileContext to <p1> and begins precompiling there\
+      the main thread creates two Recorders and moves them to <r1> and <r2> to create Recordings\
+      the main thread continues on - calling Context::insertRecording on the posted Recordings.
+
+    The PrecompileContext can safely outlive the Context that created it, but it will
+    effectively be shut down at that point.
+  * Graphite has a new `ContextOptions::fRequiredOrderedRecordings` flag that enables certain optimizations when the
+    client knows that recordings are played back in order. Otherwise Graphite will need to clear some caches at the
+    start of each recording to ensure proper playback, which can significantly affect performance.
+
+    This replaces the old `ContextOptions::fDisableCachedGlyphUploads` flag.
+
+* * *
+
 Milestone 132
 -------------
   * A new `SkCodec` method has been added: `hasHighBitDepthEncodedData`.

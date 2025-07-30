@@ -25,7 +25,9 @@
 
 #include "config.h"
 
+#include <WebCore/AffineTransform.h>
 #include <WebCore/Path.h>
+
 namespace TestWebKitAPI {
 
 using namespace WebCore;
@@ -133,6 +135,44 @@ TEST(Path, CurveBoundingRect)
     auto boundingRect2 = path2.boundingRect();
 
     ASSERT_TRUE(areEssentiallyEqual(boundingRect1, boundingRect2));
+}
+
+TEST(Path, IsEmpty)
+{
+    Path a;
+    Path b;
+    ASSERT_TRUE(a.isEmpty());
+    ASSERT_TRUE(b.isEmpty());
+
+    // platformPath() does not allocate new instances.
+    ASSERT_EQ(a.platformPath(), a.platformPath());
+    ASSERT_EQ(b.platformPath(), b.platformPath());
+
+    // platformPath() does not change isEmpty().
+    ASSERT_TRUE(a.isEmpty());
+    ASSERT_TRUE(b.isEmpty());
+    ASSERT_TRUE(a.definitelyEqual(b));
+    ASSERT_TRUE(b.definitelyEqual(a));
+
+    // ensureImplForTesting works.
+    a.ensureImplForTesting();
+    ASSERT_TRUE(a.definitelyEqual(b));
+    ASSERT_TRUE(b.definitelyEqual(a));
+
+    // addPath() with empty paths works.
+    a.addPath(b, AffineTransform(1, 0, 0, 1, 0, 0));
+    ASSERT_TRUE(a.isEmpty());
+    ASSERT_TRUE(a.definitelyEqual(b));
+
+    bool r = a.strokeContains({ 0, 0 }, [](GraphicsContext&) { });
+    ASSERT_FALSE(r);
+    ASSERT_TRUE(a.isEmpty());
+    ASSERT_TRUE(a.definitelyEqual(b));
+    r = a.contains({ 0, 0 }, WindRule::EvenOdd);
+    ASSERT_FALSE(r);
+    ASSERT_TRUE(a.isEmpty());
+    ASSERT_TRUE(a.definitelyEqual(b));
+
 }
 
 }

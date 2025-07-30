@@ -61,7 +61,7 @@
                 testRunner.waitUntilDone();
 
             document.querySelector(".content").addEventListener("animationend", event => {
-                setTimeout(() => {
+                requestAnimationFrame(() => {
                     event.target.classList.remove("fade-in");
                     event.target.classList.add("fade-out");
 

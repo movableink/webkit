@@ -65,7 +65,7 @@ protected:
     RefPtr<NativeImage> sinkIntoNativeImage() override;
 
     void getPixelBuffer(const IntRect&, PixelBuffer&) override;
-    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
+    void putPixelBuffer(const PixelBufferSourceView&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
 
     bool isInUse() const override;
     void releaseGraphicsContext() override;
@@ -81,7 +81,8 @@ protected:
 
     unsigned bytesPerRow() const override;
 
-    void invalidateCachedNativeImage();
+    // Returns true if this invalidation requires a flush to complete
+    bool invalidateCachedNativeImage();
     void prepareForExternalRead();
     void prepareForExternalWrite();
 

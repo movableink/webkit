@@ -33,6 +33,7 @@
 OBJC_CLASS AVAssetWriter;
 OBJC_CLASS AVAssetWriterInput;
 OBJC_CLASS WebAVAssetWriterDelegate;
+typedef const struct opaqueCMFormatDescription *CMFormatDescriptionRef;
 
 namespace WebCore {
 
@@ -45,10 +46,10 @@ public:
 private:
     MediaRecorderPrivateWriterAVFObjC(RetainPtr<AVAssetWriter>&&, MediaRecorderPrivateWriterListener&);
 
-    std::optional<uint8_t> addAudioTrack(CMFormatDescriptionRef) final;
-    std::optional<uint8_t> addVideoTrack(CMFormatDescriptionRef, const std::optional<CGAffineTransform>&) final;
+    std::optional<uint8_t> addAudioTrack(const AudioInfo&) final;
+    std::optional<uint8_t> addVideoTrack(const VideoInfo&, const std::optional<CGAffineTransform>&) final;
     bool allTracksAdded() final;
-    Result muxFrame(const MediaSample&, uint8_t) final;
+    Result writeFrame(const MediaSamplesBlock&) final;
     void forceNewSegment(const WTF::MediaTime&) final;
     Ref<GenericPromise> close(const WTF::MediaTime&) final;
 
@@ -59,6 +60,8 @@ private:
     uint8_t m_currentTrackIndex { 0 };
     uint8_t m_audioTrackIndex { 0 };
     uint8_t m_videoTrackIndex  { 0 };
+    RetainPtr<CMFormatDescriptionRef> m_audioDescription;
+    RetainPtr<CMFormatDescriptionRef> m_videoDescription;
     const RetainPtr<WebAVAssetWriterDelegate> m_delegate;
     const RetainPtr<AVAssetWriter> m_writer;
 };

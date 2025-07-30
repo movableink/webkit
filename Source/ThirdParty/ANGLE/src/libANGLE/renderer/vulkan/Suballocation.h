@@ -25,7 +25,7 @@ enum class MemoryAllocationType;
 
 namespace vk
 {
-class Context;
+class ErrorContext;
 
 // BufferBlock
 class BufferBlock final : angle::NonCopyable
@@ -36,14 +36,14 @@ class BufferBlock final : angle::NonCopyable
     ~BufferBlock();
 
     void destroy(Renderer *renderer);
-    VkResult init(Context *context,
+    VkResult init(ErrorContext *context,
                   Buffer &buffer,
                   uint32_t memoryTypeIndex,
                   vma::VirtualBlockCreateFlags flags,
                   DeviceMemory &deviceMemory,
                   VkMemoryPropertyFlags memoryPropertyFlags,
                   VkDeviceSize size);
-    void initWithoutVirtualBlock(Context *context,
+    void initWithoutVirtualBlock(ErrorContext *context,
                                  Buffer &buffer,
                                  MemoryAllocationType memoryAllocationType,
                                  uint32_t memoryTypeIndex,
@@ -61,6 +61,7 @@ class BufferBlock final : angle::NonCopyable
 
     VkMemoryPropertyFlags getMemoryPropertyFlags() const;
     VkDeviceSize getMemorySize() const;
+    VkDeviceSize getAllocatedBufferSize() const;
 
     VkResult allocate(VkDeviceSize size,
                       VkDeviceSize alignment,
@@ -82,18 +83,6 @@ class BufferBlock final : angle::NonCopyable
     // returned.
     int32_t getAndIncrementEmptyCounter();
     void calculateStats(vma::StatInfo *pStatInfo) const;
-
-    void onNewDescriptorSet(const SharedDescriptorSetCacheKey &sharedCacheKey)
-    {
-        mDescriptorSetCacheManager.addKey(sharedCacheKey);
-    }
-    void releaseAllCachedDescriptorSetCacheKeys(Renderer *renderer)
-    {
-        if (!mDescriptorSetCacheManager.empty())
-        {
-            mDescriptorSetCacheManager.releaseKeys(renderer);
-        }
-    }
 
   private:
     mutable angle::SimpleMutex mVirtualBlockMutex;
@@ -118,8 +107,6 @@ class BufferBlock final : angle::NonCopyable
     // buffer block is found to be empty when pruneEmptyBuffer is called. This gets reset whenever
     // it becomes non-empty.
     int32_t mCountRemainsEmpty;
-    // Manages the descriptorSet cache that created with this BufferBlock.
-    DescriptorSetCacheManager mDescriptorSetCacheManager;
 };
 using BufferBlockPointer       = std::unique_ptr<BufferBlock>;
 using BufferBlockPointerVector = std::vector<BufferBlockPointer>;
@@ -141,8 +128,10 @@ class BufferBlockGarbageList final : angle::NonCopyable
         mBufferBlockQueue.push(bufferBlock);
     }
 
-    void pruneEmptyBufferBlocks(Renderer *renderer)
+    // Number of buffer blocks destroyed is returned.
+    size_t pruneEmptyBufferBlocks(Renderer *renderer)
     {
+        size_t blocksDestroyed = 0;
         if (!mBufferBlockQueue.empty())
         {
             std::unique_lock<angle::SimpleMutex> lock(mMutex);
@@ -154,6 +143,7 @@ class BufferBlockGarbageList final : angle::NonCopyable
                 if (block->isEmpty())
                 {
                     block->destroy(renderer);
+                    ++blocksDestroyed;
                 }
                 else
                 {
@@ -161,6 +151,7 @@ class BufferBlockGarbageList final : angle::NonCopyable
                 }
             }
         }
+        return blocksDestroyed;
     }
 
     bool empty() const { return mBufferBlockQueue.empty(); }
@@ -186,7 +177,7 @@ class BufferSuballocation final : angle::NonCopyable
               VmaVirtualAllocation allocation,
               VkDeviceSize offset,
               VkDeviceSize size);
-    void initWithEntireBuffer(Context *context,
+    void initWithEntireBuffer(ErrorContext *context,
                               Buffer &buffer,
                               MemoryAllocationType memoryAllocationType,
                               uint32_t memoryTypeIndex,
@@ -204,11 +195,11 @@ class BufferSuballocation final : angle::NonCopyable
     bool isCached() const;
     bool isMapped() const;
     uint8_t *getMappedMemory() const;
-    void flush(const VkDevice &device);
-    void invalidate(const VkDevice &device);
+    void flush(Renderer *renderer);
+    void invalidate(Renderer *renderer);
     VkDeviceSize getOffset() const;
     bool valid() const;
-    VkResult map(Context *context);
+    VkResult map(ErrorContext *context);
     BufferSerial getBlockSerial() const;
     uint8_t *getBlockMemory() const;
     VkDeviceSize getBlockMemorySize() const;
@@ -272,6 +263,11 @@ ANGLE_INLINE VkMemoryPropertyFlags BufferBlock::getMemoryPropertyFlags() const
 ANGLE_INLINE VkDeviceSize BufferBlock::getMemorySize() const
 {
     return mSize;
+}
+
+ANGLE_INLINE VkDeviceSize BufferBlock::getAllocatedBufferSize() const
+{
+    return mAllocatedBufferSize;
 }
 
 ANGLE_INLINE VkBool32 BufferBlock::isEmpty()
@@ -371,7 +367,7 @@ ANGLE_INLINE void BufferSuballocation::init(BufferBlock *block,
 }
 
 ANGLE_INLINE void BufferSuballocation::initWithEntireBuffer(
-    Context *context,
+    ErrorContext *context,
     Buffer &buffer,
     MemoryAllocationType memoryAllocationType,
     uint32_t memoryTypeIndex,
@@ -431,32 +427,6 @@ ANGLE_INLINE bool BufferSuballocation::isMapped() const
 ANGLE_INLINE uint8_t *BufferSuballocation::getMappedMemory() const
 {
     return mBufferBlock->getMappedMemory() + getOffset();
-}
-
-ANGLE_INLINE void BufferSuballocation::flush(const VkDevice &device)
-{
-    if (!isCoherent())
-    {
-        VkMappedMemoryRange mappedRange = {};
-        mappedRange.sType               = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-        mappedRange.memory              = mBufferBlock->getDeviceMemory().getHandle();
-        mappedRange.offset              = getOffset();
-        mappedRange.size                = mSize;
-        mBufferBlock->getDeviceMemory().flush(device, mappedRange);
-    }
-}
-
-ANGLE_INLINE void BufferSuballocation::invalidate(const VkDevice &device)
-{
-    if (!isCoherent())
-    {
-        VkMappedMemoryRange mappedRange = {};
-        mappedRange.sType               = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-        mappedRange.memory              = mBufferBlock->getDeviceMemory().getHandle();
-        mappedRange.offset              = getOffset();
-        mappedRange.size                = mSize;
-        mBufferBlock->getDeviceMemory().invalidate(device, mappedRange);
-    }
 }
 
 ANGLE_INLINE VkDeviceSize BufferSuballocation::getOffset() const

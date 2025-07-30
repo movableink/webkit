@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "EventTargetInterfaces.h"
 #include "XMLHttpRequest.h"
 #include <wtf/Forward.h>
 

@@ -36,6 +36,7 @@
 #import "WKWebViewPrivate.h"
 #import "WebExtensionFrameIdentifier.h"
 #import "WebExtensionFrameParameters.h"
+#import "WebExtensionPermission.h"
 #import "WebExtensionTab.h"
 #import "WebExtensionUtilities.h"
 #import "WebFrame.h"
@@ -58,9 +59,9 @@ static WebExtensionFrameParameters frameParametersForFrame(_WKFrameTreeNode *fra
     };
 }
 
-bool WebExtensionContext::isWebNavigationMessageAllowed()
+bool WebExtensionContext::isWebNavigationMessageAllowed(IPC::Decoder& message)
 {
-    return isLoaded() && hasPermission(WKWebExtensionPermissionWebNavigation);
+    return isLoadedAndPrivilegedMessage(message) && hasPermission(WebExtensionPermission::webNavigation());
 }
 
 void WebExtensionContext::webNavigationTraverseFrameTreeForFrame(_WKFrameTreeNode *frame, _WKFrameTreeNode *parentFrame, WebExtensionTab* tab, Vector<WebExtensionFrameParameters> &frames)
@@ -88,27 +89,27 @@ void WebExtensionContext::webNavigationGetFrame(WebExtensionTabIdentifier tabIde
 {
     RefPtr tab = getTab(tabIdentifier);
     if (!tab) {
-        completionHandler(toWebExtensionError(@"webNavigation.getFrame()", nil, @"tab not found"));
+        completionHandler(toWebExtensionError(@"webNavigation.getFrame()", nullString(), @"tab not found"));
         return;
     }
 
     auto *webView = tab->webView();
     if (!webView) {
-        completionHandler(toWebExtensionError(@"webNavigation.getFrame()", nil, @"tab not found"));
+        completionHandler(toWebExtensionError(@"webNavigation.getFrame()", nullString(), @"tab not found"));
         return;
     }
 
     [webView _frames:makeBlockPtr([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler), tab, frameIdentifier](_WKFrameTreeNode *mainFrame) mutable {
         if (!mainFrame.info.isMainFrame) {
             RELEASE_LOG_INFO(Extensions, "Skipping frame traversal because the mainFrame is nil");
-            completionHandler(toWebExtensionError(@"webNavigation.getFrame()", nil, @"main frame not found"));
+            completionHandler(toWebExtensionError(@"webNavigation.getFrame()", nullString(), @"main frame not found"));
             return;
         }
 
         if (auto frameParameters = webNavigationFindFrameIdentifierInFrameTree(mainFrame, nil, tab.get(), frameIdentifier))
             completionHandler(WTFMove(frameParameters));
         else
-            completionHandler(toWebExtensionError(@"webNavigation.getFrame()", nil, @"frame not found"));
+            completionHandler(toWebExtensionError(@"webNavigation.getFrame()", nullString(), @"frame not found"));
     }).get()];
 }
 
@@ -116,20 +117,20 @@ void WebExtensionContext::webNavigationGetAllFrames(WebExtensionTabIdentifier ta
 {
     RefPtr tab = getTab(tabIdentifier);
     if (!tab) {
-        completionHandler(toWebExtensionError(@"webNavigation.getAllFrames()", nil, @"tab not found"));
+        completionHandler(toWebExtensionError(@"webNavigation.getAllFrames()", nullString(), @"tab not found"));
         return;
     }
 
     auto *webView = tab->webView();
     if (!webView) {
-        completionHandler(toWebExtensionError(@"webNavigation.getAllFrames()", nil, @"tab not found"));
+        completionHandler(toWebExtensionError(@"webNavigation.getAllFrames()", nullString(), @"tab not found"));
         return;
     }
 
     [webView _frames:makeBlockPtr([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler), tab](_WKFrameTreeNode *mainFrame) mutable {
         if (!mainFrame.info.isMainFrame) {
             RELEASE_LOG_INFO(Extensions, "Skipping frame traversal because the mainFrame is nil");
-            completionHandler(toWebExtensionError(@"webNavigation.getAllFrames()", nil, @"main frame not found"));
+            completionHandler(toWebExtensionError(@"webNavigation.getAllFrames()", nullString(), @"main frame not found"));
             return;
         }
 

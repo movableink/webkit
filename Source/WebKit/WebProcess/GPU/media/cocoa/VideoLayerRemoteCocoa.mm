@@ -219,11 +219,11 @@ PlatformLayerContainer createVideoLayerRemote(MediaPlayerPrivateRemote* mediaPla
     [videoLayerRemote setName:@"WKVideoLayerRemote"];
     [videoLayerRemote setVideoGravity:videoGravity];
     [videoLayerRemote setMediaPlayerPrivateRemote:mediaPlayerPrivateRemote];
-    auto layerForHostContext = LayerHostingContext::createPlatformLayerForHostingContext(contextId).get();
+    RetainPtr layerForHostContext = LayerHostingContext::createPlatformLayerForHostingContext(contextId).get();
     auto frame = CGRectMake(0, 0, contentSize.width(), contentSize.height());
     [videoLayerRemote setVideoLayerFrame:frame];
     [layerForHostContext setFrame:frame];
-    [videoLayerRemote addSublayer:WTFMove(layerForHostContext)];
+    [videoLayerRemote addSublayer:layerForHostContext.get()];
 
     return videoLayerRemote;
 }

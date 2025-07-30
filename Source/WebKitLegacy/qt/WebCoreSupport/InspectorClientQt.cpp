@@ -41,6 +41,7 @@
 #include <QUrl>
 #include <QVariant>
 #include <WebCore/LocalFrame.h>
+#include <WebCore/LocalFrameInlines.h>
 #include <WebCore/LocalFrameView.h>
 #include <WebCore/InspectorController.h>
 #include <WebCore/NotImplemented.h>
@@ -76,7 +77,10 @@ public:
         QString settingKey(settingStoragePrefix + QString(name));
         QString storedValueType = qsettings.value(settingKey + settingStorageTypeSuffix).toString();
         QVariant storedValue = qsettings.value(settingKey);
-        storedValue.convert(QVariant::nameToType(storedValueType.toLatin1().data()));
+        QMetaType metaType = QMetaType::fromName(storedValueType.toLatin1().data());
+        if (metaType.isValid()) {
+            storedValue = QVariant(metaType, storedValue.constData());
+        }
         return variantToSetting(storedValue);
 #endif // QT_NO_SETTINGS
     }
@@ -98,7 +102,7 @@ public:
         QVariant valueToStore = settingToVariant(value);
         QString settingKey(settingStoragePrefix + QString(name));
         qsettings.setValue(settingKey, valueToStore);
-        qsettings.setValue(settingKey + settingStorageTypeSuffix, QLatin1String(QVariant::typeToName(valueToStore.type())));
+        qsettings.setValue(settingKey + settingStorageTypeSuffix, QLatin1String(valueToStore.metaType().name()));
 #endif // QT_NO_SETTINGS
     }
 
@@ -107,11 +111,11 @@ private:
     {
         String retVal;
 
-        switch (qvariant.type()) {
-        case QVariant::Bool:
+        switch (qvariant.typeId()) {
+        case QMetaType::Bool:
             retVal = qvariant.toBool() ? "true"_s : "false"_s;
             break;
-        case QVariant::String:
+        case QMetaType::QString:
             retVal = qvariant.toString();
             break;
         default:

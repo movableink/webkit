@@ -8,6 +8,7 @@
 #include "src/gpu/graphite/vk/VulkanDescriptorSet.h"
 
 #include "src/gpu/graphite/vk/VulkanDescriptorPool.h"
+#include "src/gpu/graphite/vk/VulkanGraphiteUtils.h"
 #include "src/gpu/graphite/vk/VulkanSharedContext.h"
 
 namespace skgpu::graphite {
@@ -15,10 +16,8 @@ namespace skgpu::graphite {
 sk_sp<VulkanDescriptorSet> VulkanDescriptorSet::Make(const VulkanSharedContext* ctxt,
                                                      const sk_sp<VulkanDescriptorPool>& pool) {
     VkDescriptorSet descSet;
-    VkDescriptorSetAllocateInfo dsAllocateInfo;
-    memset(&dsAllocateInfo, 0, sizeof(VkDescriptorSetAllocateInfo));
+    VkDescriptorSetAllocateInfo dsAllocateInfo = {};
     dsAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    dsAllocateInfo.pNext = nullptr;
     dsAllocateInfo.descriptorPool = pool->descPool();
     dsAllocateInfo.descriptorSetCount = 1;
     dsAllocateInfo.pSetLayouts = pool->descSetLayout();
@@ -37,7 +36,6 @@ VulkanDescriptorSet::VulkanDescriptorSet(const VulkanSharedContext* ctxt,
                                          sk_sp<VulkanDescriptorPool> pool)
         : Resource(ctxt,
                    Ownership::kOwned,
-                   skgpu::Budgeted::kYes,
                    /*gpuMemorySize=*/0)
         , fDescSet(set)
         , fPool(pool) {

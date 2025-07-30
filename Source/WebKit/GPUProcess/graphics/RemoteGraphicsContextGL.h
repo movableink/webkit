@@ -106,7 +106,10 @@ protected:
     virtual void platformWorkQueueInitialize(WebCore::GraphicsContextGLAttributes&&) { };
     void workQueueUninitialize();
     template<typename T>
-    IPC::Error send(T&& message) const { return Ref { *m_streamConnection }->send(std::forward<T>(message), m_graphicsContextGLIdentifier); }
+    IPC::Error send(T&& message) const
+    {
+        return Ref { *m_streamConnection }->send(std::forward<T>(message), m_graphicsContextGLIdentifier);
+    }
 
     // GraphicsContextGL::Client overrides.
     void forceContextLost() final;

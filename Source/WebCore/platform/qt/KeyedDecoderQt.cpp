@@ -189,7 +189,7 @@ bool KeyedDecoderQt::beginArrayElement()
         return false;
 
     QVariant value = m_arrayStack.last().at(m_arrayIndexStack.last()++);
-    if (value.type() != QVariant::Map)
+    if (value.typeId() != QMetaType::QVariantMap)
         return false;
 
     m_objectStack.append(value.toMap());

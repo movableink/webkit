@@ -54,10 +54,10 @@ static QRawFont rawFontForCharacters(const QString& string, const QRawFont& font
     layout.endLayout();
 
     QList<QGlyphRun> glyphList = layout.glyphRuns();
-    ASSERT(glyphList.size() <= 1);
     if (!glyphList.size())
         return QRawFont();
 
+    // Use the first glyph run's font for the fallback
     const QGlyphRun& glyphs(glyphList.at(0));
     return glyphs.rawFont();
 }
@@ -77,8 +77,7 @@ RefPtr<Font> FontCache::systemFallbackForCharacterCluster(const FontDescription&
 Vector<String> FontCache::systemFontFamilies()
 {
     Vector<String> families;
-    QFontDatabase db;
-    for (const QString& family : db.families())
+    for (const QString& family : QFontDatabase::families())
         families.append(family);
     return families;
 }
@@ -97,15 +96,14 @@ Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescripti
 
 std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontCreationContext&, OptionSet<FontLookupOptions>)
 {
-    QFontDatabase db;
-    if (!db.hasFamily(family.string()))
+    if (!QFontDatabase::hasFamily(family.string()))
         return nullptr;
     return std::make_unique<FontPlatformData>(fontDescription, family);
 }
 
-std::optional<ASCIILiteral> FontCache::platformAlternateFamilyName(const String&)
+ASCIILiteral FontCache::platformAlternateFamilyName(const String&)
 {
-    return std::nullopt;
+    return {};
 }
 
 Vector<FontSelectionCapabilities> FontCache::getFontSelectionCapabilitiesInFamily(const AtomString&, AllowUserInstalledFonts)

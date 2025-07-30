@@ -26,6 +26,7 @@
 #include "config.h"
 #include "testb3.h"
 
+#include <wtf/Int128.h>
 #include <wtf/UniqueArray.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -987,7 +988,7 @@ void testWasmAddressDoesNotCSE()
 
     auto* originalAddress = root->appendNew<WasmAddressValue>(proc, Origin(), pointer, pinnedGPR);
     root->appendNew<MemoryValue>(proc, Store, Origin(), originalAddress, 
-        root->appendNew<WasmAddressValue>(proc, Origin(), root->appendNew<Const64Value>(proc, Origin(), 6*8), pinnedGPR), 0);
+        root->appendNew<WasmAddressValue>(proc, Origin(), root->appendNew<ConstPtrValue>(proc, Origin(), 6*8), pinnedGPR), 0);
 
     SwitchValue* switchValue = root->appendNew<SwitchValue>(proc, Origin(), path);
     switchValue->setFallThrough(FrequentedBlock(c));
@@ -1017,7 +1018,7 @@ void testWasmAddressDoesNotCSE()
 
     auto* address2 = continuation->appendNew<WasmAddressValue>(proc, Origin(), pointer, pinnedGPR);
     continuation->appendNew<MemoryValue>(proc, Store, Origin(), takenPhi,
-        continuation->appendNew<WasmAddressValue>(proc, Origin(), continuation->appendNew<Const64Value>(proc, Origin(), 4*8), pinnedGPR),
+        continuation->appendNew<WasmAddressValue>(proc, Origin(), continuation->appendNew<ConstPtrValue>(proc, Origin(), 4*8), pinnedGPR),
         0);
 
     auto* returnVal = address2;
@@ -1030,15 +1031,15 @@ void testWasmAddressDoesNotCSE()
     auto binary = compileProc(proc);
 
     uint64_t* memory = new uint64_t[10];
-    uint64_t ptr = 8;
+    uintptr_t ptr = 8;
 
-    uint64_t finalPtr = reinterpret_cast<uint64_t>(static_cast<void*>(memory)) + ptr;
+    uintptr_t finalPtr = reinterpret_cast<uintptr_t>(static_cast<void*>(memory)) + ptr;
 
     for (int i = 0; i < 10; ++i)
         memory[i] = 0;
 
     {
-        uint64_t result = invoke<uint64_t>(*binary, memory, ptr, 0);
+        uintptr_t result = invoke<uintptr_t>(*binary, memory, ptr, 0);
 
         CHECK_EQ(result, finalPtr);
         CHECK_EQ(memory[0], 0ul);
@@ -1054,7 +1055,7 @@ void testWasmAddressDoesNotCSE()
     memory[7] = 0;
 
     {
-        uint64_t result = invoke<uint64_t>(*binary, memory, ptr, 1);
+        uintptr_t result = invoke<uintptr_t>(*binary, memory, ptr, 1);
 
         CHECK_EQ(result, finalPtr + 8);
         CHECK_EQ(memory[0], 0ul);
@@ -1069,7 +1070,7 @@ void testWasmAddressDoesNotCSE()
     memory[6] = 0;
     memory[7] = 0;
     {
-        uint64_t result = invoke<uint64_t>(*binary, memory, ptr, 2);
+        uintptr_t result = invoke<uintptr_t>(*binary, memory, ptr, 2);
 
         CHECK_EQ(result, finalPtr);
         CHECK_EQ(memory[0], 0ul);
@@ -1094,6 +1095,14 @@ void testStoreAfterClobberExitsSideways()
     RegisterSetBuilder csrs;
     csrs.merge(RegisterSetBuilder::calleeSaveRegisters());
     csrs.exclude(RegisterSetBuilder::stackRegisters());
+#if CPU(ARM)
+    csrs.remove(MacroAssembler::fpTempRegister);
+    // FIXME We should allow this to be used. See the note
+    // in https://commits.webkit.org/257808@main for more
+    // info about why masm is using scratch registers on
+    // ARM-only.
+    csrs.remove(MacroAssembler::addressTempRegister);
+#endif
     csrs.buildAndValidate().forEach(
         [&] (Reg reg) {
             CHECK(reg != pinnedBaseGPR);
@@ -1101,7 +1110,7 @@ void testStoreAfterClobberExitsSideways()
             proc.pinRegister(reg);
         });
 
-    proc.setWasmBoundsCheckGenerator([=] (CCallHelpers& jit, GPRReg pinnedGPR) {
+    proc.setWasmBoundsCheckGenerator([=](CCallHelpers& jit, WasmBoundsCheckValue*, GPRReg pinnedGPR) {
         CHECK_EQ(pinnedGPR, pinnedSizeGPR);
 
         jit.move(CCallHelpers::TrustedImm32(42), GPRInfo::returnValueGPR);
@@ -1111,11 +1120,13 @@ void testStoreAfterClobberExitsSideways()
 
     BasicBlock* root = proc.addBlock();
 
-    auto* pointer = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2);
+    Value* pointer = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2);
     auto* resultAddress = root->appendNew<WasmAddressValue>(proc, Origin(), pointer, pinnedBaseGPR);
     root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const32Value>(proc, Origin(), 10), resultAddress, 0);
 
-    root->appendNew<WasmBoundsCheckValue>(proc, Origin(), pinnedSizeGPR, root->appendNew<Value>(proc, Trunc, Origin(), pointer), 0);
+    if (is64Bit())
+        pointer = root->appendNew<Value>(proc, Trunc, Origin(), pointer);
+    root->appendNew<WasmBoundsCheckValue>(proc, Origin(), pinnedSizeGPR, pointer, 0);
 
     root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const32Value>(proc, Origin(), 20), resultAddress, 0);
     root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 30));
@@ -1163,14 +1174,14 @@ void testStoreAfterClobberDifferentWidth()
 
     auto* pointer = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
     auto* resultAddress = root->appendNew<WasmAddressValue>(proc, Origin(), pointer, pinnedBaseGPR);
-    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const64Value>(proc, Origin(), -1), resultAddress, 0);
+    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<ConstPtrValue>(proc, Origin(), -1), resultAddress, 0);
     root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const32Value>(proc, Origin(), 20), resultAddress, 0);
     root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 30));
 
     auto binary = compileProc(proc);
 
     uint64_t* memory = new uint64_t[10];
-    uint64_t ptr = 1*8;
+    uintptr_t ptr = 1*8;
 
     for (int i = 0; i < 10; ++i)
         memory[i] = 0;
@@ -1202,7 +1213,7 @@ void testStoreAfterClobberDifferentWidthSuccessor()
     auto* pointer = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
     auto* path = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2);
     auto* resultAddress = root->appendNew<WasmAddressValue>(proc, Origin(), pointer, pinnedBaseGPR);
-    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const64Value>(proc, Origin(), -1), resultAddress, 0);
+    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<ConstPtrValue>(proc, Origin(), -1), resultAddress, 0);
 
     SwitchValue* switchValue = root->appendNew<SwitchValue>(proc, Origin(), path);
     switchValue->setFallThrough(FrequentedBlock(c));
@@ -1223,7 +1234,7 @@ void testStoreAfterClobberDifferentWidthSuccessor()
     auto binary = compileProc(proc);
 
     uint64_t* memory = new uint64_t[10];
-    uint64_t ptr = 1*8;
+    uintptr_t ptr = 1*8;
 
     for (int i = 0; i < 10; ++i)
         memory[i] = 0;
@@ -1274,6 +1285,14 @@ void testStoreAfterClobberExitsSidewaysSuccessor()
     RegisterSetBuilder csrs;
     csrs.merge(RegisterSetBuilder::calleeSaveRegisters());
     csrs.exclude(RegisterSetBuilder::stackRegisters());
+#if CPU(ARM)
+    csrs.remove(MacroAssembler::fpTempRegister);
+    // FIXME We should allow this to be used. See the note
+    // in https://commits.webkit.org/257808@main for more
+    // info about why masm is using scratch registers on
+    // ARM-only.
+    csrs.remove(MacroAssembler::addressTempRegister);
+#endif
     csrs.buildAndValidate().forEach(
         [&] (Reg reg) {
             CHECK(reg != pinnedBaseGPR);
@@ -1281,7 +1300,7 @@ void testStoreAfterClobberExitsSidewaysSuccessor()
             proc.pinRegister(reg);
         });
 
-    proc.setWasmBoundsCheckGenerator([=] (CCallHelpers& jit, GPRReg pinnedGPR) {
+    proc.setWasmBoundsCheckGenerator([=](CCallHelpers& jit, WasmBoundsCheckValue*, GPRReg pinnedGPR) {
         CHECK_EQ(pinnedGPR, pinnedSizeGPR);
 
         jit.move(CCallHelpers::TrustedImm32(42), GPRInfo::returnValueGPR);
@@ -1295,17 +1314,19 @@ void testStoreAfterClobberExitsSidewaysSuccessor()
     BasicBlock* c = proc.addBlock();
     BasicBlock* continuation = proc.addBlock();
 
-    auto* pointer = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2);
+    Value* pointer = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2);
     auto* path = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR3);
     auto* resultAddress = root->appendNew<WasmAddressValue>(proc, Origin(), pointer, pinnedBaseGPR);
-    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const64Value>(proc, Origin(), -1), resultAddress, 0);
+    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<ConstPtrValue>(proc, Origin(), -1), resultAddress, 0);
 
     SwitchValue* switchValue = root->appendNew<SwitchValue>(proc, Origin(), path);
     switchValue->setFallThrough(FrequentedBlock(c));
     switchValue->appendCase(SwitchCase(0, FrequentedBlock(a)));
     switchValue->appendCase(SwitchCase(1, FrequentedBlock(b)));
 
-    b->appendNew<WasmBoundsCheckValue>(proc, Origin(), pinnedSizeGPR, b->appendNew<Value>(proc, Trunc, Origin(), pointer), 0);
+    if (is64Bit())
+        pointer = b->appendNew<Value>(proc, Trunc, Origin(), pointer);
+    b->appendNew<WasmBoundsCheckValue>(proc, Origin(), pinnedSizeGPR, pointer, 0);
 
     UpsilonValue* takeA = a->appendNew<UpsilonValue>(proc, Origin(), a->appendNew<Const64Value>(proc, Origin(), 10));
     UpsilonValue* takeB = b->appendNew<UpsilonValue>(proc, Origin(), b->appendNew<Const64Value>(proc, Origin(), 20));
@@ -1327,7 +1348,7 @@ void testStoreAfterClobberExitsSidewaysSuccessor()
     auto binary = compileProc(proc);
 
     uint64_t* memory = new uint64_t[10];
-    uint64_t ptr = 1*8;
+    uintptr_t ptr = 1*8;
 
     for (int i = 0; i < 10; ++i)
         memory[i] = 0;
@@ -1595,6 +1616,92 @@ void testSShrCompare64(int64_t constantValue)
     testWithOpcode(AboveEqual, [](uint64_t shiftAmount, uint64_t constantValue, int64_t value) { return static_cast<uint64_t>(value >> shiftAmount) >= constantValue; });
     testWithOpcode(Below, [](uint64_t shiftAmount, uint64_t constantValue, int64_t value) { return static_cast<uint64_t>(value >> shiftAmount) < constantValue; });
     testWithOpcode(BelowEqual, [](uint64_t shiftAmount, uint64_t constantValue, int64_t value) { return static_cast<uint64_t>(value >> shiftAmount) <= constantValue; });
+}
+
+void testMulHigh64()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int64_t, int64_t>(proc, root);
+
+    Value* argumentA = arguments[0];
+    Value* argumentB = arguments[1];
+
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(
+            proc, MulHigh, Origin(),
+            argumentA,
+            argumentB));
+
+    auto code = compileProc(proc);
+    for (auto a : int64Operands()) {
+        for (auto b : int64Operands())
+            CHECK_EQ(invoke<int64_t>(*code, a.value, b.value), static_cast<int64_t>((static_cast<Int128>(a.value) * static_cast<Int128>(b.value)) >> 64));
+    }
+}
+
+void testMulHigh32()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t, int32_t>(proc, root);
+
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(
+            proc, MulHigh, Origin(),
+            arguments[0],
+            arguments[1]));
+
+    auto code = compileProc(proc);
+    for (auto a : int32Operands()) {
+        for (auto b : int32Operands())
+            CHECK_EQ(invoke<int32_t>(*code, a.value, b.value), static_cast<int32_t>((static_cast<int64_t>(a.value) * static_cast<int64_t>(b.value)) >> 32));
+    }
+}
+
+void testUMulHigh64()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<uint64_t, uint64_t>(proc, root);
+
+    Value* argumentA = arguments[0];
+    Value* argumentB = arguments[1];
+
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(
+            proc, UMulHigh, Origin(),
+            argumentA,
+            argumentB));
+
+    auto code = compileProc(proc);
+    for (auto a : int64Operands()) {
+        for (auto b : int64Operands())
+            CHECK_EQ(invoke<uint64_t>(*code, a.value, b.value), static_cast<uint64_t>((static_cast<UInt128>(static_cast<uint64_t>(a.value)) * static_cast<UInt128>(static_cast<uint64_t>(b.value))) >> 64));
+    }
+}
+
+void testUMulHigh32()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<uint32_t, uint32_t>(proc, root);
+
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(
+            proc, UMulHigh, Origin(),
+            arguments[0],
+            arguments[1]));
+
+    auto code = compileProc(proc);
+    for (auto a : int32Operands()) {
+        for (auto b : int32Operands())
+            CHECK_EQ(invoke<uint32_t>(*code, a.value, b.value), static_cast<uint32_t>((static_cast<uint64_t>(static_cast<uint32_t>(a.value)) * static_cast<uint64_t>(static_cast<uint32_t>(b.value))) >> 32));
+    }
 }
 
 #endif // ENABLE(B3_JIT)

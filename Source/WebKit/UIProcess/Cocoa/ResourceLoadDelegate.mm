@@ -70,7 +70,7 @@ void ResourceLoadDelegate::setDelegate(id <_WKResourceLoadDelegate> delegate)
     m_delegateMethods.didCompleteWithError = [delegate respondsToSelector:@selector(webView:resourceLoad:didCompleteWithError:response:)];
 }
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(ResourceLoadDelegate, ResourceLoadClient);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ResourceLoadDelegate::ResourceLoadClient);
 
 ResourceLoadDelegate::ResourceLoadClient::ResourceLoadClient(ResourceLoadDelegate& delegate)
     : m_resourceLoadDelegate(delegate)

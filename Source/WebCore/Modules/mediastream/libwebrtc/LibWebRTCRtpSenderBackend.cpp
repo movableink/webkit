@@ -197,9 +197,8 @@ void LibWebRTCRtpSenderBackend::setParameters(const RTCRtpSendParameters& parame
         return;
     }
 
-    auto rtcParameters = WTFMove(*m_currentParameters);
+    auto rtcParameters = *std::exchange(m_currentParameters, std::nullopt);
     updateRTCRtpSendParameters(parameters, rtcParameters);
-    m_currentParameters = std::nullopt;
 
     auto error = m_rtcSender->SetParameters(rtcParameters);
     if (!error.ok()) {

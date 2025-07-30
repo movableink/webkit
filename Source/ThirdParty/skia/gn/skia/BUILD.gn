@@ -22,6 +22,8 @@ declare_args() {
   malloc = ""
   werror = false
   xcode_sysroot = ""
+
+  skia_use_cpp20 = false
 }
 
 if (is_ios && xcode_sysroot == "") {
@@ -105,7 +107,12 @@ config("default") {
       "/bigobj",  # Some of our files are bigger than the regular limits.
       "/utf-8",  # Set Source and Executable character sets to UTF-8.
     ]
-    cflags_cc += [ "/std:c++17" ]
+    if (skia_use_cpp20) {
+      cflags_cc += [ "/std:c++20" ]
+    } else {
+      cflags_cc += [ "/std:c++17" ]
+    }
+
     if (!is_clang) {
       # https://developercommunity.visualstudio.com/t/Incorrect-C4573-when-taking-address-of-m/10662923
       cflags_cc += [ "/Zc:lambda" ]
@@ -143,14 +150,15 @@ config("default") {
     ]
   } else {
     cflags += [
-      "-fstrict-aliasing",
       "-fPIC",
       "-fvisibility=hidden",
     ]
-    cflags_cc += [
-      "-std=c++17",
-      "-fvisibility-inlines-hidden",
-    ]
+    cflags_cc += [ "-fvisibility-inlines-hidden" ]
+    if (skia_use_cpp20) {
+      cflags_cc += [ "-std=c++20" ]
+    } else {
+      cflags_cc += [ "-std=c++17" ]
+    }
   }
 
   if (current_cpu == "arm") {
@@ -750,6 +758,23 @@ config("NDEBUG") {
 config("trivial_abi") {
   if (is_clang) {
     defines = [ "SK_TRIVIAL_ABI=[[clang::trivial_abi]]" ]
+  }
+}
+
+# PartitionAlloc, Chrome, and many other C++ projects are written assuming
+# different types may freely point to the same location in memory. This is
+# undefined behavior in C/C++. With `-fstrict-aliasing`, some compiler will
+# optimize code in a way that would crash those projects.
+#
+# As of 2024, only GCC is aggressive about strict aliasing. Clang isn't.
+config("strict_aliasing") {
+  if (!is_win) {
+    cflags = [ "-fstrict-aliasing" ]
+  }
+}
+config("no_strict_aliasing") {
+  if (!is_win) {
+    cflags = [ "-fno-strict-aliasing" ]
   }
 }
 

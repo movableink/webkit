@@ -15,3 +15,5 @@ None
 ------------------------------------------------------------------------
 List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/selectors/resources/blue15x15.png
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/resources/partitioned-visited-cross-site-iframe.html
+/LayoutTests/imported/w3c/web-platform-tests/css/selectors/resources/partitioned-visited-same-site-iframe.html

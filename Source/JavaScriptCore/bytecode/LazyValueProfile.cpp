@@ -31,7 +31,7 @@
 
 namespace JSC {
 
-WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL_NESTED(CompressedLazyValueProfileHolder, LazyValueProfileHolder);
+WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(CompressedLazyValueProfileHolder::LazyValueProfileHolder);
 
 void CompressedLazyValueProfileHolder::computeUpdatedPredictions(const ConcurrentJSLocker& locker, CodeBlock* codeBlock)
 {

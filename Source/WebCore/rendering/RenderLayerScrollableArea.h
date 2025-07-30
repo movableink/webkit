@@ -138,7 +138,7 @@ public:
     bool hitTestOverflowControls(HitTestResult&, const IntPoint& localPoint);
     bool hitTestResizerInFragments(const LayerFragments&, const HitTestLocation&, LayoutPoint& pointInFragment) const;
 
-    void paintOverflowControls(GraphicsContext&, const IntPoint&, const IntRect& damageRect, bool paintingOverlayControls = false);
+    void paintOverflowControls(GraphicsContext&, OptionSet<PaintBehavior>, const IntPoint&, const IntRect& damageRect, bool paintingOverlayControls = false);
     void paintScrollCorner(GraphicsContext&, const IntPoint&, const IntRect& damageRect);
     void paintResizer(GraphicsContext&, const LayoutPoint&, const LayoutRect& damageRect);
     void paintOverlayScrollbars(GraphicsContext&, const LayoutRect& damageRect, OptionSet<PaintBehavior>, RenderObject* subtreePaintRoot = nullptr);
@@ -273,6 +273,10 @@ public:
 
     void scrollbarWidthChanged(ScrollbarWidth) override;
 
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    bool vectorBasedControlsEnabled() const override;
+#endif
+
 private:
     bool hasHorizontalOverflow() const;
     bool hasVerticalOverflow() const;
@@ -288,8 +292,6 @@ private:
 
     void updateScrollCornerStyle();
     void updateResizerStyle();
-
-    void drawPlatformResizerImage(GraphicsContext&, const LayoutRect& resizerCornerRect);
 
     Ref<Scrollbar> createScrollbar(ScrollbarOrientation);
     void destroyScrollbar(ScrollbarOrientation);
@@ -316,6 +318,8 @@ private:
     bool m_updatingMarqueePosition { false };
     
     bool m_isRegisteredForAnimatedScroll { false };
+
+    bool m_useDarkAppearanceForScrollbars { false };
 
     // The width/height of our scrolled area.
     int m_scrollWidth { 0 };

@@ -77,8 +77,7 @@ public:
             propagateForward();
         } while (m_changed);
 
-        if (verboseFixPointLoops)
-            dataLog("Iterated ", counter, " times in double voting fixpoint.\n");
+        dataLogLnIf(verboseFixPointLoops, "Iterated ", counter, " times in double voting fixpoint.");
         
         return true;
     }
@@ -107,8 +106,7 @@ private:
             propagateBackward();
         } while (m_changed);
 
-        if (verboseFixPointLoops)
-            dataLog("Iterated ", counter, " times in propagateToFixpoint.\n");
+        dataLogLnIf(verboseFixPointLoops, "Iterated ", counter, " times in propagateToFixpoint.");
     }
     
     bool setPrediction(SpeculatedType prediction)
@@ -640,6 +638,19 @@ private:
             }
             break;
         }
+
+        case MultiGetByVal: {
+            changed |= mergePrediction(node->getHeapPrediction());
+            break;
+        }
+
+        case StringAt: {
+            if (node->arrayMode().isOutOfBounds())
+                changed |= mergePrediction(SpecString | SpecOther);
+            else
+                changed |= mergePrediction(SpecString);
+            break;
+        }
             
         case ToThis: {
             // ToThis in methods for primitive types should speculate primitive types in strict mode.
@@ -992,7 +1003,8 @@ private:
         case ArithBitXor:
         case ArithBitRShift:
         case ArithBitLShift:
-        case BitURShift:
+        case ArithBitURShift:
+        case ValueBitURShift: // URShift >>> does not accept BigInt.
         case ArithIMul:
         case ArithClz32: {
             setPrediction(SpecInt32Only);
@@ -1012,6 +1024,7 @@ private:
         case RegExpMatchFast:
         case RegExpMatchFastGlobal:
         case StringReplace:
+        case StringReplaceAll:
         case StringReplaceRegExp:
         case StringReplaceString:
         case GetById:
@@ -1127,6 +1140,7 @@ private:
             break;
 
         case MapStorage:
+        case MapStorageOrSentinel:
         case MapIterationNext:
             setPrediction(SpecCellOther);
             break;
@@ -1137,6 +1151,12 @@ private:
             break;
         }
 
+        case ArrayIncludes: {
+            setPrediction(SpecBoolean);
+            break;
+        }
+
+        case DataViewGetByteLength:
         case GetTypedArrayByteOffset:
         case GetArrayLength:
         case GetUndetachedTypeArrayLength:
@@ -1145,6 +1165,7 @@ private:
             break;
         }
 
+        case DataViewGetByteLengthAsInt52:
         case GetTypedArrayLengthAsInt52:
         case GetTypedArrayByteOffsetAsInt52: {
             setPrediction(SpecInt52Any);
@@ -1232,6 +1253,8 @@ private:
         case NumberIsInteger:
         case GlobalIsNaN:
         case NumberIsNaN:
+        case GlobalIsFinite:
+        case NumberIsFinite:
         case IsObject:
         case IsCallable:
         case IsConstructor:
@@ -1330,8 +1353,13 @@ private:
             setPrediction(speculationFromTypedArrayType(m_currentNode->typedArrayType()));
             break;
         }
+
+        case NewTypedArrayBuffer: {
+            setPrediction(SpecObjectOther);
+            break;
+        }
             
-        case NewRegexp: {
+        case NewRegExp: {
             setPrediction(SpecRegExpObject);
             break;
         }
@@ -1382,6 +1410,10 @@ private:
             setPrediction(SpecStringObject);
             break;
         }
+        case NewRegExpUntyped: {
+            setPrediction(SpecRegExpObject);
+            break;
+        }
         case NewSymbol: {
             setPrediction(SpecSymbol);
             break;
@@ -1409,6 +1441,7 @@ private:
         }
 
         case GetScope:
+        case GetEvalScope:
             setPrediction(SpecObjectOther);
             break;
 
@@ -1505,6 +1538,7 @@ private:
         case ArithMod:
         case ArithAbs:
         case GetByVal:
+        case MultiGetByVal:
         case ToThis:
         case ToPrimitive: 
         case ToPropertyKey:
@@ -1518,7 +1552,8 @@ private:
         case AtomicsOr:
         case AtomicsStore:
         case AtomicsSub:
-        case AtomicsXor: {
+        case AtomicsXor:
+        case StringAt: {
             m_dependentNodes.append(m_currentNode);
             break;
         }
@@ -1551,10 +1586,12 @@ private:
         case DoubleRep:
         case ValueRep:
         case Int52Rep:
+        case PurifyNaN:
         case Int52Constant:
         case Identity:
         case BooleanToNumber:
         case PhantomNewObject:
+        case PhantomNewArrayWithConstantSize:
         case PhantomNewFunction:
         case PhantomNewGeneratorFunction:
         case PhantomNewAsyncGeneratorFunction:
@@ -1567,7 +1604,7 @@ private:
         case PhantomNewArrayBuffer:
         case PhantomNewInternalFieldObject:
         case PhantomClonedArguments:
-        case PhantomNewRegexp:
+        case PhantomNewRegExp:
         case GetMyArgumentByVal:
         case GetMyArgumentByValOutOfBounds:
         case PutHint:
@@ -1575,6 +1612,7 @@ private:
         case CheckStructureOrEmpty:
         case CheckArrayOrEmpty:
         case MaterializeNewObject:
+        case MaterializeNewArrayWithConstantSize:
         case MaterializeCreateActivation:
         case MaterializeNewInternalFieldObject:
         case PutStack:
@@ -1609,6 +1647,7 @@ private:
         case PutByValWithThis:
         case PutByIdWithThis:
         case PutByVal:
+        case MultiPutByVal:
         case PutByValMegamorphic:
         case PutPrivateName:
         case PutPrivateNameById:

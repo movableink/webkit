@@ -169,11 +169,11 @@ private:
 
     static bool collectTimeStamp(VTTScanner& input, MediaTime& timeStamp);
 
-    Document& m_document;
+    const Ref<Document> m_document;
     ParseState m_state { Initial };
 
     BufferedLineReader m_lineReader;
-    RefPtr<TextResourceDecoder> m_decoder;
+    const Ref<TextResourceDecoder> m_decoder;
     AtomString m_currentId;
     MediaTime m_currentStartTime;
     MediaTime m_currentEndTime;

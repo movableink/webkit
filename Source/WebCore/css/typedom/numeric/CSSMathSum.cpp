@@ -26,10 +26,10 @@
 #include "config.h"
 #include "CSSMathSum.h"
 
+#include "CSSCalcTree.h"
 #include "CSSMathNegate.h"
 #include "CSSNumericArray.h"
 #include "ExceptionOr.h"
-#include <wtf/Algorithms.h>
 #include <wtf/FixedVector.h>
 #include <wtf/TZoneMallocInlines.h>
 

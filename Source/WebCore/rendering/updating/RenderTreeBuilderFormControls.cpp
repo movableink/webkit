@@ -26,6 +26,7 @@
 #include "config.h"
 #include "RenderTreeBuilderFormControls.h"
 
+#include "RenderBlockInlines.h"
 #include "RenderButton.h"
 #include "RenderMenuList.h"
 #include "RenderTreeBuilderBlock.h"
@@ -33,7 +34,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderTreeBuilder, FormControls);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::FormControls);
 
 RenderTreeBuilder::FormControls::FormControls(RenderTreeBuilder& builder)
     : m_builder(builder)
@@ -77,7 +78,7 @@ RenderBlock& RenderTreeBuilder::FormControls::findOrCreateParentForChild(RenderB
     if (innerRenderer)
         return *innerRenderer;
 
-    auto wrapper = parent.createAnonymousBlock(parent.style().display());
+    auto wrapper = Block::createAnonymousBlockWithStyle(parent.protectedDocument(), parent.style());
     innerRenderer = wrapper.get();
     m_builder.blockBuilder().attach(parent, WTFMove(wrapper), nullptr);
     parent.setInnerRenderer(*innerRenderer);
@@ -90,7 +91,7 @@ RenderBlock& RenderTreeBuilder::FormControls::findOrCreateParentForChild(RenderM
     if (innerRenderer)
         return *innerRenderer;
 
-    auto wrapper = parent.createAnonymousBlock();
+    auto wrapper = Block::createAnonymousBlockWithStyle(parent.protectedDocument(), parent.style());
     innerRenderer = wrapper.get();
     m_builder.blockBuilder().attach(parent, WTFMove(wrapper), nullptr);
     parent.setInnerRenderer(*innerRenderer);

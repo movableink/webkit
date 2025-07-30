@@ -800,9 +800,11 @@ sub printTypeHelpersHeaderFile
     print F "#pragma once\n\n";
     print F "#include \"".$parameters{namespace}."Names.h\"\n\n";
 
-    # FIXME: Remove `if` condition below once HTMLElementTypeHeaders.h is made inline.
+    # FIXME: Remove `if` condition below once HTMLElementTypeHelpers.h is made inline.
     if ($parameters{namespace} eq "SVG") {
-        print F "#include \"".$parameters{namespace}."ElementInlines.h\"\n\n";
+        print F "#include \"SVGElementInlines.h\"\n\n";
+    } elsif ($parameters{namespace} eq "MathML") {
+        print F "#include \"MathMLElement.h\"\n\n";
     }
     printTypeHelpers($F, \%allElements);
 
@@ -1148,7 +1150,7 @@ sub printNodeNameHeaderFile
     print F "{\n";
     print F "    constexpr auto s_lastUniqueTagName = TagName::$lastUniqueTagEnumValue;\n";
     print F"\n";
-    print F "    if (LIKELY(enumToUnderlyingType(elementName) <= enumToUnderlyingType(s_lastUniqueTagName)))\n";
+    print F "    if (enumToUnderlyingType(elementName) <= enumToUnderlyingType(s_lastUniqueTagName)) [[likely]]\n";
     print F "        return static_cast<TagName>(elementName);\n";
     print F "\n";
     print F "    switch (elementName) {\n";
@@ -1173,10 +1175,10 @@ sub printNodeNameHeaderFile
         print F "        constexpr auto s_firstUnique${namespace}TagName = TagName::$firstUniqueTagEnumValueByNamespace{$namespace};\n";
         print F "        constexpr auto s_lastUnique${namespace}TagName = TagName::$lastUniqueTagEnumValueByNamespace{$namespace};\n";
         print F "\n";
-        print F "        if (UNLIKELY(tagName < s_firstUnique${namespace}TagName))\n";
+        print F "        if (tagName < s_firstUnique${namespace}TagName) [[unlikely]]\n";
         print F "            return ElementName::Unknown;\n";
         print F "\n";
-        print F "        if (LIKELY(tagName <= s_lastUnique${namespace}TagName))\n";
+        print F "        if (tagName <= s_lastUnique${namespace}TagName) [[likely]]\n";
         print F "            return static_cast<ElementName>(tagName);\n";
         print F "\n";
         my @tagKeysForNonUniqueTags = grep { elementCount($allElements{$_}{localName}) > 1 && $allElements{$_}{namespace} eq $namespace } sort byElementNameOrder keys %allElements;
@@ -1396,7 +1398,7 @@ sub generateFindNameForLength
                     }
                     print F ")) {\n";
                 } else {
-                    print F "${indent}if (WTF::equal($bufferStart, \"". substr($string, $currentIndex, $length - $currentIndex) . "\"_span)) {\n";
+                    print F "${indent}if (WTF::equal($bufferStart, \"". substr($string, $currentIndex, $length - $currentIndex) . "\"_span8)) {\n";
                 }
             }
             print F "$indent    return ${enumClass}::$enumValue;\n";

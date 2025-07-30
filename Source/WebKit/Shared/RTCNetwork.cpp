@@ -24,9 +24,13 @@
  */
 
 #include "config.h"
-#include "RTCNetwork.h"
 
 #if USE(LIBWEBRTC)
+#include "RTCNetwork.h"
+
+#include <wtf/CrossThreadCopier.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/posix/SocketPOSIX.h>
 
 namespace WebKit {
 
@@ -45,7 +49,7 @@ RTCNetwork::RTCNetwork(Vector<char>&& name, Vector<char>&& description, IPAddres
 
 rtc::Network RTCNetwork::value() const
 {
-    rtc::Network network({ name.data(), name.size() }, { description.data(), description.size() }, prefix.rtcAddress(), prefixLength, rtc::AdapterType(type));
+    rtc::Network network({ name.span().data(), name.size() }, { description.span().data(), description.size() }, prefix.rtcAddress(), prefixLength, rtc::AdapterType(type));
     network.set_id(id);
     network.set_preference(preference);
     network.set_active(active);
@@ -61,6 +65,23 @@ rtc::Network RTCNetwork::value() const
     return network;
 }
 
+RTCNetwork RTCNetwork::isolatedCopy() const
+{
+    return RTCNetwork {
+        crossThreadCopy(name),
+        crossThreadCopy(description),
+        prefix,
+        prefixLength,
+        type,
+        id,
+        preference,
+        active,
+        ignored,
+        scopeID,
+        crossThreadCopy(ips)
+    };
+}
+
 namespace RTC::Network {
 
 rtc::SocketAddress SocketAddress::rtcAddress() const
@@ -68,7 +89,7 @@ rtc::SocketAddress SocketAddress::rtcAddress() const
     rtc::SocketAddress result;
     result.SetPort(port);
     result.SetScopeID(scopeID);
-    result.SetIP({ hostname.data(), hostname.size() });
+    result.SetIP({ hostname.span().data(), hostname.size() });
     if (ipAddress)
         result.SetResolvedIP(ipAddress->rtcAddress());
     return result;
@@ -86,7 +107,7 @@ static std::array<uint32_t, 4> fromIPv6Address(const struct in6_addr& address)
 {
     std::array<uint32_t, 4> array;
     static_assert(sizeof(array) == sizeof(address));
-    memcpy(array.data(), &address, sizeof(array));
+    memcpySpan(asMutableByteSpan(array), asByteSpan(address));
     return array;
 }
 
@@ -111,10 +132,10 @@ IPAddress::IPAddress(const struct sockaddr& address)
 {
     switch (address.sa_family) {
     case AF_INET6:
-        value = fromIPv6Address(reinterpret_cast<const sockaddr_in6*>(&address)->sin6_addr);
+        value = fromIPv6Address(asIPV6SocketAddress(address).sin6_addr);
         break;
     case AF_INET:
-        value = reinterpret_cast<const sockaddr_in*>(&address)->sin_addr.s_addr;
+        value = asIPV4SocketAddress(address).sin_addr.s_addr;
         break;
     case AF_UNSPEC:
         value = UnspecifiedFamily { };
@@ -135,7 +156,7 @@ rtc::IPAddress IPAddress::rtcAddress() const
     }, [] (std::array<uint32_t, 4> ipv6) {
         in6_addr result;
         static_assert(sizeof(ipv6) == sizeof(result));
-        memcpy(&result, ipv6.data(), sizeof(ipv6));
+        memcpySpan(asMutableByteSpan(result), asByteSpan(ipv6));
         return rtc::IPAddress(result);
     });
 }

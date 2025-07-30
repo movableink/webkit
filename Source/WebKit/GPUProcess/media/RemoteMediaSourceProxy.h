@@ -58,7 +58,7 @@ class RemoteMediaSourceProxy final
     , private IPC::MessageReceiver {
     WTF_MAKE_TZONE_ALLOCATED(RemoteMediaSourceProxy);
 public:
-    RemoteMediaSourceProxy(RemoteMediaPlayerManagerProxy&, RemoteMediaSourceIdentifier, bool webMParserEnabled, RemoteMediaPlayerProxy&);
+    RemoteMediaSourceProxy(RemoteMediaPlayerManagerProxy&, RemoteMediaSourceIdentifier, RemoteMediaPlayerProxy&);
     virtual ~RemoteMediaSourceProxy();
 
     void ref() const final { WebCore::MediaSourcePrivateClient::ref(); }
@@ -87,7 +87,7 @@ private:
     bool didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, UniqueRef<IPC::Encoder>&) final;
 
     using AddSourceBufferCallback = CompletionHandler<void(WebCore::MediaSourcePrivate::AddStatus, std::optional<RemoteSourceBufferIdentifier>)>;
-    void addSourceBuffer(const WebCore::ContentType&, AddSourceBufferCallback&&);
+    void addSourceBuffer(const WebCore::ContentType&, const WebCore::MediaSourceConfiguration&, AddSourceBufferCallback&&);
     void durationChanged(const MediaTime&);
     void bufferedChanged(WebCore::PlatformTimeRanges&&);
     void markEndOfStream(WebCore::MediaSourcePrivate::EndOfStreamStatus);
@@ -102,7 +102,6 @@ private:
 
     WeakPtr<RemoteMediaPlayerManagerProxy> m_manager;
     RemoteMediaSourceIdentifier m_identifier;
-    bool m_webMParserEnabled { false };
     RefPtr<WebCore::MediaSourcePrivate> m_private;
     WeakPtr<RemoteMediaPlayerProxy> m_remoteMediaPlayerProxy;
 

@@ -36,7 +36,7 @@ _log = logging.getLogger(__name__)
 class VisionOSPort(DevicePort):
     port_name = 'visionos'
 
-    CURRENT_VERSION = Version(1)
+    CURRENT_VERSION = Version(2)
     DEVICE_TYPE = DeviceType(software_variant='visionOS')
 
     def __init__(self, *args, **kwargs):
@@ -55,7 +55,10 @@ class VisionOSPort(DevicePort):
             return None
         return VersionNameMap.map(self.host.platform).to_name(self._os_version, platform=VisionOSPort.port_name)
 
-    def default_baseline_search_path(self, **kwargs):
+    def default_baseline_search_path(self, device_type=None, **kwargs):
+        if device_type is None:
+            device_type = self.DEVICE_TYPE
+
         versions_to_fallback = []
         if self.device_version() == self.CURRENT_VERSION:
             versions_to_fallback = [self.CURRENT_VERSION]
@@ -68,30 +71,47 @@ class VisionOSPort(DevicePort):
                 else:
                     temp_version.major -= 1
 
+        runtime_type = 'simulator' if 'simulator' in self.SDK else 'device'
+        hardware_family = device_type.hardware_family.lower() if device_type and device_type.hardware_family else None
+        hardware_type = device_type.hardware_type.lower() if device_type and device_type.hardware_type else None
+
+        base_variants = []
+        if hardware_family and hardware_type:
+            base_variants.append(u'{}-{}-{}'.format(hardware_family, hardware_type, runtime_type))
+        if hardware_family:
+            base_variants.append(u'{}-{}'.format(hardware_family, runtime_type))
+        base_variants.append(u'{}-{}'.format(VisionOSPort.port_name, runtime_type))
+        if hardware_family and hardware_type:
+            base_variants.append(u'{}-{}'.format(hardware_family, hardware_type))
+        if hardware_family:
+            base_variants.append(hardware_family)
+        base_variants.append(VisionOSPort.port_name)
+
         expectations = []
-        for version in versions_to_fallback:
+        for variant in base_variants:
+            for version in versions_to_fallback:
+                if apple_additions():
+                    apple_name = VersionNameMap.map(self.host.platform).to_name(version, platform=VisionOSPort.port_name, table=INTERNAL_TABLE)
+                    if apple_name:
+                        expectations.append(self._apple_baseline_path('{}-{}'.format(variant, apple_name.lower().replace(' ', ''))))
+                expectations.append(self._webkit_baseline_path('{}-{}'.format(variant, version.major)))
+
             if apple_additions():
-                apple_name = VersionNameMap.map(self.host.platform).to_name(version, platform=VisionOSPort.port_name, table=INTERNAL_TABLE)
+                expectations.append(self._apple_baseline_path(variant))
+            expectations.append(self._webkit_baseline_path(variant))
+
+            for version in versions_to_fallback:
+                apple_name = None
+                if apple_additions():
+                    apple_name = VersionNameMap.map(self.host.platform).to_name(version, platform=VisionOSPort.port_name, table=INTERNAL_TABLE)
                 if apple_name:
-                    expectations.append(self._apple_baseline_path('{}-{}'.format(self.port_name, apple_name.lower().replace(' ', ''))))
-            expectations.append(self._webkit_baseline_path('{}-{}'.format(self.port_name, version.major)))
+                    expectations.append(self._apple_baseline_path('{}-{}'.format(VisionOSPort.port_name, apple_name.lower().replace(' ', ''))))
+                expectations.append(self._webkit_baseline_path('{}-{}'.format(VisionOSPort.port_name, version.major)))
 
-        if apple_additions():
-            expectations.append(self._apple_baseline_path(self.port_name))
-        expectations.append(self._webkit_baseline_path(self.port_name))
-
-        for version in versions_to_fallback:
-            apple_name = None
             if apple_additions():
-                apple_name = VersionNameMap.map(self.host.platform).to_name(version, platform=VisionOSPort.port_name, table=INTERNAL_TABLE)
-            if apple_name:
-                expectations.append(self._apple_baseline_path('{}-{}'.format(VisionOSPort.port_name, apple_name.lower().replace(' ', ''))))
-            expectations.append(self._webkit_baseline_path('{}-{}'.format(VisionOSPort.port_name, version.major)))
+                expectations.append(self._apple_baseline_path(VisionOSPort.port_name))
+            expectations.append(self._webkit_baseline_path(VisionOSPort.port_name))
 
-        if apple_additions():
-            expectations.append(self._apple_baseline_path(VisionOSPort.port_name))
-        expectations.append(self._webkit_baseline_path(VisionOSPort.port_name))
-
-        expectations.append(self._webkit_baseline_path('wk2'))
+            expectations.append(self._webkit_baseline_path('wk2'))
 
         return expectations

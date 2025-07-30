@@ -28,6 +28,7 @@
 #include "OSCheck.h"
 #include <optional>
 #include <wtf/Atomics.h>
+#include <wtf/MathExtras.h>
 
 namespace JSC {
 
@@ -356,6 +357,8 @@ enum class MachineCodeCopyMode : uint8_t {
     JITMemcpy,
 };
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 static ALWAYS_INLINE void* memcpyAtomicIfPossible(void* dst, const void* src, size_t n)
 {
 #if !CPU(NEEDS_ALIGNED_ACCESS)
@@ -403,5 +406,7 @@ ALWAYS_INLINE void* machineCodeCopy(void* dst, const void* src, size_t n)
     else
         return performJITMemcpy(dst, src, n);
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 } // namespace JSC.

@@ -68,10 +68,10 @@ static void testWebViewNewWithUserContentManager(Test* test, gconstpointer)
 {
     GRefPtr<WebKitUserContentManager> userContentManager1 = adoptGRef(webkit_user_content_manager_new());
     test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(userContentManager1.get()));
-    auto webView1 = Test::adoptView(Test::createWebView(userContentManager1.get()));
+    auto webView1 = test->createWebView("user-content-manager", userContentManager1.get(), nullptr);
     g_assert_true(webkit_web_view_get_user_content_manager(webView1.get()) == userContentManager1.get());
 
-    auto webView2 = Test::adoptView(Test::createWebView());
+    auto webView2 = test->createWebView();
     g_assert_true(webkit_web_view_get_user_content_manager(webView2.get()) != userContentManager1.get());
 }
 
@@ -330,7 +330,7 @@ public:
     {
         GUniquePtr<char> javascriptSnippet(g_strdup_printf("window.webkit.messageHandlers.%s.postMessage(%s);", handlerName, javascriptValueAsText));
         m_waitForScriptRun = true;
-        webkit_web_view_evaluate_javascript(m_webView, javascriptSnippet.get(), -1, worldName, nullptr, nullptr, reinterpret_cast<GAsyncReadyCallback>(runJavaScriptFinished), this);
+        webkit_web_view_evaluate_javascript(m_webView.get(), javascriptSnippet.get(), -1, worldName, nullptr, nullptr, reinterpret_cast<GAsyncReadyCallback>(runJavaScriptFinished), this);
         return waitUntilMessageReceived(handlerName);
     }
 
@@ -382,7 +382,7 @@ public:
         GUniquePtr<char> javascriptSnippet(g_strdup_printf("var p = window.webkit.messageHandlers.%s.postMessage(%s); await p; return p;", handlerName, javascriptValueAsText));
         m_waitForScriptRun = true;
 
-        webkit_web_view_call_async_javascript_function(m_webView, javascriptSnippet.get(), -1, nullptr, worldName, nullptr, nullptr, reinterpret_cast<GAsyncReadyCallback>(runAsyncJavaScriptFinished), this);
+        webkit_web_view_call_async_javascript_function(m_webView.get(), javascriptSnippet.get(), -1, nullptr, worldName, nullptr, nullptr, reinterpret_cast<GAsyncReadyCallback>(runAsyncJavaScriptFinished), this);
 
         return waitUntilPromiseResolved(handlerName, error);
     }

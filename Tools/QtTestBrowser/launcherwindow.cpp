@@ -67,6 +67,7 @@
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QNetworkReply>
+#include <QSslError>
 #endif
 
 #if !defined(QT_NO_NETWORKDISKCACHE) && !defined(QT_NO_DESKTOPSERVICES)
@@ -107,8 +108,10 @@ LauncherWindow::LauncherWindow(WindowOptions* data, QGraphicsScene* sharedScene)
     createChrome();
 #if !defined(QT_NO_FILEDIALOG) && !defined(QT_NO_MESSAGEBOX)
     connect(page(), SIGNAL(downloadRequested(const QNetworkRequest&)), this, SLOT(downloadRequest(const QNetworkRequest&)));
+#if !defined(QT_NO_SSL)
     connect(page()->networkAccessManager(), SIGNAL(sslErrors(QNetworkReply*, const QList<QSslError>&)),
             this, SLOT(showSSLErrorConfirmation(QNetworkReply*, const QList<QSslError>&)));
+#endif // QT_NO_SSL
 #endif
 }
 
@@ -432,11 +435,13 @@ void LauncherWindow::createChrome()
     toggleTiledBackingStore->setEnabled(isGraphicsBased());
     toggleTiledBackingStore->connect(toggleGraphicsView, SIGNAL(toggled(bool)), SLOT(setEnabled(bool)));
 
+#ifndef QT_NO_OPENGL
     QAction* toggleQOpenGLWidgetViewport = graphicsViewMenu->addAction("Toggle use of QOpenGLWidget Viewport", this, SLOT(toggleQOpenGLWidgetViewport(bool)));
     toggleQOpenGLWidgetViewport->setCheckable(true);
     toggleQOpenGLWidgetViewport->setChecked(m_windowOptions.useQOpenGLWidgetViewport);
     toggleQOpenGLWidgetViewport->setEnabled(isGraphicsBased());
     toggleQOpenGLWidgetViewport->connect(toggleGraphicsView, SIGNAL(toggled(bool)), SLOT(setEnabled(bool)));
+#endif
 
     QMenu* viewportUpdateMenu = graphicsViewMenu->addMenu("Change Viewport Update Mode");
     viewportUpdateMenu->setEnabled(isGraphicsBased());
@@ -1158,6 +1163,7 @@ void LauncherWindow::showUserAgentDialog()
 
 void LauncherWindow::showSSLErrorConfirmation(QNetworkReply* reply, const QList<QSslError>& errors)
 {
+#ifndef QT_NO_SSL
     QString errorStrings = "<ul>";
     for (const QSslError& error : errors)
         errorStrings += "<li>" + error.errorString() + "</li>";
@@ -1171,6 +1177,7 @@ void LauncherWindow::showSSLErrorConfirmation(QNetworkReply* reply, const QList<
     sslWarningBox.setIcon(QMessageBox::Warning);
     if (sslWarningBox.exec() == QMessageBox::Ignore)
         reply->ignoreSslErrors();
+#endif
 }
 
 void LauncherWindow::loadURLListFromFile()

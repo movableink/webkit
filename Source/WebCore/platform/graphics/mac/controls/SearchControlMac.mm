@@ -40,6 +40,8 @@ SearchControlMac::SearchControlMac(ControlPart& part, ControlFactoryMac& control
     ASSERT(m_searchFieldCell);
 }
 
+SearchControlMac::~SearchControlMac() = default;
+
 void SearchControlMac::updateCellStates(const FloatRect& rect, const ControlStyle& style)
 {
     ControlMac::updateCellStates(rect, style);

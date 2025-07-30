@@ -68,6 +68,7 @@ list(APPEND WebCore_SOURCES
 
     platform/graphics/win/DIBPixelData.cpp
     platform/graphics/win/DisplayRefreshMonitorWin.cpp
+    platform/graphics/win/FloatPointWin.cpp
     platform/graphics/win/FloatRectWin.cpp
     platform/graphics/win/FullScreenController.cpp
     platform/graphics/win/FullScreenWindow.cpp
@@ -86,14 +87,13 @@ list(APPEND WebCore_SOURCES
     platform/network/win/NetworkStateNotifierWin.cpp
 
     platform/text/Hyphenation.cpp
-    platform/text/win/LocaleWin.cpp
+    platform/text/LocaleICU.cpp
 
     platform/win/BString.cpp
     platform/win/BitmapInfo.cpp
     platform/win/ClipboardUtilitiesWin.cpp
     platform/win/CursorWin.cpp
     platform/win/DragDataWin.cpp
-    platform/win/DragImageWin.cpp
     platform/win/GDIUtilities.cpp
     platform/win/KeyEventWin.cpp
     platform/win/LoggingWin.cpp
@@ -201,7 +201,6 @@ endif ()
 if (USE_CAIRO)
     list(APPEND WebCore_SOURCES
         platform/graphics/win/ComplexTextControllerUniscribe.cpp
-        platform/graphics/win/DrawGlyphsRecorderWin.cpp
         platform/graphics/win/FontCacheWin.cpp
         platform/graphics/win/FontCustomPlatformDataWin.cpp
         platform/graphics/win/FontDescriptionWin.cpp
@@ -218,6 +217,12 @@ if (USE_CAIRO)
         platform/graphics/win/cairo/MediaPlayerPrivateMediaFoundationCairo.cpp
 
         platform/win/cairo/DragImageWinCairo.cpp
+    )
+elseif (USE_SKIA)
+    list(APPEND WebCore_SOURCES
+        platform/graphics/win/FontCacheSkiaWin.cpp
+
+        platform/skia/DragImageSkia.cpp
     )
 endif ()
 

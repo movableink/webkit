@@ -1680,7 +1680,8 @@ angle::Result FramebufferMtl::readPixelsImpl(const gl::Context *context,
         {
             return angle::Result::Stop;
         }
-        ANGLE_MTL_CHECK(contextMtl, texture->samples() == 1, GL_INVALID_OPERATION);
+        ANGLE_CHECK(contextMtl, texture->samples() == 1, gl::err::kInternalError,
+                    GL_INVALID_OPERATION);
     }
 
     const mtl::Format &readFormat        = renderTarget->getFormat();
@@ -1753,13 +1754,9 @@ angle::Result FramebufferMtl::readPixelsToPBO(const gl::Context *context,
 
     ContextMtl *contextMtl = mtl::GetImpl(context);
 
-    if constexpr (sizeof(packPixelsParams.offset) > sizeof(uint32_t))
-    {
-        ANGLE_MTL_CHECK(contextMtl,
+    ANGLE_CHECK_GL_MATH(contextMtl,
                         static_cast<std::make_unsigned_t<decltype(packPixelsParams.offset)>>(
-                            packPixelsParams.offset) <= std::numeric_limits<uint32_t>::max(),
-                        GL_INVALID_OPERATION);
-    }
+                            packPixelsParams.offset) <= std::numeric_limits<uint32_t>::max());
     uint32_t offset = static_cast<uint32_t>(packPixelsParams.offset);
 
     BufferMtl *packBufferMtl = mtl::GetImpl(packPixelsParams.packBuffer);
@@ -1817,7 +1814,7 @@ angle::Result FramebufferMtl::readPixelsToBuffer(const gl::Context *context,
                             break;
                         default:
                             // Unsupported format.
-                            ANGLE_MTL_CHECK(contextMtl, false, GL_INVALID_ENUM);
+                            ANGLE_GL_UNREACHABLE(contextMtl);
                     }
                     break;
                 }
@@ -1835,11 +1832,11 @@ angle::Result FramebufferMtl::readPixelsToBuffer(const gl::Context *context,
         params.texture                = texture;
         params.textureArea            = area;
         params.textureLevel           = renderTarget->getLevelIndex();
-        params.textureSliceOrDeph     = renderTarget->getLayerIndex();
+        params.textureSliceOrDepth    = renderTarget->getLayerIndex();
         params.reverseTextureRowOrder = reverseRowOrder;
 
-        ANGLE_TRY(contextMtl->getDisplay()->getUtils().packPixelsFromTextureToBuffer(
-            contextMtl, *actualDstAngleFormat, params));
+        ANGLE_TRY(contextMtl->getDisplay()->getUtils().packPixelsCS(contextMtl,
+                                                                    *actualDstAngleFormat, params));
     }
     else
     {
@@ -1907,8 +1904,7 @@ angle::Result FramebufferMtl::unresolveIfNeeded(const gl::Context *context,
         const mtl::RenderPassColorAttachmentDesc &colorAttachment =
             renderPassDesc.colorAttachments[colorIndexGL];
 
-        if (colorAttachment.loadAction != MTLLoadActionLoad ||
-            !colorAttachment.texture ||
+        if (colorAttachment.loadAction != MTLLoadActionLoad || !colorAttachment.texture ||
             !colorAttachment.texture->shouldNotLoadStore())
         {
             continue;

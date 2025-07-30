@@ -30,10 +30,12 @@
 #include "CSSFunctionValue.h"
 #include "CSSMarkup.h"
 #include "CSSParserIdioms.h"
+#include "CSSSerializationContext.h"
 #include "CSSTokenizer.h"
-#include "ColorSerialization.h"
-#include "ComputedStyleExtractor.h"
+#include "CalculationValue.h"
 #include "RenderStyle.h"
+#include "StyleExtractorConverter.h"
+#include "StyleURL.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
@@ -69,38 +71,38 @@ bool CSSCustomPropertyValue::equals(const CSSCustomPropertyValue& other) const
     });
 }
 
-String CSSCustomPropertyValue::customCSSText() const
+String CSSCustomPropertyValue::customCSSText(const CSS::SerializationContext& context) const
 {
-    auto serializeSyntaxValue = [](const SyntaxValue& syntaxValue) -> String {
+    auto serializeSyntaxValue = [&](const SyntaxValue& syntaxValue) -> String {
         return WTF::switchOn(syntaxValue, [&](const Length& value) {
             if (value.type() == LengthType::Calculated) {
                 // FIXME: Implement serialization for CalculationValue directly.
-                auto calcValue = CSSCalcValue::create(value.calculationValue(), RenderStyle::defaultStyle());
-                return calcValue->cssText();
+                auto calcValue = CSSCalcValue::create(value.protectedCalculationValue(), RenderStyle::defaultStyleSingleton());
+                return calcValue->cssText(context);
             }
-            return CSSPrimitiveValue::create(value, RenderStyle::defaultStyle())->cssText();
+            return CSSPrimitiveValue::create(value, RenderStyle::defaultStyleSingleton())->cssText(context);
         }, [&](const NumericSyntaxValue& value) {
-            return CSSPrimitiveValue::create(value.value, value.unitType)->cssText();
+            return CSSPrimitiveValue::create(value.value, value.unitType)->cssText(context);
         }, [&](const Style::Color& value) {
-            return serializationForCSS(value);
+            return serializationForCSS(context, value);
         }, [&](const RefPtr<StyleImage>& value) {
             // FIXME: This is not right for gradients that use `currentcolor`. There should be a way preserve it.
-            return value->computedStyleValue(RenderStyle::defaultStyle())->cssText();
-        }, [&](const URL& value) {
-            return serializeURL(value.string());
+            return value->computedStyleValue(RenderStyle::defaultStyleSingleton())->cssText(context);
+        }, [&](const Style::URL& value) {
+            return serializationForCSS(context, Style::toCSS(value, RenderStyle::defaultStyleSingleton()));
         }, [&](const String& value) {
             return value;
         }, [&](const TransformSyntaxValue& value) {
-            auto cssValue = transformOperationAsCSSValue(value.transform, RenderStyle::defaultStyle());
+            auto cssValue = Style::ExtractorConverter::convertTransformOperation(RenderStyle::defaultStyleSingleton(), value.transform);
             if (!cssValue)
                 return emptyString();
-            return cssValue->cssText();
+            return cssValue->cssText(context);
         });
     };
 
     auto serialize = [&] {
         return WTF::switchOn(m_value, [&](const Ref<CSSVariableReferenceValue>& value) {
-            return value->cssText();
+            return value->cssText(context);
         }, [&](const CSSValueID& value) {
             return nameString(value).string();
         }, [&](const Ref<CSSVariableData>& value) {
@@ -139,7 +141,7 @@ const Vector<CSSParserToken>& CSSCustomPropertyValue::tokens() const
         return value->tokens();
     }, [&](auto&) -> const Vector<CSSParserToken>& {
         if (!m_cachedTokens) {
-            CSSTokenizer tokenizer { customCSSText() };
+            CSSTokenizer tokenizer { customCSSText(CSS::defaultSerializationContext()) };
             m_cachedTokens = CSSVariableData::create(tokenizer.tokenRange());
         }
         return m_cachedTokens->tokens();
@@ -204,7 +206,7 @@ static bool mayDependOnBaseURL(const CSSCustomPropertyValue::SyntaxValue& syntax
         [](const RefPtr<StyleImage>&) {
             return true;
         },
-        [](const URL&) {
+        [](const Style::URL&) {
             return true;
         },
         [](const String&) {

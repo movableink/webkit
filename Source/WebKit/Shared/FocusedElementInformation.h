@@ -27,6 +27,7 @@
 
 #include "ArgumentCoders.h"
 #include "ColorControlSupportsAlpha.h"
+#include "FrameInfoData.h"
 #include "IdentifierTypes.h"
 #include <WebCore/AutocapitalizeTypes.h>
 #include <WebCore/Autofill.h>
@@ -61,9 +62,7 @@ enum class InputType : uint8_t {
     Time,
     Select,
     Drawing,
-#if ENABLE(INPUT_TYPE_COLOR)
     Color
-#endif
 };
 
 #if PLATFORM(IOS_FAMILY)
@@ -124,15 +123,11 @@ struct FocusedElementInformation {
     String placeholder;
     String label;
     String ariaLabel;
-#if ENABLE(DATALIST_ELEMENT)
     bool hasSuggestions { false };
     bool isFocusingWithDataListDropdown { false };
-#if ENABLE(INPUT_TYPE_COLOR)
     WebCore::Color colorValue;
     ColorControlSupportsAlpha supportsAlpha { ColorControlSupportsAlpha::No };
     Vector<WebCore::Color> suggestedColors;
-#endif
-#endif
     bool hasEverBeenPasswordField { false };
     bool shouldSynthesizeKeyEventsForEditing { false };
     bool isSpellCheckingEnabled { true };
@@ -146,7 +141,7 @@ struct FocusedElementInformation {
     FocusedElementInformationIdentifier identifier;
     Markable<WebCore::ScrollingNodeID> containerScrollingNodeID;
 
-    Markable<WebCore::FrameIdentifier> frameID;
+    std::optional<FrameInfoData> frame;
 };
 #endif
 

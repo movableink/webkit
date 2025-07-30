@@ -29,7 +29,7 @@
             height: 100%;
         }
         .flipping {
-            -webkit-animation: flip 2s forwards;
+            -webkit-animation: flip 3600s forwards;
         }
         
         .front, .back {
@@ -60,8 +60,13 @@
             }, 250);
         }
         
-        function testDone()
+        async function testDone()
         {
+            // Wait a couple of frames for the first animation frame to
+            // have been committed so we get stable results.
+            await new Promise(requestAnimationFrame);
+            await new Promise(requestAnimationFrame);
+
             var layersResult = document.getElementById('layers');
             if (window.testRunner) {
                 layersResult.innerText = window.internals.layerTreeAsText(document);

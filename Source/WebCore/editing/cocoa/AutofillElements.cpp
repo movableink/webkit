@@ -89,7 +89,7 @@ std::optional<AutofillElements> AutofillElements::computeAutofillElements(Ref<HT
         auto nextElement = nextAutofillableElement(start.ptr(), focusController);
 
         bool previousFieldIsTextField = previousElement && !previousElement->isPasswordField();
-        bool hasSecondPasswordFieldToFill = nextElement && nextElement->isPasswordField() && nextElement->value().isEmpty();
+        bool hasSecondPasswordFieldToFill = nextElement && nextElement->isPasswordField() && nextElement->value()->isEmpty();
 
         // Always allow AutoFill in a password field, even if we fill information only into it.
         return {{ previousFieldIsTextField ? WTFMove(previousElement) : nullptr, WTFMove(start), hasSecondPasswordFieldToFill ? WTFMove(nextElement) : nullptr }};
@@ -98,7 +98,7 @@ std::optional<AutofillElements> AutofillElements::computeAutofillElements(Ref<HT
         if (nextElement && is<HTMLInputElement>(*nextElement)) {
             if (nextElement->isPasswordField()) {
                 auto elementAfterNextElement = nextAutofillableElement(nextElement.get(), focusController);
-                bool hasSecondPasswordFieldToFill = elementAfterNextElement && elementAfterNextElement->isPasswordField() && elementAfterNextElement->value().isEmpty();
+                bool hasSecondPasswordFieldToFill = elementAfterNextElement && elementAfterNextElement->isPasswordField() && elementAfterNextElement->value()->isEmpty();
 
                 return {{ WTFMove(start), WTFMove(nextElement), hasSecondPasswordFieldToFill ? WTFMove(elementAfterNextElement) : nullptr }};
             }
@@ -107,7 +107,7 @@ std::optional<AutofillElements> AutofillElements::computeAutofillElements(Ref<HT
 
     // Handle the case where a username field appears separately from a password field.
     auto autofillData = start->autofillData();
-    if (toAutofillFieldName(autofillData.fieldName) == AutofillFieldName::Username)
+    if (toAutofillFieldName(autofillData.fieldName) == AutofillFieldName::Username || toAutofillFieldName(autofillData.fieldName) == AutofillFieldName::WebAuthn)
         return {{ WTFMove(start), nullptr, nullptr }};
 
     return std::nullopt;

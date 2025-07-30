@@ -35,11 +35,6 @@ enum class ItemPosition : uint8_t;
 class RenderElement;
 class RenderGrid;
 
-enum class GridAxis : uint8_t {
-    GridRowAxis = 1 << 0,
-    GridColumnAxis = 1 << 1
-};
-
 struct ExtraMarginsFromSubgrids {
     inline LayoutUnit extraTrackStartMargin() const { return m_extraMargins.first; }
     inline LayoutUnit extraTrackEndMargin() const { return m_extraMargins.second; }
@@ -70,7 +65,7 @@ bool isOrthogonalParent(const RenderGrid&, const RenderElement& parent);
 bool isAspectRatioBlockSizeDependentGridItem(const RenderBox&);
 GridTrackSizingDirection flowAwareDirectionForGridItem(const RenderGrid&, const RenderBox&, GridTrackSizingDirection);
 GridTrackSizingDirection flowAwareDirectionForParent(const RenderGrid&, const RenderElement& parent, GridTrackSizingDirection);
-std::optional<RenderBox::ContainingBlockOverrideValue> overridingContainingBlockContentSizeForGridItem(const RenderBox&, GridTrackSizingDirection);
+std::optional<RenderBox::GridAreaSize> overridingContainingBlockContentSizeForGridItem(const RenderBox&, GridTrackSizingDirection);
 bool hasRelativeOrIntrinsicSizeForGridItem(const RenderBox& gridItem, GridTrackSizingDirection);
 
 bool isFlippedDirection(const RenderGrid&, GridTrackSizingDirection);

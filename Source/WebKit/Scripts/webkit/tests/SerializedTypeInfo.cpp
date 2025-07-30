@@ -71,23 +71,47 @@
 #include <WebCore/ScrollingStateFrameHostingNode.h>
 #include <WebCore/ScrollingStateFrameHostingNodeWithStuffAfterTuple.h>
 #include <WebCore/TimingFunction.h>
+#include <wtf/CreateUsingClass.h>
+#include <wtf/EnumTraits.h>
+#include <wtf/Seconds.h>
+#include <wtf/StdLibExtras.h>
+
 #if USE(AVFOUNDATION)
 #include <pal/cocoa/AVFoundationSoftLink.h>
 #endif
+
 #if ENABLE(DATA_DETECTION)
 #include <pal/cocoa/DataDetectorsCoreSoftLink.h>
 #endif
-#include <wtf/CreateUsingClass.h>
-#include <wtf/Seconds.h>
 
-static_assert(std::is_same_v<WebCore::SharedStringHash, uint32_t>);
-static_assert(std::is_same_v<WebCore::UsingWithSemicolon, uint32_t>);
+static_assert(std::is_same_v<WebCore::SharedStringHash,
+    uint32_t
+>);
+static_assert(std::is_same_v<WebCore::UsingWithSemicolon,
+    uint32_t
+>);
 #if OS(WINDOWS)
-static_assert(std::is_same_v<WTF::ProcessID, int>);
+static_assert(std::is_same_v<WTF::ProcessID,
+    int
+>);
 #endif
 #if !(OS(WINDOWS))
-static_assert(std::is_same_v<WTF::ProcessID, pid_t>);
+static_assert(std::is_same_v<WTF::ProcessID,
+    pid_t
+>);
 #endif
+static_assert(std::is_same_v<WebCore::ConditionalVariant,
+    Variant<
+        int,
+#if USE(CHAR)
+        char,
+#endif
+        double
+    >
+>);
+static_assert(std::is_same_v<WebCore::NonConditionalVariant,
+    Variant<int, double>
+>);
 
 #if ENABLE(IPC_TESTING_API)
 
@@ -95,7 +119,7 @@ namespace WebKit {
 
 template<typename E> uint64_t enumValueForIPCTestAPI(E e)
 {
-    return static_cast<std::make_unsigned_t<std::underlying_type_t<E>>>(e);
+    return unsignedCast(e);
 }
 
 Vector<SerializedTypeInfo> allSerializedTypes()
@@ -254,7 +278,7 @@ Vector<SerializedTypeInfo> allSerializedTypes()
             },
         } },
         { "WebCore::TimingFunction"_s, {
-            { "std::variant<"
+            { "Variant<"
                 "WebCore::LinearTimingFunction"
                 ", WebCore::CubicBezierTimingFunction"
 #if CONDITION
@@ -284,7 +308,7 @@ Vector<SerializedTypeInfo> allSerializedTypes()
             },
         } },
         { "WebCore::MoveOnlyBaseClass"_s, {
-            { "std::variant<"
+            { "Variant<"
                 "WebCore::MoveOnlyDerivedClass"
             ">"_s, "subclasses"_s }
         } },
@@ -319,7 +343,13 @@ Vector<SerializedTypeInfo> allSerializedTypes()
 #endif
                     ", bool"
                 ">"_s,
-                "optionalTuple"_s
+                "OptionalTuple<"
+                    "name"
+#if ENABLE(FEATURE)
+                    ", featureEnabledMember"
+#endif
+                    ", bitFieldMember"
+                ">"_s
             },
         } },
         { "WebKit::TemplateTest"_s, {
@@ -341,7 +371,9 @@ Vector<SerializedTypeInfo> allSerializedTypes()
                 "OptionalTuple<"
                     "std::optional<WebCore::PlatformLayerIdentifier>"
                 ">"_s,
-                "optionalTuple"_s
+                "OptionalTuple<"
+                    "layer().layerIDForEncoding()"
+                ">"_s
             },
         } },
         { "WebCore::ScrollingStateFrameHostingNodeWithStuffAfterTuple"_s, {
@@ -358,7 +390,10 @@ Vector<SerializedTypeInfo> allSerializedTypes()
                     "std::optional<WebCore::PlatformLayerIdentifier>"
                     ", bool"
                 ">"_s,
-                "optionalTuple"_s
+                "OptionalTuple<"
+                    "layer().layerIDForEncoding()"
+                    ", otherMember"
+                ">"_s
             },
             {
                 "int"_s,
@@ -534,21 +569,45 @@ Vector<SerializedTypeInfo> allSerializedTypes()
             { "WebKit::CoreIPCNull"_s, "wrapper"_s }
         } },
         { "WebCore::SharedStringHash"_s, {
-            { "uint32_t"_s, "alias"_s }
+        {
+            "uint32_t"_s
+            , "alias"_s }
         } },
         { "WebCore::UsingWithSemicolon"_s, {
-            { "uint32_t"_s, "alias"_s }
+        {
+            "uint32_t"_s
+            , "alias"_s }
         } },
 #if OS(WINDOWS)
         { "WTF::ProcessID"_s, {
-            { "int"_s, "alias"_s }
+        {
+            "int"_s
+            , "alias"_s }
         } },
 #endif
 #if !(OS(WINDOWS))
         { "WTF::ProcessID"_s, {
-            { "pid_t"_s, "alias"_s }
+        {
+            "pid_t"_s
+            , "alias"_s }
         } },
 #endif
+        { "WebCore::ConditionalVariant"_s, {
+        {
+            "Variant<"
+            "int, "
+#if USE(CHAR)
+            "char, "
+#endif
+            "double"
+            ">"_s
+            , "alias"_s }
+        } },
+        { "WebCore::NonConditionalVariant"_s, {
+        {
+            "Variant<int, double>"_s
+            , "alias"_s }
+        } },
     };
 }
 

@@ -96,7 +96,7 @@ ExceptionOr<void> PaintWorkletGlobalScope::registerPaint(JSC::JSGlobalObject& gl
         Vector<AtomString> inputProperties;
         if (!inputPropertiesIterableValue.isUndefined()) {
             auto inputPropertiesConversionResult = convert<IDLSequence<IDLAtomStringAdaptor<IDLDOMString>>>(globalObject, inputPropertiesIterableValue);
-            if (UNLIKELY(inputPropertiesConversionResult.hasException(scope)))
+            if (inputPropertiesConversionResult.hasException(scope)) [[unlikely]]
                 return Exception { ExceptionCode::ExistingExceptionError };
             inputProperties = inputPropertiesConversionResult.releaseReturnValue();
         }
@@ -109,7 +109,7 @@ ExceptionOr<void> PaintWorkletGlobalScope::registerPaint(JSC::JSGlobalObject& gl
         Vector<String> inputArguments;
         if (!inputArgumentsIterableValue.isUndefined()) {
             auto inputArgumentsConversionResult = convert<IDLSequence<IDLDOMString>>(globalObject, inputArgumentsIterableValue);
-            if (UNLIKELY(inputArgumentsConversionResult.hasException(scope)))
+            if (inputArgumentsConversionResult.hasException(scope)) [[unlikely]]
                 return Exception { ExceptionCode::ExistingExceptionError };
             inputArguments = inputArgumentsConversionResult.releaseReturnValue();
         }
@@ -138,7 +138,7 @@ ExceptionOr<void> PaintWorkletGlobalScope::registerPaint(JSC::JSGlobalObject& gl
             return Exception { ExceptionCode::TypeError, "The class must have a paint method"_s };
 
         auto paintCallback = convert<IDLCallbackFunction<JSCSSPaintCallback>>(globalObject, paintValue, *jsCast<JSDOMGlobalObject*>(&globalObject));
-        if (UNLIKELY(paintCallback.hasException(scope)))
+        if (paintCallback.hasException(scope)) [[unlikely]]
             return Exception { ExceptionCode::ExistingExceptionError };
 
         auto paintDefinition = makeUnique<PaintDefinition>(name, paintConstructor.get(), paintCallback.releaseReturnValue(), WTFMove(inputProperties), WTFMove(inputArguments));

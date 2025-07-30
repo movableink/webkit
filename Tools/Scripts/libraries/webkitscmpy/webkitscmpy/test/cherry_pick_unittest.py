@@ -23,12 +23,14 @@
 import os
 import shutil
 import tempfile
+from unittest.mock import patch
 
-from mock import patch
-from webkitbugspy import Tracker, radar, mocks as bmocks
+from webkitbugspy import Tracker, radar
+from webkitbugspy import mocks as bmocks
 from webkitcorepy import OutputCapture, testing
 from webkitcorepy.mocks import Time as MockTime
-from webkitscmpy import program, mocks
+
+from webkitscmpy import mocks, program
 
 
 class TestCherryPick(testing.PathTestCase):
