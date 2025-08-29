@@ -11,6 +11,7 @@ list(APPEND JavaScriptCore_SOURCES
 list(APPEND JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     API/JSStringRefQt.h
 
+    bytecode/UnlinkedFunctionExecutable.h
     runtime/JSDateMath.h
 )
 

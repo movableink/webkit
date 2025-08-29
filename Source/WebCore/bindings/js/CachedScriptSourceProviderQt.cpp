@@ -30,13 +30,18 @@
 
 #include <wtf/MallocSpan.h>
 #include <wtf/SHA1.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/HexNumber.h>
 #include "QtBytecodeCacheDelegate.h"
 #include "QtDiskCacheDelegate.h"
+#include <JavaScriptCore/BytecodeCacheError.h>
+#include <JavaScriptCore/CachedTypes.h>
+#include <JavaScriptCore/HeapCellInlines.h>
+#include <JavaScriptCore/UnlinkedFunctionExecutable.h>
 
-#include <QString>
 #include <QByteArray>
+#include <QString>
 
 namespace WebCore {
 
@@ -71,44 +76,94 @@ static QString generateCacheKey(const String& sourceURL)
 
 RefPtr<JSC::CachedBytecode> CachedScriptSourceProvider::cachedBytecode() const
 {
+    if (m_cachedBytecode)
+        return m_cachedBytecode;
+
     auto* delegate = getOrCreateDefaultDelegate();
-    if (!delegate)
-        return nullptr;
+    if (!delegate) {
+        // Create empty cache for accumulating updates even without delegate
+        m_cachedBytecode = JSC::CachedBytecode::create();
+        return m_cachedBytecode;
+    }
 
     QString key = generateCacheKey(sourceURL());
     QString hashString = QString::number(hash());
 
     QByteArray data = delegate->loadBytecode(QString(sourceURL()), hashString);
-    if (data.isEmpty())
-        return nullptr;
+    if (data.isEmpty()) {
+        // Create empty cache for accumulating updates
+        m_cachedBytecode = JSC::CachedBytecode::create();
+        return m_cachedBytecode;
+    }
 
-    // Convert QByteArray to CachedBytecode
+    // Load existing cache that can receive updates
     auto mallocSpan = MallocSpan<uint8_t, JSC::VMMalloc>::malloc(data.size());
-    if (!mallocSpan)
-        return nullptr;
+    if (!mallocSpan) {
+        m_cachedBytecode = JSC::CachedBytecode::create();
+        return m_cachedBytecode;
+    }
 
-    memcpy(mallocSpan.mutableSpan().data(), data.constData(), data.size());
-    return JSC::CachedBytecode::create(WTFMove(mallocSpan), { });
+    memcpySpan(mallocSpan.mutableSpan(), std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(data.constData()), data.size()));
+    m_cachedBytecode = JSC::CachedBytecode::create(WTFMove(mallocSpan), {});
+    return m_cachedBytecode;
 }
 
 void CachedScriptSourceProvider::cacheBytecode(const JSC::BytecodeCacheGenerator& generator) const
 {
-    auto* delegate = getOrCreateDefaultDelegate();
-    if (!delegate)
+    // Ensure we have a cache to accumulate updates
+    if (!m_cachedBytecode)
+        m_cachedBytecode = JSC::CachedBytecode::create();
+
+    auto update = generator();
+    if (update)
+        m_cachedBytecode->addGlobalUpdate(*update);
+}
+
+void CachedScriptSourceProvider::updateCache(const JSC::UnlinkedFunctionExecutable* executable, const JSC::SourceCode&, JSC::CodeSpecializationKind kind, const JSC::UnlinkedFunctionCodeBlock* codeBlock) const
+{
+    if (!m_cachedBytecode)
         return;
 
-    auto bytecode = generator();
-    if (!bytecode)
+    JSC::BytecodeCacheError error;
+    RefPtr<JSC::CachedBytecode> functionBytecode = JSC::encodeFunctionCodeBlock(executable->vm(), codeBlock, error);
+    if (functionBytecode && !error.isValid())
+        m_cachedBytecode->addFunctionUpdate(executable, kind, *functionBytecode);
+}
+
+void CachedScriptSourceProvider::commitCachedBytecode() const
+{
+    auto* delegate = getOrCreateDefaultDelegate();
+    if (!delegate || !m_cachedBytecode || !m_cachedBytecode->hasUpdates())
         return;
 
     QString key = generateCacheKey(sourceURL());
     QString hashString = QString::number(hash());
 
-    // Convert CachedBytecode to QByteArray
-    auto span = bytecode->span();
-    QByteArray data(reinterpret_cast<const char*>(span.data()), span.size());
+    // Create a buffer to hold the complete updated bytecode
+    QByteArray updatedData;
+    updatedData.resize(m_cachedBytecode->sizeForUpdate());
 
-    delegate->storeBytecode(QString(sourceURL()), hashString, data);
+    // Start with existing payload if any
+    auto existingSpan = m_cachedBytecode->span();
+    if (!existingSpan.empty()) {
+        auto destinationSpan = std::span<uint8_t>(reinterpret_cast<uint8_t*>(updatedData.data()), existingSpan.size());
+        memcpySpan(destinationSpan, existingSpan);
+    }
+
+    // Apply all accumulated updates
+    m_cachedBytecode->commitUpdates([&](off_t offset, std::span<const uint8_t> updateData) {
+        // Ensure buffer is large enough
+        auto requiredSize = static_cast<qsizetype>(offset) + static_cast<qsizetype>(updateData.size());
+        if (updatedData.size() < requiredSize)
+            updatedData.resize(requiredSize);
+
+        // Copy update data at the specified offset
+        auto destinationSpan = std::span<uint8_t>(reinterpret_cast<uint8_t*>(updatedData.data()) + offset, updateData.size());
+        memcpySpan(destinationSpan, updateData);
+    });
+
+    // Store the complete updated bytecode through delegate
+    delegate->storeBytecode(QString(sourceURL()), hashString, updatedData);
 }
 
 } // namespace WebCore

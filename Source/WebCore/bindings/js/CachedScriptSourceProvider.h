@@ -40,6 +40,9 @@ public:
 
     virtual ~CachedScriptSourceProvider()
     {
+#if PLATFORM(QT)
+        commitCachedBytecode();
+#endif
         m_cachedScript->removeClient(*this);
     }
 
@@ -49,6 +52,8 @@ public:
 #if PLATFORM(QT)
     RefPtr<JSC::CachedBytecode> cachedBytecode() const override;
     void cacheBytecode(const JSC::BytecodeCacheGenerator&) const override;
+    void updateCache(const JSC::UnlinkedFunctionExecutable*, const JSC::SourceCode&, JSC::CodeSpecializationKind, const JSC::UnlinkedFunctionCodeBlock*) const override;
+    void commitCachedBytecode() const override;
 #endif
 
     void lockUnderlyingBufferImpl() final
@@ -73,6 +78,9 @@ private:
 
     CachedResourceHandle<CachedScript> m_cachedScript;
     RefPtr<FragmentedSharedBuffer> m_buffer;
+#if PLATFORM(QT)
+    mutable RefPtr<JSC::CachedBytecode> m_cachedBytecode;
+#endif
 };
 
 inline unsigned CachedScriptSourceProvider::hash() const
