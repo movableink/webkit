@@ -62,7 +62,8 @@ static QtBytecodeCacheDelegate* getOrCreateDefaultDelegate()
 static QString generateCacheKey(const String& sourceURL)
 {
     SHA1 sha1;
-    CString urlUtf8 = sourceURL.utf8();
+    String strippedURL = URL(sourceURL).strippedForUseAsReport();
+    CString urlUtf8 = strippedURL.utf8();
     sha1.addBytes(std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(urlUtf8.data()), urlUtf8.length()));
     SHA1::Digest digest;
     sha1.computeHash(digest);
