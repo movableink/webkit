@@ -116,6 +116,50 @@ public:
         AlwaysBlockThirdPartyCookies,
         AllowThirdPartyWithExistingCookies
     };
+    
+    enum CacheType {
+        // Resource caches
+        DeadResourceCache = 0x1,           // Dead (unused) web resources
+        LiveResourceCache = 0x2,           // Live (currently used) web resources
+        ResourceCache = 0x3,               // All resources in the cache
+        DecodedImageCache = 0x4,           // Decoded image data
+        
+        // Font caches
+        FontCache = 0x8,                   // Font rendering and platform font data
+        GlyphCache = 0x10,                 // Glyph display lists
+        
+        // JavaScript caches
+        JavaScriptBytecodeCache = 0x20,    // Compiled JavaScript bytecode
+        JavaScriptHeap = 0x40,             // JavaScript garbage collector heap
+        
+        // Page caches
+        BackForwardCache = 0x80,           // Page cache for back/forward navigation
+        
+        // DOM and CSS caches
+        CSSValueCache = 0x100,             // CSS value pool
+        SelectorQueryCache = 0x200,        // DOM query selector cache
+        StyleSheetCache = 0x400,           // CSS stylesheet contents cache
+        HTMLNameCache = 0x800,             // HTML element name cache
+        StylePropertyCache = 0x1000,       // Immutable style properties cache
+        SVGCache = 0x2000,                 // SVG path and element cache
+        
+        // Layout and rendering caches
+        LayoutCache = 0x4000,              // Layout integration caches
+        TextBreakingCache = 0x8000,        // Text breaking position cache
+        RenderThemeCache = 0x10000,        // Platform render theme cache
+        
+        // Platform graphics caches
+        GraphicsCache = 0x20000,           // Platform-specific graphics caches
+        
+        // Convenience groupings
+        ResourceCaches = DeadResourceCache | LiveResourceCache | DecodedImageCache,
+        FontCaches = FontCache | GlyphCache,
+        JavaScriptCaches = JavaScriptBytecodeCache | JavaScriptHeap,
+        DOMCaches = CSSValueCache | SelectorQueryCache | StyleSheetCache | HTMLNameCache | StylePropertyCache | SVGCache,
+        LayoutCaches = LayoutCache | TextBreakingCache | RenderThemeCache,
+        AllCaches = ResourceCaches | FontCaches | JavaScriptCaches | BackForwardCache | DOMCaches | LayoutCaches | GraphicsCache
+    };
+    Q_DECLARE_FLAGS(CacheTypes, CacheType)
 
     static QWebSettings *globalSettings();
 
@@ -168,6 +212,8 @@ public:
     QString localStoragePath() const; 
 
     static void clearMemoryCaches();
+    static void clearMemoryCaches(CacheTypes cacheTypes);
+    static QHash<CacheType, int> memoryCacheCounts();
 
     static void enablePersistentStorage(const QString& path = QString());
 
@@ -192,5 +238,7 @@ private:
 
     QWebSettingsPrivate *d;
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(QWebSettings::CacheTypes)
 
 #endif

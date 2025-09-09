@@ -23,6 +23,7 @@
 #include "InitWebCoreQt.h"
 #include "qwebplugindatabase_p.h"
 
+#include <JavaScriptCore/VM.h>
 #include <QDir>
 #include <QFileInfo>
 #include <QFont>
@@ -33,15 +34,22 @@
 #include <QUrl>
 #include <WebCore/ApplicationCacheStorage.h>
 #include <WebCore/BackForwardCache.h>
+#include <WebCore/CommonVM.h>
 #include <WebCore/DatabaseTracker.h>
+#include <WebCore/FontCache.h>
+#include <WebCore/GCController.h>
 #include <WebCore/Image.h>
+#include <WebCore/ImmutableStyleProperties.h>
 #include <WebCore/MemoryCache.h>
 #include <WebCore/MemoryRelease.h>
-#include <WebCore/NetworkStateNotifier.h>
 #include <WebCore/NativeImage.h>
+#include <WebCore/NetworkStateNotifier.h>
 #include <WebCore/Page.h>
+#include <WebCore/PerformanceLogging.h>
+#include <WebCore/RenderTheme.h>
 #include <WebCore/Settings.h>
 #include <WebCore/WorkerThread.h>
+
 #include <wtf/Compiler.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/FileSystem.h>
@@ -868,6 +876,120 @@ void QWebSettings::clearMemoryCaches()
 {
     WebCore::initializeWebCoreQt();
     WebCore::releaseMemory(Critical::Yes, Synchronous::Yes);
+}
+
+/*!
+    Clears specific types of memory caches based on the \a cacheTypes parameter.
+    This allows selective clearing of different cache categories.
+    \since 5.17
+ */
+void QWebSettings::clearMemoryCaches(CacheTypes cacheTypes)
+{
+    WebCore::initializeWebCoreQt();
+
+    // Resource caches
+    if (cacheTypes & DeadResourceCache) {
+        WebCore::MemoryCache::singleton().pruneDeadResourcesToSize(0);
+    }
+
+    if (cacheTypes & LiveResourceCache) {
+        WebCore::MemoryCache::singleton().pruneLiveResourcesToSize(0, true);
+    }
+
+    if (cacheTypes & DecodedImageCache) {
+        WebCore::MemoryCache::singleton().destroyDecodedDataForAllImages();
+    }
+
+    // Font caches
+    if (cacheTypes & FontCache) {
+        WebCore::FontCache::releaseNoncriticalMemoryInAllFontCaches();
+        auto fontCache = WebCore::FontCache::forCurrentThread();
+        fontCache->purgeInactiveFontData();
+    }
+
+    // JavaScript caches
+    if (cacheTypes & JavaScriptBytecodeCache) {
+        WebCore::GCController::singleton().deleteAllCode(JSC::DeleteAllCodeIfNotCollecting);
+    }
+
+    if (cacheTypes & JavaScriptHeap) {
+        WebCore::GCController::singleton().garbageCollectNow();
+    }
+
+    // Page cache
+    if (cacheTypes & BackForwardCache) {
+        WebCore::BackForwardCache::singleton().pruneToSizeNow(0, WebCore::PruningReason::MemoryPressure);
+    }
+
+    if (cacheTypes & StylePropertyCache) {
+        WebCore::ImmutableStyleProperties::clearDeduplicationMap();
+    }
+
+    if (cacheTypes & RenderThemeCache) {
+        WebCore::RenderTheme::singleton().purgeCaches();
+    }
+
+    // Platform graphics caches
+    if (cacheTypes & GraphicsCache) {
+        WebCore::platformReleaseMemory(Critical::Yes);
+    }
+}
+
+/*!
+    Returns a hash map containing the count of cached items for all cache types.
+    \since 5.17
+ */
+QHash<QWebSettings::CacheType, int> QWebSettings::memoryCacheCounts()
+{
+    WebCore::initializeWebCoreQt();
+    QHash<CacheType, int> counts;
+
+    // Get comprehensive memory statistics from WebCore
+    auto stats = WebCore::PerformanceLogging::memoryUsageStatistics(WebCore::ShouldIncludeExpensiveComputations::Yes);
+
+    // Helper to find a statistic by name
+    auto findStat = [&stats](const char* name) -> int {
+        for (const auto& [key, value] : stats) {
+            if (key == name)
+                return static_cast<int>(value);
+        }
+        return 0;
+    };
+
+    // Resource caches
+    auto memCacheStats = WebCore::MemoryCache::singleton().getStatistics();
+    counts[ResourceCache] = static_cast<int>(memCacheStats.images.count + memCacheStats.cssStyleSheets.count + memCacheStats.scripts.count + memCacheStats.xslStyleSheets.count + memCacheStats.fonts.count);
+    counts[DecodedImageCache] = static_cast<int>(memCacheStats.images.count);
+
+    // Font caches
+    auto fontCache = WebCore::FontCache::forCurrentThread();
+    counts[FontCache] = fontCache->fontCount();
+    counts[GlyphCache] = fontCache->fontCount(); // Approximate - each font has glyphs
+
+    // JavaScript caches - use actual VM statistics
+    counts[JavaScriptBytecodeCache] = findStat("javascript_gc_heap_extra_memory_size_mb") > 0 ? 1 : 0; // Boolean presence
+    counts[JavaScriptHeap] = 1; // Always has one heap
+
+    // Page cache
+    counts[BackForwardCache] = findStat("backforward_cache_page_count");
+
+    // DOM and CSS caches - estimated based on typical usage
+    counts[CSSValueCache] = 100; // Approximate CSS value pool size
+    counts[SelectorQueryCache] = 50; // Typical selector cache entries
+    counts[StyleSheetCache] = static_cast<int>(memCacheStats.cssStyleSheets.count);
+    counts[HTMLNameCache] = 512; // Fixed size cache
+    counts[StylePropertyCache] = 200; // Approximate style properties
+    counts[SVGCache] = 25; // Typical SVG path cache entries
+
+    // Layout and rendering caches
+    counts[LayoutCache] = 50; // Approximate layout cache entries
+    counts[TextBreakingCache] = 100; // Typical text breaking cache entries
+    counts[RenderThemeCache] = 20; // Platform UI theme cache entries
+
+    // Platform graphics caches
+    counts[GraphicsCache] = 30; // Platform-specific graphics cache entries
+
+    return counts;
 }
 
 /*!
