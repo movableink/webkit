@@ -944,6 +944,9 @@ QHash<QWebSettings::CacheType, int> QWebSettings::memoryCacheCounts()
     WebCore::initializeWebCoreQt();
     QHash<CacheType, int> counts;
 
+    // just log it
+    WebCore::logMemoryStatistics(WebCore::LogMemoryStatisticsReason::DebugNotification);
+
     // Get comprehensive memory statistics from WebCore
     auto stats = WebCore::PerformanceLogging::memoryUsageStatistics(WebCore::ShouldIncludeExpensiveComputations::Yes);
 
