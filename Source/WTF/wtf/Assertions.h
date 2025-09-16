@@ -182,6 +182,8 @@ typedef struct {
 #define LOG_CHANNEL_WEBKIT_SUBSYSTEM "WPEWebKit"
 #elif PLATFORM(PLAYSTATION)
 #define LOG_CHANNEL_WEBKIT_SUBSYSTEM "SceNKWebKit"
+#elif PLATFORM(QT)
+#define LOG_CHANNEL_WEBKIT_SUBSYSTEM "QtWebKit"
 #else
 #define LOG_CHANNEL_WEBKIT_SUBSYSTEM "com.apple.WebKit"
 #endif

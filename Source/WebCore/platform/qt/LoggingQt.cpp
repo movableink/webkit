@@ -19,7 +19,7 @@
 */
 
 #include "config.h"
-#include "Logging.h"
+#include "LogInitialization.h"
 
 #if !LOG_DISABLED || !RELEASE_LOG_DISABLED
 
@@ -34,15 +34,9 @@ String logLevelString()
     if (loggingEnv.isEmpty())
         return emptyString();
 
-#if defined(NDEBUG)
-    qWarning("This is a release build. Setting QT_WEBKIT_LOG will have no effect.");
-#else
-
-    // To disable logging notImplemented set the DISABLE_NI_WARNING environment variable to 1.
-    return String(QStringLiteral("NotYetImplemented,").append(QLatin1String(loggingEnv.constData())));
-#endif
+    return String::fromLatin1(loggingEnv.constData());
 }
 
 } // namespace WebCore
 
-#endif // !LOG_DISABLED
+#endif // !LOG_DISABLED || !RELEASE_LOG_DISABLED
