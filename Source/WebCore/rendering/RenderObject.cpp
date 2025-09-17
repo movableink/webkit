@@ -29,6 +29,7 @@
 
 #include "AXObjectCache.h"
 #include "BoundaryPointInlines.h"
+#include "ContainerNodeInlines.h"
 #include "DocumentInlines.h"
 #include "EditingInlines.h"
 #include "Editor.h"

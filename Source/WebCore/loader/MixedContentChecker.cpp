@@ -41,6 +41,7 @@
 #include "Quirks.h"
 #include "SecurityOrigin.h"
 #include <wtf/text/MakeString.h>
+#include <JavaScriptCore/ConsoleTypes.h>
 
 #if PLATFORM(IOS_FAMILY)
 #include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>

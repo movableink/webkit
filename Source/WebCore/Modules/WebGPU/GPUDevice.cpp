@@ -26,6 +26,7 @@
 #include "config.h"
 #include "GPUDevice.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "DOMPromiseProxy.h"
 #include "EventNames.h"
 #include "GPUBindGroup.h"

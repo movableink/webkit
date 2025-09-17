@@ -73,9 +73,11 @@ protected:
     bool m_mockMediaSourceEnabled { false };
 };
 
+#if ENABLE(VIDEO)
 inline void MediaStrategy::nativeImageFromVideoFrame(const VideoFrame&, CompletionHandler<void(std::optional<RefPtr<NativeImage>>&&)>&& completionHandler)
 {
     completionHandler(std::nullopt);
 }
+#endif
 
 } // namespace WebCore

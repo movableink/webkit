@@ -29,6 +29,7 @@
 #include "ColorLuminance.h"
 #include "ColorSerialization.h"
 #include "ColorWellPart.h"
+#include "ContainerNodeInlines.h"
 #include "DeprecatedGlobalSettings.h"
 #include "Document.h"
 #include "FileList.h"

@@ -30,6 +30,7 @@
 #include "CSSPrimitiveValue.h"
 #include "CSSToLengthConversionData.h"
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "EventNames.h"
