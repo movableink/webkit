@@ -28,6 +28,7 @@
 
 #include "AccessibilityObject.h"
 #include "BorderShape.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementInlines.h"

@@ -120,7 +120,11 @@ static bool shouldRepaintOnSizeChange(RenderReplaced& renderer)
 {
     if (is<RenderHTMLCanvas>(renderer))
         return true;
-    if (auto* renderImage = dynamicDowncast<RenderImage>(renderer); renderImage && !is<RenderMedia>(*renderImage) && !renderImage->isShowingMissingOrImageError())
+    if (auto* renderImage = dynamicDowncast<RenderImage>(renderer); renderImage
+#if ENABLE(VIDEO)
+            && !is<RenderMedia>(*renderImage)
+#endif
+            && !renderImage->isShowingMissingOrImageError())
         return true;
     return false;
 }

@@ -29,6 +29,7 @@
 #include "CachedResourceRequest.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "ContainerNodeInlines.h"
 #include "CookieJar.h"
 #include "CrossOriginAccessControl.h"
 #include "Document.h"
