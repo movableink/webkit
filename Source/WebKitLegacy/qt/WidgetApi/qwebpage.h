@@ -23,6 +23,7 @@
 
 #include <QtWebKit/qwebkitglobal.h>
 #include <QtWebKit/qwebfullscreenrequest.h>
+#include <QtWebKit/qwebresourcetypes.h>
 #include <QtWebKit/qwebsettings.h>
 
 #include <QtCore/qobject.h>
@@ -66,6 +67,7 @@ namespace WebCore {
     class QNetworkReplyHandler;
     class FrameLoadRequest;
 }
+
 
 class QWEBKITWIDGETS_EXPORT QWebPage : public QObject {
     Q_OBJECT
@@ -431,6 +433,8 @@ Q_SIGNALS:
     void loadStarted();
     void loadProgress(int progress);
     void loadFinished(bool ok);
+    void resourceLoadStarted(const QUrl& url, const QtResourceRequestInfo& requestInfo, bool fromCache);
+    void resourceLoadFinished(const QUrl& url, qint64 size, const QtResourceTimingInfo& timing, bool success);
 
     void linkHovered(const QString &link, const QString &title, const QString &textContent);
     void statusBarMessage(const QString& text);

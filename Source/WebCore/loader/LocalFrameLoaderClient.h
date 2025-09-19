@@ -41,6 +41,10 @@
 #include <wtf/WeakRef.h>
 #include <wtf/text/WTFString.h>
 
+#if PLATFORM(QT)
+#include "CachedResource.h"
+#endif
+
 #if ENABLE(APPLICATION_MANIFEST)
 #include "ApplicationManifest.h"
 #endif
@@ -160,6 +164,10 @@ public:
     virtual void dispatchDidFinishLoading(DocumentLoader*, IsMainResourceLoad, ResourceLoaderIdentifier) = 0;
     virtual void dispatchDidFailLoading(DocumentLoader*, IsMainResourceLoad, ResourceLoaderIdentifier, const ResourceError&) = 0;
     virtual bool dispatchDidLoadResourceFromMemoryCache(DocumentLoader*, const ResourceRequest&, const ResourceResponse&, int length) = 0;
+#if PLATFORM(QT)
+    virtual void dispatchDidStartResourceLoad(const CachedResource&) { }
+    virtual void dispatchDidFinishResourceLoad(const CachedResource&) { }
+#endif
 
     virtual void dispatchDidDispatchOnloadEvents() = 0;
     virtual void dispatchDidReceiveServerRedirectForProvisionalLoad() = 0;
