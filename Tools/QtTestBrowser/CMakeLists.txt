@@ -44,7 +44,6 @@ set(QtTestBrowser_SYSTEM_INCLUDE_DIRECTORIES
 
 set(QtTestBrowser_LIBRARIES
     Qt6::Gui
-    Qt6::GuiPrivate
     Qt6::Network
     Qt6::Widgets
     WebKitWidgets
@@ -53,6 +52,13 @@ set(QtTestBrowser_LIBRARIES
 
 if (TARGET Qt6::PrintSupport)
     list(APPEND QtTestBrowser_LIBRARIES Qt6::PrintSupport)
+endif ()
+
+if (Qt6Core_VERSION VERSION_GREATER_EQUAL 6.10)
+    list(APPEND QtTestBrowser_PRIVATE_LIBRARIES Qt6::CorePrivate)
+endif ()
+if (Qt6Gui_VERSION VERSION_GREATER_EQUAL 6.10)
+    list(APPEND QtTestBrowser_PRIVATE_LIBRARIES Qt6::GuiPrivate)
 endif ()
 
 qt_add_resources(QtTestBrowser_SOURCES
