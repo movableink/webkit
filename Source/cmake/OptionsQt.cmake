@@ -214,7 +214,6 @@ WEBKIT_OPTION_BEGIN()
 if (APPLE)
     set(MACOS_COMPATIBILITY_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}" CACHE STRING "Compatibility version that macOS dylibs should have")
 
-    option(MACOS_FORCE_SYSTEM_XML_LIBRARIES "Use system installation of libxml2 and libxslt on macOS" ON)
     option(MACOS_USE_SYSTEM_ICU "Use system installation of ICU on macOS" ON)
     option(USE_UNIX_DOMAIN_SOCKETS "Use Unix domain sockets instead of native IPC code on macOS" OFF)
     option(USE_APPSTORE_COMPLIANT_CODE "Avoid using private macOS APIs which are not allowed on App Store (experimental)" OFF)
@@ -453,6 +452,12 @@ if (APPLE)
         find_library(CORESERVICES_LIBRARY CoreServices)
         find_library(SECURITY_LIBRARY Security)
     endif ()
+endif ()
+
+# Prefer Homebrew libxml2/libxslt over CommandLineTools version on macOS
+# Otherwise, CommandLineTools headers get pulled in and cause conflicts
+if (APPLE AND EXISTS "/opt/homebrew/opt/libxml2/lib/pkgconfig")
+    set(ENV{PKG_CONFIG_PATH} "/opt/homebrew/opt/libxml2/lib/pkgconfig:/opt/homebrew/opt/libxslt/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
 endif ()
 
 find_package(LibXml2 2.8.0 REQUIRED)
