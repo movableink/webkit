@@ -43,34 +43,37 @@ set(QtTestBrowser_SYSTEM_INCLUDE_DIRECTORIES
 )
 
 set(QtTestBrowser_LIBRARIES
-    ${Qt6Gui_LIBRARIES}
-    ${Qt6Network_LIBRARIES}
-    ${Qt6Widgets_LIBRARIES}
-    ${Qt6PrintSupport_LIBRARIES}
-    ${Qt6OpenGLWidgets_LIBRARIES}
-    ${Qt6StateMachine_LIBRARIES}
+    Qt6::Gui
+    Qt6::GuiPrivate
+    Qt6::Network
+    Qt6::Widgets
     WebKitWidgets
     ${STATIC_LIB_DEPENDENCIES}
 )
+
+if (TARGET Qt6::PrintSupport)
+    list(APPEND QtTestBrowser_LIBRARIES Qt6::PrintSupport)
+endif ()
 
 qt_add_resources(QtTestBrowser_SOURCES
     QtTestBrowser.qrc
 )
 
-if (Qt6OpenGL_FOUND)
-    list(APPEND QtTestBrowser_SYSTEM_INCLUDE_DIRECTORIES
-        ${Qt6OpenGL_INCLUDE_DIRS}
-    )
-    list(APPEND QtTestBrowser_LIBRARIES
-        ${Qt6OpenGL_LIBRARIES}
-    )
+if (TARGET Qt6::OpenGL)
+    list(APPEND QtTestBrowser_LIBRARIES Qt6::OpenGL)
+endif ()
+
+if (TARGET Qt6::OpenGLWidgets)
+    list(APPEND QtTestBrowser_LIBRARIES Qt6::OpenGLWidgets)
 endif ()
 
 if (ENABLE_TEST_SUPPORT)
     add_definitions(-DHAVE_QTTESTSUPPORT)
 endif ()
 
-if (NOT TARGET Qt6::StateMachine)
+if (TARGET Qt6::StateMachine)
+    list(APPEND QtTestBrowser_LIBRARIES Qt6::StateMachine)
+else ()
     add_definitions(-DQT_NO_ANIMATION)
 endif ()
 

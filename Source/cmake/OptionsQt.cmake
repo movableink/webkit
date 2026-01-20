@@ -71,26 +71,32 @@ macro(CONVERT_PRL_LIBS_TO_CMAKE _qt_component)
 endmacro()
 
 macro(CHECK_Qt6_PRIVATE_INCLUDE_DIRS _qt_component _header)
+    # Qt6 provides private headers via Qt6::${_qt_component}Private target
+    find_package(Qt6${_qt_component}Private QUIET CONFIG)
+
+    if (NOT TARGET Qt6::${_qt_component}Private)
+        message(FATAL_ERROR "Qt6::${_qt_component}Private target not found. Please make sure Qt6 private headers are installed.")
+    endif()
+
     set(INCLUDE_TEST_SOURCE
     "
         #include <${_header}>
         int main() { return 0; }
     "
     )
-    set(CMAKE_REQUIRED_INCLUDES ${Qt6${_qt_component}_PRIVATE_INCLUDE_DIRS})
-    set(CMAKE_REQUIRED_LIBRARIES Qt6::${_qt_component})
 
-    # Avoid check_include_file_cxx() because it performs linking but doesn't support CMAKE_REQUIRED_LIBRARIES (doh!)
+    # Use the Private target directly - it provides the include dirs automatically
+    set(CMAKE_REQUIRED_LIBRARIES Qt6::${_qt_component} Qt6::${_qt_component}Private)
+
     check_cxx_source_compiles("${INCLUDE_TEST_SOURCE}" Qt6${_qt_component}_PRIVATE_HEADER_FOUND)
 
     unset(INCLUDE_TEST_SOURCE)
-    unset(CMAKE_REQUIRED_INCLUDES)
     unset(CMAKE_REQUIRED_LIBRARIES)
 
     if (NOT Qt6${_qt_component}_PRIVATE_HEADER_FOUND)
         message(FATAL_ERROR "Header ${_header} is not found. Please make sure that:
     1. Private headers of Qt6${_qt_component} are installed
-    2. Qt6${_qt_component}_PRIVATE_INCLUDE_DIRS is correctly defined in Qt6${_qt_component}Config.cmake")
+    2. Qt6${_qt_component}Private package is available")
     endif ()
 endmacro()
 
@@ -208,7 +214,6 @@ WEBKIT_OPTION_BEGIN()
 if (APPLE)
     set(MACOS_COMPATIBILITY_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}" CACHE STRING "Compatibility version that macOS dylibs should have")
 
-    option(MACOS_FORCE_SYSTEM_XML_LIBRARIES "Use system installation of libxml2 and libxslt on macOS" ON)
     option(MACOS_USE_SYSTEM_ICU "Use system installation of ICU on macOS" ON)
     option(USE_UNIX_DOMAIN_SOCKETS "Use Unix domain sockets instead of native IPC code on macOS" OFF)
     option(USE_APPSTORE_COMPLIANT_CODE "Avoid using private macOS APIs which are not allowed on App Store (experimental)" OFF)
@@ -447,6 +452,12 @@ if (APPLE)
         find_library(CORESERVICES_LIBRARY CoreServices)
         find_library(SECURITY_LIBRARY Security)
     endif ()
+endif ()
+
+# Prefer Homebrew libxml2/libxslt over CommandLineTools version on macOS
+# Otherwise, CommandLineTools headers get pulled in and cause conflicts
+if (APPLE AND EXISTS "/opt/homebrew/opt/libxml2/lib/pkgconfig")
+    set(ENV{PKG_CONFIG_PATH} "/opt/homebrew/opt/libxml2/lib/pkgconfig:/opt/homebrew/opt/libxslt/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
 endif ()
 
 find_package(LibXml2 2.8.0 REQUIRED)
