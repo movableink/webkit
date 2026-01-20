@@ -257,6 +257,10 @@ private:
     UncheckedKeyHashSet<AtomString> m_knownFamilies;
 #endif
 
+#if PLATFORM(QT)
+    UncheckedKeyHashMap<AtomString, bool> m_fontFamilyCache;
+#endif
+
 #if PLATFORM(COCOA)
     FontDatabase m_databaseAllowingUserInstalledFonts { AllowUserInstalledFonts::Yes };
     FontDatabase m_databaseDisallowingUserInstalledFonts { AllowUserInstalledFonts::No };

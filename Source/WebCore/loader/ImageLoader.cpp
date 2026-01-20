@@ -470,6 +470,12 @@ void ImageLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetr
 {
     LOG_WITH_STREAM(LazyLoading, stream << "ImageLoader " << this << " notifyFinished - hasPendingLoadEvent " << m_hasPendingLoadEvent);
 
+#if PLATFORM(QT)
+    LocalFrame* localFrame = element().document().frame();
+    if (localFrame)
+        localFrame->loader().client().dispatchDidFinishResourceLoad(resource);
+#endif
+
     ASSERT(m_failedLoadURL.isEmpty());
     ASSERT_UNUSED(resource, &resource == m_image.get());
 
@@ -691,6 +697,12 @@ void ImageLoader::dispatchPendingBeforeLoadEvent()
         return;
     if (!element().document().hasLivingRenderTree())
         return;
+#if PLATFORM(QT)
+    LocalFrame* localFrame = element().document().frame();
+    if (localFrame)
+        localFrame->loader().client().dispatchDidStartResourceLoad(*m_image.get());
+#endif
+
     m_hasPendingBeforeLoadEvent = false;
     if (!element().isConnected())
         return;

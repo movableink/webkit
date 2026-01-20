@@ -474,6 +474,12 @@ void DocumentThreadableLoader::notifyFinished(CachedResource& resource, const Ne
     ASSERT(m_client);
     ASSERT_UNUSED(resource, &resource == m_resource);
 
+#if PLATFORM(QT)
+    LocalFrame* localFrame = document().frame();
+    if (localFrame)
+        localFrame->loader().client().dispatchDidFinishResourceLoad(resource);    
+#endif    
+
     if (m_resource->errorOccurred())
         didFail(m_resource->resourceLoaderIdentifier(), m_resource->resourceError());
     else
@@ -595,6 +601,13 @@ void DocumentThreadableLoader::loadRequest(ResourceRequest&& request, SecurityCh
 
         auto cachedResource = m_document->protectedCachedResourceLoader()->requestRawResource(WTFMove(newRequest));
         m_resource = cachedResource.value_or(nullptr);
+
+#if PLATFORM(QT)
+        LocalFrame* localFrame = document().frame();
+        if (localFrame && m_resource.get())
+            localFrame->loader().client().dispatchDidStartResourceLoad(*m_resource.get());
+#endif
+
         if (CachedResourceHandle resource = m_resource)
             resource->addClient(*this);
         else

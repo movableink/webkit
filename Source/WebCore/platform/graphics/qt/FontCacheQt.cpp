@@ -96,7 +96,11 @@ Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescripti
 
 std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontCreationContext&, OptionSet<FontLookupOptions>)
 {
-    if (!QFontDatabase::hasFamily(family.string()))
+    auto addResult = m_fontFamilyCache.ensure(family, [&family] {
+        return QFontDatabase::hasFamily(family.string());
+    });
+
+    if (!addResult.iterator->value)
         return nullptr;
     return std::make_unique<FontPlatformData>(fontDescription, family);
 }
