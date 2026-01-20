@@ -250,6 +250,9 @@ if (ENABLE_DEVICE_ORIENTATION)
         platform/qt/DeviceOrientationClientQt.cpp
         platform/qt/DeviceOrientationProviderQt.cpp
     )
+    list(APPEND WebCore_LIBRARIES
+        Qt6::Sensors
+    )
 endif ()
 
 if (ENABLE_GRAPHICS_CONTEXT_3D)
@@ -302,10 +305,11 @@ list(APPEND WebCore_LIBRARIES
     ${HYPHEN_LIBRARIES}
     ${LIBXML2_LIBRARIES}
     ${LIBXSLT_LIBRARIES}
-    ${Qt6Core_LIBRARIES}
-    ${Qt6Gui_LIBRARIES}
-    ${Qt6Network_LIBRARIES}
-    ${Qt6Sensors_LIBRARIES}
+    Qt6::Core
+    Qt6::Gui
+    Qt6::GuiPrivate
+    Qt6::Network
+    Qt6::NetworkPrivate
     ${SQLITE_LIBRARIES}
     ${X11_X11_LIB}
     ${ZLIB_LIBRARIES}
@@ -399,7 +403,7 @@ if (USE_QT_MULTIMEDIA)
         platform/graphics/qt/MediaPlayerPrivateQt.cpp
     )
     list(APPEND WebCore_LIBRARIES
-        ${Qt6Multimedia_LIBRARIES}
+        Qt6::Multimedia
     )
     QTWEBKIT_GENERATE_MOC_FILES_H(WebCore platform/graphics/qt/MediaPlayerPrivateQt.h)
 endif ()
