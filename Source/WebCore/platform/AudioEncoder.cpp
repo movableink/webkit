@@ -51,7 +51,7 @@ Ref<AudioEncoder::CreatePromise> AudioEncoder::create(const String& codecName, c
     UNUSED_PARAM(descriptionCallback);
     UNUSED_PARAM(outputCallback);
 
-    return CreatePromise::createAndReject("Not supported"_s));
+    return CreatePromise::createAndReject("Not supported"_s);
 #endif
 }
 
