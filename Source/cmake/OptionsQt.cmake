@@ -71,12 +71,13 @@ macro(CONVERT_PRL_LIBS_TO_CMAKE _qt_component)
 endmacro()
 
 macro(CHECK_Qt6_PRIVATE_INCLUDE_DIRS _qt_component _header)
-    # Qt6 provides private headers via Qt6::${_qt_component}Private target
-    find_package(Qt6${_qt_component}Private QUIET CONFIG)
+    set(CMAKE_REQUIRED_LIBRARIES Qt6::${_qt_component})
 
-    if (NOT TARGET Qt6::${_qt_component}Private)
-        message(FATAL_ERROR "Qt6::${_qt_component}Private target not found. Please make sure Qt6 private headers are installed.")
-    endif()
+    # Qt 6.10+ provides private headers via Qt6::${_qt_component}Private target
+    if (Qt6${_qt_component}_VERSION VERSION_GREATER_EQUAL 6.10)
+        find_package(Qt6 ${REQUIRED_QT_VERSION} REQUIRED COMPONENTS ${_qt_component}Private)
+        list(APPEND CMAKE_REQUIRED_LIBRARIES Qt6::${_qt_component}Private)
+    endif ()
 
     set(INCLUDE_TEST_SOURCE
     "
@@ -84,9 +85,6 @@ macro(CHECK_Qt6_PRIVATE_INCLUDE_DIRS _qt_component _header)
         int main() { return 0; }
     "
     )
-
-    # Use the Private target directly - it provides the include dirs automatically
-    set(CMAKE_REQUIRED_LIBRARIES Qt6::${_qt_component} Qt6::${_qt_component}Private)
 
     check_cxx_source_compiles("${INCLUDE_TEST_SOURCE}" Qt6${_qt_component}_PRIVATE_HEADER_FOUND)
 
